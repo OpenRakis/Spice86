@@ -5,8 +5,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="IKVM" Version="8.1.5717" />
-  </ItemGroup>
-
 </Project>
