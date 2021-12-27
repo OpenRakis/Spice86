@@ -166,10 +166,8 @@ public class ConvertUtils
         for (int i = 0; i < @string.Length; i += 2)
         {
             string hex = @string.Substring(i, i + 2);
-
-            // parsing as Integer since Byte.parseByte only supports signed bytes.
-            int value = int.Parse(hex, System.Globalization.NumberStyles.HexNumber);
-            res[i / 2] = (byte)value;
+            var value = byte.Parse(hex, NumberStyles.HexNumber);
+            res[i / 2] = value;
         }
 
         return res;
@@ -177,9 +175,10 @@ public class ConvertUtils
 
     public static string ByteArrayToHexString(byte[] value)
     {
-        StringBuilder stringBuilder = new StringBuilder(value.Length * 2);
-        foreach (byte b in value)
+        StringBuilder stringBuilder = new(value.Length * 2);
+        for (int i = 0; i < value.Length; i++)
         {
+            byte b = value[i];
             stringBuilder.Append($"{b:X2}");
         }
 
@@ -193,7 +192,7 @@ public class ConvertUtils
     public static long ParseHex32(string value)
     {
         string hex = new Regex(HexStringStartPattern).Replace(value, "");
-        return long.Parse(hex, System.Globalization.NumberStyles.HexNumber);
+        return long.Parse(hex, NumberStyles.HexNumber);
     }
 
     public static long BytesToInt32(byte[] data, int start)
