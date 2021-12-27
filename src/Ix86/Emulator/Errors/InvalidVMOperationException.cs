@@ -1,6 +1,8 @@
 ﻿namespace Ix86.Emulator.Errors;
 using Ix86.Emulator.Machine;
 
+using System;
+
 /// <summary>
 /// Base class for exceptions occurring in the VM.<br/>
 /// Gives the VM status in the generated error message.

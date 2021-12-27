@@ -1,6 +1,9 @@
 ﻿namespace Ix86.Emulator.Callback;
 using Ix86.Emulator.Errors;
 using Ix86.Emulator.Machine;
+
+using System;
+
 /// <summary>
 /// Exception signaling that the callback number that was meant to be executed was not mapped to any java code.<br/>
 /// Could happen for unhandled exceptions.
