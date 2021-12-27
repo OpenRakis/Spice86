@@ -11,32 +11,32 @@ namespace Ix86.Emulator.Memory
     /// </summary>
     public class SegmentedAddress
     {
-        private int segment;
-        private int offset;
+        private int _segment;
+        private int _offset;
         public SegmentedAddress(int segment, int offset)
         {
-            this.segment = segment;
-            this.offset = offset;
+            _segment = segment;
+            _offset = offset;
         }
 
         public virtual int GetSegment()
         {
-            return segment;
+            return _segment;
         }
 
         public virtual int GetOffset()
         {
-            return offset;
+            return _offset;
         }
 
         public virtual string ToSegmentOffsetRepresentation()
         {
-            return ConvertUtils.ToSegmentedAddressRepresentation(segment, offset);
+            return ConvertUtils.ToSegmentedAddressRepresentation(_segment, _offset);
         }
 
         public virtual int ToPhysical()
         {
-            return MemoryUtils.ToPhysicalAddress(segment, offset);
+            return MemoryUtils.ToPhysicalAddress(_segment, _offset);
         }
 
         public override int GetHashCode()
@@ -60,7 +60,7 @@ namespace Ix86.Emulator.Memory
                 return false;
             }
             var other = (SegmentedAddress)obj;
-            return MemoryUtils.ToPhysicalAddress(segment, offset) == MemoryUtils.ToPhysicalAddress(other.segment, other.offset);
+            return MemoryUtils.ToPhysicalAddress(_segment, _offset) == MemoryUtils.ToPhysicalAddress(other._segment, other._offset);
         }
     }
 }

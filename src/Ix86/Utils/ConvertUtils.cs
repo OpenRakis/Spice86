@@ -1,44 +1,42 @@
 ﻿namespace Ix86.Utils;
+using Ix86.Emulator.Memory;
 
-using System;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using Ix86.Emulator.Memory;
-
 public class ConvertUtils
 {
-    private static readonly int SEGMENT_SIZE = 0x10000;
-    private const string HEX_STRING_START_PATTERN = "0x";
+    private static readonly int SegmentSize = 0x10000;
+    private const string HexStringStartPattern = "0x";
     public static string ToHex(byte value)
     {
-        return String.Format("0x%X", value);
+        return $"0x{value:x}";
     }
 
     public static string ToHex(short value)
     {
-        return String.Format("0x%X", value);
+        return $"0x{value:x}";
     }
 
     public static string ToHex(int value)
     {
-        return String.Format("0x%X", value);
+        return $"0x{value:x}";
     }
 
     public static string ToHex8(int value)
     {
-        return String.Format("0x%X", Uint8(value));
+        return $"0x{Uint8(value):x}";
     }
 
     public static string ToHex16(int value)
     {
-        return String.Format("0x%X", Uint16(value));
+        return $"0x{Uint16(value):x}";
     }
 
     public static string ToHex16WithoutX(int value)
     {
-        return String.Format("%04X", Uint16(value));
+        return $"{Uint16(value):x}";
     }
 
     public static string ToJavaStringWithPhysical(SegmentedAddress address)
@@ -84,12 +82,12 @@ public class ConvertUtils
 
     public static int ToAbsoluteSegment(int physicalAddress)
     {
-        return ((physicalAddress / SEGMENT_SIZE) * SEGMENT_SIZE) >> 4;
+        return ((physicalAddress / SegmentSize) * SegmentSize) >> 4;
     }
 
     public static int ToAbsoluteOffset(int physicalAddress)
     {
-        return physicalAddress - (physicalAddress / SEGMENT_SIZE) * SEGMENT_SIZE;
+        return physicalAddress - (physicalAddress / SegmentSize) * SegmentSize;
     }
 
     public static int ReadLsb(int value)
@@ -182,7 +180,7 @@ public class ConvertUtils
         StringBuilder stringBuilder = new StringBuilder(value.Length * 2);
         foreach (byte b in value)
         {
-            stringBuilder.Append(String.Format("%02X", b));
+            stringBuilder.Append($"{b:X2}");
         }
 
         return stringBuilder.ToString();
@@ -194,7 +192,7 @@ public class ConvertUtils
     /// <returns>a long since unsigned ints are not a thing in java</returns>
     public static long ParseHex32(string value)
     {
-        string hex = new Regex(HEX_STRING_START_PATTERN).Replace(value, "");
+        string hex = new Regex(HexStringStartPattern).Replace(value, "");
         return long.Parse(hex, System.Globalization.NumberStyles.HexNumber);
     }
 

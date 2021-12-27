@@ -2,8 +2,6 @@
 using Ix86.Emulator.Errors;
 using Ix86.Emulator.Machine;
 
-using System;
-
 /// <summary>
 /// Exception signaling that the callback number that was meant to be executed was not mapped to any java code.<br/>
 /// Could happen for unhandled exceptions.
@@ -16,6 +14,6 @@ public class UnhandledCallbackException : UnhandledOperationException
 
     private static string FormatMessage(int callbackNumber)
     {
-        return String.Format("callbackNumber=0x%X", callbackNumber);
+        return $"callbackNumber=0x{callbackNumber:x}";
     }
 }
