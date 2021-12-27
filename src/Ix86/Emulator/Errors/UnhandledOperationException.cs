@@ -1,0 +1,11 @@
+﻿namespace Ix86.Emulator.Errors;
+using Ix86.Emulator.Machine;
+/// <summary>
+/// Thrown when an unsupported / invalid operation is requested.
+/// </summary>
+public class UnhandledOperationException : InvalidVMOperationException
+{
+    public UnhandledOperationException(Machine machine, string message) : base(machine, message)
+    {
+    }
+}
