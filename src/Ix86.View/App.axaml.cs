@@ -1,10 +1,10 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Ix86View.ViewModels;
-using Ix86View.Views;
+using Ix86.View.ViewModels;
+using Ix86.View.Views;
 
-namespace Ix86View
+namespace Ix86.View
 {
     public class App : Application
     {

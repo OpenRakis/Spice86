@@ -1,9 +1,9 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using Ix86View.ViewModels;
+using Ix86.View.ViewModels;
 
-namespace Ix86View
+namespace Ix86.View
 {
     public class ViewLocator : IDataTemplate
     {

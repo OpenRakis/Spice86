@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Ix86View.ViewModels
+namespace Ix86.View.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
