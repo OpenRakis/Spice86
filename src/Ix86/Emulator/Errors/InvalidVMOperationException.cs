@@ -6,6 +6,7 @@ using System;
 /// <summary>
 /// Base class for exceptions occurring in the VM.<br/>
 /// Gives the VM status in the generated error message.
+/// Named <see cref="InvalidVMOperationException"/> because <see cref="InvalidOperationException"/> already exists in the BCL.
 /// </summary>
 public class InvalidVMOperationException : Exception
 {

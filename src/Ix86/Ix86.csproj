@@ -1,8 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
+	<EnablePackageValidation>true</EnablePackageValidation>
   </PropertyGroup>
   <ItemGroup>
 	<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
