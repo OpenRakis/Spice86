@@ -11,4 +11,9 @@
 		<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	</PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Emulator\Gdb\" />
+    <Folder Include="Emulator\LoadableFile\" />
+    <Folder Include="Emulator\ReverseEngineering\" />
+  </ItemGroup>
 </Project>

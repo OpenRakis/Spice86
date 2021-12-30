@@ -8,6 +8,7 @@ using System;
 /// Gives the VM status in the generated error message.
 /// Named <see cref="InvalidVMOperationException"/> because <see cref="InvalidOperationException"/> already exists in the BCL.
 /// </summary>
+[Serializable]
 public class InvalidVMOperationException : Exception
 {
     public InvalidVMOperationException(Machine machine, string message) : base(GenerateStatusMessage(machine, message))

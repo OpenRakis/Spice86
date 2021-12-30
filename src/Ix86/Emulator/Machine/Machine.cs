@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 
 using Emulator.Cpu;
 
+using Ix86.Emulator.Memory;
+
 public class Machine
 {
     private CPU _cpu = new CPU();
@@ -15,5 +17,10 @@ public class Machine
     public CPU GetCpu()
     {
         return _cpu;
+    }
+
+    internal Memory? GetMemory()
+    {
+        throw new NotImplementedException();
     }
 }

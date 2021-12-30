@@ -6,6 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+/// <summary>
+/// TODO
+/// </summary>
 public class CPU
 {
     public object GetState()
