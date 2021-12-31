@@ -55,11 +55,10 @@ public class SegmentedAddress
         {
             return true;
         }
-        if (obj is not SegmentedAddress)
+        if (obj is not SegmentedAddress other)
         {
             return false;
         }
-        var other = (SegmentedAddress)obj;
         return MemoryUtils.ToPhysicalAddress(_segment, _offset) == MemoryUtils.ToPhysicalAddress(other._segment, other._offset);
     }
 }

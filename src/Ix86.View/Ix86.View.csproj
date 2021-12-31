@@ -5,9 +5,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
-    <None Remove=".gitignore" />
   </ItemGroup>
   <ItemGroup>
 	<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">

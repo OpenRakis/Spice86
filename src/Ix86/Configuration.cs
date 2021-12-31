@@ -81,12 +81,12 @@ public class Configuration
         _gdbPort = gdbPort;
     }
 
-    public virtual IOverrideSupplier GetOverrideSupplier()
+    public virtual IOverrideSupplier? GetOverrideSupplier()
     {
         return _overrideSupplier;
     }
 
-    public virtual void SetOverrideSupplier(IOverrideSupplier overrideSupplier)
+    public virtual void SetOverrideSupplier(IOverrideSupplier? overrideSupplier)
     {
         _overrideSupplier = overrideSupplier;
     }
