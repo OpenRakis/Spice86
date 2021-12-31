@@ -1,15 +1,13 @@
 ﻿using Ix86.Utils;
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ix86.Emulator.Memory;
 
 /// <summary>
 /// An address that is represented with a real mode segment and an offset.
 /// </summary>
-public class SegmentedAddress
+public class SegmentedAddress : IComparable<SegmentedAddress>
 {
     private int _segment;
     private int _offset;
@@ -46,7 +44,7 @@ public class SegmentedAddress
 
     public override string ToString()
     {
-        return ToSegmentOffsetRepresentation() + '/' + ConvertUtils.ToHex(ToPhysical());
+        return $"{ToSegmentOffsetRepresentation()}/{ConvertUtils.ToHex(ToPhysical())}";
     }
 
     public override bool Equals(object? obj)
@@ -60,5 +58,12 @@ public class SegmentedAddress
             return false;
         }
         return MemoryUtils.ToPhysicalAddress(_segment, _offset) == MemoryUtils.ToPhysicalAddress(other._segment, other._offset);
+    }
+
+    public int CompareTo(SegmentedAddress? other)
+    {
+        int x = this.ToPhysical();
+        int? y = other?.ToPhysical();
+        return (x < y) ? -1 : ((x == y) ? 0 : 1);
     }
 }
