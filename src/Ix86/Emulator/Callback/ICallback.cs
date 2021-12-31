@@ -1,5 +1,8 @@
 ﻿namespace Ix86.Emulator.Callback;
-public interface ICallback
+
+using Ix86.Utils;
+
+public interface ICallback : ICheckedRunnable
 {
     public int GetIndex();
 }

@@ -1,4 +1,4 @@
-﻿namespace Ix86.Emulator.CPU;
+﻿namespace Ix86.Emulator.Cpu;
 
 using Ix86.Emulator.Memory;
 using Ix86.Utils;
@@ -454,6 +454,6 @@ public class State
 
     public override int GetHashCode()
     {
-        return base.GetHashCode() + ip.GetHashCode() + flags.GetHashCode() + registers.GetHashCode() + segmentRegisters.GetHashCode();
+        return HashCode.Combine(ip, flags, registers, segmentRegisters);
     }
 }

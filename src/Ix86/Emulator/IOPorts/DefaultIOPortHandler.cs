@@ -13,7 +13,7 @@
     {
         protected Machine machine;
         protected Memory? memory;
-        protected CPU cpu;
+        protected Cpu cpu;
         protected bool failOnUnhandledPort;
         protected DefaultIOPortHandler(Machine machine, bool failOnUnhandledPort)
         {

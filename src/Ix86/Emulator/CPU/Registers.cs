@@ -1,4 +1,4 @@
-﻿namespace Ix86.Emulator.CPU;
+﻿namespace Ix86.Emulator.Cpu;
 using System.Collections.Generic;
 
 public class Registers : RegistersHolder

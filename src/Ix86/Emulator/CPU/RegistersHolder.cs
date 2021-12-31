@@ -1,4 +1,4 @@
-﻿namespace Ix86.Emulator.CPU;
+﻿namespace Ix86.Emulator.Cpu;
 
 using Ix86.Utils;
 
@@ -95,7 +95,7 @@ public class RegistersHolder
 
     public override int GetHashCode()
     {
-        return base.GetHashCode() + _registers.GetHashCode();
+        return HashCode.Combine(this, _registers);
     }
 
     public override bool Equals(object? obj)

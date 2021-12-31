@@ -14,7 +14,7 @@ namespace Ix86.Emulator.Callback
     /// </summary>
     public abstract class IndexBasedDispatcher<T> where T : ICheckedRunnable
     {
-        protected Dictionary<int, ICheckedRunnable> _dispatchTable = new();
+        protected Dictionary<int, T> _dispatchTable = new();
         public virtual void Run(int index)
         {
             var handler = _dispatchTable[index];
@@ -26,7 +26,7 @@ namespace Ix86.Emulator.Callback
             handler.Run();
         }
 
-        public virtual void AddService(int index, ICheckedRunnable runnable)
+        public virtual void AddService(int index, T runnable)
         {
             this._dispatchTable.Add(index, runnable);
         }

@@ -1,4 +1,4 @@
-﻿namespace Ix86.Emulator.CPU;
+﻿namespace Ix86.Emulator.Cpu;
 using Ix86.Emulator.Memory;
 
 public class Stack
