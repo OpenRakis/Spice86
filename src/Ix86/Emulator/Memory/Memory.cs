@@ -1,5 +1,6 @@
 ﻿namespace Ix86.Emulator.Memory;
 
+using Ix86.Emulator.Machine.Breakpoint;
 using Ix86.Utils;
 
 using System;
@@ -12,9 +13,8 @@ using System.IO;
 public class Memory
 {
     private readonly byte[] physicalMemory;
-    // TODO
-    //private BreakPointHolder readBreakPoints = new BreakPointHolder();
-    //private BreakPointHolder writeBreakPoints = new BreakPointHolder();
+    private readonly BreakPointHolder readBreakPoints = new();
+    private readonly BreakPointHolder writeBreakPoints = new();
     public Memory(int size)
     {
         this.physicalMemory = new byte[size];
@@ -137,16 +137,16 @@ public class Memory
 
     private void MonitorReadAccess(int address)
     {
-        //readBreakPoints.TriggerMatchingBreakPoints(address);
+        readBreakPoints.TriggerMatchingBreakPoints(address);
     }
 
     private void MonitorWriteAccess(int address)
     {
-        //writeBreakPoints.TriggerMatchingBreakPoints(address);
+        writeBreakPoints.TriggerMatchingBreakPoints(address);
     }
 
     private void MonitorRangeWriteAccess(int startAddress, int endAddress)
     {
-        //writeBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
+        writeBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
     }
 }
