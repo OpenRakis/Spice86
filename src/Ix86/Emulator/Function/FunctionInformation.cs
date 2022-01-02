@@ -11,12 +11,12 @@ using System.Threading.Tasks;
 
 public class FunctionInformation : IComparable<FunctionInformation>
 {
-    private SegmentedAddress _address;
-    private string? _name;
-    private ICheckedSupplier<ICheckedRunnable>? _overrideRenamed;
-    private Dictionary<FunctionReturn, List<SegmentedAddress>> _returns = new();
-    private Dictionary<FunctionReturn, List<SegmentedAddress>> _unalignedReturns = new();
-    private List<FunctionInformation> _callers = new List<FunctionInformation>();
+    private readonly SegmentedAddress _address;
+    private readonly string? _name;
+    private readonly ICheckedSupplier<ICheckedRunnable>? _overrideRenamed;
+    private readonly Dictionary<FunctionReturn, List<SegmentedAddress>> _returns = new();
+    private readonly Dictionary<FunctionReturn, List<SegmentedAddress>> _unalignedReturns = new();
+    private readonly List<FunctionInformation> _callers = new();
     private int calledCount;
     public FunctionInformation(SegmentedAddress address, string name) : this(address, name, null)
     {
@@ -68,7 +68,7 @@ public class FunctionInformation : IComparable<FunctionInformation>
         AddReturn(_returns, functionReturn, target);
     }
 
-    private void AddReturn(Dictionary<FunctionReturn, List<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress target)
+    private static void AddReturn(Dictionary<FunctionReturn, List<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress target)
     {
         if(returnsMap.ContainsKey(functionReturn) == false)
         {

@@ -6,8 +6,8 @@ using System;
 
 public class FunctionReturn : IComparable<FunctionReturn>
 {
-    private CallType _returnCallType;
-    private SegmentedAddress _instructionAddress;
+    private readonly CallType _returnCallType;
+    private readonly SegmentedAddress _instructionAddress;
     public FunctionReturn(CallType returnCallType, SegmentedAddress instructionAddress)
     {
         this._returnCallType = returnCallType;
@@ -31,7 +31,7 @@ public class FunctionReturn : IComparable<FunctionReturn>
 
     public override string ToString()
     {
-        return _returnCallType.ToString() + " at " + _instructionAddress.ToString();
+        return $"{_returnCallType} at {_instructionAddress}";
     }
 
     public int CompareTo(FunctionReturn? other)

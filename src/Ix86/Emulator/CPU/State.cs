@@ -10,10 +10,10 @@ using System.Threading.Tasks;
 
 public class State
 {
-    private Registers registers = new Registers();
-    private SegmentRegisters segmentRegisters = new SegmentRegisters();
+    private readonly Registers registers = new();
+    private readonly SegmentRegisters segmentRegisters = new();
     private int ip;
-    private Flags flags = new Flags();
+    private readonly Flags flags = new();
     private long cycles;
     private int? segmentOverrideIndex = null;
     private bool? continueZeroFlagValue = null;

@@ -5,8 +5,6 @@ using Ix86.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 public class RegistersHolder
 {
@@ -15,8 +13,8 @@ public class RegistersHolder
     // 3rd bit in register index means to access the high part
     private const int Register8IndexHighBitMask = 0b100;
 
-    private Dictionary<int, string> _registersNames;
-    private int[] _registers;
+    private readonly Dictionary<int, string> _registersNames;
+    private readonly int[] _registers;
 
     public RegistersHolder(Dictionary<int, string> registersNames)
     {

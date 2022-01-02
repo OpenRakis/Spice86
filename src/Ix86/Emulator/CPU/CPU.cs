@@ -17,7 +17,7 @@ using System.Collections.Generic;
 /// </summary>
 public class Cpu
 {
-    private State? _state;
+    private readonly State? _state;
     //private static readonly ILogger<Cpu> _logger = LoggerFactory.CreateLogger(nameof(Cpu));
 
     public State? GetState()

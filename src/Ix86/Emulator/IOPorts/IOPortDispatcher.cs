@@ -13,7 +13,7 @@
     /// </summary>
     public class IOPortDispatcher : DefaultIOPortHandler
     {
-        private Dictionary<int, IIOPortHandler> ioPortHandlers = new();
+        private readonly Dictionary<int, IIOPortHandler> ioPortHandlers = new();
         public IOPortDispatcher(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
         {
             this.failOnUnhandledPort = failOnUnhandledPort;

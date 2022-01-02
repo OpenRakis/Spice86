@@ -8,7 +8,7 @@ namespace Ix86.View.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
-        private MainWindow _mainWindow;
+        private readonly MainWindow _mainWindow;
 
         public MainWindowViewModel(MainWindow window)
         {

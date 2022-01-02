@@ -19,7 +19,7 @@ public class Configuration
     private bool _installInterruptVector;
     private bool _failOnUnhandledPort;
     private int _programEntryPointSegment;
-    private byte[] _expectedChecksum = new byte[0];
+    private byte[] _expectedChecksum = System.Array.Empty<byte>();
     private string? _defaultDumpDirectory;
     public virtual string? GetExe()
     {

@@ -9,8 +9,8 @@ namespace Ix86.Emulator.Memory;
 /// </summary>
 public class SegmentedAddress : IComparable<SegmentedAddress>
 {
-    private int _segment;
-    private int _offset;
+    private readonly int _segment;
+    private readonly int _offset;
     public SegmentedAddress(int segment, int offset)
     {
         _segment = segment;

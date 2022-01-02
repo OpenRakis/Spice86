@@ -2,13 +2,14 @@
 public enum ValueOperation
 {
     READ,
-    WRITE,
+    WRITE
 }
-public static class ValueOperationConverter
+
+public static class ValueOperationExtension
 {
-    public static ValueOperation OppositeOperation(ValueOperation value)
+    public static ValueOperation OppositeOperation(this ValueOperation instance)
     {
-        if(value == ValueOperation.READ)
+        if(instance == ValueOperation.READ)
         {
             return ValueOperation.WRITE;
         }

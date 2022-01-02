@@ -9,10 +9,10 @@ using Ix86.Emulator.Memory;
 
 public class CallbackHandler : IndexBasedDispatcher<ICallback>
 {
-    private Machine _machine;
-    private Memory? _memory;
+    private readonly Machine _machine;
+    private readonly Memory? _memory;
     // Segment where to install the callbacks code in memory
-    private int _callbackHandlerSegment;
+    private readonly int _callbackHandlerSegment;
     // offset in this segment so that new callbacks are written to a fresh location
     private int _offset = 0;
     // Map of all the callback addresses

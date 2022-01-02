@@ -94,7 +94,7 @@ namespace Ix86.View
             return registryValue <= 0;
         }
 
-        private bool IsInDarkMode()
+        private static bool IsInDarkMode()
         {
 #pragma warning disable ERP022 // Unobserved exception in generic exception handler
             try

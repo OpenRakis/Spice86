@@ -3,8 +3,8 @@ using Ix86.Emulator.Memory;
 
 public class Stack
 {
-    private Memory memory;
-    private State state;
+    private readonly Memory memory;
+    private readonly State state;
     public Stack(Memory memory, State state)
     {
         this.memory = memory;

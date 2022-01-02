@@ -36,7 +36,7 @@ public class Alu
 
     private const int ShiftCountMask = 0x1F;
 
-    private State _state;
+    private readonly State _state;
 
     public Alu(State state)
     {
@@ -616,17 +616,17 @@ public class Alu
         return res;
     }
 
-    private int BorrowBitsSub(int value1, int value2, int dst)
+    private static int BorrowBitsSub(int value1, int value2, int dst)
     {
         return (((value1 ^ value2) ^ dst) ^ ((value1 ^ dst) & (value1 ^ value2)));
     }
 
-    private int CarryBitsAdd(int value1, int value2, int dst)
+    private static int CarryBitsAdd(int value1, int value2, int dst)
     {
         return (((value1 ^ value2) ^ dst) ^ ((value1 ^ dst) & (~(value1 ^ value2))));
     }
 
-    private bool IsParity(int value)
+    private static bool IsParity(int value)
     {
         int low4 = value & 0xF;
         int high4 = (value >> 4) & 0xF;
@@ -634,12 +634,12 @@ public class Alu
     }
 
     // from https://www.vogons.org/viewtopic.php?t=55377
-    private int OverflowBitsAdd(int value1, int value2, int dst)
+    private static int OverflowBitsAdd(int value1, int value2, int dst)
     {
         return ((value1 ^ dst) & (~(value1 ^ value2)));
     }
 
-    private int OverflowBitsSub(int value1, int value2, int dst)
+    private static int OverflowBitsSub(int value1, int value2, int dst)
     {
         return ((value1 ^ dst) & (value1 ^ value2));
     }

@@ -12,7 +12,7 @@ using Ix86.Emulator.Memory;
 
 public class Machine
 {
-    private Cpu _cpu = new Cpu();
+    private readonly Cpu _cpu = new();
 
     public Cpu GetCpu()
     {

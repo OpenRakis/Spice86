@@ -11,7 +11,7 @@ using System.IO;
 /// </summary>
 public class Memory
 {
-    private byte[] physicalMemory;
+    private readonly byte[] physicalMemory;
     // TODO
     //private BreakPointHolder readBreakPoints = new BreakPointHolder();
     //private BreakPointHolder writeBreakPoints = new BreakPointHolder();
