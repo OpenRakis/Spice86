@@ -1,5 +1,6 @@
 ﻿namespace Ix86.Emulator.Memory;
 
+using Ix86.Emulator.Errors;
 using Ix86.Emulator.Machine.Breakpoint;
 using Ix86.Utils;
 
@@ -28,6 +29,25 @@ public class Memory
     public virtual byte[] GetRam()
     {
         return physicalMemory;
+    }
+
+    public void ToggleBreakPoint(BreakPoint breakPoint, bool on)
+    {
+        var type = breakPoint.GetBreakPointType();
+        if (type == BreakPointType.READ)
+        {
+            readBreakPoints.ToggleBreakPoint(breakPoint, on);
+        }
+        if(type == BreakPointType.WRITE)
+        {
+            writeBreakPoints.ToggleBreakPoint(breakPoint, on);
+        }
+        if(type == BreakPointType.ACCESS)
+        {
+            readBreakPoints.ToggleBreakPoint(breakPoint, on);
+            writeBreakPoints.ToggleBreakPoint(breakPoint, on);
+        }
+        throw new UnrecoverableException($"Trying to add unsupported breakpoint of type {type}");
     }
 
     public virtual void LoadData(int address, byte[] data)

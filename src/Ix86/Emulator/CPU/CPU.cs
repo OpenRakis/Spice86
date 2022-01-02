@@ -1,7 +1,9 @@
 ﻿namespace Ix86.Emulator.Cpu;
 
+using Ix86.Emulator.Function;
 using Ix86.Emulator.IOPorts;
 using Ix86.Emulator.Machine;
+using Ix86.Emulator.Memory;
 
 using System;
 using System.Collections.Generic;
@@ -14,15 +16,50 @@ using System.Collections.Generic;
 /// http://ref.x86asm.net/coder32.html </li><li> Instructions implementation details:
 /// https://www.felixcloutier.com/x86/ </li><li> Pure 8086 instructions:
 /// https://jbwyatt.com/253/emu/8086_instruction_set.html </li></ul>
+/// TODO: Complete it !
 /// </summary>
 public class Cpu
 {
-    private readonly State? _state;
+    private readonly State _state = new();
+    private readonly Memory _memory;
+    private readonly Stack _stack;
     //private static readonly ILogger<Cpu> _logger = LoggerFactory.CreateLogger(nameof(Cpu));
 
-    public State? GetState()
+    public Cpu(Machine machine, bool debugMode)
+    {
+        _state = new();
+        _memory = machine.GetMemory();
+        _stack = new(_memory, _state);
+    }
+
+    public State GetState()
     {
         return _state;
+    }
+
+    internal Stack GetStack()
+    {
+        return _stack;
+    }
+
+    internal void NearRet(int v)
+    {
+        throw new NotImplementedException();
+    }
+
+    internal void FarRet(int v)
+    {
+        throw new NotImplementedException();
+    }
+
+    internal void InterruptRet()
+    {
+        throw new NotImplementedException();
+    }
+
+    internal StaticAddressesRecorder GetStaticAddressesRecorder()
+    {
+        throw new NotImplementedException();
     }
 }
 //        Arrays.asList(0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3));

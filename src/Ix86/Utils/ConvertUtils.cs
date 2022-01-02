@@ -39,14 +39,14 @@ public class ConvertUtils
         return $"{Uint16(value):x}";
     }
 
-    public static string ToJavaStringWithPhysical(SegmentedAddress address)
+    public static string ToCSharpStringWithPhysical(SegmentedAddress address)
     {
-        return ToHex16WithoutX(address.GetSegment()) + "_" + ToHex16WithoutX(address.GetOffset()) + "_" + ToHex16WithoutX(address.ToPhysical());
+        return $"{ToHex16WithoutX(address.GetSegment())}_{ToHex16WithoutX(address.GetOffset())}_{ToHex16WithoutX(address.ToPhysical())}";
     }
 
-    public static string ToJavaString(SegmentedAddress address)
+    public static string ToCSharpString(SegmentedAddress address)
     {
-        return ToHex16WithoutX(address.GetSegment()) + "_" + ToHex16WithoutX(address.GetOffset());
+        return $"{ToHex16WithoutX(address.GetSegment())}_{ToHex16WithoutX(address.GetOffset())}";
     }
 
     public static string ToBin8(int value)
@@ -71,13 +71,13 @@ public class ConvertUtils
 
     public static string ToSegmentedAddressRepresentation(int segment, int offset)
     {
-        return ToHex16(segment) + ":" + ToHex16(offset);
+        return $"{ToHex16(segment)}:{ToHex16(offset)}";
     }
 
     public static string ToAbsoluteSegmentedAddress(int segment, int offset)
     {
         int physical = MemoryUtils.ToPhysicalAddress(segment, offset);
-        return ToHex16(ToAbsoluteSegment(physical)) + ":" + ToHex16(ToAbsoluteOffset(physical));
+        return $"{ToHex16(ToAbsoluteSegment(physical))}:{ToHex16(ToAbsoluteOffset(physical))}";
     }
 
     public static int ToAbsoluteSegment(int physicalAddress)

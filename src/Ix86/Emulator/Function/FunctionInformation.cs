@@ -112,4 +112,27 @@ public class FunctionInformation : IComparable<FunctionInformation>
     {
         return this.GetAddress().CompareTo(other?.GetAddress());
     }
+
+    public override int GetHashCode()
+    {
+        return _address.GetHashCode();
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if(this == obj)
+        {
+            return true;
+        }
+        if(obj is not FunctionInformation other)
+        {
+            return false;
+        }
+        return _address.Equals(other._address);
+    }
+
+    public override string ToString()
+    {
+        return $"{this._name}_{ConvertUtils.ToCSharpStringWithPhysical(this._address)}";
+    }
 }
