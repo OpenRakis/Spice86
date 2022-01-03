@@ -1,4 +1,4 @@
-Ix86
+Spice86
 ====
 
-Ix86 is an experimental emulator inspired by Spice86 and Aeon.
+Spice86 is an experimental emulator inspired by the Java original Spice86 emulator and Aeon
