@@ -25,13 +25,7 @@ public class SegmentRegisterBasedAddress : SegmentedAddress
 
     public virtual void AddAddressOperation(AddressOperation addressOperation, int segmentRegisterIndex)
     {
-        if (_addressOperations.TryGetValue(addressOperation, out var segmentRegisterIndexes) == false)
-        {
-            _addressOperations.Add(addressOperation, new());
-        }
-        else
-        {
-            segmentRegisterIndexes.Add(segmentRegisterIndex);
-        }
+        var segmentRegisterIndexes = _addressOperations.GetValueOrDefault(addressOperation, new());
+        segmentRegisterIndexes.Add(segmentRegisterIndex);
     }
 }

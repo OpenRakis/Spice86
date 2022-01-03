@@ -5,9 +5,6 @@ using Spice86.Utils;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 public class FunctionInformation : IComparable<FunctionInformation>
 {
@@ -29,7 +26,7 @@ public class FunctionInformation : IComparable<FunctionInformation>
         this._overrideRenamed = overrideRenamed;
     }
 
-    public virtual void Enter(FunctionInformation caller)
+    public virtual void Enter(FunctionInformation? caller)
     {
         if (caller != null)
         {
@@ -58,28 +55,22 @@ public class FunctionInformation : IComparable<FunctionInformation>
         }
     }
 
-    public virtual void AddUnalignedReturn(FunctionReturn functionReturn, SegmentedAddress target)
+    public virtual void AddUnalignedReturn(FunctionReturn functionReturn, SegmentedAddress? target)
     {
         AddReturn(_unalignedReturns, functionReturn, target);
     }
 
-    public virtual void AddReturn(FunctionReturn functionReturn, SegmentedAddress target)
+    public virtual void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target)
     {
         AddReturn(_returns, functionReturn, target);
     }
 
-    private static void AddReturn(Dictionary<FunctionReturn, List<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress target)
+    private static void AddReturn(Dictionary<FunctionReturn, List<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress? target)
     {
-        if (returnsMap.ContainsKey(functionReturn) == false)
+        var addresses = returnsMap.GetValueOrDefault(functionReturn, new());
+        if (target != null)
         {
-            returnsMap.Add(functionReturn, new List<SegmentedAddress>());
-        }
-        if (returnsMap.TryGetValue(functionReturn, out var addresses))
-        {
-            if (target != null)
-            {
-                addresses.Add(target);
-            }
+            addresses.Add(target);
         }
     }
 

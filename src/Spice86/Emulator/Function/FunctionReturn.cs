@@ -52,6 +52,5 @@ public class FunctionReturn : IComparable<FunctionReturn>
         return
                 _instructionAddress.Equals(other._instructionAddress)
             && _returnCallType.Equals(other._returnCallType);
-
     }
 }

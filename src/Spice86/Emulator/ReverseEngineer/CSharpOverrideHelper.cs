@@ -88,7 +88,7 @@ public class CSharpOverrideHelper
         this.DefineFunction(segment, offset, suffix, null);
     }
 
-    public virtual void DefineFunction(int segment, int offset, string suffix, Func<Action> overrideRenamed)
+    public virtual void DefineFunction(int segment, int offset, string suffix, Func<Action>? overrideRenamed)
     {
         SegmentedAddress address = new(segment, offset);
         var name = $"{_prefix}.{suffix}";

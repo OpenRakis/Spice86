@@ -41,16 +41,8 @@
             long address = breakPoint.GetAddress();
             if (on)
             {
-                if (_breakPoints.TryGetValue(address, out var breakPointList) == false)
-                {
-                    breakPointList = new List<BreakPoint>();
-                    _breakPoints.Add(address, breakPointList);
-                }
-                else
-                {
-                    breakPointList.Add(breakPoint);
-                }
-
+                var breakPointList = _breakPoints.GetValueOrDefault(address, new());
+                breakPointList.Add(breakPoint);
             }
             else
             {
