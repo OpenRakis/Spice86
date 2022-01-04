@@ -6,7 +6,8 @@ using System.Collections.Generic;
 internal static class DictionaryExtensions
 {
     /// <summary>
-    /// Like <see cref="GetValueOrDefault"/> but only evaluates the lambda if needed.
+    /// Like <see cref="GetValueOrDefault"/> but only evaluates the lambda if needed.<br/>
+    /// And adds it to the <paramref name="dict"/> if so.
     /// </summary>
     /// <typeparam name="TKey">The generic key type</typeparam>
     /// <typeparam name="TValue">The generic return type</typeparam>
@@ -24,6 +25,8 @@ internal static class DictionaryExtensions
         {
             return value;
         }
-        return lambda.Invoke();
+        value = lambda.Invoke();
+        _ = dict.TryAdd(key, value);
+        return value;
     }
 }
