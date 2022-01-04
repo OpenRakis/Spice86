@@ -127,7 +127,7 @@ public class FunctionInformation : IComparable<FunctionInformation>
 
     private static void AddReturn(Dictionary<FunctionReturn, List<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress? target)
     {
-        var addresses = returnsMap.GetValueOrDefault(functionReturn, new());
+        var addresses = returnsMap.ComputeIfAbsent(functionReturn, () => new());
         if (target != null)
         {
             addresses.Add(target);

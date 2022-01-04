@@ -40,7 +40,7 @@ public class FunctionHandler
     public void Call(CallType callType, int entrySegment, int entryOffset, int? expectedReturnSegment, int? expectedReturnOffset, Func<String>? nameGenerator, bool recordReturn)
     {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
-        FunctionInformation currentFunction = _functionInformations.GetValueOrDefault(entryAddress, new FunctionInformation(entryAddress, nameGenerator != null ? nameGenerator.Invoke() : "unknown"));
+        FunctionInformation currentFunction = _functionInformations.ComputeIfAbsent(entryAddress, () => new FunctionInformation(entryAddress, nameGenerator != null ? nameGenerator.Invoke() : "unknown"));
         if (_debugMode)
         {
             FunctionInformation? caller = GetFunctionInformation(GetCurrentFunctionCall());

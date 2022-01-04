@@ -94,7 +94,7 @@
             long address = breakPoint.GetAddress();
             if (on)
             {
-                var breakPointList = _breakPoints.GetValueOrDefault(address, new());
+                var breakPointList = _breakPoints.ComputeIfAbsent(address, () => new());
                 breakPointList.Add(breakPoint);
             }
             else

@@ -17,7 +17,7 @@ public class SegmentRegisterBasedAddress : SegmentedAddress
 
     public void AddAddressOperation(AddressOperation addressOperation, int segmentRegisterIndex)
     {
-        var segmentRegisterIndexes = _addressOperations.GetValueOrDefault(addressOperation, new());
+        List<int> segmentRegisterIndexes = _addressOperations.ComputeIfAbsent(addressOperation, () => new());
         segmentRegisterIndexes.Add(segmentRegisterIndex);
     }
 
