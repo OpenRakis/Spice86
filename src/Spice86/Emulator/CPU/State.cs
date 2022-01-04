@@ -196,62 +196,62 @@ public class State
 
     public virtual int GetES()
     {
-        return segmentRegisters.GetRegister(SegmentRegisters.ES_INDEX);
+        return segmentRegisters.GetRegister(SegmentRegisters.EsIndex);
     }
 
     public virtual void SetES(int value)
     {
-        segmentRegisters.SetRegister(SegmentRegisters.ES_INDEX, value);
+        segmentRegisters.SetRegister(SegmentRegisters.EsIndex, value);
     }
 
     public virtual int GetCS()
     {
-        return segmentRegisters.GetRegister(SegmentRegisters.CS_INDEX);
+        return segmentRegisters.GetRegister(SegmentRegisters.CsIndex);
     }
 
     public virtual void SetCS(int value)
     {
-        segmentRegisters.SetRegister(SegmentRegisters.CS_INDEX, value);
+        segmentRegisters.SetRegister(SegmentRegisters.CsIndex, value);
     }
 
     public virtual int GetSS()
     {
-        return segmentRegisters.GetRegister(SegmentRegisters.SS_INDEX);
+        return segmentRegisters.GetRegister(SegmentRegisters.SsIndex);
     }
 
     public virtual void SetSS(int value)
     {
-        segmentRegisters.SetRegister(SegmentRegisters.SS_INDEX, value);
+        segmentRegisters.SetRegister(SegmentRegisters.SsIndex, value);
     }
 
     public virtual int GetDS()
     {
-        return segmentRegisters.GetRegister(SegmentRegisters.DS_INDEX);
+        return segmentRegisters.GetRegister(SegmentRegisters.DsIndex);
     }
 
     public virtual void SetDS(int value)
     {
-        segmentRegisters.SetRegister(SegmentRegisters.DS_INDEX, value);
+        segmentRegisters.SetRegister(SegmentRegisters.DsIndex, value);
     }
 
     public virtual int GetFS()
     {
-        return segmentRegisters.GetRegister(SegmentRegisters.FS_INDEX);
+        return segmentRegisters.GetRegister(SegmentRegisters.FsIndex);
     }
 
     public virtual void SetFS(int value)
     {
-        segmentRegisters.SetRegister(SegmentRegisters.FS_INDEX, value);
+        segmentRegisters.SetRegister(SegmentRegisters.FsIndex, value);
     }
 
     public virtual int GetGS()
     {
-        return segmentRegisters.GetRegister(SegmentRegisters.GS_INDEX);
+        return segmentRegisters.GetRegister(SegmentRegisters.GsIndex);
     }
 
     public virtual void SetGS(int value)
     {
-        segmentRegisters.SetRegister(SegmentRegisters.GS_INDEX, value);
+        segmentRegisters.SetRegister(SegmentRegisters.GsIndex, value);
     }
 
     public virtual int GetIP()

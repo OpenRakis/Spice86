@@ -7,7 +7,9 @@ namespace Spice86.Emulator.Callback;
 using Spice86.Emulator.Machine;
 using Spice86.Emulator.Memory;
 
-public class CallbackHandler : IndexBasedDispatcher<ICallback>
+using System;
+
+public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
 {
     private readonly Machine _machine;
     private readonly Memory? _memory;
@@ -24,7 +26,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback>
         this._callbackHandlerSegment = interruptHandlerSegment;
     }
 
-    public virtual void AddCallback(ICallback callback)
+    public virtual void AddCallback(ICallback<Action> callback)
     {
         AddService(callback.GetIndex(), callback);
     }
@@ -47,7 +49,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback>
         }
     }
 
-    private void InstallCallbackInInterruptTable(ICallback callback)
+    private void InstallCallbackInInterruptTable(ICallback<Action> callback)
     {
         _offset += InstallInterruptWithCallback(callback.GetIndex(), _callbackHandlerSegment, _offset);
     }

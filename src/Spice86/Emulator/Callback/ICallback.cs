@@ -1,8 +1,10 @@
 ﻿namespace Spice86.Emulator.Callback;
 
-using Spice86.Utils;
+using System;
 
-public interface ICallback : ICheckedRunnable
+public interface ICallback<T>
 {
     public int GetIndex();
+
+    public Func<T> GetCallback();
 }

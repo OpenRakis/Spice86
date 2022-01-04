@@ -10,16 +10,16 @@ public class FunctionInformation : IComparable<FunctionInformation>
 {
     private readonly SegmentedAddress _address;
     private readonly string? _name;
-    private readonly ICheckedSupplier<ICheckedRunnable>? _overrideRenamed;
+    private readonly Func<Action>? _overrideRenamed;
     private readonly Dictionary<FunctionReturn, List<SegmentedAddress>> _returns = new();
     private readonly Dictionary<FunctionReturn, List<SegmentedAddress>> _unalignedReturns = new();
     private readonly List<FunctionInformation> _callers = new();
-    private int calledCount;
+    private int _calledCount;
     public FunctionInformation(SegmentedAddress address, string name) : this(address, name, null)
     {
     }
 
-    public FunctionInformation(SegmentedAddress address, string name, ICheckedSupplier<ICheckedRunnable>? overrideRenamed)
+    public FunctionInformation(SegmentedAddress address, string name, Func<Action>? overrideRenamed)
     {
         this._address = address;
         this._name = name;
@@ -33,12 +33,12 @@ public class FunctionInformation : IComparable<FunctionInformation>
             this._callers.Add(caller);
         }
 
-        calledCount++;
+        _calledCount++;
     }
 
     public virtual int GetCalledCount()
     {
-        return calledCount;
+        return _calledCount;
     }
 
     public virtual bool HasOverride()
@@ -50,8 +50,8 @@ public class FunctionInformation : IComparable<FunctionInformation>
     {
         if (HasOverride())
         {
-            ICheckedRunnable? retHandler = _overrideRenamed?.Get();
-            retHandler?.Run();
+            var retHandler = _overrideRenamed;
+            retHandler?.Invoke();
         }
     }
 

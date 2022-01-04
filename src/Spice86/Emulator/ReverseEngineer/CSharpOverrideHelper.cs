@@ -46,7 +46,7 @@ public class CSharpOverrideHelper
             int callbackNumber = callbackAddressEnty.Key;
             SegmentedAddress callbackAddress = callbackAddressEnty.Value;
             DefineFunction(callbackAddress.GetSegment(), callbackAddress.GetOffset(), $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}",
-                new Func<Action>(() =>
+            new Func<Action>(() => 
             {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
@@ -88,7 +88,7 @@ public class CSharpOverrideHelper
         this.DefineFunction(segment, offset, suffix, null);
     }
 
-    public virtual void DefineFunction(int segment, int offset, string suffix, Func<Action>? overrideRenamed)
+    public virtual void DefineFunction(int segment, int offset, string suffix, Func<Action>? @override)
     {
         SegmentedAddress address = new(segment, offset);
         var name = $"{_prefix}.{suffix}";
@@ -98,12 +98,7 @@ public class CSharpOverrideHelper
             _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.GetName(), name);
             throw new UnrecoverableException(error);
         }
-
-        var runnable = new CheckedRunnable(overrideRenamed);
-
-        var supplier = new CheckedSupplier<ICheckedRunnable>(runnable);
-
-        FunctionInformation functionInformation = new(address, name, supplier);
+        FunctionInformation functionInformation = new(address, name, @override);
         functionInformations.Add(address, functionInformation);
     }
 
@@ -158,7 +153,7 @@ public class CSharpOverrideHelper
     /// Call this in your override when you re-implement a function with a branch that seems never reached. 
     /// @param message
     /// </summary>
-    protected void FailAsUntested(String message)
+    protected void FailAsUntested(string message)
     {
         var dumpedCallStack = _machine.DumpCallStack();
         var error = $"Untested code reached, please tell us how to reach this state.Here is the message: {message} Here is the call stack: {dumpedCallStack}";
