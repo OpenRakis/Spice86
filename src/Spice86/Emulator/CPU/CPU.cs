@@ -61,6 +61,11 @@ public class Cpu
     {
         throw new NotImplementedException();
     }
+
+    internal void ExternalInterrupt(int vectorNumber)
+    {
+        throw new NotImplementedException();
+    }
 }
 //        Arrays.asList(0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3));
 
