@@ -1,12 +1,8 @@
 ﻿namespace Spice86.Emulator.IOPorts
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
-
     using Spice86.Emulator.Machine;
+
+    using System.Collections.Generic;
 
     /// <summary>
     /// Handles calling the correct dispatcher depending on port number for I/O reads and writes.
@@ -14,12 +10,13 @@
     public class IOPortDispatcher : DefaultIOPortHandler
     {
         private readonly Dictionary<int, IIOPortHandler> ioPortHandlers = new();
+
         public IOPortDispatcher(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
         {
             this.failOnUnhandledPort = failOnUnhandledPort;
         }
 
-        public virtual void AddIOPortHandler(int port, IIOPortHandler ioPortHandler)
+        public void AddIOPortHandler(int port, IIOPortHandler ioPortHandler)
         {
             ioPortHandlers.Add(port, ioPortHandler);
         }
@@ -32,6 +29,10 @@
             }
 
             return base.Inb(port);
+        }
+
+        public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
+        {
         }
 
         public override int Inw(int port)
@@ -66,10 +67,6 @@
             {
                 base.Outw(port, value);
             }
-        }
-
-        public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
-        {
         }
     }
 }

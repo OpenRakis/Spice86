@@ -1,24 +1,28 @@
 ﻿namespace Spice86.Emulator.Machine;
 
-using Spice86.Emulator.Errors;
-
 using Serilog;
+
+using Spice86.Emulator.Errors;
 
 using System.Threading;
 
 public class PauseHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<PauseHandler>();
-    private volatile bool _pauseRequested;
+
     private volatile bool _paused;
+
     private volatile bool _pauseEnded;
-    public virtual void RequestPause()
+
+    private volatile bool _pauseRequested;
+
+    public void RequestPause()
     {
         _pauseRequested = true;
         LogStatus($"{nameof(RequestPause)} finished");
     }
 
-    public virtual void RequestPauseAndWait()
+    public void RequestPauseAndWait()
     {
         LogStatus($"{nameof(RequestPauseAndWait)} started");
         _pauseRequested = true;
@@ -26,7 +30,7 @@ public class PauseHandler
         LogStatus($"{nameof(RequestPauseAndWait)} finished");
     }
 
-    public virtual void RequestResume()
+    public void RequestResume()
     {
         LogStatus($"{nameof(RequestResume)} started");
         _pauseRequested = false;
@@ -38,7 +42,7 @@ public class PauseHandler
         LogStatus($"{nameof(RequestResume)} finished");
     }
 
-    public virtual void WaitIfPaused()
+    public void WaitIfPaused()
     {
         while (_pauseRequested)
         {

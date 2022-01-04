@@ -89,7 +89,7 @@ public class Alu
         return Add8(value1, value2, false);
     }
 
-    public virtual int And16(int value1, int value2)
+    public int And16(int value1, int value2)
     {
         int res = value1 & value2;
         UpdateFlags16(res);
@@ -98,7 +98,7 @@ public class Alu
         return res;
     }
 
-    public virtual int And8(int value1, int value2)
+    public int And8(int value1, int value2)
     {
         int res = value1 & value2;
         UpdateFlags8(res);
@@ -107,7 +107,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Dec16(int value1)
+    public int Dec16(int value1)
     {
         bool carry = _state.GetCarryFlag();
         int res = Sub16(value1, 1, false);
@@ -115,7 +115,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Dec8(int value1)
+    public int Dec8(int value1)
     {
         bool carry = _state.GetCarryFlag();
         int res = Sub8(value1, 1, false);
@@ -123,7 +123,7 @@ public class Alu
         return res;
     }
 
-    public virtual int? Div16(int value1, int value2)
+    public int? Div16(int value1, int value2)
     {
         if (value2 == 0)
         {
@@ -139,7 +139,7 @@ public class Alu
         return (int)res;
     }
 
-    public virtual int? Div8(int value1, int value2)
+    public int? Div8(int value1, int value2)
     {
         if (value2 == 0)
         {
@@ -155,7 +155,7 @@ public class Alu
         return res;
     }
 
-    public virtual int? Idiv16(int value1, int value2)
+    public int? Idiv16(int value1, int value2)
     {
         if (value2 == 0)
         {
@@ -174,7 +174,7 @@ public class Alu
         return res;
     }
 
-    public virtual int? Idiv8(int value1, int value2)
+    public int? Idiv8(int value1, int value2)
     {
         if (value2 == 0)
         {
@@ -190,7 +190,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Imul16(int value1, int value2)
+    public int Imul16(int value1, int value2)
     {
         int res = (short)(value1) * (short)(value2);
         bool doesNotFitInWord = res != (short)(res);
@@ -199,7 +199,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Imul8(int value1, int value2)
+    public int Imul8(int value1, int value2)
     {
         int res = (sbyte)(value1) * (sbyte)(value2);
         bool doesNotFitInByte = res != (sbyte)(res);
@@ -226,7 +226,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Mul16(int value1, int value2)
+    public int Mul16(int value1, int value2)
     {
         int res = value1 * value2;
         bool upperHalfNonZero = (res & 0xFFFF0000) != 0;
@@ -238,7 +238,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Mul8(int value1, int value2)
+    public int Mul8(int value1, int value2)
     {
         int res = value1 * value2;
         bool upperHalfNonZero = (res & 0xFF00) != 0;
@@ -268,7 +268,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Rcl16(int value, int count)
+    public int Rcl16(int value, int count)
     {
         count = (count & ShiftCountMask) % 17;
         if (count == 0)
@@ -292,7 +292,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Rcl8(int value, int count)
+    public int Rcl8(int value, int count)
     {
         count = (count & ShiftCountMask) % 9;
         if (count == 0)
@@ -316,7 +316,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Rcr16(int value, int count)
+    public int Rcr16(int value, int count)
     {
         count = (count & ShiftCountMask) % 17;
         if (count == 0)
@@ -339,7 +339,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Rcr8(int value, int count)
+    public int Rcr8(int value, int count)
     {
         count = (count & ShiftCountMask) % 9;
         if (count == 0)
@@ -362,7 +362,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Rol16(int value, int count)
+    public int Rol16(int value, int count)
     {
         count = (count & ShiftCountMask) % 16;
         if (count == 0)
@@ -380,7 +380,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Rol8(int value, int count)
+    public int Rol8(int value, int count)
     {
         count = (count & ShiftCountMask) % 8;
         if (count == 0)
@@ -398,7 +398,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Ror16(int value, int count)
+    public int Ror16(int value, int count)
     {
         count = (count & ShiftCountMask) % 16;
         if (count == 0)
@@ -416,7 +416,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Ror8(int value, int count)
+    public int Ror8(int value, int count)
     {
         count = (count & ShiftCountMask) % 8;
         if (count == 0)
@@ -434,7 +434,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Sar16(int value, int count)
+    public int Sar16(int value, int count)
     {
         count &= ShiftCountMask;
         if (count == 0)
@@ -451,7 +451,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Sar8(int value, int count)
+    public int Sar8(int value, int count)
     {
         count &= ShiftCountMask;
         if (count == 0)
@@ -468,17 +468,17 @@ public class Alu
         return res;
     }
 
-    public virtual int Sbb16(int value1, int value2)
+    public int Sbb16(int value1, int value2)
     {
         return Sub16(value1, value2, true);
     }
 
-    public virtual int Sbb8(int value1, int value2)
+    public int Sbb8(int value1, int value2)
     {
         return Sub8(value1, value2, true);
     }
 
-    public virtual int Shl16(int value, int count)
+    public int Shl16(int value, int count)
     {
         count &= ShiftCountMask;
         if (count == 0)
@@ -496,7 +496,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Shl8(int value, int count)
+    public int Shl8(int value, int count)
     {
         count &= ShiftCountMask;
         if (count == 0)
@@ -514,7 +514,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Shr16(int value, int count)
+    public int Shr16(int value, int count)
     {
         count &= ShiftCountMask;
         if (count == 0)
@@ -531,7 +531,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Shr8(int value, int count)
+    public int Shr8(int value, int count)
     {
         count &= ShiftCountMask;
         if (count == 0)
@@ -548,12 +548,12 @@ public class Alu
         return res;
     }
 
-    public virtual int Sub16(int value1, int value2)
+    public int Sub16(int value1, int value2)
     {
         return Sub16(value1, value2, false);
     }
 
-    public virtual int Sub16(int value1, int value2, bool useCarry)
+    public int Sub16(int value1, int value2, bool useCarry)
     {
         int carry = (useCarry && _state.GetCarryFlag()) ? 1 : 0;
         int res = (ushort)(value1 - value2 - carry);
@@ -566,12 +566,12 @@ public class Alu
         return res;
     }
 
-    public virtual int Sub8(int value1, int value2)
+    public int Sub8(int value1, int value2)
     {
         return Sub8(value1, value2, false);
     }
 
-    public virtual int Sub8(int value1, int value2, bool useCarry)
+    public int Sub8(int value1, int value2, bool useCarry)
     {
         int carry = (useCarry && _state.GetCarryFlag()) ? 1 : 0;
         int res = (byte)(value1 - value2 - carry);
@@ -584,21 +584,21 @@ public class Alu
         return res;
     }
 
-    public virtual void UpdateFlags16(int value)
+    public void UpdateFlags16(int value)
     {
         SetZeroFlag(value);
         SetParityFlag(value);
         SetSignFlag16(value);
     }
 
-    public virtual void UpdateFlags8(int value)
+    public void UpdateFlags8(int value)
     {
         SetZeroFlag(value);
         SetParityFlag(value);
         SetSignFlag8(value);
     }
 
-    public virtual int Xor16(int value1, int value2)
+    public int Xor16(int value1, int value2)
     {
         int res = value1 ^ value2;
         UpdateFlags16(res);
@@ -607,7 +607,7 @@ public class Alu
         return res;
     }
 
-    public virtual int Xor8(int value1, int value2)
+    public int Xor8(int value1, int value2)
     {
         int res = value1 ^ value2;
         UpdateFlags8(res);

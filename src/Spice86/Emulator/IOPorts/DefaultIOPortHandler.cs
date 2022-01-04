@@ -1,20 +1,19 @@
 ﻿namespace Spice86.Emulator.IOPorts
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
-
-    using Spice86.Emulator.Machine;
     using Spice86.Emulator.Cpu;
+    using Spice86.Emulator.Machine;
     using Spice86.Emulator.Memory;
+
     public abstract class DefaultIOPortHandler : IIOPortHandler
     {
-        protected Machine machine;
-        protected Memory? memory;
         protected Cpu cpu;
+
         protected bool failOnUnhandledPort;
+
+        protected Machine machine;
+
+        protected Memory? memory;
+
         protected DefaultIOPortHandler(Machine machine, bool failOnUnhandledPort)
         {
             this.machine = machine;
@@ -28,10 +27,10 @@
             return OnUnandledIn(port);
         }
 
-        /// <summary>
-        /// NOP for <see cref="DefaultIOPortHandler"/>
-        /// </summary>
-        public virtual void InitPortHandlers(IOPortDispatcher ioPortDispatcher) { }
+        /// <summary> NOP for <see cref="DefaultIOPortHandler" /> </summary>
+        public virtual void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
+        {
+        }
 
         public virtual int Inw(int port)
         {

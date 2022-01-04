@@ -8,13 +8,15 @@ using System.Linq;
 
 public class RegistersHolder
 {
-    // Registers allowing access to their high / low parts have indexes from 0 to 3 so 2 bits
-    private const int Register8IndexHighLowMask = 0b11;
     // 3rd bit in register index means to access the high part
     private const int Register8IndexHighBitMask = 0b100;
 
-    private readonly Dictionary<int, string> _registersNames;
+    // Registers allowing access to their high / low parts have indexes from 0 to 3 so 2 bits
+    private const int Register8IndexHighLowMask = 0b11;
+
     private readonly int[] _registers;
+
+    private readonly Dictionary<int, string> _registersNames;
 
     public RegistersHolder(Dictionary<int, string> registersNames)
     {
@@ -22,9 +24,22 @@ public class RegistersHolder
         this._registers = new int[registersNames.Count];
     }
 
-    public String GetRegName(int regIndex)
+    public override bool Equals(object? obj)
     {
-        return _registersNames[regIndex];
+        if (obj == this)
+        {
+            return true;
+        }
+        if (obj is not RegistersHolder other)
+        {
+            return false;
+        }
+        return Enumerable.SequenceEqual(this._registers, other._registers);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(this, _registers);
     }
 
     public String GetReg8Name(int regIndex)
@@ -39,33 +54,14 @@ public class RegistersHolder
         return _registers[index];
     }
 
-    public void SetRegister(int index, int value)
-    {
-        _registers[index] = ConvertUtils.Uint16(value);
-    }
-
-    public int GetRegister8L(int regIndex)
-    {
-        return ConvertUtils.ReadLsb(GetRegister(regIndex));
-    }
-
-    public void SetRegister8L(int regIndex, int value)
-    {
-        int currentValue = GetRegister(regIndex);
-        int newValue = ConvertUtils.WriteLsb(currentValue, value);
-        SetRegister(regIndex, newValue);
-    }
-
     public int GetRegister8H(int regIndex)
     {
         return ConvertUtils.ReadMsb(GetRegister(regIndex));
     }
 
-    public void SetRegister8H(int regIndex, int value)
+    public int GetRegister8L(int regIndex)
     {
-        int currentValue = GetRegister(regIndex);
-        int newValue = ConvertUtils.WriteMsb(currentValue, value);
-        SetRegister(regIndex, newValue);
+        return ConvertUtils.ReadLsb(GetRegister(regIndex));
     }
 
     public int GetRegisterFromHighLowIndex8(int index)
@@ -76,6 +72,30 @@ public class RegistersHolder
             return GetRegister8H(indexInArray);
         }
         return GetRegister8L(indexInArray);
+    }
+
+    public String GetRegName(int regIndex)
+    {
+        return _registersNames[regIndex];
+    }
+
+    public void SetRegister(int index, int value)
+    {
+        _registers[index] = ConvertUtils.Uint16(value);
+    }
+
+    public void SetRegister8H(int regIndex, int value)
+    {
+        int currentValue = GetRegister(regIndex);
+        int newValue = ConvertUtils.WriteMsb(currentValue, value);
+        SetRegister(regIndex, newValue);
+    }
+
+    public void SetRegister8L(int regIndex, int value)
+    {
+        int currentValue = GetRegister(regIndex);
+        int newValue = ConvertUtils.WriteLsb(currentValue, value);
+        SetRegister(regIndex, newValue);
     }
 
     public void SetRegisterFromHighLowIndex8(int index, int value)
@@ -89,23 +109,5 @@ public class RegistersHolder
         {
             SetRegister8L(indexInArray, value);
         }
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(this, _registers);
-    }
-
-    public override bool Equals(object? obj)
-    {
-        if (obj == this)
-        {
-            return true;
-        }
-        if (obj is not RegistersHolder other)
-        {
-            return false;
-        }
-        return Enumerable.SequenceEqual(this._registers, other._registers);
     }
 }

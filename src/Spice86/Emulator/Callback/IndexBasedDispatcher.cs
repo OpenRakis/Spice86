@@ -1,11 +1,7 @@
 using Spice86.Emulator.Errors;
-using Spice86.Utils;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Spice86.Emulator.Callback
 {
@@ -15,7 +11,13 @@ namespace Spice86.Emulator.Callback
     public abstract class IndexBasedDispatcher<T> where T : ICallback<Action>
     {
         protected Dictionary<int, ICallback<Action>> _dispatchTable = new();
-        public virtual void Run(int index)
+
+        public void AddService(int index, ICallback<Action> runnable)
+        {
+            this._dispatchTable.Add(index, runnable);
+        }
+
+        public void Run(int index)
         {
             var handler = _dispatchTable[index];
             if (handler == null)
@@ -24,11 +26,6 @@ namespace Spice86.Emulator.Callback
             }
 
             handler?.GetCallback().Invoke();
-        }
-
-        public virtual void AddService(int index, ICallback<Action> runnable)
-        {
-            this._dispatchTable.Add(index, runnable);
         }
 
         protected abstract UnhandledOperationException GenerateUnhandledOperationException(int index);

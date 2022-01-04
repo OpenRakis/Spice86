@@ -1,17 +1,17 @@
 ﻿namespace Spice86.Emulator.Machine.Breakpoint;
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 public class BreakPoint
 {
-    private readonly BreakPointType _breakPointType;
     private readonly long _address;
+
+    private readonly BreakPointType _breakPointType;
+
     private readonly Action<BreakPoint> _onReached;
+
     private readonly bool _removeOnTrigger;
+
     public BreakPoint(BreakPointType breakPointType, long address, Action<BreakPoint> onReached, bool removeOnTrigger)
     {
         this._breakPointType = breakPointType;
@@ -20,17 +20,17 @@ public class BreakPoint
         this._removeOnTrigger = removeOnTrigger;
     }
 
-    public virtual BreakPointType GetBreakPointType()
-    {
-        return _breakPointType;
-    }
-
-    public virtual long GetAddress()
+    public long GetAddress()
     {
         return _address;
     }
 
-    public virtual bool IsRemoveOnTrigger()
+    public BreakPointType GetBreakPointType()
+    {
+        return _breakPointType;
+    }
+
+    public bool IsRemoveOnTrigger()
     {
         return _removeOnTrigger;
     }
@@ -45,7 +45,7 @@ public class BreakPoint
         return this._address >= startAddress && this._address < endAddress;
     }
 
-    public virtual void Trigger()
+    public void Trigger()
     {
         _onReached.Invoke(this);
     }

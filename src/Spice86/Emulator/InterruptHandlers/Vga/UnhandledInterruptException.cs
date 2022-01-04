@@ -3,9 +3,7 @@
 using Spice86.Emulator.Errors;
 using Spice86.Emulator.Machine;
 
-/// <summary>
-/// Signals that the operation for the given callback is not handled.
-/// </summary>
+/// <summary> Signals that the operation for the given callback is not handled. </summary>
 public class UnhandledInterruptException : UnhandledOperationException
 {
     public UnhandledInterruptException(Machine machine, int callbackNumber, int operation) : base(machine, FormatMessage(callbackNumber, operation))

@@ -6,19 +6,45 @@ using Spice86.Emulator.Memory;
 
 public class MachineBreakpoints
 {
-    private readonly State state;
-    private readonly Memory memory;
-    private readonly PauseHandler pauseHandler = new();
-    private BreakPoint? machineStopBreakPoint;
-    private readonly BreakPointHolder executionBreakPoints = new();
     private readonly BreakPointHolder cycleBreakPoints = new();
+
+    private readonly BreakPointHolder executionBreakPoints = new();
+
+    private readonly Memory memory;
+
+    private readonly PauseHandler pauseHandler = new();
+
+    private readonly State state;
+
+    private BreakPoint? machineStopBreakPoint;
+
     public MachineBreakpoints(Machine machine)
     {
         this.state = machine.GetCpu().GetState();
         this.memory = machine.GetMemory();
     }
 
-    public virtual void ToggleBreakPoint(BreakPoint breakPoint, bool on)
+    public void CheckBreakPoint()
+    {
+        CheckBreakPoints();
+        pauseHandler.WaitIfPaused();
+    }
+
+    public PauseHandler GetPauseHandler()
+    {
+        return pauseHandler;
+    }
+
+    public void OnMachineStop()
+    {
+        if (machineStopBreakPoint is not null)
+        {
+            machineStopBreakPoint.Trigger();
+            pauseHandler.WaitIfPaused();
+        }
+    }
+
+    public void ToggleBreakPoint(BreakPoint breakPoint, bool on)
     {
         BreakPointType breakPointType = breakPoint.GetBreakPointType();
         if (breakPointType.Equals(BreakPointType.EXECUTION))
@@ -52,25 +78,5 @@ public class MachineBreakpoints
             long cycles = state.GetCycles();
             cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
         }
-    }
-
-    public virtual void CheckBreakPoint()
-    {
-        CheckBreakPoints();
-        pauseHandler.WaitIfPaused();
-    }
-
-    public virtual void OnMachineStop()
-    {
-        if (machineStopBreakPoint is not null)
-        {
-            machineStopBreakPoint.Trigger();
-            pauseHandler.WaitIfPaused();
-        }
-    }
-
-    public virtual PauseHandler GetPauseHandler()
-    {
-        return pauseHandler;
     }
 }

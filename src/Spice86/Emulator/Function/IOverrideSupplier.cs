@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 
 namespace Spice86.Emulator.Function;
+
 using Spice86.Emulator.Machine;
 
 public interface IOverrideSupplier

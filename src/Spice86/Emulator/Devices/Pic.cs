@@ -44,7 +44,7 @@ public class Pic : DefaultIOPortHandler
         this._inintialized = initialized;
     }
 
-    public virtual void AcknwowledgeInterrupt()
+    public void AcknwowledgeInterrupt()
     {
         _lastIrqAcknowledged = true;
     }
@@ -57,7 +57,7 @@ public class Pic : DefaultIOPortHandler
         ioPortDispatcher.AddIOPortHandler(SlavePortB, this);
     }
 
-    public virtual bool IrqMasked(int vectorNumber)
+    public bool IrqMasked(int vectorNumber)
     {
         if (_vectorNumberToIrq.TryGetValue(vectorNumber, out var irqNumber) == false)
         {
@@ -67,7 +67,7 @@ public class Pic : DefaultIOPortHandler
         return (maskForVectorNumber & _interruptMask) != 0;
     }
 
-    public virtual bool IsLastIrqAcknowledged()
+    public bool IsLastIrqAcknowledged()
     {
         return _lastIrqAcknowledged;
     }
@@ -87,7 +87,7 @@ public class Pic : DefaultIOPortHandler
         base.Outb(port, value);
     }
 
-    public virtual void ProcessInterrupt(int vectorNumber)
+    public void ProcessInterrupt(int vectorNumber)
     {
         if (IrqMasked(vectorNumber))
         {
@@ -113,19 +113,6 @@ public class Pic : DefaultIOPortHandler
         cpu.ExternalInterrupt(vectorNumber);
     }
 
-    private void ProcessICW1(int value)
-    {
-        bool icw4Present = (value & 0b1) == 1;
-        bool singleController = (value & 0b10) == 1;
-        bool levelTriggered = (value & 0b1000) == 1;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information))
-        {
-            _logger.Information("MASTER PIC COMMAND ICW1 {@Value}. {@Icw4Present}, {@SingleController}, {@LevelTriggered}",
-                ConvertUtils.ToHex8(value), icw4Present, singleController, levelTriggered);
-        }
-        _commandsToProcess = icw4Present ? 4 : 3;
-    }
-
     private static void ProcessICW2(int value)
     {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information))
@@ -149,6 +136,19 @@ public class Pic : DefaultIOPortHandler
         {
             _logger.Information("PIC COMMAND ICW4 {@Value}.", ConvertUtils.ToHex8(value));
         }
+    }
+
+    private void ProcessICW1(int value)
+    {
+        bool icw4Present = (value & 0b1) == 1;
+        bool singleController = (value & 0b10) == 1;
+        bool levelTriggered = (value & 0b1000) == 1;
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information))
+        {
+            _logger.Information("MASTER PIC COMMAND ICW1 {@Value}. {@Icw4Present}, {@SingleController}, {@LevelTriggered}",
+                ConvertUtils.ToHex8(value), icw4Present, singleController, levelTriggered);
+        }
+        _commandsToProcess = icw4Present ? 4 : 3;
     }
 
     private void ProcessOCW1(int value)

@@ -7,6 +7,5 @@ public class MemoryBasedDataStructureWithCsBaseAddress : MemoryBasedDataStructur
 {
     public MemoryBasedDataStructureWithCsBaseAddress(Machine machine) : base(machine, SegmentRegisters.CsIndex)
     {
-
     }
 }

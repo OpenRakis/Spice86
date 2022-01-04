@@ -1,14 +1,20 @@
 ﻿namespace Spice86.Emulator.Cpu;
+
 using System.Collections.Generic;
 
 public class SegmentRegisters : RegistersHolder
 {
-    public const int EsIndex = 0;
     public const int CsIndex = 1;
-    public const int SsIndex = 2;
+
     public const int DsIndex = 3;
+
+    public const int EsIndex = 0;
+
     public const int FsIndex = 4;
+
     public const int GsIndex = 5;
+
+    public const int SsIndex = 2;
 
     public SegmentRegisters() : base(GetRegistersNames())
     {

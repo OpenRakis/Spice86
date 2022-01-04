@@ -5,53 +5,54 @@ using Spice86.Emulator.Memory;
 public class MemoryBasedDataStructure
 {
     private readonly Memory _memory;
+
     public MemoryBasedDataStructure(Memory memory)
     {
         this._memory = memory;
     }
 
-    public virtual Memory GetMemory()
+    public Memory GetMemory()
     {
         return _memory;
     }
 
-    public virtual int GetUint8(int baseAddress, int offset)
-    {
-        return _memory.GetUint8(baseAddress + offset);
-    }
-
-    public virtual void SetUint8(int baseAddress, int offset, int value)
-    {
-        _memory.SetUint8(baseAddress + offset, value);
-    }
-
-    public virtual int GetUint16(int baseAddress, int offset)
+    public int GetUint16(int baseAddress, int offset)
     {
         return _memory.GetUint16(baseAddress + offset);
     }
 
-    public virtual void SetUint16(int baseAddress, int offset, int value)
+    public Uint16Array GetUint16Array(int baseAddress, int start, int length)
     {
-        _memory.SetUint16(baseAddress + offset, value);
+        return new Uint16Array(_memory, baseAddress + start, length);
     }
 
-    public virtual int GetUint32(int baseAddress, int offset)
+    public int GetUint32(int baseAddress, int offset)
     {
         return _memory.GetUint32(baseAddress + offset);
     }
 
-    public virtual void SetUint32(int baseAddress, int offset, int value)
+    public int GetUint8(int baseAddress, int offset)
     {
-        _memory.SetUint32(baseAddress + offset, value);
+        return _memory.GetUint8(baseAddress + offset);
     }
 
-    public virtual Uint8Array GetUint8Array(int baseAddress, int start, int length)
+    public Uint8Array GetUint8Array(int baseAddress, int start, int length)
     {
         return new Uint8Array(_memory, baseAddress + start, length);
     }
 
-    public virtual Uint16Array GetUint16Array(int baseAddress, int start, int length)
+    public void SetUint16(int baseAddress, int offset, int value)
     {
-        return new Uint16Array(_memory, baseAddress + start, length);
+        _memory.SetUint16(baseAddress + offset, value);
+    }
+
+    public void SetUint32(int baseAddress, int offset, int value)
+    {
+        _memory.SetUint32(baseAddress + offset, value);
+    }
+
+    public void SetUint8(int baseAddress, int offset, int value)
+    {
+        _memory.SetUint8(baseAddress + offset, value);
     }
 }

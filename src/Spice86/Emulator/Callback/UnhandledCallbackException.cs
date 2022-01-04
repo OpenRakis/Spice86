@@ -1,12 +1,13 @@
 ﻿namespace Spice86.Emulator.Callback;
+
 using Spice86.Emulator.Errors;
 using Spice86.Emulator.Machine;
 
 using System;
 
 /// <summary>
-/// Exception signaling that the callback number that was meant to be executed was not mapped to any csharp code.<br/>
-/// Could happen for unhandled exceptions.
+/// Exception signaling that the callback number that was meant to be executed was not mapped to any
+/// csharp code. <br /> Could happen for unhandled exceptions.
 /// </summary>
 [Serializable]
 public class UnhandledCallbackException : UnhandledOperationException

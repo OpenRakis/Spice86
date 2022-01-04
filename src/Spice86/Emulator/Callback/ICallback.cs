@@ -4,7 +4,7 @@ using System;
 
 public interface ICallback<T>
 {
-    public int GetIndex();
-
     public Func<T> GetCallback();
+
+    public int GetIndex();
 }

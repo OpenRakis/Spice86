@@ -2,10 +2,8 @@
 
 internal interface ICounterActivator
 {
-    /// <summary>
-    /// True when activation can occur.
-    /// </summary>
-    /// <returns></returns>
+    /// <summary> True when activation can occur. </summary>
+    /// <returns> </returns>
     public bool IsActive();
 
     public void UpdateDesiredFrequency(long desiredFrequency);

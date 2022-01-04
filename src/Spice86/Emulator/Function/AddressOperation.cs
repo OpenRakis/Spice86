@@ -26,6 +26,20 @@ public class AddressOperation : IComparable<AddressOperation>
         return _naturalOrderComparator.Compare(this, other);
     }
 
+    public override bool Equals(object? obj)
+    {
+        if (this == obj)
+        {
+            return true;
+        }
+        if (obj is not AddressOperation other)
+        {
+            return false;
+        }
+        return _operandSize == other._operandSize
+            && _valueOperation == other._valueOperation;
+    }
+
     public override int GetHashCode()
     {
         return _operandSize.Name.Ordinal() << 2 | _valueOperation.Ordinal();
@@ -41,25 +55,12 @@ public class AddressOperation : IComparable<AddressOperation>
         return _valueOperation;
     }
 
-    public override bool Equals(object? obj)
-    {
-        if (this == obj)
-        {
-            return true;
-        }
-        if (obj is not AddressOperation other)
-        {
-            return false;
-        }
-        return _operandSize == other._operandSize
-            && _valueOperation == other._valueOperation;
-    }
-
     private class NaturalOrderComparator : IComparer<AddressOperation>
     {
         public int Compare(AddressOperation? x, AddressOperation? y)
         {
             int? resNullable = x?._operandSize.Name.CompareTo(y?._operandSize.Name);
+
             // from Comparator.java, thenTo method
             resNullable = (resNullable != 0) ? resNullable : x?._valueOperation.CompareTo(y?._valueOperation);
 

@@ -7,6 +7,5 @@ internal class MemoryBasedDataStructureWithGsBaseAddress : MemoryBasedDataStruct
 {
     public MemoryBasedDataStructureWithGsBaseAddress(Machine machine) : base(machine, SegmentRegisters.CsIndex)
     {
-
     }
 }

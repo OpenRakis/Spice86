@@ -1,7 +1,9 @@
 ﻿namespace Spice86.Emulator.Function;
+
 public enum ValueOperation
 {
     READ,
+
     WRITE
 }
 

@@ -15,43 +15,29 @@ using System.Text;
 public class FunctionHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<FunctionHandler>();
-    private readonly Machine _machine;
+
     private readonly Queue<FunctionCall> _callerStack = new();
-    private Dictionary<SegmentedAddress, FunctionInformation> _functionInformations = new();
-    private bool _useCodeOverride;
+
     private readonly bool _debugMode;
+
+    private readonly Machine _machine;
+
+    private Dictionary<SegmentedAddress, FunctionInformation> _functionInformations = new();
+
+    private bool _useCodeOverride;
+
     public FunctionHandler(Machine machine, bool debugMode)
     {
         this._machine = machine;
         this._debugMode = debugMode;
     }
 
-    public virtual void SetFunctionInformations(Dictionary<SegmentedAddress, FunctionInformation> functionInformations)
-    {
-        this._functionInformations = functionInformations;
-    }
-
-    public virtual Dictionary<SegmentedAddress, FunctionInformation> GetFunctionInformations()
-    {
-        return _functionInformations;
-    }
-
-    public virtual void SetUseCodeOverride(bool useCodeOverride)
-    {
-        this._useCodeOverride = useCodeOverride;
-    }
-
-    public virtual void Icall(CallType callType, int entrySegment, int entryOffset, int expectedReturnSegment, int expectedReturnOffset, int vectorNumber, bool recordReturn)
-    {
-        Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, () => $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
-    }
-
-    public virtual void Call(CallType callType, int entrySegment, int entryOffset, int expectedReturnSegment, int expectedReturnOffset)
+    public void Call(CallType callType, int entrySegment, int entryOffset, int expectedReturnSegment, int expectedReturnOffset)
     {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, null, true);
     }
 
-    public virtual void Call(CallType callType, int entrySegment, int entryOffset, int? expectedReturnSegment, int? expectedReturnOffset, Func<String>? nameGenerator, bool recordReturn)
+    public void Call(CallType callType, int entrySegment, int entryOffset, int? expectedReturnSegment, int? expectedReturnOffset, Func<String>? nameGenerator, bool recordReturn)
     {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
         FunctionInformation currentFunction = _functionInformations.GetValueOrDefault(entryAddress, new FunctionInformation(entryAddress, nameGenerator != null ? nameGenerator.Invoke() : "unknown"));
@@ -80,11 +66,61 @@ public class FunctionHandler
         }
     }
 
-    public virtual bool Ret(CallType returnCallType)
+    public string DumpCallStack()
+    {
+        StringBuilder res = new();
+        foreach (FunctionCall functionCall in this._callerStack)
+        {
+            SegmentedAddress? returnAddress = functionCall.GetExpectedReturnAddress();
+            FunctionInformation? functionInformation = GetFunctionInformation(functionCall);
+            res.Append(" - ");
+            res.Append(functionInformation);
+            res.Append(" expected to return to address ");
+            res.Append(returnAddress);
+            res.Append('\\');
+        }
+
+        return res.ToString();
+    }
+
+    public Dictionary<SegmentedAddress, FunctionInformation> GetFunctionInformations()
+    {
+        return _functionInformations;
+    }
+
+    public void Icall(CallType callType, int entrySegment, int entryOffset, int expectedReturnSegment, int expectedReturnOffset, int vectorNumber, bool recordReturn)
+    {
+        Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, () => $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
+    }
+
+    public SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType)
+    {
+        int stackPhysicalAddress = GetStackPhysicalAddress();
+        return PeekReturnAddressOnMachineStack(returnCallType, stackPhysicalAddress);
+    }
+
+    public SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType, int stackPhysicalAddress)
+    {
+        Memory memory = _machine.GetMemory();
+        State state = _machine.GetCpu().GetState();
+        return new SegmentedAddress(state.GetCS(), memory.GetUint16(stackPhysicalAddress));
+    }
+
+    public SegmentedAddress? PeekReturnAddressOnMachineStackForCurrentFunction()
+    {
+        FunctionCall? currentFunctionCall = GetCurrentFunctionCall();
+        if (currentFunctionCall == null)
+        {
+            return null;
+        }
+
+        return PeekReturnAddressOnMachineStack(currentFunctionCall.GetCallType());
+    }
+
+    public bool Ret(CallType returnCallType)
     {
         if (_debugMode)
         {
-
             if (_callerStack.TryDequeue(out var currentFunctionCall) == false)
             {
                 _logger.Warning("Returning but no call was done before!!");
@@ -104,6 +140,16 @@ public class FunctionHandler
         }
 
         return true;
+    }
+
+    public void SetFunctionInformations(Dictionary<SegmentedAddress, FunctionInformation> functionInformations)
+    {
+        this._functionInformations = functionInformations;
+    }
+
+    public void SetUseCodeOverride(bool useCodeOverride)
+    {
+        this._useCodeOverride = useCodeOverride;
     }
 
     private bool AddReturn(CallType returnCallType, FunctionCall currentFunctionCall, FunctionInformation? currentFunctionInformation)
@@ -132,11 +178,54 @@ public class FunctionHandler
         return returnAddressAlignedWithCallStack;
     }
 
+    private FunctionReturn GenerateCurrentFunctionReturn(CallType returnCallType)
+    {
+        Cpu cpu = _machine.GetCpu();
+        State state = cpu.GetState();
+        int cs = state.GetCS();
+        int ip = state.GetIP();
+        return new FunctionReturn(returnCallType, new SegmentedAddress(cs, ip));
+    }
+
+    private FunctionCall? GetCurrentFunctionCall()
+    {
+        if (_callerStack.Any() == false)
+        {
+            return null;
+        }
+        return _callerStack.TryPeek(out var firstElement) ? firstElement : null;
+    }
+
+    private SegmentedAddress GetCurrentStackAddress()
+    {
+        State state = _machine.GetCpu().GetState();
+        return new SegmentedAddress(state.GetSS(), state.GetSP());
+    }
+
+    private FunctionInformation? GetFunctionInformation(FunctionCall? functionCall)
+    {
+        if (functionCall == null)
+        {
+            return null;
+        }
+        if (_functionInformations.TryGetValue(functionCall.GetEntryPointAddress(), out var value))
+        {
+            return value;
+        }
+        return null;
+    }
+
+    private int GetStackPhysicalAddress()
+    {
+        return _machine.GetCpu().GetState().GetStackPhysicalAddress();
+    }
+
     private bool IsReturnAddressAlignedWithCallStack(FunctionCall currentFunctionCall, SegmentedAddress actualReturnAddress, FunctionReturn currentFunctionReturn)
     {
         SegmentedAddress? expectedReturnAddress = currentFunctionCall.GetExpectedReturnAddress();
-        // Null check necessary for machine stop call, in this case it won't be equals to what is in the stack but it's
-        // expected.
+
+        // Null check necessary for machine stop call, in this case it won't be equals to what is in
+        // the stack but it's expected.
         if (actualReturnAddress != null && !actualReturnAddress.Equals(expectedReturnAddress))
         {
             FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
@@ -179,91 +268,8 @@ public class FunctionHandler
         return true;
     }
 
-    private int GetStackPhysicalAddress()
-    {
-        return _machine.GetCpu().GetState().GetStackPhysicalAddress();
-    }
-
-    private SegmentedAddress GetCurrentStackAddress()
-    {
-        State state = _machine.GetCpu().GetState();
-        return new SegmentedAddress(state.GetSS(), state.GetSP());
-    }
-
-    public virtual SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType)
-    {
-        int stackPhysicalAddress = GetStackPhysicalAddress();
-        return PeekReturnAddressOnMachineStack(returnCallType, stackPhysicalAddress);
-    }
-
-    public virtual SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType, int stackPhysicalAddress)
-    {
-        Memory memory = _machine.GetMemory();
-        State state = _machine.GetCpu().GetState();
-        return new SegmentedAddress(state.GetCS(), memory.GetUint16(stackPhysicalAddress));
-    }
-
-    public virtual SegmentedAddress? PeekReturnAddressOnMachineStackForCurrentFunction()
-    {
-        FunctionCall? currentFunctionCall = GetCurrentFunctionCall();
-        if (currentFunctionCall == null)
-        {
-            return null;
-        }
-
-        return PeekReturnAddressOnMachineStack(currentFunctionCall.GetCallType());
-    }
-
-    private FunctionReturn GenerateCurrentFunctionReturn(CallType returnCallType)
-    {
-        Cpu cpu = _machine.GetCpu();
-        State state = cpu.GetState();
-        int cs = state.GetCS();
-        int ip = state.GetIP();
-        return new FunctionReturn(returnCallType, new SegmentedAddress(cs, ip));
-    }
-
-    private FunctionCall? GetCurrentFunctionCall()
-    {
-        if (_callerStack.Any() == false)
-        {
-            return null;
-        }
-        return _callerStack.TryPeek(out var firstElement) ? firstElement : null;
-    }
-
     private bool UseOverride(FunctionInformation functionInformation)
     {
         return this._useCodeOverride && functionInformation != null && functionInformation.HasOverride();
-    }
-
-    private FunctionInformation? GetFunctionInformation(FunctionCall? functionCall)
-    {
-        if (functionCall == null)
-        {
-            return null;
-        }
-        if (_functionInformations.TryGetValue(functionCall.GetEntryPointAddress(), out var value))
-        {
-            return value;
-        }
-        return null;
-    }
-
-    public virtual string DumpCallStack()
-    {
-        StringBuilder res = new();
-        foreach (FunctionCall functionCall in this._callerStack)
-        {
-            SegmentedAddress? returnAddress = functionCall.GetExpectedReturnAddress();
-            FunctionInformation? functionInformation = GetFunctionInformation(functionCall);
-            res.Append(" - ");
-            res.Append(functionInformation);
-            res.Append(" expected to return to address ");
-            res.Append(returnAddress);
-            res.Append('\\');
-        }
-
-        return res.ToString();
     }
 }

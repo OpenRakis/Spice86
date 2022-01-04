@@ -8,15 +8,15 @@ public class Uint8Array : MemoryBasedArray
     {
     }
 
-    public override int GetValueSize()
-    {
-        return 1;
-    }
-
     public override int GetValueAt(int index)
     {
         int offset = this.IndexToOffset(index);
         return GetUint8(offset);
+    }
+
+    public override int GetValueSize()
+    {
+        return 1;
     }
 
     public override void SetValueAt(int index, int value)

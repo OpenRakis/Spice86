@@ -5,10 +5,15 @@ using Spice86.Emulator.Memory;
 public class FunctionCall
 {
     private readonly CallType _callType;
+
     private readonly SegmentedAddress _entryPointAddress;
+
     private readonly SegmentedAddress? _expectedReturnAddress;
-    private readonly SegmentedAddress _stackAddressAfterCall;
+
     private readonly bool _recordReturn;
+
+    private readonly SegmentedAddress _stackAddressAfterCall;
+
     public FunctionCall(CallType callType, SegmentedAddress entryPointAddress, SegmentedAddress? expectedReturnAddress, SegmentedAddress stackAddressAfterCall, bool recordReturn) : base()
     {
         this._callType = callType;
@@ -18,27 +23,27 @@ public class FunctionCall
         this._recordReturn = recordReturn;
     }
 
-    public virtual CallType GetCallType()
+    public CallType GetCallType()
     {
         return _callType;
     }
 
-    public virtual SegmentedAddress GetEntryPointAddress()
+    public SegmentedAddress GetEntryPointAddress()
     {
         return _entryPointAddress;
     }
 
-    public virtual SegmentedAddress? GetExpectedReturnAddress()
+    public SegmentedAddress? GetExpectedReturnAddress()
     {
         return _expectedReturnAddress;
     }
 
-    public virtual SegmentedAddress GetStackAddressAfterCall()
+    public SegmentedAddress GetStackAddressAfterCall()
     {
         return _stackAddressAfterCall;
     }
 
-    public virtual bool IsRecordReturn()
+    public bool IsRecordReturn()
     {
         return _recordReturn;
     }

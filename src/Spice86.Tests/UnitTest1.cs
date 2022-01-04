@@ -7,7 +7,6 @@ namespace Spice86.Tests
         [Fact]
         public void Test1()
         {
-
         }
     }
 }

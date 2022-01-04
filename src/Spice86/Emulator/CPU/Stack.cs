@@ -1,37 +1,40 @@
 ﻿namespace Spice86.Emulator.Cpu;
+
 using Spice86.Emulator.Memory;
 
 public class Stack
 {
     private readonly Memory memory;
+
     private readonly State state;
+
     public Stack(Memory memory, State state)
     {
         this.memory = memory;
         this.state = state;
     }
 
-    public virtual void Push(int value)
+    public int Peek(int index)
     {
-        var sp = state.GetSP() - 2;
-        state.SetSP(sp);
-        memory.SetUint16(state.GetStackPhysicalAddress(), value);
+        return memory.GetUint16(state.GetStackPhysicalAddress() + index);
     }
 
-    public virtual int Pop()
+    public void Poke(int index, int value)
+    {
+        memory.SetUint16(state.GetStackPhysicalAddress() + index, value);
+    }
+
+    public int Pop()
     {
         int res = memory.GetUint16(state.GetStackPhysicalAddress());
         state.SetSP(state.GetSP() + 2);
         return res;
     }
 
-    public virtual int Peek(int index)
+    public void Push(int value)
     {
-        return memory.GetUint16(state.GetStackPhysicalAddress() + index);
-    }
-
-    public virtual void Poke(int index, int value)
-    {
-        memory.SetUint16(state.GetStackPhysicalAddress() + index, value);
+        var sp = state.GetSP() - 2;
+        state.SetSP(sp);
+        memory.SetUint16(state.GetStackPhysicalAddress(), value);
     }
 }

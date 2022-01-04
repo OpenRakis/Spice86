@@ -1,15 +1,11 @@
 ﻿namespace Spice86.Emulator.Machine;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Emulator.Cpu;
 
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.Memory;
+
+using System;
 
 /// <summary>
 /// Emulates an IBM PC
@@ -27,17 +23,17 @@ public class Machine
         _machineBreakpoints = new(this);
     }
 
-    public MachineBreakpoints GetMachineBreakpoints()
-    {
-        return _machineBreakpoints;
-    }
-
     public Cpu GetCpu()
     {
         return _cpu;
     }
 
-    internal Memory GetMemory()
+    public MachineBreakpoints GetMachineBreakpoints()
+    {
+        return _machineBreakpoints;
+    }
+
+    internal object DumpCallStack()
     {
         throw new NotImplementedException();
     }
@@ -47,7 +43,7 @@ public class Machine
         throw new NotImplementedException();
     }
 
-    internal object DumpCallStack()
+    internal Memory GetMemory()
     {
         throw new NotImplementedException();
     }

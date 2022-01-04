@@ -6,7 +6,6 @@ using Spice86.Utils;
 
 using System;
 
-
 [Serializable]
 public class InvalidModeException : InvalidVMOperationException
 {

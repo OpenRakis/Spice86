@@ -1,16 +1,21 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+
+using Live.Avalonia;
+
+using Microsoft.Win32;
+
+using ReactiveUI;
+
 using Spice86.View.ViewModels;
 using Spice86.View.Views;
+
 using System;
-using Microsoft.Win32;
-using System.Runtime.Versioning;
-using ReactiveUI;
-using Live.Avalonia;
-using System.Reactive;
 using System.Diagnostics;
-using Avalonia.Controls;
+using System.Reactive;
+using System.Runtime.Versioning;
 
 namespace Spice86.View
 {
@@ -20,21 +25,11 @@ namespace Spice86.View
 
         private const string RegistryValueName = "AppsUseLightTheme";
 
-        public override void Initialize() => AvaloniaXamlLoader.Load(this);
-
-        private static bool IsProduction()
-        {
-#if DEBUG
-            return false;
-#else
-            return true;
-#endif
-        }
-
-        // When any of the source files change, a new version of the assembly is
-        // built, and this method gets called. The returned content gets embedded
-        // into the LiveViewHost window.
+        // When any of the source files change, a new version of the assembly is built, and this
+        // method gets called. The returned content gets embedded into the LiveViewHost window.
         public object CreateView(Window window) => new MainWindow();
+
+        public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
         public override void OnFrameworkInitializationCompleted()
         {
@@ -47,8 +42,8 @@ namespace Spice86.View
 
                 if (Debugger.IsAttached || IsProduction())
                 {
-                    // Debugging requires pdb loading etc, so we disable live reloading
-                    // during a test run with an attached debugger.
+                    // Debugging requires pdb loading etc, so we disable live reloading during a
+                    // test run with an attached debugger.
                     var mainWindow = new MainWindow();
                     mainWindow.DataContext = MainWindowViewModel.Create(mainWindow);
                     mainWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -57,11 +52,11 @@ namespace Spice86.View
                 }
                 else
                 {
-                    // Here, we create a new LiveViewHost, located in the 'Live.Avalonia'
-                    // namespace, and pass an ILiveView implementation to it. The ILiveView
-                    // implementation should have a parameterless constructor! Next, we
-                    // start listening for any changes in the source files. And then, we
-                    // show the LiveViewHost window. Simple enough, huh?
+                    // Here, we create a new LiveViewHost, located in the 'Live.Avalonia' namespace,
+                    // and pass an ILiveView implementation to it. The ILiveView implementation
+                    // should have a parameterless constructor! Next, we start listening for any
+                    // changes in the source files. And then, we show the LiveViewHost window.
+                    // Simple enough, huh?
                     var window = new LiveViewHost(this, Console.WriteLine);
                     window.StartWatchingSourceFilesForHotReloading();
                     window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -69,11 +64,10 @@ namespace Spice86.View
                 }
 
                 // Here we subscribe to ReactiveUI default exception handler to avoid app
-                // termination in case if we do something wrong in our view models. See:
-                // https://www.reactiveui.net/docs/handbook/default-exception-handler/
+                // termination in case if we do something wrong in our view models. See: https://www.reactiveui.net/docs/handbook/default-exception-handler/
                 //
-                // In case if you are using another MV* framework, please refer to its
-                // documentation explaining global exception handling.
+                // In case if you are using another MV* framework, please refer to its documentation
+                // explaining global exception handling.
                 RxApp.DefaultExceptionHandler = Observer.Create<Exception>(Console.WriteLine);
 
                 base.OnFrameworkInitializationCompleted();
@@ -110,6 +104,15 @@ namespace Spice86.View
             }
 #pragma warning restore ERP022 // Unobserved exception in generic exception handler
             return false;
+        }
+
+        private static bool IsProduction()
+        {
+#if DEBUG
+            return false;
+#else
+            return true;
+#endif
         }
     }
 }

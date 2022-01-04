@@ -12,47 +12,33 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
     }
 
     public abstract int GetBaseAddress();
-    public virtual int GetUint8(int offset)
-    {
-        return base.GetUint8(GetBaseAddress(), offset);
-    }
 
-    public virtual void SetUint8(int offset, int value)
-    {
-        base.SetUint8(GetBaseAddress(), offset, value);
-    }
-
-    public virtual int GetUint16(int offset)
+    public int GetUint16(int offset)
     {
         return base.GetUint16(GetBaseAddress(), offset);
     }
 
-    public virtual void SetUint16(int offset, int value)
-    {
-        base.SetUint16(GetBaseAddress(), offset, value);
-    }
-
-    public virtual int GetUint32(int offset)
-    {
-        return base.GetUint32(GetBaseAddress(), offset);
-    }
-
-    public virtual void SetUint32(int offset, int value)
-    {
-        base.SetUint32(GetBaseAddress(), offset, value);
-    }
-
-    public virtual Uint8Array GetUint8Array(int start, int length)
-    {
-        return base.GetUint8Array(GetBaseAddress(), start, length);
-    }
-
-    public virtual Uint16Array GetUint16Array(int start, int length)
+    public Uint16Array GetUint16Array(int start, int length)
     {
         return base.GetUint16Array(GetBaseAddress(), start, length);
     }
 
-    public virtual string GetZeroTerminatedString(int start, int maxLength)
+    public int GetUint32(int offset)
+    {
+        return base.GetUint32(GetBaseAddress(), offset);
+    }
+
+    public int GetUint8(int offset)
+    {
+        return base.GetUint8(GetBaseAddress(), offset);
+    }
+
+    public Uint8Array GetUint8Array(int start, int length)
+    {
+        return base.GetUint8Array(GetBaseAddress(), start, length);
+    }
+
+    public string GetZeroTerminatedString(int start, int maxLength)
     {
         StringBuilder res = new();
         int physicalStart = GetBaseAddress() + start;
@@ -70,7 +56,22 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         return res.ToString();
     }
 
-    public virtual void SetZeroTerminatedString(int start, string value, int maxLenght)
+    public void SetUint16(int offset, int value)
+    {
+        base.SetUint16(GetBaseAddress(), offset, value);
+    }
+
+    public void SetUint32(int offset, int value)
+    {
+        base.SetUint32(GetBaseAddress(), offset, value);
+    }
+
+    public void SetUint8(int offset, int value)
+    {
+        base.SetUint8(GetBaseAddress(), offset, value);
+    }
+
+    public void SetZeroTerminatedString(int start, string value, int maxLenght)
     {
         if (value.Length + 1 > maxLenght)
         {

@@ -5,44 +5,42 @@ using Spice86.Emulator.Memory;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 public class StaticAddressesRecorder
 {
     private readonly bool _debugMode;
-    private readonly SegmentRegisters _segmentRegisters;
-    private readonly HashSet<SegmentedAddress> _whiteListOfSegmentForOffset = new();
-    private readonly Dictionary<int, SegmentRegisterBasedAddress> _segmentRegisterBasedAddress = new();
+
     private readonly Dictionary<int, string> _names = new();
-    private int? _currentSegmentIndex;
-    private int? _currentOffset;
+
+    private readonly Dictionary<int, SegmentRegisterBasedAddress> _segmentRegisterBasedAddress = new();
+
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private readonly HashSet<SegmentedAddress> _whiteListOfSegmentForOffset = new();
+
     private AddressOperation? _currentAddressOperation;
+
+    private int? _currentOffset;
+
+    private int? _currentSegmentIndex;
+
     public StaticAddressesRecorder(State state, bool debugMode)
     {
         this._debugMode = debugMode;
         this._segmentRegisters = state.GetSegmentRegisters();
     }
 
-    public virtual Dictionary<int, String> GetNames()
-    {
-        return _names;
-    }
-
-    public virtual void AddName(int physicalAddress, string name)
+    public void AddName(int physicalAddress, string name)
     {
         _names.Add(physicalAddress, name);
     }
 
-    public virtual void Reset()
+    public void AddSegmentTowhiteList(SegmentedAddress address)
     {
-        _currentSegmentIndex = null;
-        _currentOffset = null;
-        _currentAddressOperation = null;
+        _whiteListOfSegmentForOffset.Add(address);
     }
 
-    public virtual void Commit()
+    public void Commit()
     {
         if (_debugMode && _currentSegmentIndex != null && _currentOffset != null && _currentAddressOperation != null && _currentSegmentIndex != null)
         {
@@ -57,29 +55,36 @@ public class StaticAddressesRecorder
         }
     }
 
-    public virtual void SetCurrentValue(int regIndex, int offset)
+    public Dictionary<int, String> GetNames()
     {
-        _currentSegmentIndex = regIndex;
-        _currentOffset = offset;
+        return _names;
     }
 
-    public virtual void SetCurrentAddressOperation(ValueOperation valueOperation, OperandSize operandSize)
-    {
-        _currentAddressOperation = new AddressOperation(valueOperation, operandSize);
-    }
-
-    public virtual ICollection<SegmentRegisterBasedAddress> GetSegmentRegisterBasedAddress()
+    public ICollection<SegmentRegisterBasedAddress> GetSegmentRegisterBasedAddress()
     {
         return _segmentRegisterBasedAddress.Values;
     }
 
-    public virtual HashSet<SegmentedAddress> GetWhiteListOfSegmentForOffset()
+    public HashSet<SegmentedAddress> GetWhiteListOfSegmentForOffset()
     {
         return _whiteListOfSegmentForOffset;
     }
 
-    public virtual void AddSegmentTowhiteList(SegmentedAddress address)
+    public void Reset()
     {
-        _whiteListOfSegmentForOffset.Add(address);
+        _currentSegmentIndex = null;
+        _currentOffset = null;
+        _currentAddressOperation = null;
+    }
+
+    public void SetCurrentAddressOperation(ValueOperation valueOperation, OperandSize operandSize)
+    {
+        _currentAddressOperation = new AddressOperation(valueOperation, operandSize);
+    }
+
+    public void SetCurrentValue(int regIndex, int offset)
+    {
+        _currentSegmentIndex = regIndex;
+        _currentOffset = offset;
     }
 }

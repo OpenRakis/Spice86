@@ -5,6 +5,7 @@ using Spice86.Emulator.Memory;
 public class MemoryBasedDataStructureWithBaseAddress : MemoryBasedDataStructureWithBaseAddressProvider
 {
     private readonly int _baseAddress;
+
     public MemoryBasedDataStructureWithBaseAddress(Memory memory, int baseAddress) : base(memory)
     {
         this._baseAddress = baseAddress;

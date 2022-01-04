@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Spice86.Emulator.Callback;
+
 using Spice86.Emulator.Machine;
 using Spice86.Emulator.Memory;
 
@@ -11,14 +12,19 @@ using System;
 
 public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
 {
-    private readonly Machine _machine;
-    private readonly Memory? _memory;
-    // Segment where to install the callbacks code in memory
-    private readonly int _callbackHandlerSegment;
-    // offset in this segment so that new callbacks are written to a fresh location
-    private int _offset = 0;
     // Map of all the callback addresses
     private readonly Dictionary<int, SegmentedAddress> _callbackAddresses = new();
+
+    // Segment where to install the callbacks code in memory
+    private readonly int _callbackHandlerSegment;
+
+    private readonly Machine _machine;
+
+    private readonly Memory? _memory;
+
+    // offset in this segment so that new callbacks are written to a fresh location
+    private int _offset = 0;
+
     public CallbackHandler(Machine machine, int interruptHandlerSegment)
     {
         this._machine = machine;
@@ -26,27 +32,27 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
         this._callbackHandlerSegment = interruptHandlerSegment;
     }
 
-    public virtual void AddCallback(ICallback<Action> callback)
+    public void AddCallback(ICallback<Action> callback)
     {
         AddService(callback.GetIndex(), callback);
     }
 
-    public virtual Dictionary<int, SegmentedAddress> GetCallbackAddresses()
+    public Dictionary<int, SegmentedAddress> GetCallbackAddresses()
     {
         return _callbackAddresses;
     }
 
-    protected override UnhandledOperationException GenerateUnhandledOperationException(int index)
-    {
-        return new UnhandledCallbackException(_machine, index);
-    }
-
-    public virtual void InstallAllCallbacksInInterruptTable()
+    public void InstallAllCallbacksInInterruptTable()
     {
         foreach (var callback in _dispatchTable.Values.OrderBy(x => x.GetIndex()))
         {
             this.InstallCallbackInInterruptTable(callback);
         }
+    }
+
+    protected override UnhandledOperationException GenerateUnhandledOperationException(int index)
+    {
+        return new UnhandledCallbackException(_machine, index);
     }
 
     private void InstallCallbackInInterruptTable(ICallback<Action> callback)
@@ -58,6 +64,13 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
     {
         InstallVectorInTable(vectorNumber, segment, offset);
         return WriteInterruptCallback(vectorNumber, segment, offset);
+    }
+
+    private void InstallVectorInTable(int vectorNumber, int segment, int offset)
+    {
+        // install the vector in the vector table
+        _memory?.SetUint16(4 * vectorNumber + 2, segment);
+        _memory?.SetUint16(4 * vectorNumber, offset);
     }
 
     private int WriteInterruptCallback(int vectorNumber, int segment, int offset)
@@ -77,13 +90,5 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
 
         // 5 bytes used
         return 5;
-    }
-
-    private void InstallVectorInTable(int vectorNumber, int segment, int offset)
-    {
-
-        // install the vector in the vector table
-        _memory?.SetUint16(4 * vectorNumber + 2, segment);
-        _memory?.SetUint16(4 * vectorNumber, offset);
     }
 }
