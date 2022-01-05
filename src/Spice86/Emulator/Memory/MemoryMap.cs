@@ -3,35 +3,35 @@
 /// <summary> Informations about memory mapping of an IBM PC </summary>
 public static class MemoryMap
 {
-    public static readonly int BIOS_DATA_AREA_LENGTH = 256;
+    public const int BiosDataAreaLength = 256;
 
     // This is where the port to get VGA CRT status is stored
-    public static readonly int BIOS_DATA_AREA_OFFSET_CRT_IO_PORT = 0x63;
+    public const int BiosDataAreaOffsetCrtIoPort = 0x63;
 
     // Counter incremented 18.2 times per second
-    public static readonly int BIOS_DATA_AREA_OFFSET_TICK_COUNTER = 0x6C;
+    public const int BiosDataAreaOffsetTickCounter = 0x6C;
 
-    public static readonly int BIOS_DATA_AREA_SEGMENT = 0x40;
+    public const int BiosDataAreaSegment = 0x40;
 
-    public static readonly int BOOT_SECTOR_CODE_LENGTH = 512;
+    public const int BootSectorCodeLength = 512;
 
-    public static readonly int BOOT_SECTOR_CODE_SEGMENT = 0x07C0;
+    public const int BootSectorCodeSegment = 0x07C0;
 
-    public static readonly int COLOR_TEXT_VIDEO_MEMORY_LENGTH = 32767;
+    public const int ColorTextVideoMemoryLength = 32767;
 
-    public static readonly int COLOR_TEXT_VIDEO_MEMORY_SEGMENT = 0xB800;
+    public const int ColorTextVideoMemorySegment = 0xB800;
 
-    public static readonly int FREE_MEMORY_START_SEGMENT = 0x50;
+    public const int FreeMemoryStartSegment = 0x50;
 
-    public static readonly int GRAPHIC_VIDEO_MEMORY_LENGTH = 65535;
+    public const int GraphicVideoMemorylength = 65535;
 
-    public static readonly int GRAPHIC_VIDEO_MEMORY_SEGMENT = 0xA000;
+    public const int GraphicVideoMemorySegment = 0xA000;
 
-    public static readonly int INTERRUPT_VECTOR_LENGTH = 1024;
+    public const int InterruptVectorLength = 1024;
 
-    public static readonly int INTERRUPT_VECTOR_SEGMENT = 0x0;
+    public const int InterruptVectorSegment = 0x0;
 
-    public static readonly int MONOCHROME_TEXT_VIDEO_MEMORY_LENGTH = 32767;
+    public const int MonochromeTextVideoMemoryLength = 32767;
 
-    public static readonly int MONOCHROME_TEXT_VIDEO_MEMORY_SEGMENT = 0xB000;
+    public const int MonochromeTextVideoMemorySegment = 0xB000;
 }

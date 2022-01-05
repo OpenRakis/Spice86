@@ -6,5 +6,5 @@ public interface ICallback<T>
 {
     public Func<T> GetCallback();
 
-    public int GetIndex();
+    public ushort GetIndex();
 }

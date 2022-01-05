@@ -16,7 +16,7 @@ public class MemoryBasedDataStructure
         return _memory;
     }
 
-    public int GetUint16(int baseAddress, int offset)
+    public ushort GetUint16(int baseAddress, int offset)
     {
         return _memory.GetUint16(baseAddress + offset);
     }
@@ -26,12 +26,12 @@ public class MemoryBasedDataStructure
         return new Uint16Array(_memory, baseAddress + start, length);
     }
 
-    public int GetUint32(int baseAddress, int offset)
+    public uint GetUint32(int baseAddress, int offset)
     {
         return _memory.GetUint32(baseAddress + offset);
     }
 
-    public int GetUint8(int baseAddress, int offset)
+    public byte GetUint8(int baseAddress, int offset)
     {
         return _memory.GetUint8(baseAddress + offset);
     }
@@ -41,17 +41,17 @@ public class MemoryBasedDataStructure
         return new Uint8Array(_memory, baseAddress + start, length);
     }
 
-    public void SetUint16(int baseAddress, int offset, int value)
+    public void SetUint16(int baseAddress, int offset, ushort value)
     {
         _memory.SetUint16(baseAddress + offset, value);
     }
 
-    public void SetUint32(int baseAddress, int offset, int value)
+    public void SetUint32(int baseAddress, int offset, uint value)
     {
         _memory.SetUint32(baseAddress + offset, value);
     }
 
-    public void SetUint8(int baseAddress, int offset, int value)
+    public void SetUint8(int baseAddress, int offset, byte value)
     {
         _memory.SetUint8(baseAddress + offset, value);
     }

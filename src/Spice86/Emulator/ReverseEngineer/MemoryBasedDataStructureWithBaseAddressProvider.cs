@@ -13,7 +13,7 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
 
     public abstract int GetBaseAddress();
 
-    public int GetUint16(int offset)
+    public ushort GetUint16(int offset)
     {
         return base.GetUint16(GetBaseAddress(), offset);
     }
@@ -23,12 +23,12 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         return base.GetUint16Array(GetBaseAddress(), start, length);
     }
 
-    public int GetUint32(int offset)
+    public uint GetUint32(int offset)
     {
         return base.GetUint32(GetBaseAddress(), offset);
     }
 
-    public int GetUint8(int offset)
+    public byte GetUint8(int offset)
     {
         return base.GetUint8(GetBaseAddress(), offset);
     }
@@ -56,17 +56,17 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         return res.ToString();
     }
 
-    public void SetUint16(int offset, int value)
+    public void SetUint16(int offset, ushort value)
     {
         base.SetUint16(GetBaseAddress(), offset, value);
     }
 
-    public void SetUint32(int offset, int value)
+    public void SetUint32(int offset, uint value)
     {
         base.SetUint32(GetBaseAddress(), offset, value);
     }
 
-    public void SetUint8(int offset, int value)
+    public void SetUint8(int offset, byte value)
     {
         base.SetUint8(GetBaseAddress(), offset, value);
     }
@@ -83,7 +83,8 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         for (; i < value.Length; i++)
         {
             char character = value[i];
-            base.SetUint8(physicalStart, i, character);
+            var charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
+            base.SetUint8(physicalStart, i, charFirstByte);
         }
 
         base.SetUint8(physicalStart, i, 0);

@@ -14,12 +14,12 @@ public class Stack
         this.state = state;
     }
 
-    public int Peek(int index)
+    public ushort Peek(int index)
     {
         return memory.GetUint16(state.GetStackPhysicalAddress() + index);
     }
 
-    public void Poke(int index, int value)
+    public void Poke(int index, ushort value)
     {
         memory.SetUint16(state.GetStackPhysicalAddress() + index, value);
     }
@@ -31,7 +31,7 @@ public class Stack
         return res;
     }
 
-    public void Push(int value)
+    public void Push(ushort value)
     {
         var sp = state.GetSP() - 2;
         state.SetSP(sp);

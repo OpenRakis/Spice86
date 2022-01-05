@@ -22,6 +22,6 @@ public class Uint8Array : MemoryBasedArray
     public override void SetValueAt(int index, int value)
     {
         int offset = this.IndexToOffset(index);
-        SetUint8(offset, value);
+        SetUint8(offset, (byte)value);
     }
 }

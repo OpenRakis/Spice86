@@ -22,7 +22,7 @@
         public override void SetValueAt(int index, int value)
         {
             int offset = this.IndexToOffset(index);
-            SetUint16(offset, value);
+            SetUint16(offset, (ushort)value);
         }
     }
 }

@@ -16,16 +16,16 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
     private readonly Dictionary<int, SegmentedAddress> _callbackAddresses = new();
 
     // Segment where to install the callbacks code in memory
-    private readonly int _callbackHandlerSegment;
+    private readonly ushort _callbackHandlerSegment;
 
     private readonly Machine _machine;
 
     private readonly Memory? _memory;
 
     // offset in this segment so that new callbacks are written to a fresh location
-    private int _offset = 0;
+    private ushort _offset = 0;
 
-    public CallbackHandler(Machine machine, int interruptHandlerSegment)
+    public CallbackHandler(Machine machine, ushort interruptHandlerSegment)
     {
         this._machine = machine;
         this._memory = machine.GetMemory();
@@ -60,20 +60,20 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
         _offset += InstallInterruptWithCallback(callback.GetIndex(), _callbackHandlerSegment, _offset);
     }
 
-    private int InstallInterruptWithCallback(int vectorNumber, int segment, int offset)
+    private ushort InstallInterruptWithCallback(ushort vectorNumber, ushort segment, ushort offset)
     {
         InstallVectorInTable(vectorNumber, segment, offset);
         return WriteInterruptCallback(vectorNumber, segment, offset);
     }
 
-    private void InstallVectorInTable(int vectorNumber, int segment, int offset)
+    private void InstallVectorInTable(ushort vectorNumber, ushort segment, ushort offset)
     {
         // install the vector in the vector table
         _memory?.SetUint16(4 * vectorNumber + 2, segment);
         _memory?.SetUint16(4 * vectorNumber, offset);
     }
 
-    private int WriteInterruptCallback(int vectorNumber, int segment, int offset)
+    private ushort WriteInterruptCallback(ushort vectorNumber, int segment, int offset)
     {
         _callbackAddresses.Add(vectorNumber, new SegmentedAddress(segment, offset));
         int address = MemoryUtils.ToPhysicalAddress(segment, offset);

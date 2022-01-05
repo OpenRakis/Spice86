@@ -44,23 +44,23 @@ public class Memory
         return physicalMemory.Length;
     }
 
-    public int GetUint16(int address)
+    public ushort GetUint16(int address)
     {
-        int res = MemoryUtils.GetUint16(physicalMemory, address);
+        var res = MemoryUtils.GetUint16(physicalMemory, address);
         MonitorReadAccess(address);
         return res;
     }
 
-    public int GetUint32(int address)
+    public uint GetUint32(int address)
     {
-        int res = MemoryUtils.GetUint32(physicalMemory, address);
+        var res = MemoryUtils.GetUint32(physicalMemory, address);
         MonitorReadAccess(address);
         return res;
     }
 
-    public int GetUint8(int addr)
+    public byte GetUint8(int addr)
     {
-        int res = MemoryUtils.GetUint8(physicalMemory, addr);
+        var res = MemoryUtils.GetUint8(physicalMemory, addr);
         MonitorReadAccess(addr);
         return res;
     }
@@ -86,7 +86,7 @@ public class Memory
         Array.Fill(physicalMemory, (byte)address, address + length, ConvertUtils.Uint8b(value));
     }
 
-    public int? SearchValue(int address, int len, IList<Byte> value)
+    public int? SearchValue(int address, int len, IList<byte> value)
     {
         int end = address + len;
         if (end >= physicalMemory.Length)
@@ -117,13 +117,13 @@ public class Memory
         return null;
     }
 
-    public void SetUint16(int address, int value)
+    public void SetUint16(int address, ushort value)
     {
         MonitorWriteAccess(address);
         MemoryUtils.SetUint16(physicalMemory, address, value);
     }
 
-    public void SetUint32(int address, int value)
+    public void SetUint32(int address, uint value)
     {
         MonitorWriteAccess(address);
 
@@ -131,7 +131,7 @@ public class Memory
         MemoryUtils.SetUint32(physicalMemory, address, value);
     }
 
-    public void SetUint8(int address, int value)
+    public void SetUint8(int address, byte value)
     {
         MonitorWriteAccess(address);
         MemoryUtils.SetUint8(physicalMemory, address, value);
