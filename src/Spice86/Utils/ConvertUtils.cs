@@ -10,7 +10,7 @@ public class ConvertUtils
 {
     private const string HexStringStartPattern = "0x";
 
-    private static readonly int SegmentSize = 0x10000;
+    private const int SegmentSize = 0x10000;
 
     public static string ByteArrayToHexString(byte[] value)
     {
@@ -24,9 +24,9 @@ public class ConvertUtils
         return stringBuilder.ToString();
     }
 
-    public static long BytesToInt32(byte[] data, int start)
+    public static uint BytesToInt32(byte[] data, int start)
     {
-        return Uint32(((data[start] << 24) & 0xFF000000) | ((data[start + 1] << 16) & 0x00FF0000) | ((data[start + 2] << 8) & 0x0000FF00) | ((data[start + 3]) & 0x000000FF));
+        return Uint32(((data[start] << 24) & 0xFF000000) | (((uint)data[start + 1] << 16) & 0x00FF0000) | (((uint)data[start + 2] << 8) & 0x0000FF00) | (((uint)data[start + 3]) & 0x000000FF));
     }
 
     public static byte[] HexToByteArray(string @string)
@@ -45,7 +45,7 @@ public class ConvertUtils
     /// <summary> Sign extend value considering it is a 16 bit value </summary>
     /// <param name="value"> </param>
     /// <returns> the value sign extended </returns>
-    public static int Int16(int value)
+    public static short Int16(ushort value)
     {
         return (short)value;
     }
@@ -53,9 +53,9 @@ public class ConvertUtils
     /// <summary> Sign extend value considering it is a 8 bit value </summary>
     /// <param name="value"> </param>
     /// <returns> the value sign extended </returns>
-    public static int Int8(int value)
+    public static sbyte Int8(byte value)
     {
-        return (byte)value;
+        return (sbyte)value;
     }
 
     /// <summary> </summary>
@@ -67,19 +67,19 @@ public class ConvertUtils
         return long.Parse(hex, NumberStyles.HexNumber);
     }
 
-    public static int ReadLsb(int value)
+    public static byte ReadLsb(int value)
     {
         return Uint8(value);
     }
 
-    public static int ReadMsb(int value)
+    public static byte ReadMsb(int value)
     {
         return Uint8(value >> 8);
     }
 
     public static int Swap32(int value)
     {
-        return (int)(((value >> 24) & 0x000000ff) | ((value >> 8) & 0x0000ff00) | ((value << 8) & 0x00ff0000) | ((value << 24) & 0xff000000));
+        return (int)((((uint)value >> 24) & 0x000000ff) | (((uint)value >> 8) & 0x0000ff00) | (((uint)value << 8) & 0x00ff0000) | ((value << 24) & 0xff000000));
     }
 
     public static int ToAbsoluteOffset(int physicalAddress)
@@ -163,29 +163,29 @@ public class ConvertUtils
         return Encoding.ASCII.GetString(value);
     }
 
-    public static int Uint16(int value)
+    public static ushort Uint16(int value)
     {
-        return value & 0xFFFF;
+        return (ushort)(value & 0xFFFF);
     }
 
-    public static long Uint32(long value)
+    public static uint Uint32(long value)
     {
-        return value & 4294967295L;
+        return (uint)(value & 4294967295L);
     }
 
-    public static int Uint32i(long value)
+    public static uint Uint32i(long value)
     {
-        return (int)Uint32(value);
+        return Uint32(value);
     }
 
-    public static int Uint8(int value)
+    public static byte Uint8(int value)
     {
-        return value & 0xFF;
+        return (byte)(value & 0xFF);
     }
 
     public static byte Uint8b(int value)
     {
-        return (byte)Uint8(value);
+        return Uint8(value);
     }
 
     public static int WriteLsb(int value, int lsb)
