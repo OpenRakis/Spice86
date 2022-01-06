@@ -31,10 +31,10 @@ public class Stack
         return res;
     }
 
-    public void Push(ushort value)
+    public void Push(int value)
     {
         var sp = state.GetSP() - 2;
         state.SetSP(sp);
-        memory.SetUint16(state.GetStackPhysicalAddress(), value);
+        memory.SetUint16(state.GetStackPhysicalAddress(), (ushort)value);
     }
 }
