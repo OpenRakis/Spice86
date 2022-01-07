@@ -139,7 +139,7 @@ public class Cpu
         _internalIp = _state.GetIP();
         _staticAddressesRecorder.Reset();
         var stateString = "";
-        if(IsLoggingEnabled())
+        if (IsLoggingEnabled())
         {
             stateString = _state.ToString();
             _state.ResetCurrentInstructionPrefix();
@@ -158,7 +158,7 @@ public class Cpu
         }
         else
         {
-            // TODO
+            // Todo: implement
             //ExecOpcode(opcode);
         }
         if (IsLoggingEnabled())
@@ -181,40 +181,193 @@ public class Cpu
         // For some instructions, zero flag is not to be checked
         bool checkZeroFlag = IsStringOpUpdatingFlags(opcode);
         int cx = _state.GetCX();
-        while (cx != 0) {
+        while (cx != 0)
+        {
             // re-set the segment override that may have been cleared. No need to reset ip
             // as string instructions don't modify it and are only one byte.
-            // TODO
-            //ProcessString(opcode);
+            ProcessString(opcode);
             cx = cx - 1;
 
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose))
+            {
                 _logger.Verbose("{@Rep} Loop, {@Cx}, {@If}, {@CheckZeroFlag}, {@ContinueZF}",
                 _state.GetCurrentInstructionNameWithPrefix(),
                 ConvertUtils.ToHex(cx), _state.GetZeroFlag(), checkZeroFlag, continueZeroFlagValue);
             }
             // Not all the string operations require checking the zero flag...
-            if (checkZeroFlag && _state.GetZeroFlag() != continueZeroFlagValue) {
-            break;
+            if (checkZeroFlag && _state.GetZeroFlag() != continueZeroFlagValue)
+            {
+                break;
             }
         }
         _state.SetCX(cx);
     }
+
+    private int GetMemoryAddressOverridableDsSi() => _modRM.GetAddress(SegmentRegisters.DsIndex, _state.GetSI());
+
+    private int GetMemoryAddressEsDi() => MemoryUtils.ToPhysicalAddress(_state.GetES(), _state.GetDI());
+
+    private void ProcessString(int opcode)
+    {
+        int diff = (_state.GetDirectionFlag() ? -1 : 1) << (opcode & 1);
+
+        if (opcode == 0xA4)
+        {
+            SetCurrentInstructionName(() => "MOVSB");
+            int value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
+            _memory.SetUint8(GetMemoryAddressEsDi(), (byte)value);
+            _state.SetSI(_state.GetSI() + diff);
+            _state.SetDI(_state.GetDI() + diff);
+        }
+        if (opcode == 0xA5)
+        {
+            SetCurrentInstructionName(() => "MOVSW");
+            int value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
+            _memory.SetUint16(GetMemoryAddressEsDi(), (ushort)value);
+            _state.SetSI(_state.GetSI() + diff);
+            _state.SetDI(_state.GetDI() + diff);
+        }
+        if (opcode == 0xA6)
+        {
+            SetCurrentInstructionName(() => "CMPSB");
+            int value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
+            _alu.Sub8(value, _memory.GetUint8(GetMemoryAddressEsDi()));
+            _state.SetSI(_state.GetSI() + diff);
+            _state.SetDI(_state.GetDI() + diff);
+        }
+        if (opcode == 0xA7)
+        {
+            SetCurrentInstructionName(() => "CMPSW");
+            int value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
+            _alu.Sub16(value, _memory.GetUint16(GetMemoryAddressEsDi()));
+            _state.SetSI(_state.GetSI() + diff);
+            _state.SetDI(_state.GetDI() + diff);
+        }
+        if (opcode == 0xAA)
+        {
+            SetCurrentInstructionName(() => "STOSB");
+            _memory.SetUint8(GetMemoryAddressEsDi(), (byte)_state.GetAL());
+            _state.SetDI(_state.GetDI() + diff);
+        }
+        if (opcode == 0xAB)
+        {
+            SetCurrentInstructionName(() => "STOSW");
+            _memory.SetUint16(GetMemoryAddressEsDi(), (ushort)_state.GetAX());
+            _state.SetDI(_state.GetDI() + diff);
+        }
+        if (opcode == 0xAC)
+        {
+            SetCurrentInstructionName(() => "LODSB");
+            int value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
+            _state.SetAL(value);
+            _state.SetSI(_state.GetSI() + diff);
+        }
+        if (opcode == 0xAD)
+        {
+            SetCurrentInstructionName(() => "LODSW");
+            int value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
+            _state.SetAX(value);
+            _state.SetSI(_state.GetSI() + diff);
+        }
+        if (opcode == 0xAE)
+        {
+            SetCurrentInstructionName(() => "SCASB");
+            _alu.Sub8(_state.GetAL(), _memory.GetUint8(GetMemoryAddressEsDi()));
+            _state.SetDI(_state.GetDI() + diff);
+        }
+        if (opcode == 0xAF)
+        {
+            SetCurrentInstructionName(() => "SCASW");
+            _alu.Sub16(_state.GetAX(), _memory.GetUint16(GetMemoryAddressEsDi()));
+            _state.SetDI(_state.GetDI() + diff);
+        }
+        if (opcode == 0x6C)
+        {
+            SetCurrentInstructionName(() => "INSB");
+            int port = _state.GetDX();
+            int value = Inb(port);
+            _memory.SetUint8(GetMemoryAddressEsDi(), (byte)value);
+            _state.SetSI(_state.GetSI() + diff);
+        }
+        if (opcode == 0x6D)
+        {
+            SetCurrentInstructionName(() => "INSW");
+            int port = _state.GetDX();
+            int value = Inw(port);
+            _memory.SetUint16(GetMemoryAddressEsDi(), (ushort)value);
+            _state.SetSI(_state.GetSI() + diff);
+        }
+        if (opcode == 0x6E)
+        {
+            SetCurrentInstructionName(() => "OUTSB");
+            int port = _state.GetDX();
+            int value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
+            Outb(port, value);
+            _state.SetSI(_state.GetSI() + diff);
+        }
+        if (opcode == 0x6F)
+        {
+            SetCurrentInstructionName(() => "OUTSW");
+            int port = _state.GetDX();
+            int value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
+            Outw(port, value);
+            _state.SetSI(_state.GetSI() + diff);
+        }
+        HandleInvalidOpcode(opcode);
+    }
+
+    private void Outb(int port, int val)
+    {
+        if (_ioPortDispatcher != null)
+        {
+            _ioPortDispatcher.Outb((ushort)port, (byte)val);
+        }
+    }
+
+    private void Outw(int port, int val)
+    {
+        if (_ioPortDispatcher != null)
+        {
+            _ioPortDispatcher.Outw((ushort)port, (ushort)val);
+        }
+    }
+
+    private byte Inb(int port)
+    {
+        if (_ioPortDispatcher != null)
+        {
+            return (byte)_ioPortDispatcher.Inb((ushort)port);
+        }
+        return 0;
+    }
+
+    private ushort Inw(int port)
+    {
+        if (_ioPortDispatcher != null)
+        {
+            return (ushort)_ioPortDispatcher.Inw((ushort)port);
+        }
+        return 0;
+    }
+
+    private void HandleInvalidOpcode(int opcode) => throw new InvalidOpCodeException(_machine, opcode, false);
 
     private void Interrupt(int? vectorNumber, bool external)
     {
         if (vectorNumber == null) { return; }
         int targetIP = _memory.GetUint16(4 * vectorNumber.Value);
         int targetCS = _memory.GetUint16(4 * vectorNumber.Value + 2);
-        if (_errorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0) {
-          throw new UnhandledOperationException(_machine,
-              $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");
+        if (_errorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0)
+        {
+            throw new UnhandledOperationException(_machine,
+                $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");
         }
         int returnCS = _state.GetCS();
         int returnIP = _internalIp;
-        if (IsLoggingEnabled()) {
-          _logger.Debug("int {@VectorNumber} handler found in memory, {@SegmentedAddressRepresentation}", ConvertUtils.ToHex(vectorNumber.Value),
-              ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP));
+        if (IsLoggingEnabled())
+        {
+            _logger.Debug("int {@VectorNumber} handler found in memory, {@SegmentedAddressRepresentation}", ConvertUtils.ToHex(vectorNumber.Value),
+                ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP));
         }
         _stack.Push(_state.GetFlags().GetFlagRegister());
         _stack.Push(returnCS);
@@ -223,15 +376,16 @@ public class Cpu
         _internalIp = targetIP;
         _state.SetCS(targetCS);
         var recordReturn = true;
-        if (external) {
-          _functionHandlerInUse = _functionHandlerInExternalInterrupt;
-          recordReturn = false;
+        if (external)
+        {
+            _functionHandlerInUse = _functionHandlerInExternalInterrupt;
+            recordReturn = false;
         }
         _functionHandlerInUse.Icall(CallType.INTERRUPT, targetCS, targetIP, returnCS, returnIP, vectorNumber.Value,
             recordReturn);
     }
 
-    private static bool IsStringOpUpdatingFlags(int stringOpCode) 
+    private static bool IsStringOpUpdatingFlags(int stringOpCode)
         => stringOpCode == 0xA6 // CMPSB
         || stringOpCode == 0xA7 // CMPSW
         || stringOpCode == 0xAE // SCASB
@@ -239,12 +393,58 @@ public class Cpu
     private int ProcessPrefixes()
     {
         int opcode = NextUint8();
-        while (IsPrefix(opcode)) {
-            // TODO
-            //ProcessPrefix(opcode);
+        while (IsPrefix(opcode))
+        {
+            ProcessPrefix(opcode);
             opcode = NextUint8();
         }
         return opcode;
+    }
+
+    private void ProcessPrefix(int opcode)
+    {
+        if (opcode == 0x26)
+        {
+            AddCurrentInstructionPrefix(() => "ES:");
+            _state.SetSegmentOverrideIndex(SegmentRegisters.EsIndex);
+        }
+        if (opcode == 0x2E)
+        {
+            AddCurrentInstructionPrefix(() => "CS:");
+            _state.SetSegmentOverrideIndex(SegmentRegisters.CsIndex);
+        }
+        if (opcode == 0x36)
+        {
+            AddCurrentInstructionPrefix(() => "SS:");
+            _state.SetSegmentOverrideIndex(SegmentRegisters.SsIndex);
+        }
+        if (opcode == 0x3E)
+        {
+            AddCurrentInstructionPrefix(() => "DS:");
+            _state.SetSegmentOverrideIndex(SegmentRegisters.DsIndex);
+        }
+        if (opcode == 0x64)
+        {
+            AddCurrentInstructionPrefix(() => "FS:");
+            _state.SetSegmentOverrideIndex(SegmentRegisters.FsIndex);
+        }
+        if (opcode == 0x65)
+        {
+            AddCurrentInstructionPrefix(() => "GS:");
+            _state.SetSegmentOverrideIndex(SegmentRegisters.GsIndex);
+        }
+        if (opcode == 0xF0)
+        {
+            AddCurrentInstructionPrefix(() => "LOCK");
+        }
+        if (opcode == 0xF2 || opcode == 0xF3)
+        { // REPNZ, REPZ
+            bool continueZeroFlagValue = (opcode & 1) == 1;
+            _state.SetContinueZeroFlagValue(continueZeroFlagValue);
+            AddCurrentInstructionPrefix(() => "REP" + (continueZeroFlagValue ? "Z" : ""));
+        }
+        throw new InvalidVMOperationException(_machine,
+            $"processPrefix Called with a non prefix opcode {opcode}");
     }
 
     private bool IsPrefix(int opcode) => PREFIXES_OPCODES.Contains(opcode);
