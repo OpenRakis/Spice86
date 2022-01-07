@@ -513,6 +513,232 @@ public class Cpu
         Interrupt(0, false);
     }
 
+
+    /// <summary>
+    /// Jumps handling
+    /// </summary>
+    private void Jcc(int opcode)
+    {
+        byte address = NextUint8();
+        bool jump = opcode switch
+        {
+            0x70 => _state.GetOverflowFlag(),
+            0x71 => !_state.GetOverflowFlag(),
+            0x72 => _state.GetCarryFlag(),
+            0x73 => !_state.GetCarryFlag(),
+            0x74 => _state.GetZeroFlag(),
+            0x75 => !_state.GetZeroFlag(),
+            0x76 => _state.GetCarryFlag() || _state.GetZeroFlag(),
+            0x77 => !_state.GetCarryFlag() && !_state.GetZeroFlag(),
+            0x78 => _state.GetSignFlag(),
+            0x79 => !_state.GetSignFlag(),
+            0x7A => _state.GetParityFlag(),
+            0x7B => !_state.GetParityFlag(),
+            0x7C => _state.GetSignFlag() != _state.GetOverflowFlag(),
+            0x7D => _state.GetSignFlag() == _state.GetOverflowFlag(),
+            0x7E => _state.GetZeroFlag() || _state.GetSignFlag() != _state.GetOverflowFlag(),
+            0x7F => !_state.GetZeroFlag() && _state.GetSignFlag() == _state.GetOverflowFlag(),
+            0xE3 => _state.GetCX() == 0,
+            _ => throw new InvalidOpCodeException(_machine, opcode, false)
+        };
+        SetCurrentInstructionName(() => opcode switch
+        {
+            0x70 => "JO",
+            0x71 => "JNO",
+            0x72 => "JB",
+            0x73 => "JNB",
+            0x74 => "JZ",
+            0x75 => "JNZ",
+            0x76 => "JBE",
+            0x77 => "JA",
+            0x78 => "JS",
+            0x79 => "JNS",
+            0x7A => "JP",
+            0x7B => "JPO",
+            0x7C => "JL",
+            0x7D => "JGE",
+            0x7E => "JNG",
+            0x7F => "JG",
+            0xE3 => "JCXZ",
+            _ => ""
+        } + " " + address + " jump?" + jump);
+        if (jump)
+        {
+            _internalIp += address;
+        }
+    }
+
+    private void Grp1(int opcode)
+    {
+        _modRM.Read();
+        int groupIndex = _modRM.GetRegisterIndex();
+        bool op1Byte = (opcode & 0b01) == 0;
+        bool op2Byte = (opcode & 0b11) != 1;
+        int op2;
+        if (op2Byte)
+        {
+            if (op1Byte)
+            {
+                op2 = NextUint8();
+            }
+            else
+            {
+                // preserve sign in byte so that it can be extended later if needed
+                op2 = (ushort)(sbyte)NextUint8();
+            }
+        }
+        else
+        {
+            op2 = NextUint16();
+        }
+        int op1 = GetRm8Or16(op1Byte);
+        SetCurrentInstructionName(() => GenerateGrp1Name(groupIndex, op1Byte, op1, op2));
+        int res;
+        if (op1Byte)
+        {
+            res = (groupIndex) switch
+            {
+                0 => _alu.Add8(op1, op2),
+                1 => _alu.Or8(op1, op2),
+                2 => _alu.Adc8(op1, op2),
+                3 => _alu.Sbb8(op1, op2),
+                4 => _alu.And8(op1, op2),
+                5 => _alu.Sub8(op1, op2),
+                6 => _alu.Xor8(op1, op2),
+                7 => _alu.Sub8(op1, op2),
+                _ => throw new InvalidGroupIndexException(_machine, groupIndex)
+            };
+        }
+        else
+        {
+            res = (groupIndex) switch
+            {
+                0 => _alu.Add16(op1, op2),
+                1 => _alu.Or16(op1, op2),
+                2 => _alu.Adc16(op1, op2),
+                3 => _alu.Sbb16(op1, op2),
+                4 => _alu.And16(op1, op2),
+                5 => _alu.Sub16(op1, op2),
+                6 => _alu.Xor16(op1, op2),
+                7 => _alu.Sub16(op1, op2),
+                _ => throw new InvalidGroupIndexException(_machine, groupIndex)
+            };
+        }
+        // 7 is CMP so no memory to set
+        if (groupIndex != 7)
+        {
+            if (op1Byte)
+            {
+                _modRM.SetRm8(res);
+            }
+            else
+            {
+                _modRM.SetRm16(res);
+            }
+        }
+    }
+
+    private string GenerateGrp1Name(int groupIndex, bool op1Byte, int op1, int op2)
+    {
+        var opName = (groupIndex) switch
+        {
+            0 => "ADD",
+            1 => "OR",
+            2 => "ADC",
+            3 => "SBB",
+            4 => "AND",
+            5 => "SUB",
+            6 => "XOR",
+            7 => "CMP",
+            _ => "",
+        };
+        return opName + Generate8Or16Value(op1Byte, op1, op2);
+    }
+
+    private void Grp2(int opcode)
+    {
+        // GRP2 rmb 1
+        _modRM.Read();
+        int groupIndex = _modRM.GetRegisterIndex();
+        bool op1Byte = (opcode & 0b01) == 0;
+
+        bool valueIsCL = (opcode & 0b10) == 0b10;// if it 0b10, it is CL
+        int op2;
+        if (valueIsCL)
+        {
+            op2 = _state.GetCL();
+        }
+        else
+        {
+            op2 = 1;
+        }
+        int op1 = GetRm8Or16(op1Byte);
+        SetCurrentInstructionName(() => GenerateGrp2Name(groupIndex, op1Byte, op1, op2));
+        int res;
+        if (op1Byte)
+        {
+            res = (groupIndex) switch
+            {
+                0 => _alu.Rol8(op1, op2),
+                1 => _alu.Ror8(op1, op2),
+                2 => _alu.Rcl8(op1, op2),
+                3 => _alu.Rcr8(op1, op2),
+                4 => _alu.Shl8(op1, op2),
+                5 => _alu.Shr8(op1, op2),
+                7 => _alu.Sar8(op1, op2),
+                _ => throw new InvalidGroupIndexException(_machine, groupIndex)
+            };
+        }
+        else
+        {
+            res = (groupIndex) switch
+            {
+                0 => _alu.Rol16(op1, op2),
+                1 => _alu.Ror16(op1, op2),
+                2 => _alu.Rcl16(op1, op2),
+                3 => _alu.Rcr16(op1, op2),
+                4 => _alu.Shl16(op1, op2),
+                5 => _alu.Shr16(op1, op2),
+                7 => _alu.Sar16(op1, op2),
+                _ => throw new InvalidGroupIndexException(_machine, groupIndex)
+            };
+        }
+        if (op1Byte)
+        {
+            _modRM.SetRm8(res);
+        }
+        else
+        {
+            _modRM.SetRm16(res);
+        }
+    }
+
+    private string GenerateGrp2Name(int groupIndex, bool op1Byte, int op1, int op2)
+    {
+        var opName = (groupIndex) switch
+        {
+            0 => "ROL",
+            1 => "ROR",
+            2 => "RCL",
+            3 => "RCR",
+            4 => "SHL",
+            5 => "SHR",
+            7 => "SAR",
+            _ => ""
+        };
+        return opName + Generate8Or16Value(op1Byte, op1, op2);
+    }
+
+    private string Generate8Or16Value(bool op1Byte, int op1, int op2)
+    {
+        var @params = $"({ConvertUtils.ToHex8(op1)},{ConvertUtils.ToHex8(op2)})";
+        if (op1Byte)
+        {
+            return $"8 {@params}";
+        }
+        return $"16 {@params}";
+    }
+
     private void Grp3b()
     {
         _modRM.Read();
