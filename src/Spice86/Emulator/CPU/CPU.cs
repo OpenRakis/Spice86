@@ -93,7 +93,7 @@ public class Cpu
 
     public void SetForceLog(bool forceLog) => _forceLog = forceLog;
 
-    internal void ExternalInterrupt(int vectorNumber)
+    public void ExternalInterrupt(int vectorNumber)
     {
         // hack: do not let the timer overwrite keyboard.
         if (_externalInterruptVectorNumber == null || _externalInterruptVectorNumber != 9)
@@ -350,6 +350,8 @@ public class Cpu
         return 0;
     }
 
+    private void HandleInvalidOpcodeBecausePrefix(int opcode) => throw new InvalidOpCodeException(_machine, opcode, true);
+
     private void HandleInvalidOpcode(int opcode) => throw new InvalidOpCodeException(_machine, opcode, false);
 
     private void Interrupt(int? vectorNumber, bool external)
@@ -468,26 +470,175 @@ public class Cpu
         return STRING_OPCODES.Contains(opcode);
     }
 
-    internal void FarRet(int v)
+    public void FarRet(int numberOfBytesToPop)
     {
-        throw new NotImplementedException();
+        _functionHandlerInUse.Ret(CallType.FAR);
+        _internalIp = _stack.Pop();
+        _state.SetCS(_stack.Pop());
+        _state.SetSP(numberOfBytesToPop + _state.GetSP());
     }
 
 
 
-    internal StaticAddressesRecorder GetStaticAddressesRecorder()
+    public StaticAddressesRecorder GetStaticAddressesRecorder() => _staticAddressesRecorder;
+
+    public void InterruptRet()
     {
-        throw new NotImplementedException();
+        _functionHandlerInUse.Ret(CallType.INTERRUPT);
+        _internalIp = _stack.Pop();
+        _state.SetCS(_stack.Pop());
+        _state.GetFlags().SetFlagRegister(_stack.Pop());
+        _functionHandlerInUse = _functionHandler;
     }
 
-    internal void InterruptRet()
+    private int GetDsNextUint16Address()
     {
-        throw new NotImplementedException();
+        return _modRM.GetAddress(SegmentRegisters.DsIndex, NextUint16(), true);
     }
 
-    internal void NearRet(int v)
+
+    private int GetRm8Or16(bool op1Byte)
     {
-        throw new NotImplementedException();
+        if (op1Byte)
+        {
+            return _modRM.GetRm8();
+        }
+        return _modRM.GetRm16();
+    }
+
+    private void HandleDivisionError()
+    {
+        // Reset IP because instruction is not finished (this is how an actual CPU behaves)
+        _internalIp = _state.GetIP();
+        Interrupt(0, false);
+    }
+
+    private void Grp4()
+    {
+        _modRM.Read();
+        int groupIndex = _modRM.GetRegisterIndex();
+        if (groupIndex == 0)
+        {
+            SetCurrentInstructionName(() => "INC");
+            _modRM.SetRm8(_alu.Inc8(_modRM.GetRm8()));
+        }
+        if (groupIndex == 1)
+        {
+            SetCurrentInstructionName(() => "DEC");
+            _modRM.SetRm8(_alu.Dec8(_modRM.GetRm8()));
+        }
+        if (groupIndex == 7)
+        {
+            // Callback, emulator specific instruction FE38 like in dosbox,
+            // to allow interrupts to be overridden by the program
+            Callback(NextUint16());
+        }
+        throw new InvalidGroupIndexException(_machine, groupIndex);
+    }
+
+    private void Grp5()
+    {
+        _modRM.Read();
+        int groupIndex = _modRM.GetRegisterIndex();
+        if (groupIndex == 0)
+        {
+            SetCurrentInstructionName(() => "INC");
+            _modRM.SetRm16(_alu.Inc16(_modRM.GetRm16()));
+        }
+        if (groupIndex == 1)
+        {
+            SetCurrentInstructionName(() => "DEC");
+            _modRM.SetRm16(_alu.Dec16(_modRM.GetRm16()));
+        }
+        if (groupIndex == 2)
+        {
+            SetCurrentInstructionName(() => "NEAR CALL");
+            int callAddress = _modRM.GetRm16();
+            NearCall(_internalIp, callAddress);
+        }
+        if (groupIndex == 3)
+        {
+            SetCurrentInstructionName(() => "FAR CALL");
+            int? ipAddress = _modRM.GetMemoryAddress();
+            if (ipAddress is null) { return; }
+            GetStaticAddressesRecorder().SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32Ptr);
+            int ip = _memory.GetUint16(ipAddress.Value);
+            int cs = _memory.GetUint16(ipAddress.Value + 2);
+            FarCall(_state.GetCS(), _internalIp, cs, ip);
+        }
+        if (groupIndex == 4)
+        {
+            int ip = _modRM.GetRm16();
+            JumpNear(ip);
+        }
+        if (groupIndex == 5)
+        {
+            int? ipAddress = _modRM.GetMemoryAddress();
+            if (ipAddress is null) { return; }
+            GetStaticAddressesRecorder().SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32Ptr);
+            int ip = _memory.GetUint16(ipAddress.Value);
+            int cs = _memory.GetUint16(ipAddress.Value + 2);
+            JumpFar(cs, ip);
+        }
+        if (groupIndex == 6)
+        {
+            SetCurrentInstructionName(() => "PUSH");
+            _stack.Push(_modRM.GetRm16());
+        }
+        throw new InvalidGroupIndexException(_machine, groupIndex);
+    }
+
+    private void JumpNear(int ip)
+    {
+        SetCurrentInstructionName(
+            () => $"JMP NEAR {ConvertUtils.ToSegmentedAddressRepresentation(_state.GetCS(), ip)}");
+        HandleJump(_state.GetCS(), ip);
+    }
+
+    private void JumpFar(int cs, int ip)
+    {
+        SetCurrentInstructionName(
+            () => $"JMP FAR {ConvertUtils.ToSegmentedAddressRepresentation(cs, ip)}");
+        HandleJump(cs, ip);
+    }
+
+    private void HandleJump(int cs, int ip)
+    {
+        _internalIp = ip;
+        _state.SetCS(cs);
+    }
+
+    private void NearCall(int returnIP, int callIP)
+    {
+        _stack.Push(returnIP);
+        _internalIp = callIP;
+        HandleCall(CallType.NEAR, _state.GetCS(), returnIP, _state.GetCS(), callIP);
+    }
+
+    private void FarCall(int returnCS, int returnIP, int targetCS, int targetIP)
+    {
+        _stack.Push(returnCS);
+        _stack.Push(returnIP);
+        _state.SetCS(targetCS);
+        _internalIp = targetIP;
+        HandleCall(CallType.FAR, returnCS, returnIP, targetCS, targetIP);
+    }
+
+    private void HandleCall(CallType callType, int returnCS, int returnIP, int targetCS, int targetIP)
+    {
+        if (IsLoggingEnabled())
+        {
+            _logger.Debug("CALL {@TargetCsTargetIp}, will return to {@ReturnCsReturnIp}", ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP),
+              ConvertUtils.ToSegmentedAddressRepresentation(returnCS, returnIP));
+        }
+        _functionHandlerInUse.Call(callType, targetCS, targetIP, returnCS, returnIP);
+    }
+
+    public void NearRet(int numberOfBytesToPop)
+    {
+        _functionHandlerInUse.Ret(CallType.NEAR);
+        _internalIp = _stack.Pop();
+        _state.SetSP(numberOfBytesToPop + _state.GetSP());
     }
 
     public byte NextUint8()
@@ -497,6 +648,31 @@ public class Cpu
         return res;
     }
 
+    public void SetFlagOnInterruptStack(int flagMask, bool flagValue)
+    {
+        int flagsAddress = MemoryUtils.ToPhysicalAddress(_state.GetSS(), _state.GetSP() + 4);
+        int value = _memory.GetUint16(flagsAddress);
+        if (flagValue)
+        {
+            value = value | flagMask;
+        }
+        else
+        {
+            value = value & ~flagMask;
+        }
+        _memory.SetUint16(flagsAddress, (ushort)value);
+    }
+
+    private void Callback(int callbackIndex)
+    {
+        SetCurrentInstructionName(() => $"CALLBACK {callbackIndex}");
+        if (IsLoggingEnabled())
+        {
+            _logger.Debug("callback {@CallbackIndex}", ConvertUtils.ToHex16(callbackIndex));
+        }
+        _callbackHandler.Run(callbackIndex);
+    }
+
     public ushort NextUint16()
     {
         var res = _memory.GetUint16(GetInternalIpPhysicalAddress());
@@ -504,8 +680,5 @@ public class Cpu
         return res;
     }
 
-    private int GetInternalIpPhysicalAddress()
-    {
-        return MemoryUtils.ToPhysicalAddress(_state.GetCS(), _internalIp);
-    }
+    private int GetInternalIpPhysicalAddress() => MemoryUtils.ToPhysicalAddress(_state.GetCS(), _internalIp);
 }
