@@ -513,6 +513,76 @@ public class Cpu
         Interrupt(0, false);
     }
 
+    private void Grp3b()
+    {
+        _modRM.Read();
+        int groupIndex = _modRM.GetRegisterIndex();
+        if (groupIndex == 0)
+        {
+            SetCurrentInstructionName(() => "TEST16");
+            _alu.And16(_modRM.GetRm16(), NextUint16());
+        }
+        if (groupIndex == 2)
+        {
+            SetCurrentInstructionName(() => "NOT16");
+            _modRM.SetRm16((ushort)~_modRM.GetRm16());
+        }
+        if (groupIndex == 3)
+        {
+            SetCurrentInstructionName(() => "NEG16");
+            int value = _modRM.GetRm16();
+            value = _alu.Sub16(0, value);
+            _modRM.SetRm16(value);
+            _state.SetCarryFlag(value != 0);
+        }
+        if (groupIndex == 4)
+        {
+            SetCurrentInstructionName(() => "MUL16");
+            int result = _alu.Mul16(_state.GetAX(), _modRM.GetRm16());
+            // Upper part of the result goes in DX
+            _state.SetDX((ushort)(result >> 16));
+            _state.SetAX(result);
+        }
+        if (groupIndex == 5)
+        {
+            SetCurrentInstructionName(() => "IMUL16");
+            int result = _alu.Imul16(_state.GetAX(), _modRM.GetRm16());
+            // Upper part of the result goes in DX
+            _state.SetDX((ushort)(result >> 16));
+            _state.SetAX(result);
+        }
+        if (groupIndex == 6)
+        {
+            SetCurrentInstructionName(() => "DIV16");
+            int v1 = (_state.GetDX() << 16) | _state.GetAX();
+            int v2 = _modRM.GetRm16();
+            int? result = _alu.Div16(v1, v2);
+            if (result == null)
+            {
+                HandleDivisionError();
+                return;
+            }
+            _state.SetAX(result.Value);
+            _state.SetDX((int)((uint)v1 % (uint)v2));
+        }
+        if (groupIndex == 7)
+        {
+            SetCurrentInstructionName(() => "IDIV16");
+            // no sign extension for v1 as it is already a 32bit value
+            int v1 = (_state.GetDX() << 16) | _state.GetAX();
+            int v2 = (short)_modRM.GetRm16();
+            int? result = _alu.Idiv16(v1, v2);
+            if (result == null)
+            {
+                HandleDivisionError();
+                return;
+            }
+            _state.SetAX(result.Value);
+            _state.SetDX(v1 % v2);
+        }
+        throw new InvalidGroupIndexException(_machine, groupIndex);
+    }
+
     private void Grp4()
     {
         _modRM.Read();
