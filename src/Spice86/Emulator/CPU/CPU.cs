@@ -2074,7 +2074,7 @@ public class Cpu
         {
             _logger.Debug("callback {@CallbackIndex}", ConvertUtils.ToHex16(callbackIndex));
         }
-        _callbackHandler.Run(callbackIndex);
+        _callbackHandler?.Run(callbackIndex);
     }
 
     public ushort NextUint16()

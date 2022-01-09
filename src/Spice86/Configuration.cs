@@ -17,7 +17,7 @@ public class Configuration
 
     private bool _failOnUnhandledPort;
 
-    private int _gdbPort;
+    private int? _gdbPort;
 
     private bool _installInterruptVector;
 
@@ -57,7 +57,7 @@ public class Configuration
         return _expectedChecksum;
     }
 
-    public int GetGdbPort()
+    public int? GetGdbPort()
     {
         return _gdbPort;
     }

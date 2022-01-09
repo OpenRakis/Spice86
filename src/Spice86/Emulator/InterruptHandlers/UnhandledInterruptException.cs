@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.InterruptHandlers.Vga;
+﻿namespace Spice86.Emulator.InterruptHandlers;
 
 using Spice86.Emulator.Errors;
 using Spice86.Emulator.Machine;

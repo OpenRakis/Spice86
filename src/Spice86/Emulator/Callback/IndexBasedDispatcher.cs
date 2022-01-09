@@ -1,6 +1,5 @@
 using Spice86.Emulator.Errors;
 
-using System;
 using System.Collections.Generic;
 
 namespace Spice86.Emulator.Callback
@@ -8,24 +7,23 @@ namespace Spice86.Emulator.Callback
     /// <summary>
     /// Base class for most classes having to dispatch operations depending on a numeric value, like interrupts.
     /// </summary>
-    public abstract class IndexBasedDispatcher<T> where T : ICallback<Action>
+    public abstract class IndexBasedDispatcher<T> where T: IRunnable
     {
-        protected Dictionary<int, ICallback<Action>> _dispatchTable = new();
+        protected Dictionary<int, ICallback> _dispatchTable = new();
 
-        public void AddService(int index, ICallback<Action> runnable)
+        public void AddService(int index, ICallback runnable)
         {
             this._dispatchTable.Add(index, runnable);
         }
 
         public void Run(int index)
         {
-            var handler = _dispatchTable[index];
-            if (handler == null)
+            if(_dispatchTable.TryGetValue(index, out var handler) == false)
             {
                 throw GenerateUnhandledOperationException(index);
             }
 
-            handler?.GetCallback().Invoke();
+            handler.Run();
         }
 
         protected abstract UnhandledOperationException GenerateUnhandledOperationException(int index);

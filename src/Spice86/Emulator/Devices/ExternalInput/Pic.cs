@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Devices;
+﻿namespace Spice86.Emulator.Devices.ExternalInput;
 
 using Serilog;
 

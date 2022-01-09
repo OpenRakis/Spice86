@@ -12,7 +12,7 @@
 
         protected Machine machine;
 
-        protected Memory? memory;
+        protected Memory memory;
 
         protected DefaultIOPortHandler(Machine machine, bool failOnUnhandledPort)
         {

@@ -1,10 +1,6 @@
 ﻿namespace Spice86.Emulator.Callback;
 
-using System;
-
-public interface ICallback<T>
+public interface ICallback : IRunnable
 {
-    public Func<T> GetCallback();
-
-    public ushort GetIndex();
+    public int GetIndex();
 }

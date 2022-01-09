@@ -10,7 +10,7 @@ using Spice86.Emulator.Memory;
 
 using System;
 
-public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
+public class CallbackHandler : IndexBasedDispatcher<ICallback>
 {
     // Map of all the callback addresses
     private readonly Dictionary<int, SegmentedAddress> _callbackAddresses = new();
@@ -32,7 +32,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
         this._callbackHandlerSegment = interruptHandlerSegment;
     }
 
-    public void AddCallback(ICallback<Action> callback)
+    public void AddCallback(ICallback callback)
     {
         AddService(callback.GetIndex(), callback);
     }
@@ -55,25 +55,25 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
         return new UnhandledCallbackException(_machine, index);
     }
 
-    private void InstallCallbackInInterruptTable(ICallback<Action> callback)
+    private void InstallCallbackInInterruptTable(ICallback callback)
     {
         _offset += InstallInterruptWithCallback(callback.GetIndex(), _callbackHandlerSegment, _offset);
     }
 
-    private ushort InstallInterruptWithCallback(ushort vectorNumber, ushort segment, ushort offset)
+    private ushort InstallInterruptWithCallback(int vectorNumber, ushort segment, ushort offset)
     {
         InstallVectorInTable(vectorNumber, segment, offset);
         return WriteInterruptCallback(vectorNumber, segment, offset);
     }
 
-    private void InstallVectorInTable(ushort vectorNumber, ushort segment, ushort offset)
+    private void InstallVectorInTable(int vectorNumber, ushort segment, ushort offset)
     {
         // install the vector in the vector table
         _memory?.SetUint16(4 * vectorNumber + 2, segment);
         _memory?.SetUint16(4 * vectorNumber, offset);
     }
 
-    private ushort WriteInterruptCallback(ushort vectorNumber, int segment, int offset)
+    private ushort WriteInterruptCallback(int vectorNumber, int segment, int offset)
     {
         _callbackAddresses.Add(vectorNumber, new SegmentedAddress(segment, offset));
         int address = MemoryUtils.ToPhysicalAddress(segment, offset);
@@ -83,7 +83,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback<Action>>
         _memory?.SetUint8(address + 1, 0x38);
 
         // vector to call
-        _memory?.SetUint16(address + 2, vectorNumber);
+        _memory?.SetUint16(address + 2, (ushort)vectorNumber);
 
         // IRET
         _memory?.SetUint8(address + 4, 0xCF);
