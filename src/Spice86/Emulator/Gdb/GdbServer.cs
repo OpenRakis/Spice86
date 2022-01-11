@@ -1,21 +1,19 @@
 ﻿namespace Spice86.Emulator.Gdb;
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Serilog;
+
 using Spice86.Emulator.Machine;
+
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 public class GdbServer : IDisposable
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbServer>();
     private Machine machine;
     private bool running = true;
-    private volatile bool started = false;
+    private bool started = false;
     private string defaultDumpDirectory;
     private bool disposedValue;
 
@@ -35,7 +33,10 @@ public class GdbServer : IDisposable
     private async Task StartAsync(int port)
     {
         // wait for thread to start
-        await RunServerAsync(port);
+        while(!started)
+        {
+            await RunServerAsync(port);
+        }
     }
 
     private async Task RunServerAsync(int port)
@@ -43,19 +44,21 @@ public class GdbServer : IDisposable
         _logger.Information("Starting GDB server");
         try
         {
-            while (running)
+            await Task.Factory.StartNew(() =>
             {
-                try
+                while (running)
                 {
-                    var gdbIo = new GdbIo(port);
-                    AcceptOneConnection(gdbIo);
+                    try
+                    {
+                        var gdbIo = new GdbIo(port);
+                        AcceptOneConnection(gdbIo);
+                    }
+                    catch (IOException e)
+                    {
+                        _logger.Error(e, "Error in the GDB server, restarting it...");
+                    }
                 }
-                catch (IOException e)
-                {
-                    _logger.Error(e, "Error in the GDB server, restarting it...");
-                }
-                await Task.Yield();
-            }
+            });
         }
         finally
         {
