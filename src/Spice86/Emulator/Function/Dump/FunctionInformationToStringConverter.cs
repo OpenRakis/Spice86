@@ -73,7 +73,6 @@ namespace Spice86.Emulator.Function.Dump
 
         protected virtual IEnumerable<FunctionInformation> GetCalls(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions)
         {
-
             // calls made by this function is the list of functions that get called by it
             return Sort(allFunctions.Where((callee) => callee.GetCallers().Contains(functionInformation)));
         }
@@ -88,7 +87,7 @@ namespace Spice86.Emulator.Function.Dump
             return enumerable.OrderBy(x => x).ToList();
         }
 
-        protected virtual IDictionary<K, V> Sort<K, V>(IDictionary<K, V> map)
+        protected virtual Dictionary<K, V> Sort<K, V>(IDictionary<K, V> map)
         {
             var ordered = map.OrderBy(x => x);
             Dictionary<K, V> result = new();
@@ -106,7 +105,7 @@ namespace Spice86.Emulator.Function.Dump
             {
                 sb.Append(item);
             }
-            sb.Append(Environment.NewLine);
+            sb.Append('\n');
             return sb.ToString();
         }
 
