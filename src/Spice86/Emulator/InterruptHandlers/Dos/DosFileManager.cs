@@ -18,6 +18,7 @@ public class DosFileManager
     public const int FileHandleOffset = 5;
     private const int MaxOpenFiles = 15;
     private static readonly Dictionary<int, string> _fileOpenMode = new();
+
     static DosFileManager()
     {
         _fileOpenMode.Add(0x00, "r");
@@ -34,23 +35,24 @@ public class DosFileManager
     private string? currentMatchingFileSearchFolder;
     private string? currentMatchingFileSearchSpec;
     private IEnumerator<string>? matchingFilesIterator;
+
     public DosFileManager(Memory memory)
     {
         this.memory = memory;
     }
 
-    public virtual void SetDiskTransferAreaAddress(int diskTransferAreaAddressSegment, int diskTransferAreaAddressOffset)
+    public void SetDiskTransferAreaAddress(int diskTransferAreaAddressSegment, int diskTransferAreaAddressOffset)
     {
         this.diskTransferAreaAddressSegment = diskTransferAreaAddressSegment;
         this.diskTransferAreaAddressOffset = diskTransferAreaAddressOffset;
     }
 
-    public virtual int GetDiskTransferAreaAddressSegment()
+    public int GetDiskTransferAreaAddressSegment()
     {
         return diskTransferAreaAddressSegment;
     }
 
-    public virtual int GetDiskTransferAreaAddressOffset()
+    public int GetDiskTransferAreaAddressOffset()
     {
         return diskTransferAreaAddressOffset;
     }
@@ -60,13 +62,13 @@ public class DosFileManager
         return MemoryUtils.ToPhysicalAddress(diskTransferAreaAddressSegment, diskTransferAreaAddressOffset);
     }
 
-    public virtual void SetDiskParameters(string currentDir, Dictionary<char, string> driveMap)
+    public void SetDiskParameters(string currentDir, Dictionary<char, string> driveMap)
     {
         this.currentDir = currentDir;
         this.driveMap = driveMap;
     }
 
-    public virtual DosFileOperationResult SetCurrentDir(string currentDir)
+    public DosFileOperationResult SetCurrentDir(string currentDir)
     {
         this.currentDir = ToHostCaseSensitiveFileName(currentDir, false);
         return DosFileOperationResult.NoValue();
@@ -107,7 +109,7 @@ public class DosFileManager
         }
     }
 
-    public virtual DosFileOperationResult CreateFileUsingHandle(string fileName, int fileAttribute)
+    public DosFileOperationResult CreateFileUsingHandle(string fileName, int fileAttribute)
     {
         string? hostFileName = ToHostCaseSensitiveFileName(fileName, true);
         if (hostFileName == null)
@@ -134,7 +136,7 @@ public class DosFileManager
         return OpenFileInternal(fileName, hostFileName, "rw");
     }
 
-    public virtual DosFileOperationResult OpenFile(string fileName, int rwAccessMode)
+    public DosFileOperationResult OpenFile(string fileName, int rwAccessMode)
     {
         string hostFileName = ToHostCaseSensitiveFileName(fileName, false);
         if (hostFileName == null)
@@ -151,7 +153,7 @@ public class DosFileManager
         return OpenFileInternal(fileName, hostFileName, openMode);
     }
 
-    public virtual DosFileOperationResult DuplicateFileHandle(int fileHandle)
+    public DosFileOperationResult DuplicateFileHandle(int fileHandle)
     {
         OpenFile file = GetOpenFile(fileHandle);
         if (file == null)
@@ -170,7 +172,7 @@ public class DosFileManager
         return DosFileOperationResult.Value16(dosIndex);
     }
 
-    public virtual DosFileOperationResult CloseFile(int fileHandle)
+    public DosFileOperationResult CloseFile(int fileHandle)
     {
         OpenFile file = GetOpenFile(fileHandle);
         if (file == null)
@@ -188,7 +190,6 @@ public class DosFileManager
         {
             if (CountHandles(file) == 0)
             {
-
                 // Only close the file if no other handle to it exist.
                 file.GetRandomAccessFile().Close();
             }
@@ -201,7 +202,7 @@ public class DosFileManager
         return DosFileOperationResult.NoValue();
     }
 
-    public virtual DosFileOperationResult ReadFile(int fileHandle, int readLength, int targetAddress)
+    public DosFileOperationResult ReadFile(int fileHandle, int readLength, int targetAddress)
     {
         OpenFile file = GetOpenFile(fileHandle);
         if (file == null)
@@ -227,7 +228,6 @@ public class DosFileManager
 
         if (actualReadLength == -1)
         {
-
             // EOF
             return DosFileOperationResult.Value16(0);
         }
@@ -263,7 +263,7 @@ public class DosFileManager
         };
     }
 
-    public virtual DosFileOperationResult WriteFileUsingHandle(int fileHandle, int writeLength, int bufferAddress)
+    public DosFileOperationResult WriteFileUsingHandle(int fileHandle, int writeLength, int bufferAddress)
     {
         if (IsWriteDeviceFileHandle(fileHandle))
         {
@@ -296,7 +296,7 @@ public class DosFileManager
         return DosFileOperationResult.Value16(writeLength);
     }
 
-    public virtual DosFileOperationResult MoveFilePointerUsingHandle(int originOfMove, int fileHandle, int offset)
+    public DosFileOperationResult MoveFilePointerUsingHandle(int originOfMove, int fileHandle, int offset)
     {
         OpenFile file = GetOpenFile(fileHandle);
         if (file == null)
@@ -322,7 +322,7 @@ public class DosFileManager
     /// </summary>
     /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match. Case is insensitive</param>
     /// <returns></returns>
-    public virtual DosFileOperationResult FindFirstMatchingFile(string fileSpec)
+    public DosFileOperationResult FindFirstMatchingFile(string fileSpec)
     {
         string hostSearchSpec = ToHostFileName(fileSpec);
         currentMatchingFileSearchFolder = hostSearchSpec.Substring(0, hostSearchSpec.LastIndexOf('/') + 1);
@@ -356,7 +356,7 @@ public class DosFileManager
         return new Regex(regex);
     }
 
-    public virtual DosFileOperationResult FindNextMatchingFile()
+    public DosFileOperationResult FindNextMatchingFile()
     {
         if (matchingFilesIterator == null)
         {
@@ -371,7 +371,7 @@ public class DosFileManager
         }
 
         var matching = matchingFilesIterator.MoveNext();
-        if(matching)
+        if (matching)
         {
             try
             {
@@ -446,13 +446,11 @@ public class DosFileManager
         }
         else if (originOfMove == 1)
         {
-
             // seek from last read
             newOffset = randomAccessFile.Position + offset;
         }
         else
         {
-
             // seek from end
             newOffset = randomAccessFile.Length - offset;
         }
@@ -516,7 +514,6 @@ public class DosFileManager
     {
         if (hostFileName == null)
         {
-
             // Not found
             return FileNotFoundError(fileName);
         }
@@ -531,16 +528,16 @@ public class DosFileManager
         try
         {
             FileAccess fileAccess = FileAccess.Read;
-            if(openMode == "w")
+            if (openMode == "w")
             {
                 fileAccess = FileAccess.Write;
             }
-            if(openMode == "rw")
+            if (openMode == "rw")
             {
                 fileAccess = FileAccess.ReadWrite;
             }
             FileStream? randomAccessFile = null;
-            if(fileAccess == FileAccess.Read)
+            if (fileAccess == FileAccess.Read)
             {
                 randomAccessFile = File.OpenRead(hostFileName);
             }
@@ -592,12 +589,12 @@ public class DosFileManager
 
         return null;
     }
+
     private string ReplaceDriveWithHostPath(string fileName)
     {
-
         // Absolute path
         char driveLetter = fileName[0];
-        
+
         if (driveMap.TryGetValue(driveLetter, out var pathForDrive))
         {
             throw new UnrecoverableException("Could not find a mapping for drive " + driveLetter);

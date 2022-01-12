@@ -1,10 +1,8 @@
 ﻿namespace Spice86.Emulator.Devices.Sound;
 
-using Spice86.Emulator.IOPorts;
-
-
 using Serilog;
 
+using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Machine;
 using Spice86.Utils;
 
@@ -16,6 +14,7 @@ public class PcSpeaker : DefaultIOPortHandler
     private static readonly ILogger _logger = Log.Logger.ForContext<PcSpeaker>();
     private static readonly int PC_SPEAKER_PORT_NUMBER = 0x61;
     private int value;
+
     public PcSpeaker(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {
     }

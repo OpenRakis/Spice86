@@ -3,12 +3,6 @@
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Machine;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-
 /// <summary>
 /// MPU401 (Midi) implementation. Emulates an absent card :)
 /// </summary>
@@ -16,6 +10,7 @@ public class Midi : DefaultIOPortHandler
 {
     private static readonly int DATA = 0x330;
     private static readonly int COMMAND = 0x331;
+
     public Midi(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {
     }
@@ -50,20 +45,20 @@ public class Midi : DefaultIOPortHandler
         }
     }
 
-    public virtual void WriteData(int value)
+    public void WriteData(int value)
     {
     }
 
-    public virtual void WriteCommand(int value)
+    public void WriteCommand(int value)
     {
     }
 
-    public virtual int ReadData()
+    public int ReadData()
     {
         return 0;
     }
 
-    public virtual int ReadStatus()
+    public int ReadStatus()
     {
         return 0;
     }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 
 namespace Spice86.Emulator.Loadablefile.Dos;
 
@@ -15,12 +12,13 @@ public class PspGenerator
     private static readonly int LAST_FREE_SEGMENT_OFFSET = 0x02;
     private static readonly int DTA_OR_COMMAND_LINE_OFFSET = 0x80;
     private readonly Machine machine;
+
     public PspGenerator(Machine machine)
     {
         this.machine = machine;
     }
 
-    public virtual void GeneratePsp(int pspSegment, string arguments)
+    public void GeneratePsp(int pspSegment, string arguments)
     {
         Memory memory = machine.GetMemory();
         int pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
@@ -43,11 +41,9 @@ public class PspGenerator
         string correctLengthArguments = "";
         if (string.IsNullOrWhiteSpace(arguments) == false)
         {
-
             // Cut strings longer than 127 chrs
             correctLengthArguments = arguments.Length > 127 ? arguments[..127] : arguments;
         }
-
 
         // Command line size
         res[0] = ConvertUtils.Uint8b(correctLengthArguments.Length);

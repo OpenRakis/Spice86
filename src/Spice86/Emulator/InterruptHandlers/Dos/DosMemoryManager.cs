@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Dos;
+
 using Serilog;
 
 using Spice86.Emulator.Memory;
@@ -12,12 +13,13 @@ public class DosMemoryManager
     private Memory memory;
     private DosMemoryControlBlock? start;
     private int pspSegment;
+
     public DosMemoryManager(Memory memory)
     {
         this.memory = memory;
     }
 
-    public  void Init(int pspSegment, int lastFreeSegment)
+    public void Init(int pspSegment, int lastFreeSegment)
     {
         int startSegment = pspSegment - 1;
         this.pspSegment = pspSegment;
@@ -30,19 +32,18 @@ public class DosMemoryManager
         start.SetLast();
     }
 
-    public  int GetPspSegment()
+    public int GetPspSegment()
     {
         return pspSegment;
     }
 
-    public  bool ModifyBlock(int blockSegment, int requestedSize)
+    public bool ModifyBlock(int blockSegment, int requestedSize)
     {
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
         if (!CheckValidOrLogError(block))
         {
             return false;
         }
-
 
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false))
@@ -82,7 +83,6 @@ public class DosMemoryManager
         int blockSize = block.GetSize();
         if (blockSize == size)
         {
-
             // nothing to do
             return true;
         }
@@ -113,7 +113,6 @@ public class DosMemoryManager
     {
         if (onlyIfFree && !block.IsFree())
         {
-
             // Do not touch blocks in use
             return true;
         }
@@ -123,7 +122,6 @@ public class DosMemoryManager
             DosMemoryControlBlock next = block.Next();
             if (!next.IsFree())
             {
-
                 // end of the free blocks reached
                 break;
             }
@@ -148,7 +146,7 @@ public class DosMemoryManager
         destination.SetSize(destination.GetSize() + next.GetSize() + 1);
     }
 
-    public  DosMemoryControlBlock? AllocateMemoryBlock(int requestedSize)
+    public DosMemoryControlBlock? AllocateMemoryBlock(int requestedSize)
     {
         IList<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
 
@@ -156,7 +154,6 @@ public class DosMemoryManager
         var blockOptional = candidates.OrderBy(x => x.GetSize()).FirstOrDefault();
         if (blockOptional is null)
         {
-
             // Nothing found
             _logger.Error("Could not find any MCB to fit {@RequestedSize}.", requestedSize);
             return null;
@@ -165,7 +162,6 @@ public class DosMemoryManager
         DosMemoryControlBlock block = blockOptional;
         if (!SplitBlock(block, requestedSize))
         {
-
             // An issue occurred while splitting the block
             _logger.Error("Could not spit block {@Block}.", block);
             return null;
@@ -175,7 +171,7 @@ public class DosMemoryManager
         return block;
     }
 
-    public  DosMemoryControlBlock FindLargestFree()
+    public DosMemoryControlBlock FindLargestFree()
     {
         DosMemoryControlBlock? current = start;
         DosMemoryControlBlock? largest = null;
@@ -205,7 +201,7 @@ public class DosMemoryManager
             {
                 return new List<DosMemoryControlBlock>();
             }
-            if(current != null)
+            if (current != null)
             {
                 JoinBlocks(current, true);
             }
@@ -223,7 +219,7 @@ public class DosMemoryManager
         }
     }
 
-    public  bool FreeMemoryBlock(int blockSegment)
+    public bool FreeMemoryBlock(int blockSegment)
     {
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
         if (!CheckValidOrLogError(block))

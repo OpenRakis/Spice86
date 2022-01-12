@@ -24,6 +24,7 @@ public class MouseInt33Handler : InterruptHandler
     private int userCallbackMask;
     private int userCallbackSegment;
     private int userCallbackOffset;
+
     public MouseInt33Handler(Machine machine, Gui gui) : base(machine)
     {
         this.gui = gui;
@@ -63,7 +64,7 @@ public class MouseInt33Handler : InterruptHandler
         return valueInRange;
     }
 
-    public virtual void MouseInstalledFlag()
+    public void MouseInstalledFlag()
     {
         _logger.Information("MOUSE INSTALLED FLAG");
         _state.SetAX(0xFFFF);
@@ -72,7 +73,7 @@ public class MouseInt33Handler : InterruptHandler
         _state.SetBX(3);
     }
 
-    public virtual void GetMousePositionAndStatus()
+    public void GetMousePositionAndStatus()
     {
         int x = RestrictValue(gui.GetMouseX(), gui.GetWidth(), mouseMinX, mouseMaxX);
         int y = RestrictValue(gui.GetMouseY(), gui.GetHeight(), mouseMinY, mouseMaxY);
@@ -84,7 +85,7 @@ public class MouseInt33Handler : InterruptHandler
         _state.SetBX((leftClick ? 1 : 0) | ((rightClick ? 1 : 0) << 1));
     }
 
-    public virtual void SetMouseCursorPosition()
+    public void SetMouseCursorPosition()
     {
         int x = _state.GetCX();
         int y = _state.GetDX();
@@ -93,21 +94,21 @@ public class MouseInt33Handler : InterruptHandler
         gui.SetMouseY(y);
     }
 
-    public virtual void SetMouseHorizontalMinMaxPosition()
+    public void SetMouseHorizontalMinMaxPosition()
     {
         this.mouseMinX = _state.GetCX();
         this.mouseMaxX = _state.GetDX();
         _logger.Information("SET MOUSE HORIZONTAL MIN MAX POSITION {@MinX}, {@MaxX}", mouseMinX, mouseMaxX);
     }
 
-    public virtual void SetMouseVerticalMinMaxPosition()
+    public void SetMouseVerticalMinMaxPosition()
     {
         this.mouseMinY = _state.GetCX();
         this.mouseMaxY = _state.GetDX();
         _logger.Information("SET MOUSE VERTICAL MIN MAX POSITION {@MinY}, {@MaxY}", mouseMinY, mouseMaxY);
     }
 
-    public virtual void SetMouseUserDefinedSubroutine()
+    public void SetMouseUserDefinedSubroutine()
     {
         userCallbackMask = _state.GetCX();
         userCallbackSegment = _state.GetES();
@@ -115,20 +116,20 @@ public class MouseInt33Handler : InterruptHandler
         _logger.Information("SET MOUSE USER DEFINED SUBROUTINE (unimplemented!) {@Mask}, {@Segment}, {@Offset}", userCallbackMask, userCallbackSegment, userCallbackOffset);
     }
 
-    public virtual void SetMouseMickeyPixelRatio()
+    public void SetMouseMickeyPixelRatio()
     {
         int rx = _state.GetCX();
         int ry = _state.GetDX();
         _logger.Information("SET MOUSE MICKEY PIXEL RATIO {@Rx}, {@Ry}", rx, ry);
     }
 
-    public virtual void SetMouseDoubleSpeedThreshold()
+    public void SetMouseDoubleSpeedThreshold()
     {
         int threshold = _state.GetDX();
         _logger.Information("SET MOUSE DOUBLE SPEED THRESHOLD {@Threshold}", threshold);
     }
 
-    public virtual void SwapMouseUserDefinedSubroutine()
+    public void SwapMouseUserDefinedSubroutine()
     {
         int newUserCallbackMask = _state.GetCX();
         int newUserCallbackSegment = _state.GetES();
@@ -142,7 +143,7 @@ public class MouseInt33Handler : InterruptHandler
         userCallbackSegment = newUserCallbackSegment;
     }
 
-    public virtual void SetMouseSensivity()
+    public void SetMouseSensivity()
     {
         int horizontalSpeed = _state.GetBX();
         int verticalSpeed = _state.GetCX();

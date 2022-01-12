@@ -13,6 +13,7 @@ public class ExeLoader : ExecutableFileLoader
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<ExeLoader>();
     private readonly int startSegment;
+
     public ExeLoader(Machine machine, int startSegment) : base(machine)
     {
         this.startSegment = startSegment;
@@ -38,7 +39,6 @@ public class ExeLoader : ExecutableFileLoader
         _memory.LoadData(physicalStartAddress, exeFile.GetProgramImage());
         foreach (SegmentedAddress address in exeFile.GetRelocationTable())
         {
-
             // Read value from memory, add the start segment offset and write back
             int addressToEdit = MemoryUtils.ToPhysicalAddress(address.GetSegment(), address.GetOffset()) + physicalStartAddress;
             int segmentToRelocate = _memory.GetUint16(addressToEdit);

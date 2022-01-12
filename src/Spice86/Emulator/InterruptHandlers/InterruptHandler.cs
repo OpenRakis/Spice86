@@ -10,9 +10,11 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
 {
     // Protected visibility because they are used by almost all implementations
     protected Machine machine;
+
     protected Memory memory;
     protected Cpu cpu;
     protected State _state;
+
     protected InterruptHandler(Machine machine)
     {
         this.machine = machine;
@@ -22,6 +24,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
     }
 
     public abstract void Run();
+
     public abstract int GetIndex();
 
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index)
@@ -29,7 +32,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
         return new UnhandledInterruptException(machine, GetIndex(), index);
     }
 
-    protected virtual void SetCarryFlag(bool value, bool setOnStack)
+    protected void SetCarryFlag(bool value, bool setOnStack)
     {
         _state.SetCarryFlag(value);
         if (setOnStack)
@@ -38,7 +41,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
         }
     }
 
-    protected virtual void SetZeroFlag(bool value, bool setOnStack)
+    protected void SetZeroFlag(bool value, bool setOnStack)
     {
         _state.SetZeroFlag(value);
         if (setOnStack)

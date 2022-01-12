@@ -19,6 +19,7 @@ public class VgaDac
     private int _readIndex;
     private int _writeIndex;
     private readonly Rgb[] _rgbs = new Rgb[256];
+
     public VgaDac(Machine machine)
     {
         _machine = machine;
@@ -38,7 +39,7 @@ public class VgaDac
 
     public static int From6bitColorTo8bit(int color6bit) => (byte)((color6bit & 0b111111) << 2);
 
-    public virtual void WriteColor(int colorValue)
+    public void WriteColor(int colorValue)
     {
         Rgb rgb = _rgbs[_writeIndex];
         if (_colour == Redindex)
@@ -83,47 +84,47 @@ public class VgaDac
         return value;
     }
 
-    public virtual int GetState()
+    public int GetState()
     {
         return _state;
     }
 
-    public virtual void SetState(int state)
+    public void SetState(int state)
     {
         this._state = state;
     }
 
-    public virtual int GetColour()
+    public int GetColour()
     {
         return _colour;
     }
 
-    public virtual void SetColour(int colour)
+    public void SetColour(int colour)
     {
         this._colour = colour;
     }
 
-    public virtual int GetReadIndex()
+    public int GetReadIndex()
     {
         return _readIndex;
     }
 
-    public virtual void SetReadIndex(int readIndex)
+    public void SetReadIndex(int readIndex)
     {
         this._readIndex = readIndex;
     }
 
-    public virtual int GetWriteIndex()
+    public int GetWriteIndex()
     {
         return _writeIndex;
     }
 
-    public virtual void SetWriteIndex(int writeIndex)
+    public void SetWriteIndex(int writeIndex)
     {
         this._writeIndex = writeIndex;
     }
 
-    public virtual Rgb[] GetRgbs()
+    public Rgb[] GetRgbs()
     {
         return _rgbs;
     }

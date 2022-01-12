@@ -22,9 +22,12 @@ public class Timer : DefaultIOPortHandler
     private static readonly int MODE_COMMAND_REGISTER = 0x43;
     private readonly Counter[] counters = new Counter[3];
     private readonly Pic pic;
+
     // Cheat: display at 60fps
     private readonly Counter vgaCounter;
+
     private readonly VgaCard vgaCard;
+
     public Timer(Machine machine, Pic pic, VgaCard vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {
         this.pic = pic;

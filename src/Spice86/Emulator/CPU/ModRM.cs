@@ -15,6 +15,7 @@ public class ModRM
     private uint _registerMemoryIndex;
     private int? _memoryAddress;
     private int? _memoryOffset;
+
     public ModRM(Machine machine, Cpu cpu)
     {
         _machine = machine;
@@ -35,15 +36,15 @@ public class ModRM
         _registerMemoryIndex = modRM & 0b111;
         if (mode == 3)
         {
-          // value at reg[memoryRegisterIndex] to be used instead of memoryAddress
-          _memoryOffset = null;
-          _memoryAddress = null;
-          return;
+            // value at reg[memoryRegisterIndex] to be used instead of memoryAddress
+            _memoryOffset = null;
+            _memoryAddress = null;
+            return;
         }
         var disp = 0;
         if (mode == 1)
         {
-          disp = _cpu.NextUint8();
+            disp = _cpu.NextUint8();
         }
         else if (mode == 2)
         {
@@ -76,19 +77,19 @@ public class ModRM
     {
         return _registerMemoryIndex switch
         {
-              0 => _state.GetBX() + _state.GetSI(),
-              1 => _state.GetBX() + _state.GetDI(),
-              2 => _state.GetBP() + _state.GetSI(),
-              3 => _state.GetBP() + _state.GetDI(),
-              4 => _state.GetSI(),
-              5 => _state.GetDI(),
-              6 => bpForRm6 ? _state.GetBP() : _cpu.NextUint16(),
-              7 => _state.GetBX(),
-                _ => throw new InvalidModeException(_machine, (int)_registerMemoryIndex)
-            };
+            0 => _state.GetBX() + _state.GetSI(),
+            1 => _state.GetBX() + _state.GetDI(),
+            2 => _state.GetBP() + _state.GetSI(),
+            3 => _state.GetBP() + _state.GetDI(),
+            4 => _state.GetSI(),
+            5 => _state.GetDI(),
+            6 => bpForRm6 ? _state.GetBP() : _cpu.NextUint16(),
+            7 => _state.GetBX(),
+            _ => throw new InvalidModeException(_machine, (int)_registerMemoryIndex)
+        };
     }
 
-    public virtual int GetAddress(int defaultSegmentRegisterIndex, int offset, bool recordAddress)
+    public int GetAddress(int defaultSegmentRegisterIndex, int offset, bool recordAddress)
     {
         int? segmentIndex = _state.GetSegmentOverrideIndex();
         if (segmentIndex == null)
@@ -105,12 +106,12 @@ public class ModRM
         return MemoryUtils.ToPhysicalAddress(segment, offset);
     }
 
-    public virtual int GetAddress(int defaultSegmentRegisterIndex, int offset)
+    public int GetAddress(int defaultSegmentRegisterIndex, int offset)
     {
         return GetAddress(defaultSegmentRegisterIndex, offset, false);
     }
 
-    public virtual int GetRm8()
+    public int GetRm8()
     {
         if (_memoryAddress == null)
         {

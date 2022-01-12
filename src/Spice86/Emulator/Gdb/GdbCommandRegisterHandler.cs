@@ -1,15 +1,13 @@
 ﻿namespace Spice86.Emulator.Gdb;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 using Serilog;
 
 using Spice86.Emulator.Cpu;
 using Spice86.Emulator.Machine;
 using Spice86.Utils;
+
+using System;
+using System.Text;
 
 public class GdbCommandRegisterHandler
 {
@@ -17,13 +15,14 @@ public class GdbCommandRegisterHandler
     private GdbIo gdbIo;
     private Machine machine;
     private GdbFormatter gdbFormatter = new GdbFormatter();
+
     public GdbCommandRegisterHandler(GdbIo gdbIo, Machine machine)
     {
         this.gdbIo = gdbIo;
         this.machine = machine;
     }
 
-    public virtual string WriteRegister(string commandContent)
+    public string WriteRegister(string commandContent)
     {
         String[] split = commandContent.Split("=");
         uint registerIndex = (uint)ConvertUtils.ParseHex32(split[0]);
@@ -32,7 +31,7 @@ public class GdbCommandRegisterHandler
         return gdbIo.GenerateResponse("OK");
     }
 
-    public virtual string ReadRegister(string commandContent)
+    public string ReadRegister(string commandContent)
     {
         try
         {
@@ -47,7 +46,7 @@ public class GdbCommandRegisterHandler
         }
     }
 
-    public virtual string WriteAllRegisters(string commandContent)
+    public string WriteAllRegisters(string commandContent)
     {
         try
         {
@@ -67,7 +66,7 @@ public class GdbCommandRegisterHandler
         }
     }
 
-    public virtual string ReadAllRegisters()
+    public string ReadAllRegisters()
     {
         _logger.Information("Reading all registers");
         StringBuilder response = new(2 * 4 * 16);

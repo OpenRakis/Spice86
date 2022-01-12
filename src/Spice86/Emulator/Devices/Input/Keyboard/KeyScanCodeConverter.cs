@@ -8,6 +8,7 @@ public class KeyScancodeConverter
 {
     private static readonly Dictionary<Key, int> _keyPressedScanCode = new();
     private static readonly Dictionary<int, int> _scanCodeToAscii = new();
+
     static KeyScancodeConverter()
     {
         // Some keys are not supported by AvaloniaUI so not putting them.
@@ -154,12 +155,12 @@ public class KeyScancodeConverter
         _scanCodeToAscii.Add(0x4E, 0x2B);
     }
 
-    public virtual int GetKeyPressedScancode(Key keyCode)
+    public int GetKeyPressedScancode(Key keyCode)
     {
         return _keyPressedScanCode[keyCode];
     }
 
-    public virtual int? GetKeyReleasedScancode(Key keyCode)
+    public int? GetKeyReleasedScancode(Key keyCode)
     {
         int? pressed = GetKeyPressedScancode(keyCode);
         if (pressed != null)
@@ -170,7 +171,7 @@ public class KeyScancodeConverter
         return null;
     }
 
-    public virtual int GetAsciiCode(int scancode)
+    public int GetAsciiCode(int scancode)
     {
         int keypressedScancode = scancode;
         if (keypressedScancode > 0x7F)

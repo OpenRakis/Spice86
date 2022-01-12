@@ -12,8 +12,10 @@ public class Counter
     public const long HardwareFrequency = 1193182;
     private readonly Machine _machine;
     private readonly int _index;
+
     // Some programs don't set it so let's use by default the simplest mode
     private int _readWritePolicy = 1;
+
     private int _mode;
     private int _bcd;
     private int _value;
@@ -21,6 +23,7 @@ public class Counter
     private bool _firstByteWritten;
     private long _ticks;
     private readonly ICounterActivator _activator;
+
     public Counter(Machine machine, int index, ICounterActivator activator)
     {
         this._machine = machine;
@@ -31,53 +34,53 @@ public class Counter
         UpdateDesiredFreqency(18);
     }
 
-    public virtual int GetIndex()
+    public int GetIndex()
     {
         return _index;
     }
 
-    public virtual int GetReadWritePolicy()
+    public int GetReadWritePolicy()
     {
         return _readWritePolicy;
     }
 
-    public virtual void SetReadWritePolicy(int readWritePolicy)
+    public void SetReadWritePolicy(int readWritePolicy)
     {
         this._readWritePolicy = readWritePolicy;
     }
 
-    public virtual int GetMode()
+    public int GetMode()
     {
         return _mode;
     }
 
-    public virtual void SetMode(int mode)
+    public void SetMode(int mode)
     {
         this._mode = mode;
     }
 
-    public virtual int GetBcd()
+    public int GetBcd()
     {
         return _bcd;
     }
 
-    public virtual void SetBcd(int bcd)
+    public void SetBcd(int bcd)
     {
         this._bcd = bcd;
     }
 
-    public virtual int GetValue()
+    public int GetValue()
     {
         return _value;
     }
 
-    public virtual void SetValue(int counter)
+    public void SetValue(int counter)
     {
         this._value = counter;
         OnValueWrite();
     }
 
-    public virtual long GetTicks()
+    public long GetTicks()
     {
         return _ticks;
     }
@@ -92,21 +95,20 @@ public class Counter
             2 => ReadMsb(),
             3 => ReadPolicy3(),
             _ => throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {_readWritePolicy}")
-            
         };
     }
 
     public void SetValueUsingMode(int partialValue)
     {
-        if(_readWritePolicy == 1)
+        if (_readWritePolicy == 1)
         {
             WriteLsb(partialValue);
         }
-        else if(partialValue == 2)
+        else if (partialValue == 2)
         {
             WriteMsb(partialValue);
         }
-        else if(partialValue == 3)
+        else if (partialValue == 3)
         {
             WritePolicy3(partialValue);
         }
@@ -115,16 +117,13 @@ public class Counter
 
     private int ReadPolicy3()
     {
-
         // LSB first, then MSB
         if (_firstByteRead)
         {
-
             // return msb
             _firstByteRead = false;
             return ReadMsb();
         }
-
 
         // else return lsb
         _firstByteRead = true;
@@ -134,7 +133,7 @@ public class Counter
     private void WritePolicy3(int partialValue)
     {
         // LSB first, then MSB
-        if(_firstByteWritten)
+        if (_firstByteWritten)
         {
             // write MSB
             _firstByteWritten = false;
@@ -187,7 +186,7 @@ public class Counter
         _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", _index, desiredFrequency);
     }
 
-    public virtual bool ProcessActivation(long currentCycles)
+    public bool ProcessActivation(long currentCycles)
     {
         if (_activator.IsActivated())
         {

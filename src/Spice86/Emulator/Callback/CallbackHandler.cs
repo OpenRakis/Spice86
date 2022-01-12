@@ -8,8 +8,6 @@ namespace Spice86.Emulator.Callback;
 using Spice86.Emulator.Machine;
 using Spice86.Emulator.Memory;
 
-using System;
-
 public class CallbackHandler : IndexBasedDispatcher<ICallback>
 {
     // Map of all the callback addresses

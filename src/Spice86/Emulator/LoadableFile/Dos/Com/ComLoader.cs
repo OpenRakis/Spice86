@@ -1,13 +1,14 @@
 ﻿namespace Spice86.Emulator.Loadablefile.Dos.Com;
 
+using Spice86.Emulator.LoadableFile;
 using Spice86.Emulator.Machine;
 using Spice86.Emulator.Memory;
-using Spice86.Emulator.LoadableFile;
 
 public class ComLoader : ExecutableFileLoader
 {
     private const int ComOffset = 0x100;
     private readonly int _startSegment;
+
     public ComLoader(Machine machine, int startSegment) : base(machine)
     {
         this._startSegment = startSegment;

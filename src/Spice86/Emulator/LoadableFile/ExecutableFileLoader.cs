@@ -39,7 +39,7 @@ public abstract class ExecutableFileLoader
         State state = _cpu.GetState();
         state.SetCS(cs);
         state.SetIP(ip);
-        if(_logger.IsEnabled(Serilog.Events.LogEventLevel.Information))
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information))
         {
             _logger.Information("Program entry point is {@ProgramEntty}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }

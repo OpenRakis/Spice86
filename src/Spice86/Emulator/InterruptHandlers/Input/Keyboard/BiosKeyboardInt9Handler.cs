@@ -11,6 +11,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler
     private KeyScancodeConverter _keyScancodeConverter = new();
     private BiosKeyboardBuffer _biosKeyboardBuffer;
     private Keyboard _keyboard;
+
     public BiosKeyboardInt9Handler(Machine machine) : base(machine)
     {
         this._keyboard = machine.GetKeyboard();
@@ -18,7 +19,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler
         _biosKeyboardBuffer.Init();
     }
 
-    public virtual BiosKeyboardBuffer GetBiosKeyboardBuffer()
+    public BiosKeyboardBuffer GetBiosKeyboardBuffer()
     {
         return _biosKeyboardBuffer;
     }

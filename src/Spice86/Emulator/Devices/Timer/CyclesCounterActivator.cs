@@ -11,6 +11,7 @@ public class CyclesCounterActivator : ICounterActivator
     private long _lastActivationCycle;
     private long _cyclesBetweenActivations;
     private readonly long _instructionsPerSecond;
+
     public CyclesCounterActivator(State state, long instructionsPerSecond)
     {
         this._state = state;

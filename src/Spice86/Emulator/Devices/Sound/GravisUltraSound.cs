@@ -1,10 +1,6 @@
 ﻿namespace Spice86.Emulator.Devices.Sound;
-using Spice86.Emulator.IOPorts;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Spice86.Emulator.IOPorts;
 
 using Spice86.Emulator.Machine;
 
@@ -19,6 +15,7 @@ public class GravisUltraSound : DefaultIOPortHandler
     private static readonly int TIMER_CONTROL_REGISTER = 0x248;
     private static readonly int IRQ_CONTROL_REGISTER = 0x24B;
     private static readonly int REGISTER_CONTROLS = 0x24F;
+
     public GravisUltraSound(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {
     }

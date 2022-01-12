@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿namespace Spice86.Emulator.InterruptHandlers.Bios;
 
-namespace Spice86.Emulator.InterruptHandlers.Bios;
-
-using Spice86.Emulator.Machine;
 using Spice86.Emulator.Callback;
+using Spice86.Emulator.Machine;
 
 public class SystemBiosInt15Handler : InterruptHandler
 {
@@ -30,7 +25,6 @@ public class SystemBiosInt15Handler : InterruptHandler
 
     private void Unsupported()
     {
-
         // We are not an IBM PS/2
         base.SetCarryFlag(true, true);
         _state.SetAH(0x86);

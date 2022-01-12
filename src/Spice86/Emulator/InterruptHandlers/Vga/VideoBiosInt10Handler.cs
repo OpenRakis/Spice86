@@ -1,13 +1,13 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Vga;
 
-using Spice86.Emulator.Machine;
-using Spice86.Emulator.Memory;
+using Serilog;
+
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.Devices.Video;
-using Spice86.Utils;
 using Spice86.Emulator.Errors;
-using Serilog;
-using System;
+using Spice86.Emulator.Machine;
+using Spice86.Emulator.Memory;
+using Spice86.Utils;
 
 public class VideoBiosInt10Handler : InterruptHandler
 {
@@ -18,6 +18,7 @@ public class VideoBiosInt10Handler : InterruptHandler
     private readonly VgaCard _vgaCard;
     private readonly int _numberOfScreenColumns = 80;
     private readonly int _currentDisplayPage = 0;
+
     public VideoBiosInt10Handler(Machine machine, VgaCard vgaCard) : base(machine)
     {
         this._vgaCard = vgaCard;
@@ -41,13 +42,13 @@ public class VideoBiosInt10Handler : InterruptHandler
     private void VideoDisplayCombination()
     {
         int op = _state.GetAL();
-        if(op == 0)
+        if (op == 0)
         {
             _logger.Information("GET VIDEO DISPLAY COMBINATION");
             // VGA with analog color display
             _state.SetBX(0x08);
         }
-        else if(op == 1)
+        else if (op == 1)
         {
             _logger.Information("SET VIDEO DISPLAY COMBINATION");
             throw new UnhandledOperationException(machine, "Unimplemented");

@@ -1,9 +1,11 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Dos;
+
 public class DosFileOperationResult
 {
     private readonly bool _error;
     private readonly bool _valueIsUint32;
     private readonly int? _value;
+
     public static DosFileOperationResult Error(int errorCode)
     {
         return new DosFileOperationResult(true, false, errorCode);

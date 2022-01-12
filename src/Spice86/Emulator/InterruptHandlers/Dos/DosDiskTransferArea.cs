@@ -14,6 +14,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress
     private static readonly int FILE_SIZE_OFFSET = 0x1A;
     private static readonly int FILE_NAME_OFFSET = 0x1E;
     private static readonly int FILE_NAME_SIZE = 13;
+
     public DosDiskTransferArea(Memory memory, int baseAddress) : base(memory, baseAddress)
     {
     }

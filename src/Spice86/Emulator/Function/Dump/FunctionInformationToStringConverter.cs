@@ -28,7 +28,7 @@ namespace Spice86.Emulator.Function.Dump
         /// Generates the footer of the file.
         /// </summary>
         /// <returns></returns>
-        public virtual string GetFileFooter()
+        public string GetFileFooter()
         {
             return "";
         }
@@ -40,7 +40,8 @@ namespace Spice86.Emulator.Function.Dump
         /// <param name="allFunctions"></param>
         /// <returns></returns>
         public abstract string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions);
-        protected virtual int ApproximateSize(FunctionInformation functionInformation)
+
+        protected int ApproximateSize(FunctionInformation functionInformation)
         {
             List<SegmentedAddress> boundaries = GetBoundaries(functionInformation);
             SegmentedAddress first = boundaries[0];
@@ -48,7 +49,7 @@ namespace Spice86.Emulator.Function.Dump
             return Math.Abs(first.ToPhysical() - last.ToPhysical());
         }
 
-        protected virtual List<SegmentedAddress> GetBoundaries(FunctionInformation functionInformation)
+        protected List<SegmentedAddress> GetBoundaries(FunctionInformation functionInformation)
         {
             List<SegmentedAddress> boundaries = new();
             boundaries.AddRange(functionInformation.GetReturns().Keys.ToDictionary(x => x.GetAddress()).Select(x => x.Key));
@@ -56,38 +57,38 @@ namespace Spice86.Emulator.Function.Dump
             return boundaries.OrderBy(x => x).ToList();
         }
 
-        protected virtual bool ContainsNonOverride(IEnumerable<FunctionInformation> calls)
+        protected bool ContainsNonOverride(IEnumerable<FunctionInformation> calls)
         {
             return calls.Any((function) => !function.HasOverride());
         }
 
-        protected virtual bool IsOverridable(IEnumerable<FunctionInformation> calls)
+        protected bool IsOverridable(IEnumerable<FunctionInformation> calls)
         {
             return calls.Any() == false || !ContainsNonOverride(calls);
         }
 
-        protected virtual List<FunctionInformation> GetCallers(FunctionInformation functionInformation)
+        protected List<FunctionInformation> GetCallers(FunctionInformation functionInformation)
         {
             return Sort(functionInformation.GetCallers()).ToList();
         }
 
-        protected virtual IEnumerable<FunctionInformation> GetCalls(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions)
+        protected IEnumerable<FunctionInformation> GetCalls(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions)
         {
             // calls made by this function is the list of functions that get called by it
             return Sort(allFunctions.Where((callee) => callee.GetCallers().Contains(functionInformation)));
         }
 
-        protected virtual ICollection<T> Sort<T>(ICollection<T> collection)
+        protected ICollection<T> Sort<T>(ICollection<T> collection)
         {
             return collection.OrderBy(x => x).ToList();
         }
 
-        protected virtual IEnumerable<T> Sort<T>(IEnumerable<T> enumerable)
+        protected IEnumerable<T> Sort<T>(IEnumerable<T> enumerable)
         {
             return enumerable.OrderBy(x => x).ToList();
         }
 
-        protected virtual Dictionary<K, V> Sort<K, V>(IDictionary<K, V> map)
+        protected Dictionary<K, V> Sort<K, V>(IDictionary<K, V> map)
         {
             var ordered = map.OrderBy(x => x);
             Dictionary<K, V> result = new();
@@ -98,7 +99,7 @@ namespace Spice86.Emulator.Function.Dump
             return result;
         }
 
-        protected virtual string JoinNewLine(IEnumerable<string> enumerable)
+        protected string JoinNewLine(IEnumerable<string> enumerable)
         {
             var sb = new StringBuilder();
             foreach (var item in enumerable)
@@ -109,7 +110,7 @@ namespace Spice86.Emulator.Function.Dump
             return sb.ToString();
         }
 
-        protected virtual string ToCSharpName(FunctionInformation functionInformation, bool dots)
+        protected string ToCSharpName(FunctionInformation functionInformation, bool dots)
         {
             string? nameToUse = functionInformation.GetName();
             if (!dots)
@@ -120,9 +121,9 @@ namespace Spice86.Emulator.Function.Dump
             return $"{nameToUse}_{ConvertUtils.ToCSharpStringWithPhysical(functionInformation.GetAddress())}";
         }
 
-        protected virtual string? RemoveDotsFromFunctionName(string? name)
+        protected string? RemoveDotsFromFunctionName(string? name)
         {
-            if(name is null)
+            if (name is null)
             {
                 return null;
             }

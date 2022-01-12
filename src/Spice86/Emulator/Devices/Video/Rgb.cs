@@ -8,6 +8,7 @@ public class Rgb
     private int r;
     private int g;
     private int b;
+
     public int GetR()
     {
         return r;

@@ -1,12 +1,11 @@
 ﻿namespace Spice86.Emulator.Gdb;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 using Serilog;
 
 using Spice86.Emulator.Machine;
+
+using System;
+
 public class GdbCommandHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandHandler>();
@@ -14,6 +13,7 @@ public class GdbCommandHandler
     private Machine machine;
     private bool connected = true;
     private GdbCommandRegisterHandler gdbCommandRegisterHandler;
+
     //private GdbCommandMemoryHandler gdbCommandMemoryHandler;
     //private GdbCustomCommandsHandler gdbCustomCommandsHandler;
     //private GdbCommandBreakpointHandler gdbCommandBreakpointHandler;
@@ -27,12 +27,12 @@ public class GdbCommandHandler
         //this.gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, gdbCommandBreakpointHandler.OnBreakPointReached(), defaultDumpDirectory);
     }
 
-    public virtual bool IsConnected()
+    public bool IsConnected()
     {
         return connected;
     }
 
-    public virtual void RunCommand(string command)
+    public void RunCommand(string command)
     {
         _logger.Information("Received command {@Command}", command);
         char first = command[0];
@@ -61,7 +61,7 @@ public class GdbCommandHandler
         return gdbIo.GenerateResponse("OK");
     }
 
-    public virtual void PauseEmulator()
+    public void PauseEmulator()
     {
         //gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(false);
         machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();

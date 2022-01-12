@@ -17,6 +17,7 @@ public class Keyboard : DefaultIOPortHandler
     private const int KeyboardIoPort = 0x60;
     private readonly KeyScancodeConverter _keyScancodeConverter = new();
     private readonly Gui gui;
+
     public Keyboard(Machine machine, Gui gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {
         this.gui = gui;
@@ -27,12 +28,12 @@ public class Keyboard : DefaultIOPortHandler
         }
     }
 
-    public virtual void OnKeyEvent()
+    public void OnKeyEvent()
     {
         cpu.ExternalInterrupt(9);
     }
 
-    public virtual int? GetScancode()
+    public int? GetScancode()
     {
         Key keyCode = gui.GetLastKeyCode();
         int? scancode;

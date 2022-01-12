@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Input.Keyboard;
+
 using Spice86.Emulator.Memory;
 using Spice86.Emulator.ReverseEngineer;
 
@@ -10,11 +11,12 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress
     private static readonly int TAIL = 0x41C;
     private static readonly int INITIAL_START_ADDRESS = 0x41E;
     private static readonly int INITIAL_LENGTH = 0x20;
+
     public BiosKeyboardBuffer(Memory memory) : base(memory, 0)
     {
     }
 
-    public virtual void Init()
+    public void Init()
     {
         this.SetStartAddress(INITIAL_START_ADDRESS);
         this.SetEndAddress(INITIAL_START_ADDRESS + INITIAL_LENGTH);
@@ -22,53 +24,52 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress
         this.SetTailAddress(INITIAL_START_ADDRESS);
     }
 
-    public virtual int GetStartAddress()
+    public int GetStartAddress()
     {
         return this.GetUint16(START);
     }
 
-    public virtual void SetStartAddress(int value)
+    public void SetStartAddress(int value)
     {
         this.SetUint16(START, (ushort)value);
     }
 
-    public virtual int GetEndAddress()
+    public int GetEndAddress()
     {
         return this.GetUint16(END);
     }
 
-    public virtual void SetEndAddress(int value)
+    public void SetEndAddress(int value)
     {
         this.SetUint16(END, (ushort)value);
     }
 
-    public virtual int GetHeadAddress()
+    public int GetHeadAddress()
     {
         return this.GetUint16(HEAD);
     }
 
-    public virtual void SetHeadAddress(int value)
+    public void SetHeadAddress(int value)
     {
         this.SetUint16(HEAD, (ushort)value);
     }
 
-    public virtual int GetTailAddress()
+    public int GetTailAddress()
     {
         return this.GetUint16(TAIL);
     }
 
-    public virtual void SetTailAddress(int value)
+    public void SetTailAddress(int value)
     {
         this.SetUint16(TAIL, (ushort)value);
     }
 
-    public virtual bool AddKeyCode(int code)
+    public bool AddKeyCode(int code)
     {
         int tail = GetTailAddress();
         int newTail = AdvancePointer(tail);
         if (newTail == GetHeadAddress())
         {
-
             // buffer full
             return false;
         }
@@ -78,7 +79,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress
         return true;
     }
 
-    public virtual int? GetKeyCode()
+    public int? GetKeyCode()
     {
         int head = GetHeadAddress();
         if (Empty())
@@ -91,7 +92,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress
         return this.GetUint16(head);
     }
 
-    public virtual bool Empty()
+    public bool Empty()
     {
         int head = GetHeadAddress();
         int tail = GetTailAddress();

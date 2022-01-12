@@ -17,11 +17,11 @@ internal static class DictionaryExtensions
     /// <returns>The found or computed value</returns>
     public static TValue ComputeIfAbsent<TKey, TValue>(this IDictionary<TKey, TValue>? dict, TKey key, Func<TValue> lambda)
     {
-        if(dict is null)
+        if (dict is null)
         {
             return lambda.Invoke();
         }
-        if(dict.TryGetValue(key, out var value))
+        if (dict.TryGetValue(key, out var value))
         {
             return value;
         }

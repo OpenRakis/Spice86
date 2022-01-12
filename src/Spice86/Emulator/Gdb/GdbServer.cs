@@ -33,7 +33,7 @@ public class GdbServer : IDisposable
     private async Task StartAsync(int port)
     {
         // wait for thread to start
-        while(!started)
+        while (!started)
         {
             await RunServerAsync(port);
         }
@@ -83,7 +83,7 @@ public class GdbServer : IDisposable
         }
     }
 
-    protected virtual void Dispose(bool disposing)
+    protected void Dispose(bool disposing)
     {
         if (!disposedValue)
         {

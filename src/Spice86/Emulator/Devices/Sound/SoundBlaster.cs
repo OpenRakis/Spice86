@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Emulator.Devices.Sound;
+
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Machine;
 
@@ -21,6 +22,7 @@ public class SoundBlaster : DefaultIOPortHandler
     private static readonly int DSP_READ_PORT_NUMBER = 0x22A;
     private static readonly int DSP_WRITE_BUFFER_STATUS_PORT_NUMBER = 0x22C;
     private static readonly int DSP_DATA_AVAILABLE_PORT_NUMBER = 0x22E;
+
     public SoundBlaster(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {
     }

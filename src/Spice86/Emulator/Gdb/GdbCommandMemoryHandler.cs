@@ -9,19 +9,21 @@ using Spice86.Utils;
 using System;
 using System.Collections.Generic;
 using System.Text;
+
 public class GdbCommandMemoryHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandMemoryHandler>();
     private GdbIo gdbIo;
     private Machine machine;
     private GdbFormatter gdbFormatter = new GdbFormatter();
+
     public GdbCommandMemoryHandler(GdbIo gdbIo, Machine machine)
     {
         this.gdbIo = gdbIo;
         this.machine = machine;
     }
 
-    public virtual string WriteMemory(string commandContent)
+    public string WriteMemory(string commandContent)
     {
         try
         {
@@ -50,7 +52,7 @@ public class GdbCommandMemoryHandler
         }
     }
 
-    public virtual string ReadMemory(string commandContent)
+    public string ReadMemory(string commandContent)
     {
         try
         {
@@ -93,7 +95,7 @@ public class GdbCommandMemoryHandler
         }
     }
 
-    public virtual string SearchMemory(string command)
+    public string SearchMemory(string command)
     {
         String[] parameters = command.Replace("Search:memory:", "").Split(";");
         long start = ConvertUtils.ParseHex32(parameters[0]);

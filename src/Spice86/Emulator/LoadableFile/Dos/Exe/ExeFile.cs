@@ -1,11 +1,8 @@
-﻿
-namespace Spice86.Emulator.Loadablefile.Dos.Exe;
+﻿namespace Spice86.Emulator.Loadablefile.Dos.Exe;
 
 using Spice86.Emulator.Memory;
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 public class ExeFile
@@ -26,6 +23,7 @@ public class ExeFile
     private int overlay; // 001A - Overlay number
     private List<SegmentedAddress> relocationTable = new();
     private byte[] programImage;
+
     public ExeFile(byte[] exe)
     {
         this.signature = new string(Encoding.UTF8.GetChars(exe), 0, 2);
@@ -57,152 +55,152 @@ public class ExeFile
         System.Array.Copy(exe, actualHeaderSize, programImage, 0, programSize);
     }
 
-    public  string GetSignature()
+    public string GetSignature()
     {
         return signature;
     }
 
-    public  void SetSignature(string signature)
+    public void SetSignature(string signature)
     {
         this.signature = signature;
     }
 
-    public  int GetExtraBytes()
+    public int GetExtraBytes()
     {
         return extraBytes;
     }
 
-    public  void SetExtraBytes(int extraBytes)
+    public void SetExtraBytes(int extraBytes)
     {
         this.extraBytes = extraBytes;
     }
 
-    public  int GetPages()
+    public int GetPages()
     {
         return pages;
     }
 
-    public  void SetPages(int pages)
+    public void SetPages(int pages)
     {
         this.pages = pages;
     }
 
-    public  int GetRelocItems()
+    public int GetRelocItems()
     {
         return relocItems;
     }
 
-    public  void SetRelocItems(int relocItems)
+    public void SetRelocItems(int relocItems)
     {
         this.relocItems = relocItems;
     }
 
-    public  int GetHeaderSize()
+    public int GetHeaderSize()
     {
         return headerSize;
     }
 
-    public  void SetHeaderSize(int headerSize)
+    public void SetHeaderSize(int headerSize)
     {
         this.headerSize = headerSize;
     }
 
-    public  int GetMinAlloc()
+    public int GetMinAlloc()
     {
         return minAlloc;
     }
 
-    public  void SetMinAlloc(int minAlloc)
+    public void SetMinAlloc(int minAlloc)
     {
         this.minAlloc = minAlloc;
     }
 
-    public  int GetMaxAlloc()
+    public int GetMaxAlloc()
     {
         return maxAlloc;
     }
 
-    public  void SetMaxAlloc(int maxAlloc)
+    public void SetMaxAlloc(int maxAlloc)
     {
         this.maxAlloc = maxAlloc;
     }
 
-    public  int GetInitSS()
+    public int GetInitSS()
     {
         return initSS;
     }
 
-    public  void SetInitSS(int initSS)
+    public void SetInitSS(int initSS)
     {
         this.initSS = initSS;
     }
 
-    public  int GetInitSP()
+    public int GetInitSP()
     {
         return initSP;
     }
 
-    public  void SetInitSP(int initSP)
+    public void SetInitSP(int initSP)
     {
         this.initSP = initSP;
     }
 
-    public  int GetCheckSum()
+    public int GetCheckSum()
     {
         return checkSum;
     }
 
-    public  void SetCheckSum(int checkSum)
+    public void SetCheckSum(int checkSum)
     {
         this.checkSum = checkSum;
     }
 
-    public  int GetInitIP()
+    public int GetInitIP()
     {
         return initIP;
     }
 
-    public  void SetInitIP(int initIP)
+    public void SetInitIP(int initIP)
     {
         this.initIP = initIP;
     }
 
-    public  int GetInitCS()
+    public int GetInitCS()
     {
         return initCS;
     }
 
-    public  void SetInitCS(int initCS)
+    public void SetInitCS(int initCS)
     {
         this.initCS = initCS;
     }
 
-    public  int GetRelocTable()
+    public int GetRelocTable()
     {
         return relocTable;
     }
 
-    public  void SetRelocTable(int relocTable)
+    public void SetRelocTable(int relocTable)
     {
         this.relocTable = relocTable;
     }
 
-    public  int GetOverlay()
+    public int GetOverlay()
     {
         return overlay;
     }
 
-    public  void SetOverlay(int overlay)
+    public void SetOverlay(int overlay)
     {
         this.overlay = overlay;
     }
 
-    public  byte[] GetProgramImage()
+    public byte[] GetProgramImage()
     {
         return programImage;
     }
 
-    public  void SetProgramImage(byte[] programImage)
+    public void SetProgramImage(byte[] programImage)
     {
         this.programImage = programImage;
     }
@@ -212,12 +210,12 @@ public class ExeFile
         this.relocationTable = relocationTable;
     }
 
-    public  IList<SegmentedAddress> GetRelocationTable()
+    public IList<SegmentedAddress> GetRelocationTable()
     {
         return relocationTable;
     }
 
-    public  int GetCodeSize()
+    public int GetCodeSize()
     {
         return programImage.Length;
     }

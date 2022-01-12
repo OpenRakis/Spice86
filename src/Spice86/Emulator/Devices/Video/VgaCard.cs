@@ -7,12 +7,6 @@ using Spice86.Emulator.Machine;
 using Spice86.Emulator.Memory;
 using Spice86.Gui;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-
 /// <summary>
 /// Implementation of VGA card, currently only supports mode 0x13.<br/>
 /// </summary>
@@ -20,8 +14,10 @@ public class VgaCard : DefaultIOPortHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<VgaCard>();
     public const int CRT_IO_PORT = 0x03D4;
+
     // http://www.osdever.net/FreeVGA/vga/extreg.htm#3xAR
     public const int VGA_SEQUENCER_ADDRESS_REGISTER_PORT = 0x03C4;
+
     public const int VGA_SEQUENCER_DATA_REGISTER_PORT = 0x03C5;
     public const int VGA_READ_INDEX_PORT = 0x03C7;
     public const int VGA_WRITE_INDEX_PORT = 0x03C8;
@@ -33,13 +29,14 @@ public class VgaCard : DefaultIOPortHandler
     private readonly VgaDac _vgaDac;
     private byte _crtStatusRegister;
     private bool _drawing = false;
+
     public VgaCard(Machine machine, Gui gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {
         this._gui = gui;
         this._vgaDac = new VgaDac(machine);
     }
 
-    public virtual VgaDac GetVgaDac()
+    public VgaDac GetVgaDac()
     {
         return _vgaDac;
     }
@@ -47,6 +44,7 @@ public class VgaCard : DefaultIOPortHandler
     /**
    * @return true when in retrace
    */
+
     public bool TickRetrace()
     {
         if (_drawing)
@@ -72,20 +70,20 @@ public class VgaCard : DefaultIOPortHandler
         return _drawing;
     }
 
-    public virtual int GetStatusRegisterPort()
+    public int GetStatusRegisterPort()
     {
         _logger.Information("CHECKING RETRACE");
         TickRetrace();
         return _crtStatusRegister;
     }
 
-    public virtual int GetVgaReadIndex()
+    public int GetVgaReadIndex()
     {
         _logger.Information("GET VGA READ INDEX");
         return _vgaDac.GetState() == VgaDac.VgaDacWrite ? 0x3 : 0x0;
     }
 
-    public virtual void SetVgaReadIndex(int value)
+    public void SetVgaReadIndex(int value)
     {
         _logger.Information("SET VGA READ INDEX {@Value}", value);
         _vgaDac.SetReadIndex(value);
@@ -93,7 +91,7 @@ public class VgaCard : DefaultIOPortHandler
         _vgaDac.SetState(VgaDac.VgaDacRead);
     }
 
-    public virtual void SetVgaWriteIndex(int value)
+    public void SetVgaWriteIndex(int value)
     {
         _logger.Information("SET VGA WRITE INDEX {@Value}", value);
         _vgaDac.SetWriteIndex(value);
@@ -101,19 +99,19 @@ public class VgaCard : DefaultIOPortHandler
         _vgaDac.SetState(VgaDac.VgaDacWrite);
     }
 
-    public virtual int RgbDataRead()
+    public int RgbDataRead()
     {
         _logger.Information("PALETTE READ");
         return VgaDac.From8bitTo6bitColor(_vgaDac.ReadColor());
     }
 
-    public virtual void RgbDataWrite(int value)
+    public void RgbDataWrite(int value)
     {
         _logger.Information("PALETTE WRITE {@Value}", value);
         _vgaDac.WriteColor(VgaDac.From6bitColorTo8bit(value));
     }
 
-    public virtual void UpdateScreen()
+    public void UpdateScreen()
     {
         if (_gui != null)
         {
@@ -121,7 +119,7 @@ public class VgaCard : DefaultIOPortHandler
         }
     }
 
-    public virtual void GetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, int colorValuesAddress)
+    public void GetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, int colorValuesAddress)
     {
         Rgb[] rgbs = _vgaDac.GetRgbs();
         for (int i = 0; i < numberOfColors; i++)
@@ -134,7 +132,7 @@ public class VgaCard : DefaultIOPortHandler
         }
     }
 
-    public virtual void SetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, int colorValuesAddress)
+    public void SetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, int colorValuesAddress)
     {
         Rgb[] rgbs = _vgaDac.GetRgbs();
         for (int i = 0; i < numberOfColors; i++)
@@ -147,7 +145,7 @@ public class VgaCard : DefaultIOPortHandler
         }
     }
 
-    public virtual void SetVideoModeValue(int mode)
+    public void SetVideoModeValue(int mode)
     {
         if (mode == MODE_320_200_256)
         {

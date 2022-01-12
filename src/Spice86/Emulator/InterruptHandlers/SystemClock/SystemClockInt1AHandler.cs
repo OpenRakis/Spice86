@@ -1,14 +1,10 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿namespace Spice86.Emulator.InterruptHandlers.SystemClock;
 
-namespace Spice86.Emulator.InterruptHandlers.SystemClock;
-using Spice86.Emulator.Machine;
-using Spice86.Emulator.Callback;
 using Serilog;
+
+using Spice86.Emulator.Callback;
 using Spice86.Emulator.InterruptHandlers.Timer;
+using Spice86.Emulator.Machine;
 
 /// <summary>
 /// Implementation of int1A.
@@ -17,6 +13,7 @@ public class SystemClockInt1AHandler : InterruptHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<SystemClockInt1AHandler>();
     private readonly TimerInt8Handler timerHandler;
+
     public SystemClockInt1AHandler(Machine machine, TimerInt8Handler timerHandler) : base(machine)
     {
         this.timerHandler = timerHandler;
@@ -40,14 +37,14 @@ public class SystemClockInt1AHandler : InterruptHandler
         Run(operation);
     }
 
-    public virtual void SetSystemClockCounter()
+    public void SetSystemClockCounter()
     {
         int value = _state.GetCX() << 16 | _state.GetDX();
         _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         timerHandler.SetTickCounterValue(value);
     }
 
-    public virtual void GetSystemClockCounter()
+    public void GetSystemClockCounter()
     {
         int value = timerHandler.GetTickCounterValue();
         _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);

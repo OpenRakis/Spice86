@@ -6,13 +6,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-
 /// <summary>
 /// Dumps collected function informations to a file
 /// </summary>
 public class FunctionInformationDumper
 {
-    public virtual void DumpFunctionHandlers(string destinationFilePath, FunctionInformationToStringConverter converter, StaticAddressesRecorder staticAddressesRecorder, params FunctionHandler[] functionHandlers)
+    public void DumpFunctionHandlers(string destinationFilePath, FunctionInformationToStringConverter converter, StaticAddressesRecorder staticAddressesRecorder, params FunctionHandler[] functionHandlers)
     {
         List<FunctionInformation> functionInformations = MergeFunctionHandlers(functionHandlers).ToList();
 

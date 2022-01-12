@@ -10,6 +10,7 @@ public class TimeCounterActivator : ICounterActivator
     private readonly double _multiplier;
     private long _timeBetweenTicks;
     private long _lastActivationTime = DateTime.Now.Ticks;
+
     public TimeCounterActivator(double multiplier)
     {
         this._multiplier = multiplier;

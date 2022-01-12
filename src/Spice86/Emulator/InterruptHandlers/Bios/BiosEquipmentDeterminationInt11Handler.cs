@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Bios;
+
 using Spice86.Emulator.Machine;
 
 /// <summary>

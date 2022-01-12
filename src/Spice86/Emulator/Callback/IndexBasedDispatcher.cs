@@ -7,7 +7,7 @@ namespace Spice86.Emulator.Callback
     /// <summary>
     /// Base class for most classes having to dispatch operations depending on a numeric value, like interrupts.
     /// </summary>
-    public abstract class IndexBasedDispatcher<T> where T: IRunnable
+    public abstract class IndexBasedDispatcher<T> where T : IRunnable
     {
         protected Dictionary<int, ICallback> _dispatchTable = new();
 
@@ -18,7 +18,7 @@ namespace Spice86.Emulator.Callback
 
         public void Run(int index)
         {
-            if(_dispatchTable.TryGetValue(index, out var handler) == false)
+            if (_dispatchTable.TryGetValue(index, out var handler) == false)
             {
                 throw GenerateUnhandledOperationException(index);
             }

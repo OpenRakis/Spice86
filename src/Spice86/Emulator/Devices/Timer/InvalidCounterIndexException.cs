@@ -1,8 +1,9 @@
 ﻿namespace Spice86.Emulator.Devices.Timer;
 
-using System;
 using Spice86.Emulator.Errors;
 using Spice86.Emulator.Machine;
+
+using System;
 
 [Serializable]
 public class InvalidCounterIndexException : InvalidVMOperationException

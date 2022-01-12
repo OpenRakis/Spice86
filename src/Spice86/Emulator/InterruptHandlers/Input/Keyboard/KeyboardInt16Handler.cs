@@ -5,11 +5,11 @@ using Serilog;
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.Machine;
 
-
 public class KeyboardInt16Handler : InterruptHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<KeyboardInt16Handler>();
     private BiosKeyboardBuffer biosKeyboardBuffer;
+
     public KeyboardInt16Handler(Machine machine, BiosKeyboardBuffer biosKeyboardBuffer) : base(machine)
     {
         this.biosKeyboardBuffer = biosKeyboardBuffer;
@@ -17,12 +17,12 @@ public class KeyboardInt16Handler : InterruptHandler
         _dispatchTable.Add(0x01, new Callback(0x01, () => GetKeystrokeStatus(true)));
     }
 
-    public virtual int? GetNextKeyCode()
+    public int? GetNextKeyCode()
     {
         return biosKeyboardBuffer.GetKeyCode();
     }
 
-    public virtual void GetKeystroke()
+    public void GetKeystroke()
     {
         _logger.Information("READ KEY STROKE");
         int? keyCode = GetNextKeyCode();
@@ -36,7 +36,7 @@ public class KeyboardInt16Handler : InterruptHandler
         _state.SetAX(keyCode.Value);
     }
 
-    public virtual void GetKeystrokeStatus(bool calledFromVm)
+    public void GetKeystrokeStatus(bool calledFromVm)
     {
         _logger.Information("KEY STROKE STATUS");
 
@@ -52,7 +52,7 @@ public class KeyboardInt16Handler : InterruptHandler
         else
         {
             int? keyCode = biosKeyboardBuffer.GetKeyCode();
-            if(keyCode != null)
+            if (keyCode != null)
             {
                 SetZeroFlag(false, calledFromVm);
                 _state.SetAX(keyCode.Value);

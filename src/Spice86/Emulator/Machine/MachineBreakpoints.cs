@@ -46,16 +46,16 @@ public class MachineBreakpoints
 
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on)
     {
-        BreakPointType breakPointType = breakPoint.GetBreakPointType();
-        if (breakPointType.Equals(BreakPointType.EXECUTION))
+        BreakPointType? breakPointType = breakPoint.GetBreakPointType();
+        if (breakPointType == BreakPointType.EXECUTION)
         {
             executionBreakPoints.ToggleBreakPoint(breakPoint, on);
         }
-        else if (breakPointType.Equals(BreakPointType.CYCLES))
+        else if (breakPointType == BreakPointType.CYCLES)
         {
             cycleBreakPoints.ToggleBreakPoint(breakPoint, on);
         }
-        else if (breakPointType.Equals(BreakPointType.MACHINE_STOP))
+        else if (breakPointType == BreakPointType.MACHINE_STOP)
         {
             machineStopBreakPoint = breakPoint;
         }

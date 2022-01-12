@@ -1,18 +1,12 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Dos;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Serilog;
 
 using Spice86.Emulator.Machine;
-using Spice86.Emulator.Errors;
-using Spice86.Emulator.Memory;
-using Spice86.Utils;
+
+using System;
 using System.Runtime.InteropServices;
+using System.Text;
 
 // TODO: Complete it
 public class DosInt21Handler : InterruptHandler
@@ -22,8 +16,10 @@ public class DosInt21Handler : InterruptHandler
     private static readonly CharSet CP850_CHARSET = CharSet.Ansi;
 
     private bool ctrlCFlag = false;
+
     // dosbox
     private int defaultDrive = 2;
+
     private DosMemoryManager dosMemoryManager;
     private DosFileManager dosFileManager;
     private StringBuilder displayOutputBuilder = new StringBuilder();
@@ -34,6 +30,7 @@ public class DosInt21Handler : InterruptHandler
         dosFileManager = new DosFileManager(memory);
         //FillDispatchTable();
     }
+
     public override int GetIndex()
     {
         throw new NotImplementedException();
