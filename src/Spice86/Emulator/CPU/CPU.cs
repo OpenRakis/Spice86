@@ -180,220 +180,184 @@ public class Cpu
 
     private void ExecOpcode(int opcode)
     {
-        if (opcode == 0x00)
+        int regIndex;
+        switch (opcode)
         {
+        case 0x00:
             SetCurrentInstructionName(() => "ADD rmb rb");
             _modRM.Read();
             _modRM.SetRm8(_alu.Add8(_modRM.GetRm8(), _modRM.GetR8()));
-        }
-        if (opcode == 0x01)
-        {
+            break;
+        case 0x01:
             SetCurrentInstructionName(() => "ADD rmw rw");
             _modRM.Read();
             _modRM.SetRm16(_alu.Add16(_modRM.GetRm16(), _modRM.GetR16()));
-        }
-        if (opcode == 0x02)
-        {
+            break;
+        case 0x02:
             SetCurrentInstructionName(() => "ADD rb rmb");
             _modRM.Read();
             _modRM.SetR8(_alu.Add8(_modRM.GetR8(), _modRM.GetRm8()));
-        }
-        if (opcode == 0x03)
-        {
+            break;
+        case 0x03:
             SetCurrentInstructionName(() => "ADD rw rmw");
             _modRM.Read();
             _modRM.SetR16(_alu.Add16(_modRM.GetR16(), _modRM.GetRm16()));
-        }
-        if (opcode == 0x04)
-        {
+            break;
+        case 0x04:
             SetCurrentInstructionName(() => "ADD AL ib");
             _state.SetAL(_alu.Add8(_state.GetAL(), NextUint8()));
-        }
-        if (opcode == 0x05)
-        {
+            break;
+        case 0x05:
             SetCurrentInstructionName(() => "ADD AX iw");
             _state.SetAX(_alu.Add16(_state.GetAX(), NextUint16()));
-        }
-        if (opcode == 0x06)
-        {
+            break;
+        case 0x06:
             SetCurrentInstructionName(() => "PUSH ES");
             _stack.Push(_state.GetES());
-        }
-        if (opcode == 0x07)
-        {
+            break;
+        case 0x07:
             SetCurrentInstructionName(() => "POP ES");
             _state.SetES(_stack.Pop());
-        }
-        if (opcode == 0x08)
-        {
+            break;
+        case 0x08:
             SetCurrentInstructionName(() => "OR rmb rb");
             _modRM.Read();
             _modRM.SetRm8(_alu.Or8(_modRM.GetRm8(), _modRM.GetR8()));
-        }
-        if (opcode == 0x09)
-        {
+            break;
+        case 0x09:
             SetCurrentInstructionName(() => "OR rmw rw");
             _modRM.Read();
             _modRM.SetRm16(_alu.Or16(_modRM.GetRm16(), _modRM.GetR16()));
-        }
-        if (opcode == 0x0A)
-        {
+            break;
+        case 0x0A:
             SetCurrentInstructionName(() => "OR rb rmb");
             _modRM.Read();
             _modRM.SetR8(_alu.Or8(_modRM.GetR8(), _modRM.GetRm8()));
-        }
-        if (opcode == 0x0B)
-        {
+            break;
+        case 0x0B:
             SetCurrentInstructionName(() => "OR rw rmw");
             _modRM.Read();
             _modRM.SetR16(_alu.Or16(_modRM.GetR16(), _modRM.GetRm16()));
-        }
-        if (opcode == 0x0C)
-        {
+            break;
+        case 0x0C:
             SetCurrentInstructionName(() => "OR AL ib");
             _state.SetAL(_alu.Or8(_state.GetAL(), NextUint8()));
-        }
-        if (opcode == 0x0D)
-        {
+            break;
+        case 0x0D:
             SetCurrentInstructionName(() => "OR AX iw");
             _state.SetAX(_alu.Or16(_state.GetAX(), NextUint16()));
-        }
-        if (opcode == 0x0E)
-        {
+            break;
+        case 0x0E:
             SetCurrentInstructionName(() => "PUSH CS");
             _stack.Push(_state.GetCS());
-        }
-        if (opcode == 0x0F)
-        {
+            break;
+        case 0x0F:
             HandleInvalidOpcode(opcode);
-        }
-        if (opcode == 0x10)
-        {
+            break;
+        case 0x10:
             SetCurrentInstructionName(() => "ADC rmb rb");
             _modRM.Read();
             _modRM.SetRm8(_alu.Adc8(_modRM.GetRm8(), _modRM.GetR8()));
-        }
-        if (opcode == 0x11)
-        {
+            break;
+        case 0x11:
             SetCurrentInstructionName(() => "ADC rmw rw");
             _modRM.Read();
             _modRM.SetRm16(_alu.Adc16(_modRM.GetRm16(), _modRM.GetR16()));
-        }
-        if (opcode == 0x12)
-        {
+            break;
+        case 0x12:
             SetCurrentInstructionName(() => "ADC rb rmb");
             _modRM.Read();
             _modRM.SetR8(_alu.Adc8(_modRM.GetR8(), _modRM.GetRm8()));
-        }
-        if (opcode == 0x13)
-        {
+            break;
+        case 0x13:
             SetCurrentInstructionName(() => "ADC rw rmw");
             _modRM.Read();
             _modRM.SetR16(_alu.Adc16(_modRM.GetR16(), _modRM.GetRm16()));
-        }
-        if (opcode == 0x14)
-        {
+            break;
+        case 0x14:
             SetCurrentInstructionName(() => "ADC AL ib");
             _state.SetAL(_alu.Adc8(_state.GetAL(), NextUint8()));
-        }
-        if (opcode == 0x15)
-        {
+            break;
+        case 0x15:
             SetCurrentInstructionName(() => "ADC AX iw");
             _state.SetAX(_alu.Adc16(_state.GetAX(), NextUint16()));
-        }
-        if (opcode == 0x16)
-        {
+            break;
+        case 0x16:
             SetCurrentInstructionName(() => "PUSH SS");
             _stack.Push(_state.GetSS());
-        }
-        if (opcode == 0x17)
-        {
+            break;
+        case 0x17:
             SetCurrentInstructionName(() => "POP SS");
             _state.SetSS(_stack.Pop());
-        }
-        if (opcode == 0x18)
-        {
+            break;
+        case 0x18:
             SetCurrentInstructionName(() => "SBB rmb rb");
             _modRM.Read();
             _modRM.SetRm8(_alu.Sbb8(_modRM.GetRm8(), _modRM.GetR8()));
-        }
-        if (opcode == 0x19)
-        {
+            break;
+        case 0x19:
             SetCurrentInstructionName(() => "SBB rmw rw");
             _modRM.Read();
             _modRM.SetRm16(_alu.Sbb16(_modRM.GetRm16(), _modRM.GetR16()));
-        }
-        if (opcode == 0x1A)
-        {
+            break;
+        case 0x1A:
             SetCurrentInstructionName(() => "SBB rb rmb");
             _modRM.Read();
             _modRM.SetR8(_alu.Sbb8(_modRM.GetR8(), _modRM.GetRm8()));
-        }
-        if (opcode == 0x1B)
-        {
+            break;
+        case 0x1B:
             SetCurrentInstructionName(() => "SBB rw rmw");
             _modRM.Read();
             _modRM.SetR16(_alu.Sbb16(_modRM.GetR16(), _modRM.GetRm16()));
-        }
-        if (opcode == 0x1C)
-        {
+            break;
+        case 0x1C:
             SetCurrentInstructionName(() => "SBB AL ib");
             _state.SetAL(_alu.Sbb8(_state.GetAL(), NextUint8()));
-        }
-        if (opcode == 0x1D)
-        {
+            break;
+        case 0x1D:
             SetCurrentInstructionName(() => "SBB AX iw");
             _state.SetAX(_alu.Sbb16(_state.GetAX(), NextUint16()));
-        }
-        if (opcode == 0x1E)
-        {
+            break;
+        case 0x1E:
             SetCurrentInstructionName(() => "PUSH DS");
             _stack.Push(_state.GetDS());
-        }
-        if (opcode == 0x1F)
-        {
+            break;
+        case 0x1F:
             SetCurrentInstructionName(() => "POP DS");
             _state.SetDS(_stack.Pop());
-        }
-        if (opcode == 0x20)
-        {
+            break;
+        case 0x20:
             SetCurrentInstructionName(() => "AND rmb rb");
             _modRM.Read();
             _modRM.SetRm8(_alu.And8(_modRM.GetRm8(), _modRM.GetR8()));
-        }
-        if (opcode == 0x21)
-        {
+            break;
+        case 0x21:
             SetCurrentInstructionName(() => "AND rmw rw");
             _modRM.Read();
             _modRM.SetRm16(_alu.And16(_modRM.GetRm16(), _modRM.GetR16()));
-        }
-        if (opcode == 0x22)
-        {
+            break;
+        case 0x22:
             SetCurrentInstructionName(() => "AND rb rmb");
             _modRM.Read();
             _modRM.SetR8(_alu.And8(_modRM.GetR8(), _modRM.GetRm8()));
-        }
-        if (opcode == 0x23)
-        {
+            break;
+        case 0x23:
             SetCurrentInstructionName(() => "AND rw rmw");
             _modRM.Read();
             _modRM.SetR16(_alu.And16(_modRM.GetR16(), _modRM.GetRm16()));
-        }
-        if (opcode == 0x24)
-        {
+            break;
+        case 0x24:
             SetCurrentInstructionName(() => "AND AL ib");
             _state.SetAL(_alu.And8(_state.GetAL(), NextUint8()));
-        }
-        if (opcode == 0x25)
-        {
+            break;
+        case 0x25:
             SetCurrentInstructionName(() => "AND AX iw");
             _state.SetAX(_alu.And16(_state.GetAX(), NextUint16()));
-        }
-        if (opcode == 0x26)
-        {
+            break;
+        case 0x26:
             HandleInvalidOpcodeBecausePrefix(opcode);
-        }
-        if (opcode == 0x27)
+            break;
+        case 0x27:
         {
             SetCurrentInstructionName(() => "DAA");
             int initialAL = _state.GetAL();
@@ -419,47 +383,41 @@ public class Cpu
             _alu.UpdateFlags8(_state.GetAL());
             _state.SetAuxiliaryFlag(finalAuxillaryFlag);
             _state.SetCarryFlag(finalCarryFlag);
+            break;
         }
-        if (opcode == 0x28)
-        {
+        case 0x28:
             SetCurrentInstructionName(() => "SUB rmb rb");
             _modRM.Read();
             _modRM.SetRm8(_alu.Sub8(_modRM.GetRm8(), _modRM.GetR8()));
-        }
-        if (opcode == 0x29)
-        {
+            break;
+        case 0x29:
             SetCurrentInstructionName(() => "SUB rmw rw");
             _modRM.Read();
             _modRM.SetRm16(_alu.Sub16(_modRM.GetRm16(), _modRM.GetR16()));
-        }
-        if (opcode == 0x2A)
-        {
+            break;
+        case 0x2A:
             SetCurrentInstructionName(() => "SUB rb rmb");
             _modRM.Read();
             _modRM.SetR8(_alu.Sub8(_modRM.GetR8(), _modRM.GetRm8()));
-        }
-        if (opcode == 0x2B)
-        {
+            break;
+        case 0x2B:
             SetCurrentInstructionName(() => "SUB rw rmw");
             _modRM.Read();
             _modRM.SetR16(_alu.Sub16(_modRM.GetR16(), _modRM.GetRm16()));
-        }
-        if (opcode == 0x2C)
-        {
+            break;
+        case 0x2C:
             SetCurrentInstructionName(() => "SUB AL ib");
             _state.SetAL(_alu.Sub8(_state.GetAL(), NextUint8()));
-        }
-        if (opcode == 0x2D)
-        {
+            break;
+        case 0x2D:
             SetCurrentInstructionName(() => "SUB AX iw");
             _state.SetAX(_alu.Sub16(_state.GetAX(), NextUint16()));
-        }
-        if (opcode == 0x2E)
-        {
+            break;
+        case 0x2E:
             HandleInvalidOpcodeBecausePrefix(opcode);
-        }
-        if (opcode == 0x2F)
-        {
+            break;
+        case 0x2F:
+        { 
             SetCurrentInstructionName(() => "DAS");
             int initialAL = _state.GetAL();
             bool initialCF = _state.GetCarryFlag();
@@ -481,44 +439,40 @@ public class Cpu
             _alu.UpdateFlags8(_state.GetAL());
             _state.SetAuxiliaryFlag(finalAuxillaryFlag);
             _state.SetCarryFlag(finalCarryFlag);
+            break;
         }
-        if (opcode == 0x30)
-        {
+        case 0x30:
             SetCurrentInstructionName(() => "XOR rmb rb");
             _modRM.Read();
             _modRM.SetRm8(_alu.Xor8(_modRM.GetRm8(), _modRM.GetR8()));
-        }
-        if (opcode == 0x31)
-        {
+            break;
+        case 0x31:
             SetCurrentInstructionName(() => "XOR rmw rw");
             _modRM.Read();
             _modRM.SetRm16(_alu.Xor16(_modRM.GetRm16(), _modRM.GetR16()));
-        }
-        if (opcode == 0x32)
-        {
+            break;
+        case 0x32:
             SetCurrentInstructionName(() => "XOR rb rmb");
             _modRM.Read();
             _modRM.SetR8(_alu.Xor8(_modRM.GetR8(), _modRM.GetRm8()));
-        }
-        if (opcode == 0x33)
-        {
+            break;
+        case 0x33:
             SetCurrentInstructionName(() => "XOR rw rmw");
             _modRM.Read();
             _modRM.SetR16(_alu.Xor16(_modRM.GetR16(), _modRM.GetRm16()));
-        }
-        if (opcode == 0x34)
-        {
+            break;
+        case 0x34:
             SetCurrentInstructionName(() => "XOR AL mb");
             _state.SetAL(_alu.Xor8(_state.GetAL(), NextUint8()));
-        }
-        if (opcode == 0x35)
-        {
+            break;
+        case 0x35:
             SetCurrentInstructionName(() => "XOR AX mw");
             _state.SetAX(_alu.Xor16(_state.GetAX(), NextUint16()));
-        }
-        if (opcode == 0x36)
+            break;
+        case 0x36:
             HandleInvalidOpcodeBecausePrefix(opcode);
-        if (opcode == 0x37)
+            break;
+        case 0x37:
         {
             SetCurrentInstructionName(() => "AAA");
             bool finalAuxillaryFlag = false;
@@ -534,46 +488,40 @@ public class Cpu
             _alu.UpdateFlags8(_state.GetAL());
             _state.SetAuxiliaryFlag(finalAuxillaryFlag);
             _state.SetCarryFlag(finalCarryFlag);
+            break;
         }
-        if (opcode == 0x38)
-        {
+        case 0x38:
             SetCurrentInstructionName(() => "CMP rmb rb");
             _modRM.Read();
             _alu.Sub8(_modRM.GetRm8(), _modRM.GetR8());
-        }
-        if (opcode == 0x39)
-        {
+            break;
+        case 0x39:
             SetCurrentInstructionName(() => "CMP rmw rw");
             _modRM.Read();
             _alu.Sub16(_modRM.GetRm16(), _modRM.GetR16());
-        }
-        if (opcode == 0x3A)
-        {
+            break;
+        case 0x3A:
             SetCurrentInstructionName(() => "CMP rb rmb");
             _modRM.Read();
             _alu.Sub8(_modRM.GetR8(), _modRM.GetRm8());
-        }
-        if (opcode == 0x3B)
-        {
+            break;
+        case 0x3B:
             SetCurrentInstructionName(() => "CMP rw rmw");
             _modRM.Read();
             _alu.Sub16(_modRM.GetR16(), _modRM.GetRm16());
-        }
-        if (opcode == 0x3C)
-        {
+            break;
+        case 0x3C:
             SetCurrentInstructionName(() => "CMP AL ib");
             _alu.Sub8(_state.GetAL(), NextUint8());
-        }
-        if (opcode == 0x3D)
-        {
+            break;
+        case 0x3D:
             SetCurrentInstructionName(() => "CMP AX iw");
             _alu.Sub16(_state.GetAX(), NextUint16());
-        }
-        if (opcode == 0x3E)
-        {
+            break;
+        case 0x3E:
             HandleInvalidOpcodeBecausePrefix(opcode);
-        }
-        if (opcode == 0x3F)
+            break;
+        case 0x3F:
         {
             SetCurrentInstructionName(() => "AAS");
             bool finalAuxillaryFlag = false;
@@ -590,33 +538,29 @@ public class Cpu
             _alu.UpdateFlags8(_state.GetAL());
             _state.SetAuxiliaryFlag(finalAuxillaryFlag);
             _state.SetCarryFlag(finalCarryFlag);
+            break;
         }
-        if (opcode == 0x40 || opcode == 0x41 || opcode == 0x42 || opcode == 0x43 || opcode == 0x44 || opcode == 0x45 || opcode == 0x46 || opcode == 0x47)
-        {
-            int regIndex = opcode & REG_INDEX_MASK;
+        case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x46: case 0x47:
+            regIndex = opcode & REG_INDEX_MASK;
             SetCurrentInstructionName(() => $"INC {_state.GetRegisters().GetRegName(regIndex)}");
             _state.GetRegisters().SetRegister(regIndex, _alu.Inc16(_state.GetRegisters().GetRegister(regIndex)));
-        }
-        if (opcode == 0x48 || opcode == 0x49 || opcode == 0x4A || opcode == 0x4B || opcode == 0x4C || opcode == 0x4D || opcode == 0x4E || opcode == 0x4F)
-        {
-            int regIndex = opcode & REG_INDEX_MASK;
+            break;
+        case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4E: case 0x4F:
+            regIndex = opcode & REG_INDEX_MASK;
             SetCurrentInstructionName(() => $"DEC {_state.GetRegisters().GetRegName(regIndex)}");
             _state.GetRegisters().SetRegister(regIndex, _alu.Dec16(_state.GetRegisters().GetRegister(regIndex)));
-        }
-        if (opcode == 0x50 || opcode == 0x51 || opcode == 0x52 || opcode == 0x53 || opcode == 0x54 || opcode == 0x55 || opcode == 0x56 || opcode == 0x57)
-        {
-            int regIndex = opcode & REG_INDEX_MASK;
+            break;
+        case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x56: case 0x57:
+            regIndex = opcode & REG_INDEX_MASK;
             SetCurrentInstructionName(() => $"PUSH {_state.GetRegisters().GetRegName(regIndex)}");
             _stack.Push(_state.GetRegisters().GetRegister(regIndex));
-        }
-        if (opcode == 0x58 || opcode == 0x59 || opcode == 0x5A || opcode == 0x5B || opcode == 0x5C || opcode == 0x5D || opcode == 0x5E || opcode == 0x5F)
-        {
-            int regIndex = opcode & REG_INDEX_MASK;
+            break;
+        case 0x58: case 0x59: case 0x5A: case 0x5B: case 0x5C: case 0x5D: case 0x5E: case 0x5F:
+            regIndex = opcode & REG_INDEX_MASK;
             SetCurrentInstructionName(() => $"POP {_state.GetRegisters().GetRegName(regIndex)}");
             _state.GetRegisters().SetRegister(regIndex, _stack.Pop());
-        }
-        if (opcode == 0x60)
-        {
+            break;
+        case 0x60:
             // 80186
             SetCurrentInstructionName(() => "PUSHA");
             int sp = _state.GetSP();
@@ -628,9 +572,8 @@ public class Cpu
             _stack.Push(_state.GetBP());
             _stack.Push(_state.GetSI());
             _stack.Push(_state.GetDI());
-        }
-        if (opcode == 0x61)
-        {
+            break;
+        case 0x61:
             // 80186
             SetCurrentInstructionName(() => "POPA");
             _state.SetDI(_stack.Pop());
@@ -642,143 +585,141 @@ public class Cpu
             _state.SetDX(_stack.Pop());
             _state.SetCX(_stack.Pop());
             _state.SetAX(_stack.Pop());
-        }
-        if (opcode == 0x62 || opcode == 0x63 || opcode == 0x64 || opcode == 0x65 || opcode == 0x66 || opcode == 0x67) HandleInvalidOpcode(opcode);
-        if (opcode == 0x68)
+            break;
+        case 0x62: case 0x63: case 0x64: case 0x65: case 0x66: case 0x67: HandleInvalidOpcode(opcode); break;
+        case 0x68:
         {
             // 80186
             int value = NextUint16();
             SetCurrentInstructionName(() => $"PUSH {ConvertUtils.ToHex16(value)}");
             _stack.Push(value);
+            break;
         }
-        if (opcode == 0x69)
+        case 0x69:
         {
             _modRM.Read();
             int value = NextUint16();
             SetCurrentInstructionName(() => $"IMUL16 rm16 {ConvertUtils.ToHex16(value)}");
             int result = _alu.Imul16(value, _modRM.GetRm16());
             _modRM.SetR16(result);
+            break;
         }
-        if (opcode == 0x6A)
+        case 0x6A:
         {
             // 80186
             // sign extend it to 16 bits
             ushort value = NextUint8();
             SetCurrentInstructionName(() => $"PUSH {ConvertUtils.ToHex16(value)}");
             _stack.Push(value);
+            break;
         }
-        if (opcode == 0x6B)
-        {
-            _modRM.Read();
+        case 0x6B:
+        {    _modRM.Read();
             byte value = NextUint8();
             SetCurrentInstructionName(() => $"IMUL8 rm16 {ConvertUtils.ToHex16(value)}");
             int result = _alu.Imul16(value, _modRM.GetRm16());
             _modRM.SetR16(result);
+            break;
         }
-        if (opcode == 0x6C || opcode == 0x6D || opcode == 0x6E || opcode == 0x6F) // INSB, INSW, OUTSB, OUTSW
-            ProcessString(opcode);
-        if (opcode == 0x70 || opcode == 0x71 || opcode == 0x72 || opcode == 0x73 || opcode == 0x74 || opcode == 0x75 || opcode == 0x76 || opcode == 0x77 || opcode == 0x78 || opcode == 0x79 || opcode == 0x7A || opcode == 0x7B || opcode == 0x7C || opcode == 0x7D || opcode == 0x7E || opcode == 0x7F)
-        {
+        case 0x6C: case 0x6D: case 0x6E: case 0x6F: // INSB, INSW, OUTSB, OUTSW
+            ProcessString(opcode); 
+            break;
+        case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x76: case 0x77: case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7E: case 0x7F:
             Jcc(opcode);
-        }
-        if (opcode == 0x80 || opcode == // GRP1 rmb ib, GRP1 rmw iw, GRP1 rmb ib, GRP1 rmw ib
-                0x81 || opcode == 0x82 || opcode == 0x83) Grp1(opcode);
-        if (opcode == 0x84)
-        {
+            break;
+        case 0x80: // GRP1 rmb ib, GRP1 rmw iw, GRP1 rmb ib, GRP1 rmw ib
+        case 0x81: case 0x82: case 0x83:
+            Grp1(opcode);
+            break;
+        case 0x84:
             SetCurrentInstructionName(() => "TEST rmb rb");
             _modRM.Read();
             _alu.And8(_modRM.GetRm8(), _modRM.GetR8());
-        }
-        if (opcode == 0x85)
-        {
+            break;
+        case 0x85:
             SetCurrentInstructionName(() => "TEST rmw rw");
             _modRM.Read();
             _alu.And16(_modRM.GetRm16(), _modRM.GetR16());
-        }
-        if (opcode == 0x86)
-        {
+            break;
+        case 0x86:
+        { 
             SetCurrentInstructionName(() => "XCHG8");
             _modRM.Read();
             int value1 = _modRM.GetRm8();
             int value2 = _modRM.GetR8();
             _modRM.SetR8(value1);
             _modRM.SetRm8(value2);
+            break;
         }
-        if (opcode == 0x87)
-        {
+        case 0x87:
+        { 
             SetCurrentInstructionName(() => "XCHG16");
             _modRM.Read();
             int value1 = _modRM.GetRm16();
             int value2 = _modRM.GetR16();
             _modRM.SetR16(value1);
             _modRM.SetRm16(value2);
+            break;
         }
-        if (opcode == 0x88)
-        {
+        case 0x88:
             SetCurrentInstructionName(() => "MOV rmb rb");
             _modRM.Read();
             _modRM.SetRm8(_modRM.GetR8());
-        }
-        if (opcode == 0x89)
-        {
+            break;
+        case 0x89:
             SetCurrentInstructionName(() => "MOV rmw rw");
             _modRM.Read();
             _modRM.SetRm16((ushort)_modRM.GetR16());
-        }
-        if (opcode == 0x8A)
-        {
+            break;
+        case 0x8A:
             SetCurrentInstructionName(() => "MOV rb, rmb");
             _modRM.Read();
             _modRM.SetR8(_modRM.GetRm8());
-        }
-        if (opcode == 0x8B)
-        {
+            break;
+        case 0x8B:
             SetCurrentInstructionName(() => "MOV rw rmw");
             _modRM.Read();
             _modRM.SetR16(_modRM.GetRm16());
-        }
-        if (opcode == 0x8C)
-        {
+            break;
+        case 0x8C:
             SetCurrentInstructionName(() => "MOV rmw sreg");
             _modRM.Read();
             _modRM.SetRm16((ushort)_modRM.GetSegmentRegister());
-        }
-        if (opcode == 0x8D)
-        {
+            break;
+        case 0x8D:
             SetCurrentInstructionName(() => "LEA");
             _modRM.Read();
             _modRM.SetR16((ushort)_modRM.GetMemoryOffset());
-        }
-        if (opcode == 0x8E)
-        {
+            break;
+        case 0x8E:
             SetCurrentInstructionName(() => "MOV sreg rmw");
             _modRM.Read();
             _modRM.SetSegmentRegister(_modRM.GetRm16());
-        }
-        if (opcode == 0x8F)
-        {
+            break;
+        case 0x8F:
             SetCurrentInstructionName(() => "POP rmw");
             _modRM.Read();
             _modRM.SetRm16(_stack.Pop());
-        }
-        if (opcode == 0x90) SetCurrentInstructionName(() => "NOP");
-        if (opcode == 0x91 || opcode == 0x92 || opcode == 0x93 || opcode == 0x94 || opcode == 0x95 || opcode == 0x96 || opcode == 0x97)
+            break;
+        case 0x90: 
+            SetCurrentInstructionName(() => "NOP");
+            break;
+        case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: case 0x97:
         {
-            int regIndex = opcode & REG_INDEX_MASK;
+            regIndex = opcode & REG_INDEX_MASK;
             SetCurrentInstructionName(() => $"XCHG AX,{_state.GetRegisters().GetRegName(regIndex)}");
             int value1 = _state.GetAX();
             int value2 = _state.GetRegisters().GetRegister(regIndex);
             _state.SetAX(value2);
             _state.GetRegisters().SetRegister(regIndex, value1);
+            break;
         }
-        if (opcode == 0x98)
-        {
+        case 0x98:
             // Convert byte to word
             SetCurrentInstructionName(() => "CBW");
             _state.SetAX((byte)_state.GetAL());
-        }
-        if (opcode == 0x99)
-        {
+            break;
+        case 0x99:
             // Sign extend AX into DX (word to dword)
             SetCurrentInstructionName(() => "CWD");
             if (_state.GetAX() >= 0x8000)
@@ -789,116 +730,111 @@ public class Cpu
             {
                 _state.SetDX(0);
             }
-        }
-        if (opcode == 0x9A)
-        { // FAR CALL
+            break;
+        case 0x9A: // FAR CALL
+        {
             int ip = NextUint16();
             int cs = NextUint16();
             SetCurrentInstructionName(() => "FAR CALL");
             FarCall(_state.GetCS(), _internalIp, cs, ip);
+            break;
         }
         // Do nothing, this is to wait for the FPU which is not implemented
-        if (opcode == 0x9B)
-        {
+        case 0x9B:
             SetCurrentInstructionName(() => "WAIT");
-        }
-        if (opcode == 0x9C)
-        {
+            break;
+        case 0x9C:
             SetCurrentInstructionName(() => "PUSHF");
             _stack.Push(_state.GetFlags().GetFlagRegister());
-        }
-        if (opcode == 0x9D)
-        {
+            break;
+        case 0x9D:
             SetCurrentInstructionName(() => "POPF");
             _state.GetFlags().SetFlagRegister(_stack.Pop());
-        }
-        if (opcode == 0x9E)
-        {
+            break;
+        case 0x9E:
             SetCurrentInstructionName(() => "SAHF");
             _state.GetFlags().SetFlagRegister(_state.GetAH());
-        }
-        if (opcode == 0x9F)
-        {
+            break;
+        case 0x9F:
             SetCurrentInstructionName(() => "LAHF");
             _state.SetAH(_state.GetFlags().GetFlagRegister());
-        }
-        if (opcode == 0xA0)
-        {
+            break;
+        case 0xA0:
             SetCurrentInstructionName(() => "MOV AL moffs8");
             _state.SetAL(_memory.GetUint8(GetDsNextUint16Address()));
             _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Byte8);
-        }
-        if (opcode == 0xA1)
-        {
+            break;
+        case 0xA1:
             SetCurrentInstructionName(() => "MOV AX moffs16");
             _state.SetAX(_memory.GetUint16(GetDsNextUint16Address()));
             _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Word16);
-        }
-        if (opcode == 0xA2)
-        {
+            break;
+        case 0xA2:
             SetCurrentInstructionName(() => "MOV moffs8 AL");
             _memory.SetUint8(GetDsNextUint16Address(), (byte)_state.GetAL());
             _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Byte8);
-        }
-        if (opcode == 0xA3)
-        {
+            break;
+        case 0xA3:
             SetCurrentInstructionName(() => "MOV moffs16 AX");
             _memory.SetUint16(GetDsNextUint16Address(), (ushort)_state.GetAX());
             _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Word16);
-        }
-        if (opcode == 0xA4 || opcode == 0xA5 || opcode == 0xA6 || opcode == 0xA7) ProcessString(opcode);
-        if (opcode == 0xA8)
-        {
+            break;
+        case 0xA4: case 0xA5: case 0xA6: case 0xA7:
+            ProcessString(opcode);
+            break;
+        case 0xA8:
             SetCurrentInstructionName(() => "TEST AL ib");
             _alu.And8(_state.GetAL(), NextUint8());
-        }
-        if (opcode == 0xA9)
-        {
+            break;
+        case 0xA9:
             SetCurrentInstructionName(() => "TEST AX iw");
             _alu.And16(_state.GetAX(), NextUint16());
-        }
-        if (opcode == 0xAA || opcode == 0xAB || opcode == 0xAC || opcode == 0xAD || opcode == 0xAE || opcode == 0xAF) ProcessString(opcode);
-        if (opcode == 0xB0 || opcode == 0xB1 || opcode == 0xB2 || opcode == 0xB3 || opcode == 0xB4 || opcode == 0xB5 || opcode == 0xB6 || opcode == 0xB7)
-        {
-            int regIndex = opcode & REG_INDEX_MASK;
+            break;
+        case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF:
+            ProcessString(opcode);
+            break;
+        case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7:
+            regIndex = opcode & REG_INDEX_MASK;
             SetCurrentInstructionName(() => $"MOV {_state.GetRegisters().GetReg8Name(regIndex)} ib");
             _state.GetRegisters().SetRegisterFromHighLowIndex8(regIndex, NextUint8());
-        }
-        if (opcode == 0xB8 || opcode == 0xB9 || opcode == 0xBA || opcode == 0xBB || opcode == 0xBC || opcode == 0xBD || opcode == 0xBE || opcode == 0xBF)
-        {
-            int regIndex = opcode & REG_INDEX_MASK;
+            break;
+        case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF:
+            regIndex = opcode & REG_INDEX_MASK;
             SetCurrentInstructionName(() => $"MOV {_state.GetRegisters().GetRegName(regIndex)} iw");
             _state.GetRegisters().SetRegister(regIndex, NextUint16());
-        }
-        if (opcode == 0xC0)
+            break;
+        case 0xC0:
         {
             _modRM.Read();
             int count = this.NextUint8();
             int value = _modRM.GetRm8();
             SetCurrentInstructionName(() => $"SHL rmb {count}");
             _modRM.SetRm8(_alu.Shl8(value, count));
+            break;
         }
-        if (opcode == 0xC1)
+        case 0xC1:
         {
             _modRM.Read();
             int count = this.NextUint8();
             int value = _modRM.GetRm16();
             SetCurrentInstructionName(() => $"SHL rmw {count}");
             _modRM.SetRm16(_alu.Shl16(value, count));
+            break;
         }
-        if (opcode == 0xC2)
+        case 0xC2:
         {
             int numberOfBytesToPop = NextUint8();
             SetCurrentInstructionName(() => $"RET and pop {numberOfBytesToPop} bytes");
             NearRet(numberOfBytesToPop);
+            break;
         }
-        if (opcode == 0xC3)
-        {
+        case 0xC3:
             SetCurrentInstructionName(() => "RET");
             NearRet(0);
-        }
-        if (opcode == 0xC4 || opcode == 0xC5)
+            break;
+        case 0xC4: case 0xC5:
         {
+
             // Copy segmented address that is in memory (32bits) into DS/ES and the
             // specified register
             _modRM.Read();
@@ -917,60 +853,56 @@ public class Cpu
                 SetCurrentInstructionName(() => "LDS rw md");
                 _state.SetDS(value);
             }
+            break;
         }
-        if (opcode == 0xC6)
-        {
+        case 0xC6:
             SetCurrentInstructionName(() => "MOV rmb ib");
             _modRM.Read();
             _modRM.SetRm8(NextUint8());
-        }
-        if (opcode == 0xC7)
-        {
+            break;
+        case 0xC7:
             SetCurrentInstructionName(() => "MOV rmw iw");
             _modRM.Read();
             _modRM.SetRm16(NextUint16());
-        }
-        if (opcode == 0xC8 || opcode == 0xC9) HandleInvalidOpcode(opcode);
-        if (opcode == 0xCA)
+            break;
+        case 0xC8: case 0xC9: 
+            HandleInvalidOpcode(opcode);
+            break;
+        case 0xCA:
         {
             int numberOfBytesToPop = NextUint8();
             SetCurrentInstructionName(() => $"RETF and pop {numberOfBytesToPop} bytes");
             FarRet(numberOfBytesToPop);
+            break;
         }
-        if (opcode == 0xCB)
-        {
+        case 0xCB:
             SetCurrentInstructionName(() => "RETF");
             FarRet(0);
-        }
-        if (opcode == 0xCC)
-        {
+            break;
+        case 0xCC:
             SetCurrentInstructionName(() => "INT 3");
             Interrupt(3, false);
-        }
-        if (opcode == 0xCD)
-        {
+            break;
+        case 0xCD:
             SetCurrentInstructionName(() => "INT ib");
             Interrupt(NextUint8(), false);
-        }
-        if (opcode == 0xCE)
-        {
+            break;
+        case 0xCE:
             SetCurrentInstructionName(() => "INTO");
             if (_state.GetOverflowFlag())
             {
                 Interrupt(4, false);
             }
-        }
-        if (opcode == 0xCF)
-        {
+            break;
+        case 0xCF:
             SetCurrentInstructionName(() => "IRET");
             InterruptRet();
-        }
-        if (opcode == 0xD0 || opcode == 0xD1 || opcode == 0xD2 || opcode == 0xD3) // GRP2 rmb 1, GRP2 rmw 1, GRP2 rmb CL, GRP2 rmw CL
-        {
+            break;
+        case 0xD0: case 0xD1: case 0xD2: case 0xD3: // GRP2 rmb 1, GRP2 rmw 1, GRP2 rmb CL, GRP2 rmw CL
             Grp2(opcode);
-        }
-        if (opcode == 0xD4)
-        {
+            break;
+        case 0xD4:
+        { 
             SetCurrentInstructionName(() => "AAM ib");
             int v1 = _state.GetAL();
             int v2 = NextUint8();
@@ -983,25 +915,32 @@ public class Cpu
             _state.SetAH(v1 / v2);
             _state.SetAL(result);
             _alu.UpdateFlags8(result);
+            break;
         }
-        if (opcode == 0xD5)
-        {
+        case 0xD5:
+        { 
             SetCurrentInstructionName(() => "AAD ib");
             int result = (byte)(_state.GetAL() + (_state.GetAH() * NextUint8()));
             _state.SetAL(result);
             _state.SetAH(0);
             _state.GetFlags().SetFlagRegister(0);
             _alu.UpdateFlags8(result);
+            break;
         }
-        if (opcode == 0xD6) HandleInvalidOpcode(opcode);
-        if (opcode == 0xD7)
+        case 0xD6:
+            HandleInvalidOpcode(opcode);
+            break;
+        case 0xD7:
         {
             SetCurrentInstructionName(() => "XLAT");
             int address = _modRM.GetAddress(SegmentRegisters.DsIndex, _state.GetBX()) + _state.GetAL();
             _state.SetAL(_memory.GetUint8(address));
+            break;
         }
-        if (opcode == 0xD8) HandleInvalidOpcode(opcode);
-        if (opcode == 0xD9)
+        case 0xD8:
+            HandleInvalidOpcode(opcode);
+            break;
+        case 0xD9:
         {
             _modRM.Read();
             int groupIndex = _modRM.GetRegisterIndex();
@@ -1015,13 +954,13 @@ public class Cpu
             {
                 throw new InvalidGroupIndexException(_machine, groupIndex);
             }
+            break;
         }
-        if (opcode == 0xDA)
-        {
+        case 0xDA:
             HandleInvalidOpcode(opcode);
-        }
-        if (opcode == 0xDB)
-        {
+            break;
+        case 0xDB:
+        { 
             int opCodeNextByte = NextUint8();
             if (opCodeNextByte != 0xE3)
             {
@@ -1047,9 +986,12 @@ public class Cpu
                     throw new InvalidGroupIndexException(_machine, groupIndex);
                 }
             }
+            break;
         }
-        if (opcode == 0xDE || opcode == 0xDF) HandleInvalidOpcode(opcode);
-        if (opcode == 0xE0 || opcode == 0xE1)
+        case  0xDE: case 0xDF:
+            HandleInvalidOpcode(opcode);
+            break;
+        case 0xE0: case 0xE1:
         { // LOOPZ / LOOPNZ
             bool zeroFlag = (opcode & 0x1) == 1;
             byte address = NextUint8();
@@ -1067,9 +1009,10 @@ public class Cpu
             {
                 _internalIp += address;
             }
+            break;
         }
-        if (opcode == 0xE2)
-        { // LOOP
+        case 0xE2: // LOOP
+        {
             SetCurrentInstructionName(() => "LOOP");
             byte address = NextUint8();
             int cx = _state.GetCX() - 1;
@@ -1078,141 +1021,154 @@ public class Cpu
             {
                 _internalIp += address;
             }
+            break;
         }
-        if (opcode == 0xE3) // JCXZ
+        case 0xE3:// JCXZ
             Jcc(opcode);
-        if (opcode == 0xE4)
+            break;
+        case 0xE4:
         {
             int port = NextUint8();
             SetCurrentInstructionName(() => $"IN AL {ConvertUtils.ToHex8(port)}");
             _state.SetAL(Inb(port));
+            break;
         }
-        if (opcode == 0xE5)
+        case 0xE5:
         {
             int port = NextUint16();
             SetCurrentInstructionName(() => $"IN AL {ConvertUtils.ToHex16(port)}");
             _state.SetAX(Inw(port));
+            break;
         }
-        if (opcode == 0xE6)
+        case 0xE6:
         {
             int port = NextUint8();
             int value = _state.GetAL();
             SetCurrentInstructionName(() => $"OUT {ConvertUtils.ToHex8(port)} AL={ConvertUtils.ToHex8(value)}");
             Outb(port, value);
+            break;
         }
-        if (opcode == 0xE7)
+        case 0xE7:
         {
             int port = NextUint16();
             int value = _state.GetAX();
             SetCurrentInstructionName(() => $"OUT {ConvertUtils.ToHex16(port)} AX={ConvertUtils.ToHex16(value)}");
             Outw(port, value);
+            break;
         }
-        if (opcode == 0xE8)
+        case 0xE8:
         {
             SetCurrentInstructionName(() => "CALL NEAR");
             int nextInstruction = _internalIp + 2;
             short offset = (short)NextUint16();
             ushort callAddress = (ushort)(nextInstruction + offset);
             NearCall(nextInstruction, callAddress);
+            break;
         }
-        if (opcode == 0xE9)
+        case 0xE9:
         {
             short offset = (short)NextUint16();
             JumpNear(_internalIp + offset);
+            break;
         }
-        if (opcode == 0xEA)
+        case 0xEA:
         {
             int ip = NextUint16();
             int cs = NextUint16();
             JumpFar(cs, ip);
+            break;
         }
-        if (opcode == 0xEB)
+        case 0xEB:
         {
             byte offset = NextUint8();
             JumpNear(_internalIp + offset);
+            break;
         }
-        if (opcode == 0xEC)
+        case 0xEC:
         {
             int port = _state.GetDX();
             SetCurrentInstructionName(() => "IN AL DX=" + ConvertUtils.ToHex16(port));
             _state.SetAL(Inb(port));
+            break;
         }
-        if (opcode == 0xED)
+        case 0xED:
         {
             int port = _state.GetDX();
             SetCurrentInstructionName(() => "IN AX DX=" + ConvertUtils.ToHex16(port));
             _state.SetAX(Inw(port));
+            break;
         }
-        if (opcode == 0xEE)
+        case 0xEE:
         {
             int port = _state.GetDX();
             int value = _state.GetAL();
             SetCurrentInstructionName(() => "OUT DX=" + ConvertUtils.ToHex16(port) + " AL=" + ConvertUtils.ToHex8(value));
             Outb(port, value);
+            break;
         }
-        if (opcode == 0xEF)
-        {
+        case 0xEF:
+        { 
             int port = _state.GetDX();
             int value = _state.GetAX();
             SetCurrentInstructionName(() => "OUT DX=" + ConvertUtils.ToHex16(port) + " AX=" + ConvertUtils.ToHex16(value));
             Outw(port, value);
+            break;
         }
-        if (opcode == 0xF0 || opcode == 0xF1) HandleInvalidOpcode(opcode);
-        if (opcode == 0xF2 || opcode == 0xF3) HandleInvalidOpcodeBecausePrefix(opcode);
-        if (opcode == 0xF4)
-        {
+        case 0xF0: case 0xF1: 
+            HandleInvalidOpcode(opcode);
+            break;
+        case 0xF2: case 0xF3:
+            HandleInvalidOpcodeBecausePrefix(opcode);
+            break;
+        case 0xF4:
             SetCurrentInstructionName(() => "HLT");
             _logger.Information("HLT instruction encountered, halting!");
             _running = false;
-        }
-        if (opcode == 0xF5)
-        {
+            break;
+        case 0xF5:
             SetCurrentInstructionName(() => "CMC");
             _state.SetCarryFlag(!_state.GetCarryFlag());
-        }
-        if (opcode == 0xF6) // GRP3a rmb
+            break;
+        case 0xF6: // GRP3a rmb
             Grp3a();
-        if (opcode == 0xF7) // GRP3b rmw
+            break;
+        case 0xF7: // GRP3b rmw
             Grp3b();
-        if (opcode == 0xF8)
-        {
+            break;
+        case 0xF8:
             SetCurrentInstructionName(() => "CLC");
             _state.SetCarryFlag(false);
-        }
-        if (opcode == 0xF9)
-        {
+            break;
+        case 0xF9:
             SetCurrentInstructionName(() => "STC");
             _state.SetCarryFlag(true);
-        }
-        if (opcode == 0xFA)
-        {
+            break;
+        case 0xFA:
             SetCurrentInstructionName(() => "CLI");
             _state.SetInterruptFlag(false);
-        }
-        if (opcode == 0xFB)
-        {
+            break;
+        case 0xFB:
             SetCurrentInstructionName(() => "STI");
             _state.SetInterruptFlag(true);
-        }
-        if (opcode == 0xFC)
-        {
+            break;
+        case 0xFC:
             SetCurrentInstructionName(() => "CLD");
             _state.SetDirectionFlag(false);
-        }
-        if (opcode == 0xFD)
-        {
+            break;
+        case 0xFD:
             SetCurrentInstructionName(() => "STD");
             _state.SetDirectionFlag(true);
-        }
-        if (opcode == 0xFE)
-        {// GRP4 rmb
+            break;
+        case 0xFE:// GRP4 rmb
             Grp4();
-        }
-        if (opcode == 0xFF)
-        { // GRP5 rmw
+            break;
+        case 0xFF: // GRP5 rmw
             Grp5();
+            break;
+        default:
+            HandleInvalidOpcode(opcode);
+            break;
         }
-        HandleInvalidOpcode(opcode);
     }
 
     private void Grp3a()
@@ -1321,110 +1277,102 @@ public class Cpu
     private void ProcessString(int opcode)
     {
         int diff = (_state.GetDirectionFlag() ? -1 : 1) << (opcode & 1);
-
-        if (opcode == 0xA4)
+        int value;
+        int port;
+        switch (opcode)
         {
+        case 0xA4:
             SetCurrentInstructionName(() => "MOVSB");
-            int value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
+            value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
             _memory.SetUint8(GetMemoryAddressEsDi(), (byte)value);
             _state.SetSI(_state.GetSI() + diff);
             _state.SetDI(_state.GetDI() + diff);
-        }
-        if (opcode == 0xA5)
-        {
+            break;
+        case 0xA5:
             SetCurrentInstructionName(() => "MOVSW");
-            int value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
+            value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
             _memory.SetUint16(GetMemoryAddressEsDi(), (ushort)value);
             _state.SetSI(_state.GetSI() + diff);
             _state.SetDI(_state.GetDI() + diff);
-        }
-        if (opcode == 0xA6)
-        {
+            break;
+        case 0xA6:
             SetCurrentInstructionName(() => "CMPSB");
-            int value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
+            value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
             _alu.Sub8(value, _memory.GetUint8(GetMemoryAddressEsDi()));
             _state.SetSI(_state.GetSI() + diff);
             _state.SetDI(_state.GetDI() + diff);
-        }
-        if (opcode == 0xA7)
-        {
+            break;
+        case 0xA7:
             SetCurrentInstructionName(() => "CMPSW");
-            int value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
+            value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
             _alu.Sub16(value, _memory.GetUint16(GetMemoryAddressEsDi()));
             _state.SetSI(_state.GetSI() + diff);
             _state.SetDI(_state.GetDI() + diff);
-        }
-        if (opcode == 0xAA)
-        {
+            break;
+        case 0xAA:
             SetCurrentInstructionName(() => "STOSB");
             _memory.SetUint8(GetMemoryAddressEsDi(), (byte)_state.GetAL());
             _state.SetDI(_state.GetDI() + diff);
-        }
-        if (opcode == 0xAB)
-        {
+            break;
+        case 0xAB:
             SetCurrentInstructionName(() => "STOSW");
             _memory.SetUint16(GetMemoryAddressEsDi(), (ushort)_state.GetAX());
             _state.SetDI(_state.GetDI() + diff);
-        }
-        if (opcode == 0xAC)
-        {
+            break;
+        case 0xAC:
             SetCurrentInstructionName(() => "LODSB");
-            int value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
+            value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
             _state.SetAL(value);
             _state.SetSI(_state.GetSI() + diff);
-        }
-        if (opcode == 0xAD)
-        {
+            break;
+        case 0xAD:
             SetCurrentInstructionName(() => "LODSW");
-            int value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
+            value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
             _state.SetAX(value);
             _state.SetSI(_state.GetSI() + diff);
-        }
-        if (opcode == 0xAE)
-        {
+            break;
+        case 0xAE:
             SetCurrentInstructionName(() => "SCASB");
             _alu.Sub8(_state.GetAL(), _memory.GetUint8(GetMemoryAddressEsDi()));
             _state.SetDI(_state.GetDI() + diff);
-        }
-        if (opcode == 0xAF)
-        {
+            break;
+        case 0xAF:
             SetCurrentInstructionName(() => "SCASW");
             _alu.Sub16(_state.GetAX(), _memory.GetUint16(GetMemoryAddressEsDi()));
             _state.SetDI(_state.GetDI() + diff);
-        }
-        if (opcode == 0x6C)
-        {
+            break;
+        case 0x6C:
             SetCurrentInstructionName(() => "INSB");
-            int port = _state.GetDX();
-            int value = Inb(port);
+            port = _state.GetDX();
+            value = Inb(port);
             _memory.SetUint8(GetMemoryAddressEsDi(), (byte)value);
             _state.SetSI(_state.GetSI() + diff);
-        }
-        if (opcode == 0x6D)
-        {
+            break;
+        case 0x6D:
             SetCurrentInstructionName(() => "INSW");
-            int port = _state.GetDX();
-            int value = Inw(port);
+            port = _state.GetDX();
+            value = Inw(port);
             _memory.SetUint16(GetMemoryAddressEsDi(), (ushort)value);
             _state.SetSI(_state.GetSI() + diff);
-        }
-        if (opcode == 0x6E)
-        {
+            break;
+        case 0x6E:
             SetCurrentInstructionName(() => "OUTSB");
-            int port = _state.GetDX();
-            int value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
+            port = _state.GetDX();
+            value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
             Outb(port, value);
             _state.SetSI(_state.GetSI() + diff);
-        }
-        if (opcode == 0x6F)
-        {
+            break;
+        case 0x6F:
             SetCurrentInstructionName(() => "OUTSW");
-            int port = _state.GetDX();
-            int value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
+            port = _state.GetDX();
+            value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
             Outw(port, value);
             _state.SetSI(_state.GetSI() + diff);
+            break;
+        default:
+            HandleInvalidOpcode(opcode);
+            break;
         }
-        HandleInvalidOpcode(opcode);
     }
 
     private void Outb(int port, int val)
@@ -1517,45 +1465,42 @@ public class Cpu
 
     private void ProcessPrefix(int opcode)
     {
-        if (opcode == 0x26)
+        switch (opcode)
         {
+        case 0x26:
             AddCurrentInstructionPrefix(() => "ES:");
             _state.SetSegmentOverrideIndex(SegmentRegisters.EsIndex);
-        }
-        if (opcode == 0x2E)
-        {
+            break;
+        case 0x2E:
             AddCurrentInstructionPrefix(() => "CS:");
             _state.SetSegmentOverrideIndex(SegmentRegisters.CsIndex);
-        }
-        if (opcode == 0x36)
-        {
+            break;
+        case 0x36:
             AddCurrentInstructionPrefix(() => "SS:");
             _state.SetSegmentOverrideIndex(SegmentRegisters.SsIndex);
-        }
-        if (opcode == 0x3E)
-        {
+            break;
+        case 0x3E:
             AddCurrentInstructionPrefix(() => "DS:");
             _state.SetSegmentOverrideIndex(SegmentRegisters.DsIndex);
-        }
-        if (opcode == 0x64)
-        {
+            break;
+        case 0x64:
             AddCurrentInstructionPrefix(() => "FS:");
             _state.SetSegmentOverrideIndex(SegmentRegisters.FsIndex);
-        }
-        if (opcode == 0x65)
-        {
+            break;
+        case 0x65:
             AddCurrentInstructionPrefix(() => "GS:");
             _state.SetSegmentOverrideIndex(SegmentRegisters.GsIndex);
-        }
-        if (opcode == 0xF0)
-        {
+            break;
+        case 0xF0:
             AddCurrentInstructionPrefix(() => "LOCK");
-        }
-        if (opcode == 0xF2 || opcode == 0xF3)
-        { // REPNZ, REPZ
+            break;
+        case 0xF2: case 0xF3: // REPNZ, REPZ
+        {
             bool continueZeroFlagValue = (opcode & 1) == 1;
             _state.SetContinueZeroFlagValue(continueZeroFlagValue);
             AddCurrentInstructionPrefix(() => "REP" + (continueZeroFlagValue ? "Z" : ""));
+            break;
+        }
         }
         throw new InvalidVMOperationException(_machine,
             $"processPrefix Called with a non prefix opcode {opcode}");
