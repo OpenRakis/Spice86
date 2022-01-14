@@ -1,12 +1,10 @@
-namespace Spice86.Tests
-{
-    using Xunit;
+namespace Spice86.Tests;
 
-    public class UnitTest1
-    {
-        [Fact]
-        public void Test1()
-        {
-        }
+using Xunit;
+
+public class UnitTest1 {
+
+    [Fact]
+    public void Test1() {
     }
 }

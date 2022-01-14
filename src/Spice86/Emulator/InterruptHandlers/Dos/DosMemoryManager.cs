@@ -7,34 +7,29 @@ using Spice86.Emulator.Memory;
 using System.Collections.Generic;
 using System.Linq;
 
-public class DosMemoryManager
-{
+public class DosMemoryManager {
     private static readonly ILogger _logger = Log.Logger.ForContext<DosMemoryManager>();
     private Memory memory;
     private int pspSegment;
     private DosMemoryControlBlock? start;
 
-    public DosMemoryManager(Memory memory)
-    {
+    public DosMemoryManager(Memory memory) {
         this.memory = memory;
     }
 
-    public DosMemoryControlBlock? AllocateMemoryBlock(int requestedSize)
-    {
+    public DosMemoryControlBlock? AllocateMemoryBlock(int requestedSize) {
         IList<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
 
         // take the smallest
         var blockOptional = candidates.OrderBy(x => x.GetSize()).FirstOrDefault();
-        if (blockOptional is null)
-        {
+        if (blockOptional is null) {
             // Nothing found
             _logger.Error("Could not find any MCB to fit {@RequestedSize}.", requestedSize);
             return null;
         }
 
         DosMemoryControlBlock block = blockOptional;
-        if (!SplitBlock(block, requestedSize))
-        {
+        if (!SplitBlock(block, requestedSize)) {
             // An issue occurred while splitting the block
             _logger.Error("Could not spit block {@Block}.", block);
             return null;
@@ -44,19 +39,15 @@ public class DosMemoryManager
         return block;
     }
 
-    public DosMemoryControlBlock FindLargestFree()
-    {
+    public DosMemoryControlBlock FindLargestFree() {
         DosMemoryControlBlock? current = start;
         DosMemoryControlBlock? largest = null;
-        while (true)
-        {
-            if (current != null && current.IsFree() && (largest == null || current.GetSize() > largest.GetSize()))
-            {
+        while (true) {
+            if (current != null && current.IsFree() && (largest == null || current.GetSize() > largest.GetSize())) {
                 largest = current;
             }
 
-            if (current != null && current.IsLast() && largest != null)
-            {
+            if (current != null && current.IsLast() && largest != null) {
                 return largest;
             }
 
@@ -64,11 +55,9 @@ public class DosMemoryManager
         }
     }
 
-    public bool FreeMemoryBlock(int blockSegment)
-    {
+    public bool FreeMemoryBlock(int blockSegment) {
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
-        if (!CheckValidOrLogError(block))
-        {
+        if (!CheckValidOrLogError(block)) {
             return false;
         }
 
@@ -76,13 +65,11 @@ public class DosMemoryManager
         return JoinBlocks(block, true);
     }
 
-    public int GetPspSegment()
-    {
+    public int GetPspSegment() {
         return pspSegment;
     }
 
-    public void Init(int pspSegment, int lastFreeSegment)
-    {
+    public void Init(int pspSegment, int lastFreeSegment) {
         int startSegment = pspSegment - 1;
         this.pspSegment = pspSegment;
         int size = lastFreeSegment - startSegment;
@@ -94,29 +81,24 @@ public class DosMemoryManager
         start.SetLast();
     }
 
-    public bool ModifyBlock(int blockSegment, int requestedSize)
-    {
+    public bool ModifyBlock(int blockSegment, int requestedSize) {
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
-        if (!CheckValidOrLogError(block))
-        {
+        if (!CheckValidOrLogError(block)) {
             return false;
         }
 
         // Make the block the biggest it can get
-        if (!JoinBlocks(block, false))
-        {
+        if (!JoinBlocks(block, false)) {
             _logger.Error("Could not join MCB {@Block}.", block);
             return false;
         }
 
-        if (block.GetSize() < requestedSize - 1)
-        {
+        if (block.GetSize() < requestedSize - 1) {
             _logger.Error("MCB {@Block} is too small for requested size {@RequestedSize}.", block, requestedSize);
             return false;
         }
 
-        if (block.GetSize() > requestedSize)
-        {
+        if (block.GetSize() > requestedSize) {
             SplitBlock(block, requestedSize);
         }
 
@@ -124,10 +106,8 @@ public class DosMemoryManager
         return true;
     }
 
-    private bool CheckValidOrLogError(DosMemoryControlBlock? block)
-    {
-        if (block is null || block.IsValid())
-        {
+    private bool CheckValidOrLogError(DosMemoryControlBlock? block) {
+        if (block is null || block.IsValid()) {
             _logger.Error("MCB {@Block} is invalid.", block);
             return false;
         }
@@ -135,27 +115,21 @@ public class DosMemoryManager
         return true;
     }
 
-    private IList<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize)
-    {
+    private IList<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
         DosMemoryControlBlock? current = start;
         List<DosMemoryControlBlock> candidates = new();
-        while (true)
-        {
-            if (!CheckValidOrLogError(current))
-            {
+        while (true) {
+            if (!CheckValidOrLogError(current)) {
                 return new List<DosMemoryControlBlock>();
             }
-            if (current != null)
-            {
+            if (current != null) {
                 JoinBlocks(current, true);
             }
-            if (current != null && current.IsFree() && current.GetSize() >= requestedSize)
-            {
+            if (current != null && current.IsFree() && current.GetSize() >= requestedSize) {
                 candidates.Add(current);
             }
 
-            if (current != null && current.IsLast())
-            {
+            if (current != null && current.IsLast()) {
                 return candidates;
             }
 
@@ -163,30 +137,24 @@ public class DosMemoryManager
         }
     }
 
-    private DosMemoryControlBlock GetDosMemoryControlBlockFromSegment(int blockSegment)
-    {
+    private DosMemoryControlBlock GetDosMemoryControlBlockFromSegment(int blockSegment) {
         return new DosMemoryControlBlock(memory, MemoryUtils.ToPhysicalAddress(blockSegment, 0));
     }
 
-    private bool JoinBlocks(DosMemoryControlBlock block, bool onlyIfFree)
-    {
-        if (onlyIfFree && !block.IsFree())
-        {
+    private bool JoinBlocks(DosMemoryControlBlock block, bool onlyIfFree) {
+        if (onlyIfFree && !block.IsFree()) {
             // Do not touch blocks in use
             return true;
         }
 
-        while (block.IsNonLast())
-        {
+        while (block.IsNonLast()) {
             DosMemoryControlBlock next = block.Next();
-            if (!next.IsFree())
-            {
+            if (!next.IsFree()) {
                 // end of the free blocks reached
                 break;
             }
 
-            if (!CheckValidOrLogError(next))
-            {
+            if (!CheckValidOrLogError(next)) {
                 _logger.Error("MCB {@NextBlock} is not valid.", next);
                 return false;
             }
@@ -197,8 +165,7 @@ public class DosMemoryManager
         return true;
     }
 
-    private void JoinContiguousBlocks(DosMemoryControlBlock destination, DosMemoryControlBlock next)
-    {
+    private void JoinContiguousBlocks(DosMemoryControlBlock destination, DosMemoryControlBlock next) {
         destination.SetTypeField(next.GetTypeField());
 
         // +1 because next block metadata is going to free space
@@ -216,18 +183,15 @@ public class DosMemoryManager
     /// <param name="block"></param>
     /// <param name="size"></param>
     /// <returns></returns>
-    private bool SplitBlock(DosMemoryControlBlock block, int size)
-    {
+    private bool SplitBlock(DosMemoryControlBlock block, int size) {
         int blockSize = block.GetSize();
-        if (blockSize == size)
-        {
+        if (blockSize == size) {
             // nothing to do
             return true;
         }
 
         int nextBlockSize = blockSize - size - 1;
-        if (size < 0)
-        {
+        if (size < 0) {
             _logger.Error("Cannot split block {@Block} with size {@Size} because it is too small.", block, size);
             return false;
         }

@@ -6,40 +6,33 @@ using Spice86.Emulator.Machine;
 /// <summary>
 /// Crude implementation of Int9
 /// </summary>
-public class BiosKeyboardInt9Handler : InterruptHandler
-{
+public class BiosKeyboardInt9Handler : InterruptHandler {
     private BiosKeyboardBuffer _biosKeyboardBuffer;
     private Keyboard _keyboard;
     private KeyScancodeConverter _keyScancodeConverter = new();
 
-    public BiosKeyboardInt9Handler(Machine machine) : base(machine)
-    {
+    public BiosKeyboardInt9Handler(Machine machine) : base(machine) {
         this._keyboard = machine.GetKeyboard();
         this._biosKeyboardBuffer = new BiosKeyboardBuffer(machine.GetMemory());
         _biosKeyboardBuffer.Init();
     }
 
-    public BiosKeyboardBuffer GetBiosKeyboardBuffer()
-    {
+    public BiosKeyboardBuffer GetBiosKeyboardBuffer() {
         return _biosKeyboardBuffer;
     }
 
-    public override int GetIndex()
-    {
+    public override int GetIndex() {
         return 0x9;
     }
 
-    public override void Run()
-    {
+    public override void Run() {
         int? scancode = _keyboard.GetScancode();
-        if (scancode == null)
-        {
+        if (scancode == null) {
             return;
         }
 
         int? ascii = _keyScancodeConverter.GetAsciiCode(scancode.Value);
-        if (ascii == null)
-        {
+        if (ascii == null) {
             ascii = 0;
         }
 

@@ -9,8 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 // TODO: Complete it
-public class DosInt21Handler : InterruptHandler
-{
+public class DosInt21Handler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<DosInt21Handler>();
 
     private static readonly CharSet CP850_CHARSET = CharSet.Ansi;
@@ -24,30 +23,25 @@ public class DosInt21Handler : InterruptHandler
     private DosFileManager dosFileManager;
     private DosMemoryManager dosMemoryManager;
 
-    public DosInt21Handler(Machine machine) : base(machine)
-    {
+    public DosInt21Handler(Machine machine) : base(machine) {
         dosMemoryManager = new DosMemoryManager(machine.GetMemory());
         dosFileManager = new DosFileManager(memory);
         //FillDispatchTable();
     }
 
-    public override int GetIndex()
-    {
+    public override int GetIndex() {
         throw new NotImplementedException();
     }
 
-    public override void Run()
-    {
+    public override void Run() {
         throw new NotImplementedException();
     }
 
-    internal DosFileManager GetDosFileManager()
-    {
+    internal DosFileManager GetDosFileManager() {
         return this.dosFileManager;
     }
 
-    internal DosMemoryManager GetDosMemoryManager()
-    {
+    internal DosMemoryManager GetDosMemoryManager() {
         return this.dosMemoryManager;
     }
 }

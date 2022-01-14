@@ -24,8 +24,8 @@ using System.Linq;
 /// https://jbwyatt.com/253/emu/8086_instruction_set.html </li></ul>
 /// TODO: Complete it !
 /// </summary>
-public class Cpu
-{
+public class Cpu {
+
     // Extract regIndex from opcode
     private const int REG_INDEX_MASK = 0b111;
 
@@ -63,8 +63,7 @@ public class Cpu
 
     public bool IsRunning => _running;
 
-    public Cpu(Machine machine, bool debugMode)
-    {
+    public Cpu(Machine machine, bool debugMode) {
         _machine = machine;
         _memory = machine.GetMemory();
         _state = new State();
@@ -77,34 +76,27 @@ public class Cpu
         _modRM = new ModRM(machine, this);
     }
 
-    public void ExecuteNextInstruction()
-    {
+    public void ExecuteNextInstruction() {
         _internalIp = _state.GetIP();
         _staticAddressesRecorder.Reset();
         var stateString = "";
-        if (IsLoggingEnabled())
-        {
+        if (IsLoggingEnabled()) {
             stateString = _state.ToString();
             _state.ResetCurrentInstructionPrefix();
             _state.SetCurrentInstructionName("");
         }
         int opcode = ProcessPrefixes();
-        if (IsLoggingEnabled())
-        {
+        if (IsLoggingEnabled()) {
             _logger.Debug("Before execution: {@OpCode} {@StateString} ", ConvertUtils.ToHex8(opcode),
                 stateString);
         }
-        if (_state.GetContinueZeroFlagValue() != null && IsStringOpcode(opcode))
-        {
+        if (_state.GetContinueZeroFlagValue() != null && IsStringOpcode(opcode)) {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
             ProcessRep(opcode);
-        }
-        else
-        {
+        } else {
             ExecOpcode(opcode);
         }
-        if (IsLoggingEnabled())
-        {
+        if (IsLoggingEnabled()) {
             String instructionName = _state.GetCurrentInstructionNameWithPrefix();
             _logger.Debug("After execution of {@InstructionName} {@State}", instructionName, _state);
         }
@@ -115,17 +107,14 @@ public class Cpu
         _state.SetIP(_internalIp);
     }
 
-    public void ExternalInterrupt(int vectorNumber)
-    {
+    public void ExternalInterrupt(int vectorNumber) {
         // hack: do not let the timer overwrite keyboard.
-        if (_externalInterruptVectorNumber == null || _externalInterruptVectorNumber != 9)
-        {
+        if (_externalInterruptVectorNumber == null || _externalInterruptVectorNumber != 9) {
             _externalInterruptVectorNumber = vectorNumber;
         }
     }
 
-    public void FarRet(int numberOfBytesToPop)
-    {
+    public void FarRet(int numberOfBytesToPop) {
         _functionHandlerInUse.Ret(CallType.FAR);
         _internalIp = _stack.Pop();
         _state.SetCS(_stack.Pop());
@@ -146,8 +135,7 @@ public class Cpu
 
     public StaticAddressesRecorder GetStaticAddressesRecorder() => _staticAddressesRecorder;
 
-    public void InterruptRet()
-    {
+    public void InterruptRet() {
         _functionHandlerInUse.Ret(CallType.INTERRUPT);
         _internalIp = _stack.Pop();
         _state.SetCS(_stack.Pop());
@@ -155,22 +143,19 @@ public class Cpu
         _functionHandlerInUse = _functionHandler;
     }
 
-    public void NearRet(int numberOfBytesToPop)
-    {
+    public void NearRet(int numberOfBytesToPop) {
         _functionHandlerInUse.Ret(CallType.NEAR);
         _internalIp = _stack.Pop();
         _state.SetSP(numberOfBytesToPop + _state.GetSP());
     }
 
-    public ushort NextUint16()
-    {
+    public ushort NextUint16() {
         var res = _memory.GetUint16(GetInternalIpPhysicalAddress());
         _internalIp += 2;
         return res;
     }
 
-    public byte NextUint8()
-    {
+    public byte NextUint8() {
         var res = _memory.GetUint8(GetInternalIpPhysicalAddress());
         _internalIp++;
         return res;
@@ -178,21 +163,16 @@ public class Cpu
 
     public void SetCallbackHandler(CallbackHandler callbackHandler) => _callbackHandler = callbackHandler;
 
-    public void SetErrorOnUninitializedInterruptHandler(bool errorOnUninitializedInterruptHandler)
-    {
+    public void SetErrorOnUninitializedInterruptHandler(bool errorOnUninitializedInterruptHandler) {
         _errorOnUninitializedInterruptHandler = errorOnUninitializedInterruptHandler;
     }
 
-    public void SetFlagOnInterruptStack(int flagMask, bool flagValue)
-    {
+    public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
         int flagsAddress = MemoryUtils.ToPhysicalAddress(_state.GetSS(), _state.GetSP() + 4);
         int value = _memory.GetUint16(flagsAddress);
-        if (flagValue)
-        {
+        if (flagValue) {
             value = value | flagMask;
-        }
-        else
-        {
+        } else {
             value = value & ~flagMask;
         }
         _memory.SetUint16(flagsAddress, (ushort)value);
@@ -210,30 +190,24 @@ public class Cpu
         || stringOpCode == 0xAE // SCASB
         || stringOpCode == 0xAF;
 
-    private void AddCurrentInstructionPrefix(Func<String> getLog)
-    {
+    private void AddCurrentInstructionPrefix(Func<String> getLog) {
         // Optimization, do not calculate the log if it is not used
-        if (IsLoggingEnabled())
-        {
+        if (IsLoggingEnabled()) {
             _state.AddCurrentInstructionPrefix(getLog.Invoke());
         }
     }
 
-    private void Callback(int callbackIndex)
-    {
+    private void Callback(int callbackIndex) {
         SetCurrentInstructionName(() => $"CALLBACK {callbackIndex}");
-        if (IsLoggingEnabled())
-        {
+        if (IsLoggingEnabled()) {
             _logger.Debug("callback {@CallbackIndex}", ConvertUtils.ToHex16(callbackIndex));
         }
         _callbackHandler?.Run(callbackIndex);
     }
 
-    private void ExecOpcode(int opcode)
-    {
+    private void ExecOpcode(int opcode) {
         int regIndex;
-        switch (opcode)
-        {
+        switch (opcode) {
             case 0x00:
                 SetCurrentInstructionName(() => "ADD rmb rb");
                 _modRM.Read();
@@ -447,26 +421,21 @@ public class Cpu
                 HandleInvalidOpcodeBecausePrefix(opcode);
                 break;
 
-            case 0x27:
-                {
+            case 0x27: {
                     SetCurrentInstructionName(() => "DAA");
                     int initialAL = _state.GetAL();
                     bool initialCF = _state.GetCarryFlag();
                     bool finalAuxillaryFlag = false;
                     bool finalCarryFlag = false;
-                    if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag())
-                    {
+                    if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag()) {
                         _state.SetAL(_state.GetAL() + 6);
                         finalAuxillaryFlag = true;
                     }
 
-                    if (initialAL > 0x99 || initialCF)
-                    {
+                    if (initialAL > 0x99 || initialCF) {
                         _state.SetAL(_state.GetAL() + 0x60);
                         finalCarryFlag = true;
-                    }
-                    else
-                    {
+                    } else {
                         finalCarryFlag = false;
                     }
                     // Undocumented behaviour
@@ -513,22 +482,19 @@ public class Cpu
                 HandleInvalidOpcodeBecausePrefix(opcode);
                 break;
 
-            case 0x2F:
-                {
+            case 0x2F: {
                     SetCurrentInstructionName(() => "DAS");
                     int initialAL = _state.GetAL();
                     bool initialCF = _state.GetCarryFlag();
                     bool finalAuxillaryFlag = false;
                     bool finalCarryFlag = false;
                     _state.SetCarryFlag(false);
-                    if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag())
-                    {
+                    if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag()) {
                         _state.SetAL(_state.GetAL() - 6);
                         finalCarryFlag = _state.GetCarryFlag() || initialCF;
                         finalAuxillaryFlag = true;
                     }
-                    if (initialAL > 0x99 || initialCF)
-                    {
+                    if (initialAL > 0x99 || initialCF) {
                         _state.SetAL(_state.GetAL() - 0x60);
                         finalCarryFlag = true;
                     }
@@ -576,13 +542,11 @@ public class Cpu
                 HandleInvalidOpcodeBecausePrefix(opcode);
                 break;
 
-            case 0x37:
-                {
+            case 0x37: {
                     SetCurrentInstructionName(() => "AAA");
                     bool finalAuxillaryFlag = false;
                     bool finalCarryFlag = false;
-                    if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag())
-                    {
+                    if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag()) {
                         _state.SetAX(_state.GetAX() + 0x106);
                         finalAuxillaryFlag = true;
                         finalCarryFlag = true;
@@ -632,13 +596,11 @@ public class Cpu
                 HandleInvalidOpcodeBecausePrefix(opcode);
                 break;
 
-            case 0x3F:
-                {
+            case 0x3F: {
                     SetCurrentInstructionName(() => "AAS");
                     bool finalAuxillaryFlag = false;
                     bool finalCarryFlag = false;
-                    if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag())
-                    {
+                    if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag()) {
                         _state.SetAX(_state.GetAX() - 6);
                         _state.SetAH(_state.GetAH() - 1);
                         finalAuxillaryFlag = true;
@@ -732,16 +694,14 @@ public class Cpu
                 break;
 
             case 0x62: case 0x63: case 0x64: case 0x65: case 0x66: case 0x67: HandleInvalidOpcode(opcode); break;
-            case 0x68:
-                {
+            case 0x68: {
                     // 80186
                     int value = NextUint16();
                     SetCurrentInstructionName(() => $"PUSH {ConvertUtils.ToHex16(value)}");
                     _stack.Push(value);
                     break;
                 }
-            case 0x69:
-                {
+            case 0x69: {
                     _modRM.Read();
                     int value = NextUint16();
                     SetCurrentInstructionName(() => $"IMUL16 rm16 {ConvertUtils.ToHex16(value)}");
@@ -749,8 +709,7 @@ public class Cpu
                     _modRM.SetR16(result);
                     break;
                 }
-            case 0x6A:
-                {
+            case 0x6A: {
                     // 80186
                     // sign extend it to 16 bits
                     ushort value = NextUint8();
@@ -758,8 +717,7 @@ public class Cpu
                     _stack.Push(value);
                     break;
                 }
-            case 0x6B:
-                {
+            case 0x6B: {
                     _modRM.Read();
                     byte value = NextUint8();
                     SetCurrentInstructionName(() => $"IMUL8 rm16 {ConvertUtils.ToHex16(value)}");
@@ -812,8 +770,7 @@ public class Cpu
                 _alu.And16(_modRM.GetRm16(), _modRM.GetR16());
                 break;
 
-            case 0x86:
-                {
+            case 0x86: {
                     SetCurrentInstructionName(() => "XCHG8");
                     _modRM.Read();
                     int value1 = _modRM.GetRm8();
@@ -822,8 +779,7 @@ public class Cpu
                     _modRM.SetRm8(value2);
                     break;
                 }
-            case 0x87:
-                {
+            case 0x87: {
                     SetCurrentInstructionName(() => "XCHG16");
                     _modRM.Read();
                     int value1 = _modRM.GetRm16();
@@ -890,8 +846,7 @@ public class Cpu
             case 0x94:
             case 0x95:
             case 0x96:
-            case 0x97:
-                {
+            case 0x97: {
                     regIndex = opcode & REG_INDEX_MASK;
                     SetCurrentInstructionName(() => $"XCHG AX,{_state.GetRegisters().GetRegName(regIndex)}");
                     int value1 = _state.GetAX();
@@ -909,12 +864,9 @@ public class Cpu
             case 0x99:
                 // Sign extend AX into DX (word to dword)
                 SetCurrentInstructionName(() => "CWD");
-                if (_state.GetAX() >= 0x8000)
-                {
+                if (_state.GetAX() >= 0x8000) {
                     _state.SetDX(0xFFFF);
-                }
-                else
-                {
+                } else {
                     _state.SetDX(0);
                 }
                 break;
@@ -1028,8 +980,7 @@ public class Cpu
                 _state.GetRegisters().SetRegister(regIndex, NextUint16());
                 break;
 
-            case 0xC0:
-                {
+            case 0xC0: {
                     _modRM.Read();
                     int count = this.NextUint8();
                     int value = _modRM.GetRm8();
@@ -1037,8 +988,7 @@ public class Cpu
                     _modRM.SetRm8(_alu.Shl8(value, count));
                     break;
                 }
-            case 0xC1:
-                {
+            case 0xC1: {
                     _modRM.Read();
                     int count = this.NextUint8();
                     int value = _modRM.GetRm16();
@@ -1046,8 +996,7 @@ public class Cpu
                     _modRM.SetRm16(_alu.Shl16(value, count));
                     break;
                 }
-            case 0xC2:
-                {
+            case 0xC2: {
                     int numberOfBytesToPop = NextUint8();
                     SetCurrentInstructionName(() => $"RET and pop {numberOfBytesToPop} bytes");
                     NearRet(numberOfBytesToPop);
@@ -1059,22 +1008,18 @@ public class Cpu
                 break;
 
             case 0xC4:
-            case 0xC5:
-                {
+            case 0xC5: {
                     // Copy segmented address that is in memory (32bits) into DS/ES and the
                     // specified register
                     _modRM.Read();
                     _modRM.SetR16(_memory.GetUint16((int)_modRM.GetMemoryAddress()));
                     int value = _memory.GetUint16((int)(_modRM.GetMemoryAddress() + 2));
                     GetStaticAddressesRecorder().SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32);
-                    if (opcode == 0xC4)
-                    {
+                    if (opcode == 0xC4) {
                         // LES
                         SetCurrentInstructionName(() => "LES rw md");
                         _state.SetES(value);
-                    }
-                    else
-                    {
+                    } else {
                         // LDS
                         SetCurrentInstructionName(() => "LDS rw md");
                         _state.SetDS(value);
@@ -1098,8 +1043,7 @@ public class Cpu
                 HandleInvalidOpcode(opcode);
                 break;
 
-            case 0xCA:
-                {
+            case 0xCA: {
                     int numberOfBytesToPop = NextUint8();
                     SetCurrentInstructionName(() => $"RETF and pop {numberOfBytesToPop} bytes");
                     FarRet(numberOfBytesToPop);
@@ -1122,8 +1066,7 @@ public class Cpu
 
             case 0xCE:
                 SetCurrentInstructionName(() => "INTO");
-                if (_state.GetOverflowFlag())
-                {
+                if (_state.GetOverflowFlag()) {
                     Interrupt(4, false);
                 }
                 break;
@@ -1140,13 +1083,11 @@ public class Cpu
                 Grp2(opcode);
                 break;
 
-            case 0xD4:
-                {
+            case 0xD4: {
                     SetCurrentInstructionName(() => "AAM ib");
                     int v1 = _state.GetAL();
                     int v2 = NextUint8();
-                    if (v2 == 0)
-                    {
+                    if (v2 == 0) {
                         HandleDivisionError();
                         return;
                     }
@@ -1156,8 +1097,7 @@ public class Cpu
                     _alu.UpdateFlags8(result);
                     break;
                 }
-            case 0xD5:
-                {
+            case 0xD5: {
                     SetCurrentInstructionName(() => "AAD ib");
                     int result = (byte)(_state.GetAL() + (_state.GetAH() * NextUint8()));
                     _state.SetAL(result);
@@ -1170,8 +1110,7 @@ public class Cpu
                 HandleInvalidOpcode(opcode);
                 break;
 
-            case 0xD7:
-                {
+            case 0xD7: {
                     SetCurrentInstructionName(() => "XLAT");
                     int address = _modRM.GetAddress(SegmentRegisters.DsIndex, _state.GetBX()) + _state.GetAL();
                     _state.SetAL(_memory.GetUint8(address));
@@ -1181,18 +1120,14 @@ public class Cpu
                 HandleInvalidOpcode(opcode);
                 break;
 
-            case 0xD9:
-                {
+            case 0xD9: {
                     _modRM.Read();
                     int groupIndex = _modRM.GetRegisterIndex();
-                    if (groupIndex == 0x7)
-                    {
+                    if (groupIndex == 0x7) {
                         // Set the control word to the value expected after init since FPU is not supported.
                         _modRM.SetRm16(0x37F);
                         SetCurrentInstructionName(() => "FNSTCW");
-                    }
-                    else
-                    {
+                    } else {
                         throw new InvalidGroupIndexException(_machine, groupIndex);
                     }
                     break;
@@ -1201,30 +1136,23 @@ public class Cpu
                 HandleInvalidOpcode(opcode);
                 break;
 
-            case 0xDB:
-                {
+            case 0xDB: {
                     int opCodeNextByte = NextUint8();
-                    if (opCodeNextByte != 0xE3)
-                    {
+                    if (opCodeNextByte != 0xE3) {
                         int fullOpCode = (opcode << 8) | opCodeNextByte;
                         HandleInvalidOpcode(fullOpCode);
                     }
                     SetCurrentInstructionName(() => "FNINIT");
                     // Do nothing, no FPU emulation, but this is used to detect FPU
-                    if (opcode == 0xDC)
-                    { HandleInvalidOpcode(opcode); }
-                    if (opcode == 0xDD)
-                    {
+                    if (opcode == 0xDC) { HandleInvalidOpcode(opcode); }
+                    if (opcode == 0xDD) {
                         _modRM.Read();
                         int groupIndex = _modRM.GetRegisterIndex();
-                        if (groupIndex == 0x7)
-                        {
+                        if (groupIndex == 0x7) {
                             // Set non zero, means no FPU installed when called after FNINIT.
                             _modRM.SetRm16(0xFF);
                             SetCurrentInstructionName(() => "FNSTSW");
-                        }
-                        else
-                        {
+                        } else {
                             throw new InvalidGroupIndexException(_machine, groupIndex);
                         }
                     }
@@ -1236,22 +1164,17 @@ public class Cpu
                 break;
 
             case 0xE0:
-            case 0xE1:
-                { // LOOPZ / LOOPNZ
+            case 0xE1: { // LOOPZ / LOOPNZ
                     bool zeroFlag = (opcode & 0x1) == 1;
                     byte address = NextUint8();
-                    if (zeroFlag)
-                    {
+                    if (zeroFlag) {
                         SetCurrentInstructionName(() => $"LOOPZ {address}");
-                    }
-                    else
-                    {
+                    } else {
                         SetCurrentInstructionName(() => $"LOOPNZ {address}");
                     }
                     int cx = _state.GetCX() - 1;
                     _state.SetCX(cx);
-                    if (cx != 0 && _state.GetZeroFlag() == zeroFlag)
-                    {
+                    if (cx != 0 && _state.GetZeroFlag() == zeroFlag) {
                         _internalIp += address;
                     }
                     break;
@@ -1262,8 +1185,7 @@ public class Cpu
                     byte address = NextUint8();
                     int cx = _state.GetCX() - 1;
                     _state.SetCX(cx);
-                    if (cx != 0)
-                    {
+                    if (cx != 0) {
                         _internalIp += address;
                     }
                     break;
@@ -1272,38 +1194,33 @@ public class Cpu
                 Jcc(opcode);
                 break;
 
-            case 0xE4:
-                {
+            case 0xE4: {
                     int port = NextUint8();
                     SetCurrentInstructionName(() => $"IN AL {ConvertUtils.ToHex8(port)}");
                     _state.SetAL(Inb(port));
                     break;
                 }
-            case 0xE5:
-                {
+            case 0xE5: {
                     int port = NextUint16();
                     SetCurrentInstructionName(() => $"IN AL {ConvertUtils.ToHex16(port)}");
                     _state.SetAX(Inw(port));
                     break;
                 }
-            case 0xE6:
-                {
+            case 0xE6: {
                     int port = NextUint8();
                     int value = _state.GetAL();
                     SetCurrentInstructionName(() => $"OUT {ConvertUtils.ToHex8(port)} AL={ConvertUtils.ToHex8(value)}");
                     Outb(port, value);
                     break;
                 }
-            case 0xE7:
-                {
+            case 0xE7: {
                     int port = NextUint16();
                     int value = _state.GetAX();
                     SetCurrentInstructionName(() => $"OUT {ConvertUtils.ToHex16(port)} AX={ConvertUtils.ToHex16(value)}");
                     Outw(port, value);
                     break;
                 }
-            case 0xE8:
-                {
+            case 0xE8: {
                     SetCurrentInstructionName(() => "CALL NEAR");
                     int nextInstruction = _internalIp + 2;
                     short offset = (short)NextUint16();
@@ -1311,49 +1228,42 @@ public class Cpu
                     NearCall(nextInstruction, callAddress);
                     break;
                 }
-            case 0xE9:
-                {
+            case 0xE9: {
                     short offset = (short)NextUint16();
                     JumpNear(_internalIp + offset);
                     break;
                 }
-            case 0xEA:
-                {
+            case 0xEA: {
                     int ip = NextUint16();
                     int cs = NextUint16();
                     JumpFar(cs, ip);
                     break;
                 }
-            case 0xEB:
-                {
+            case 0xEB: {
                     byte offset = NextUint8();
                     JumpNear(_internalIp + offset);
                     break;
                 }
-            case 0xEC:
-                {
+            case 0xEC: {
                     int port = _state.GetDX();
                     SetCurrentInstructionName(() => "IN AL DX=" + ConvertUtils.ToHex16(port));
                     _state.SetAL(Inb(port));
                     break;
                 }
-            case 0xED:
-                {
+            case 0xED: {
                     int port = _state.GetDX();
                     SetCurrentInstructionName(() => "IN AX DX=" + ConvertUtils.ToHex16(port));
                     _state.SetAX(Inw(port));
                     break;
                 }
-            case 0xEE:
-                {
+            case 0xEE: {
                     int port = _state.GetDX();
                     int value = _state.GetAL();
                     SetCurrentInstructionName(() => "OUT DX=" + ConvertUtils.ToHex16(port) + " AL=" + ConvertUtils.ToHex8(value));
                     Outb(port, value);
                     break;
                 }
-            case 0xEF:
-                {
+            case 0xEF: {
                     int port = _state.GetDX();
                     int value = _state.GetAX();
                     SetCurrentInstructionName(() => "OUT DX=" + ConvertUtils.ToHex16(port) + " AX=" + ConvertUtils.ToHex16(value));
@@ -1433,8 +1343,7 @@ public class Cpu
         }
     }
 
-    private void FarCall(int returnCS, int returnIP, int targetCS, int targetIP)
-    {
+    private void FarCall(int returnCS, int returnIP, int targetCS, int targetIP) {
         _stack.Push(returnCS);
         _stack.Push(returnIP);
         _state.SetCS(targetCS);
@@ -1442,20 +1351,16 @@ public class Cpu
         HandleCall(CallType.FAR, returnCS, returnIP, targetCS, targetIP);
     }
 
-    private string Generate8Or16Value(bool op1Byte, int op1, int op2)
-    {
+    private string Generate8Or16Value(bool op1Byte, int op1, int op2) {
         var @params = $"({ConvertUtils.ToHex8(op1)},{ConvertUtils.ToHex8(op2)})";
-        if (op1Byte)
-        {
+        if (op1Byte) {
             return $"8 {@params}";
         }
         return $"16 {@params}";
     }
 
-    private string GenerateGrp1Name(int groupIndex, bool op1Byte, int op1, int op2)
-    {
-        var opName = (groupIndex) switch
-        {
+    private string GenerateGrp1Name(int groupIndex, bool op1Byte, int op1, int op2) {
+        var opName = (groupIndex) switch {
             0 => "ADD",
             1 => "OR",
             2 => "ADC",
@@ -1469,10 +1374,8 @@ public class Cpu
         return opName + Generate8Or16Value(op1Byte, op1, op2);
     }
 
-    private string GenerateGrp2Name(int groupIndex, bool op1Byte, int op1, int op2)
-    {
-        var opName = (groupIndex) switch
-        {
+    private string GenerateGrp2Name(int groupIndex, bool op1Byte, int op1, int op2) {
+        var opName = (groupIndex) switch {
             0 => "ROL",
             1 => "ROR",
             2 => "RCL",
@@ -1485,8 +1388,7 @@ public class Cpu
         return opName + Generate8Or16Value(op1Byte, op1, op2);
     }
 
-    private int GetDsNextUint16Address()
-    {
+    private int GetDsNextUint16Address() {
         return _modRM.GetAddress(SegmentRegisters.DsIndex, NextUint16(), true);
     }
 
@@ -1496,45 +1398,34 @@ public class Cpu
 
     private int GetMemoryAddressOverridableDsSi() => _modRM.GetAddress(SegmentRegisters.DsIndex, _state.GetSI());
 
-    private int GetRm8Or16(bool op1Byte)
-    {
-        if (op1Byte)
-        {
+    private int GetRm8Or16(bool op1Byte) {
+        if (op1Byte) {
             return _modRM.GetRm8();
         }
         return _modRM.GetRm16();
     }
 
-    private void Grp1(int opcode)
-    {
+    private void Grp1(int opcode) {
         _modRM.Read();
         int groupIndex = _modRM.GetRegisterIndex();
         bool op1Byte = (opcode & 0b01) == 0;
         bool op2Byte = (opcode & 0b11) != 1;
         int op2;
-        if (op2Byte)
-        {
-            if (op1Byte)
-            {
+        if (op2Byte) {
+            if (op1Byte) {
                 op2 = NextUint8();
-            }
-            else
-            {
+            } else {
                 // preserve sign in byte so that it can be extended later if needed
                 op2 = (ushort)(sbyte)NextUint8();
             }
-        }
-        else
-        {
+        } else {
             op2 = NextUint16();
         }
         int op1 = GetRm8Or16(op1Byte);
         SetCurrentInstructionName(() => GenerateGrp1Name(groupIndex, op1Byte, op1, op2));
         int res;
-        if (op1Byte)
-        {
-            res = (groupIndex) switch
-            {
+        if (op1Byte) {
+            res = (groupIndex) switch {
                 0 => _alu.Add8(op1, op2),
                 1 => _alu.Or8(op1, op2),
                 2 => _alu.Adc8(op1, op2),
@@ -1545,11 +1436,8 @@ public class Cpu
                 7 => _alu.Sub8(op1, op2),
                 _ => throw new InvalidGroupIndexException(_machine, groupIndex)
             };
-        }
-        else
-        {
-            res = (groupIndex) switch
-            {
+        } else {
+            res = (groupIndex) switch {
                 0 => _alu.Add16(op1, op2),
                 1 => _alu.Or16(op1, op2),
                 2 => _alu.Adc16(op1, op2),
@@ -1562,21 +1450,16 @@ public class Cpu
             };
         }
         // 7 is CMP so no memory to set
-        if (groupIndex != 7)
-        {
-            if (op1Byte)
-            {
+        if (groupIndex != 7) {
+            if (op1Byte) {
                 _modRM.SetRm8(res);
-            }
-            else
-            {
+            } else {
                 _modRM.SetRm16(res);
             }
         }
     }
 
-    private void Grp2(int opcode)
-    {
+    private void Grp2(int opcode) {
         // GRP2 rmb 1
         _modRM.Read();
         int groupIndex = _modRM.GetRegisterIndex();
@@ -1584,21 +1467,16 @@ public class Cpu
 
         bool valueIsCL = (opcode & 0b10) == 0b10;// if it 0b10, it is CL
         int op2;
-        if (valueIsCL)
-        {
+        if (valueIsCL) {
             op2 = _state.GetCL();
-        }
-        else
-        {
+        } else {
             op2 = 1;
         }
         int op1 = GetRm8Or16(op1Byte);
         SetCurrentInstructionName(() => GenerateGrp2Name(groupIndex, op1Byte, op1, op2));
         int res;
-        if (op1Byte)
-        {
-            res = (groupIndex) switch
-            {
+        if (op1Byte) {
+            res = (groupIndex) switch {
                 0 => _alu.Rol8(op1, op2),
                 1 => _alu.Ror8(op1, op2),
                 2 => _alu.Rcl8(op1, op2),
@@ -1608,11 +1486,8 @@ public class Cpu
                 7 => _alu.Sar8(op1, op2),
                 _ => throw new InvalidGroupIndexException(_machine, groupIndex)
             };
-        }
-        else
-        {
-            res = (groupIndex) switch
-            {
+        } else {
+            res = (groupIndex) switch {
                 0 => _alu.Rol16(op1, op2),
                 1 => _alu.Ror16(op1, op2),
                 2 => _alu.Rcl16(op1, op2),
@@ -1623,76 +1498,63 @@ public class Cpu
                 _ => throw new InvalidGroupIndexException(_machine, groupIndex)
             };
         }
-        if (op1Byte)
-        {
+        if (op1Byte) {
             _modRM.SetRm8(res);
-        }
-        else
-        {
+        } else {
             _modRM.SetRm16(res);
         }
     }
 
-    private void Grp3a()
-    {
+    private void Grp3a() {
         _modRM.Read();
         int groupIndex = _modRM.GetRegisterIndex();
-        if (groupIndex == 0)
-        {
+        if (groupIndex == 0) {
             SetCurrentInstructionName(() => "TEST8");
             _alu.And8(_modRM.GetRm8(), NextUint8());
         }
-        if (groupIndex == 2)
-        {
+        if (groupIndex == 2) {
             SetCurrentInstructionName(() => "NOT8");
             _modRM.SetRm8((byte)~_modRM.GetRm8());
         }
-        if (groupIndex == 3)
-        {
+        if (groupIndex == 3) {
             SetCurrentInstructionName(() => "NEG8");
             int value = _modRM.GetRm8();
             value = _alu.Sub8(0, value);
             _modRM.SetRm8(value);
             _state.SetCarryFlag(value != 0);
         }
-        if (groupIndex == 4)
-        {
+        if (groupIndex == 4) {
             SetCurrentInstructionName(() => "MUL8");
             int result = _alu.Mul8(_state.GetAL(), _modRM.GetRm8());
             // Upper part of the result goes in AH
             _state.SetAH((byte)(result >> 8));
             _state.SetAL((byte)result);
         }
-        if (groupIndex == 5)
-        {
+        if (groupIndex == 5) {
             SetCurrentInstructionName(() => "IMUL8");
             int result = _alu.Imul8(_state.GetAL(), _modRM.GetRm8());
             // Upper part of the result goes in AH
             _state.SetAH((byte)(result >> 8));
             _state.SetAL((byte)result);
         }
-        if (groupIndex == 6)
-        {
+        if (groupIndex == 6) {
             SetCurrentInstructionName(() => "DIV8");
             int v1 = _state.GetAX();
             int v2 = _modRM.GetRm8();
             int? result = _alu.Div8(v1, v2);
-            if (result == null)
-            {
+            if (result == null) {
                 HandleDivisionError();
                 return;
             }
             _state.SetAL(result.Value);
             _state.SetAH(v1 % v2);
         }
-        if (groupIndex == 7)
-        {
+        if (groupIndex == 7) {
             SetCurrentInstructionName(() => "IDIV8");
             int v1 = (short)_state.GetAX();
             int v2 = (sbyte)_modRM.GetRm8();
             int? result = _alu.Idiv8(v1, v2);
-            if (result == null)
-            {
+            if (result == null) {
                 HandleDivisionError();
                 return;
             }
@@ -1702,67 +1564,57 @@ public class Cpu
         throw new InvalidGroupIndexException(_machine, groupIndex);
     }
 
-    private void Grp3b()
-    {
+    private void Grp3b() {
         _modRM.Read();
         int groupIndex = _modRM.GetRegisterIndex();
-        if (groupIndex == 0)
-        {
+        if (groupIndex == 0) {
             SetCurrentInstructionName(() => "TEST16");
             _alu.And16(_modRM.GetRm16(), NextUint16());
         }
-        if (groupIndex == 2)
-        {
+        if (groupIndex == 2) {
             SetCurrentInstructionName(() => "NOT16");
             _modRM.SetRm16((ushort)~_modRM.GetRm16());
         }
-        if (groupIndex == 3)
-        {
+        if (groupIndex == 3) {
             SetCurrentInstructionName(() => "NEG16");
             int value = _modRM.GetRm16();
             value = _alu.Sub16(0, value);
             _modRM.SetRm16(value);
             _state.SetCarryFlag(value != 0);
         }
-        if (groupIndex == 4)
-        {
+        if (groupIndex == 4) {
             SetCurrentInstructionName(() => "MUL16");
             int result = _alu.Mul16(_state.GetAX(), _modRM.GetRm16());
             // Upper part of the result goes in DX
             _state.SetDX((ushort)(result >> 16));
             _state.SetAX(result);
         }
-        if (groupIndex == 5)
-        {
+        if (groupIndex == 5) {
             SetCurrentInstructionName(() => "IMUL16");
             int result = _alu.Imul16(_state.GetAX(), _modRM.GetRm16());
             // Upper part of the result goes in DX
             _state.SetDX((ushort)(result >> 16));
             _state.SetAX(result);
         }
-        if (groupIndex == 6)
-        {
+        if (groupIndex == 6) {
             SetCurrentInstructionName(() => "DIV16");
             int v1 = (_state.GetDX() << 16) | _state.GetAX();
             int v2 = _modRM.GetRm16();
             int? result = _alu.Div16(v1, v2);
-            if (result == null)
-            {
+            if (result == null) {
                 HandleDivisionError();
                 return;
             }
             _state.SetAX(result.Value);
             _state.SetDX((int)((uint)v1 % (uint)v2));
         }
-        if (groupIndex == 7)
-        {
+        if (groupIndex == 7) {
             SetCurrentInstructionName(() => "IDIV16");
             // no sign extension for v1 as it is already a 32bit value
             int v1 = (_state.GetDX() << 16) | _state.GetAX();
             int v2 = (short)_modRM.GetRm16();
             int? result = _alu.Idiv16(v1, v2);
-            if (result == null)
-            {
+            if (result == null) {
                 HandleDivisionError();
                 return;
             }
@@ -1772,22 +1624,18 @@ public class Cpu
         throw new InvalidGroupIndexException(_machine, groupIndex);
     }
 
-    private void Grp4()
-    {
+    private void Grp4() {
         _modRM.Read();
         int groupIndex = _modRM.GetRegisterIndex();
-        if (groupIndex == 0)
-        {
+        if (groupIndex == 0) {
             SetCurrentInstructionName(() => "INC");
             _modRM.SetRm8(_alu.Inc8(_modRM.GetRm8()));
         }
-        if (groupIndex == 1)
-        {
+        if (groupIndex == 1) {
             SetCurrentInstructionName(() => "DEC");
             _modRM.SetRm8(_alu.Dec8(_modRM.GetRm8()));
         }
-        if (groupIndex == 7)
-        {
+        if (groupIndex == 7) {
             // Callback, emulator specific instruction FE38 like in dosbox,
             // to allow interrupts to be overridden by the program
             Callback(NextUint16());
@@ -1795,28 +1643,23 @@ public class Cpu
         throw new InvalidGroupIndexException(_machine, groupIndex);
     }
 
-    private void Grp5()
-    {
+    private void Grp5() {
         _modRM.Read();
         int groupIndex = _modRM.GetRegisterIndex();
-        if (groupIndex == 0)
-        {
+        if (groupIndex == 0) {
             SetCurrentInstructionName(() => "INC");
             _modRM.SetRm16(_alu.Inc16(_modRM.GetRm16()));
         }
-        if (groupIndex == 1)
-        {
+        if (groupIndex == 1) {
             SetCurrentInstructionName(() => "DEC");
             _modRM.SetRm16(_alu.Dec16(_modRM.GetRm16()));
         }
-        if (groupIndex == 2)
-        {
+        if (groupIndex == 2) {
             SetCurrentInstructionName(() => "NEAR CALL");
             int callAddress = _modRM.GetRm16();
             NearCall(_internalIp, callAddress);
         }
-        if (groupIndex == 3)
-        {
+        if (groupIndex == 3) {
             SetCurrentInstructionName(() => "FAR CALL");
             int? ipAddress = _modRM.GetMemoryAddress();
             if (ipAddress is null) { return; }
@@ -1825,13 +1668,11 @@ public class Cpu
             int cs = _memory.GetUint16(ipAddress.Value + 2);
             FarCall(_state.GetCS(), _internalIp, cs, ip);
         }
-        if (groupIndex == 4)
-        {
+        if (groupIndex == 4) {
             int ip = _modRM.GetRm16();
             JumpNear(ip);
         }
-        if (groupIndex == 5)
-        {
+        if (groupIndex == 5) {
             int? ipAddress = _modRM.GetMemoryAddress();
             if (ipAddress is null) { return; }
             GetStaticAddressesRecorder().SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32Ptr);
@@ -1839,39 +1680,32 @@ public class Cpu
             int cs = _memory.GetUint16(ipAddress.Value + 2);
             JumpFar(cs, ip);
         }
-        if (groupIndex == 6)
-        {
+        if (groupIndex == 6) {
             SetCurrentInstructionName(() => "PUSH");
             _stack.Push(_modRM.GetRm16());
         }
         throw new InvalidGroupIndexException(_machine, groupIndex);
     }
 
-    private void HandleCall(CallType callType, int returnCS, int returnIP, int targetCS, int targetIP)
-    {
-        if (IsLoggingEnabled())
-        {
+    private void HandleCall(CallType callType, int returnCS, int returnIP, int targetCS, int targetIP) {
+        if (IsLoggingEnabled()) {
             _logger.Debug("CALL {@TargetCsTargetIp}, will return to {@ReturnCsReturnIp}", ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP),
               ConvertUtils.ToSegmentedAddressRepresentation(returnCS, returnIP));
         }
         _functionHandlerInUse.Call(callType, targetCS, targetIP, returnCS, returnIP);
     }
 
-    private void HandleDivisionError()
-    {
+    private void HandleDivisionError() {
         // Reset IP because instruction is not finished (this is how an actual CPU behaves)
         _internalIp = _state.GetIP();
         Interrupt(0, false);
     }
 
-    private void HandleExternalInterrupt()
-    {
-        if (_externalInterruptVectorNumber == null || !_state.GetInterruptFlag())
-        {
+    private void HandleExternalInterrupt() {
+        if (_externalInterruptVectorNumber == null || !_state.GetInterruptFlag()) {
             return;
         }
-        if (IsLoggingEnabled())
-        {
+        if (IsLoggingEnabled()) {
             _logger.Debug("Interrupted!, {@ExternalInterruptVectorNumber}", _externalInterruptVectorNumber);
         }
         Interrupt(_externalInterruptVectorNumber, true);
@@ -1882,35 +1716,29 @@ public class Cpu
 
     private void HandleInvalidOpcodeBecausePrefix(int opcode) => throw new InvalidOpCodeException(_machine, opcode, true);
 
-    private void HandleJump(int cs, int ip)
-    {
+    private void HandleJump(int cs, int ip) {
         _internalIp = ip;
         _state.SetCS(cs);
     }
 
-    private byte Inb(int port)
-    {
-        if (_ioPortDispatcher != null)
-        {
+    private byte Inb(int port) {
+        if (_ioPortDispatcher != null) {
             return (byte)_ioPortDispatcher.Inb((ushort)port);
         }
         return 0;
     }
 
-    private void Interrupt(int? vectorNumber, bool external)
-    {
+    private void Interrupt(int? vectorNumber, bool external) {
         if (vectorNumber == null) { return; }
         int targetIP = _memory.GetUint16(4 * vectorNumber.Value);
         int targetCS = _memory.GetUint16(4 * vectorNumber.Value + 2);
-        if (_errorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0)
-        {
+        if (_errorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0) {
             throw new UnhandledOperationException(_machine,
                 $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");
         }
         int returnCS = _state.GetCS();
         int returnIP = _internalIp;
-        if (IsLoggingEnabled())
-        {
+        if (IsLoggingEnabled()) {
             _logger.Debug("int {@VectorNumber} handler found in memory, {@SegmentedAddressRepresentation}", ConvertUtils.ToHex(vectorNumber.Value),
                 ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP));
         }
@@ -1921,8 +1749,7 @@ public class Cpu
         _internalIp = targetIP;
         _state.SetCS(targetCS);
         var recordReturn = true;
-        if (external)
-        {
+        if (external) {
             _functionHandlerInUse = _functionHandlerInExternalInterrupt;
             recordReturn = false;
         }
@@ -1930,19 +1757,15 @@ public class Cpu
             recordReturn);
     }
 
-    private ushort Inw(int port)
-    {
-        if (_ioPortDispatcher != null)
-        {
+    private ushort Inw(int port) {
+        if (_ioPortDispatcher != null) {
             return (ushort)_ioPortDispatcher.Inw((ushort)port);
         }
         return 0;
     }
 
-    private bool IsLoggingEnabled()
-    {
-        if (_forceLog == null)
-        {
+    private bool IsLoggingEnabled() {
+        if (_forceLog == null) {
             return _logger.IsEnabled(Serilog.Events.LogEventLevel.Debug);
         }
         return _forceLog.Value;
@@ -1950,19 +1773,16 @@ public class Cpu
 
     private bool IsPrefix(int opcode) => PREFIXES_OPCODES.Contains(opcode);
 
-    private bool IsStringOpcode(int opcode)
-    {
+    private bool IsStringOpcode(int opcode) {
         return STRING_OPCODES.Contains(opcode);
     }
 
     /// <summary>
     /// Jumps handling
     /// </summary>
-    private void Jcc(int opcode)
-    {
+    private void Jcc(int opcode) {
         byte address = NextUint8();
-        bool jump = opcode switch
-        {
+        bool jump = opcode switch {
             0x70 => _state.GetOverflowFlag(),
             0x71 => !_state.GetOverflowFlag(),
             0x72 => _state.GetCarryFlag(),
@@ -1982,8 +1802,7 @@ public class Cpu
             0xE3 => _state.GetCX() == 0,
             _ => throw new InvalidOpCodeException(_machine, opcode, false)
         };
-        SetCurrentInstructionName(() => opcode switch
-        {
+        SetCurrentInstructionName(() => opcode switch {
             0x70 => "JO",
             0x71 => "JNO",
             0x72 => "JB",
@@ -2003,53 +1822,43 @@ public class Cpu
             0xE3 => "JCXZ",
             _ => ""
         } + " " + address + " jump?" + jump);
-        if (jump)
-        {
+        if (jump) {
             _internalIp += address;
         }
     }
 
-    private void JumpFar(int cs, int ip)
-    {
+    private void JumpFar(int cs, int ip) {
         SetCurrentInstructionName(
             () => $"JMP FAR {ConvertUtils.ToSegmentedAddressRepresentation(cs, ip)}");
         HandleJump(cs, ip);
     }
 
-    private void JumpNear(int ip)
-    {
+    private void JumpNear(int ip) {
         SetCurrentInstructionName(
             () => $"JMP NEAR {ConvertUtils.ToSegmentedAddressRepresentation(_state.GetCS(), ip)}");
         HandleJump(_state.GetCS(), ip);
     }
 
-    private void NearCall(int returnIP, int callIP)
-    {
+    private void NearCall(int returnIP, int callIP) {
         _stack.Push(returnIP);
         _internalIp = callIP;
         HandleCall(CallType.NEAR, _state.GetCS(), returnIP, _state.GetCS(), callIP);
     }
 
-    private void Outb(int port, int val)
-    {
-        if (_ioPortDispatcher != null)
-        {
+    private void Outb(int port, int val) {
+        if (_ioPortDispatcher != null) {
             _ioPortDispatcher.Outb((ushort)port, (byte)val);
         }
     }
 
-    private void Outw(int port, int val)
-    {
-        if (_ioPortDispatcher != null)
-        {
+    private void Outw(int port, int val) {
+        if (_ioPortDispatcher != null) {
             _ioPortDispatcher.Outw((ushort)port, (ushort)val);
         }
     }
 
-    private void ProcessPrefix(int opcode)
-    {
-        switch (opcode)
-        {
+    private void ProcessPrefix(int opcode) {
+        switch (opcode) {
             case 0x26:
                 AddCurrentInstructionPrefix(() => "ES:");
                 _state.SetSegmentOverrideIndex(SegmentRegisters.EsIndex);
@@ -2097,54 +1906,46 @@ public class Cpu
             $"processPrefix Called with a non prefix opcode {opcode}");
     }
 
-    private int ProcessPrefixes()
-    {
+    private int ProcessPrefixes() {
         int opcode = NextUint8();
-        while (IsPrefix(opcode))
-        {
+        while (IsPrefix(opcode)) {
             ProcessPrefix(opcode);
             opcode = NextUint8();
         }
         return opcode;
     }
 
-    private void ProcessRep(int opcode)
-    {
+    private void ProcessRep(int opcode) {
         // repeat while zero flag is false for REPNZ (last bit is 0)
         // or while zero flag is true for REPZ (last bit is 1)
         var continueZeroFlagValue = _state.GetContinueZeroFlagValue();
         // For some instructions, zero flag is not to be checked
         bool checkZeroFlag = IsStringOpUpdatingFlags(opcode);
         int cx = _state.GetCX();
-        while (cx != 0)
-        {
+        while (cx != 0) {
             // re-set the segment override that may have been cleared. No need to reset ip
             // as string instructions don't modify it and are only one byte.
             ProcessString(opcode);
             cx = cx - 1;
 
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose))
-            {
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
                 _logger.Verbose("{@Rep} Loop, {@Cx}, {@If}, {@CheckZeroFlag}, {@ContinueZF}",
                 _state.GetCurrentInstructionNameWithPrefix(),
                 ConvertUtils.ToHex(cx), _state.GetZeroFlag(), checkZeroFlag, continueZeroFlagValue);
             }
             // Not all the string operations require checking the zero flag...
-            if (checkZeroFlag && _state.GetZeroFlag() != continueZeroFlagValue)
-            {
+            if (checkZeroFlag && _state.GetZeroFlag() != continueZeroFlagValue) {
                 break;
             }
         }
         _state.SetCX(cx);
     }
 
-    private void ProcessString(int opcode)
-    {
+    private void ProcessString(int opcode) {
         int diff = (_state.GetDirectionFlag() ? -1 : 1) << (opcode & 1);
         int value;
         int port;
-        switch (opcode)
-        {
+        switch (opcode) {
             case 0xA4:
                 SetCurrentInstructionName(() => "MOVSB");
                 value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
@@ -2253,11 +2054,9 @@ public class Cpu
         }
     }
 
-    private void SetCurrentInstructionName(Func<String> getLog)
-    {
+    private void SetCurrentInstructionName(Func<String> getLog) {
         // Optimization, do not calculate the log if it is not used
-        if (IsLoggingEnabled())
-        {
+        if (IsLoggingEnabled()) {
             _state.SetCurrentInstructionName(getLog.Invoke());
         }
     }

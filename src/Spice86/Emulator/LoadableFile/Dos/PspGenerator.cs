@@ -1,25 +1,21 @@
-﻿using System.Text;
-
-namespace Spice86.Emulator.Loadablefile.Dos;
+﻿namespace Spice86.Emulator.Loadablefile.Dos;
 
 using Spice86.Emulator.InterruptHandlers.Dos;
 using Spice86.Emulator.Machine;
 using Spice86.Emulator.Memory;
 using Spice86.Utils;
+using System.Text;
 
-public class PspGenerator
-{
+public class PspGenerator {
     private static readonly int DTA_OR_COMMAND_LINE_OFFSET = 0x80;
     private static readonly int LAST_FREE_SEGMENT_OFFSET = 0x02;
     private readonly Machine machine;
 
-    public PspGenerator(Machine machine)
-    {
+    public PspGenerator(Machine machine) {
         this.machine = machine;
     }
 
-    public void GeneratePsp(int pspSegment, string arguments)
-    {
+    public void GeneratePsp(int pspSegment, string arguments) {
         Memory memory = machine.GetMemory();
         int pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 
@@ -35,12 +31,10 @@ public class PspGenerator
         dosFunctionDispatcher.GetDosFileManager().SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
     }
 
-    private byte[] ArgumentsToDosBytes(string arguments)
-    {
+    private byte[] ArgumentsToDosBytes(string arguments) {
         byte[] res = new byte[128];
         string correctLengthArguments = "";
-        if (string.IsNullOrWhiteSpace(arguments) == false)
-        {
+        if (string.IsNullOrWhiteSpace(arguments) == false) {
             // Cut strings longer than 127 chrs
             correctLengthArguments = arguments.Length > 127 ? arguments[..127] : arguments;
         }
@@ -50,8 +44,7 @@ public class PspGenerator
 
         // Copy actual characters
         int index = 0;
-        for (; index < correctLengthArguments.Length; index++)
-        {
+        for (; index < correctLengthArguments.Length; index++) {
             var str = correctLengthArguments[index];
             var chr = Encoding.ASCII.GetBytes(str.ToString())[0];
             res[index + 1] = chr;

@@ -6,8 +6,7 @@ using Spice86.Emulator.Errors;
 using Spice86.Emulator.Machine;
 using Spice86.Emulator.Memory;
 
-public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallback
-{
+public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallback {
     protected State _state;
 
     protected Cpu cpu;
@@ -17,8 +16,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
 
     protected Memory memory;
 
-    protected InterruptHandler(Machine machine)
-    {
+    protected InterruptHandler(Machine machine) {
         this.machine = machine;
         memory = machine.GetMemory();
         cpu = machine.GetCpu();
@@ -29,25 +27,20 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
 
     public abstract void Run();
 
-    protected override UnhandledOperationException GenerateUnhandledOperationException(int index)
-    {
+    protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
         return new UnhandledInterruptException(machine, GetIndex(), index);
     }
 
-    protected void SetCarryFlag(bool value, bool setOnStack)
-    {
+    protected void SetCarryFlag(bool value, bool setOnStack) {
         _state.SetCarryFlag(value);
-        if (setOnStack)
-        {
+        if (setOnStack) {
             cpu.SetFlagOnInterruptStack(Flags.Carry, value);
         }
     }
 
-    protected void SetZeroFlag(bool value, bool setOnStack)
-    {
+    protected void SetZeroFlag(bool value, bool setOnStack) {
         _state.SetZeroFlag(value);
-        if (setOnStack)
-        {
+        if (setOnStack) {
             cpu.SetFlagOnInterruptStack(Flags.Zero, value);
         }
     }

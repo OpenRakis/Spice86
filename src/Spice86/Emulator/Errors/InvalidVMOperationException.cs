@@ -10,21 +10,17 @@ using System;
 /// <see cref="InvalidOperationException" /> already exists in the BCL.
 /// </summary>
 [Serializable]
-public class InvalidVMOperationException : Exception
-{
-    public InvalidVMOperationException(Machine machine, string message) : base(GenerateStatusMessage(machine, message))
-    {
+public class InvalidVMOperationException : Exception {
+
+    public InvalidVMOperationException(Machine machine, string message) : base(GenerateStatusMessage(machine, message)) {
     }
 
-    public InvalidVMOperationException(Machine machine, Exception e) : base(GenerateStatusMessage(machine, e.Message), e)
-    {
+    public InvalidVMOperationException(Machine machine, Exception e) : base(GenerateStatusMessage(machine, e.Message), e) {
     }
 
-    protected static string GenerateStatusMessage(Machine machine, string message)
-    {
+    protected static string GenerateStatusMessage(Machine machine, string message) {
         string error = $"An error occurred while machine was in this state: {machine.GetCpu().GetState()}";
-        if (message != null)
-        {
+        if (message != null) {
             error += $".{Environment.NewLine}Error is: {message}";
         }
 

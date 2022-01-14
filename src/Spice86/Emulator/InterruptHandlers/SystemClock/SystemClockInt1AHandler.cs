@@ -9,13 +9,11 @@ using Spice86.Emulator.Machine;
 /// <summary>
 /// Implementation of int1A.
 /// </summary>
-public class SystemClockInt1AHandler : InterruptHandler
-{
+public class SystemClockInt1AHandler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<SystemClockInt1AHandler>();
     private readonly TimerInt8Handler timerHandler;
 
-    public SystemClockInt1AHandler(Machine machine, TimerInt8Handler timerHandler) : base(machine)
-    {
+    public SystemClockInt1AHandler(Machine machine, TimerInt8Handler timerHandler) : base(machine) {
         this.timerHandler = timerHandler;
         _dispatchTable.Add(0x00, new Callback(0x00, () => SetSystemClockCounter()));
         _dispatchTable.Add(0x01, new Callback(0x01, () => GetSystemClockCounter()));
@@ -26,13 +24,11 @@ public class SystemClockInt1AHandler : InterruptHandler
         _dispatchTable.Add(0x85, new Callback(0x85, () => TandySoundSystemUnhandled()));
     }
 
-    public override int GetIndex()
-    {
+    public override int GetIndex() {
         return 0x1A;
     }
 
-    public void GetSystemClockCounter()
-    {
+    public void GetSystemClockCounter() {
         int value = timerHandler.GetTickCounterValue();
         _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
 
@@ -42,21 +38,18 @@ public class SystemClockInt1AHandler : InterruptHandler
         _state.SetDX(value);
     }
 
-    public override void Run()
-    {
+    public override void Run() {
         int operation = _state.GetAH();
         Run(operation);
     }
 
-    public void SetSystemClockCounter()
-    {
+    public void SetSystemClockCounter() {
         int value = _state.GetCX() << 16 | _state.GetDX();
         _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         timerHandler.SetTickCounterValue(value);
     }
 
-    private void TandySoundSystemUnhandled()
-    {
+    private void TandySoundSystemUnhandled() {
         _logger.Information("TANDY SOUND SYSTEM IS NOT IMPLEMENTED");
     }
 }

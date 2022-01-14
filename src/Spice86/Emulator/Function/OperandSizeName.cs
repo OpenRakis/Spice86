@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Emulator.Function;
 
-public enum OperandSizeName
-{
+public enum OperandSizeName {
     Byte8,
 
     Word16,

@@ -2,8 +2,7 @@
 
 using Spice86.Emulator.Memory;
 
-public class FunctionCall
-{
+public class FunctionCall {
     private readonly CallType _callType;
 
     private readonly SegmentedAddress _entryPointAddress;
@@ -14,8 +13,7 @@ public class FunctionCall
 
     private readonly SegmentedAddress _stackAddressAfterCall;
 
-    public FunctionCall(CallType callType, SegmentedAddress entryPointAddress, SegmentedAddress? expectedReturnAddress, SegmentedAddress stackAddressAfterCall, bool recordReturn) : base()
-    {
+    public FunctionCall(CallType callType, SegmentedAddress entryPointAddress, SegmentedAddress? expectedReturnAddress, SegmentedAddress stackAddressAfterCall, bool recordReturn) : base() {
         this._callType = callType;
         this._entryPointAddress = entryPointAddress;
         this._expectedReturnAddress = expectedReturnAddress;
@@ -23,33 +21,27 @@ public class FunctionCall
         this._recordReturn = recordReturn;
     }
 
-    public CallType GetCallType()
-    {
+    public CallType GetCallType() {
         return _callType;
     }
 
-    public SegmentedAddress GetEntryPointAddress()
-    {
+    public SegmentedAddress GetEntryPointAddress() {
         return _entryPointAddress;
     }
 
-    public SegmentedAddress? GetExpectedReturnAddress()
-    {
+    public SegmentedAddress? GetExpectedReturnAddress() {
         return _expectedReturnAddress;
     }
 
-    public SegmentedAddress GetStackAddressAfterCall()
-    {
+    public SegmentedAddress GetStackAddressAfterCall() {
         return _stackAddressAfterCall;
     }
 
-    public bool IsRecordReturn()
-    {
+    public bool IsRecordReturn() {
         return _recordReturn;
     }
 
-    public override string ToString()
-    {
+    public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
     }
 }

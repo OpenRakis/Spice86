@@ -1,8 +1,6 @@
-﻿using ReactiveUI;
+﻿namespace Spice86.View.ViewModels;
 
-namespace Spice86.View.ViewModels
-{
-    public class ViewModelBase : ReactiveObject
-    {
-    }
+using ReactiveUI;
+
+public class ViewModelBase : ReactiveObject {
 }

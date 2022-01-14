@@ -7,9 +7,8 @@ using Spice86.Utils;
 using System;
 
 [Serializable]
-public class InvalidModeException : InvalidVMOperationException
-{
-    public InvalidModeException(Machine machine, int mode) : base(machine, $"Invalid mode {ConvertUtils.ToHex(mode)}")
-    {
+public class InvalidModeException : InvalidVMOperationException {
+
+    public InvalidModeException(Machine machine, int mode) : base(machine, $"Invalid mode {ConvertUtils.ToHex(mode)}") {
     }
 }

@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.Devices.Timer;
 
-public interface ICounterActivator
-{
+public interface ICounterActivator {
+
     /// <summary> True when activation can occur. </summary>
     /// <returns> </returns>
     public bool IsActivated();

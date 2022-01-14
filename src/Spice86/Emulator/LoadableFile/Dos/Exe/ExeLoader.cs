@@ -9,18 +9,15 @@ using Spice86.Emulator.Memory;
 /// <summary>
 /// Loads a DOS 16 bits EXE file in memory.
 /// </summary>
-public class ExeLoader : ExecutableFileLoader
-{
+public class ExeLoader : ExecutableFileLoader {
     private static readonly ILogger _logger = Log.Logger.ForContext<ExeLoader>();
     private readonly int startSegment;
 
-    public ExeLoader(Machine machine, int startSegment) : base(machine)
-    {
+    public ExeLoader(Machine machine, int startSegment) : base(machine) {
         this.startSegment = startSegment;
     }
 
-    public override byte[] LoadFile(string file, string arguments)
-    {
+    public override byte[] LoadFile(string file, string arguments) {
         byte[] exe = this.ReadFile(file);
         _logger.Debug("Exe size: {@ExeSize}", exe.Length);
         ExeFile exeFile = new ExeFile(exe);
@@ -33,12 +30,10 @@ public class ExeLoader : ExecutableFileLoader
         return exe;
     }
 
-    private void LoadExeFileInMemory(ExeFile exeFile, int startSegment)
-    {
+    private void LoadExeFileInMemory(ExeFile exeFile, int startSegment) {
         int physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
         _memory.LoadData(physicalStartAddress, exeFile.GetProgramImage());
-        foreach (SegmentedAddress address in exeFile.GetRelocationTable())
-        {
+        foreach (SegmentedAddress address in exeFile.GetRelocationTable()) {
             // Read value from memory, add the start segment offset and write back
             int addressToEdit = MemoryUtils.ToPhysicalAddress(address.GetSegment(), address.GetOffset()) + physicalStartAddress;
             int segmentToRelocate = _memory.GetUint16(addressToEdit);
@@ -47,8 +42,7 @@ public class ExeLoader : ExecutableFileLoader
         }
     }
 
-    private void SetupCpuForExe(ExeFile exeFile, int startSegment, int pspSegment)
-    {
+    private void SetupCpuForExe(ExeFile exeFile, int startSegment, int pspSegment) {
         var state = _cpu.GetState();
 
         // MS-DOS uses the values in the file header to set the SP and SS registers and

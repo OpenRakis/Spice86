@@ -1,3 +1,5 @@
+namespace Spice86.View;
+
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 
@@ -5,28 +7,20 @@ using Spice86.View.ViewModels;
 
 using System;
 
-namespace Spice86.View
-{
-    public class ViewLocator : IDataTemplate
-    {
-        public IControl Build(object data)
-        {
-            var name = data.GetType().FullName!.Replace("ViewModel", "View");
-            var type = Type.GetType(name);
+public class ViewLocator : IDataTemplate {
 
-            if (type != null)
-            {
-                return (Control)Activator.CreateInstance(type)!;
-            }
-            else
-            {
-                return new TextBlock { Text = "Not Found: " + name };
-            }
-        }
+    public IControl Build(object data) {
+        var name = data.GetType().FullName!.Replace("ViewModel", "View");
+        var type = Type.GetType(name);
 
-        public bool Match(object data)
-        {
-            return data is ViewModelBase;
+        if (type != null) {
+            return (Control)Activator.CreateInstance(type)!;
+        } else {
+            return new TextBlock { Text = "Not Found: " + name };
         }
+    }
+
+    public bool Match(object data) {
+        return data is ViewModelBase;
     }
 }

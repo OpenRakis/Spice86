@@ -3,8 +3,8 @@
 using System;
 using System.Collections.Generic;
 
-internal static class DictionaryExtensions
-{
+internal static class DictionaryExtensions {
+
     /// <summary>
     /// Like <see cref="GetValueOrDefault"/> but only evaluates the lambda if needed.<br/>
     /// And adds it to the <paramref name="dict"/> if so.
@@ -15,14 +15,11 @@ internal static class DictionaryExtensions
     /// <param name="key">The input key to use</param>
     /// <param name="lambda">The lambda to call if the value is not found.</param>
     /// <returns>The found or computed value</returns>
-    public static TValue ComputeIfAbsent<TKey, TValue>(this IDictionary<TKey, TValue>? dict, TKey key, Func<TValue> lambda)
-    {
-        if (dict is null)
-        {
+    public static TValue ComputeIfAbsent<TKey, TValue>(this IDictionary<TKey, TValue>? dict, TKey key, Func<TValue> lambda) {
+        if (dict is null) {
             return lambda.Invoke();
         }
-        if (dict.TryGetValue(key, out var value))
-        {
+        if (dict.TryGetValue(key, out var value)) {
             return value;
         }
         value = lambda.Invoke();

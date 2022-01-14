@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.Function;
 
-public enum CallType
-{
+public enum CallType {
+
     /// <summary> For this call, only IP is on the stack </summary>
     NEAR,
 

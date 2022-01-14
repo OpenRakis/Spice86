@@ -13,8 +13,7 @@ using Spice86.Emulator.Machine;
 /// Triggers interrupt 8 on the CPU via the PIC.<br/>
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
-public class Timer : DefaultIOPortHandler
-{
+public class Timer : DefaultIOPortHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<Timer>();
     private static readonly int COUNTER_REGISTER_0 = 0x40;
     private static readonly int COUNTER_REGISTER_1 = 0x41;
@@ -28,13 +27,11 @@ public class Timer : DefaultIOPortHandler
     // Cheat: display at 60fps
     private readonly Counter vgaCounter;
 
-    public Timer(Machine machine, Pic pic, VgaCard vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
-    {
+    public Timer(Machine machine, Pic pic, VgaCard vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
         this.pic = pic;
         this.vgaCard = vgaCard;
         this.cpu = machine.GetCpu();
-        for (int i = 0; i < counters.Length; i++)
-        {
+        for (int i = 0; i < counters.Length; i++) {
             counters[i] = new Counter(machine, i, counterConfigurator.InstanciateCounterActivator(cpu.GetState()));
         }
 
@@ -44,24 +41,19 @@ public class Timer : DefaultIOPortHandler
         vgaCounter.SetValue((int)(Counter.HardwareFrequency / 30));
     }
 
-    public Counter GetCounter(int counterIndex)
-    {
-        if (counterIndex > counters.Length || counterIndex < 0)
-        {
+    public Counter GetCounter(int counterIndex) {
+        if (counterIndex > counters.Length || counterIndex < 0) {
             throw new InvalidCounterIndexException(machine, counterIndex);
         }
         return counters[counterIndex];
     }
 
-    public long GetNumberOfTicks()
-    {
+    public long GetNumberOfTicks() {
         return counters[0].GetTicks();
     }
 
-    public override int Inb(int port)
-    {
-        if (IsCounterRegisterPort(port))
-        {
+    public override int Inb(int port) {
+        if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             int value = counter.GetValueUsingMode();
             _logger.Information("READING COUNTER {@Counter}, partial value is {@Value}", counter, value);
@@ -71,25 +63,20 @@ public class Timer : DefaultIOPortHandler
         return base.Inb(port);
     }
 
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
-    {
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(MODE_COMMAND_REGISTER, this);
         ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_0, this);
         ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_1, this);
         ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_2, this);
     }
 
-    public override void Outb(int port, int value)
-    {
-        if (IsCounterRegisterPort(port))
-        {
+    public override void Outb(int port, int value) {
+        if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             counter.SetValueUsingMode(value);
             _logger.Information("SETTING COUNTER {@Index} to partial value {@Value}. {@Counter}", counter.GetIndex(), value, counter);
             return;
-        }
-        else if (port == MODE_COMMAND_REGISTER)
-        {
+        } else if (port == MODE_COMMAND_REGISTER) {
             int counterIndex = (value >> 6);
             Counter counter = GetCounter(counterIndex);
             counter.SetReadWritePolicy((value >> 4) & 0b11);
@@ -101,24 +88,20 @@ public class Timer : DefaultIOPortHandler
         base.Outb(port, value);
     }
 
-    public void Tick()
-    {
+    public void Tick() {
         long cycles = cpu.GetState().GetCycles();
-        if (counters[0].ProcessActivation(cycles))
-        {
+        if (counters[0].ProcessActivation(cycles)) {
             pic.ProcessInterrupt(0x8);
         }
 
-        if (vgaCounter.ProcessActivation(cycles))
-        {
+        if (vgaCounter.ProcessActivation(cycles)) {
             vgaCard.UpdateScreen();
         }
     }
 
     private static bool IsCounterRegisterPort(int port) => port >= COUNTER_REGISTER_0 && port <= COUNTER_REGISTER_2;
 
-    private Counter GetCounterIndexFromPortNumber(int port)
-    {
+    private Counter GetCounterIndexFromPortNumber(int port) {
         int counter = port & 0b11;
         return GetCounter(counter);
     }

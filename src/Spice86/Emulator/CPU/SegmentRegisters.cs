@@ -2,8 +2,7 @@
 
 using System.Collections.Generic;
 
-public class SegmentRegisters : RegistersHolder
-{
+public class SegmentRegisters : RegistersHolder {
     public const int CsIndex = 1;
 
     public const int DsIndex = 3;
@@ -16,12 +15,10 @@ public class SegmentRegisters : RegistersHolder
 
     public const int SsIndex = 2;
 
-    public SegmentRegisters() : base(GetRegistersNames())
-    {
+    public SegmentRegisters() : base(GetRegistersNames()) {
     }
 
-    private static Dictionary<int, string> GetRegistersNames()
-    {
+    private static Dictionary<int, string> GetRegistersNames() {
         Dictionary<int, string> res = new();
         res.Add(EsIndex, "ES");
         res.Add(CsIndex, "CS");

@@ -5,8 +5,7 @@ using Spice86.Utils;
 using System.Text;
 
 /// <summary> Handles the CPU flag register. </summary>
-public class Flags
-{
+public class Flags {
     public const int Auxiliary = 0b00000000_00010000;
 
     public const int Carry = 0b00000000_00000001;
@@ -30,13 +29,11 @@ public class Flags
 
     private int _flagRegister;
 
-    public Flags()
-    {
+    public Flags() {
         this.SetFlagRegister(0);
     }
 
-    public static string DumpFlags(int flags)
-    {
+    public static string DumpFlags(int flags) {
         var res = new StringBuilder();
         res.Append(GetFlag(flags, Flags.Overflow, 'O'));
         res.Append(GetFlag(flags, Flags.Direction, 'D'));
@@ -50,60 +47,45 @@ public class Flags
         return res.ToString();
     }
 
-    public override bool Equals(object? obj)
-    {
-        if (obj == this)
-        {
+    public override bool Equals(object? obj) {
+        if (obj == this) {
             return true;
         }
-        if (obj is not Flags other)
-        {
+        if (obj is not Flags other) {
             return false;
         }
         return _flagRegister == other._flagRegister;
     }
 
-    public bool GetFlag(int mask)
-    {
+    public bool GetFlag(int mask) {
         return (_flagRegister & mask) == mask;
     }
 
-    public int GetFlagRegister()
-    {
+    public int GetFlagRegister() {
         return _flagRegister;
     }
 
-    public override int GetHashCode()
-    {
+    public override int GetHashCode() {
         return _flagRegister;
     }
 
-    public void SetDosboxCompatibility(bool compatible)
-    {
-        if (compatible)
-        {
+    public void SetDosboxCompatibility(bool compatible) {
+        if (compatible) {
             _additionalFlagMask = 0b111000000000000;
-        }
-        else
-        {
+        } else {
             _additionalFlagMask = 0;
         }
     }
 
-    public void SetFlag(int mask, bool value)
-    {
-        if (value)
-        {
+    public void SetFlag(int mask, bool value) {
+        if (value) {
             _flagRegister |= mask;
-        }
-        else
-        {
+        } else {
             _flagRegister &= ~mask;
         }
     }
 
-    public void SetFlagRegister(int value)
-    {
+    public void SetFlagRegister(int value) {
         // Some flags are always 1 or 0 no matter what (8086)
         int modifedValue = (value | 0b10) & 0b0111111111010111;
 
@@ -112,15 +94,12 @@ public class Flags
         _flagRegister = ConvertUtils.Uint16(modifedValue);
     }
 
-    public override string ToString()
-    {
+    public override string ToString() {
         return DumpFlags(_flagRegister);
     }
 
-    private static char GetFlag(int flags, int mask, char representation)
-    {
-        if ((flags & mask) == 0)
-        {
+    private static char GetFlag(int flags, int mask, char representation) {
+        if ((flags & mask) == 0) {
             return ' ';
         }
         return representation;

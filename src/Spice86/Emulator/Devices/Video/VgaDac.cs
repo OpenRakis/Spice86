@@ -5,8 +5,7 @@ using Spice86.Emulator.Machine;
 /// <summary>
 /// VGA Digital Analog Converter Implementation.
 /// </summary>
-public class VgaDac
-{
+public class VgaDac {
     public const int VgaDacnotInitialized = 0;
     public const int VgaDacRead = 1;
     public const int VgaDacWrite = 2;
@@ -21,13 +20,11 @@ public class VgaDac
     /* 0 = red, 1 = green, 2 = blue */
     private int _writeIndex;
 
-    public VgaDac(Machine machine)
-    {
+    public VgaDac(Machine machine) {
         _machine = machine;
 
         // Initial VGA default palette initialization
-        for (int i = 0; i < _rgbs.Length; i++)
-        {
+        for (int i = 0; i < _rgbs.Length; i++) {
             Rgb rgb = new();
             rgb.SetR((((i >> 5) & 0x7) * 255 / 7));
             rgb.SetG((((i >> 2) & 0x7) * 255 / 7));
@@ -40,97 +37,75 @@ public class VgaDac
 
     public static int From8bitTo6bitColor(int color8bit) => (byte)((uint)color8bit >> 2);
 
-    public int GetColour()
-    {
+    public int GetColour() {
         return _colour;
     }
 
-    public int GetReadIndex()
-    {
+    public int GetReadIndex() {
         return _readIndex;
     }
 
-    public Rgb[] GetRgbs()
-    {
+    public Rgb[] GetRgbs() {
         return _rgbs;
     }
 
-    public int GetState()
-    {
+    public int GetState() {
         return _state;
     }
 
-    public int GetWriteIndex()
-    {
+    public int GetWriteIndex() {
         return _writeIndex;
     }
 
-    public int ReadColor()
-    {
+    public int ReadColor() {
         Rgb rgb = _rgbs[_readIndex];
-        int value = _colour switch
-        {
+        int value = _colour switch {
             Redindex => rgb.GetR(),
             GreenIndex => rgb.GetG(),
             BlueIndex => rgb.GetB(),
             _ => throw new InvalidColorIndexException(_machine, _colour)
         };
         _colour = (_colour + 1) % 3;
-        if (_colour == 0)
-        {
+        if (_colour == 0) {
             _writeIndex++;
         }
         return value;
     }
 
-    public void SetColour(int colour)
-    {
+    public void SetColour(int colour) {
         this._colour = colour;
     }
 
-    public void SetReadIndex(int readIndex)
-    {
+    public void SetReadIndex(int readIndex) {
         this._readIndex = readIndex;
     }
 
-    public void SetState(int state)
-    {
+    public void SetState(int state) {
         this._state = state;
     }
 
-    public void SetWriteIndex(int writeIndex)
-    {
+    public void SetWriteIndex(int writeIndex) {
         this._writeIndex = writeIndex;
     }
 
-    public override string ToString()
-    {
+    public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
     }
 
-    public void WriteColor(int colorValue)
-    {
+    public void WriteColor(int colorValue) {
         Rgb rgb = _rgbs[_writeIndex];
-        if (_colour == Redindex)
-        {
+        if (_colour == Redindex) {
             rgb.SetR(colorValue);
-        }
-        else if (_colour == GreenIndex)
-        {
+        } else if (_colour == GreenIndex) {
             rgb.SetG(colorValue);
-        }
-        else if (_colour == BlueIndex)
-        {
+        } else if (_colour == BlueIndex) {
             rgb.SetB(colorValue);
-        }
-        else
-        {
+        } else {
             throw new InvalidColorIndexException(_machine, _colour);
         }
 
         _colour = (_colour + 1) % 3;
-        if (_colour == 0)
-        {
+        if (_colour == 0) {
             _writeIndex++;
         }
     }

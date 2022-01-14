@@ -10,14 +10,12 @@ using System;
 /// csharp code. <br /> Could happen for unhandled exceptions.
 /// </summary>
 [Serializable]
-public class UnhandledCallbackException : UnhandledOperationException
-{
-    public UnhandledCallbackException(Machine machine, int callbackNumber) : base(machine, FormatMessage(callbackNumber))
-    {
+public class UnhandledCallbackException : UnhandledOperationException {
+
+    public UnhandledCallbackException(Machine machine, int callbackNumber) : base(machine, FormatMessage(callbackNumber)) {
     }
 
-    private static string FormatMessage(int callbackNumber)
-    {
+    private static string FormatMessage(int callbackNumber) {
         return $"callbackNumber=0x{callbackNumber:x}";
     }
 }

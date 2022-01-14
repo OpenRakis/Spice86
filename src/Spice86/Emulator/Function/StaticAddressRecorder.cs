@@ -6,8 +6,7 @@ using Spice86.Emulator.Memory;
 using System;
 using System.Collections.Generic;
 
-public class StaticAddressesRecorder
-{
+public class StaticAddressesRecorder {
     private readonly bool _debugMode;
 
     private readonly Dictionary<int, string> _names = new();
@@ -24,30 +23,24 @@ public class StaticAddressesRecorder
 
     private int? _currentSegmentIndex;
 
-    public StaticAddressesRecorder(State state, bool debugMode)
-    {
+    public StaticAddressesRecorder(State state, bool debugMode) {
         this._debugMode = debugMode;
         this._segmentRegisters = state.GetSegmentRegisters();
     }
 
-    public void AddName(int physicalAddress, string name)
-    {
+    public void AddName(int physicalAddress, string name) {
         _names.Add(physicalAddress, name);
     }
 
-    public void AddSegmentTowhiteList(SegmentedAddress address)
-    {
+    public void AddSegmentTowhiteList(SegmentedAddress address) {
         _whiteListOfSegmentForOffset.Add(address);
     }
 
-    public void Commit()
-    {
-        if (_debugMode && _currentSegmentIndex != null && _currentOffset != null && _currentAddressOperation != null && _currentSegmentIndex != null)
-        {
+    public void Commit() {
+        if (_debugMode && _currentSegmentIndex != null && _currentOffset != null && _currentAddressOperation != null && _currentSegmentIndex != null) {
             int segmentValue = _segmentRegisters.GetRegister(_currentSegmentIndex.Value);
             int physicalAddress = MemoryUtils.ToPhysicalAddress(segmentValue, _currentOffset.Value);
-            if (_segmentRegisterBasedAddress.TryGetValue(physicalAddress, out var value) == false)
-            {
+            if (_segmentRegisterBasedAddress.TryGetValue(physicalAddress, out var value) == false) {
                 value = new SegmentRegisterBasedAddress(segmentValue, _currentOffset.Value, _names[physicalAddress]);
                 _segmentRegisterBasedAddress.Add(physicalAddress, value);
             }
@@ -55,35 +48,29 @@ public class StaticAddressesRecorder
         }
     }
 
-    public Dictionary<int, String> GetNames()
-    {
+    public Dictionary<int, String> GetNames() {
         return _names;
     }
 
-    public ICollection<SegmentRegisterBasedAddress> GetSegmentRegisterBasedAddress()
-    {
+    public ICollection<SegmentRegisterBasedAddress> GetSegmentRegisterBasedAddress() {
         return _segmentRegisterBasedAddress.Values;
     }
 
-    public HashSet<SegmentedAddress> GetWhiteListOfSegmentForOffset()
-    {
+    public HashSet<SegmentedAddress> GetWhiteListOfSegmentForOffset() {
         return _whiteListOfSegmentForOffset;
     }
 
-    public void Reset()
-    {
+    public void Reset() {
         _currentSegmentIndex = null;
         _currentOffset = null;
         _currentAddressOperation = null;
     }
 
-    public void SetCurrentAddressOperation(ValueOperation valueOperation, OperandSize operandSize)
-    {
+    public void SetCurrentAddressOperation(ValueOperation valueOperation, OperandSize operandSize) {
         _currentAddressOperation = new AddressOperation(valueOperation, operandSize);
     }
 
-    public void SetCurrentValue(int regIndex, int offset)
-    {
+    public void SetCurrentValue(int regIndex, int offset) {
         _currentSegmentIndex = regIndex;
         _currentOffset = offset;
     }

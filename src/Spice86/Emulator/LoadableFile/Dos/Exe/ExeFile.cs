@@ -5,8 +5,7 @@ using Spice86.Emulator.Memory;
 using System.Collections.Generic;
 using System.Text;
 
-public class ExeFile
-{
+public class ExeFile {
     private int checkSum;
     private int extraBytes;
     private int headerSize;
@@ -47,8 +46,7 @@ public class ExeFile
     private string signature; // 0000 - Magic number
 
     // 0018 - File address of relocation table
-    public ExeFile(byte[] exe)
-    {
+    public ExeFile(byte[] exe) {
         this.signature = new string(Encoding.UTF8.GetChars(exe), 0, 2);
         this.extraBytes = MemoryUtils.GetUint16(exe, 0x02);
         this.pages = MemoryUtils.GetUint16(exe, 0x04);
@@ -65,8 +63,7 @@ public class ExeFile
         this.overlay = MemoryUtils.GetUint16(exe, 0x1A);
         int relocationTableOffset = this.relocTable;
         int numRelocationEntries = this.relocItems;
-        for (int i = 0; i < numRelocationEntries; i++)
-        {
+        for (int i = 0; i < numRelocationEntries; i++) {
             int offset = MemoryUtils.GetUint16(exe, relocationTableOffset + i * 4);
             int segment = MemoryUtils.GetUint16(exe, relocationTableOffset + i * 4 + 2);
             relocationTable.Add(new SegmentedAddress(segment, offset));
@@ -78,173 +75,139 @@ public class ExeFile
         System.Array.Copy(exe, actualHeaderSize, programImage, 0, programSize);
     }
 
-    public int GetCheckSum()
-    {
+    public int GetCheckSum() {
         return checkSum;
     }
 
-    public int GetCodeSize()
-    {
+    public int GetCodeSize() {
         return programImage.Length;
     }
 
-    public int GetExtraBytes()
-    {
+    public int GetExtraBytes() {
         return extraBytes;
     }
 
-    public int GetHeaderSize()
-    {
+    public int GetHeaderSize() {
         return headerSize;
     }
 
-    public int GetInitCS()
-    {
+    public int GetInitCS() {
         return initCS;
     }
 
-    public int GetInitIP()
-    {
+    public int GetInitIP() {
         return initIP;
     }
 
-    public int GetInitSP()
-    {
+    public int GetInitSP() {
         return initSP;
     }
 
-    public int GetInitSS()
-    {
+    public int GetInitSS() {
         return initSS;
     }
 
-    public int GetMaxAlloc()
-    {
+    public int GetMaxAlloc() {
         return maxAlloc;
     }
 
-    public int GetMinAlloc()
-    {
+    public int GetMinAlloc() {
         return minAlloc;
     }
 
-    public int GetOverlay()
-    {
+    public int GetOverlay() {
         return overlay;
     }
 
-    public int GetPages()
-    {
+    public int GetPages() {
         return pages;
     }
 
-    public byte[] GetProgramImage()
-    {
+    public byte[] GetProgramImage() {
         return programImage;
     }
 
-    public IList<SegmentedAddress> GetRelocationTable()
-    {
+    public IList<SegmentedAddress> GetRelocationTable() {
         return relocationTable;
     }
 
-    public int GetRelocItems()
-    {
+    public int GetRelocItems() {
         return relocItems;
     }
 
-    public int GetRelocTable()
-    {
+    public int GetRelocTable() {
         return relocTable;
     }
 
-    public string GetSignature()
-    {
+    public string GetSignature() {
         return signature;
     }
 
-    public void SetCheckSum(int checkSum)
-    {
+    public void SetCheckSum(int checkSum) {
         this.checkSum = checkSum;
     }
 
-    public void SetExtraBytes(int extraBytes)
-    {
+    public void SetExtraBytes(int extraBytes) {
         this.extraBytes = extraBytes;
     }
 
-    public void SetHeaderSize(int headerSize)
-    {
+    public void SetHeaderSize(int headerSize) {
         this.headerSize = headerSize;
     }
 
-    public void SetInitCS(int initCS)
-    {
+    public void SetInitCS(int initCS) {
         this.initCS = initCS;
     }
 
-    public void SetInitIP(int initIP)
-    {
+    public void SetInitIP(int initIP) {
         this.initIP = initIP;
     }
 
-    public void SetInitSP(int initSP)
-    {
+    public void SetInitSP(int initSP) {
         this.initSP = initSP;
     }
 
-    public void SetInitSS(int initSS)
-    {
+    public void SetInitSS(int initSS) {
         this.initSS = initSS;
     }
 
-    public void SetMaxAlloc(int maxAlloc)
-    {
+    public void SetMaxAlloc(int maxAlloc) {
         this.maxAlloc = maxAlloc;
     }
 
-    public void SetMinAlloc(int minAlloc)
-    {
+    public void SetMinAlloc(int minAlloc) {
         this.minAlloc = minAlloc;
     }
 
-    public void SetOverlay(int overlay)
-    {
+    public void SetOverlay(int overlay) {
         this.overlay = overlay;
     }
 
-    public void SetPages(int pages)
-    {
+    public void SetPages(int pages) {
         this.pages = pages;
     }
 
-    public void SetProgramImage(byte[] programImage)
-    {
+    public void SetProgramImage(byte[] programImage) {
         this.programImage = programImage;
     }
 
-    public void SetRelocationTable(List<SegmentedAddress> relocationTable)
-    {
+    public void SetRelocationTable(List<SegmentedAddress> relocationTable) {
         this.relocationTable = relocationTable;
     }
 
-    public void SetRelocItems(int relocItems)
-    {
+    public void SetRelocItems(int relocItems) {
         this.relocItems = relocItems;
     }
 
-    public void SetRelocTable(int relocTable)
-    {
+    public void SetRelocTable(int relocTable) {
         this.relocTable = relocTable;
     }
 
-    public void SetSignature(string signature)
-    {
+    public void SetSignature(string signature) {
         this.signature = signature;
     }
 
-    public override string ToString()
-    {
+    public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
     }
 }

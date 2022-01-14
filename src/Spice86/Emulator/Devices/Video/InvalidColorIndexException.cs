@@ -6,9 +6,8 @@ using Spice86.Emulator.Machine;
 using System;
 
 [Serializable]
-public class InvalidColorIndexException : InvalidVMOperationException
-{
-    public InvalidColorIndexException(Machine machine, int color) : base(machine, $"Color index {color} is invalid")
-    {
+public class InvalidColorIndexException : InvalidVMOperationException {
+
+    public InvalidColorIndexException(Machine machine, int color) : base(machine, $"Color index {color} is invalid") {
     }
 }

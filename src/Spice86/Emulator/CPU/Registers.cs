@@ -2,8 +2,7 @@
 
 using System.Collections.Generic;
 
-public class Registers : RegistersHolder
-{
+public class Registers : RegistersHolder {
     public const int AxIndex = 0;
 
     public const int BpIndex = 5;
@@ -20,12 +19,10 @@ public class Registers : RegistersHolder
 
     public const int SpIndex = 4;
 
-    public Registers() : base(GetRegistersNames())
-    {
+    public Registers() : base(GetRegistersNames()) {
     }
 
-    private static Dictionary<int, string> GetRegistersNames()
-    {
+    private static Dictionary<int, string> GetRegistersNames() {
         Dictionary<int, string> res = new();
         res.Add(AxIndex, "AX");
         res.Add(CxIndex, "CX");

@@ -2,17 +2,14 @@
 
 using Spice86.Emulator.Memory;
 
-public class MemoryBasedDataStructureWithBaseAddress : MemoryBasedDataStructureWithBaseAddressProvider
-{
+public class MemoryBasedDataStructureWithBaseAddress : MemoryBasedDataStructureWithBaseAddressProvider {
     private readonly int _baseAddress;
 
-    public MemoryBasedDataStructureWithBaseAddress(Memory memory, int baseAddress) : base(memory)
-    {
+    public MemoryBasedDataStructureWithBaseAddress(Memory memory, int baseAddress) : base(memory) {
         this._baseAddress = baseAddress;
     }
 
-    public override int GetBaseAddress()
-    {
+    public override int GetBaseAddress() {
         return _baseAddress;
     }
 }

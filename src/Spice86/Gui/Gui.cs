@@ -1,80 +1,66 @@
-﻿namespace Spice86.Gui
-{
+﻿namespace Spice86.Gui {
+
     using Avalonia.Input;
 
     using Spice86.Emulator.Devices.Video;
 
     using System;
 
-    public class Gui
-    {
-        internal void Draw(byte[] vs, Rgb[] rgbs)
-        {
+    public class Gui {
+
+        internal void Draw(byte[] vs, Rgb[] rgbs) {
             throw new NotImplementedException();
         }
 
-        internal int GetHeight()
-        {
+        internal int GetHeight() {
             throw new NotImplementedException();
         }
 
-        internal Key GetLastKeyCode()
-        {
+        internal Key GetLastKeyCode() {
             throw new NotImplementedException();
         }
 
-        internal int GetMouseX()
-        {
+        internal int GetMouseX() {
             throw new NotImplementedException();
         }
 
-        internal int GetMouseY()
-        {
+        internal int GetMouseY() {
             throw new NotImplementedException();
         }
 
-        internal int GetWidth()
-        {
+        internal int GetWidth() {
             throw new NotImplementedException();
         }
 
-        internal bool IsKeyPressed(Key keyCode)
-        {
+        internal bool IsKeyPressed(Key keyCode) {
             throw new NotImplementedException();
         }
 
-        internal bool IsLeftButtonClicked()
-        {
+        internal bool IsLeftButtonClicked() {
             throw new NotImplementedException();
         }
 
-        internal bool IsRightButtonClicked()
-        {
+        internal bool IsRightButtonClicked() {
             throw new NotImplementedException();
         }
 
-        internal void SetMouseX(int x)
-        {
+        internal void SetMouseX(int x) {
             throw new NotImplementedException();
         }
 
-        internal void SetMouseY(int y)
-        {
+        internal void SetMouseY(int y) {
             throw new NotImplementedException();
         }
 
-        internal void SetOnKeyPressedEvent(Action v)
-        {
+        internal void SetOnKeyPressedEvent(Action v) {
             throw new NotImplementedException();
         }
 
-        internal void SetOnKeyReleasedEvent(Action v)
-        {
+        internal void SetOnKeyReleasedEvent(Action v) {
             throw new NotImplementedException();
         }
 
-        internal void SetResolution(int videoWidth, int videoHeight, int v)
-        {
+        internal void SetResolution(int videoWidth, int videoHeight, int v) {
             throw new NotImplementedException();
         }
     }

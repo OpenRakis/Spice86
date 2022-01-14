@@ -1,8 +1,7 @@
 ﻿namespace Spice86.Emulator.Memory;
 
 /// <summary> Informations about memory mapping of an IBM PC </summary>
-public static class MemoryMap
-{
+public static class MemoryMap {
     public const int BiosDataAreaLength = 256;
 
     // This is where the port to get VGA CRT status is stored

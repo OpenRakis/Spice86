@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Emulator.Function;
-public record OperandSize
-{
+public record OperandSize {
     private OperandSize() { }
 
     public int Bits { get; init; } = 8;

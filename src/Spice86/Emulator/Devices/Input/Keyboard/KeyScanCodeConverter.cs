@@ -1,16 +1,14 @@
-﻿using Avalonia.Input;
+﻿namespace Spice86.Emulator.Devices.Input.Keyboard;
+
+using Avalonia.Input;
 
 using System.Collections.Generic;
 
-namespace Spice86.Emulator.Devices.Input.Keyboard;
-
-public class KeyScancodeConverter
-{
+public class KeyScancodeConverter {
     private static readonly Dictionary<Key, int> _keyPressedScanCode = new();
     private static readonly Dictionary<int, int> _scanCodeToAscii = new();
 
-    static KeyScancodeConverter()
-    {
+    static KeyScancodeConverter() {
         // Some keys are not supported by AvaloniaUI so not putting them.
         _keyPressedScanCode.Add(Key.LeftCtrl, 0x1D);
         _keyPressedScanCode.Add(Key.RightCtrl, 0x1D);
@@ -155,27 +153,22 @@ public class KeyScancodeConverter
         _scanCodeToAscii.Add(0x4E, 0x2B);
     }
 
-    public int GetAsciiCode(int scancode)
-    {
+    public int GetAsciiCode(int scancode) {
         int keypressedScancode = scancode;
-        if (keypressedScancode > 0x7F)
-        {
+        if (keypressedScancode > 0x7F) {
             keypressedScancode -= 0x80;
         }
 
         return _scanCodeToAscii[keypressedScancode];
     }
 
-    public int GetKeyPressedScancode(Key keyCode)
-    {
+    public int GetKeyPressedScancode(Key keyCode) {
         return _keyPressedScanCode[keyCode];
     }
 
-    public int? GetKeyReleasedScancode(Key keyCode)
-    {
+    public int? GetKeyReleasedScancode(Key keyCode) {
         int? pressed = GetKeyPressedScancode(keyCode);
-        if (pressed != null)
-        {
+        if (pressed != null) {
             return pressed + 0x80;
         }
 

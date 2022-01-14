@@ -3,8 +3,7 @@ namespace Spice86;
 using Spice86.Emulator.Function;
 
 /// <summary> Configuration for spice86, that is what to run and how. </summary>
-public class Configuration
-{
+public class Configuration {
     private string? _cDrive;
 
     private string? _defaultDumpDirectory;
@@ -32,133 +31,107 @@ public class Configuration
 
     private double timeMultiplier;
 
-    public string? GetcDrive()
-    {
+    public string? GetcDrive() {
         return _cDrive;
     }
 
-    public string? GetDefaultDumpDirectory()
-    {
+    public string? GetDefaultDumpDirectory() {
         return _defaultDumpDirectory;
     }
 
-    public string? GetExe()
-    {
+    public string? GetExe() {
         return _exe;
     }
 
-    public string? GetExeArgs()
-    {
+    public string? GetExeArgs() {
         return _exeArgs;
     }
 
-    public byte[] GetExpectedChecksum()
-    {
+    public byte[] GetExpectedChecksum() {
         return _expectedChecksum;
     }
 
-    public int? GetGdbPort()
-    {
+    public int? GetGdbPort() {
         return _gdbPort;
     }
 
-    public long GetInstructionsPerSecond()
-    {
+    public long GetInstructionsPerSecond() {
         return instructionsPerSecond;
     }
 
-    public IOverrideSupplier? GetOverrideSupplier()
-    {
+    public IOverrideSupplier? GetOverrideSupplier() {
         return _overrideSupplier;
     }
 
-    public int GetProgramEntryPointSegment()
-    {
+    public int GetProgramEntryPointSegment() {
         return _programEntryPointSegment;
     }
 
-    public double GetTimeMultiplier()
-    {
+    public double GetTimeMultiplier() {
         return timeMultiplier;
     }
 
-    public bool IsFailOnUnhandledPort()
-    {
+    public bool IsFailOnUnhandledPort() {
         return _failOnUnhandledPort;
     }
 
-    public bool IsInstallInterruptVector()
-    {
+    public bool IsInstallInterruptVector() {
         return _installInterruptVector;
     }
 
-    public bool IsUseCodeOverride()
-    {
+    public bool IsUseCodeOverride() {
         return _useCodeOverride;
     }
 
-    public void SetcDrive(string cDrive)
-    {
+    public void SetcDrive(string cDrive) {
         _cDrive = cDrive;
     }
 
-    public void SetDefaultDumpDirectory(string defaultDumpDirectory)
-    {
+    public void SetDefaultDumpDirectory(string defaultDumpDirectory) {
         _defaultDumpDirectory = defaultDumpDirectory;
     }
 
-    public void SetExe(string exe)
-    {
+    public void SetExe(string exe) {
         _exe = exe;
     }
 
-    public void SetExeArgs(string exeArgs)
-    {
+    public void SetExeArgs(string exeArgs) {
         _exeArgs = exeArgs;
     }
 
-    public void SetExpectedChecksum(byte[] expectedChecksum)
-    {
+    public void SetExpectedChecksum(byte[] expectedChecksum) {
         _expectedChecksum = expectedChecksum;
     }
 
-    public void SetFailOnUnhandledPort(bool failOnUnhandledPort)
-    {
+    public void SetFailOnUnhandledPort(bool failOnUnhandledPort) {
         _failOnUnhandledPort = failOnUnhandledPort;
     }
 
-    public void SetGdbPort(int gdbPort)
-    {
+    public void SetGdbPort(int gdbPort) {
         _gdbPort = gdbPort;
     }
 
-    public void SetInstallInterruptVector(bool installInterruptVector)
-    {
+    public void SetInstallInterruptVector(bool installInterruptVector) {
         _installInterruptVector = installInterruptVector;
     }
 
-    public void SetInstructionsPerSecond(long instructionsPerSecond)
-    {
+    public void SetInstructionsPerSecond(long instructionsPerSecond) {
         this.instructionsPerSecond = instructionsPerSecond;
     }
 
-    public void SetOverrideSupplier(IOverrideSupplier? overrideSupplier)
-    {
+    public void SetOverrideSupplier(IOverrideSupplier? overrideSupplier) {
         _overrideSupplier = overrideSupplier;
     }
 
-    public void SetProgramEntryPointSegment(int programEntryPointSegment)
-    {
+    public void SetProgramEntryPointSegment(int programEntryPointSegment) {
         _programEntryPointSegment = programEntryPointSegment;
     }
 
-    public void SetTimeMultiplier(double timeMultiplier)
-    {
+    public void SetTimeMultiplier(double timeMultiplier) {
         this.timeMultiplier = timeMultiplier;
     }
 
-    public void SetUseCodeOverride(bool useCodeOverride)
-    {
+    public void SetUseCodeOverride(bool useCodeOverride) {
         _useCodeOverride = useCodeOverride;
     }
 }
