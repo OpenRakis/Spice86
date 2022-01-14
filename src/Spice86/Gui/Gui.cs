@@ -8,12 +8,12 @@
 
     public class Gui
     {
-        internal void SetOnKeyPressedEvent(Action v)
+        internal void Draw(byte[] vs, Rgb[] rgbs)
         {
             throw new NotImplementedException();
         }
 
-        internal void SetOnKeyReleasedEvent(Action v)
+        internal int GetHeight()
         {
             throw new NotImplementedException();
         }
@@ -23,27 +23,32 @@
             throw new NotImplementedException();
         }
 
-        internal bool IsKeyPressed(Key keyCode)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void Draw(byte[] vs, Rgb[] rgbs)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void SetResolution(int videoWidth, int videoHeight, int v)
-        {
-            throw new NotImplementedException();
-        }
-
         internal int GetMouseX()
         {
             throw new NotImplementedException();
         }
 
+        internal int GetMouseY()
+        {
+            throw new NotImplementedException();
+        }
+
         internal int GetWidth()
+        {
+            throw new NotImplementedException();
+        }
+
+        internal bool IsKeyPressed(Key keyCode)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal bool IsLeftButtonClicked()
+        {
+            throw new NotImplementedException();
+        }
+
+        internal bool IsRightButtonClicked()
         {
             throw new NotImplementedException();
         }
@@ -58,22 +63,17 @@
             throw new NotImplementedException();
         }
 
-        internal bool IsRightButtonClicked()
+        internal void SetOnKeyPressedEvent(Action v)
         {
             throw new NotImplementedException();
         }
 
-        internal bool IsLeftButtonClicked()
+        internal void SetOnKeyReleasedEvent(Action v)
         {
             throw new NotImplementedException();
         }
 
-        internal int GetMouseY()
-        {
-            throw new NotImplementedException();
-        }
-
-        internal int GetHeight()
+        internal void SetResolution(int videoWidth, int videoHeight, int v)
         {
             throw new NotImplementedException();
         }

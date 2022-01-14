@@ -8,21 +8,24 @@ using Spice86.Utils;
 
 public class Counter
 {
-    private static readonly ILogger _logger = Log.Logger.ForContext<Counter>();
     public const long HardwareFrequency = 1193182;
-    private readonly Machine _machine;
+    private static readonly ILogger _logger = Log.Logger.ForContext<Counter>();
+    private readonly ICounterActivator _activator;
     private readonly int _index;
+    private readonly Machine _machine;
+    private int _bcd;
+
+    private bool _firstByteRead;
+
+    private bool _firstByteWritten;
+
+    private int _mode;
 
     // Some programs don't set it so let's use by default the simplest mode
     private int _readWritePolicy = 1;
 
-    private int _mode;
-    private int _bcd;
-    private int _value;
-    private bool _firstByteRead;
-    private bool _firstByteWritten;
     private long _ticks;
-    private readonly ICounterActivator _activator;
+    private int _value;
 
     public Counter(Machine machine, int index, ICounterActivator activator)
     {
@@ -34,19 +37,14 @@ public class Counter
         UpdateDesiredFreqency(18);
     }
 
+    public int GetBcd()
+    {
+        return _bcd;
+    }
+
     public int GetIndex()
     {
         return _index;
-    }
-
-    public int GetReadWritePolicy()
-    {
-        return _readWritePolicy;
-    }
-
-    public void SetReadWritePolicy(int readWritePolicy)
-    {
-        this._readWritePolicy = readWritePolicy;
     }
 
     public int GetMode()
@@ -54,35 +52,19 @@ public class Counter
         return _mode;
     }
 
-    public void SetMode(int mode)
+    public int GetReadWritePolicy()
     {
-        this._mode = mode;
-    }
-
-    public int GetBcd()
-    {
-        return _bcd;
-    }
-
-    public void SetBcd(int bcd)
-    {
-        this._bcd = bcd;
-    }
-
-    public int GetValue()
-    {
-        return _value;
-    }
-
-    public void SetValue(int counter)
-    {
-        this._value = counter;
-        OnValueWrite();
+        return _readWritePolicy;
     }
 
     public long GetTicks()
     {
         return _ticks;
+    }
+
+    public int GetValue()
+    {
+        return _value;
     }
 
     public int GetValueUsingMode()
@@ -96,6 +78,38 @@ public class Counter
             3 => ReadPolicy3(),
             _ => throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {_readWritePolicy}")
         };
+    }
+
+    public bool ProcessActivation(long currentCycles)
+    {
+        if (_activator.IsActivated())
+        {
+            _ticks++;
+            return true;
+        }
+
+        return false;
+    }
+
+    public void SetBcd(int bcd)
+    {
+        this._bcd = bcd;
+    }
+
+    public void SetMode(int mode)
+    {
+        this._mode = mode;
+    }
+
+    public void SetReadWritePolicy(int readWritePolicy)
+    {
+        this._readWritePolicy = readWritePolicy;
+    }
+
+    public void SetValue(int counter)
+    {
+        this._value = counter;
+        OnValueWrite();
     }
 
     public void SetValueUsingMode(int partialValue)
@@ -115,6 +129,33 @@ public class Counter
         throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {_readWritePolicy}");
     }
 
+    public override string ToString()
+    {
+        return System.Text.Json.JsonSerializer.Serialize(this);
+    }
+
+    private void OnValueWrite()
+    {
+        if (_value == 0)
+        {
+            UpdateDesiredFreqency(HardwareFrequency / 0x10000);
+        }
+        else
+        {
+            UpdateDesiredFreqency(HardwareFrequency / _value);
+        }
+    }
+
+    private int ReadLsb()
+    {
+        return ConvertUtils.ReadLsb(_value);
+    }
+
+    private int ReadMsb()
+    {
+        return ConvertUtils.ReadMsb(_value);
+    }
+
     private int ReadPolicy3()
     {
         // LSB first, then MSB
@@ -128,6 +169,22 @@ public class Counter
         // else return lsb
         _firstByteRead = true;
         return ReadLsb();
+    }
+
+    private void UpdateDesiredFreqency(long desiredFrequency)
+    {
+        _activator.UpdateDesiredFrequency(desiredFrequency);
+        _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", _index, desiredFrequency);
+    }
+
+    private void WriteLsb(int partialValue)
+    {
+        _value = ConvertUtils.WriteLsb(_value, partialValue);
+    }
+
+    private void WriteMsb(int partialValue)
+    {
+        _value = ConvertUtils.WriteMsb(_value, partialValue);
     }
 
     private void WritePolicy3(int partialValue)
@@ -146,59 +203,5 @@ public class Counter
             _firstByteWritten = true;
             WriteLsb(partialValue);
         }
-    }
-
-    private int ReadLsb()
-    {
-        return ConvertUtils.ReadLsb(_value);
-    }
-
-    private void WriteLsb(int partialValue)
-    {
-        _value = ConvertUtils.WriteLsb(_value, partialValue);
-    }
-
-    private int ReadMsb()
-    {
-        return ConvertUtils.ReadMsb(_value);
-    }
-
-    private void WriteMsb(int partialValue)
-    {
-        _value = ConvertUtils.WriteMsb(_value, partialValue);
-    }
-
-    private void OnValueWrite()
-    {
-        if (_value == 0)
-        {
-            UpdateDesiredFreqency(HardwareFrequency / 0x10000);
-        }
-        else
-        {
-            UpdateDesiredFreqency(HardwareFrequency / _value);
-        }
-    }
-
-    private void UpdateDesiredFreqency(long desiredFrequency)
-    {
-        _activator.UpdateDesiredFrequency(desiredFrequency);
-        _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", _index, desiredFrequency);
-    }
-
-    public bool ProcessActivation(long currentCycles)
-    {
-        if (_activator.IsActivated())
-        {
-            _ticks++;
-            return true;
-        }
-
-        return false;
-    }
-
-    public override string ToString()
-    {
-        return System.Text.Json.JsonSerializer.Serialize(this);
     }
 }

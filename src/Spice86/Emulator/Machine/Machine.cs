@@ -29,38 +29,38 @@ using System;
 public class Machine
 {
     private static readonly int INTERRUPT_HANDLERS_SEGMENT = 0xF000;
-    private Memory memory;
+    private BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler;
+    private BiosKeyboardInt9Handler biosKeyboardInt9Handler;
+    private CallbackHandler callbackHandler;
     private Cpu cpu;
+    private bool debugMode;
+    private DosInt20Handler dosInt20Handler;
+    private DosInt21Handler dosInt21Handler;
+    private GravisUltraSound gravisUltraSound;
+    private Gui gui;
 
     // IO Devices
     private IOPortDispatcher ioPortDispatcher;
 
-    private Pic pic;
-    private Timer timer;
-    private SystemClockInt1AHandler systemClockInt1AHandler;
-    private VgaCard vgaCard;
-    private Keyboard keyboard;
     private Joystick joystick;
-    private PcSpeaker pcSpeaker;
-    private SoundBlaster soundBlaster;
-    private GravisUltraSound gravisUltraSound;
+    private Keyboard keyboard;
+    private KeyboardInt16Handler keyboardInt16Handler;
+    private MachineBreakpoints machineBreakpoints;
+    private Memory memory;
     private Midi midi;
-    private Gui gui;
-    private CallbackHandler callbackHandler;
+    private MouseInt33Handler mouseInt33Handler;
+    private PcSpeaker pcSpeaker;
+    private Pic pic;
+    private SoundBlaster soundBlaster;
+    private SystemBiosInt15Handler systemBiosInt15Handler;
+    private SystemClockInt1AHandler systemClockInt1AHandler;
+    private Timer timer;
 
     // Services for int callbacks
     private TimerInt8Handler timerInt8Handler;
 
-    private BiosKeyboardInt9Handler biosKeyboardInt9Handler;
+    private VgaCard vgaCard;
     private VideoBiosInt10Handler videoBiosInt10Handler;
-    private BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler;
-    private SystemBiosInt15Handler systemBiosInt15Handler;
-    private KeyboardInt16Handler keyboardInt16Handler;
-    private DosInt20Handler dosInt20Handler;
-    private DosInt21Handler dosInt21Handler;
-    private MouseInt33Handler mouseInt33Handler;
-    private MachineBreakpoints machineBreakpoints;
-    private bool debugMode;
 
     public Machine(Gui gui, CounterConfigurator counterConfigurator, bool failOnUnhandledPort, bool debugMode)
     {
@@ -70,94 +70,17 @@ public class Machine
         InitServices();
     }
 
-    public Memory GetMemory()
+    public string DumpCallStack()
     {
-        return memory;
-    }
+        FunctionHandler inUse = cpu.GetFunctionHandlerInUse();
+        string callStack = "";
+        if (inUse.Equals(cpu.GetFunctionHandlerInExternalInterrupt()))
+        {
+            callStack += "From external interrupt:\\n";
+        }
 
-    public Cpu GetCpu()
-    {
-        return cpu;
-    }
-
-    public IOPortDispatcher GetIoPortDispatcher()
-    {
-        return ioPortDispatcher;
-    }
-
-    public Pic GetPic()
-    {
-        return pic;
-    }
-
-    public Timer GetTimer()
-    {
-        return timer;
-    }
-
-    public SystemClockInt1AHandler GetSystemClockInt1AHandler()
-    {
-        return systemClockInt1AHandler;
-    }
-
-    public VgaCard GetVgaCard()
-    {
-        return vgaCard;
-    }
-
-    public Keyboard GetKeyboard()
-    {
-        return keyboard;
-    }
-
-    public Joystick GetJoystick()
-    {
-        return joystick;
-    }
-
-    public PcSpeaker GetPcSpeaker()
-    {
-        return pcSpeaker;
-    }
-
-    public SoundBlaster GetSoundBlaster()
-    {
-        return soundBlaster;
-    }
-
-    public GravisUltraSound GetGravisUltraSound()
-    {
-        return gravisUltraSound;
-    }
-
-    public Midi GetMidi()
-    {
-        return midi;
-    }
-
-    public Gui GetGui()
-    {
-        return gui;
-    }
-
-    public CallbackHandler GetCallbackHandler()
-    {
-        return callbackHandler;
-    }
-
-    public TimerInt8Handler GetTimerInt8Handler()
-    {
-        return timerInt8Handler;
-    }
-
-    public BiosKeyboardInt9Handler GetBiosKeyboardInt9Handler()
-    {
-        return biosKeyboardInt9Handler;
-    }
-
-    public VideoBiosInt10Handler GetVideoBiosInt10Handler()
-    {
-        return videoBiosInt10Handler;
+        callStack += inUse.DumpCallStack();
+        return callStack;
     }
 
     public BiosEquipmentDeterminationInt11Handler GetBiosEquipmentDeterminationInt11Handler()
@@ -165,14 +88,19 @@ public class Machine
         return biosEquipmentDeterminationInt11Handler;
     }
 
-    public SystemBiosInt15Handler GetSystemBiosInt15Handler()
+    public BiosKeyboardInt9Handler GetBiosKeyboardInt9Handler()
     {
-        return systemBiosInt15Handler;
+        return biosKeyboardInt9Handler;
     }
 
-    public KeyboardInt16Handler GetKeyboardInt16Handler()
+    public CallbackHandler GetCallbackHandler()
     {
-        return keyboardInt16Handler;
+        return callbackHandler;
+    }
+
+    public Cpu GetCpu()
+    {
+        return cpu;
     }
 
     public DosInt20Handler GetDosInt20Handler()
@@ -185,14 +113,104 @@ public class Machine
         return dosInt21Handler;
     }
 
-    public MouseInt33Handler GetMouseInt33Handler()
+    public GravisUltraSound GetGravisUltraSound()
     {
-        return mouseInt33Handler;
+        return gravisUltraSound;
+    }
+
+    public Gui GetGui()
+    {
+        return gui;
+    }
+
+    public IOPortDispatcher GetIoPortDispatcher()
+    {
+        return ioPortDispatcher;
+    }
+
+    public Joystick GetJoystick()
+    {
+        return joystick;
+    }
+
+    public Keyboard GetKeyboard()
+    {
+        return keyboard;
+    }
+
+    public KeyboardInt16Handler GetKeyboardInt16Handler()
+    {
+        return keyboardInt16Handler;
     }
 
     public MachineBreakpoints GetMachineBreakpoints()
     {
         return machineBreakpoints;
+    }
+
+    public Memory GetMemory()
+    {
+        return memory;
+    }
+
+    public Midi GetMidi()
+    {
+        return midi;
+    }
+
+    public MouseInt33Handler GetMouseInt33Handler()
+    {
+        return mouseInt33Handler;
+    }
+
+    public PcSpeaker GetPcSpeaker()
+    {
+        return pcSpeaker;
+    }
+
+    public Pic GetPic()
+    {
+        return pic;
+    }
+
+    public SoundBlaster GetSoundBlaster()
+    {
+        return soundBlaster;
+    }
+
+    public SystemBiosInt15Handler GetSystemBiosInt15Handler()
+    {
+        return systemBiosInt15Handler;
+    }
+
+    public SystemClockInt1AHandler GetSystemClockInt1AHandler()
+    {
+        return systemClockInt1AHandler;
+    }
+
+    public Timer GetTimer()
+    {
+        return timer;
+    }
+
+    public TimerInt8Handler GetTimerInt8Handler()
+    {
+        return timerInt8Handler;
+    }
+
+    public VgaCard GetVgaCard()
+    {
+        return vgaCard;
+    }
+
+    public VideoBiosInt10Handler GetVideoBiosInt10Handler()
+    {
+        return videoBiosInt10Handler;
+    }
+
+    public void InstallAllCallbacksInInterruptTable()
+    {
+        callbackHandler.InstallAllCallbacksInInterruptTable();
     }
 
     public string PeekReturn()
@@ -205,14 +223,36 @@ public class Machine
         return ToString(cpu.GetFunctionHandlerInUse().PeekReturnAddressOnMachineStack(returnCallType));
     }
 
-    private string ToString(SegmentedAddress segmentedAddress)
+    public void Register(IIOPortHandler ioPortHandler)
     {
-        if (segmentedAddress != null)
+        ioPortHandler.InitPortHandlers(ioPortDispatcher);
+    }
+
+    public void Register(ICallback callback)
+    {
+        callbackHandler.AddCallback(callback);
+    }
+
+    public void Run()
+    {
+        State state = cpu.GetState();
+        FunctionHandler functionHandler = cpu.GetFunctionHandler();
+        functionHandler.Call(CallType.MACHINE, state.GetCS(), state.GetIP(), null, null, () => "entry", false);
+        try
         {
-            return segmentedAddress.ToString();
+            RunLoop();
+        }
+        catch (InvalidVMOperationException)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            throw new InvalidVMOperationException(this, e);
         }
 
-        return "null";
+        machineBreakpoints.OnMachineStop();
+        functionHandler.Ret(CallType.MACHINE);
     }
 
     private void InitHardware(CounterConfigurator counterConfigurator, bool failOnUnhandledPort)
@@ -274,43 +314,6 @@ public class Machine
         Register(mouseInt33Handler);
     }
 
-    public void Register(IIOPortHandler ioPortHandler)
-    {
-        ioPortHandler.InitPortHandlers(ioPortDispatcher);
-    }
-
-    public void Register(ICallback callback)
-    {
-        callbackHandler.AddCallback(callback);
-    }
-
-    public void InstallAllCallbacksInInterruptTable()
-    {
-        callbackHandler.InstallAllCallbacksInInterruptTable();
-    }
-
-    public void Run()
-    {
-        State state = cpu.GetState();
-        FunctionHandler functionHandler = cpu.GetFunctionHandler();
-        functionHandler.Call(CallType.MACHINE, state.GetCS(), state.GetIP(), null, null, () => "entry", false);
-        try
-        {
-            RunLoop();
-        }
-        catch (InvalidVMOperationException)
-        {
-            throw;
-        }
-        catch (Exception e)
-        {
-            throw new InvalidVMOperationException(this, e);
-        }
-
-        machineBreakpoints.OnMachineStop();
-        functionHandler.Ret(CallType.MACHINE);
-    }
-
     private void RunLoop()
     {
         while (cpu.IsRunning)
@@ -325,16 +328,13 @@ public class Machine
         }
     }
 
-    public string DumpCallStack()
+    private string ToString(SegmentedAddress segmentedAddress)
     {
-        FunctionHandler inUse = cpu.GetFunctionHandlerInUse();
-        string callStack = "";
-        if (inUse.Equals(cpu.GetFunctionHandlerInExternalInterrupt()))
+        if (segmentedAddress != null)
         {
-            callStack += "From external interrupt:\\n";
+            return segmentedAddress.ToString();
         }
 
-        callStack += inUse.DumpCallStack();
-        return callStack;
+        return "null";
     }
 }

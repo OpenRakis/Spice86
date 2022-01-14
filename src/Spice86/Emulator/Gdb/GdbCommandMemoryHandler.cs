@@ -13,43 +13,14 @@ using System.Text;
 public class GdbCommandMemoryHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandMemoryHandler>();
+    private GdbFormatter gdbFormatter = new GdbFormatter();
     private GdbIo gdbIo;
     private Machine machine;
-    private GdbFormatter gdbFormatter = new GdbFormatter();
 
     public GdbCommandMemoryHandler(GdbIo gdbIo, Machine machine)
     {
         this.gdbIo = gdbIo;
         this.machine = machine;
-    }
-
-    public string WriteMemory(string commandContent)
-    {
-        try
-        {
-            String[] commandContentSplit = commandContent.Split("[,:]");
-            long address = ConvertUtils.ParseHex32(commandContentSplit[0]);
-            long length = ConvertUtils.ParseHex32(commandContentSplit[1]);
-            byte[] data = ConvertUtils.HexToByteArray(commandContentSplit[2]);
-            if (length != data.Length)
-            {
-                return gdbIo.GenerateResponse("E01");
-            }
-
-            Memory memory = machine.GetMemory();
-            if (address + length > memory.GetSize())
-            {
-                return gdbIo.GenerateResponse("E02");
-            }
-
-            memory.LoadData((int)address, data);
-            return gdbIo.GenerateResponse("OK");
-        }
-        catch (FormatException nfe)
-        {
-            _logger.Error(nfe, "Memory write requested but could not understand the request {@CommandContent}", commandContent);
-            return gdbIo.GenerateUnsupportedResponse();
-        }
     }
 
     public string ReadMemory(string commandContent)
@@ -119,5 +90,34 @@ public class GdbCommandMemoryHandler
         }
 
         return gdbIo.GenerateResponse("1," + gdbFormatter.FormatValueAsHex32(address.Value));
+    }
+
+    public string WriteMemory(string commandContent)
+    {
+        try
+        {
+            String[] commandContentSplit = commandContent.Split("[,:]");
+            long address = ConvertUtils.ParseHex32(commandContentSplit[0]);
+            long length = ConvertUtils.ParseHex32(commandContentSplit[1]);
+            byte[] data = ConvertUtils.HexToByteArray(commandContentSplit[2]);
+            if (length != data.Length)
+            {
+                return gdbIo.GenerateResponse("E01");
+            }
+
+            Memory memory = machine.GetMemory();
+            if (address + length > memory.GetSize())
+            {
+                return gdbIo.GenerateResponse("E02");
+            }
+
+            memory.LoadData((int)address, data);
+            return gdbIo.GenerateResponse("OK");
+        }
+        catch (FormatException nfe)
+        {
+            _logger.Error(nfe, "Memory write requested but could not understand the request {@CommandContent}", commandContent);
+            return gdbIo.GenerateUnsupportedResponse();
+        }
     }
 }

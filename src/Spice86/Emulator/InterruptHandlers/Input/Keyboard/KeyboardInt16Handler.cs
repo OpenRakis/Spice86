@@ -17,9 +17,9 @@ public class KeyboardInt16Handler : InterruptHandler
         _dispatchTable.Add(0x01, new Callback(0x01, () => GetKeystrokeStatus(true)));
     }
 
-    public int? GetNextKeyCode()
+    public override int GetIndex()
     {
-        return biosKeyboardBuffer.GetKeyCode();
+        return 0x16;
     }
 
     public void GetKeystroke()
@@ -60,14 +60,14 @@ public class KeyboardInt16Handler : InterruptHandler
         }
     }
 
+    public int? GetNextKeyCode()
+    {
+        return biosKeyboardBuffer.GetKeyCode();
+    }
+
     public override void Run()
     {
         int operation = _state.GetAH();
         this.Run(operation);
-    }
-
-    public override int GetIndex()
-    {
-        return 0x16;
     }
 }

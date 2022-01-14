@@ -19,11 +19,6 @@ public class PcSpeaker : DefaultIOPortHandler
     {
     }
 
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
-    {
-        ioPortDispatcher.AddIOPortHandler(PC_SPEAKER_PORT_NUMBER, this);
-    }
-
     public override int Inb(int port)
     {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information))
@@ -32,6 +27,11 @@ public class PcSpeaker : DefaultIOPortHandler
         }
 
         return this.value;
+    }
+
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
+    {
+        ioPortDispatcher.AddIOPortHandler(PC_SPEAKER_PORT_NUMBER, this);
     }
 
     public override void Outb(int port, int value)

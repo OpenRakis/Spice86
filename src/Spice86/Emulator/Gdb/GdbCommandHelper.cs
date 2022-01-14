@@ -9,10 +9,10 @@ using System;
 public class GdbCommandHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandHandler>();
-    private GdbIo gdbIo;
-    private Machine machine;
     private bool connected = true;
     private GdbCommandRegisterHandler gdbCommandRegisterHandler;
+    private GdbIo gdbIo;
+    private Machine machine;
 
     //private GdbCommandMemoryHandler gdbCommandMemoryHandler;
     //private GdbCustomCommandsHandler gdbCustomCommandsHandler;
@@ -30,6 +30,12 @@ public class GdbCommandHandler
     public bool IsConnected()
     {
         return connected;
+    }
+
+    public void PauseEmulator()
+    {
+        //gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(false);
+        machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
     }
 
     public void RunCommand(string command)
@@ -56,25 +62,53 @@ public class GdbCommandHandler
         }
     }
 
+    private string Detach()
+    {
+        connected = false;
+        //gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(true);
+        return gdbIo.GenerateResponse("");
+    }
+
     private string HandleThreadALive()
     {
         return gdbIo.GenerateResponse("OK");
     }
 
-    public void PauseEmulator()
+    private string Kill()
     {
-        //gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(false);
-        machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
+        machine.GetCpu().SetRunning(false);
+        return Detach();
     }
 
-    private string SetThreadContext()
+    private Object[] ParseSupportedQuery(string item)
     {
-        return gdbIo.GenerateResponse("OK");
+        Object[] res = new Object[2];
+        if (item.EndsWith("+"))
+        {
+            res[0] = item.Substring(0, item.Length - 1);
+            res[1] = true;
+        }
+        else if (item.EndsWith("-"))
+        {
+            res[0] = item.Substring(0, item.Length - 1);
+            res[1] = false;
+        }
+        else
+        {
+            String[] split = item.Split("=");
+            res[0] = split[0];
+            if (split.Length == 2)
+            {
+                res[1] = split[1];
+            }
+        }
+
+        return res;
     }
 
-    private string ReasonHalted()
+    private string ProcessVPacket(string commandContent)
     {
-        return gdbIo.GenerateResponse("S05");
+        return "";
     }
 
     private string QueryVariable(string command)
@@ -122,47 +156,13 @@ public class GdbCommandHandler
         return "";
     }
 
-    private Object[] ParseSupportedQuery(string item)
+    private string ReasonHalted()
     {
-        Object[] res = new Object[2];
-        if (item.EndsWith("+"))
-        {
-            res[0] = item.Substring(0, item.Length - 1);
-            res[1] = true;
-        }
-        else if (item.EndsWith("-"))
-        {
-            res[0] = item.Substring(0, item.Length - 1);
-            res[1] = false;
-        }
-        else
-        {
-            String[] split = item.Split("=");
-            res[0] = split[0];
-            if (split.Length == 2)
-            {
-                res[1] = split[1];
-            }
-        }
-
-        return res;
+        return gdbIo.GenerateResponse("S05");
     }
 
-    private string ProcessVPacket(string commandContent)
+    private string SetThreadContext()
     {
-        return "";
-    }
-
-    private string Kill()
-    {
-        machine.GetCpu().SetRunning(false);
-        return Detach();
-    }
-
-    private string Detach()
-    {
-        connected = false;
-        //gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(true);
-        return gdbIo.GenerateResponse("");
+        return gdbIo.GenerateResponse("OK");
     }
 }

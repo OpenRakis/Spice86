@@ -8,12 +8,14 @@ using Spice86.Emulator.Memory;
 
 public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallback
 {
+    protected State _state;
+
+    protected Cpu cpu;
+
     // Protected visibility because they are used by almost all implementations
     protected Machine machine;
 
     protected Memory memory;
-    protected Cpu cpu;
-    protected State _state;
 
     protected InterruptHandler(Machine machine)
     {
@@ -23,9 +25,9 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
         _state = cpu.GetState();
     }
 
-    public abstract void Run();
-
     public abstract int GetIndex();
+
+    public abstract void Run();
 
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index)
     {

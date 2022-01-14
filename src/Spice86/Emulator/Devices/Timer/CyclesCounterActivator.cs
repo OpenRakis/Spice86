@@ -7,10 +7,10 @@ namespace Spice86.Emulator.Devices.Timer;
 /// </summary>
 public class CyclesCounterActivator : ICounterActivator
 {
-    private readonly State _state;
-    private long _lastActivationCycle;
-    private long _cyclesBetweenActivations;
     private readonly long _instructionsPerSecond;
+    private readonly State _state;
+    private long _cyclesBetweenActivations;
+    private long _lastActivationCycle;
 
     public CyclesCounterActivator(State state, long instructionsPerSecond)
     {

@@ -31,6 +31,17 @@ public class SystemClockInt1AHandler : InterruptHandler
         return 0x1A;
     }
 
+    public void GetSystemClockCounter()
+    {
+        int value = timerHandler.GetTickCounterValue();
+        _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+
+        // let's say it never overflows
+        _state.SetAL(0);
+        _state.SetCX(value >> 16);
+        _state.SetDX(value);
+    }
+
     public override void Run()
     {
         int operation = _state.GetAH();
@@ -42,17 +53,6 @@ public class SystemClockInt1AHandler : InterruptHandler
         int value = _state.GetCX() << 16 | _state.GetDX();
         _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         timerHandler.SetTickCounterValue(value);
-    }
-
-    public void GetSystemClockCounter()
-    {
-        int value = timerHandler.GetTickCounterValue();
-        _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
-
-        // let's say it never overflows
-        _state.SetAL(0);
-        _state.SetCX(value >> 16);
-        _state.SetDX(value);
     }
 
     private void TandySoundSystemUnhandled()

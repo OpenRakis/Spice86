@@ -11,25 +11,15 @@ namespace Spice86.Emulator.Function.Dump;
 /// </summary>
 public class CsvFunctionInformationToStringConverter : FunctionInformationToStringConverter
 {
-    public override string GetFileHeader(IEnumerable<SegmentRegisterBasedAddress> allGlobals, IEnumerable<SegmentedAddress> whiteListOfSegmentForOffset)
-    {
-        return GenerateLine("Name", "Returns", "UnalignedReturns", "Callers", "Called", "Calls", "ApproximateSize", "Overridable", "Overriden");
-    }
-
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions)
     {
         var calls = GetCalls(functionInformation, allFunctions);
         return GenerateLine(ToCSharpName(functionInformation, true), Size(functionInformation.GetReturns()), Size(functionInformation.GetUnalignedReturns()), Size(GetCallers(functionInformation)), functionInformation.GetCalledCount().ToString(), Size(calls), ApproximateSize(functionInformation).ToString(), IsOverridable(calls).ToString(), functionInformation.HasOverride().ToString());
     }
 
-    private string Size<K, V>(IDictionary<K, V> map)
+    public override string GetFileHeader(IEnumerable<SegmentRegisterBasedAddress> allGlobals, IEnumerable<SegmentedAddress> whiteListOfSegmentForOffset)
     {
-        return map.Count.ToString();
-    }
-
-    private string Size<T>(IEnumerable<T> collection)
-    {
-        return collection.Count().ToString();
+        return GenerateLine("Name", "Returns", "UnalignedReturns", "Callers", "Called", "Calls", "ApproximateSize", "Overridable", "Overriden");
     }
 
     private static string GenerateLine(string name, string returns, string unalignedReturns, string callers, string called, string calls, string approximateSize, string overridable, string overridden)
@@ -53,5 +43,15 @@ public class CsvFunctionInformationToStringConverter : FunctionInformationToStri
         res.Append(',');
         res.Append(overridden);
         return res.ToString();
+    }
+
+    private string Size<K, V>(IDictionary<K, V> map)
+    {
+        return map.Count.ToString();
+    }
+
+    private string Size<T>(IEnumerable<T> collection)
+    {
+        return collection.Count().ToString();
     }
 }

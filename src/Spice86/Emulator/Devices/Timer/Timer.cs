@@ -23,10 +23,10 @@ public class Timer : DefaultIOPortHandler
     private readonly Counter[] counters = new Counter[3];
     private readonly Pic pic;
 
+    private readonly VgaCard vgaCard;
+
     // Cheat: display at 60fps
     private readonly Counter vgaCounter;
-
-    private readonly VgaCard vgaCard;
 
     public Timer(Machine machine, Pic pic, VgaCard vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {
@@ -44,31 +44,18 @@ public class Timer : DefaultIOPortHandler
         vgaCounter.SetValue((int)(Counter.HardwareFrequency / 30));
     }
 
+    public Counter GetCounter(int counterIndex)
+    {
+        if (counterIndex > counters.Length || counterIndex < 0)
+        {
+            throw new InvalidCounterIndexException(machine, counterIndex);
+        }
+        return counters[counterIndex];
+    }
+
     public long GetNumberOfTicks()
     {
         return counters[0].GetTicks();
-    }
-
-    public void Tick()
-    {
-        long cycles = cpu.GetState().GetCycles();
-        if (counters[0].ProcessActivation(cycles))
-        {
-            pic.ProcessInterrupt(0x8);
-        }
-
-        if (vgaCounter.ProcessActivation(cycles))
-        {
-            vgaCard.UpdateScreen();
-        }
-    }
-
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
-    {
-        ioPortDispatcher.AddIOPortHandler(MODE_COMMAND_REGISTER, this);
-        ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_0, this);
-        ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_1, this);
-        ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_2, this);
     }
 
     public override int Inb(int port)
@@ -84,7 +71,13 @@ public class Timer : DefaultIOPortHandler
         return base.Inb(port);
     }
 
-    private static bool IsCounterRegisterPort(int port) => port >= COUNTER_REGISTER_0 && port <= COUNTER_REGISTER_2;
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
+    {
+        ioPortDispatcher.AddIOPortHandler(MODE_COMMAND_REGISTER, this);
+        ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_0, this);
+        ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_1, this);
+        ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_2, this);
+    }
 
     public override void Outb(int port, int value)
     {
@@ -108,14 +101,21 @@ public class Timer : DefaultIOPortHandler
         base.Outb(port, value);
     }
 
-    public Counter GetCounter(int counterIndex)
+    public void Tick()
     {
-        if (counterIndex > counters.Length || counterIndex < 0)
+        long cycles = cpu.GetState().GetCycles();
+        if (counters[0].ProcessActivation(cycles))
         {
-            throw new InvalidCounterIndexException(machine, counterIndex);
+            pic.ProcessInterrupt(0x8);
         }
-        return counters[counterIndex];
+
+        if (vgaCounter.ProcessActivation(cycles))
+        {
+            vgaCard.UpdateScreen();
+        }
     }
+
+    private static bool IsCounterRegisterPort(int port) => port >= COUNTER_REGISTER_0 && port <= COUNTER_REGISTER_2;
 
     private Counter GetCounterIndexFromPortNumber(int port)
     {

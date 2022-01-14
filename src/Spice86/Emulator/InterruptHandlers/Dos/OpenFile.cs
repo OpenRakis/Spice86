@@ -11,9 +11,9 @@ namespace Spice86.Emulator.InterruptHandlers.Dos
     /// </summary>
     public class OpenFile
     {
-        private string _name;
         private int _descriptor;
         private List<MemoryRange> _loadMemoryRanges = new();
+        private string _name;
         private FileStream _randomAccessFile;
 
         public OpenFile(string name, int descriptor, FileStream randomAccessFile)
@@ -52,11 +52,6 @@ namespace Spice86.Emulator.InterruptHandlers.Dos
             _loadMemoryRanges.Add(memoryRange);
         }
 
-        public string GetName()
-        {
-            return _name;
-        }
-
         public int GetDescriptor()
         {
             return _descriptor;
@@ -65,6 +60,11 @@ namespace Spice86.Emulator.InterruptHandlers.Dos
         public IList<MemoryRange> GetLoadMemoryRanges()
         {
             return _loadMemoryRanges;
+        }
+
+        public string GetName()
+        {
+            return _name;
         }
 
         public FileStream GetRandomAccessFile()

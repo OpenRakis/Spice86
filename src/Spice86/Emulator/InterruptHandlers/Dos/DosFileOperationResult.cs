@@ -3,12 +3,24 @@
 public class DosFileOperationResult
 {
     private readonly bool _error;
-    private readonly bool _valueIsUint32;
     private readonly int? _value;
+    private readonly bool _valueIsUint32;
+
+    private DosFileOperationResult(bool error, bool valueIsUint32, int? value)
+    {
+        this._error = error;
+        this._valueIsUint32 = valueIsUint32;
+        this._value = value;
+    }
 
     public static DosFileOperationResult Error(int errorCode)
     {
         return new DosFileOperationResult(true, false, errorCode);
+    }
+
+    public static DosFileOperationResult NoValue()
+    {
+        return new DosFileOperationResult(false, false, null);
     }
 
     public static DosFileOperationResult Value16(int fileHandle)
@@ -21,16 +33,9 @@ public class DosFileOperationResult
         return new DosFileOperationResult(false, true, offset);
     }
 
-    public static DosFileOperationResult NoValue()
+    public int? GetValue()
     {
-        return new DosFileOperationResult(false, false, null);
-    }
-
-    private DosFileOperationResult(bool error, bool valueIsUint32, int? value)
-    {
-        this._error = error;
-        this._valueIsUint32 = valueIsUint32;
-        this._value = value;
+        return _value;
     }
 
     public bool IsError()
@@ -41,10 +46,5 @@ public class DosFileOperationResult
     public bool IsValueIsUint32()
     {
         return _valueIsUint32;
-    }
-
-    public int? GetValue()
-    {
-        return _value;
     }
 }

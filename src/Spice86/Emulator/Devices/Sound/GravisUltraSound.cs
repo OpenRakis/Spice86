@@ -9,12 +9,12 @@ using Spice86.Emulator.Machine;
 /// </summary>
 public class GravisUltraSound : DefaultIOPortHandler
 {
+    private static readonly int IRQ_CONTROL_REGISTER = 0x24B;
+    private static readonly int IRQ_STATUS_REGISTER = 0x246;
     private static readonly int MIX_CONTROL_REGISTER = 0x240;
     private static readonly int READ_DATA_OR_TRIGGER_STATUS = 0x241;
-    private static readonly int IRQ_STATUS_REGISTER = 0x246;
-    private static readonly int TIMER_CONTROL_REGISTER = 0x248;
-    private static readonly int IRQ_CONTROL_REGISTER = 0x24B;
     private static readonly int REGISTER_CONTROLS = 0x24F;
+    private static readonly int TIMER_CONTROL_REGISTER = 0x248;
 
     public GravisUltraSound(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort)
     {

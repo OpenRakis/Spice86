@@ -14,15 +14,12 @@ namespace Spice86.Emulator.Function.Dump
     public abstract class FunctionInformationToStringConverter
     {
         /// <summary>
-        /// Generates the header for the file.
+        /// Called once per functionInformation.
         /// </summary>
-        /// <param name="allGlobals">List of addresses encountered during the execution. Hacky to pass it there, but used by Java stub generator.</param>
-        /// <param name="whiteListOfSegmentForOffset">Set of segmented addresses for which nothing should be displayed if the offset matches but not the segmen</param>
+        /// <param name="functionInformation"></param>
+        /// <param name="allFunctions"></param>
         /// <returns></returns>
-        public virtual string GetFileHeader(IEnumerable<SegmentRegisterBasedAddress> allGlobals, IEnumerable<SegmentedAddress> whiteListOfSegmentForOffset)
-        {
-            return "";
-        }
+        public abstract string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions);
 
         /// <summary>
         /// Generates the footer of the file.
@@ -34,12 +31,15 @@ namespace Spice86.Emulator.Function.Dump
         }
 
         /// <summary>
-        /// Called once per functionInformation.
+        /// Generates the header for the file.
         /// </summary>
-        /// <param name="functionInformation"></param>
-        /// <param name="allFunctions"></param>
+        /// <param name="allGlobals">List of addresses encountered during the execution. Hacky to pass it there, but used by Java stub generator.</param>
+        /// <param name="whiteListOfSegmentForOffset">Set of segmented addresses for which nothing should be displayed if the offset matches but not the segmen</param>
         /// <returns></returns>
-        public abstract string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions);
+        public virtual string GetFileHeader(IEnumerable<SegmentRegisterBasedAddress> allGlobals, IEnumerable<SegmentedAddress> whiteListOfSegmentForOffset)
+        {
+            return "";
+        }
 
         protected int ApproximateSize(FunctionInformation functionInformation)
         {
@@ -49,22 +49,17 @@ namespace Spice86.Emulator.Function.Dump
             return Math.Abs(first.ToPhysical() - last.ToPhysical());
         }
 
+        protected bool ContainsNonOverride(IEnumerable<FunctionInformation> calls)
+        {
+            return calls.Any((function) => !function.HasOverride());
+        }
+
         protected List<SegmentedAddress> GetBoundaries(FunctionInformation functionInformation)
         {
             List<SegmentedAddress> boundaries = new();
             boundaries.AddRange(functionInformation.GetReturns().Keys.ToDictionary(x => x.GetAddress()).Select(x => x.Key));
             boundaries.Add(functionInformation.GetAddress());
             return boundaries.OrderBy(x => x).ToList();
-        }
-
-        protected bool ContainsNonOverride(IEnumerable<FunctionInformation> calls)
-        {
-            return calls.Any((function) => !function.HasOverride());
-        }
-
-        protected bool IsOverridable(IEnumerable<FunctionInformation> calls)
-        {
-            return calls.Any() == false || !ContainsNonOverride(calls);
         }
 
         protected List<FunctionInformation> GetCallers(FunctionInformation functionInformation)
@@ -76,6 +71,37 @@ namespace Spice86.Emulator.Function.Dump
         {
             // calls made by this function is the list of functions that get called by it
             return Sort(allFunctions.Where((callee) => callee.GetCallers().Contains(functionInformation)));
+        }
+
+        protected bool IsOverridable(IEnumerable<FunctionInformation> calls)
+        {
+            return calls.Any() == false || !ContainsNonOverride(calls);
+        }
+
+        protected string JoinNewLine(IEnumerable<string> enumerable)
+        {
+            var sb = new StringBuilder();
+            foreach (var item in enumerable)
+            {
+                sb.Append(item);
+            }
+            sb.Append('\n');
+            return sb.ToString();
+        }
+
+        protected string? RemoveDotsFromFunctionName(string? name)
+        {
+            if (name is null)
+            {
+                return null;
+            }
+            String[] functionNameSplit = name.Split(".");
+            if (functionNameSplit.Length > 1)
+            {
+                return functionNameSplit[^1];
+            }
+
+            return name;
         }
 
         protected ICollection<T> Sort<T>(ICollection<T> collection)
@@ -99,17 +125,6 @@ namespace Spice86.Emulator.Function.Dump
             return result;
         }
 
-        protected string JoinNewLine(IEnumerable<string> enumerable)
-        {
-            var sb = new StringBuilder();
-            foreach (var item in enumerable)
-            {
-                sb.Append(item);
-            }
-            sb.Append('\n');
-            return sb.ToString();
-        }
-
         protected string ToCSharpName(FunctionInformation functionInformation, bool dots)
         {
             string? nameToUse = functionInformation.GetName();
@@ -119,21 +134,6 @@ namespace Spice86.Emulator.Function.Dump
             }
 
             return $"{nameToUse}_{ConvertUtils.ToCSharpStringWithPhysical(functionInformation.GetAddress())}";
-        }
-
-        protected string? RemoveDotsFromFunctionName(string? name)
-        {
-            if (name is null)
-            {
-                return null;
-            }
-            String[] functionNameSplit = name.Split(".");
-            if (functionNameSplit.Length > 1)
-            {
-                return functionNameSplit[^1];
-            }
-
-            return name;
         }
     }
 }

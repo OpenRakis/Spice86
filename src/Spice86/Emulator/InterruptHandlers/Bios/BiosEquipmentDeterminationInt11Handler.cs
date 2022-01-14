@@ -11,13 +11,13 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler
     {
     }
 
-    public override void Run()
-    {
-        _state.SetAX(0);
-    }
-
     public override int GetIndex()
     {
         return 0x11;
+    }
+
+    public override void Run()
+    {
+        _state.SetAX(0);
     }
 }

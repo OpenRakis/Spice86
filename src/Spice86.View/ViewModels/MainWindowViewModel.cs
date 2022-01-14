@@ -6,12 +6,12 @@ namespace Spice86.View.ViewModels
     {
         private readonly MainWindow _mainWindow;
 
+        public string Greeting => "Welcome to Avalonia!";
+
         public MainWindowViewModel(MainWindow window)
         {
             _mainWindow = window;
         }
-
-        public string Greeting => "Welcome to Avalonia!";
 
         internal static MainWindowViewModel Create(MainWindow mainWindow)
         {

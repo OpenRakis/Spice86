@@ -20,9 +20,9 @@ public class DosInt21Handler : InterruptHandler
     // dosbox
     private int defaultDrive = 2;
 
-    private DosMemoryManager dosMemoryManager;
-    private DosFileManager dosFileManager;
     private StringBuilder displayOutputBuilder = new StringBuilder();
+    private DosFileManager dosFileManager;
+    private DosMemoryManager dosMemoryManager;
 
     public DosInt21Handler(Machine machine) : base(machine)
     {
@@ -41,13 +41,13 @@ public class DosInt21Handler : InterruptHandler
         throw new NotImplementedException();
     }
 
-    internal DosMemoryManager GetDosMemoryManager()
-    {
-        return this.dosMemoryManager;
-    }
-
     internal DosFileManager GetDosFileManager()
     {
         return this.dosFileManager;
+    }
+
+    internal DosMemoryManager GetDosMemoryManager()
+    {
+        return this.dosMemoryManager;
     }
 }

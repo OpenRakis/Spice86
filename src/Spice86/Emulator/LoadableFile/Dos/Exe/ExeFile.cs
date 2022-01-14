@@ -7,23 +7,46 @@ using System.Text;
 
 public class ExeFile
 {
-    private string signature; // 0000 - Magic number
-    private int extraBytes; // 0002 - Bytes on last page of file
-    private int pages; // 0004 - Pages in file
-    private int relocItems; // 0006 - Relocations
-    private int headerSize; // 0008 - Size of header in paragraphs
-    private int minAlloc; // 000A - Minimum extra paragraphs needed
-    private int maxAlloc; // 000C - Maximum extra paragraphs needed
-    private int initSS; // 000E - Initial (relative) SS value
-    private int initSP; // 0010 - Initial SP value
-    private int checkSum; // 0012 - Checksum
-    private int initIP; // 0014 - Initial IP value
-    private int initCS; // 0016 - Initial (relative) CS value
-    private int relocTable; // 0018 - File address of relocation table
-    private int overlay; // 001A - Overlay number
-    private List<SegmentedAddress> relocationTable = new();
+    private int checkSum;
+    private int extraBytes;
+    private int headerSize;
+    private int initCS;
+
+    // 0012 - Checksum
+    private int initIP;
+
+    private int initSP;
+    private int initSS;
+    private int maxAlloc;
+
+    // 0008 - Size of header in paragraphs
+    private int minAlloc;
+
+    private int overlay;
+
+    // 0002 - Bytes on last page of file
+    private int pages;
+
     private byte[] programImage;
 
+    // 001A - Overlay number
+    private List<SegmentedAddress> relocationTable = new();
+
+    // 0004 - Pages in file
+    private int relocItems;
+
+    // 0006 - Relocations
+    // 000A - Minimum extra paragraphs needed
+    // 000C - Maximum extra paragraphs needed
+    // 000E - Initial (relative) SS value
+    // 0010 - Initial SP value
+    // 0014 - Initial IP value
+    // 0016 - Initial (relative) CS value
+    private int relocTable;
+
+    private string signature; // 0000 - Magic number
+
+    // 0018 - File address of relocation table
     public ExeFile(byte[] exe)
     {
         this.signature = new string(Encoding.UTF8.GetChars(exe), 0, 2);
@@ -55,14 +78,14 @@ public class ExeFile
         System.Array.Copy(exe, actualHeaderSize, programImage, 0, programSize);
     }
 
-    public string GetSignature()
+    public int GetCheckSum()
     {
-        return signature;
+        return checkSum;
     }
 
-    public void SetSignature(string signature)
+    public int GetCodeSize()
     {
-        this.signature = signature;
+        return programImage.Length;
     }
 
     public int GetExtraBytes()
@@ -70,99 +93,9 @@ public class ExeFile
         return extraBytes;
     }
 
-    public void SetExtraBytes(int extraBytes)
-    {
-        this.extraBytes = extraBytes;
-    }
-
-    public int GetPages()
-    {
-        return pages;
-    }
-
-    public void SetPages(int pages)
-    {
-        this.pages = pages;
-    }
-
-    public int GetRelocItems()
-    {
-        return relocItems;
-    }
-
-    public void SetRelocItems(int relocItems)
-    {
-        this.relocItems = relocItems;
-    }
-
     public int GetHeaderSize()
     {
         return headerSize;
-    }
-
-    public void SetHeaderSize(int headerSize)
-    {
-        this.headerSize = headerSize;
-    }
-
-    public int GetMinAlloc()
-    {
-        return minAlloc;
-    }
-
-    public void SetMinAlloc(int minAlloc)
-    {
-        this.minAlloc = minAlloc;
-    }
-
-    public int GetMaxAlloc()
-    {
-        return maxAlloc;
-    }
-
-    public void SetMaxAlloc(int maxAlloc)
-    {
-        this.maxAlloc = maxAlloc;
-    }
-
-    public int GetInitSS()
-    {
-        return initSS;
-    }
-
-    public void SetInitSS(int initSS)
-    {
-        this.initSS = initSS;
-    }
-
-    public int GetInitSP()
-    {
-        return initSP;
-    }
-
-    public void SetInitSP(int initSP)
-    {
-        this.initSP = initSP;
-    }
-
-    public int GetCheckSum()
-    {
-        return checkSum;
-    }
-
-    public void SetCheckSum(int checkSum)
-    {
-        this.checkSum = checkSum;
-    }
-
-    public int GetInitIP()
-    {
-        return initIP;
-    }
-
-    public void SetInitIP(int initIP)
-    {
-        this.initIP = initIP;
     }
 
     public int GetInitCS()
@@ -170,19 +103,29 @@ public class ExeFile
         return initCS;
     }
 
-    public void SetInitCS(int initCS)
+    public int GetInitIP()
     {
-        this.initCS = initCS;
+        return initIP;
     }
 
-    public int GetRelocTable()
+    public int GetInitSP()
     {
-        return relocTable;
+        return initSP;
     }
 
-    public void SetRelocTable(int relocTable)
+    public int GetInitSS()
     {
-        this.relocTable = relocTable;
+        return initSS;
+    }
+
+    public int GetMaxAlloc()
+    {
+        return maxAlloc;
+    }
+
+    public int GetMinAlloc()
+    {
+        return minAlloc;
     }
 
     public int GetOverlay()
@@ -190,14 +133,89 @@ public class ExeFile
         return overlay;
     }
 
-    public void SetOverlay(int overlay)
+    public int GetPages()
     {
-        this.overlay = overlay;
+        return pages;
     }
 
     public byte[] GetProgramImage()
     {
         return programImage;
+    }
+
+    public IList<SegmentedAddress> GetRelocationTable()
+    {
+        return relocationTable;
+    }
+
+    public int GetRelocItems()
+    {
+        return relocItems;
+    }
+
+    public int GetRelocTable()
+    {
+        return relocTable;
+    }
+
+    public string GetSignature()
+    {
+        return signature;
+    }
+
+    public void SetCheckSum(int checkSum)
+    {
+        this.checkSum = checkSum;
+    }
+
+    public void SetExtraBytes(int extraBytes)
+    {
+        this.extraBytes = extraBytes;
+    }
+
+    public void SetHeaderSize(int headerSize)
+    {
+        this.headerSize = headerSize;
+    }
+
+    public void SetInitCS(int initCS)
+    {
+        this.initCS = initCS;
+    }
+
+    public void SetInitIP(int initIP)
+    {
+        this.initIP = initIP;
+    }
+
+    public void SetInitSP(int initSP)
+    {
+        this.initSP = initSP;
+    }
+
+    public void SetInitSS(int initSS)
+    {
+        this.initSS = initSS;
+    }
+
+    public void SetMaxAlloc(int maxAlloc)
+    {
+        this.maxAlloc = maxAlloc;
+    }
+
+    public void SetMinAlloc(int minAlloc)
+    {
+        this.minAlloc = minAlloc;
+    }
+
+    public void SetOverlay(int overlay)
+    {
+        this.overlay = overlay;
+    }
+
+    public void SetPages(int pages)
+    {
+        this.pages = pages;
     }
 
     public void SetProgramImage(byte[] programImage)
@@ -210,14 +228,19 @@ public class ExeFile
         this.relocationTable = relocationTable;
     }
 
-    public IList<SegmentedAddress> GetRelocationTable()
+    public void SetRelocItems(int relocItems)
     {
-        return relocationTable;
+        this.relocItems = relocItems;
     }
 
-    public int GetCodeSize()
+    public void SetRelocTable(int relocTable)
     {
-        return programImage.Length;
+        this.relocTable = relocTable;
+    }
+
+    public void SetSignature(string signature)
+    {
+        this.signature = signature;
     }
 
     public override string ToString()

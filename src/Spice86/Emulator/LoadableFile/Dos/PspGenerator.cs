@@ -9,8 +9,8 @@ using Spice86.Utils;
 
 public class PspGenerator
 {
-    private static readonly int LAST_FREE_SEGMENT_OFFSET = 0x02;
     private static readonly int DTA_OR_COMMAND_LINE_OFFSET = 0x80;
+    private static readonly int LAST_FREE_SEGMENT_OFFSET = 0x02;
     private readonly Machine machine;
 
     public PspGenerator(Machine machine)

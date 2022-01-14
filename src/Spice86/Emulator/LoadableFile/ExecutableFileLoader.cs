@@ -14,11 +14,10 @@ using System.IO;
 /// </summary>
 public abstract class ExecutableFileLoader
 {
-    private static readonly ILogger _logger = Log.Logger.ForContext<ExecutableFileLoader>();
-
-    protected Machine _machine;
     protected Cpu _cpu;
+    protected Machine _machine;
     protected Memory _memory;
+    private static readonly ILogger _logger = Log.Logger.ForContext<ExecutableFileLoader>();
 
     protected ExecutableFileLoader(Machine machine)
     {

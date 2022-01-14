@@ -8,8 +8,8 @@ namespace Spice86.Emulator.Devices.Timer;
 public class TimeCounterActivator : ICounterActivator
 {
     private readonly double _multiplier;
-    private long _timeBetweenTicks;
     private long _lastActivationTime = DateTime.Now.Ticks;
+    private long _timeBetweenTicks;
 
     public TimeCounterActivator(double multiplier)
     {

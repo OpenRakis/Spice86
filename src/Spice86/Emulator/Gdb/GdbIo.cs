@@ -15,15 +15,15 @@ using System.Text;
 public class GdbIo : IDisposable
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbIo>();
-    private readonly Socket serverSocket;
-    private readonly TcpListener tcpListener;
-    private readonly Socket socket;
+    private readonly GdbFormatter gdbFormatter = new();
     private readonly StreamReader input;
     private readonly StreamWriter output;
-    private NetworkStream stream;
     private readonly List<byte> rawCommand = new();
-    private readonly GdbFormatter gdbFormatter = new();
+    private readonly Socket serverSocket;
+    private readonly Socket socket;
+    private readonly TcpListener tcpListener;
     private bool disposedValue;
+    private NetworkStream stream;
 
     public GdbIo(int port)
     {
@@ -37,6 +37,35 @@ public class GdbIo : IDisposable
         stream = new NetworkStream(socket);
         input = new StreamReader(stream);
         output = new StreamWriter(stream);
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    public string GenerateMessageToDisplayResponse(string message)
+    {
+        string toSend = message + '\n';
+        return this.GenerateResponse(ConvertUtils.ByteArrayToHexString(Encoding.UTF8.GetBytes(toSend)));
+    }
+
+    public string GenerateResponse(string data)
+    {
+        int checksum = 0;
+        foreach (byte b in Encoding.UTF8.GetBytes(data))
+        {
+            checksum += b;
+        }
+
+        return "+$" + data + '#' + gdbFormatter.FormatValueAsHex8(checksum);
+    }
+
+    public string GenerateUnsupportedResponse()
+    {
+        return "";
     }
 
     public List<byte> GetRawCommand()
@@ -69,24 +98,6 @@ public class GdbIo : IDisposable
         return GetPayload(resBuilder);
     }
 
-    private string GetPayload(StringBuilder resBuilder)
-    {
-        string res = resBuilder.ToString();
-        int beginning = res.IndexOf('$');
-        if (beginning != -1)
-        {
-            return res[(beginning + 1)..];
-        }
-
-        beginning = res.IndexOf('+');
-        if (beginning != -1)
-        {
-            return res[(beginning + 1)..];
-        }
-
-        return res;
-    }
-
     public void SendResponse(string data)
     {
         if (data != null)
@@ -94,28 +105,6 @@ public class GdbIo : IDisposable
             _logger.Information("Sending response {@ResponseData}", data);
             output.Write(Encoding.UTF8.GetBytes(data));
         }
-    }
-
-    public string GenerateMessageToDisplayResponse(string message)
-    {
-        string toSend = message + '\n';
-        return this.GenerateResponse(ConvertUtils.ByteArrayToHexString(Encoding.UTF8.GetBytes(toSend)));
-    }
-
-    public string GenerateResponse(string data)
-    {
-        int checksum = 0;
-        foreach (byte b in Encoding.UTF8.GetBytes(data))
-        {
-            checksum += b;
-        }
-
-        return "+$" + data + '#' + gdbFormatter.FormatValueAsHex8(checksum);
-    }
-
-    public string GenerateUnsupportedResponse()
-    {
-        return "";
     }
 
     protected void Dispose(bool disposing)
@@ -132,10 +121,21 @@ public class GdbIo : IDisposable
         }
     }
 
-    public void Dispose()
+    private string GetPayload(StringBuilder resBuilder)
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
+        string res = resBuilder.ToString();
+        int beginning = res.IndexOf('$');
+        if (beginning != -1)
+        {
+            return res[(beginning + 1)..];
+        }
+
+        beginning = res.IndexOf('+');
+        if (beginning != -1)
+        {
+            return res[(beginning + 1)..];
+        }
+
+        return res;
     }
 }

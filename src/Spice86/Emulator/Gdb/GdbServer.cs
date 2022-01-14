@@ -11,11 +11,17 @@ using System.Threading.Tasks;
 public class GdbServer : IDisposable
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbServer>();
+    private string defaultDumpDirectory;
+    private bool disposedValue;
     private Machine machine;
     private bool running = true;
     private bool started = false;
-    private string defaultDumpDirectory;
-    private bool disposedValue;
+
+    private GdbServer(Machine machine, string defaultDumpDirectory)
+    {
+        this.machine = machine;
+        this.defaultDumpDirectory = defaultDumpDirectory;
+    }
 
     public async Task<GdbServer> CreateAsync(Machine machine, int port, string defaultDumpDirectory)
     {
@@ -24,18 +30,38 @@ public class GdbServer : IDisposable
         return server;
     }
 
-    private GdbServer(Machine machine, string defaultDumpDirectory)
+    public void Dispose()
     {
-        this.machine = machine;
-        this.defaultDumpDirectory = defaultDumpDirectory;
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 
-    private async Task StartAsync(int port)
+    protected void Dispose(bool disposing)
     {
-        // wait for thread to start
-        while (!started)
+        if (!disposedValue)
         {
-            await RunServerAsync(port);
+            if (disposing)
+            {
+                //TODO: Dispose managed resources here
+                running = false;
+            }
+            disposedValue = true;
+        }
+    }
+
+    private void AcceptOneConnection(GdbIo gdbIo)
+    {
+        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo, machine, defaultDumpDirectory);
+        gdbCommandHandler.PauseEmulator();
+        this.started = true;
+        while (gdbCommandHandler.IsConnected())
+        {
+            string command = gdbIo.ReadCommand();
+            if (string.IsNullOrWhiteSpace(command) == false)
+            {
+                gdbCommandHandler.RunCommand(command);
+            }
         }
     }
 
@@ -68,38 +94,12 @@ public class GdbServer : IDisposable
         }
     }
 
-    private void AcceptOneConnection(GdbIo gdbIo)
+    private async Task StartAsync(int port)
     {
-        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo, machine, defaultDumpDirectory);
-        gdbCommandHandler.PauseEmulator();
-        this.started = true;
-        while (gdbCommandHandler.IsConnected())
+        // wait for thread to start
+        while (!started)
         {
-            string command = gdbIo.ReadCommand();
-            if (string.IsNullOrWhiteSpace(command) == false)
-            {
-                gdbCommandHandler.RunCommand(command);
-            }
+            await RunServerAsync(port);
         }
-    }
-
-    protected void Dispose(bool disposing)
-    {
-        if (!disposedValue)
-        {
-            if (disposing)
-            {
-                //TODO: Dispose managed resources here
-                running = false;
-            }
-            disposedValue = true;
-        }
-    }
-
-    public void Dispose()
-    {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }

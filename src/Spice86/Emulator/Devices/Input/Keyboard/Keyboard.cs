@@ -13,8 +13,8 @@ using Spice86.Gui;
 /// </summary>
 public class Keyboard : DefaultIOPortHandler
 {
-    private static readonly ILogger _logger = Log.Logger.ForContext<Keyboard>();
     private const int KeyboardIoPort = 0x60;
+    private static readonly ILogger _logger = Log.Logger.ForContext<Keyboard>();
     private readonly KeyScancodeConverter _keyScancodeConverter = new();
     private readonly Gui gui;
 
@@ -26,11 +26,6 @@ public class Keyboard : DefaultIOPortHandler
             gui.SetOnKeyPressedEvent(() => this.OnKeyEvent());
             gui.SetOnKeyReleasedEvent(() => this.OnKeyEvent());
         }
-    }
-
-    public void OnKeyEvent()
-    {
-        cpu.ExternalInterrupt(9);
     }
 
     public int? GetScancode()
@@ -56,11 +51,6 @@ public class Keyboard : DefaultIOPortHandler
         return (byte)scancode;
     }
 
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
-    {
-        ioPortDispatcher.AddIOPortHandler(KeyboardIoPort, this);
-    }
-
     public override int Inb(int port)
     {
         int? scancode = GetScancode();
@@ -70,5 +60,15 @@ public class Keyboard : DefaultIOPortHandler
         }
 
         return scancode.Value;
+    }
+
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher)
+    {
+        ioPortDispatcher.AddIOPortHandler(KeyboardIoPort, this);
+    }
+
+    public void OnKeyEvent()
+    {
+        cpu.ExternalInterrupt(9);
     }
 }

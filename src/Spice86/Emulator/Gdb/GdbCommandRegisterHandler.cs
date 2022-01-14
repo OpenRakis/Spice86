@@ -12,9 +12,9 @@ using System.Text;
 public class GdbCommandRegisterHandler
 {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandRegisterHandler>();
+    private GdbFormatter gdbFormatter = new GdbFormatter();
     private GdbIo gdbIo;
     private Machine machine;
-    private GdbFormatter gdbFormatter = new GdbFormatter();
 
     public GdbCommandRegisterHandler(GdbIo gdbIo, Machine machine)
     {
@@ -22,13 +22,17 @@ public class GdbCommandRegisterHandler
         this.machine = machine;
     }
 
-    public string WriteRegister(string commandContent)
+    public string ReadAllRegisters()
     {
-        String[] split = commandContent.Split("=");
-        uint registerIndex = (uint)ConvertUtils.ParseHex32(split[0]);
-        uint registerValue = (uint)ConvertUtils.Swap32((int)ConvertUtils.ParseHex32(split[1]));
-        SetRegisterValue((int)registerIndex, (int)registerValue);
-        return gdbIo.GenerateResponse("OK");
+        _logger.Information("Reading all registers");
+        StringBuilder response = new(2 * 4 * 16);
+        for (int i = 0; i < 16; i++)
+        {
+            string regValue = gdbFormatter.FormatValueAsHex32(GetRegisterValue(i));
+            response.Append(regValue);
+        }
+
+        return gdbIo.GenerateResponse(response.ToString());
     }
 
     public string ReadRegister(string commandContent)
@@ -66,17 +70,13 @@ public class GdbCommandRegisterHandler
         }
     }
 
-    public string ReadAllRegisters()
+    public string WriteRegister(string commandContent)
     {
-        _logger.Information("Reading all registers");
-        StringBuilder response = new(2 * 4 * 16);
-        for (int i = 0; i < 16; i++)
-        {
-            string regValue = gdbFormatter.FormatValueAsHex32(GetRegisterValue(i));
-            response.Append(regValue);
-        }
-
-        return gdbIo.GenerateResponse(response.ToString());
+        String[] split = commandContent.Split("=");
+        uint registerIndex = (uint)ConvertUtils.ParseHex32(split[0]);
+        uint registerValue = (uint)ConvertUtils.Swap32((int)ConvertUtils.ParseHex32(split[1]));
+        SetRegisterValue((int)registerIndex, (int)registerValue);
+        return gdbIo.GenerateResponse("OK");
     }
 
     private int GetRegisterValue(int regIndex)
@@ -105,6 +105,22 @@ public class GdbCommandRegisterHandler
         return 0;
     }
 
+    private int GetSegmentRegisterIndex(int gdbRegisterIndex)
+    {
+        int registerIndex = gdbRegisterIndex - 10;
+        if (registerIndex < 3)
+        {
+            return registerIndex + 1;
+        }
+
+        if (registerIndex == 3)
+        {
+            return 0;
+        }
+
+        return registerIndex;
+    }
+
     private void SetRegisterValue(int regIndex, int value)
     {
         State state = machine.GetCpu().GetState();
@@ -124,21 +140,5 @@ public class GdbCommandRegisterHandler
         {
             state.GetSegmentRegisters().SetRegister(GetSegmentRegisterIndex(regIndex), value);
         }
-    }
-
-    private int GetSegmentRegisterIndex(int gdbRegisterIndex)
-    {
-        int registerIndex = gdbRegisterIndex - 10;
-        if (registerIndex < 3)
-        {
-            return registerIndex + 1;
-        }
-
-        if (registerIndex == 3)
-        {
-            return 0;
-        }
-
-        return registerIndex;
     }
 }

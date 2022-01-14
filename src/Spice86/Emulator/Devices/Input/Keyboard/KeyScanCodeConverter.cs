@@ -155,6 +155,17 @@ public class KeyScancodeConverter
         _scanCodeToAscii.Add(0x4E, 0x2B);
     }
 
+    public int GetAsciiCode(int scancode)
+    {
+        int keypressedScancode = scancode;
+        if (keypressedScancode > 0x7F)
+        {
+            keypressedScancode -= 0x80;
+        }
+
+        return _scanCodeToAscii[keypressedScancode];
+    }
+
     public int GetKeyPressedScancode(Key keyCode)
     {
         return _keyPressedScanCode[keyCode];
@@ -169,16 +180,5 @@ public class KeyScancodeConverter
         }
 
         return null;
-    }
-
-    public int GetAsciiCode(int scancode)
-    {
-        int keypressedScancode = scancode;
-        if (keypressedScancode > 0x7F)
-        {
-            keypressedScancode -= 0x80;
-        }
-
-        return _scanCodeToAscii[keypressedScancode];
     }
 }

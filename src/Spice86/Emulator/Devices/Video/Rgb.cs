@@ -5,18 +5,13 @@
 /// </summary>
 public class Rgb
 {
-    private int r;
-    private int g;
     private int b;
+    private int g;
+    private int r;
 
-    public int GetR()
+    public int GetB()
     {
-        return r;
-    }
-
-    public void SetR(int r)
-    {
-        this.r = r;
+        return b;
     }
 
     public int GetG()
@@ -24,19 +19,24 @@ public class Rgb
         return g;
     }
 
-    public void SetG(int g)
+    public int GetR()
     {
-        this.g = g;
-    }
-
-    public int GetB()
-    {
-        return b;
+        return r;
     }
 
     public void SetB(int b)
     {
         this.b = b;
+    }
+
+    public void SetG(int g)
+    {
+        this.g = g;
+    }
+
+    public void SetR(int r)
+    {
+        this.r = r;
     }
 
     public int ToArgb()

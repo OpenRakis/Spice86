@@ -22,14 +22,41 @@ public class GdbCommandBreakpointHandler
         this.machine = machine;
     }
 
+    public string AddBreakpoint(string commandContent)
+    {
+        BreakPoint breakPoint = ParseBreakPoint(commandContent);
+        machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _logger.Debug("Breakpoint added!\\n{@BreakPoint}", breakPoint);
+        return gdbIo.GenerateResponse("OK");
+    }
+
+    public string ContinueCommand()
+    {
+        resumeEmulatorOnCommandEnd = true;
+        machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
+
+        // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
+        return gdbIo.GenerateResponse("OK");
+    }
+
     public bool IsResumeEmulatorOnCommandEnd()
     {
         return resumeEmulatorOnCommandEnd;
     }
 
-    public void SetResumeEmulatorOnCommandEnd(bool resumeEmulatorOnCommandEnd)
+    public void OnBreakPointReached(BreakPoint breakPoint)
     {
-        this.resumeEmulatorOnCommandEnd = resumeEmulatorOnCommandEnd;
+        _logger.Debug("Breakpoint reached!\\n{@BreakPoint}", breakPoint);
+        machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
+        resumeEmulatorOnCommandEnd = false;
+        try
+        {
+            gdbIo.SendResponse(gdbIo.GenerateResponse("S05"));
+        }
+        catch (IOException e)
+        {
+            _logger.Error(e, "IOException while sending breakpoint info");
+        }
     }
 
     public BreakPoint? ParseBreakPoint(String command)
@@ -62,20 +89,17 @@ public class GdbCommandBreakpointHandler
         }
     }
 
-    public string AddBreakpoint(string commandContent)
-    {
-        BreakPoint breakPoint = ParseBreakPoint(commandContent);
-        machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
-        _logger.Debug("Breakpoint added!\\n{@BreakPoint}", breakPoint);
-        return gdbIo.GenerateResponse("OK");
-    }
-
     public string RemoveBreakpoint(string commandContent)
     {
         BreakPoint breakPoint = ParseBreakPoint(commandContent);
         machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, false);
         _logger.Debug("Breakpoint removed!\\n{@BreakPoint}", breakPoint);
         return gdbIo.GenerateResponse("OK");
+    }
+
+    public void SetResumeEmulatorOnCommandEnd(bool resumeEmulatorOnCommandEnd)
+    {
+        this.resumeEmulatorOnCommandEnd = resumeEmulatorOnCommandEnd;
     }
 
     public string Step()
@@ -89,29 +113,5 @@ public class GdbCommandBreakpointHandler
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return null;
-    }
-
-    public void OnBreakPointReached(BreakPoint breakPoint)
-    {
-        _logger.Debug("Breakpoint reached!\\n{@BreakPoint}", breakPoint);
-        machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
-        resumeEmulatorOnCommandEnd = false;
-        try
-        {
-            gdbIo.SendResponse(gdbIo.GenerateResponse("S05"));
-        }
-        catch (IOException e)
-        {
-            _logger.Error(e, "IOException while sending breakpoint info");
-        }
-    }
-
-    public string ContinueCommand()
-    {
-        resumeEmulatorOnCommandEnd = true;
-        machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
-
-        // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
-        return gdbIo.GenerateResponse("OK");
     }
 }

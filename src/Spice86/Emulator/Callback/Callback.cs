@@ -4,8 +4,8 @@ using System;
 
 public class Callback : ICallback
 {
-    private readonly Action _runnable;
     private readonly int _index;
+    private readonly Action _runnable;
 
     public Callback(int index, Action runnable)
     {

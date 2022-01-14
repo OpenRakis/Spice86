@@ -8,9 +8,9 @@ using Spice86.Emulator.Machine;
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler
 {
-    private KeyScancodeConverter _keyScancodeConverter = new();
     private BiosKeyboardBuffer _biosKeyboardBuffer;
     private Keyboard _keyboard;
+    private KeyScancodeConverter _keyScancodeConverter = new();
 
     public BiosKeyboardInt9Handler(Machine machine) : base(machine)
     {
@@ -22,6 +22,11 @@ public class BiosKeyboardInt9Handler : InterruptHandler
     public BiosKeyboardBuffer GetBiosKeyboardBuffer()
     {
         return _biosKeyboardBuffer;
+    }
+
+    public override int GetIndex()
+    {
+        return 0x9;
     }
 
     public override void Run()
@@ -39,10 +44,5 @@ public class BiosKeyboardInt9Handler : InterruptHandler
         }
 
         _biosKeyboardBuffer.AddKeyCode((scancode.Value << 8) | ascii.Value);
-    }
-
-    public override int GetIndex()
-    {
-        return 0x9;
     }
 }
