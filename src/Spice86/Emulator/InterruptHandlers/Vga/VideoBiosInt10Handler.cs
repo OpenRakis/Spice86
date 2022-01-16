@@ -49,13 +49,13 @@ public class VideoBiosInt10Handler : InterruptHandler {
         } else if (op == 0x17) {
             GetBlockOfDacColorRegisters();
         } else {
-            throw new UnhandledOperationException(machine, $"Unhandled operation for get/set palette registers op={ConvertUtils.ToHex8(op)}");
+            throw new UnhandledOperationException(_machine, $"Unhandled operation for get/set palette registers op={ConvertUtils.ToHex8(op)}");
         }
     }
 
     public int GetVideoModeValue() {
         _logger.Information("GET VIDEO MODE");
-        return memory.GetUint8(BIOS_VIDEO_MODE_ADDRESS);
+        return _memory.GetUint8(BIOS_VIDEO_MODE_ADDRESS);
     }
 
     public void GetVideoStatus() {
@@ -67,7 +67,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
 
     public void InitRam() {
         this.SetVideoModeValue(VgaCard.MODE_320_200_256);
-        memory.SetUint16(CRT_IO_PORT_ADDRESS_IN_RAM, VgaCard.CRT_IO_PORT);
+        _memory.SetUint16(CRT_IO_PORT_ADDRESS_IN_RAM, VgaCard.CRT_IO_PORT);
     }
 
     public override void Run() {
@@ -124,7 +124,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
             _logger.Information("SET VIDEO MODE {@VideoMode}", ConvertUtils.ToHex8(mode));
         }
 
-        memory.SetUint8(BIOS_VIDEO_MODE_ADDRESS, (byte)mode);
+        _memory.SetUint8(BIOS_VIDEO_MODE_ADDRESS, (byte)mode);
         _vgaCard.SetVideoModeValue(mode);
     }
 
@@ -156,9 +156,9 @@ public class VideoBiosInt10Handler : InterruptHandler {
             _state.SetBX(0x08);
         } else if (op == 1) {
             _logger.Information("SET VIDEO DISPLAY COMBINATION");
-            throw new UnhandledOperationException(machine, "Unimplemented");
+            throw new UnhandledOperationException(_machine, "Unimplemented");
         } else {
-            throw new UnhandledOperationException(machine,
+            throw new UnhandledOperationException(_machine,
                 $"Unhandled operation for videoDisplayCombination op={ConvertUtils.ToHex8(op)}");
         }
         _state.SetAL(0x1A);
@@ -181,7 +181,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
             _state.SetCL(0x09);
             return;
         }
-        throw new UnhandledOperationException(machine,
+        throw new UnhandledOperationException(_machine,
         $"Unhandled operation for videoSubsystemConfiguration op={ConvertUtils.ToHex8(op)}");
     }
 }

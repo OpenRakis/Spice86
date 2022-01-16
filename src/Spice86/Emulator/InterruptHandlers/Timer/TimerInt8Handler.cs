@@ -15,7 +15,7 @@ public class TimerInt8Handler : InterruptHandler {
 
     public TimerInt8Handler(Machine machine) : base(machine) {
         timer = machine.GetTimer();
-        memory = machine.GetMemory();
+        _memory = machine.GetMemory();
         pic = machine.GetPic();
     }
 
@@ -24,7 +24,7 @@ public class TimerInt8Handler : InterruptHandler {
     }
 
     public int GetTickCounterValue() {
-        return (int)memory.GetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS);
+        return (int)_memory.GetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS);
     }
 
     public override void Run() {
@@ -34,6 +34,6 @@ public class TimerInt8Handler : InterruptHandler {
     }
 
     public void SetTickCounterValue(int value) {
-        memory.SetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS, (uint)value);
+        _memory.SetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS, (uint)value);
     }
 }

@@ -15,11 +15,11 @@ public abstract class IndexBasedDispatcher<T> where T : IRunnable {
     }
 
     public void Run(int index) {
-        if (_dispatchTable.TryGetValue(index, out var handler) == false) {
+        if (_dispatchTable.TryGetValue(index, out ICallback? handler) == false) {
             throw GenerateUnhandledOperationException(index);
         }
 
-        handler.Run();
+        handler?.Run();
     }
 
     protected abstract UnhandledOperationException GenerateUnhandledOperationException(int index);
