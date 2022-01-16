@@ -54,7 +54,7 @@ public class GdbIo : IDisposable {
             checksum += b;
         }
 
-        return "+$" + data + '#' + gdbFormatter.FormatValueAsHex8(checksum);
+        return $"+${data}#{gdbFormatter.FormatValueAsHex8(checksum)}";
     }
 
     public string GenerateUnsupportedResponse() {
@@ -96,6 +96,10 @@ public class GdbIo : IDisposable {
         if (!disposedValue) {
             if (disposing) {
                 // dispose managed state (managed objects)
+                input.Close();
+                output.Flush();
+                output.Close();
+                tcpListener.Stop();
                 serverSocket.Close();
                 socket.Close();
             }

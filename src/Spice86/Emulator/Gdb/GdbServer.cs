@@ -6,7 +6,6 @@ using Spice86.Emulator.Machine;
 
 using System;
 using System.IO;
-using System.Threading.Tasks;
 
 public class GdbServer : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbServer>();
@@ -16,15 +15,10 @@ public class GdbServer : IDisposable {
     private bool running = true;
     private bool started = false;
 
-    private GdbServer(Machine machine, string defaultDumpDirectory) {
+    public GdbServer(Machine machine, int port, string defaultDumpDirectory) {
         this.machine = machine;
         this.defaultDumpDirectory = defaultDumpDirectory;
-    }
-
-    public async Task<GdbServer> CreateAsync(Machine machine, int port, string defaultDumpDirectory) {
-        var server = new GdbServer(machine, defaultDumpDirectory);
-        await StartAsync(port);
-        return server;
+        Start(port);
     }
 
     public void Dispose() {
@@ -36,7 +30,6 @@ public class GdbServer : IDisposable {
     protected void Dispose(bool disposing) {
         if (!disposedValue) {
             if (disposing) {
-                //TODO: Dispose managed resources here
                 running = false;
             }
             disposedValue = true;
@@ -55,19 +48,17 @@ public class GdbServer : IDisposable {
         }
     }
 
-    private async Task RunServerAsync(int port) {
+    private void RunServer(int port) {
         _logger.Information("Starting GDB server");
         try {
-            await Task.Factory.StartNew(() => {
-                while (running) {
-                    try {
-                        var gdbIo = new GdbIo(port);
-                        AcceptOneConnection(gdbIo);
-                    } catch (IOException e) {
-                        _logger.Error(e, "Error in the GDB server, restarting it...");
-                    }
+            while (running) {
+                try {
+                    var gdbIo = new GdbIo(port);
+                    AcceptOneConnection(gdbIo);
+                } catch (IOException e) {
+                    _logger.Error(e, "Error in the GDB server, restarting it...");
                 }
-            });
+            }
         } finally {
             machine.GetCpu().SetRunning(false);
             machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
@@ -75,10 +66,10 @@ public class GdbServer : IDisposable {
         }
     }
 
-    private async Task StartAsync(int port) {
+    private void Start(int port) {
         // wait for thread to start
         while (!started) {
-            await RunServerAsync(port);
+            RunServer(port);
         }
     }
 }

@@ -20,7 +20,6 @@ using System.Text;
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
 /// Custom commands list can be seen with the monitor help command.
-/// TODO : Complete it, along with the Gdb namespace classes themsevles !
 /// </summary>
 public class GdbCustomCommandsHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCustomCommandsHandler>();
