@@ -22,7 +22,7 @@ using System.Linq;
 /// http://ref.x86asm.net/coder32.html </li><li> Instructions implementation details:
 /// https://www.felixcloutier.com/x86/ </li><li> Pure 8086 instructions:
 /// https://jbwyatt.com/253/emu/8086_instruction_set.html </li></ul>
-/// TODO: Complete it !
+/// TODO: Fix it !
 /// </summary>
 public class Cpu {
 

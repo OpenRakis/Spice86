@@ -1,0 +1,293 @@
+﻿namespace Spice86.Emulator.Gdb;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+using Serilog;
+
+using Spice86.Emulator.Devices.Video;
+using Spice86.Emulator.Function.Dump;
+using Spice86.Emulator.Cpu;
+using Spice86.Emulator.Machine;
+using Spice86.Emulator.Memory;
+using Spice86.Emulator.Machine.Breakpoint;
+using Spice86.Utils;
+using Spice86.Emulator.Function;
+using Spice86.Ui;
+
+
+/// <summary>
+/// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
+/// Custom commands list can be seen with the monitor help command.
+/// TODO : Complete it, along with the Gdb namespace classes themsevles !
+/// </summary>
+public class GdbCustomCommandsHandler {
+    private static readonly ILogger _logger = Log.Logger.ForContext<GdbCustomCommandsHandler>();
+    private GdbIo _gdbIo;
+    private Machine _machine;
+    private Func<BreakPoint> _onBreakpointReached;
+    private string _defaultDumpDirectory;
+    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Func<BreakPoint> onBreakpointReached, string defaultDumpDirectory) {
+        this._gdbIo = gdbIo;
+        this._machine = machine;
+        this._onBreakpointReached = onBreakpointReached;
+        this._defaultDumpDirectory = defaultDumpDirectory;
+    }
+
+    public virtual string HandleCustomCommands(string command) {
+        String[] commandSplit = command.Split(",");
+        if (commandSplit.Length != 2) {
+            return _gdbIo.GenerateResponse("");
+        }
+
+        byte[] customHex = ConvertUtils.HexToByteArray(commandSplit[1]);
+        string custom = Encoding.UTF8.GetString(customHex);
+        String[] customSplit = custom.Split(" ");
+        return ExecuteCustomCommand(customSplit);
+    }
+
+    private string ExecuteCustomCommand(string[] customSplit) {
+        throw new NotImplementedException();
+    }
+
+    private string DumpFunctionsCsv(String[] args) {
+        return DumpFunctionWithFormat(args, "Functions.csv", new CsvFunctionInformationToStringConverter());
+    }
+
+    private string DumpFunctions(String[] args) {
+        return DumpFunctionWithFormat(args, "FunctionsDetails.txt", new DetailedFunctionInformationToStringConverter());
+    }
+
+    private string DumpJavaStubs(String[] args) {
+        return DumpFunctionWithFormat(args, "JavaStubs.java", new CSharpStubToStringConverter());
+    }
+
+    private string DumpAll() {
+        string[] args = Array.Empty<string>();
+        DumpMemory(args);
+        DumpFunctionsCsv(args);
+        DumpFunctions(args);
+        DumpJavaStubs(args);
+        return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_defaultDumpDirectory}");
+    }
+
+    private string PeekRet(String[] args) {
+        if (args.Length == 1) {
+            return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn());
+        } else {
+            string returnType = args[1];
+            bool parsed = Enum.TryParse(typeof(CallType), returnType, out var callType);
+            if (parsed == false) {
+                return _gdbIo.GenerateMessageToDisplayResponse("Could not understand " + returnType + " as a return type. Valid values are: " + GetValidRetValues());
+            }
+            if(callType is CallType) {
+                return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn((CallType)callType));
+            }
+        }
+        return "";
+    }
+
+    private string InvalidCommand(string command) {
+        return Help("Invalid command " + command + "\\n");
+    }
+
+    private string Help(string v) {
+        throw new NotImplementedException();
+    }
+
+    private string GetValidRetValues() {
+        return string.Join(", ", Enum.GetNames(typeof(CallType)));
+    }
+
+    private string State() {
+        string state = _machine.GetCpu().GetState().ToString();
+        return _gdbIo.GenerateMessageToDisplayResponse(state);
+    }
+
+    private string BreakStop() {
+        BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, OnBreakpointReached, false);
+        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _logger.Debug("Breakpoint added for end of execution!\\n{@BreakPoint}", breakPoint);
+        return _gdbIo.GenerateMessageToDisplayResponse("Breakpoint added for end of execution.");
+    }
+
+    private string CallStack() {
+        return _gdbIo.GenerateMessageToDisplayResponse(_machine.DumpCallStack());
+    }
+
+    private string BreakCycles(String[] args) {
+        if (args.Length < 2) {
+            return InvalidCommand("breakCycles can only work with one argument.");
+        }
+
+        string cyclesToWaitString = args[1];
+        if (!int.TryParse(cyclesToWaitString, out _)) {
+            return InvalidCommand($"breakCycles argument needs to be a number. You gave {cyclesToWaitString}");
+        }
+
+        long cyclesToWait = long.Parse(cyclesToWaitString);
+        long currentCycles = _machine.GetCpu().GetState().GetCycles();
+        long cyclesBreak = currentCycles + cyclesToWait;
+        var breakPoint = new BreakPoint(BreakPointType.CYCLES, cyclesBreak, OnBreakpointReached, true);
+        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _logger.Debug("Breakpoint added for cycles!\\n{@BreakPoint}", breakPoint);
+        return _gdbIo.GenerateMessageToDisplayResponse("Breakpoint added for cycles. Current cycles is " + currentCycles + ". Will wait for " + cyclesToWait + ". Will stop at " + cyclesBreak);
+    }
+
+    private void OnBreakpointReached(BreakPoint obj) {
+        throw new NotImplementedException();
+    }
+
+    private string DumpMemory(String[] args) {
+        string fileName = GetFirstArgumentOrDefaultFile(args, "MemoryDump.bin");
+        return DoFileAction(fileName, (f) => _machine.GetMemory().DumpToFile(f), "Error while dumping memory");
+    }
+
+    private string DumpFunctionWithFormat(String[] args, string defaultSuffix, FunctionInformationToStringConverter converter) {
+        string fileName = GetFirstArgumentOrDefaultFile(args, defaultSuffix);
+        return DoFileAction(fileName, (f) => {
+            Cpu cpu = _machine.GetCpu();
+            new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.GetStaticAddressesRecorder(), cpu.GetFunctionHandler(), cpu.GetFunctionHandlerInExternalInterrupt());
+        }, "Error while dumping functions");
+    }
+
+    private string DoFileAction(string fileName, Action<string> fileNameConsumer, string errorMessageInCaseIOException) {
+        try {
+            fileNameConsumer.Invoke(fileName);
+        } catch (IOException e) {
+            _logger.Error(e, "{@ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
+            string errorWithException = errorMessageInCaseIOException + ": " + e.Message;
+            return _gdbIo.GenerateMessageToDisplayResponse(errorWithException);
+        }
+
+        return ResultIsInFile(fileName);
+    }
+
+    private string ResultIsInFile(string fileName) {
+        return _gdbIo.GenerateMessageToDisplayResponse("Result is in file " + fileName);
+    }
+
+    private string GetFirstArgumentOrDefaultFile(String[] args, string defaultSuffix) {
+        if (args.Length >= 2) {
+            return args[1];
+        }
+
+        return _defaultDumpDirectory + "/spice86dump" + defaultSuffix;
+    }
+
+    private string Vbuffer(String[] args) {
+        try {
+            string action = ExtractAction(args);
+            Gui gui = _machine.GetGui();
+            VgaCard vgaCard = _machine.GetVgaCard();
+
+            // Actions for 1 parameter
+            if ("refresh".Equals(action)) {
+                Memory memory = _machine.GetMemory();
+                gui.Draw(memory.GetRam(), vgaCard.GetVgaDac().GetRgbs());
+                return _gdbIo.GenerateResponse("");
+            } else if ("list".Equals(action)) {
+                StringBuilder listBuilder = new StringBuilder();
+                gui.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => x.Value + "\\n").ToList().ForEach(x => listBuilder.AppendLine(x));
+                string list = listBuilder.ToString();
+                return _gdbIo.GenerateMessageToDisplayResponse(list);
+            }
+
+            int address = ExtractAddress(args, action);
+            if ("remove".Equals(action)) {
+                gui.RemoveBuffer(address);
+                return _gdbIo.GenerateMessageToDisplayResponse("Removed buffer at address " + address);
+            }
+
+            int[] resolution = ExtractResolution(args, action);
+            double scale = ExtractScale(args);
+            if ("add".Equals(action)) {
+                VideoBuffer existing = gui.GetVideoBuffers()[address];
+                if (existing != null) {
+                    return _gdbIo.GenerateMessageToDisplayResponse("Buffer already exists: " + existing);
+                }
+
+                gui.AddBuffer(address, scale, resolution[0], resolution[1], null);
+                return _gdbIo.GenerateMessageToDisplayResponse("Added buffer to view address " + address);
+            } else {
+                return _gdbIo.GenerateMessageToDisplayResponse("Could not understand action " + action);
+            }
+        } catch (ArgumentException e) {
+            return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
+        }
+    }
+
+    private string ExtractAction(String[] args) {
+        if (args.Length >= 2) {
+            return args[1];
+        }
+
+        throw new ArgumentException("You need to specify an action. Valid actions are [refresh, add, remove]");
+    }
+
+    private int ExtractAddress(String[] args, string action) {
+        if (args.Length < 3) {
+            throw new ArgumentException("You need to specify an address for action " + action + ". Format is 0x12AB (hex) or 1234 (decimal)");
+        }
+
+        string addressString = args[2];
+        try {
+            return ParseAddress(addressString);
+        } catch (FormatException nfe) {
+            throw new ArgumentException($"Could not parse address {addressString}", nfe);
+        }
+    }
+
+    private int ParseAddress(string address) {
+        if (address.Contains("0x")) {
+            return (int)ConvertUtils.ParseHex32(address);
+        }
+
+        return int.Parse(address);
+    }
+
+    private int[] ExtractResolution(String[] args, string action) {
+        if (args.Length < 4) {
+            throw new ArgumentException("You need to specify a resolution for action " + action + ". Format is 320x200 for resolution");
+        }
+
+        string resolutionString = args[3];
+        return ParseResolution(resolutionString);
+    }
+
+    private int[] ParseResolution(string resolution) {
+        String[] split = resolution.Split("x");
+        if (split.Length != 2) {
+            throw new ArgumentException("Could not parse resolution " + resolution + ". Format is like 320x200");
+        }
+
+        try {
+            return new int[] { int.Parse(split[0]), int.Parse(split[1]) };
+        } catch (FormatException nfe) {
+            throw new ArgumentException("Could not parse numbers in resolution " + resolution, nfe);
+        }
+    }
+
+    private double ExtractScale(String[] args) {
+        if (args.Length != 5) {
+
+            // Not specified in input
+            return 1;
+        }
+
+        string scaleString = args[4];
+        if (!int.TryParse(scaleString, out var value)) {
+            throw new ArgumentException("Could not parse scale " + scaleString);
+        }
+
+        double scale = Double.Parse(scaleString);
+        if (scale < 0.1) {
+            throw new ArgumentException("Scale cannot be less than 0.1");
+        }
+
+        return scale;
+    }
+}

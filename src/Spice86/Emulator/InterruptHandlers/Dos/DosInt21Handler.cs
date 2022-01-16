@@ -8,9 +8,16 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-// TODO: Complete it
+
+/// <summary>
+/// TODO: Complete it !
+/// </summary>
 public class DosInt21Handler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<DosInt21Handler>();
+
+    /// <summary>
+    /// TODO : Fix it, the Jave original uses a different CharSet.
+    /// </summary>
 
     private static readonly CharSet CP850_CHARSET = CharSet.Ansi;
 

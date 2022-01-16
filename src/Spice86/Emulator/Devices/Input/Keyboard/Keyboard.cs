@@ -6,7 +6,7 @@ using Serilog;
 
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Machine;
-using Spice86.Gui;
+using Spice86.Ui;
 
 /// <summary>
 /// Basic implementation of a keyboard

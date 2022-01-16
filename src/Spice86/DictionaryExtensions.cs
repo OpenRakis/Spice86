@@ -19,7 +19,7 @@ internal static class DictionaryExtensions {
         if (dict is null) {
             return lambda.Invoke();
         }
-        if (dict.TryGetValue(key, out var value)) {
+        if (dict.TryGetValue(key, out TValue? value)) {
             return value;
         }
         value = lambda.Invoke();

@@ -19,7 +19,7 @@ using Spice86.Emulator.InterruptHandlers.Timer;
 using Spice86.Emulator.InterruptHandlers.Vga;
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Memory;
-using Spice86.Gui;
+using Spice86.Ui;
 
 using System;
 

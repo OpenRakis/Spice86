@@ -12,6 +12,9 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+/// <summary>
+/// TODO : Fix it !
+/// </summary>
 public class DosFileManager {
     public const int FileHandleOffset = 5;
     private const int MaxOpenFiles = 15;
