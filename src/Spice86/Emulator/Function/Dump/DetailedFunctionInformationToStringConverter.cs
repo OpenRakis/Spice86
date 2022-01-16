@@ -44,14 +44,14 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
 
     private string DumpReturns(Dictionary<FunctionReturn, List<SegmentedAddress>> returns, string prefix) {
         StringBuilder res = new StringBuilder();
-        foreach (var entry in returns) {
+        foreach (KeyValuePair<FunctionReturn, List<SegmentedAddress>> entry in returns) {
             FunctionReturn oneReturn = entry.Key;
             res.Append(" - ");
             res.Append(prefix);
             res.Append(": ");
             res.Append(oneReturn.ToString());
             res.Append('\n');
-            var targets = entry.Value;
+            List<SegmentedAddress>? targets = entry.Value;
             foreach (SegmentedAddress target in targets) {
                 res.Append("   - target: ");
                 res.Append(target);

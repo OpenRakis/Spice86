@@ -25,7 +25,7 @@ public abstract class FunctionInformationToStringConverter {
     /// Generates the footer of the file.
     /// </summary>
     /// <returns></returns>
-    public string GetFileFooter() {
+    public virtual string GetFileFooter() {
         return "";
     }
 
