@@ -1,14 +1,19 @@
 ﻿namespace Spice86.Ui;
 
 using Avalonia.Input;
+
 using Spice86.Emulator.Devices.Video;
+
 using System;
-using System.Collections.Generic;
 
 /// <summary>
 /// TODO : complete it, along with all the UI framework.
 /// </summary>
 public class Gui {
+
+    internal void AddBuffer(int address, double scale, int v1, int v2, object? p) {
+        throw new NotImplementedException();
+    }
 
     internal void Draw(byte[] vs, Rgb[] rgbs) {
         throw new NotImplementedException();
@@ -30,6 +35,10 @@ public class Gui {
         throw new NotImplementedException();
     }
 
+    internal VideoBuffer[] GetVideoBuffers() {
+        throw new NotImplementedException();
+    }
+
     internal int GetWidth() {
         throw new NotImplementedException();
     }
@@ -43,6 +52,10 @@ public class Gui {
     }
 
     internal bool IsRightButtonClicked() {
+        throw new NotImplementedException();
+    }
+
+    internal void RemoveBuffer(int address) {
         throw new NotImplementedException();
     }
 
@@ -63,18 +76,6 @@ public class Gui {
     }
 
     internal void SetResolution(int videoWidth, int videoHeight, int v) {
-        throw new NotImplementedException();
-    }
-
-    internal void RemoveBuffer(int address) {
-        throw new NotImplementedException();
-    }
-
-    internal VideoBuffer[] GetVideoBuffers() {
-        throw new NotImplementedException();
-    }
-
-    internal void AddBuffer(int address, double scale, int v1, int v2, object p) {
         throw new NotImplementedException();
     }
 }
