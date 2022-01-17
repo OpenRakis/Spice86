@@ -3,7 +3,7 @@
 using Serilog;
 
 using Spice86.Emulator.Callback;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 public class KeyboardInt16Handler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<KeyboardInt16Handler>();

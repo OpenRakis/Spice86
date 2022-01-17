@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Input.Keyboard;
 
 using Spice86.Emulator.Devices.Input.Keyboard;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// Crude implementation of Int9

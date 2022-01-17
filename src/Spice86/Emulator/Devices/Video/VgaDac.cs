@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Emulator.Devices.Video;
 
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// VGA Digital Analog Converter Implementation.

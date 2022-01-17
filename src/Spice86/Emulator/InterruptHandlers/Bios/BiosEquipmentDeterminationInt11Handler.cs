@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Bios;
 
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// Very basic implementation of int 11 that basically does nothing.

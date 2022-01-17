@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Cpu;
+﻿namespace Spice86.Emulator.CPU;
 
 using Spice86.Emulator.Memory;
 using Spice86.Utils;

@@ -1,4 +1,4 @@
-namespace Spice86;
+namespace Spice86.Emulator;
 
 using Spice86.Emulator.Function;
 
@@ -91,7 +91,7 @@ public class Configuration {
         _defaultDumpDirectory = defaultDumpDirectory;
     }
 
-    public void SetExe(string exe) {
+    public void SetExe(string? exe) {
         _exe = exe;
     }
 

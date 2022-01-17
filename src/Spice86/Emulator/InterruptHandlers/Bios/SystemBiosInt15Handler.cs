@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.InterruptHandlers.Bios;
 
 using Spice86.Emulator.Callback;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 public class SystemBiosInt15Handler : InterruptHandler {
 

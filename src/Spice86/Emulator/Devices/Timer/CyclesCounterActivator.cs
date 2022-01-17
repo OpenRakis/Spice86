@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Emulator.Devices.Timer;
 
-using Spice86.Emulator.Cpu;
+using Spice86.Emulator.CPU;
 
 /// <summary>
 /// Counter activator based on emulated cycles

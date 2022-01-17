@@ -5,8 +5,8 @@ using Avalonia.Input;
 using Serilog;
 
 using Spice86.Emulator.IOPorts;
-using Spice86.Emulator.Machine;
-using Spice86.Ui;
+using Spice86.Emulator.VM;
+using Spice86.UI;
 
 /// <summary>
 /// Basic implementation of a keyboard

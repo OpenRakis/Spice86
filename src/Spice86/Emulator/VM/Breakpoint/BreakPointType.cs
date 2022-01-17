@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Machine.Breakpoint;
+﻿namespace Spice86.Emulator.VM.Breakpoint;
 
 public enum BreakPointType {
 

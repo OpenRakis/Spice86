@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.Devices.Sound;
 
 using Spice86.Emulator.IOPorts;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// MPU401 (Midi) implementation. Emulates an absent card :)

@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.ReverseEngineer;
 
-using Spice86.Emulator.Cpu;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.CPU;
+using Spice86.Emulator.VM;
 
 public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : MemoryBasedDataStructureWithBaseAddressProvider {
     private readonly int _segmentRegisterIndex;

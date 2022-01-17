@@ -1,7 +1,7 @@
-﻿namespace Spice86.Emulator.Cpu;
+﻿namespace Spice86.Emulator.CPU;
 
 using Spice86.Emulator.Function;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 
 public class ModRM {

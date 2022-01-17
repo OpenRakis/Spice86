@@ -2,7 +2,7 @@
 
 using Spice86.Emulator.Devices.ExternalInput;
 using Spice86.Emulator.Devices.Timer;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 
 /// <summary>

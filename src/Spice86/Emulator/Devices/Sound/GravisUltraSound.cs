@@ -2,7 +2,7 @@
 
 using Spice86.Emulator.IOPorts;
 
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// Gravis Ultra Sound implementation. Emulates an absent card :)

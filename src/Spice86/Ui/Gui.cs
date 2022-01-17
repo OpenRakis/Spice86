@@ -1,10 +1,11 @@
-﻿namespace Spice86.Ui;
+﻿namespace Spice86.UI;
 
 using Avalonia.Input;
 
 using Spice86.Emulator.Devices.Video;
 
 using System;
+using System.Threading.Tasks;
 
 /// <summary>
 /// TODO : complete it, along with all the UI framework.
@@ -60,6 +61,22 @@ public class Gui {
     }
 
     internal void SetMouseX(int x) {
+        throw new NotImplementedException();
+    }
+
+    internal void SetOnCloseRequest(Action<object> p) {
+        throw new NotImplementedException();
+    }
+
+    internal void Show() {
+        throw new NotImplementedException();
+    }
+
+    internal void SetOnShown(Func<object, Task> p) {
+        throw new NotImplementedException();
+    }
+
+    internal void SetTitle(string v) {
         throw new NotImplementedException();
     }
 

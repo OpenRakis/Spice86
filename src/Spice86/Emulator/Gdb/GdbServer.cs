@@ -2,20 +2,20 @@
 
 using Serilog;
 
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 using System;
 using System.IO;
 
 public class GdbServer : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbServer>();
-    private string defaultDumpDirectory;
+    private string? defaultDumpDirectory;
     private bool disposedValue;
     private Machine machine;
     private bool running = true;
     private bool started = false;
 
-    public GdbServer(Machine machine, int port, string defaultDumpDirectory) {
+    public GdbServer(Machine machine, int port, string? defaultDumpDirectory) {
         this.machine = machine;
         this.defaultDumpDirectory = defaultDumpDirectory;
         Start(port);

@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.Memory;
 
 using Spice86.Emulator.Errors;
-using Spice86.Emulator.Machine.Breakpoint;
+using Spice86.Emulator.VM.Breakpoint;
 using Spice86.Utils;
 
 using System;

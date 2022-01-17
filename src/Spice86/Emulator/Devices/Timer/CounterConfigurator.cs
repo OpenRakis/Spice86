@@ -2,7 +2,7 @@
 
 using Serilog;
 
-using Spice86.Emulator.Cpu;
+using Spice86.Emulator.CPU;
 
 public class CounterConfigurator {
     private static readonly ILogger _logger = Log.Logger.ForContext<CounterConfigurator>();

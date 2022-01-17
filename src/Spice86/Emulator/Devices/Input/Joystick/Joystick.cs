@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.Devices.Input.Joystick;
 
 using Spice86.Emulator.IOPorts;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// Joystick implementation. Emulates an unplugged joystick for now.

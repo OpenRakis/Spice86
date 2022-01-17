@@ -2,14 +2,14 @@
 
 using Serilog;
 
-using Spice86.Emulator.Cpu;
+using Spice86.Emulator.CPU;
 using Spice86.Emulator.Devices.Video;
 using Spice86.Emulator.Function;
 using Spice86.Emulator.Function.Dump;
-using Spice86.Emulator.Machine;
-using Spice86.Emulator.Machine.Breakpoint;
+using Spice86.Emulator.VM;
+using Spice86.Emulator.VM.Breakpoint;
 using Spice86.Emulator.Memory;
-using Spice86.Ui;
+using Spice86.UI;
 using Spice86.Utils;
 
 using System;

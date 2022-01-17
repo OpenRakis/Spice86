@@ -3,9 +3,9 @@
 using Serilog;
 
 using Spice86.Emulator.IOPorts;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
-using Spice86.Ui;
+using Spice86.UI;
 
 /// <summary>
 /// Implementation of VGA card, currently only supports mode 0x13.<br/>

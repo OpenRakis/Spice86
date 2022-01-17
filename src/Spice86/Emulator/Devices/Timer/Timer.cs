@@ -5,7 +5,7 @@ using Serilog;
 using Spice86.Emulator.Devices.ExternalInput;
 using Spice86.Emulator.Devices.Video;
 using Spice86.Emulator.IOPorts;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// Emulates a PIT8254 Programmable Interval Timer.<br/>

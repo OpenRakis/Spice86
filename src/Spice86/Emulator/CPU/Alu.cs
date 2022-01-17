@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Cpu;
+﻿namespace Spice86.Emulator.CPU;
 
 public class Alu {
     /**

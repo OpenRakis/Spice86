@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Emulator.Function;
 
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 
 using System.Collections.Generic;

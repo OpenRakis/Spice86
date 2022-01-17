@@ -3,7 +3,7 @@
 using Serilog;
 
 using Spice86.Emulator.LoadableFile;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 
 /// <summary>

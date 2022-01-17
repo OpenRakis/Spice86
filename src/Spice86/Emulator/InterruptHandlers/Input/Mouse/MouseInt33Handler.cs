@@ -3,8 +3,8 @@
 using Serilog;
 
 using Spice86.Emulator.Callback;
-using Spice86.Emulator.Machine;
-using Spice86.Ui;
+using Spice86.Emulator.VM;
+using Spice86.UI;
 using Spice86.Utils;
 
 /// <summary>

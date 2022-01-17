@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Emulator.Devices.Sound;
 
 using Spice86.Emulator.IOPorts;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// Sound blaster implementation. Emulates an absent card :) http://www.fysnet.net/detectsb.htm

@@ -2,8 +2,8 @@
 
 using Serilog;
 
-using Spice86.Emulator.Cpu;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.CPU;
+using Spice86.Emulator.VM;
 using Spice86.Utils;
 
 using System;

@@ -3,11 +3,11 @@
 using Serilog;
 
 using Spice86.Emulator.Callback;
-using Spice86.Emulator.Cpu;
+using Spice86.Emulator.CPU;
 using Spice86.Emulator.Errors;
 using Spice86.Emulator.Function;
-using Spice86.Emulator.Machine;
-using Spice86.Emulator.Machine.Breakpoint;
+using Spice86.Emulator.VM;
+using Spice86.Emulator.VM.Breakpoint;
 using Spice86.Emulator.Memory;
 using Spice86.Utils;
 

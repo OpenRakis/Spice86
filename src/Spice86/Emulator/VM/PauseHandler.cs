@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Machine;
+﻿namespace Spice86.Emulator.VM;
 
 using Serilog;
 

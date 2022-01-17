@@ -4,7 +4,7 @@ using Serilog;
 
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.InterruptHandlers.Timer;
-using Spice86.Emulator.Machine;
+using Spice86.Emulator.VM;
 
 /// <summary>
 /// Implementation of int1A.

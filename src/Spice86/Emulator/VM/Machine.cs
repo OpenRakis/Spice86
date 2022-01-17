@@ -1,7 +1,7 @@
-﻿namespace Spice86.Emulator.Machine;
+﻿namespace Spice86.Emulator.VM;
 
 using Spice86.Emulator.Callback;
-using Spice86.Emulator.Cpu;
+using Spice86.Emulator.CPU;
 using Spice86.Emulator.Devices.ExternalInput;
 using Spice86.Emulator.Devices.Input.Joystick;
 using Spice86.Emulator.Devices.Input.Keyboard;
@@ -19,7 +19,7 @@ using Spice86.Emulator.InterruptHandlers.Timer;
 using Spice86.Emulator.InterruptHandlers.Vga;
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Memory;
-using Spice86.Ui;
+using Spice86.UI;
 
 using System;
 
