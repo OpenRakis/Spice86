@@ -29,4 +29,10 @@
     <ProjectReference Include="..\Spice86\Spice86.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Resources\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
