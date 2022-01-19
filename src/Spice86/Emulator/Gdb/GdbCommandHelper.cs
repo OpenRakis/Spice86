@@ -18,7 +18,7 @@ public class GdbCommandHandler {
     private GdbIo gdbIo;
     private Machine machine;
 
-    public GdbCommandHandler(GdbIo gdbIo, Machine machine, string defaultDumpDirectory) {
+    public GdbCommandHandler(GdbIo gdbIo, Machine machine, string? defaultDumpDirectory) {
         this.gdbIo = gdbIo;
         this.machine = machine;
         this.gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine);

@@ -23,12 +23,12 @@ using System.Text;
 /// </summary>
 public class GdbCustomCommandsHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCustomCommandsHandler>();
-    private string _defaultDumpDirectory;
+    private string? _defaultDumpDirectory;
     private GdbIo _gdbIo;
     private Machine _machine;
     private Action<BreakPoint> _onBreakpointReached;
 
-    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string defaultDumpDirectory) {
+    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string? defaultDumpDirectory) {
         this._gdbIo = gdbIo;
         this._machine = machine;
         this._onBreakpointReached = onBreakpointReached;
@@ -204,8 +204,8 @@ public class GdbCustomCommandsHandler {
         return string.Join(", ", Enum.GetNames(typeof(CallType)));
     }
 
-    private string Help(string additinnalMessage) {
-        return _gdbIo.GenerateMessageToDisplayResponse($@"{additinnalMessage}
+    private string Help(string additionnalMessage) {
+        return _gdbIo.GenerateMessageToDisplayResponse($@"{additionnalMessage}
             Supported custom commands:
              -help: display this
              - dumpall: dumps everything possible in the default directory which is { _defaultDumpDirectory }
@@ -277,7 +277,7 @@ public class GdbCustomCommandsHandler {
         return _gdbIo.GenerateMessageToDisplayResponse(state);
     }
 
-    private string Vbuffer(String[] args) {
+    private string Vbuffer(string[] args) {
         try {
             string action = ExtractAction(args);
             Gui gui = _machine.GetGui();
@@ -290,7 +290,7 @@ public class GdbCustomCommandsHandler {
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
                 StringBuilder listBuilder = new StringBuilder();
-                gui.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => x.Value + "\\n").ToList().ForEach(x => listBuilder.AppendLine(x));
+                gui.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\\n").ToList().ForEach(x => listBuilder.AppendLine(x));
                 string list = listBuilder.ToString();
                 return _gdbIo.GenerateMessageToDisplayResponse(list);
             }

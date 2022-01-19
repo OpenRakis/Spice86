@@ -5,6 +5,7 @@ using Serilog;
 using Spice86.Emulator.VM;
 
 using System;
+using System.ComponentModel;
 using System.IO;
 
 public class GdbServer : IDisposable {
@@ -13,7 +14,7 @@ public class GdbServer : IDisposable {
     private bool disposedValue;
     private Machine machine;
     private bool running = true;
-    private bool started = false;
+    private volatile bool started;
 
     public GdbServer(Machine machine, int port, string? defaultDumpDirectory) {
         this.machine = machine;
@@ -67,9 +68,14 @@ public class GdbServer : IDisposable {
     }
 
     private void Start(int port) {
-        // wait for thread to start
-        while (!started) {
-            RunServer(port);
-        }
+        using BackgroundWorker backgroundWorker = new();
+        backgroundWorker.WorkerSupportsCancellation = false;
+        backgroundWorker.DoWork += (s, e) => {
+            // wait for thread to start
+            while (!started) {
+                RunServer(port);
+            }
+        };
+        backgroundWorker.RunWorkerAsync();
     }
 }

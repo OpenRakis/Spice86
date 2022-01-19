@@ -22,7 +22,7 @@ public class GdbIo : IDisposable {
     private readonly Socket socket;
     private readonly TcpListener tcpListener;
     private bool disposedValue;
-    private NetworkStream stream;
+    private readonly NetworkStream stream;
 
     public GdbIo(int port) {
         IPHostEntry host = Dns.GetHostEntry("localhost");
@@ -44,7 +44,7 @@ public class GdbIo : IDisposable {
     }
 
     public string GenerateMessageToDisplayResponse(string message) {
-        string toSend = message + '\n';
+        string toSend = $"{message}\n";
         return this.GenerateResponse(ConvertUtils.ByteArrayToHexString(Encoding.UTF8.GetBytes(toSend)));
     }
 
