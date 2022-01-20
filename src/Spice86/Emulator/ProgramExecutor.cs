@@ -67,7 +67,10 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private void CheckSha256Checksum(byte[] file, byte[] expectedHash) {
+    private void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
+        if(expectedHash is null) {
+            throw new ArgumentNullException(nameof(expectedHash));
+        }
         if (expectedHash.Length == 0) {
             return;
         }
@@ -104,11 +107,11 @@ public class ProgramExecutor : IDisposable {
             throw new ArgumentNullException(nameof(configuration));
         }
         CounterConfigurator counterConfigurator = new CounterConfigurator(configuration);
-        bool debugMode = configuration.GetGdbPort() != null;
-        var machine = new Machine(gui, counterConfigurator, configuration.IsFailOnUnhandledPort(), debugMode);
+        bool debugMode = configuration.GdbPort != null;
+        var machine = new Machine(gui, counterConfigurator, configuration.FailOnUnhandledPort, debugMode);
         InitializeCpu();
         InitializeDos(configuration);
-        if (configuration.IsInstallInterruptVector()) {
+        if (configuration.InstallInterruptVector) {
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
             machine.InstallAllCallbacksInInterruptTable();
@@ -121,9 +124,9 @@ public class ProgramExecutor : IDisposable {
 
 
     private GdbServer? StartGdbServer(Configuration configuration) {
-        int? gdbPort = configuration.GetGdbPort();
+        int? gdbPort = configuration.GdbPort;
         if (gdbPort != null) {
-            var gdbServer = new GdbServer(_machine, gdbPort.Value, configuration.GetDefaultDumpDirectory());
+            var gdbServer = new GdbServer(_machine, gdbPort.Value, configuration.DefaultDumpDirectory);
             return gdbServer;
         }
         return null;
@@ -142,7 +145,7 @@ public class ProgramExecutor : IDisposable {
     }
 
     private string? GetExeParentFolder(Configuration configuration) {
-        string? exe = configuration.GetExe();
+        string? exe = configuration.Exe;
         if (exe == null) {
             return null;
         }
@@ -167,38 +170,43 @@ public class ProgramExecutor : IDisposable {
     private void InitializeDos(Configuration configuration) {
         string? parentFolder = GetExeParentFolder(configuration);
         Dictionary<char, string> driveMap = new();
-        string? cDrive = configuration.GetcDrive();
+        string? cDrive = configuration.CDrive;
         if (string.IsNullOrWhiteSpace(cDrive)) {
             cDrive = parentFolder;
         }
-        if(cDrive != null) {
-            driveMap.Add('C', cDrive);
+        if(string.IsNullOrWhiteSpace(cDrive)) {
+            throw new ArgumentNullException(nameof(cDrive));
         }
-        if (parentFolder != null) {
-            _machine.GetDosInt21Handler().GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
+        if (string.IsNullOrWhiteSpace(parentFolder)) {
+            throw new ArgumentNullException(nameof(parentFolder));
         }
+        driveMap.Add('C', cDrive);
+        _machine.GetDosInt21Handler().GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration) {
+        if(configuration.OverrideSupplier is null) {
+            return;
+        }
         Cpu cpu = _machine.GetCpu();
-        Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.GetOverrideSupplier(), configuration.GetProgramEntryPointSegment(), _machine);
-        bool useCodeOverride = configuration.IsUseCodeOverride();
+        Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, _machine);
+        bool useCodeOverride = configuration.UseCodeOverride;
         SetupFunctionHandler(cpu.GetFunctionHandler(), functionInformations, useCodeOverride);
         SetupFunctionHandler(cpu.GetFunctionHandlerInExternalInterrupt(), functionInformations, useCodeOverride);
     }
 
     private void LoadFileToRun(Configuration configuration) {
-        string? fileName = configuration.GetExe();
-        if (string.IsNullOrWhiteSpace(fileName)) {
-            throw new NullReferenceException(nameof(fileName));
+        string? executableFileName = configuration.Exe;
+        if(executableFileName is null) {
+            throw new ArgumentNullException(nameof(executableFileName));
         }
-        ExecutableFileLoader loader = CreateExecutableFileLoader(fileName, configuration.GetProgramEntryPointSegment());
-        _logger.Information("Loading file {@FileName} with loader {@LoaderType}", fileName, loader.GetType());
+        ExecutableFileLoader loader = CreateExecutableFileLoader(executableFileName, configuration.ProgramEntryPointSegment);
+        _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName, loader.GetType());
         try {
-            byte[] fileContent = loader.LoadFile(fileName, configuration.GetExeArgs());
-            CheckSha256Checksum(fileContent, configuration.GetExpectedChecksum());
+            byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
+            CheckSha256Checksum(fileContent, configuration.ExpectedChecksum);
         } catch (IOException e) {
-            throw new UnrecoverableException("Failed to read file " + fileName, e);
+            throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
     }
 

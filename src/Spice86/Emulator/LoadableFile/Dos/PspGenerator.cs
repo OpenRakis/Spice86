@@ -31,7 +31,7 @@ public class PspGenerator {
         dosFunctionDispatcher.GetDosFileManager().SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
     }
 
-    private byte[] ArgumentsToDosBytes(string arguments) {
+    private byte[] ArgumentsToDosBytes(string? arguments) {
         byte[] res = new byte[128];
         string correctLengthArguments = "";
         if (string.IsNullOrWhiteSpace(arguments) == false) {

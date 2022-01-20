@@ -1,4 +1,4 @@
-namespace Spice86.Views;
+namespace Spice86.UI.Views;
 
 using Avalonia;
 using Avalonia.Controls;

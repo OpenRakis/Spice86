@@ -1,9 +1,8 @@
-namespace Spice86;
+namespace Spice86.UI;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Markup.Xaml;
 
 using Live.Avalonia;
 
@@ -11,15 +10,15 @@ using Microsoft.Win32;
 
 using ReactiveUI;
 
-using Spice86.ViewModels;
-using Spice86.Views;
+using Spice86.UI.ViewModels;
+using Spice86.UI.Views;
 
 using System;
 using System.Diagnostics;
 using System.Reactive;
 using System.Runtime.Versioning;
 
-public class App : Application, ILiveView {
+public partial class App : Application, ILiveView {
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
     private const string RegistryValueName = "AppsUseLightTheme";
@@ -27,8 +26,6 @@ public class App : Application, ILiveView {
     // When any of the source files change, a new version of the assembly is built, and this
     // method gets called. The returned content gets embedded into the LiveViewHost window.
     public object CreateView(Window window) => new MainWindow();
-
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted() {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
@@ -69,7 +66,7 @@ public class App : Application, ILiveView {
 
     [SupportedOSPlatform("windows")]
     private static bool GetIsWindowsInDarkMode() {
-        var key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath);
+        RegistryKey? key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath);
         var registryValueObject = key?.GetValue(RegistryValueName);
         if (registryValueObject == null) {
             return false;

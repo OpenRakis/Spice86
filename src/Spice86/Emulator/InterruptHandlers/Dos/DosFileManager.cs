@@ -190,7 +190,7 @@ public class DosFileManager {
     }
 
     public DosFileOperationResult OpenFile(string fileName, int rwAccessMode) {
-        string hostFileName = ToHostCaseSensitiveFileName(fileName, false);
+        string? hostFileName = ToHostCaseSensitiveFileName(fileName, false);
         if (hostFileName == null) {
             return this.FileNotFoundError(fileName);
         }

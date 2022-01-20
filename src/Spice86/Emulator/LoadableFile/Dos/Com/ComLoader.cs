@@ -3,6 +3,7 @@
 using Spice86.Emulator.LoadableFile;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
+using Spice86.Emulator.CPU;
 
 public class ComLoader : ExecutableFileLoader {
     private const int ComOffset = 0x100;
@@ -12,12 +13,12 @@ public class ComLoader : ExecutableFileLoader {
         this._startSegment = startSegment;
     }
 
-    public override byte[] LoadFile(string file, string arguments) {
+    public override byte[] LoadFile(string file, string? arguments) {
         new PspGenerator(_machine).GeneratePsp(_startSegment, arguments);
         byte[] com = this.ReadFile(file);
         int physicalStartAddress = MemoryUtils.ToPhysicalAddress(_startSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
-        var state = _cpu.GetState();
+        State? state = _cpu.GetState();
 
         // Make DS and ES point to the PSP
         state.SetDS(_startSegment);

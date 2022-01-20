@@ -1,23 +1,22 @@
 ﻿namespace Spice86.UI;
 
-using Avalonia;
+using Avalonia.Markup.Xaml;
 
 using Serilog;
 using Serilog.Events;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
+using Spice86.CLI;
 using Spice86.Emulator;
+
+using System;
+using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 
 /// <summary>
 /// GUI entry point.<br/>
-/// Responsible for setting up java-fx and starting the exe from the configuration provided in the command line.
+/// Responsible for setting up AvaloniaUI, Serilog, and starting the exe from the configuration provided in the command line.
 /// </summary>
-public class Spice86Application : Application {
+public partial class App {
 
     private static readonly ILogger _logger = new LoggerConfiguration()
         .MinimumLevel.Debug()
@@ -26,14 +25,9 @@ public class Spice86Application : Application {
 
     private ProgramExecutor? _programExecutor;
 
-    public static void RunWithOverrides<T>(String[] args, T overrides, string expectedChecksum) where T : class, new() {
-        var argsList = args.ToList();
-
-        // Inject override
-        argsList.Add($"--overrideSupplierClassName={overrides.GetType().FullName}");
-        argsList.Add($"--expectedChecksum={expectedChecksum}");
-        // TODO: Call Main
-        //Main(argsList.ToArray(new string[argsList.Count]));
+    public override void Initialize() {
+        AvaloniaXamlLoader.Load(this);
+        Start();
     }
 
     public void Start() {
@@ -42,9 +36,9 @@ public class Spice86Application : Application {
             Exit();
         }
 
-        Gui gui = new Gui();
+        Gui gui = new();
         gui.SetResolution(320, 200, 0);
-        gui.SetTitle($"Spice86: {configuration?.GetExe()}");
+        gui.SetTitle($"{nameof(Spice86)} {configuration?.Exe}");
         gui.SetOnCloseRequest((x) => Exit());
         gui.SetOnShown((@event) => StartMachineAsync(gui, configuration));
         gui.Show();
@@ -68,7 +62,6 @@ public class Spice86Application : Application {
             } catch (Exception e) {
                 _logger.Error(e, "An error occurred during execution");
             }
-
             Exit();
         });
     }

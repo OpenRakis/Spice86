@@ -1,9 +1,9 @@
-namespace Spice86;
+namespace Spice86.UI;
 
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 
-using Spice86.ViewModels;
+using Spice86.UI.ViewModels;
 
 using System;
 

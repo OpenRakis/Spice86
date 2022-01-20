@@ -13,7 +13,7 @@ public class BiosLoader : ExecutableFileLoader {
     public BiosLoader(Machine machine) : base(machine) {
     }
 
-    public override byte[] LoadFile(string file, string arguments) {
+    public override byte[] LoadFile(string file, string? arguments) {
         byte[] bios = this.ReadFile(file);
         int physicalStartAddress = MemoryUtils.ToPhysicalAddress(CODE_SEGMENT, 0);
         _memory.LoadData(physicalStartAddress, bios);

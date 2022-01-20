@@ -3,12 +3,28 @@
 using Avalonia;
 using Avalonia.ReactiveUI;
 
+using Spice86.UI;
+
 using System;
+using System.Linq;
 
 /// <summary>
 /// Spice86 Entry Point
 /// </summary>
 internal class Program {
+
+    /// <summary>
+    /// Alternate Entry Point
+    /// </summary>
+    [STAThread]
+    public static void RunWithOverrides<T>(String[] args, T overrides, string expectedChecksum) where T : class, new() {
+        var argsList = args.ToList();
+
+        // Inject override
+        argsList.Add($"--overrideSupplierClassName={overrides.GetType().FullName}");
+        argsList.Add($"--expectedChecksum={expectedChecksum}");
+        Program.Main(args.ToArray());
+    }
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()

@@ -1,6 +1,6 @@
-﻿namespace Spice86.ViewModels;
+﻿namespace Spice86.UI.ViewModels;
 
-using Spice86.Views;
+using Spice86.UI.Views;
 
 public class MainWindowViewModel : ViewModelBase {
     private readonly MainWindow _mainWindow;

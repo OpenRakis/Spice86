@@ -24,7 +24,7 @@ public abstract class ExecutableFileLoader {
         _memory = machine.GetMemory();
     }
 
-    public abstract byte[] LoadFile(string file, string arguments);
+    public abstract byte[] LoadFile(string file, string? arguments);
 
     protected byte[] ReadFile(string file) {
         return File.ReadAllBytes(file);
