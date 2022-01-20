@@ -37,7 +37,7 @@ public class Spice86Application : Application {
     }
 
     public void Start() {
-        Configuration configuration = GenerateConfiguration();
+        Configuration? configuration = GenerateConfiguration();
         if (configuration == null) {
             Exit();
         }
@@ -55,7 +55,7 @@ public class Spice86Application : Application {
         Environment.Exit(0);
     }
 
-    private Configuration GenerateConfiguration() {
+    private Configuration? GenerateConfiguration() {
         return new CommandLineParser().ParseCommandLine(Environment.GetCommandLineArgs());
     }
 
