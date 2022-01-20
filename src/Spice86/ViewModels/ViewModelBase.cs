@@ -1,4 +1,4 @@
-﻿namespace Spice86.View.ViewModels;
+﻿namespace Spice86.ViewModels;
 
 using ReactiveUI;
 

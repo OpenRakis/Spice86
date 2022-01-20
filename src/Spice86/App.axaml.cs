@@ -1,4 +1,4 @@
-namespace Spice86.View;
+namespace Spice86;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -11,8 +11,8 @@ using Microsoft.Win32;
 
 using ReactiveUI;
 
-using Spice86.View.ViewModels;
-using Spice86.View.Views;
+using Spice86.ViewModels;
+using Spice86.Views;
 
 using System;
 using System.Diagnostics;

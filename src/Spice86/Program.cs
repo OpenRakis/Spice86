@@ -1,10 +1,13 @@
-﻿namespace Spice86.View;
+﻿namespace Spice86;
 
 using Avalonia;
 using Avalonia.ReactiveUI;
 
 using System;
 
+/// <summary>
+/// Spice86 Entry Point
+/// </summary>
 internal class Program {
 
     // Avalonia configuration, don't remove; also used by visual designer.
