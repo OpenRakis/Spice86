@@ -21,6 +21,7 @@ using Spice86.Emulator.Loadablefile.Dos.Exe;
 using Spice86.Emulator.Loadablefile.Dos.Com;
 using Spice86.Emulator.Loadablefile.Bios;
 using System.Security.Cryptography;
+using System.Text;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -203,8 +204,15 @@ public class ProgramExecutor : IDisposable {
         ExecutableFileLoader loader = CreateExecutableFileLoader(executableFileName, configuration.ProgramEntryPointSegment);
         _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName, loader.GetType());
         try {
-            byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
-            CheckSha256Checksum(fileContent, configuration.ExpectedChecksum);
+            var sb = new StringBuilder();
+            if(configuration.ExeArgs != null) {
+                foreach (var arg in configuration.ExeArgs) {
+                    sb.Append(arg);
+                }
+            }
+            var exeArgs = sb.ToString();
+            byte[] fileContent = loader.LoadFile(executableFileName, exeArgs);
+            CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
         } catch (IOException e) {
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
