@@ -4,7 +4,6 @@ using Avalonia;
 using Avalonia.ReactiveUI;
 
 using Serilog;
-using Serilog.Events;
 
 using Spice86.UI;
 
@@ -17,8 +16,8 @@ using System.Linq;
 internal class Program {
 
     private static readonly ILogger _logger = new LoggerConfiguration()
-        .MinimumLevel.Debug()
         .WriteTo.Console()
+        .WriteTo.Debug()
         .CreateLogger();
 
     public Program() {
@@ -29,7 +28,7 @@ internal class Program {
     /// Alternate Entry Point
     /// </summary>
     [STAThread]
-    public static void RunWithOverrides<T>(String[] args, T overrides, string expectedChecksum) where T : class, new() {
+    public static void RunWithOverrides<T>(string[] args, T overrides, string expectedChecksum) where T : class, new() {
         var argsList = args.ToList();
 
         // Inject override
