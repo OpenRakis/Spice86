@@ -33,6 +33,9 @@ public class ProgramExecutor : IDisposable {
     private Machine _machine;
 
     public ProgramExecutor(Gui gui, Configuration? configuration) {
+        if(configuration == null) {
+            throw new ArgumentNullException(nameof(configuration));
+        }
         _machine = CreateMachine(gui, configuration);
         _gdbServer = StartGdbServer(configuration);
     }
@@ -186,10 +189,13 @@ public class ProgramExecutor : IDisposable {
 
     private void LoadFileToRun(Configuration configuration) {
         string? fileName = configuration.GetExe();
+        if (string.IsNullOrWhiteSpace(fileName)) {
+            throw new NullReferenceException(nameof(fileName));
+        }
         ExecutableFileLoader loader = CreateExecutableFileLoader(fileName, configuration.GetProgramEntryPointSegment());
         _logger.Information("Loading file {@FileName} with loader {@LoaderType}", fileName, loader.GetType());
         try {
-            byte[] fileContent = loader.LoadFile(fileName, configuration?.GetExeArgs());
+            byte[] fileContent = loader.LoadFile(fileName, configuration.GetExeArgs());
             CheckSha256Checksum(fileContent, configuration.GetExpectedChecksum());
         } catch (IOException e) {
             throw new UnrecoverableException("Failed to read file " + fileName, e);

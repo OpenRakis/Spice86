@@ -5,6 +5,7 @@ using Serilog;
 using Spice86.Emulator.LoadableFile;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
+using Spice86.Emulator.CPU;
 
 /// <summary>
 /// Loads a DOS 16 bits EXE file in memory.
@@ -17,7 +18,7 @@ public class ExeLoader : ExecutableFileLoader {
         this.startSegment = startSegment;
     }
 
-    public override byte[] LoadFile(string file, string arguments) {
+    public override byte[] LoadFile(string file, string? arguments) {
         byte[] exe = this.ReadFile(file);
         _logger.Debug("Exe size: {@ExeSize}", exe.Length);
         ExeFile exeFile = new ExeFile(exe);
@@ -43,7 +44,7 @@ public class ExeLoader : ExecutableFileLoader {
     }
 
     private void SetupCpuForExe(ExeFile exeFile, int startSegment, int pspSegment) {
-        var state = _cpu.GetState();
+        State state = _cpu.GetState();
 
         // MS-DOS uses the values in the file header to set the SP and SS registers and
         // adjusts the initial value of the SS register by adding the start-segment
