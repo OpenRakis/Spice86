@@ -6,7 +6,7 @@
 *.doc
 *.pdf
 
-## VS debug settings
+# VS debug settings
 launchSettings.json
 
 ## installers
