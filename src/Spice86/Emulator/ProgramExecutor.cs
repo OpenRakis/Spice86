@@ -28,12 +28,13 @@ using System.Security.Cryptography;
 /// </summary>
 public class ProgramExecutor : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<ProgramExecutor>();
-    private bool disposedValue;
-    private GdbServer gdbServer;
-    private Machine machine;
+    private bool _disposedValue;
+    private GdbServer? _gdbServer;
+    private Machine _machine;
 
     public ProgramExecutor(Gui gui, Configuration? configuration) {
-        CreateMachine(gui, configuration);
+        _machine = CreateMachine(gui, configuration);
+        _gdbServer = StartGdbServer(configuration);
     }
 
     public void Dispose() {
@@ -43,22 +44,23 @@ public class ProgramExecutor : IDisposable {
     }
 
     public Machine GetMachine() {
-        return machine;
+        return _machine;
     }
 
     public void Run() {
-        machine.Run();
+        _machine.Run();
     }
 
     protected void Dispose(bool disposing) {
-        if (!disposedValue) {
+        if (!_disposedValue) {
             if (disposing) {
                 // TODO: dispose managed state (managed objects)
+                _gdbServer?.Dispose();
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
-            disposedValue = true;
+            _disposedValue = true;
         }
     }
 
@@ -80,21 +82,27 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private ExecutableFileLoader CreateExecutableFileLoader(string fileName, int entryPointSegment) {
+    private ExecutableFileLoader CreateExecutableFileLoader(string? fileName, int entryPointSegment) {
+        if (fileName == null) {
+            throw new ArgumentNullException(nameof(fileName));
+        }
         string lowerCaseFileName = fileName.ToLowerInvariant();
         if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(machine, entryPointSegment);
+            return new ExeLoader(_machine, entryPointSegment);
         } else if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(machine, entryPointSegment);
+            return new ComLoader(_machine, entryPointSegment);
         }
 
-        return new BiosLoader(machine);
+        return new BiosLoader(_machine);
     }
 
-    private void CreateMachine(Gui gui, Configuration configuration) {
+    private Machine CreateMachine(Gui gui, Configuration? configuration) {
+        if (configuration == null) {
+            throw new ArgumentNullException(nameof(configuration));
+        }
         CounterConfigurator counterConfigurator = new CounterConfigurator(configuration);
         bool debugMode = configuration.GetGdbPort() != null;
-        machine = new Machine(gui, counterConfigurator, configuration.IsFailOnUnhandledPort(), debugMode);
+        var machine = new Machine(gui, counterConfigurator, configuration.IsFailOnUnhandledPort(), debugMode);
         InitializeCpu();
         InitializeDos(configuration);
         if (configuration.IsInstallInterruptVector()) {
@@ -105,7 +113,17 @@ public class ProgramExecutor : IDisposable {
 
         InitializeFunctionHandlers(configuration);
         LoadFileToRun(configuration);
-        StartGdbServer(configuration);
+        return machine;
+    }
+
+
+    private GdbServer? StartGdbServer(Configuration configuration) {
+        int? gdbPort = configuration.GetGdbPort();
+        if (gdbPort != null) {
+            var gdbServer = new GdbServer(_machine, gdbPort.Value, configuration.GetDefaultDumpDirectory());
+            return gdbServer;
+        }
+        return null;
     }
 
     private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier supplier, int entryPointSegment, Machine machine) {
@@ -137,38 +155,41 @@ public class ProgramExecutor : IDisposable {
     }
 
     private void InitializeCpu() {
-        Cpu cpu = machine.GetCpu();
+        Cpu cpu = _machine.GetCpu();
         cpu.SetErrorOnUninitializedInterruptHandler(true);
         State state = cpu.GetState();
         state.GetFlags().SetDosboxCompatibility(true);
     }
 
     private void InitializeDos(Configuration configuration) {
-        string parentFolder = GetExeParentFolder(configuration);
+        string? parentFolder = GetExeParentFolder(configuration);
         Dictionary<char, string> driveMap = new();
-        string cDrive = configuration.GetcDrive();
+        string? cDrive = configuration.GetcDrive();
         if (string.IsNullOrWhiteSpace(cDrive)) {
             cDrive = parentFolder;
         }
-
-        driveMap.Add('C', cDrive);
-        machine.GetDosInt21Handler().GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
+        if(cDrive != null) {
+            driveMap.Add('C', cDrive);
+        }
+        if (parentFolder != null) {
+            _machine.GetDosInt21Handler().GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
+        }
     }
 
     private void InitializeFunctionHandlers(Configuration configuration) {
-        Cpu cpu = machine.GetCpu();
-        Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.GetOverrideSupplier(), configuration.GetProgramEntryPointSegment(), machine);
+        Cpu cpu = _machine.GetCpu();
+        Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.GetOverrideSupplier(), configuration.GetProgramEntryPointSegment(), _machine);
         bool useCodeOverride = configuration.IsUseCodeOverride();
         SetupFunctionHandler(cpu.GetFunctionHandler(), functionInformations, useCodeOverride);
         SetupFunctionHandler(cpu.GetFunctionHandlerInExternalInterrupt(), functionInformations, useCodeOverride);
     }
 
     private void LoadFileToRun(Configuration configuration) {
-        string fileName = configuration.GetExe();
+        string? fileName = configuration.GetExe();
         ExecutableFileLoader loader = CreateExecutableFileLoader(fileName, configuration.GetProgramEntryPointSegment());
         _logger.Information("Loading file {@FileName} with loader {@LoaderType}", fileName, loader.GetType());
         try {
-            byte[] fileContent = loader.LoadFile(fileName, configuration.GetExeArgs());
+            byte[] fileContent = loader.LoadFile(fileName, configuration?.GetExeArgs());
             CheckSha256Checksum(fileContent, configuration.GetExpectedChecksum());
         } catch (IOException e) {
             throw new UnrecoverableException("Failed to read file " + fileName, e);
@@ -178,12 +199,5 @@ public class ProgramExecutor : IDisposable {
     private void SetupFunctionHandler(FunctionHandler functionHandler, Dictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.SetFunctionInformations(functionInformations);
         functionHandler.SetUseCodeOverride(useCodeOverride);
-    }
-
-    private void StartGdbServer(Configuration configuration) {
-        int? gdbPort = configuration.GetGdbPort();
-        if (gdbPort != null) {
-            gdbServer = new GdbServer(machine, gdbPort.Value, configuration.GetDefaultDumpDirectory());
-        }
     }
 }
