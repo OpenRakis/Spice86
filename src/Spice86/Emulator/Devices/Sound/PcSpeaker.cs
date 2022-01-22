@@ -12,12 +12,12 @@ using Spice86.Utils;
 public class PcSpeaker : DefaultIOPortHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<PcSpeaker>();
     private static readonly int PC_SPEAKER_PORT_NUMBER = 0x61;
-    private int value;
+    private byte value;
 
     public PcSpeaker(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
     }
 
-    public override int Inb(int port) {
+    public override byte Inb(int port) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PC Speaker get value {@PCSpeakerValue}", ConvertUtils.ToHex8(this.value));
         }
@@ -29,7 +29,7 @@ public class PcSpeaker : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(PC_SPEAKER_PORT_NUMBER, this);
     }
 
-    public override void Outb(int port, int value) {
+    public override void Outb(int port, byte value) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PC Speaker set value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }

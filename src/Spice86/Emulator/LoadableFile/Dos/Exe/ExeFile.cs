@@ -6,25 +6,25 @@ using System.Collections.Generic;
 using System.Text;
 
 public class ExeFile {
-    private int checkSum;
-    private int extraBytes;
-    private int headerSize;
-    private int initCS;
+    private ushort checkSum;
+    private ushort extraBytes;
+    private ushort headerSize;
+    private ushort initCS;
 
     // 0012 - Checksum
-    private int initIP;
+    private ushort initIP;
 
-    private int initSP;
-    private int initSS;
-    private int maxAlloc;
+    private ushort initSP;
+    private ushort initSS;
+    private ushort maxAlloc;
 
     // 0008 - Size of header in paragraphs
-    private int minAlloc;
+    private ushort minAlloc;
 
-    private int overlay;
+    private ushort overlay;
 
     // 0002 - Bytes on last page of file
-    private int pages;
+    private ushort pages;
 
     private byte[] programImage;
 
@@ -32,7 +32,7 @@ public class ExeFile {
     private List<SegmentedAddress> relocationTable = new();
 
     // 0004 - Pages in file
-    private int relocItems;
+    private ushort relocItems;
 
     // 0006 - Relocations
     // 000A - Minimum extra paragraphs needed
@@ -41,7 +41,7 @@ public class ExeFile {
     // 0010 - Initial SP value
     // 0014 - Initial IP value
     // 0016 - Initial (relative) CS value
-    private int relocTable;
+    private ushort relocTable;
 
     private string signature; // 0000 - Magic number
 
@@ -64,8 +64,9 @@ public class ExeFile {
         int relocationTableOffset = this.relocTable;
         int numRelocationEntries = this.relocItems;
         for (int i = 0; i < numRelocationEntries; i++) {
-            int offset = MemoryUtils.GetUint16(exe, relocationTableOffset + i * 4);
-            int segment = MemoryUtils.GetUint16(exe, relocationTableOffset + i * 4 + 2);
+            uint currentEntry = (uint)(relocationTableOffset + i * 4);
+            ushort offset = MemoryUtils.GetUint16(exe, currentEntry);
+            ushort segment = MemoryUtils.GetUint16(exe, currentEntry + 2);
             relocationTable.Add(new SegmentedAddress(segment, offset));
         }
 
@@ -75,7 +76,7 @@ public class ExeFile {
         System.Array.Copy(exe, actualHeaderSize, programImage, 0, programSize);
     }
 
-    public int GetCheckSum() {
+    public ushort GetCheckSum() {
         return checkSum;
     }
 
@@ -83,43 +84,43 @@ public class ExeFile {
         return programImage.Length;
     }
 
-    public int GetExtraBytes() {
+    public ushort GetExtraBytes() {
         return extraBytes;
     }
 
-    public int GetHeaderSize() {
+    public ushort GetHeaderSize() {
         return headerSize;
     }
 
-    public int GetInitCS() {
+    public ushort GetInitCS() {
         return initCS;
     }
 
-    public int GetInitIP() {
+    public ushort GetInitIP() {
         return initIP;
     }
 
-    public int GetInitSP() {
+    public ushort GetInitSP() {
         return initSP;
     }
 
-    public int GetInitSS() {
+    public ushort GetInitSS() {
         return initSS;
     }
 
-    public int GetMaxAlloc() {
+    public ushort GetMaxAlloc() {
         return maxAlloc;
     }
 
-    public int GetMinAlloc() {
+    public ushort GetMinAlloc() {
         return minAlloc;
     }
 
-    public int GetOverlay() {
+    public ushort GetOverlay() {
         return overlay;
     }
 
-    public int GetPages() {
+    public ushort GetPages() {
         return pages;
     }
 
@@ -131,11 +132,11 @@ public class ExeFile {
         return relocationTable;
     }
 
-    public int GetRelocItems() {
+    public ushort GetRelocItems() {
         return relocItems;
     }
 
-    public int GetRelocTable() {
+    public ushort GetRelocTable() {
         return relocTable;
     }
 
@@ -143,47 +144,47 @@ public class ExeFile {
         return signature;
     }
 
-    public void SetCheckSum(int checkSum) {
+    public void SetCheckSum(ushort checkSum) {
         this.checkSum = checkSum;
     }
 
-    public void SetExtraBytes(int extraBytes) {
+    public void SetExtraBytes(ushort extraBytes) {
         this.extraBytes = extraBytes;
     }
 
-    public void SetHeaderSize(int headerSize) {
+    public void SetHeaderSize(ushort headerSize) {
         this.headerSize = headerSize;
     }
 
-    public void SetInitCS(int initCS) {
+    public void SetInitCS(ushort initCS) {
         this.initCS = initCS;
     }
 
-    public void SetInitIP(int initIP) {
+    public void SetInitIP(ushort initIP) {
         this.initIP = initIP;
     }
 
-    public void SetInitSP(int initSP) {
+    public void SetInitSP(ushort initSP) {
         this.initSP = initSP;
     }
 
-    public void SetInitSS(int initSS) {
+    public void SetInitSS(ushort initSS) {
         this.initSS = initSS;
     }
 
-    public void SetMaxAlloc(int maxAlloc) {
+    public void SetMaxAlloc(ushort maxAlloc) {
         this.maxAlloc = maxAlloc;
     }
 
-    public void SetMinAlloc(int minAlloc) {
+    public void SetMinAlloc(ushort minAlloc) {
         this.minAlloc = minAlloc;
     }
 
-    public void SetOverlay(int overlay) {
+    public void SetOverlay(ushort overlay) {
         this.overlay = overlay;
     }
 
-    public void SetPages(int pages) {
+    public void SetPages(ushort pages) {
         this.pages = pages;
     }
 
@@ -195,11 +196,11 @@ public class ExeFile {
         this.relocationTable = relocationTable;
     }
 
-    public void SetRelocItems(int relocItems) {
+    public void SetRelocItems(ushort relocItems) {
         this.relocItems = relocItems;
     }
 
-    public void SetRelocTable(int relocTable) {
+    public void SetRelocTable(ushort relocTable) {
         this.relocTable = relocTable;
     }
 

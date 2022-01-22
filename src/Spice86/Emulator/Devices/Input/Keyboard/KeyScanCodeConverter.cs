@@ -5,8 +5,8 @@ using Avalonia.Input;
 using System.Collections.Generic;
 
 public class KeyScancodeConverter {
-    private static readonly Dictionary<Key, int> _keyPressedScanCode = new();
-    private static readonly Dictionary<int, int> _scanCodeToAscii = new();
+    private static readonly Dictionary<Key, byte> _keyPressedScanCode = new();
+    private static readonly Dictionary<byte, byte> _scanCodeToAscii = new();
 
     static KeyScancodeConverter() {
         // Some keys are not supported by AvaloniaUI so not putting them.
@@ -77,7 +77,7 @@ public class KeyScancodeConverter {
         _keyPressedScanCode.Add(Key.OemBackslash, 0x2B);
         _keyPressedScanCode.Add(Key.OemCloseBrackets, 0x1B);
         _keyPressedScanCode.Add(Key.OemMinus, 0xC);
-        _keyPressedScanCode.Add(Key.OemQuotes, 0x29);
+        //_keyPressedScanCode.Add(Key.OemQuotes, 0x29);
         _keyPressedScanCode.Add(Key.Back, 0xE);
         _keyPressedScanCode.Add(Key.Enter, 0x1C);
         _keyPressedScanCode.Add(Key.Tab, 0xF);
@@ -93,7 +93,7 @@ public class KeyScancodeConverter {
         _keyPressedScanCode.Add(Key.PageUp, 0x49);
         _keyPressedScanCode.Add(Key.Insert, 0x52);
         _keyPressedScanCode.Add(Key.Delete, 0x53);
-        _keyPressedScanCode.Add(Key.D5, 0x4C);
+        //_keyPressedScanCode.Add(Key.D5, 0x4C);
         _keyPressedScanCode.Add(Key.Multiply, 0x37);
         _scanCodeToAscii.Add(0x01, 0x1B);
         _scanCodeToAscii.Add(0x02, 0x31);
@@ -153,8 +153,8 @@ public class KeyScancodeConverter {
         _scanCodeToAscii.Add(0x4E, 0x2B);
     }
 
-    public int GetAsciiCode(int scancode) {
-        int keypressedScancode = scancode;
+    public byte? GetAsciiCode(byte scancode) {
+        byte keypressedScancode = scancode;
         if (keypressedScancode > 0x7F) {
             keypressedScancode -= 0x80;
         }
@@ -162,14 +162,14 @@ public class KeyScancodeConverter {
         return _scanCodeToAscii[keypressedScancode];
     }
 
-    public int GetKeyPressedScancode(Key keyCode) {
+    public byte? GetKeyPressedScancode(Key keyCode) {
         return _keyPressedScanCode[keyCode];
     }
 
-    public int? GetKeyReleasedScancode(Key keyCode) {
-        int? pressed = GetKeyPressedScancode(keyCode);
+    public byte? GetKeyReleasedScancode(Key keyCode) {
+        byte? pressed = GetKeyPressedScancode(keyCode);
         if (pressed != null) {
-            return pressed + 0x80;
+            return (byte)(pressed + 0x80);
         }
 
         return null;

@@ -11,11 +11,11 @@ using Spice86.Utils;
 
 public class VideoBiosInt10Handler : InterruptHandler {
     public const int BiosVideoMode = 0x49;
-    public static readonly int BIOS_VIDEO_MODE_ADDRESS = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, BiosVideoMode);
-    public static readonly int CRT_IO_PORT_ADDRESS_IN_RAM = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, MemoryMap.BiosDataAreaOffsetCrtIoPort);
+    public static readonly uint BIOS_VIDEO_MODE_ADDRESS = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, BiosVideoMode);
+    public static readonly uint CRT_IO_PORT_ADDRESS_IN_RAM = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, MemoryMap.BiosDataAreaOffsetCrtIoPort);
     private static readonly ILogger _logger = Log.Logger.ForContext<VideoBiosInt10Handler>();
-    private readonly int _currentDisplayPage = 0;
-    private readonly int _numberOfScreenColumns = 80;
+    private readonly byte _currentDisplayPage = 0;
+    private readonly byte _numberOfScreenColumns = 80;
     private readonly VgaCard _vgaCard;
 
     public VideoBiosInt10Handler(Machine machine, VgaCard vgaCard) : base(machine) {
@@ -24,22 +24,22 @@ public class VideoBiosInt10Handler : InterruptHandler {
     }
 
     public void GetBlockOfDacColorRegisters() {
-        int firstRegisterToGet = _state.GetBX();
-        int numberOfColorsToGet = _state.GetCX();
+        ushort firstRegisterToGet = _state.GetBX();
+        ushort numberOfColorsToGet = _state.GetCX();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET BLOCKS OF DAC COLOR REGISTERS. First register is {@FirstRegisterToGet}, getting {@NumberOfColorsToGet} colors, values are to be stored at address {@EsDx}", ConvertUtils.ToHex(firstRegisterToGet), numberOfColorsToGet, ConvertUtils.ToSegmentedAddressRepresentation(_state.GetES(), _state.GetDX()));
         }
 
-        int colorValuesAddress = MemoryUtils.ToPhysicalAddress(_state.GetES(), _state.GetDX());
+        uint colorValuesAddress = MemoryUtils.ToPhysicalAddress(_state.GetES(), _state.GetDX());
         _vgaCard.GetBlockOfDacColorRegisters(firstRegisterToGet, numberOfColorsToGet, colorValuesAddress);
     }
 
-    public override int GetIndex() {
+    public override byte GetIndex() {
         return 0x10;
     }
 
     public void GetSetPaletteRegisters() {
-        int op = _state.GetAL();
+        byte op = _state.GetAL();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET/SET PALETTE REGISTERS {@Operation}", ConvertUtils.ToHex8(op));
         }
@@ -53,7 +53,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
         }
     }
 
-    public int GetVideoModeValue() {
+    public byte GetVideoModeValue() {
         _logger.Information("GET VIDEO MODE");
         return _memory.GetUint8(BIOS_VIDEO_MODE_ADDRESS);
     }
@@ -71,85 +71,84 @@ public class VideoBiosInt10Handler : InterruptHandler {
     }
 
     public override void Run() {
-        int operation = _state.GetAH();
+        byte operation = _state.GetAH();
         this.Run(operation);
     }
 
     public void ScrollPageUp() {
-        int scrollAmount = _state.GetAL();
+        byte scrollAmount = _state.GetAL();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SCROLL PAGE UP BY AMOUNT {@ScrollAmount}", ConvertUtils.ToHex8(scrollAmount));
         }
     }
 
     public void SetBlockOfDacColorRegisters() {
-        int firstRegisterToSet = _state.GetBX();
-        int numberOfColorsToSet = _state.GetCX();
+        ushort firstRegisterToSet = _state.GetBX();
+        ushort numberOfColorsToSet = _state.GetCX();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET BLOCKS OF DAC COLOR REGISTERS. First register is {@FirstRegisterToSet}, setting {@NumberOfColorsToSet} colors, values are from address {@EsDx}", ConvertUtils.ToHex(firstRegisterToSet), numberOfColorsToSet, ConvertUtils.ToSegmentedAddressRepresentation(_state.GetES(), _state.GetDX()));
         }
 
-        int colorValuesAddress = MemoryUtils.ToPhysicalAddress(_state.GetES(), _state.GetDX());
+        uint colorValuesAddress = MemoryUtils.ToPhysicalAddress(_state.GetES(), _state.GetDX());
         _vgaCard.SetBlockOfDacColorRegisters(firstRegisterToSet, numberOfColorsToSet, colorValuesAddress);
     }
 
     public void SetColorPalette() {
-        int colorId = _state.GetBH();
-        int colorValue = _state.GetBL();
+        byte colorId = _state.GetBH();
+        byte colorValue = _state.GetBL();
         _logger.Information("SET COLOR PALETTE {@ColorId}, {@ColorValue}", colorId, colorValue);
     }
 
     public void SetCursorPosition() {
-        int cursorPositionRow = _state.GetDH();
-        int cursorPositionColumn = _state.GetDL();
+        byte cursorPositionRow = _state.GetDH();
+        byte cursorPositionColumn = _state.GetDL();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET CURSOR POSITION, {@Row}, {@Column}", ConvertUtils.ToHex8(cursorPositionRow), ConvertUtils.ToHex8(cursorPositionColumn));
         }
     }
 
     public void SetCursorType() {
-        int cursorStartEnd = _state.GetCX();
+        ushort cursorStartEnd = _state.GetCX();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET CURSOR TYPE, SCAN LINE START END IS {@CursorStartEnd}", ConvertUtils.ToHex(cursorStartEnd));
         }
     }
 
     public void SetVideoMode() {
-        int videoMode = _state.GetAL();
+        byte videoMode = _state.GetAL();
         SetVideoModeValue(videoMode);
     }
 
-    public void SetVideoModeValue(int mode) {
+    public void SetVideoModeValue(byte mode) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET VIDEO MODE {@VideoMode}", ConvertUtils.ToHex8(mode));
         }
-
-        _memory.SetUint8(BIOS_VIDEO_MODE_ADDRESS, (byte)mode);
+        _memory.SetUint8(BIOS_VIDEO_MODE_ADDRESS, mode);
         _vgaCard.SetVideoModeValue(mode);
     }
 
     public void WriteTextInTeletypeMode() {
-        int chr = _state.GetAL();
+        byte chr = _state.GetAL();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Write Text in Teletype Mode ascii code {@AsciiCode}, chr {@Character}", ConvertUtils.ToHex(chr), ConvertUtils.ToChar(chr));
         }
     }
 
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x00, new Callback(0x00, () => this.SetVideoMode()));
-        _dispatchTable.Add(0x01, new Callback(0x01, () => this.SetCursorType()));
-        _dispatchTable.Add(0x02, new Callback(0x02, () => this.SetCursorPosition()));
-        _dispatchTable.Add(0x06, new Callback(0x06, () => this.ScrollPageUp()));
-        _dispatchTable.Add(0x0B, new Callback(0x0B, () => this.SetColorPalette()));
-        _dispatchTable.Add(0x0E, new Callback(0x0E, () => this.WriteTextInTeletypeMode()));
-        _dispatchTable.Add(0x0F, new Callback(0x0F, () => this.GetVideoStatus()));
-        _dispatchTable.Add(0x10, new Callback(0x10, () => this.GetSetPaletteRegisters()));
-        _dispatchTable.Add(0x12, new Callback(0x12, () => this.VideoSubsystemConfiguration()));
-        _dispatchTable.Add(0x1A, new Callback(0x1A, () => this.VideoDisplayCombination()));
+        _dispatchTable.Add(0x00, new Callback(0x00, this.SetVideoMode));
+        _dispatchTable.Add(0x01, new Callback(0x01, this.SetCursorType));
+        _dispatchTable.Add(0x02, new Callback(0x02, this.SetCursorPosition));
+        _dispatchTable.Add(0x06, new Callback(0x06, this.ScrollPageUp));
+        _dispatchTable.Add(0x0B, new Callback(0x0B, this.SetColorPalette));
+        _dispatchTable.Add(0x0E, new Callback(0x0E, this.WriteTextInTeletypeMode));
+        _dispatchTable.Add(0x0F, new Callback(0x0F, this.GetVideoStatus));
+        _dispatchTable.Add(0x10, new Callback(0x10, this.GetSetPaletteRegisters));
+        _dispatchTable.Add(0x12, new Callback(0x12, this.VideoSubsystemConfiguration));
+        _dispatchTable.Add(0x1A, new Callback(0x1A, this.VideoDisplayCombination));
     }
 
     private void VideoDisplayCombination() {
-        int op = _state.GetAL();
+        byte op = _state.GetAL();
         if (op == 0) {
             _logger.Information("GET VIDEO DISPLAY COMBINATION");
             // VGA with analog color display
@@ -165,7 +164,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
     }
 
     private void VideoSubsystemConfiguration() {
-        int op = _state.GetBL();
+        byte op = _state.GetBL();
         if (op == 0x0) {
             _logger.Information("UNKNOWN!");
             return;

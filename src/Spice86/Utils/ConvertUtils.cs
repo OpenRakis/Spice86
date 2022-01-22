@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 public class ConvertUtils {
     private const string HexStringStartPattern = "0x";
 
-    private const int SegmentSize = 0x10000;
+    private const uint SegmentSize = 0x10000;
 
     public static string ByteArrayToHexString(byte[] value) {
         StringBuilder stringBuilder = new(value.Length * 2);
@@ -52,47 +52,47 @@ public class ConvertUtils {
 
     /// <summary> </summary>
     /// <param name="value"> </param>
-    /// <returns> a long since unsigned ints are not a thing in java </returns>
-    public static long ParseHex32(string value) {
+    /// <returns>the value as a uint</returns>
+    public static uint ParseHex32(string value) {
         string hex = new Regex(HexStringStartPattern).Replace(value, "");
-        return long.Parse(hex, NumberStyles.HexNumber);
+        return uint.Parse(hex, NumberStyles.HexNumber);
     }
 
-    public static byte ReadLsb(int value) {
-        return Uint8(value);
+    public static byte ReadLsb(ushort value) {
+        return (byte)value;
     }
 
-    public static byte ReadMsb(int value) {
-        return Uint8(value >> 8);
+    public static byte ReadMsb(ushort value) {
+        return (byte)(value >> 8);
     }
 
-    public static int Swap32(int value) {
-        return (int)((((uint)value >> 24) & 0x000000ff) | (((uint)value >> 8) & 0x0000ff00) | (((uint)value << 8) & 0x00ff0000) | ((value << 24) & 0xff000000));
+    public static uint Swap32(uint value) {
+        return ((value >> 24) & 0x000000ff) | ((value >> 8) & 0x0000ff00) | ((value << 8) & 0x00ff0000) | ((value << 24) & 0xff000000);
     }
 
-    public static int ToAbsoluteOffset(int physicalAddress) {
-        return physicalAddress - (physicalAddress / SegmentSize) * SegmentSize;
+    public static ushort ToAbsoluteOffset(uint physicalAddress) {
+        return (ushort)(physicalAddress - (physicalAddress / SegmentSize) * SegmentSize);
     }
 
-    public static int ToAbsoluteSegment(int physicalAddress) {
-        return ((physicalAddress / SegmentSize) * SegmentSize) >> 4;
+    public static ushort ToAbsoluteSegment(uint physicalAddress) {
+        return (ushort)(((physicalAddress / SegmentSize) * SegmentSize) >> 4);
     }
 
-    public static string ToAbsoluteSegmentedAddress(int segment, int offset) {
-        int physical = MemoryUtils.ToPhysicalAddress(segment, offset);
+    public static string ToAbsoluteSegmentedAddress(ushort segment, ushort offset) {
+        uint physical = MemoryUtils.ToPhysicalAddress(segment, offset);
         return $"{ToHex16(ToAbsoluteSegment(physical))}:{ToHex16(ToAbsoluteOffset(physical))}";
     }
 
-    public static string ToBin16(int value) {
-        return Uint16(value).ToString(CultureInfo.InvariantCulture);
+    public static string ToBin16(ushort value) {
+        return value.ToString(CultureInfo.InvariantCulture);
     }
 
-    public static string ToBin8(int value) {
-        return Uint8(value).ToString(CultureInfo.InvariantCulture);
+    public static string ToBin8(byte value) {
+        return value.ToString(CultureInfo.InvariantCulture);
     }
 
-    public static char ToChar(int value) {
-        return Encoding.ASCII.GetString(new byte[] { (byte)value }).ToCharArray()[0];
+    public static char ToChar(byte value) {
+        return Encoding.ASCII.GetString(new [] { value }).ToCharArray()[0];
     }
 
     public static string ToCSharpString(SegmentedAddress address) {
@@ -100,7 +100,7 @@ public class ConvertUtils {
     }
 
     public static string ToCSharpStringWithPhysical(SegmentedAddress address) {
-        return $"{ToHex16WithoutX(address.GetSegment())}_{ToHex16WithoutX(address.GetOffset())}_{ToHex16WithoutX(address.ToPhysical())}";
+        return $"{ToHex16WithoutX(address.GetSegment())}_{ToHex16WithoutX(address.GetOffset())}_{ToHex32WithoutX(address.ToPhysical())}";
     }
 
     public static string ToHex(byte value) {
@@ -111,23 +111,26 @@ public class ConvertUtils {
         return $"0x{value:x}";
     }
 
-    public static string ToHex(int value) {
+    public static string ToHex(uint value) {
         return $"0x{value:x}";
     }
 
-    public static string ToHex16(int value) {
-        return $"0x{Uint16(value):x}";
+    public static string ToHex16(ushort value) {
+        return $"0x{value:x}";
     }
 
-    public static string ToHex16WithoutX(int value) {
-        return $"{Uint16(value):x}";
+    public static string ToHex16WithoutX(ushort value) {
+        return $"{value:x}";
+    }
+    public static string ToHex32WithoutX(uint value) {
+        return $"{value:x}";
     }
 
-    public static string ToHex8(int value) {
-        return $"0x{Uint8(value):x}";
+    public static string ToHex8(byte value) {
+        return $"0x{value:x}";
     }
 
-    public static string ToSegmentedAddressRepresentation(int segment, int offset) {
+    public static string ToSegmentedAddressRepresentation(ushort segment, ushort offset) {
         return $"{ToHex16(segment)}:{ToHex16(offset)}";
     }
 
@@ -135,7 +138,7 @@ public class ConvertUtils {
         return Encoding.ASCII.GetString(value);
     }
 
-    public static ushort Uint16(int value) {
+    public static ushort Uint16(ushort value) {
         return (ushort)(value & 0xFFFF);
     }
 
@@ -143,23 +146,23 @@ public class ConvertUtils {
         return (uint)(value & 4294967295L);
     }
 
-    public static uint Uint32i(long value) {
-        return Uint32(value);
+    public static int Uint32i(long value) {
+        return (int)Uint32(value);
     }
 
-    public static byte Uint8(int value) {
+    public static byte Uint8(byte value) {
         return (byte)(value & 0xFF);
     }
 
-    public static byte Uint8b(int value) {
-        return Uint8(value);
+    public static sbyte Uint8b(byte value) {
+        return (sbyte)Uint8(value);
     }
 
-    public static int WriteLsb(int value, int lsb) {
-        return (value & 0xFF00) | Uint8(lsb);
+    public static ushort WriteLsb(ushort value, byte lsb) {
+        return (ushort)((value & 0xFF00) | lsb);
     }
 
-    public static int WriteMsb(int value, int msb) {
-        return (value & 0x00FF) | ((msb << 8) & 0xFF00);
+    public static ushort WriteMsb(ushort value, byte msb) {
+        return (ushort)((value & 0x00FF) | ((msb << 8) & 0xFF00));
     }
 }

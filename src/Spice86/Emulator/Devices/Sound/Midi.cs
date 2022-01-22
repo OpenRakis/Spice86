@@ -13,7 +13,7 @@ public class Midi : DefaultIOPortHandler {
     public Midi(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
     }
 
-    public override int Inb(int port) {
+    public override byte Inb(int port) {
         if (port == DATA) {
             return ReadData();
         } else {
@@ -26,7 +26,7 @@ public class Midi : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(COMMAND, this);
     }
 
-    public override void Outb(int port, int value) {
+    public override void Outb(int port, byte value) {
         if (port == DATA) {
             WriteData(value);
         } else {
@@ -34,17 +34,17 @@ public class Midi : DefaultIOPortHandler {
         }
     }
 
-    public int ReadData() {
+    public byte ReadData() {
         return 0;
     }
 
-    public int ReadStatus() {
+    public byte ReadStatus() {
         return 0;
     }
 
-    public void WriteCommand(int value) {
+    public void WriteCommand(byte value) {
     }
 
-    public void WriteData(int value) {
+    public void WriteData(byte value) {
     }
 }

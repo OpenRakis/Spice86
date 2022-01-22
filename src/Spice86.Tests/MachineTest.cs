@@ -1,7 +1,8 @@
 namespace Spice86.Tests;
 
-using Emulator.Cpu;
-using Emulator.Machine;
+using Emulator;
+using Emulator.CPU;
+using Emulator.VM;
 using Emulator.Memory;
 
 using System;
@@ -25,7 +26,7 @@ public class MachineTest {
 
     [Fact]
     public void TestBitwise() {
-        byte[] expected = GetExpected("bitwise" + ".bin");
+        byte[] expected = GetExpected("bitwise");
         // dosbox values
         expected[0x9F] = 0x12;
         expected[0x9D] = 0x12;
@@ -78,9 +79,9 @@ public class MachineTest {
         byte[] expected = new byte[] { 0x01, 0x40 };
         Machine emulator = TestOneBin("jmpmov", expected);
         State state = emulator.GetCpu().GetState();
-        int endAddress = MemoryUtils.ToPhysicalAddress(state.GetCS(), state.GetIP());
+        uint endAddress = MemoryUtils.ToPhysicalAddress(state.GetCS(), state.GetIP());
         // Last instruction HLT is one byte long and is at 0xF400C
-        Assert.Equal(0xF400D, endAddress);
+        Assert.Equal((uint)0xF400D, endAddress);
     }
 
     [Fact]
@@ -127,78 +128,81 @@ public class MachineTest {
     public void TestSub() {
         TestOneBin("sub");
     }
-    private Machine TestOneBin(String binName) {
+    private Machine TestOneBin(string binName) {
         byte[] expected = GetExpected(binName);
         return this.TestOneBin(binName, expected);
     }
 
-    private Machine TestOneBin(String binName, byte[] expected) {
+    private Machine TestOneBin(string binName, byte[] expected) {
         Machine machine = Execute(binName);
         Memory memory = machine.GetMemory();
         CompareMemoryWithExpected(memory, expected, 0, expected.Length - 1);
         return machine;
     }
 
-    private Machine Execute(String binName) {
+    private Machine Execute(string binName) {
         Configuration configuration = new Configuration();
         // making sure int8 is not going to be triggered during the tests
-        configuration.SetInstructionsPerSecond(10000000);
-        configuration.SetExe(GetBinPath(binName));
-        /*using ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
-        Machine machine = programExecutor.getMachine();
+        configuration.InstructionsPerSecond = 10000000;
+        configuration.Exe = GetBinPath(binName);
+        // Don't expect any hash for the exe
+        configuration.ExpectedChecksumValue = Array.Empty<byte>();
+        configuration.InstallInterruptVector = false;
+
+        using ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
+        Machine machine = programExecutor.GetMachine();
         Cpu cpu = machine.GetCpu();
         // Disabling custom IO handling
         cpu.SetIoPortDispatcher(null);
         cpu.SetErrorOnUninitializedInterruptHandler(false);
         State state = cpu.GetState();
         state.GetFlags().SetDosboxCompatibility(false);
-        programExecutor.run();
-        return machine;*/
-        return null;
+        programExecutor.Run();
+        return machine;
     }
 
-    private byte[] GetExpected(String binName) {
-        String resPath = $"Resources/cpuTests/res/{binName}.bin";
+    private byte[] GetExpected(string binName) {
+        string resPath = $"Resources/cpuTests/res/{binName}.bin";
         return File.ReadAllBytes(resPath);
     }
 
-    private String GetBinPath(String binName) {
+    private string GetBinPath(string binName) {
         return $"Resources/cpuTests/{binName}.bin";
     }
 
     private void CompareMemoryWithExpected(Memory memory, byte[] expected, int start, int end) {
         byte[] actual = memory.GetRam();
-        for (int i = 0; i < end; i++) {
+        for (uint i = 0; i < end; i++) {
             byte actualByte = actual[i];
             byte expectedByte = expected[i];
             if (actualByte != expectedByte) {
-                int wordIndex = i;
+                uint wordIndex = i;
                 if (wordIndex % 2 == 1) {
                     wordIndex--;
                 }
-                int actualWord = MemoryUtils.GetUint16(actual, wordIndex);
-                int expectedWord = MemoryUtils.GetUint16(expected, wordIndex);
+                ushort actualWord = MemoryUtils.GetUint16(actual, wordIndex);
+                ushort expectedWord = MemoryUtils.GetUint16(expected, wordIndex);
                 Assert.True(false, "Byte value differs at " + CreateMessageByteDiffer(i, expectedByte, actualByte) + ". If words, "
                     + CreateMessageWordDiffer(wordIndex, expectedWord, actualWord));
             }
         }
     }
 
-    private String CreateMessageByteDiffer(int address, int expected, int actual) {
+    private string CreateMessageByteDiffer(uint address, byte expected, byte actual) {
         return "address " + ConvertUtils.ToHex(address) + " Expected " + HexValueWithFlagsB(expected) + " but got "
             + HexValueWithFlagsB(actual);
     }
 
-    private String HexValueWithFlagsB(int value) {
+    private string HexValueWithFlagsB(byte value) {
         return ConvertUtils.ToHex8(value) + " (if flags=" + Flags.DumpFlags(value) + ")";
     }
 
-    private String CreateMessageWordDiffer(int address, int expected, int actual) {
+    private string CreateMessageWordDiffer(uint address, ushort expected, ushort actual) {
         return "address " + ConvertUtils.ToHex(address) + " Expected " + HexValueWithFlagsW(expected) + " but got "
             + HexValueWithFlagsW(actual);
     }
 
-    private String HexValueWithFlagsW(int value) {
+    private string HexValueWithFlagsW(ushort value) {
         return ConvertUtils.ToHex16(value) + " (if flags=" + Flags.DumpFlags(value) + ")";
     }
 }

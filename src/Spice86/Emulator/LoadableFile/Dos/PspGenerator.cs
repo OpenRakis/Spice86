@@ -3,21 +3,20 @@
 using Spice86.Emulator.InterruptHandlers.Dos;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
-using Spice86.Utils;
 using System.Text;
 
 public class PspGenerator {
-    private static readonly int DTA_OR_COMMAND_LINE_OFFSET = 0x80;
-    private static readonly int LAST_FREE_SEGMENT_OFFSET = 0x02;
+    private static readonly ushort DTA_OR_COMMAND_LINE_OFFSET = 0x80;
+    private static readonly ushort LAST_FREE_SEGMENT_OFFSET = 0x02;
     private readonly Machine machine;
 
     public PspGenerator(Machine machine) {
         this.machine = machine;
     }
 
-    public void GeneratePsp(int pspSegment, string? arguments) {
+    public void GeneratePsp(ushort pspSegment, string arguments) {
         Memory memory = machine.GetMemory();
-        int pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
+        uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 
         // https://en.wikipedia.org/wiki/Program_Segment_Prefix
         memory.SetUint16(pspAddress, 0xCD20); // INT20h
@@ -40,13 +39,13 @@ public class PspGenerator {
         }
 
         // Command line size
-        res[0] = ConvertUtils.Uint8b(correctLengthArguments.Length);
+        res[0] = (byte)correctLengthArguments.Length;
 
         // Copy actual characters
         int index = 0;
         for (; index < correctLengthArguments.Length; index++) {
-            var str = correctLengthArguments[index];
-            var chr = Encoding.ASCII.GetBytes(str.ToString())[0];
+            char str = correctLengthArguments[index];
+            byte chr = Encoding.ASCII.GetBytes(str.ToString())[0];
             res[index + 1] = chr;
         }
 

@@ -2,10 +2,10 @@
 
 using Spice86.Emulator.Memory;
 
-public abstract class MemoryBasedArray : MemoryBasedDataStructureWithBaseAddress {
+public abstract class MemoryBasedArray<T> : MemoryBasedDataStructureWithBaseAddress {
     private readonly int _length;
 
-    protected MemoryBasedArray(Memory memory, int baseAddress, int length) : base(memory, baseAddress) {
+    protected MemoryBasedArray(Memory memory, uint baseAddress, int length) : base(memory, baseAddress) {
         this._length = length;
     }
 
@@ -13,7 +13,7 @@ public abstract class MemoryBasedArray : MemoryBasedDataStructureWithBaseAddress
         return _length;
     }
 
-    public abstract int GetValueAt(int index);
+    public abstract T GetValueAt(int index);
 
     public abstract int GetValueSize();
 
@@ -21,5 +21,5 @@ public abstract class MemoryBasedArray : MemoryBasedDataStructureWithBaseAddress
         return index * GetValueSize();
     }
 
-    public abstract void SetValueAt(int index, int value);
+    public abstract void SetValueAt(int index, T value);
 }

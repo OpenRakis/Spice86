@@ -39,11 +39,11 @@ public abstract class FunctionInformationToStringConverter {
         return "";
     }
 
-    protected int ApproximateSize(FunctionInformation functionInformation) {
+    protected long ApproximateSize(FunctionInformation functionInformation) {
         List<SegmentedAddress> boundaries = GetBoundaries(functionInformation);
         SegmentedAddress first = boundaries[0];
         SegmentedAddress last = boundaries[^1];
-        return Math.Abs(first.ToPhysical() - last.ToPhysical());
+        return Math.Abs((long)first.ToPhysical() - (long)last.ToPhysical());
     }
 
     protected bool ContainsNonOverride(IEnumerable<FunctionInformation> calls) {

@@ -13,7 +13,7 @@ public class DosInt20Handler : InterruptHandler {
     public DosInt20Handler(Machine machine) : base(machine) {
     }
 
-    public override int GetIndex() {
+    public override byte GetIndex() {
         return 0x20;
     }
 

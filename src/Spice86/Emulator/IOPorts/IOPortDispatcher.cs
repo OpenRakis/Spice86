@@ -18,7 +18,7 @@
             ioPortHandlers.Add(port, ioPortHandler);
         }
 
-        public override int Inb(int port) {
+        public override byte Inb(int port) {
             if (ioPortHandlers.ContainsKey(port)) {
                 return ioPortHandlers[port].Inb(port);
             }
@@ -29,7 +29,7 @@
         public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         }
 
-        public override int Inw(int port) {
+        public override ushort Inw(int port) {
             if (ioPortHandlers.ContainsKey(port)) {
                 return ioPortHandlers[port].Inw(port);
             }
@@ -37,7 +37,7 @@
             return base.Inw(port);
         }
 
-        public override void Outb(int port, int value) {
+        public override void Outb(int port, byte value) {
             if (ioPortHandlers.ContainsKey(port)) {
                 ioPortHandlers[port].Outb(port, value);
             } else {
@@ -45,7 +45,7 @@
             }
         }
 
-        public override void Outw(int port, int value) {
+        public override void Outw(int port, ushort value) {
             if (ioPortHandlers.ContainsKey(port)) {
                 ioPortHandlers[port].Outw(port, value);
             } else {

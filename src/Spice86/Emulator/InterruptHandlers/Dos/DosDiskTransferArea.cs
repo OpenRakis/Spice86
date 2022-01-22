@@ -14,14 +14,14 @@ public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress {
     private static readonly int FILE_SIZE_OFFSET = 0x1A;
     private static readonly int FILE_TIME_OFFSET = 0x16;
 
-    public DosDiskTransferArea(Memory memory, int baseAddress) : base(memory, baseAddress) {
+    public DosDiskTransferArea(Memory memory, uint baseAddress) : base(memory, baseAddress) {
     }
 
-    public int GetAttribute() {
+    public byte GetAttribute() {
         return this.GetUint8(ATTRIBUTE_OFFSET);
     }
 
-    public int GetFileDate() {
+    public ushort GetFileDate() {
         return this.GetUint16(FILE_DATE_OFFSET);
     }
 
@@ -29,31 +29,31 @@ public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress {
         return this.GetZeroTerminatedString(FILE_NAME_OFFSET, FILE_NAME_SIZE);
     }
 
-    public int GetFileSize() {
+    public ushort GetFileSize() {
         return this.GetUint16(FILE_SIZE_OFFSET);
     }
 
-    public int GetFileTime() {
+    public ushort GetFileTime() {
         return this.GetUint16(FILE_TIME_OFFSET);
     }
 
-    public void SetAttribute(int value) {
-        this.SetUint8(ATTRIBUTE_OFFSET, (byte)value);
+    public void SetAttribute(byte value) {
+        this.SetUint8(ATTRIBUTE_OFFSET, value);
     }
 
-    public void SetFileDate(int value) {
-        this.SetUint16(FILE_DATE_OFFSET, (ushort)value);
+    public void SetFileDate(ushort value) {
+        this.SetUint16(FILE_DATE_OFFSET, value);
     }
 
     public void SetFileName(string value) {
         this.SetZeroTerminatedString(FILE_NAME_OFFSET, value, FILE_NAME_SIZE);
     }
 
-    public void SetFileSize(int value) {
-        this.SetUint16(FILE_SIZE_OFFSET, (ushort)value);
+    public void SetFileSize(ushort value) {
+        this.SetUint16(FILE_SIZE_OFFSET, value);
     }
 
-    public void SetFileTime(int value) {
-        this.SetUint16(FILE_TIME_OFFSET, (ushort)value);
+    public void SetFileTime(ushort value) {
+        this.SetUint16(FILE_TIME_OFFSET, value);
     }
 }

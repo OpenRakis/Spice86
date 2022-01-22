@@ -18,7 +18,7 @@ public record Configuration {
 
 
     [Option('e', nameof(Exe), Default = null, Required = true, HelpText = "Path to executable")]
-    public string? Exe { get; init; }
+    public string? Exe { get; set; }
 
     [Option('a', nameof(ExeArgs), Default = null, Required = false, HelpText = "List of parameters to give to the emulated program")]
     public IEnumerable<string>? ExeArgs { get; init; }
@@ -26,7 +26,7 @@ public record Configuration {
 
     [Option('x', nameof(ExpectedChecksum), Default = null, Required = false, HelpText = "Hexadecimal string representing the expected checksum of the checksum")]
     public string? ExpectedChecksum { get; init; }
-    public byte[]? ExpectedChecksumValue {get; init;}
+    public byte[]? ExpectedChecksumValue {get; set;}
 
 
     [Option('f', nameof(FailOnUnhandledPort), Default = false, Required = false, HelpText = "If true, will fail when encountering an unhandled IO port. Useful to check for unimplemented hardware. false by default.")]
@@ -35,7 +35,7 @@ public record Configuration {
     [Option('g', nameof(GdbPort), Default = null, Required = false, HelpText = "gdb port, if empty gdb server will not be created. If not empty, application will pause until gdb connects")]
     public int? GdbPort { get; init; }
 
-    public bool InstallInterruptVector { get; init; } = true;
+    public bool InstallInterruptVector { get; set; } = true;
 
     [Option('o', nameof(OverrideSupplierClass), Default = null, Required = false, HelpText = "Name of a class in the current folder that will generate the initial function informations. See documentation for more information.")]
     public string? OverrideSupplierClass { get; init; }
@@ -46,7 +46,7 @@ public record Configuration {
     public IOverrideSupplier? OverrideSupplier { get; init; }
 
     [Option('p', nameof(ProgramEntryPointSegment), Default = 0x01ED, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
-    public int ProgramEntryPointSegment { get; init; }
+    public ushort ProgramEntryPointSegment { get; init; }
 
     [Option('u', nameof(UseCodeOverride), Default = false, Required = false, HelpText = "<true or false> if false it will use the names provided by overrideSupplierClassName but not the code")]
     public bool UseCodeOverride { get; init; }
@@ -55,7 +55,7 @@ public record Configuration {
     /// Only for <see cref="Devices.Timer.Timer"/>
     /// </summary>
     [Option('i', nameof(InstructionsPerSecond), Required = false, HelpText = "<number of instructions that have to be executed executed by the emulator to consider a second passed> if blank will use time based timer.")]
-    public long InstructionsPerSecond { get; init; }
+    public long InstructionsPerSecond { get; set; }
 
     [Option('t', nameof(TimeMultiplier), Required = false, HelpText = "<time multiplier> if >1 will go faster, if <1 will go slower.")]
     public double TimeMultiplier { get; init; }

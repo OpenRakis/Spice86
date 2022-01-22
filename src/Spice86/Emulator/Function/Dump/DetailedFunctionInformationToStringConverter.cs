@@ -17,7 +17,7 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
         Dictionary<FunctionReturn, List<SegmentedAddress>> unalignedReturns = Sort(functionInformation.GetUnalignedReturns());
         List<FunctionInformation> callers = GetCallers(functionInformation);
         IEnumerable<FunctionInformation> calls = GetCalls(functionInformation, allFunctions);
-        int approximateSize = ApproximateSize(functionInformation);
+        long approximateSize = ApproximateSize(functionInformation);
         string header = $"function {functionInformation}";
         header += $" returns:{returns.Count}";
         header += $" callers:{callers.Count}";
@@ -49,9 +49,9 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
             res.Append(" - ");
             res.Append(prefix);
             res.Append(": ");
-            res.Append(oneReturn.ToString());
+            res.Append(oneReturn);
             res.Append('\n');
-            List<SegmentedAddress>? targets = entry.Value;
+            List<SegmentedAddress> targets = entry.Value;
             foreach (SegmentedAddress target in targets) {
                 res.Append("   - target: ");
                 res.Append(target);

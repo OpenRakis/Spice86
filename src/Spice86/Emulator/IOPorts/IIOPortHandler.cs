@@ -5,13 +5,13 @@
 /// </summary>
 public interface IIOPortHandler {
 
-    int Inb(int port);
+    byte Inb(int port);
 
     void InitPortHandlers(IOPortDispatcher ioPortDispatcher);
 
-    int Inw(int port);
+    ushort Inw(int port);
 
-    void Outb(int port, int value);
+    void Outb(int port, byte value);
 
-    void Outw(int port, int value);
+    void Outw(int port, ushort value);
 }

@@ -24,8 +24,8 @@ public class GdbCommandMemoryHandler {
     public string ReadMemory(string commandContent) {
         try {
             String[] commandContentSplit = commandContent.Split(",");
-            long address = ConvertUtils.ParseHex32(commandContentSplit[0]);
-            long length = 1;
+            uint address = ConvertUtils.ParseHex32(commandContentSplit[0]);
+            uint length = 1;
             if (commandContentSplit.Length > 1) {
                 length = ConvertUtils.ParseHex32(commandContentSplit[1]);
             }
@@ -33,10 +33,6 @@ public class GdbCommandMemoryHandler {
             _logger.Information("Reading memory at address {@Address} for a length of {@Length}", address, length);
             Memory memory = machine.GetMemory();
             int memorySize = memory.GetSize();
-            if (address < 0) {
-                return gdbIo.GenerateResponse("");
-            }
-
             StringBuilder response = new StringBuilder((int)length * 2);
             for (long i = 0; i < length; i++) {
                 long readAddress = address + i;
@@ -44,7 +40,7 @@ public class GdbCommandMemoryHandler {
                     break;
                 }
 
-                byte b = memory.GetUint8((int)readAddress);
+                byte b = memory.GetUint8((uint)readAddress);
                 string value = gdbFormatter.FormatValueAsHex8(b);
                 response.Append(value);
             }
@@ -58,8 +54,8 @@ public class GdbCommandMemoryHandler {
 
     public string SearchMemory(string command) {
         String[] parameters = command.Replace("Search:memory:", "").Split(";");
-        long start = ConvertUtils.ParseHex32(parameters[0]);
-        long end = ConvertUtils.ParseHex32(parameters[1]);
+        uint start = ConvertUtils.ParseHex32(parameters[0]);
+        uint end = ConvertUtils.ParseHex32(parameters[1]);
 
         // read the bytes from the raw command as GDB does not send them as hex
         List<Byte> rawCommand = gdbIo.GetRawCommand();
@@ -72,7 +68,7 @@ public class GdbCommandMemoryHandler {
         int patternStartIndex = 3 + "Search:memory:".Length + 2 + parameters[0].Length + parameters[1].Length;
         List<Byte> patternBytesList = rawCommand.GetRange(patternStartIndex, rawCommand.Count - 1);
         Memory memory = machine.GetMemory();
-        int? address = memory.SearchValue((int)start, (int)end, patternBytesList);
+        uint? address = memory.SearchValue(start, (int)end, patternBytesList);
         if (address == null) {
             return gdbIo.GenerateResponse("0");
         }
@@ -83,8 +79,8 @@ public class GdbCommandMemoryHandler {
     public string WriteMemory(string commandContent) {
         try {
             String[] commandContentSplit = commandContent.Split("[,:]");
-            long address = ConvertUtils.ParseHex32(commandContentSplit[0]);
-            long length = ConvertUtils.ParseHex32(commandContentSplit[1]);
+            uint address = ConvertUtils.ParseHex32(commandContentSplit[0]);
+            uint length = ConvertUtils.ParseHex32(commandContentSplit[1]);
             byte[] data = ConvertUtils.HexToByteArray(commandContentSplit[2]);
             if (length != data.Length) {
                 return gdbIo.GenerateResponse("E01");
@@ -95,7 +91,7 @@ public class GdbCommandMemoryHandler {
                 return gdbIo.GenerateResponse("E02");
             }
 
-            memory.LoadData((int)address, data);
+            memory.LoadData(address, data);
             return gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
             _logger.Error(nfe, "Memory write requested but could not understand the request {@CommandContent}", commandContent);

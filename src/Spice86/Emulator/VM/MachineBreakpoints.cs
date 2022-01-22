@@ -56,7 +56,7 @@ public class MachineBreakpoints {
 
     private void CheckBreakPoints() {
         if (!executionBreakPoints.IsEmpty()) {
-            int address = state.GetIpPhysicalAddress();
+            uint address = state.GetIpPhysicalAddress();
             executionBreakPoints.TriggerMatchingBreakPoints(address);
         }
 

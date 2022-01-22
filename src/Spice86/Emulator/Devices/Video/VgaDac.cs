@@ -26,16 +26,16 @@ public class VgaDac {
         // Initial VGA default palette initialization
         for (int i = 0; i < _rgbs.Length; i++) {
             Rgb rgb = new();
-            rgb.SetR((((i >> 5) & 0x7) * 255 / 7));
-            rgb.SetG((((i >> 2) & 0x7) * 255 / 7));
-            rgb.SetB(((i & 0x3) * 255 / 3));
+            rgb.SetR((byte)(((i >> 5) & 0x7) * 255 / 7));
+            rgb.SetG((byte)(((i >> 2) & 0x7) * 255 / 7));
+            rgb.SetB((byte)((i & 0x3) * 255 / 3));
             _rgbs[i] = rgb;
         }
     }
 
-    public static int From6bitColorTo8bit(int color6bit) => (byte)((color6bit & 0b111111) << 2);
+    public static byte From6bitColorTo8bit(byte color6bit) => (byte)((color6bit & 0b111111) << 2);
 
-    public static int From8bitTo6bitColor(int color8bit) => (byte)((uint)color8bit >> 2);
+    public static byte From8bitTo6bitColor(byte color8bit) => (byte)((uint)color8bit >> 2);
 
     public int GetColour() {
         return _colour;
@@ -57,9 +57,9 @@ public class VgaDac {
         return _writeIndex;
     }
 
-    public int ReadColor() {
+    public byte ReadColor() {
         Rgb rgb = _rgbs[_readIndex];
-        int value = _colour switch {
+        byte value = _colour switch {
             Redindex => rgb.GetR(),
             GreenIndex => rgb.GetG(),
             BlueIndex => rgb.GetB(),
@@ -92,7 +92,7 @@ public class VgaDac {
         return System.Text.Json.JsonSerializer.Serialize(this);
     }
 
-    public void WriteColor(int colorValue) {
+    public void WriteColor(byte colorValue) {
         Rgb rgb = _rgbs[_writeIndex];
         if (_colour == Redindex) {
             rgb.SetR(colorValue);

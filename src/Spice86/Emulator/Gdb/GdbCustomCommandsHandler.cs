@@ -170,7 +170,7 @@ public class GdbCustomCommandsHandler {
         throw new ArgumentException("You need to specify an action. Valid actions are [refresh, add, remove]");
     }
 
-    private int ExtractAddress(String[] args, string action) {
+    private uint ExtractAddress(String[] args, string action) {
         if (args.Length < 3) {
             throw new ArgumentException($"You need to specify an address for action {action}. Format is 0x12AB (hex) or 1234 (decimal)");
         }
@@ -231,12 +231,12 @@ public class GdbCustomCommandsHandler {
         return Help($"Invalid command {command}\\n");
     }
 
-    private int ParseAddress(string address) {
+    private uint ParseAddress(string address) {
         if (address.Contains("0x")) {
-            return (int)ConvertUtils.ParseHex32(address);
+            return ConvertUtils.ParseHex32(address);
         }
 
-        return int.Parse(address);
+        return uint.Parse(address);
     }
 
     private int[] ParseResolution(string resolution) {
@@ -246,7 +246,7 @@ public class GdbCustomCommandsHandler {
         }
 
         try {
-            return new int[] { int.Parse(split[0]), int.Parse(split[1]) };
+            return new [] { int.Parse(split[0]), int.Parse(split[1]) };
         } catch (FormatException nfe) {
             throw new ArgumentException($"Could not parse numbers in resolution {resolution}", nfe);
         }
@@ -295,7 +295,7 @@ public class GdbCustomCommandsHandler {
                 return _gdbIo.GenerateMessageToDisplayResponse(list);
             }
 
-            int address = ExtractAddress(args, action);
+            uint address = ExtractAddress(args, action);
             if ("remove".Equals(action)) {
                 gui.RemoveBuffer(address);
                 return _gdbIo.GenerateMessageToDisplayResponse($"Removed buffer at address {address}");
@@ -304,8 +304,7 @@ public class GdbCustomCommandsHandler {
             int[] resolution = ExtractResolution(args, action);
             double scale = ExtractScale(args);
             if ("add".Equals(action)) {
-                VideoBuffer existing = gui.GetVideoBuffers()[address];
-                if (existing != null) {
+                if (!gui.GetVideoBuffers().TryGetValue(address, out VideoBuffer? existing)) {
                     return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
                 }
 

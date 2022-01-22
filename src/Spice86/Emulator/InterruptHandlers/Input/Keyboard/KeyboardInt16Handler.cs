@@ -15,13 +15,13 @@ public class KeyboardInt16Handler : InterruptHandler {
         _dispatchTable.Add(0x01, new Callback(0x01, () => GetKeystrokeStatus(true)));
     }
 
-    public override int GetIndex() {
+    public override byte GetIndex() {
         return 0x16;
     }
 
     public void GetKeystroke() {
         _logger.Information("READ KEY STROKE");
-        int? keyCode = GetNextKeyCode();
+        ushort? keyCode = GetNextKeyCode();
         if (keyCode == null) {
             keyCode = 0;
         }
@@ -42,7 +42,7 @@ public class KeyboardInt16Handler : InterruptHandler {
             SetZeroFlag(true, calledFromVm);
             _state.SetAX(0);
         } else {
-            int? keyCode = biosKeyboardBuffer.GetKeyCode();
+            ushort? keyCode = biosKeyboardBuffer.GetKeyCode();
             if (keyCode != null) {
                 SetZeroFlag(false, calledFromVm);
                 _state.SetAX(keyCode.Value);
@@ -50,12 +50,12 @@ public class KeyboardInt16Handler : InterruptHandler {
         }
     }
 
-    public int? GetNextKeyCode() {
+    public ushort? GetNextKeyCode() {
         return biosKeyboardBuffer.GetKeyCode();
     }
 
     public override void Run() {
-        int operation = _state.GetAH();
+        byte operation = _state.GetAH();
         this.Run(operation);
     }
 }

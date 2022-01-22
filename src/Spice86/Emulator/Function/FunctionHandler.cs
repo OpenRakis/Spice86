@@ -30,11 +30,11 @@ public class FunctionHandler {
         this._debugMode = debugMode;
     }
 
-    public void Call(CallType callType, int entrySegment, int entryOffset, int expectedReturnSegment, int expectedReturnOffset) {
+    public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort expectedReturnSegment, ushort expectedReturnOffset) {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, null, true);
     }
 
-    public void Call(CallType callType, int entrySegment, int entryOffset, int? expectedReturnSegment, int? expectedReturnOffset, Func<String>? nameGenerator, bool recordReturn) {
+    public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort? expectedReturnSegment, ushort? expectedReturnOffset, Func<String>? nameGenerator, bool recordReturn) {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
         FunctionInformation currentFunction = _functionInformations.ComputeIfAbsent(entryAddress, () => new FunctionInformation(entryAddress, nameGenerator != null ? nameGenerator.Invoke() : "unknown"));
         if (_debugMode) {
@@ -77,16 +77,16 @@ public class FunctionHandler {
         return _functionInformations;
     }
 
-    public void Icall(CallType callType, int entrySegment, int entryOffset, int expectedReturnSegment, int expectedReturnOffset, int vectorNumber, bool recordReturn) {
+    public void Icall(CallType callType, ushort entrySegment, ushort entryOffset, ushort expectedReturnSegment, ushort expectedReturnOffset, byte vectorNumber, bool recordReturn) {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, () => $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
     }
 
     public SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType) {
-        int stackPhysicalAddress = GetStackPhysicalAddress();
+        uint stackPhysicalAddress = GetStackPhysicalAddress();
         return PeekReturnAddressOnMachineStack(returnCallType, stackPhysicalAddress);
     }
 
-    public SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType, int stackPhysicalAddress) {
+    public SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
         Memory memory = _machine.GetMemory();
         State state = _machine.GetCpu().GetState();
         return new SegmentedAddress(state.GetCS(), memory.GetUint16(stackPhysicalAddress));
@@ -152,8 +152,8 @@ public class FunctionHandler {
     private FunctionReturn GenerateCurrentFunctionReturn(CallType returnCallType) {
         Cpu cpu = _machine.GetCpu();
         State state = cpu.GetState();
-        int cs = state.GetCS();
-        int ip = state.GetIP();
+        ushort cs = state.GetCS();
+        ushort ip = state.GetIP();
         return new FunctionReturn(returnCallType, new SegmentedAddress(cs, ip));
     }
 
@@ -179,11 +179,11 @@ public class FunctionHandler {
         return null;
     }
 
-    private int GetStackPhysicalAddress() {
+    private uint GetStackPhysicalAddress() {
         return _machine.GetCpu().GetState().GetStackPhysicalAddress();
     }
 
-    private bool IsReturnAddressAlignedWithCallStack(FunctionCall currentFunctionCall, SegmentedAddress actualReturnAddress, FunctionReturn currentFunctionReturn) {
+    private bool IsReturnAddressAlignedWithCallStack(FunctionCall currentFunctionCall, SegmentedAddress? actualReturnAddress, FunctionReturn currentFunctionReturn) {
         SegmentedAddress? expectedReturnAddress = currentFunctionCall.GetExpectedReturnAddress();
 
         // Null check necessary for machine stop call, in this case it won't be equals to what is in
@@ -199,7 +199,7 @@ public class FunctionHandler {
                 SegmentedAddress currentStackAddress = GetCurrentStackAddress();
                 string additionalInformation = Environment.NewLine;
                 if (!currentStackAddress.Equals(stackAddressAfterCall)) {
-                    int delta = Math.Abs(currentStackAddress.ToPhysical() - stackAddressAfterCall.ToPhysical());
+                    int delta = (int)Math.Abs((long)currentStackAddress.ToPhysical() - (long)stackAddressAfterCall.ToPhysical());
                     additionalInformation +=
                         $"Stack is not pointing at the same address as it was at call time. Delta is {delta} bytes{Environment.NewLine}";
                 }
@@ -226,7 +226,7 @@ public class FunctionHandler {
         return true;
     }
 
-    private bool UseOverride(FunctionInformation functionInformation) {
+    private bool UseOverride(FunctionInformation? functionInformation) {
         return this._useCodeOverride && functionInformation != null && functionInformation.HasOverride();
     }
 }

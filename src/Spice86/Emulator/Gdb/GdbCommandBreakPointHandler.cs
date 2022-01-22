@@ -66,6 +66,7 @@ public class GdbCommandBreakpointHandler {
             };
             if (breakPointType == null) {
                 _logger.Error("Cannot parse breakpoint type {@Type} for command {@Command}", type, command);
+                return null;
             }
             return new BreakPoint(breakPointType, address, this.OnBreakPointReached, false);
         } catch (FormatException nfe) {
@@ -75,7 +76,10 @@ public class GdbCommandBreakpointHandler {
     }
 
     public string RemoveBreakpoint(string commandContent) {
-        BreakPoint breakPoint = ParseBreakPoint(commandContent);
+        BreakPoint? breakPoint = ParseBreakPoint(commandContent);
+        if (breakPoint == null) {
+            return gdbIo.GenerateResponse("");
+        }
         machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, false);
         _logger.Debug("Breakpoint removed!\\n{@BreakPoint}", breakPoint);
         return gdbIo.GenerateResponse("OK");
@@ -85,7 +89,7 @@ public class GdbCommandBreakpointHandler {
         this.resumeEmulatorOnCommandEnd = resumeEmulatorOnCommandEnd;
     }
 
-    public string Step() {
+    public string? Step() {
         resumeEmulatorOnCommandEnd = true;
 
         // will pause the CPU at the next instruction unconditionally

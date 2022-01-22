@@ -1,14 +1,11 @@
 ﻿namespace Spice86.Emulator.Function.Dump;
 
 using Spice86.Emulator.CPU;
-using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 using Spice86.Utils;
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 public abstract class ClrFunctionToStringConverter : FunctionInformationToStringConverter {
     private static readonly SegmentRegisters _segmentRegisters = new();
     public override string GetFileHeader(IEnumerable<SegmentRegisterBasedAddress> allPotentialGlobals, IEnumerable<SegmentedAddress> whiteListOfSegmentForOffset) {
@@ -32,21 +29,21 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         return address1.GetSegment() != address2.GetSegment() && address1.GetOffset() == address2.GetOffset();
     }
 
-    private string GetStringSegmentValuesForDisplay(int segmentIndex, IEnumerable<int> values) {
+    private string GetStringSegmentValuesForDisplay(int segmentIndex, IEnumerable<ushort> values) {
         string segmentName = _segmentRegisters.GetRegName(segmentIndex);
         string segmentValues = string.Join(",", values.Select(x => $"{ConvertUtils.ToHex16(x)}"));
         return $"{segmentName}:{segmentValues}";
     }
 
-    private Dictionary<int, IEnumerable<int>> GetValuesTakenBySegments(IEnumerable<SegmentRegisterBasedAddress> globals) {
+    private Dictionary<int, IEnumerable<ushort>> GetValuesTakenBySegments(IEnumerable<SegmentRegisterBasedAddress> globals) {
         return MapBySegment(globals).ToDictionary(x => x.Key, (x) => GetSegmentValues(x.Value));
     }
 
-    private Dictionary<int, IEnumerable<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(IEnumerable<SegmentRegisterBasedAddress> globals) {
+    private Dictionary<ushort, IEnumerable<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(IEnumerable<SegmentRegisterBasedAddress> globals) {
         return globals.ToDictionary(x => x.GetSegment(), (x) => globals.Where(y => x.GetSegment() == y.GetSegment()));
     }
 
-    private IEnumerable<int> GetSegmentValues(IEnumerable<SegmentRegisterBasedAddress> globals) {
+    private IEnumerable<ushort> GetSegmentValues(IEnumerable<SegmentRegisterBasedAddress> globals) {
         return globals.ToDictionary(x => x.GetSegment()).Keys.ToList();
     }
 
@@ -55,7 +52,6 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         foreach (SegmentRegisterBasedAddress address in globals) {
             address.GetAddressOperations().Values.SelectMany(x => x).ToList().ForEach((segmentIndex) => res.ComputeIfAbsent(segmentIndex, () => new List<SegmentRegisterBasedAddress>()).ToList().Add(address));
         }
-
         return res;
     }
 
@@ -65,7 +61,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         return JoinNewLine(GetAddressesBySegmentValues(globals).Select(x => GenerateClassForGlobalsOnCSWithValue(x.Key, x.Value)));
     }
 
-    private string GenerateClassForGlobalsOnCSWithValue(int segmentValue, IEnumerable<SegmentRegisterBasedAddress> globals) {
+    private string GenerateClassForGlobalsOnCSWithValue(ushort segmentValue, IEnumerable<SegmentRegisterBasedAddress> globals) {
         string segmentValueHex = ConvertUtils.ToHex16(segmentValue);
         string globalsContent = GenerateGettersSettersForAddresses(globals);
         return GenerateClassForGlobalsOnCSWithValue(segmentValueHex, globalsContent);

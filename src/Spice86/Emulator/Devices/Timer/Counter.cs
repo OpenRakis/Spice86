@@ -24,7 +24,7 @@ public class Counter {
     private int _readWritePolicy = 1;
 
     private long _ticks;
-    private int _value;
+    private ushort _value;
 
     public Counter(Machine machine, int index, ICounterActivator activator) {
         this._machine = machine;
@@ -59,7 +59,7 @@ public class Counter {
         return _value;
     }
 
-    public int GetValueUsingMode() {
+    public byte GetValueUsingMode() {
         return _readWritePolicy switch {
             0 => throw new UnhandledOperationException(_machine,
               "Latch read is not implemented yet"),
@@ -91,12 +91,12 @@ public class Counter {
         this._readWritePolicy = readWritePolicy;
     }
 
-    public void SetValue(int counter) {
+    public void SetValue(ushort counter) {
         this._value = counter;
         OnValueWrite();
     }
 
-    public void SetValueUsingMode(int partialValue) {
+    public void SetValueUsingMode(byte partialValue) {
         if (_readWritePolicy == 1) {
             WriteLsb(partialValue);
         } else if (partialValue == 2) {
@@ -119,15 +119,15 @@ public class Counter {
         }
     }
 
-    private int ReadLsb() {
+    private byte ReadLsb() {
         return ConvertUtils.ReadLsb(_value);
     }
 
-    private int ReadMsb() {
+    private byte ReadMsb() {
         return ConvertUtils.ReadMsb(_value);
     }
 
-    private int ReadPolicy3() {
+    private byte ReadPolicy3() {
         // LSB first, then MSB
         if (_firstByteRead) {
             // return msb
@@ -145,15 +145,15 @@ public class Counter {
         _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", _index, desiredFrequency);
     }
 
-    private void WriteLsb(int partialValue) {
+    private void WriteLsb(byte partialValue) {
         _value = ConvertUtils.WriteLsb(_value, partialValue);
     }
 
-    private void WriteMsb(int partialValue) {
+    private void WriteMsb(byte partialValue) {
         _value = ConvertUtils.WriteMsb(_value, partialValue);
     }
 
-    private void WritePolicy3(int partialValue) {
+    private void WritePolicy3(byte partialValue) {
         // LSB first, then MSB
         if (_firstByteWritten) {
             // write MSB

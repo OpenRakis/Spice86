@@ -20,7 +20,7 @@ public class State {
 
     private long cycles;
 
-    private int ip;
+    private ushort ip;
 
     private int? segmentOverrideIndex = null;
 
@@ -50,15 +50,15 @@ public class State {
         res += " FS=" + ConvertUtils.ToHex16(GetFS());
         res += " GS=" + ConvertUtils.ToHex16(GetGS());
         res += " flags=" + ConvertUtils.ToHex16(flags.GetFlagRegister());
-        res += " (" + flags.ToString() + ")";
+        res += " (" + flags + ")";
         return res;
     }
 
-    public int GetAH() {
+    public byte GetAH() {
         return registers.GetRegister8H(Registers.AxIndex);
     }
 
-    public int GetAL() {
+    public byte GetAL() {
         return registers.GetRegister8L(Registers.AxIndex);
     }
 
@@ -66,23 +66,23 @@ public class State {
         return flags.GetFlag(Flags.Auxiliary);
     }
 
-    public int GetAX() {
+    public ushort GetAX() {
         return registers.GetRegister(Registers.AxIndex);
     }
 
-    public int GetBH() {
+    public byte GetBH() {
         return registers.GetRegister8H(Registers.BxIndex);
     }
 
-    public int GetBL() {
+    public byte GetBL() {
         return registers.GetRegister8L(Registers.BxIndex);
     }
 
-    public int GetBP() {
+    public ushort GetBP() {
         return registers.GetRegister(Registers.BpIndex);
     }
 
-    public int GetBX() {
+    public ushort GetBX() {
         return registers.GetRegister(Registers.BxIndex);
     }
 
@@ -90,11 +90,11 @@ public class State {
         return flags.GetFlag(Flags.Carry);
     }
 
-    public int GetCH() {
+    public byte GetCH() {
         return registers.GetRegister8H(Registers.CxIndex);
     }
 
-    public int GetCL() {
+    public byte GetCL() {
         return registers.GetRegister8L(Registers.CxIndex);
     }
 
@@ -102,7 +102,7 @@ public class State {
         return continueZeroFlagValue;
     }
 
-    public int GetCS() {
+    public ushort GetCS() {
         return segmentRegisters.GetRegister(SegmentRegisters.CsIndex);
     }
 
@@ -110,7 +110,7 @@ public class State {
         return currentInstructionPrefix + currentInstructionName;
     }
 
-    public int GetCX() {
+    public ushort GetCX() {
         return registers.GetRegister(Registers.CxIndex);
     }
 
@@ -118,11 +118,11 @@ public class State {
         return cycles;
     }
 
-    public int GetDH() {
+    public byte GetDH() {
         return registers.GetRegister8H(Registers.DxIndex);
     }
 
-    public int GetDI() {
+    public ushort GetDI() {
         return registers.GetRegister(Registers.DiIndex);
     }
 
@@ -130,19 +130,19 @@ public class State {
         return flags.GetFlag(Flags.Direction);
     }
 
-    public int GetDL() {
+    public byte GetDL() {
         return registers.GetRegister8L(Registers.DxIndex);
     }
 
-    public int GetDS() {
+    public ushort GetDS() {
         return segmentRegisters.GetRegister(SegmentRegisters.DsIndex);
     }
 
-    public int GetDX() {
+    public ushort GetDX() {
         return registers.GetRegister(Registers.DxIndex);
     }
 
-    public int GetES() {
+    public ushort GetES() {
         return segmentRegisters.GetRegister(SegmentRegisters.EsIndex);
     }
 
@@ -150,11 +150,11 @@ public class State {
         return flags;
     }
 
-    public int GetFS() {
+    public ushort GetFS() {
         return segmentRegisters.GetRegister(SegmentRegisters.FsIndex);
     }
 
-    public int GetGS() {
+    public ushort GetGS() {
         return segmentRegisters.GetRegister(SegmentRegisters.GsIndex);
     }
 
@@ -166,11 +166,11 @@ public class State {
         return flags.GetFlag(Flags.Interrupt);
     }
 
-    public int GetIP() {
+    public ushort GetIP() {
         return ip;
     }
 
-    public int GetIpPhysicalAddress() {
+    public uint GetIpPhysicalAddress() {
         return MemoryUtils.ToPhysicalAddress(this.GetCS(), this.GetIP());
     }
 
@@ -194,7 +194,7 @@ public class State {
         return segmentRegisters;
     }
 
-    public int GetSI() {
+    public ushort GetSI() {
         return registers.GetRegister(Registers.SiIndex);
     }
 
@@ -202,15 +202,15 @@ public class State {
         return flags.GetFlag(Flags.Sign);
     }
 
-    public int GetSP() {
+    public ushort GetSP() {
         return registers.GetRegister(Registers.SpIndex);
     }
 
-    public int GetSS() {
+    public ushort GetSS() {
         return segmentRegisters.GetRegister(SegmentRegisters.SsIndex);
     }
 
-    public int GetStackPhysicalAddress() {
+    public uint GetStackPhysicalAddress() {
         return MemoryUtils.ToPhysicalAddress(this.GetSS(), this.GetSP());
     }
 
@@ -230,11 +230,11 @@ public class State {
         this.currentInstructionPrefix = "";
     }
 
-    public void SetAH(int value) {
+    public void SetAH(byte value) {
         registers.SetRegister8H(Registers.AxIndex, value);
     }
 
-    public void SetAL(int value) {
+    public void SetAL(byte value) {
         registers.SetRegister8L(Registers.AxIndex, value);
     }
 
@@ -242,23 +242,23 @@ public class State {
         flags.SetFlag(Flags.Auxiliary, value);
     }
 
-    public void SetAX(int value) {
+    public void SetAX(ushort value) {
         registers.SetRegister(Registers.AxIndex, value);
     }
 
-    public void SetBH(int value) {
+    public void SetBH(byte value) {
         registers.SetRegister8H(Registers.BxIndex, value);
     }
 
-    public void SetBL(int value) {
+    public void SetBL(byte value) {
         registers.SetRegister8L(Registers.BxIndex, value);
     }
 
-    public void SetBP(int value) {
+    public void SetBP(ushort value) {
         registers.SetRegister(Registers.BpIndex, value);
     }
 
-    public void SetBX(int value) {
+    public void SetBX(ushort value) {
         registers.SetRegister(Registers.BxIndex, value);
     }
 
@@ -266,11 +266,11 @@ public class State {
         flags.SetFlag(Flags.Carry, value);
     }
 
-    public void SetCH(int value) {
+    public void SetCH(byte value) {
         registers.SetRegister8H(Registers.CxIndex, value);
     }
 
-    public void SetCL(int value) {
+    public void SetCL(byte value) {
         registers.SetRegister8L(Registers.CxIndex, value);
     }
 
@@ -278,7 +278,7 @@ public class State {
         this.continueZeroFlagValue = continueZeroFlagValue;
     }
 
-    public void SetCS(int value) {
+    public void SetCS(ushort value) {
         segmentRegisters.SetRegister(SegmentRegisters.CsIndex, value);
     }
 
@@ -286,7 +286,7 @@ public class State {
         this.currentInstructionName = currentInstructionName;
     }
 
-    public void SetCX(int value) {
+    public void SetCX(ushort value) {
         registers.SetRegister(Registers.CxIndex, value);
     }
 
@@ -294,11 +294,11 @@ public class State {
         this.cycles = cycles;
     }
 
-    public void SetDH(int value) {
+    public void SetDH(byte value) {
         registers.SetRegister8H(Registers.DxIndex, value);
     }
 
-    public void SetDI(int value) {
+    public void SetDI(ushort value) {
         registers.SetRegister(Registers.DiIndex, value);
     }
 
@@ -306,27 +306,27 @@ public class State {
         flags.SetFlag(Flags.Direction, value);
     }
 
-    public void SetDL(int value) {
+    public void SetDL(byte value) {
         registers.SetRegister8L(Registers.DxIndex, value);
     }
 
-    public void SetDS(int value) {
+    public void SetDS(ushort value) {
         segmentRegisters.SetRegister(SegmentRegisters.DsIndex, value);
     }
 
-    public void SetDX(int value) {
+    public void SetDX(ushort value) {
         registers.SetRegister(Registers.DxIndex, value);
     }
 
-    public void SetES(int value) {
+    public void SetES(ushort value) {
         segmentRegisters.SetRegister(SegmentRegisters.EsIndex, value);
     }
 
-    public void SetFS(int value) {
+    public void SetFS(ushort value) {
         segmentRegisters.SetRegister(SegmentRegisters.FsIndex, value);
     }
 
-    public void SetGS(int value) {
+    public void SetGS(ushort value) {
         segmentRegisters.SetRegister(SegmentRegisters.GsIndex, value);
     }
 
@@ -334,8 +334,8 @@ public class State {
         flags.SetFlag(Flags.Interrupt, value);
     }
 
-    public void SetIP(int value) {
-        ip = ConvertUtils.Uint16(value);
+    public void SetIP(ushort value) {
+        ip = value;
     }
 
     public void SetOverflowFlag(bool value) {
@@ -350,7 +350,7 @@ public class State {
         this.segmentOverrideIndex = segmentOverrideIndex;
     }
 
-    public void SetSI(int value) {
+    public void SetSI(ushort value) {
         registers.SetRegister(Registers.SiIndex, value);
     }
 
@@ -358,11 +358,11 @@ public class State {
         flags.SetFlag(Flags.Sign, value);
     }
 
-    public void SetSP(int value) {
+    public void SetSP(ushort value) {
         registers.SetRegister(Registers.SpIndex, value);
     }
 
-    public void SetSS(int value) {
+    public void SetSS(ushort value) {
         segmentRegisters.SetRegister(SegmentRegisters.SsIndex, value);
     }
 

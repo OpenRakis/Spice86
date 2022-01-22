@@ -10,7 +10,7 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
     protected MemoryBasedDataStructureWithBaseAddressProvider(Memory memory) : base(memory) {
     }
 
-    public abstract int GetBaseAddress();
+    public abstract uint GetBaseAddress();
 
     public ushort GetUint16(int offset) {
         return base.GetUint16(GetBaseAddress(), offset);
@@ -34,7 +34,7 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
 
     public string GetZeroTerminatedString(int start, int maxLength) {
         StringBuilder res = new();
-        int physicalStart = GetBaseAddress() + start;
+        uint physicalStart = (uint)(GetBaseAddress() + start);
         for (int i = 0; i < maxLength; i++) {
             char character = (char)base.GetUint8(physicalStart, i);
             if (character == 0) {
@@ -64,7 +64,7 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
             throw new UnrecoverableException($"String {value} is more than {maxLenght} cannot write it at offset {start}");
         }
 
-        int physicalStart = GetBaseAddress() + start;
+        uint physicalStart = (uint)(GetBaseAddress() + start);
         int i = 0;
         for (; i < value.Length; i++) {
             char character = value[i];

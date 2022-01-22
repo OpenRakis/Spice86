@@ -9,6 +9,6 @@ using System;
 [Serializable]
 public class InvalidGroupIndexException : InvalidVMOperationException {
 
-    public InvalidGroupIndexException(Machine machine, int groupIndex) : base(machine, $"Invalid group index {ConvertUtils.ToHex(groupIndex)}") {
+    public InvalidGroupIndexException(Machine machine, int groupIndex) : base(machine, $"Invalid group index {ConvertUtils.ToHex((uint)groupIndex)}") {
     }
 }
