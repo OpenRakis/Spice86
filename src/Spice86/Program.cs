@@ -3,6 +3,9 @@
 using Avalonia;
 using Avalonia.ReactiveUI;
 
+using Serilog;
+using Serilog.Events;
+
 using Spice86.UI;
 
 using System;
@@ -12,6 +15,15 @@ using System.Linq;
 /// Spice86 Entry Point
 /// </summary>
 internal class Program {
+
+    private static readonly ILogger _logger = new LoggerConfiguration()
+        .MinimumLevel.Debug()
+        .WriteTo.Console()
+        .CreateLogger();
+
+    public Program() {
+        Log.Logger = _logger;
+    }
 
     /// <summary>
     /// Alternate Entry Point

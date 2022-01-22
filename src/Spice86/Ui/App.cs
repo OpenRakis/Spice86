@@ -18,10 +18,7 @@ using System.Threading.Tasks;
 /// </summary>
 public partial class App {
 
-    private static readonly ILogger _logger = new LoggerConfiguration()
-        .MinimumLevel.Debug()
-        .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug) // restricted... is Optional
-        .CreateLogger();
+    private static readonly ILogger _logger = Log.Logger.ForContext<App>();
 
     private ProgramExecutor? _programExecutor;
 
