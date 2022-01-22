@@ -20,7 +20,7 @@ internal class Program {
         .WriteTo.Debug()
         .CreateLogger();
 
-    public Program() {
+    static Program() {
         Log.Logger = _logger;
     }
 
