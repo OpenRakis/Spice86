@@ -30,4 +30,9 @@
   <ItemGroup>
     <AvaloniaResource Include="UI\Assets\**" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Update="UI\VideoBuffer.axaml.cs">
+      <DependentUpon>VideoBuffer.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>

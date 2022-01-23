@@ -2,26 +2,24 @@
 
 using Serilog;
 
+using Spice86.Emulator.CPU;
+using Spice86.Emulator.Devices.Timer;
+using Spice86.Emulator.Errors;
+using Spice86.Emulator.Function;
+using Spice86.Emulator.Gdb;
+using Spice86.Emulator.Loadablefile.Bios;
+using Spice86.Emulator.Loadablefile.Dos.Com;
+using Spice86.Emulator.Loadablefile.Dos.Exe;
+using Spice86.Emulator.LoadableFile;
+using Spice86.Emulator.Memory;
+using Spice86.Emulator.VM;
+using Spice86.UI;
+using Spice86.Utils;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
-
-
-using Spice86.Emulator.CPU;
-using Spice86.Emulator.Gdb;
-using Spice86.Emulator.VM;
-using Spice86.Emulator.Memory;
-using Spice86.Utils;
-using Spice86.UI;
-using Spice86.Emulator.LoadableFile;
-using Spice86.Emulator.Errors;
-using Spice86.Emulator.Function;
-using Spice86.Emulator.Devices.Timer;
-using Spice86.Emulator.Loadablefile.Dos.Exe;
-using Spice86.Emulator.Loadablefile.Dos.Com;
-using Spice86.Emulator.Loadablefile.Bios;
 using System.Security.Cryptography;
-using System.Text;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -58,12 +56,8 @@ public class ProgramExecutor : IDisposable {
     protected void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                // TODO: dispose managed state (managed objects)
                 _gdbServer?.Dispose();
             }
-
-            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            // TODO: set large fields to null
             _disposedValue = true;
         }
     }
@@ -82,7 +76,7 @@ public class ProgramExecutor : IDisposable {
             byte[] actualHash = mySHA256.ComputeHash(file);
 
             if (!Array.Equals(expectedHash, actualHash)) {
-                string error = "File does not match the expected SHA256 checksum, cannot execute it.\\n" + "Expected checksum is " + ConvertUtils.ByteArrayToHexString(expectedHash) + ".\\n" + "Got " + ConvertUtils.ByteArrayToHexString(actualHash) + "\\n";
+                string error = $"File does not match the expected SHA256 checksum, cannot execute it.\\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\\n";
                 throw new UnrecoverableException(error);
             }
         } catch (UnauthorizedAccessException e) {
