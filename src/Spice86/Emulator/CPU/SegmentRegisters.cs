@@ -19,13 +19,14 @@ public class SegmentRegisters : RegistersHolder {
     }
 
     private static Dictionary<int, string> GetRegistersNames() {
-        Dictionary<int, string> res = new();
-        res.Add(EsIndex, "ES");
-        res.Add(CsIndex, "CS");
-        res.Add(SsIndex, "SS");
-        res.Add(DsIndex, "DS");
-        res.Add(FsIndex, "FS");
-        res.Add(GsIndex, "GS");
+        Dictionary<int, string> res = new() {
+            { EsIndex, "ES" },
+            { CsIndex, "CS" },
+            { SsIndex, "SS" },
+            { DsIndex, "DS" },
+            { FsIndex, "FS" },
+            { GsIndex, "GS" }
+        };
         return res;
     }
 }

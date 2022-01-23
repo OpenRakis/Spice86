@@ -30,12 +30,12 @@ public abstract class ExecutableFileLoader {
         return File.ReadAllBytes(file);
     }
 
-    protected void SetEntryPoint(int cs, int ip) {
+    protected void SetEntryPoint(ushort cs, ushort ip) {
         State state = _cpu.GetState();
         state.SetCS(cs);
         state.SetIP(ip);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Program entry point is {@ProgramEntty}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
+            _logger.Information("Program entry point is {@ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
     }
 }

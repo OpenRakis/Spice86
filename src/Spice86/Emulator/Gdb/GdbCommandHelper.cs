@@ -43,7 +43,7 @@ public class GdbCommandHandler {
         PauseHandler pauseHandler = machine.GetMachineBreakpoints().GetPauseHandler();
         pauseHandler.RequestPauseAndWait();
         try {
-            string response = first switch {
+            string? response = first switch {
                 (char)0x03 => gdbCommandBreakpointHandler.Step(),
                 'k' => Kill(),
                 'D' => Detach(),
@@ -119,7 +119,7 @@ public class GdbCommandHandler {
             string[] supportedRequestItems = command.Replace("Supported:", "").Split(";");
             Dictionary<string, object> supportedRequest = supportedRequestItems
                 .ToDictionary(x => ParseSupportedQuery(x))
-                .ToDictionary(data => (string)data.Key.Item1, data => data.Key.Item2);
+                .ToDictionary(data => data.Key.Item1, data => data.Key.Item2);
             if (supportedRequest.TryGetValue("xmlRegisters", out var value) == false || value.Equals("i386") == false) {
                 return gdbIo.GenerateUnsupportedResponse();
             }

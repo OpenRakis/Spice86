@@ -13,7 +13,7 @@ public class FunctionCall {
 
     private readonly SegmentedAddress _stackAddressAfterCall;
 
-    public FunctionCall(CallType callType, SegmentedAddress entryPointAddress, SegmentedAddress? expectedReturnAddress, SegmentedAddress stackAddressAfterCall, bool recordReturn) : base() {
+    public FunctionCall(CallType callType, SegmentedAddress entryPointAddress, SegmentedAddress? expectedReturnAddress, SegmentedAddress stackAddressAfterCall, bool recordReturn) {
         this._callType = callType;
         this._entryPointAddress = entryPointAddress;
         this._expectedReturnAddress = expectedReturnAddress;

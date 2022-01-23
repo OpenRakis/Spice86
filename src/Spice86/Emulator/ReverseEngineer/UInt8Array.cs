@@ -2,12 +2,12 @@
 
 using Spice86.Emulator.Memory;
 
-public class Uint8Array : MemoryBasedArray {
+public class Uint8Array : MemoryBasedArray<byte> {
 
-    public Uint8Array(Memory memory, int baseAddress, int length) : base(memory, baseAddress, length) {
+    public Uint8Array(Memory memory, uint baseAddress, int length) : base(memory, baseAddress, length) {
     }
 
-    public override int GetValueAt(int index) {
+    public override byte GetValueAt(int index) {
         int offset = this.IndexToOffset(index);
         return GetUint8(offset);
     }
@@ -16,8 +16,8 @@ public class Uint8Array : MemoryBasedArray {
         return 1;
     }
 
-    public override void SetValueAt(int index, int value) {
+    public override void SetValueAt(int index, byte value) {
         int offset = this.IndexToOffset(index);
-        SetUint8(offset, (byte)value);
+        SetUint8(offset, value);
     }
 }

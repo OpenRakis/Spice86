@@ -10,14 +10,14 @@ using System.Linq;
 public class CallbackHandler : IndexBasedDispatcher<ICallback> {
 
     // Map of all the callback addresses
-    private readonly Dictionary<int, SegmentedAddress> _callbackAddresses = new();
+    private readonly Dictionary<byte, SegmentedAddress> _callbackAddresses = new();
 
     // Segment where to install the callbacks code in memory
     private readonly ushort _callbackHandlerSegment;
 
     private readonly Machine _machine;
 
-    private readonly Memory? _memory;
+    private readonly Memory _memory;
 
     // offset in this segment so that new callbacks are written to a fresh location
     private ushort _offset = 0;
@@ -32,12 +32,12 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
         AddService(callback.GetIndex(), callback);
     }
 
-    public Dictionary<int, SegmentedAddress> GetCallbackAddresses() {
+    public Dictionary<byte, SegmentedAddress> GetCallbackAddresses() {
         return _callbackAddresses;
     }
 
     public void InstallAllCallbacksInInterruptTable() {
-        foreach (var callback in _dispatchTable.Values.OrderBy(x => x.GetIndex())) {
+        foreach (ICallback callback in _dispatchTable.Values.OrderBy(x => x.GetIndex())) {
             this.InstallCallbackInInterruptTable(callback);
         }
     }
@@ -50,32 +50,32 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
         _offset += InstallInterruptWithCallback(callback.GetIndex(), _callbackHandlerSegment, _offset);
     }
 
-    private ushort InstallInterruptWithCallback(int vectorNumber, ushort segment, ushort offset) {
+    private ushort InstallInterruptWithCallback(byte vectorNumber, ushort segment, ushort offset) {
         InstallVectorInTable(vectorNumber, segment, offset);
         return WriteInterruptCallback(vectorNumber, segment, offset);
     }
 
-    private void InstallVectorInTable(int vectorNumber, ushort segment, ushort offset) {
+    private void InstallVectorInTable(byte vectorNumber, ushort segment, ushort offset) {
         // install the vector in the vector table
-        _memory?.SetUint16(4 * vectorNumber + 2, segment);
-        _memory?.SetUint16(4 * vectorNumber, offset);
+        _memory.SetUint16((ushort)(4 * vectorNumber + 2), segment);
+        _memory.SetUint16((ushort)(4 * vectorNumber), offset);
     }
 
-    private ushort WriteInterruptCallback(int vectorNumber, int segment, int offset) {
+    private ushort WriteInterruptCallback(byte vectorNumber, ushort segment, ushort offset) {
         _callbackAddresses.Add(vectorNumber, new SegmentedAddress(segment, offset));
-        int address = MemoryUtils.ToPhysicalAddress(segment, offset);
+        uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
 
         // CALLBACK opcode (custom instruction, FE38 + 16 bits callback number)
-        _memory?.SetUint8(address, 0xFE);
-        _memory?.SetUint8(address + 1, 0x38);
+        _memory.SetUint8(address, 0xFE);
+        _memory.SetUint8(address + 1, 0x38);
 
         // vector to call
-        _memory?.SetUint16(address + 2, (ushort)vectorNumber);
+        _memory.SetUint8(address + 2, vectorNumber);
 
         // IRET
-        _memory?.SetUint8(address + 4, 0xCF);
+        _memory.SetUint8(address + 3, 0xCF);
 
-        // 5 bytes used
-        return 5;
+        // 4 bytes used
+        return 4;
     }
 }

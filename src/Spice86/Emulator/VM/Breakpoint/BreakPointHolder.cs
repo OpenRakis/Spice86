@@ -34,7 +34,7 @@
 
         public void TriggerMatchingBreakPoints(long address) {
             if (!_breakPoints.Any() == false) {
-                if (_breakPoints.TryGetValue(address, out var breakPointList)) {
+                if (_breakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
                     TriggerBreakPointsFromList(breakPointList, address);
                     if (breakPointList.Any() == false) {
                         _breakPoints.Remove(address);
@@ -70,7 +70,7 @@
         private void ToggleConditionalBreakPoint(BreakPoint breakPoint, bool on) {
             long address = breakPoint.GetAddress();
             if (on) {
-                var breakPointList = _breakPoints.ComputeIfAbsent(address, () => new());
+                List<BreakPoint> breakPointList = _breakPoints.ComputeIfAbsent(address, () => new());
                 breakPointList.Add(breakPoint);
             } else {
                 if (_breakPoints.TryGetValue(address, out var breakPointList)) {

@@ -21,21 +21,21 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         return _biosKeyboardBuffer;
     }
 
-    public override int GetIndex() {
+    public override byte GetIndex() {
         return 0x9;
     }
 
     public override void Run() {
-        int? scancode = _keyboard.GetScancode();
+        byte? scancode = _keyboard.GetScancode();
         if (scancode == null) {
             return;
         }
 
-        int? ascii = _keyScancodeConverter.GetAsciiCode(scancode.Value);
+        byte? ascii = _keyScancodeConverter.GetAsciiCode(scancode.Value);
         if (ascii == null) {
             ascii = 0;
         }
 
-        _biosKeyboardBuffer.AddKeyCode((scancode.Value << 8) | ascii.Value);
+        _biosKeyboardBuffer.AddKeyCode((ushort)((scancode.Value << 8) | ascii.Value));
     }
 }

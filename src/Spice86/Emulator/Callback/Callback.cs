@@ -3,15 +3,15 @@
 using System;
 
 public class Callback : ICallback {
-    private readonly int _index;
+    private readonly byte _index;
     private readonly Action _runnable;
 
-    public Callback(int index, Action runnable) {
+    public Callback(byte index, Action runnable) {
         _index = index;
         _runnable = runnable;
     }
 
-    public int GetIndex() {
+    public byte GetIndex() {
         return _index;
     }
 

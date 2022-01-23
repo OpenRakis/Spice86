@@ -47,7 +47,7 @@ public class GdbCommandRegisterHandler {
             byte[] data = ConvertUtils.HexToByteArray(commandContent);
             for (int i = 0; i < data.Length; i += 4) {
                 long value = ConvertUtils.BytesToInt32(data, i);
-                SetRegisterValue(i / 4, (int)value);
+                SetRegisterValue(i / 4, (ushort)value);
             }
 
             return gdbIo.GenerateResponse("OK");
@@ -59,13 +59,13 @@ public class GdbCommandRegisterHandler {
 
     public string WriteRegister(string commandContent) {
         String[] split = commandContent.Split("=");
-        uint registerIndex = (uint)ConvertUtils.ParseHex32(split[0]);
-        uint registerValue = (uint)ConvertUtils.Swap32((int)ConvertUtils.ParseHex32(split[1]));
-        SetRegisterValue((int)registerIndex, (int)registerValue);
+        int registerIndex = (int)ConvertUtils.ParseHex32(split[0]);
+        uint registerValue = ConvertUtils.Swap32(ConvertUtils.ParseHex32(split[1]));
+        SetRegisterValue(registerIndex, (ushort)registerValue);
         return gdbIo.GenerateResponse("OK");
     }
 
-    private int GetRegisterValue(int regIndex) {
+    private uint GetRegisterValue(int regIndex) {
         State state = machine.GetCpu().GetState();
         if (regIndex < 8) {
             return state.GetRegisters().GetRegister(regIndex);
@@ -99,7 +99,7 @@ public class GdbCommandRegisterHandler {
         return registerIndex;
     }
 
-    private void SetRegisterValue(int regIndex, int value) {
+    private void SetRegisterValue(int regIndex, ushort value) {
         State state = machine.GetCpu().GetState();
         if (regIndex < 8) {
             state.GetRegisters().SetRegister(regIndex, value);

@@ -3,13 +3,13 @@
 using Spice86.Emulator.Memory;
 
 public class MemoryBasedDataStructureWithBaseAddress : MemoryBasedDataStructureWithBaseAddressProvider {
-    private readonly int _baseAddress;
+    private readonly uint _baseAddress;
 
-    public MemoryBasedDataStructureWithBaseAddress(Memory memory, int baseAddress) : base(memory) {
+    public MemoryBasedDataStructureWithBaseAddress(Memory memory, uint baseAddress) : base(memory) {
         this._baseAddress = baseAddress;
     }
 
-    public override int GetBaseAddress() {
+    public override uint GetBaseAddress() {
         return _baseAddress;
     }
 }

@@ -33,7 +33,7 @@ public class ProgramExecutor : IDisposable {
     private GdbServer? _gdbServer;
     private Machine _machine;
 
-    public ProgramExecutor(Gui gui, Configuration? configuration) {
+    public ProgramExecutor(Gui? gui, Configuration? configuration) {
         if(configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
@@ -73,6 +73,7 @@ public class ProgramExecutor : IDisposable {
             throw new ArgumentNullException(nameof(expectedHash));
         }
         if (expectedHash.Length == 0) {
+            // No hash check
             return;
         }
 
@@ -89,7 +90,7 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private ExecutableFileLoader CreateExecutableFileLoader(string? fileName, int entryPointSegment) {
+    private ExecutableFileLoader CreateExecutableFileLoader(string? fileName, ushort entryPointSegment) {
         if (fileName == null) {
             throw new ArgumentNullException(nameof(fileName));
         }
@@ -103,24 +104,24 @@ public class ProgramExecutor : IDisposable {
         return new BiosLoader(_machine);
     }
 
-    private Machine CreateMachine(Gui gui, Configuration? configuration) {
+    private Machine CreateMachine(Gui? gui, Configuration? configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
         CounterConfigurator counterConfigurator = new CounterConfigurator(configuration);
         bool debugMode = configuration.GdbPort != null;
-        var machine = new Machine(gui, counterConfigurator, configuration.FailOnUnhandledPort, debugMode);
+        _machine = new Machine(gui, counterConfigurator, configuration.FailOnUnhandledPort, debugMode);
         InitializeCpu();
         InitializeDos(configuration);
         if (configuration.InstallInterruptVector) {
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
-            machine.InstallAllCallbacksInInterruptTable();
+            _machine.InstallAllCallbacksInInterruptTable();
         }
 
         InitializeFunctionHandlers(configuration);
         LoadFileToRun(configuration);
-        return machine;
+        return _machine;
     }
 
 
@@ -133,7 +134,7 @@ public class ProgramExecutor : IDisposable {
         return null;
     }
 
-    private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier supplier, int entryPointSegment, Machine machine) {
+    private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
             _logger.Information("Override supplied: {@OverideSupplier}", supplier);

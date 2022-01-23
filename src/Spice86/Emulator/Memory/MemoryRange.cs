@@ -4,29 +4,29 @@ using System.Text.Json;
 
 /// <summary> Represents a range in memory. </summary>
 public class MemoryRange {
-    private int endAddress;
+    private uint endAddress;
 
     private string name;
 
-    private int startAddress;
+    private uint startAddress;
 
-    public MemoryRange(int startAddress, int endAddress, string name) {
+    public MemoryRange(uint startAddress, uint endAddress, string name) {
         this.startAddress = startAddress;
         this.endAddress = endAddress;
         this.name = name;
     }
 
-    public static MemoryRange FromSegment(int segmentStart, int length, string name) {
+    public static MemoryRange FromSegment(ushort segmentStart, ushort length, string name) {
         return FromSegment(segmentStart, 0, length, name);
     }
 
-    public static MemoryRange FromSegment(int segment, int startOffset, int length, string name) {
-        int start = MemoryUtils.ToPhysicalAddress(segment, startOffset);
-        int end = MemoryUtils.ToPhysicalAddress(segment, startOffset + length);
+    public static MemoryRange FromSegment(ushort segment, ushort startOffset, ushort length, string name) {
+        uint start = MemoryUtils.ToPhysicalAddress(segment, startOffset);
+        uint end = MemoryUtils.ToPhysicalAddress(segment, (ushort)(startOffset + length));
         return new MemoryRange(start, end, name);
     }
 
-    public int GetEndAddress() {
+    public uint GetEndAddress() {
         return endAddress;
     }
 
@@ -34,19 +34,19 @@ public class MemoryRange {
         return name;
     }
 
-    public int GetStartAddress() {
+    public uint GetStartAddress() {
         return startAddress;
     }
 
-    public bool IsInRange(int rangeStartAddress, int rangeEndAddress) {
+    public bool IsInRange(uint rangeStartAddress, uint rangeEndAddress) {
         return rangeStartAddress <= endAddress && rangeEndAddress >= startAddress;
     }
 
-    public bool IsInRange(int address) {
+    public bool IsInRange(uint address) {
         return startAddress <= address && address <= endAddress;
     }
 
-    public void SetEndAddress(int endAddress) {
+    public void SetEndAddress(uint endAddress) {
         this.endAddress = endAddress;
     }
 
@@ -54,7 +54,7 @@ public class MemoryRange {
         this.name = name;
     }
 
-    public void SetStartAddress(int startAddress) {
+    public void SetStartAddress(uint startAddress) {
         this.startAddress = startAddress;
     }
 

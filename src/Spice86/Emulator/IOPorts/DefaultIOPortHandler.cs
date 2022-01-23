@@ -20,7 +20,7 @@
             this.failOnUnhandledPort = failOnUnhandledPort;
         }
 
-        public virtual int Inb(int port) {
+        public virtual byte Inb(int port) {
             return OnUnandledIn(port);
         }
 
@@ -28,19 +28,19 @@
         public virtual void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         }
 
-        public virtual int Inw(int port) {
+        public virtual ushort Inw(int port) {
             return OnUnandledIn(port);
         }
 
-        public virtual void Outb(int port, int value) {
+        public virtual void Outb(int port, byte value) {
             OnUnhandledPort(port);
         }
 
-        public virtual void Outw(int port, int value) {
+        public virtual void Outw(int port, ushort value) {
             OnUnhandledPort(port);
         }
 
-        protected virtual int OnUnandledIn(int port) {
+        protected virtual byte OnUnandledIn(int port) {
             OnUnhandledPort(port);
             return 0;
         }

@@ -64,7 +64,7 @@ public class Pic : DefaultIOPortHandler {
         return _lastIrqAcknowledged;
     }
 
-    public override void Outb(int port, int value) {
+    public override void Outb(int port, byte value) {
         if (port == MasterPortA) {
             ProcessPortACommand(value);
             return;
@@ -75,7 +75,7 @@ public class Pic : DefaultIOPortHandler {
         base.Outb(port, value);
     }
 
-    public void ProcessInterrupt(int vectorNumber) {
+    public void ProcessInterrupt(byte vectorNumber) {
         if (IrqMasked(vectorNumber)) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Cannot process interrupt {@ProcessInterrupt}, IRQ is masked.", ConvertUtils.ToHex8(vectorNumber));
@@ -96,26 +96,26 @@ public class Pic : DefaultIOPortHandler {
         cpu.ExternalInterrupt(vectorNumber);
     }
 
-    private static void ProcessICW2(int value) {
+    private static void ProcessICW2(byte value) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("MASTER PIC COMMAND ICW2 {@Value}. {@BaseOffsetInInterruptDescriptorTable}", ConvertUtils.ToHex8(value),
                 value);
         }
     }
 
-    private static void ProcessICW3(int value) {
+    private static void ProcessICW3(byte value) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PIC COMMAND ICW3 {@Value}.", ConvertUtils.ToHex8(value));
         }
     }
 
-    private static void ProcessICW4(int value) {
+    private static void ProcessICW4(byte value) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PIC COMMAND ICW4 {@Value}.", ConvertUtils.ToHex8(value));
         }
     }
 
-    private void ProcessICW1(int value) {
+    private void ProcessICW1(byte value) {
         bool icw4Present = (value & 0b1) == 1;
         bool singleController = (value & 0b10) == 1;
         bool levelTriggered = (value & 0b1000) == 1;
@@ -126,14 +126,14 @@ public class Pic : DefaultIOPortHandler {
         _commandsToProcess = icw4Present ? 4 : 3;
     }
 
-    private void ProcessOCW1(int value) {
+    private void ProcessOCW1(byte value) {
         _interruptMask = value;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PIC COMMAND OCW1 {@Value}. Mask is {@Mask}", ConvertUtils.ToHex8(value), ConvertUtils.ToBin8(value));
         }
     }
 
-    private void ProcessOCW2(int value) {
+    private void ProcessOCW2(byte value) {
         int interruptLevel = value & 0b111;
         bool sendEndOfInterruptCommand = (value & 0b100000) != 0;
         _lastIrqAcknowledged = sendEndOfInterruptCommand;
@@ -146,7 +146,7 @@ public class Pic : DefaultIOPortHandler {
         }
     }
 
-    private void ProcessPortACommand(int value) {
+    private void ProcessPortACommand(byte value) {
         if (!_inintialized) {
             // Process initialization commands
             if (_currentCommand == 1) {
@@ -169,7 +169,7 @@ public class Pic : DefaultIOPortHandler {
         }
     }
 
-    private void ProcessPortBCommand(int value) {
+    private void ProcessPortBCommand(byte value) {
         if (!_inintialized) {
             ProcessICW1(value);
             _currentCommand = 1;

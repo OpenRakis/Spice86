@@ -6,28 +6,28 @@ using System.Text;
 
 /// <summary> Handles the CPU flag register. </summary>
 public class Flags {
-    public const int Auxiliary = 0b00000000_00010000;
+    public const ushort Auxiliary = 0b00000000_00010000;
 
-    public const int Carry = 0b00000000_00000001;
+    public const ushort Carry = 0b00000000_00000001;
 
-    public const int Direction = 0b00000100_00000000;
+    public const ushort Direction = 0b00000100_00000000;
 
-    public const int Interrupt = 0b00000010_00000000;
+    public const ushort Interrupt = 0b00000010_00000000;
 
-    public const int Overflow = 0b00001000_00000000;
+    public const ushort Overflow = 0b00001000_00000000;
 
-    public const int Parity = 0b00000000_00000100;
+    public const ushort Parity = 0b00000000_00000100;
 
-    public const int Sign = 0b00000000_10000000;
+    public const ushort Sign = 0b00000000_10000000;
 
-    public const int Trap = 0b00000001_00000000;
+    public const ushort Trap = 0b00000001_00000000;
 
-    public const int Zero = 0b00000000_01000000;
+    public const ushort Zero = 0b00000000_01000000;
 
     // rflag mask to OR with flags, useful to compare values with dosbox which emulates
-    private int _additionalFlagMask;
+    private ushort _additionalFlagMask;
 
-    private int _flagRegister;
+    private ushort _flagRegister;
 
     public Flags() {
         this.SetFlagRegister(0);
@@ -57,11 +57,11 @@ public class Flags {
         return _flagRegister == other._flagRegister;
     }
 
-    public bool GetFlag(int mask) {
+    public bool GetFlag(ushort mask) {
         return (_flagRegister & mask) == mask;
     }
 
-    public int GetFlagRegister() {
+    public ushort GetFlagRegister() {
         return _flagRegister;
     }
 
@@ -77,17 +77,17 @@ public class Flags {
         }
     }
 
-    public void SetFlag(int mask, bool value) {
+    public void SetFlag(ushort mask, bool value) {
         if (value) {
             _flagRegister |= mask;
         } else {
-            _flagRegister &= ~mask;
+            _flagRegister &= (ushort)~mask;
         }
     }
 
-    public void SetFlagRegister(int value) {
+    public void SetFlagRegister(ushort value) {
         // Some flags are always 1 or 0 no matter what (8086)
-        int modifedValue = (value | 0b10) & 0b0111111111010111;
+        ushort modifedValue = (ushort)((value | 0b10) & 0b0111111111010111);
 
         // dosbox
         modifedValue |= _additionalFlagMask;

@@ -9,6 +9,6 @@ using System;
 [Serializable]
 public class InvalidModeException : InvalidVMOperationException {
 
-    public InvalidModeException(Machine machine, int mode) : base(machine, $"Invalid mode {ConvertUtils.ToHex(mode)}") {
+    public InvalidModeException(Machine machine, int mode) : base(machine, $"Invalid mode {ConvertUtils.ToHex((uint)mode)}") {
     }
 }

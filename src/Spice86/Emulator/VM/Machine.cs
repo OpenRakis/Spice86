@@ -36,7 +36,7 @@ public class Machine {
     private DosInt20Handler dosInt20Handler;
     private DosInt21Handler dosInt21Handler;
     private GravisUltraSound gravisUltraSound;
-    private Gui gui;
+    private Gui? gui;
 
     // IO Devices
     private IOPortDispatcher ioPortDispatcher;
@@ -61,7 +61,7 @@ public class Machine {
     private VgaCard vgaCard;
     private VideoBiosInt10Handler videoBiosInt10Handler;
 
-    public Machine(Gui gui, CounterConfigurator counterConfigurator, bool failOnUnhandledPort, bool debugMode) {
+    public Machine(Gui? gui, CounterConfigurator counterConfigurator, bool failOnUnhandledPort, bool debugMode) {
         this.gui = gui;
         this.debugMode = debugMode;
         InitHardware(counterConfigurator, failOnUnhandledPort);
@@ -107,7 +107,7 @@ public class Machine {
         return gravisUltraSound;
     }
 
-    public Gui GetGui() {
+    public Gui? GetGui() {
         return gui;
     }
 
@@ -283,7 +283,7 @@ public class Machine {
         }
     }
 
-    private string ToString(SegmentedAddress segmentedAddress) {
+    private string ToString(SegmentedAddress? segmentedAddress) {
         if (segmentedAddress != null) {
             return segmentedAddress.ToString();
         }

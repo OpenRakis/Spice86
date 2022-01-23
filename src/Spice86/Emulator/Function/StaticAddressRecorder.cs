@@ -9,9 +9,9 @@ using System.Collections.Generic;
 public class StaticAddressesRecorder {
     private readonly bool _debugMode;
 
-    private readonly Dictionary<int, string> _names = new();
+    private readonly Dictionary<uint, string> _names = new();
 
-    private readonly Dictionary<int, SegmentRegisterBasedAddress> _segmentRegisterBasedAddress = new();
+    private readonly Dictionary<uint, SegmentRegisterBasedAddress> _segmentRegisterBasedAddress = new();
 
     private readonly SegmentRegisters _segmentRegisters;
 
@@ -19,7 +19,7 @@ public class StaticAddressesRecorder {
 
     private AddressOperation? _currentAddressOperation;
 
-    private int? _currentOffset;
+    private ushort? _currentOffset;
 
     private int? _currentSegmentIndex;
 
@@ -28,7 +28,7 @@ public class StaticAddressesRecorder {
         this._segmentRegisters = state.GetSegmentRegisters();
     }
 
-    public void AddName(int physicalAddress, string name) {
+    public void AddName(uint physicalAddress, string name) {
         _names.Add(physicalAddress, name);
     }
 
@@ -38,8 +38,8 @@ public class StaticAddressesRecorder {
 
     public void Commit() {
         if (_debugMode && _currentSegmentIndex != null && _currentOffset != null && _currentAddressOperation != null && _currentSegmentIndex != null) {
-            int segmentValue = _segmentRegisters.GetRegister(_currentSegmentIndex.Value);
-            int physicalAddress = MemoryUtils.ToPhysicalAddress(segmentValue, _currentOffset.Value);
+            ushort segmentValue = _segmentRegisters.GetRegister(_currentSegmentIndex.Value);
+            uint physicalAddress = MemoryUtils.ToPhysicalAddress(segmentValue, _currentOffset.Value);
             if (_segmentRegisterBasedAddress.TryGetValue(physicalAddress, out var value) == false) {
                 value = new SegmentRegisterBasedAddress(segmentValue, _currentOffset.Value, _names[physicalAddress]);
                 _segmentRegisterBasedAddress.Add(physicalAddress, value);
@@ -48,7 +48,7 @@ public class StaticAddressesRecorder {
         }
     }
 
-    public Dictionary<int, String> GetNames() {
+    public Dictionary<uint, String> GetNames() {
         return _names;
     }
 
@@ -70,7 +70,7 @@ public class StaticAddressesRecorder {
         _currentAddressOperation = new AddressOperation(valueOperation, operandSize);
     }
 
-    public void SetCurrentValue(int regIndex, int offset) {
+    public void SetCurrentValue(int regIndex, ushort offset) {
         _currentSegmentIndex = regIndex;
         _currentOffset = offset;
     }

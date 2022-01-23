@@ -23,15 +23,16 @@ public class Registers : RegistersHolder {
     }
 
     private static Dictionary<int, string> GetRegistersNames() {
-        Dictionary<int, string> res = new();
-        res.Add(AxIndex, "AX");
-        res.Add(CxIndex, "CX");
-        res.Add(DxIndex, "DX");
-        res.Add(BxIndex, "BX");
-        res.Add(SpIndex, "SP");
-        res.Add(BpIndex, "BP");
-        res.Add(SiIndex, "SI");
-        res.Add(DiIndex, "DI");
+        Dictionary<int, string> res = new() {
+            { AxIndex, "AX" },
+            { CxIndex, "CX" },
+            { DxIndex, "DX" },
+            { BxIndex, "BX" },
+            { SpIndex, "SP" },
+            { BpIndex, "BP" },
+            { SiIndex, "SI" },
+            { DiIndex, "DI" }
+        };
         return res;
     }
 }

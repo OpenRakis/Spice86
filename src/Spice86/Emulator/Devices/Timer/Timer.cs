@@ -52,10 +52,10 @@ public class Timer : DefaultIOPortHandler {
         return counters[0].GetTicks();
     }
 
-    public override int Inb(int port) {
+    public override byte Inb(int port) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
-            int value = counter.GetValueUsingMode();
+            byte value = counter.GetValueUsingMode();
             _logger.Information("READING COUNTER {@Counter}, partial value is {@Value}", counter, value);
             return value;
         }
@@ -70,7 +70,7 @@ public class Timer : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(COUNTER_REGISTER_2, this);
     }
 
-    public override void Outb(int port, int value) {
+    public override void Outb(int port, byte value) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             counter.SetValueUsingMode(value);

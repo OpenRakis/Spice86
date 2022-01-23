@@ -9,10 +9,10 @@ using System;
 [Serializable]
 public class InvalidOpCodeException : InvalidVMOperationException {
 
-    public InvalidOpCodeException(Machine machine, int opcode, bool prefixNotAllowed) : base(machine, GenerateMessage(opcode, prefixNotAllowed)) {
+    public InvalidOpCodeException(Machine machine, ushort opcode, bool prefixNotAllowed) : base(machine, GenerateMessage(opcode, prefixNotAllowed)) {
     }
 
-    private static string GenerateMessage(int opcode, bool prefixNotAllowed) {
+    private static string GenerateMessage(ushort opcode, bool prefixNotAllowed) {
         return $"opcode={ConvertUtils.ToHex(opcode)}{(prefixNotAllowed ? " prefix is not allowed here" : "")}";
     }
 }

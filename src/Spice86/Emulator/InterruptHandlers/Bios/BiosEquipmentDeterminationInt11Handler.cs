@@ -10,7 +10,7 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     public BiosEquipmentDeterminationInt11Handler(Machine machine) : base(machine) {
     }
 
-    public override int GetIndex() {
+    public override byte GetIndex() {
         return 0x11;
     }
 

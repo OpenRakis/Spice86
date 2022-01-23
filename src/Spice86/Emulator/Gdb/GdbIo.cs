@@ -49,7 +49,7 @@ public class GdbIo : IDisposable {
     }
 
     public string GenerateResponse(string data) {
-        int checksum = 0;
+        byte checksum = 0;
         foreach (byte b in Encoding.UTF8.GetBytes(data)) {
             checksum += b;
         }
@@ -85,7 +85,7 @@ public class GdbIo : IDisposable {
         return GetPayload(resBuilder);
     }
 
-    public void SendResponse(string data) {
+    public void SendResponse(string? data) {
         if (data != null) {
             _logger.Information("Sending response {@ResponseData}", data);
             output.Write(Encoding.UTF8.GetBytes(data));

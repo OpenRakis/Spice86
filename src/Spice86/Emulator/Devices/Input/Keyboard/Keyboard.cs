@@ -15,9 +15,9 @@ public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
     private static readonly ILogger _logger = Log.Logger.ForContext<Keyboard>();
     private readonly KeyScancodeConverter _keyScancodeConverter = new();
-    private readonly Gui gui;
+    private readonly Gui? gui;
 
-    public Keyboard(Machine machine, Gui gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public Keyboard(Machine machine, Gui? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
         this.gui = gui;
         if (gui != null) {
             gui.SetOnKeyPressedEvent(() => this.OnKeyEvent());
@@ -25,9 +25,12 @@ public class Keyboard : DefaultIOPortHandler {
         }
     }
 
-    public int? GetScancode() {
+    public byte? GetScancode() {
+        if (gui == null) {
+            return null;
+        }
         Key keyCode = gui.GetLastKeyCode();
-        int? scancode;
+        byte? scancode;
         if (gui.IsKeyPressed(keyCode)) {
             scancode = _keyScancodeConverter.GetKeyPressedScancode(keyCode);
             _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
@@ -43,8 +46,8 @@ public class Keyboard : DefaultIOPortHandler {
         return (byte)scancode;
     }
 
-    public override int Inb(int port) {
-        int? scancode = GetScancode();
+    public override byte Inb(int port) {
+        byte? scancode = GetScancode();
         if (scancode == null) {
             return 0;
         }

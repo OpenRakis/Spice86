@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Spice86.Emulator.Devices.Video;
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 /// <summary>
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 /// </summary>
 public class Gui {
 
-    internal void AddBuffer(int address, double scale, int v1, int v2, object? p) {
+    internal void AddBuffer(uint address, double scale, int v1, int v2, object? p) {
         throw new NotImplementedException();
     }
 
@@ -36,7 +37,7 @@ public class Gui {
         throw new NotImplementedException();
     }
 
-    internal VideoBuffer[] GetVideoBuffers() {
+    internal IDictionary<uint, VideoBuffer> GetVideoBuffers() {
         throw new NotImplementedException();
     }
 
@@ -56,7 +57,7 @@ public class Gui {
         throw new NotImplementedException();
     }
 
-    internal void RemoveBuffer(int address) {
+    internal void RemoveBuffer(uint address) {
         throw new NotImplementedException();
     }
 
@@ -92,7 +93,7 @@ public class Gui {
         throw new NotImplementedException();
     }
 
-    internal void SetResolution(int videoWidth, int videoHeight, int v) {
+    internal void SetResolution(int videoWidth, int videoHeight, uint v) {
         throw new NotImplementedException();
     }
 }

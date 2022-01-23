@@ -23,7 +23,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
         _state = _cpu.GetState();
     }
 
-    public abstract int GetIndex();
+    public abstract byte GetIndex();
 
     public abstract void Run();
 
