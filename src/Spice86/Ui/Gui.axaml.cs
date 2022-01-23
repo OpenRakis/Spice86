@@ -163,6 +163,7 @@ public partial class Gui : UserControl {
         VideoBuffer videoBuffer = new VideoBuffer(bufferWidth, bufferHeight, scale, address, VideoBuffers.Count);
         ScalableBitmapControl canvas = videoBuffer.GetScalableControl();
         VideoBuffers.Add(address, videoBuffer);
+        this.RaisePropertyChanged(VideoBuffersProperty, VideoBuffers, VideoBuffers);
         if (canvasPostSetupAction != null) {
             canvasPostSetupAction.Invoke(canvas);
         }
