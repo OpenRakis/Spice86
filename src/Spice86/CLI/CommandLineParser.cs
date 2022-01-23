@@ -24,23 +24,10 @@ public class CommandLineParser {
             .WithNotParsed((e) => _logger.Information("{@Errors}",e));
         if (result != null) {
             Configuration? parsedConfig = result.MapResult((initialConfig) => {
-                return new Configuration() {
-                    CDrive = initialConfig.CDrive,
-                    DefaultDumpDirectory = initialConfig.DefaultDumpDirectory,
-                    Exe = ParseExePath(initialConfig.Exe),
-                    ExeArgs = initialConfig.ExeArgs,
-                    ExpectedChecksum = initialConfig.ExpectedChecksum,
-                    ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum),
-                    FailOnUnhandledPort = initialConfig.FailOnUnhandledPort,
-                    GdbPort = initialConfig.GdbPort,
-                    InstallInterruptVector = initialConfig.InstallInterruptVector,
-                    InstructionsPerSecond = initialConfig.InstructionsPerSecond,
-                    OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClass),
-                    OverrideSupplierClass = initialConfig.OverrideSupplierClass,
-                    ProgramEntryPointSegment = initialConfig.ProgramEntryPointSegment,
-                    TimeMultiplier = initialConfig.TimeMultiplier,
-                    UseCodeOverride = initialConfig.UseCodeOverride,
-                };
+                initialConfig.Exe = ParseExePath(initialConfig.Exe);
+                initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
+                initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClass);
+                return initialConfig;
             }, (error) => {
                 return null;
             });
