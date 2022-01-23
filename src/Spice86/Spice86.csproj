@@ -5,6 +5,7 @@
 	  <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
 	<EnablePackageValidation>true</EnablePackageValidation>
+	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
 	<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
@@ -31,8 +32,8 @@
     <AvaloniaResource Include="UI\Assets\**" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="UI\VideoBuffer.axaml.cs">
-      <DependentUpon>VideoBuffer.axaml</DependentUpon>
+    <Compile Update="UI\Controls\ScalableBitmapControl.axaml.cs">
+      <DependentUpon>ScalableBitmapControl.axaml</DependentUpon>
     </Compile>
   </ItemGroup>
 </Project>
