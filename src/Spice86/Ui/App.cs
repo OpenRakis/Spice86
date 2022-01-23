@@ -1,5 +1,6 @@
 ﻿namespace Spice86.UI;
 
+using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
 using Serilog;
@@ -28,6 +29,9 @@ public partial class App {
     }
 
     public void Start() {
+        if(Design.IsDesignMode) {
+            return;
+        }
         Configuration? configuration = GenerateConfiguration();
         if (configuration == null) {
             Exit();
