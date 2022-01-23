@@ -5,7 +5,6 @@ using CommandLine;
 using Spice86.Emulator.Function;
 
 using System;
-using System.Collections.Generic;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public class Configuration {
@@ -21,12 +20,12 @@ public class Configuration {
     public string? Exe { get; set; }
 
     [Option('a', nameof(ExeArgs), Default = null, Required = false, HelpText = "List of parameters to give to the emulated program")]
-    public IEnumerable<string>? ExeArgs { get; set; }
+    public string? ExeArgs { get; set; }
 
 
     [Option('x', nameof(ExpectedChecksum), Default = null, Required = false, HelpText = "Hexadecimal string representing the expected checksum of the checksum")]
     public string? ExpectedChecksum { get; set; }
-    public byte[]? ExpectedChecksumValue {get; set;}
+    public byte[] ExpectedChecksumValue {get; set;} = Array.Empty<byte>();
 
 
     [Option('f', nameof(FailOnUnhandledPort), Default = false, Required = false, HelpText = "If true, will fail when encountering an unhandled IO port. Useful to check for unimplemented hardware. false by default.")]

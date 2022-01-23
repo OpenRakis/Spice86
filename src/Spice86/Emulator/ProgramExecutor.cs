@@ -205,14 +205,7 @@ public class ProgramExecutor : IDisposable {
         ExecutableFileLoader loader = CreateExecutableFileLoader(executableFileName, configuration.ProgramEntryPointSegment);
         _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName, loader.GetType());
         try {
-            var sb = new StringBuilder();
-            if(configuration.ExeArgs != null) {
-                foreach (var arg in configuration.ExeArgs) {
-                    sb.Append(arg);
-                }
-            }
-            var exeArgs = sb.ToString();
-            byte[] fileContent = loader.LoadFile(executableFileName, exeArgs);
+            byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
         } catch (IOException e) {
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
