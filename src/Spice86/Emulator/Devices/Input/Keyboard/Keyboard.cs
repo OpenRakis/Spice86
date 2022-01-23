@@ -29,21 +29,23 @@ public class Keyboard : DefaultIOPortHandler {
         if (gui == null) {
             return null;
         }
-        Key keyCode = gui.GetLastKeyCode();
-        byte? scancode;
-        if (gui.IsKeyPressed(keyCode)) {
-            scancode = _keyScancodeConverter.GetKeyPressedScancode(keyCode);
-            _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
-        } else {
-            scancode = _keyScancodeConverter.GetKeyReleasedScancode(keyCode);
-            _logger.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
-        }
+        Key? keyCode = gui.GetLastKeyCode();
+        byte? scancode = null;
+        if (keyCode != null) {
+            if (gui.IsKeyPressed(keyCode.Value)) {
+                scancode = _keyScancodeConverter.GetKeyPressedScancode(keyCode.Value);
+                _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
+            } else {
+                scancode = _keyScancodeConverter.GetKeyReleasedScancode(keyCode.Value);
+                _logger.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
+            }
 
-        if (scancode == null) {
-            return null;
+            if (scancode == null) {
+                return null;
+            }
         }
+        return scancode;
 
-        return (byte)scancode;
     }
 
     public override byte Inb(int port) {

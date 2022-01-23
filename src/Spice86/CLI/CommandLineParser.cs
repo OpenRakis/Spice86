@@ -10,6 +10,7 @@ using Spice86.Emulator.Function;
 using Spice86.Utils;
 
 using System;
+using System.IO;
 using System.Reflection;
 
 /// <summary>
@@ -38,8 +39,8 @@ public class CommandLineParser {
 
     private static string? ParseExePath(string? exePath) {
         string? unixPathValue = exePath?.Replace('\\', '/');
-        if (!unixPathValue?.EndsWith("/") == true) {
-            unixPathValue += "/";
+        if(File.Exists(exePath)) {
+            return new FileInfo(exePath).FullName;
         }
         return unixPathValue;
     }

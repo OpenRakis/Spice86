@@ -45,7 +45,7 @@ public class Configuration {
     public IOverrideSupplier? OverrideSupplier { get; set; }
 
     [Option('p', nameof(ProgramEntryPointSegment), Default = 0x01ED, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
-    public ushort ProgramEntryPointSegment { get; set; }
+    public int ProgramEntryPointSegment { get; set; }
 
     [Option('u', nameof(UseCodeOverride), Default = false, Required = false, HelpText = "<true or false> if false it will use the names provided by overrideSupplierClassName but not the code")]
     public bool UseCodeOverride { get; set; }

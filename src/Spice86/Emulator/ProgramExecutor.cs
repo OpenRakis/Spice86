@@ -84,15 +84,15 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private ExecutableFileLoader CreateExecutableFileLoader(string? fileName, ushort entryPointSegment) {
+    private ExecutableFileLoader CreateExecutableFileLoader(string? fileName, int entryPointSegment) {
         if (fileName == null) {
             throw new ArgumentNullException(nameof(fileName));
         }
         string lowerCaseFileName = fileName.ToLowerInvariant();
         if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(_machine, entryPointSegment);
+            return new ExeLoader(_machine, (ushort)entryPointSegment);
         } else if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(_machine, entryPointSegment);
+            return new ComLoader(_machine, (ushort)entryPointSegment);
         }
 
         return new BiosLoader(_machine);

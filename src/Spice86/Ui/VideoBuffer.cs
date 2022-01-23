@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using ReactiveUI;
 
 using Spice86.Emulator.Devices.Video;
+using Spice86.UI.Controls;
 using Spice86.Utils;
 
 using System;
@@ -17,18 +18,20 @@ using System.Threading.Tasks;
 
 [Serializable]
 public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
-    private int _address;
+    private uint _address;
     private int _index;
 
     [IgnoreDataMember]
     [JsonIgnore]
-    public ScalableBitmapControl _scalableBitmapControl;
+    private ScalableBitmapControl _scalableBitmapControl;
+
+    public ScalableBitmapControl ScalableBitmapControl => _scalableBitmapControl;
 
     private bool _disposedValue;
     private int _width;
     private int _height;
 
-    public VideoBuffer(int width, int height, double scaleFactor, int address, int index) {
+    public VideoBuffer(int width, int height, double scaleFactor, uint address, int index) {
         _width = width;
         _height = height;
         _scalableBitmapControl = new ScalableBitmapControl();
@@ -40,8 +43,8 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
         _index = index;
     }
 
-    public WriteableBitmap GetCanvas() {
-        return _scalableBitmapControl.Bitmap;
+    public ScalableBitmapControl GetScalableControl() {
+        return _scalableBitmapControl;
     }
 
     public int GetIndex() {
@@ -49,15 +52,21 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
     }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
-        int endAddress = _address + (_width * _height);
-        int startAddress = _address;
-        WriteableBitmap bitmap = _scalableBitmapControl.Bitmap;
-        using ILockedFramebuffer buffer = bitmap.Lock();
-        for (int i = endAddress; i > startAddress; i--) {
+        int size = _width * _height;
+        long endAddress = _address + size;
+        uint startAddress = _address;
+        var buffer = new List<uint>(size);
+        for (long i = startAddress; i < endAddress; i++) {
             int colorIndex = ConvertUtils.Uint8(memory[i]);
             Rgb pixel = palette[colorIndex];
             uint argb = pixel.ToArgb();
-            var dst = (uint*)buffer.Address;
+            buffer.Add(argb);
+        }
+        buffer.Reverse();
+        using ILockedFramebuffer buf = _scalableBitmapControl.Bitmap.Lock();
+        for (int i = (int)startAddress; i < endAddress; i++) {
+            var dst = (uint*)buf.Address;
+            var argb = buffer[i];
             dst[i] = argb;
         }
     }
