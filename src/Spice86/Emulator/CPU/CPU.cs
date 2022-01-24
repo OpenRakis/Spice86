@@ -1829,7 +1829,7 @@ public class Cpu {
     /// Jumps handling
     /// </summary>
     private void Jcc(ushort opcode) {
-        byte address = NextUint8();
+        sbyte address = (sbyte)NextUint8();
         bool jump = opcode switch {
             0x70 => _state.GetOverflowFlag(),
             0x71 => !_state.GetOverflowFlag(),
@@ -1871,7 +1871,7 @@ public class Cpu {
             _ => ""
         } + " " + address + " jump?" + jump);
         if (jump) {
-            _internalIp += address;
+            HandleJump(_state.GetCS(), (ushort)(_internalIp + address));
         }
     }
 

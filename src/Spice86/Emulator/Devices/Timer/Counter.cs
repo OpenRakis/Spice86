@@ -62,7 +62,7 @@ public class Counter {
     public byte GetValueUsingMode() {
         return _readWritePolicy switch {
             0 => throw new UnhandledOperationException(_machine,
-              "Latch read is not implemented yet"),
+                "Latch read is not implemented yet"),
             1 => ReadLsb(),
             2 => ReadMsb(),
             3 => ReadPolicy3(),
@@ -97,14 +97,18 @@ public class Counter {
     }
 
     public void SetValueUsingMode(byte partialValue) {
-        if (_readWritePolicy == 1) {
-            WriteLsb(partialValue);
-        } else if (partialValue == 2) {
-            WriteMsb(partialValue);
-        } else if (partialValue == 3) {
-            WritePolicy3(partialValue);
+        switch (_readWritePolicy) {
+            case 1:
+                WriteLsb(partialValue);
+                break;
+            case 2:
+                WriteMsb(partialValue);
+                break;
+            case 3:
+                WritePolicy3(partialValue);
+                break;
+            default: throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {_readWritePolicy}");
         }
-        throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {_readWritePolicy}");
     }
 
     public override string ToString() {

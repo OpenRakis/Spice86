@@ -74,7 +74,7 @@ public class DosFileManager {
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
         string? hostFileName = ToHostCaseSensitiveFileName(fileName, true);
         if (hostFileName == null) {
-            return FileNotFoundError(fileName, "Could not find parent of {} so cannot create file.");
+            return FileNotFoundError(fileName, @"Could not find parent of {fileName} so cannot create file.");
         }
 
         _logger.Information("Creating file {@HostFileName} with attribute {@FileAttribute}", hostFileName, fileAttribute);
@@ -291,12 +291,12 @@ public class DosFileManager {
     }
 
     private DosFileOperationResult FileNotFoundError(string? fileName) {
-        return FileNotFoundError(fileName, "File {} not found!");
+        return FileNotFoundError(fileName, @"File {fileName} not found!");
     }
 
     private DosFileOperationResult FileNotFoundError(string? fileName, string message) {
         if (fileName != null) {
-            _logger.Warning("File not foud in {@MethodName} {@Message} {@FileName}", nameof(FileNotFoundError), message, fileName);
+            _logger.Warning(message);
         }
 
         return DosFileOperationResult.Error(0x02);

@@ -35,7 +35,7 @@ public class State {
 
     public string DumpRegFlags() {
         string res = "cycles=" + this.GetCycles();
-        res += " CS:IP=" + ConvertUtils.ToSegmentedAddressRepresentation(GetCS(), GetIP()) + '/' + ConvertUtils.ToAbsoluteSegmentedAddress(GetCS(), GetIP());
+        res += " CS:IP=" + ConvertUtils.ToSegmentedAddressRepresentation(GetCS(), GetIP()) + '/' + ConvertUtils.ToHex(MemoryUtils.ToPhysicalAddress(GetCS(), GetIP()));
         res += " AX=" + ConvertUtils.ToHex16(GetAX());
         res += " BX=" + ConvertUtils.ToHex16(GetBX());
         res += " CX=" + ConvertUtils.ToHex16(GetCX());

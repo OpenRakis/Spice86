@@ -57,14 +57,14 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
         uint startAddress = _address;
         var buffer = new List<uint>(size);
         for (long i = startAddress; i < endAddress; i++) {
-            int colorIndex = ConvertUtils.Uint8(memory[i]);
+            byte colorIndex = memory[i];
             Rgb pixel = palette[colorIndex];
             uint argb = pixel.ToArgb();
             buffer.Add(argb);
         }
         buffer.Reverse();
         using ILockedFramebuffer buf = _scalableBitmapControl.Bitmap.Lock();
-        for (int i = (int)startAddress; i < endAddress; i++) {
+        for (int i = 0; i < size; i++) {
             var dst = (uint*)buf.Address;
             var argb = buffer[i];
             dst[i] = argb;
