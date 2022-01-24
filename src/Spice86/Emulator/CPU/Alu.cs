@@ -371,9 +371,9 @@ public class Alu {
         if (count == 0) {
             return value;
         }
-
-        SetCarryFlagForRightShifts(value, count);
-        short res = (short)(value);
+        
+        short res = (short)value;
+        SetCarryFlagForRightShifts(res, count);
         res >>= count;
         UpdateFlags16((ushort)res);
         _state.SetOverflowFlag(false);
@@ -385,9 +385,8 @@ public class Alu {
         if (count == 0) {
             return value;
         }
-
-        SetCarryFlagForRightShifts(value, count);
-        sbyte res = (sbyte)(value);
+        sbyte res = (sbyte)value;
+        SetCarryFlagForRightShifts(res, count);
         res >>= count;
         UpdateFlags8((byte)res);
         _state.SetOverflowFlag(false);
@@ -543,8 +542,8 @@ public class Alu {
         return ((value1 ^ dst) & (value1 ^ value2));
     }
 
-    private void SetCarryFlagForRightShifts(uint value, int count) {
-        uint lastBit = (value >> (count - 1)) & 0x1;
+    private void SetCarryFlagForRightShifts(int value, int count) {
+        int lastBit = (value >> (count - 1)) & 0x1;
         _state.SetCarryFlag(lastBit == 1);
     }
 
