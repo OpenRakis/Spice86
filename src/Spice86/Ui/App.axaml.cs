@@ -2,24 +2,17 @@ namespace Spice86.UI;
 
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using Live.Avalonia;
-
 using Microsoft.Win32;
-
-using ReactiveUI;
 
 using Spice86.UI.ViewModels;
 using Spice86.UI.Views;
 
 using System;
-using System.Diagnostics;
-using System.Reactive;
 using System.Runtime.Versioning;
 
-public partial class App : Application, ILiveView {
+public partial class App : Application {
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
     private const string RegistryValueName = "AppsUseLightTheme";
@@ -31,40 +24,15 @@ public partial class App : Application, ILiveView {
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted() {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            if (IsInDarkMode() == false) {
-                this.Styles.RemoveAt(1);
-            }
-
-            if (Debugger.IsAttached || IsProduction()) {
-                // Debugging requires pdb loading etc, so we disable live reloading during a
-                // test run with an attached debugger.
-                var mainWindow = new MainWindow();
-                mainWindow.DataContext = MainWindowViewModel.Create(mainWindow);
-                mainWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                desktop.MainWindow = mainWindow;
-                mainWindow.Show();
-            } else {
-                // Here, we create a new LiveViewHost, located in the 'Live.Avalonia' namespace,
-                // and pass an ILiveView implementation to it. The ILiveView implementation
-                // should have a parameterless constructor! Next, we start listening for any
-                // changes in the source files. And then, we show the LiveViewHost window.
-                // Simple enough, huh?
-                var window = new LiveViewHost(this, Console.WriteLine);
-                window.StartWatchingSourceFilesForHotReloading();
-                window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                window.Show();
-            }
-
-            // Here we subscribe to ReactiveUI default exception handler to avoid app
-            // termination in case if we do something wrong in our view models. See: https://www.reactiveui.net/docs/handbook/default-exception-handler/
-            //
-            // In case if you are using another MV* framework, please refer to its documentation
-            // explaining global exception handling.
-            RxApp.DefaultExceptionHandler = Observer.Create<Exception>(Console.WriteLine);
-
-            base.OnFrameworkInitializationCompleted();
+        if (IsInDarkMode() == false) {
+            this.Styles.RemoveAt(1);
         }
+
+        var mainWindow = new MainWindow();
+        mainWindow.DataContext = MainWindowViewModel.Create(mainWindow);
+        mainWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        mainWindow.Show();
+        base.OnFrameworkInitializationCompleted();
     }
 
     [SupportedOSPlatform("windows")]
