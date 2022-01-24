@@ -5,6 +5,8 @@ using Emulator.CPU;
 using Emulator.VM;
 using Emulator.Memory;
 
+using Serilog;
+
 using System;
 using System.IO;
 
@@ -13,6 +15,13 @@ using Utils;
 using Xunit;
 
 public class MachineTest {
+
+    static MachineTest() {
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.Console()
+            .MinimumLevel.Debug()
+            .CreateLogger();
+    }
 
     [Fact]
     public void TestAdd() {
