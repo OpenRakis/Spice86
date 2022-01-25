@@ -159,8 +159,7 @@ public class DosFileManager {
             2 => "STDERR",
             3 => "STDAUX",
             4 => "STDPRN",
-            _ => throw new UnrecoverableException(
-                "This is a programming error. getDeviceName called with fileHandle=" + fileHandle)
+            _ => throw new UnrecoverableException($"This is a programming error. getDeviceName called with fileHandle={fileHandle}")
         };
     }
 
@@ -296,7 +295,7 @@ public class DosFileManager {
 
     private DosFileOperationResult FileNotFoundError(string? fileName, string message) {
         if (fileName != null) {
-            _logger.Warning(message);
+            _logger.Warning("{@FileName} {@Message}", fileName, message);
         }
 
         return DosFileOperationResult.Error(0x02);
@@ -348,10 +347,8 @@ public class DosFileManager {
 
     /// <summary>
     /// </summary>
-    /// <param name="fileSpecPattern">
-    ///          a regex to match for a file, lower case</param>
-    /// <param name="item">
-    ///          a path from which the file to match will be extracted</param>
+    /// <param name="fileSpecPattern">a regex to match for a file, lower case</param>
+    /// <param name="item">a path from which the file to match will be extracted</param>
     /// <returns>true if it matched, false otherwise</returns>
     private bool MatchesSpec(Regex fileSpecPattern, FileInfo item) {
         if (Directory.Exists(item.DirectoryName)) {
@@ -443,21 +440,22 @@ public class DosFileManager {
             return null;
         }
 
-        FileInfo fileToProcess = new FileInfo(caseInsensitivePath);
-        if (File.Exists(fileToProcess.FullName) == false ||
-            Path.GetPathRoot(fileToProcess.FullName) == Directory.GetParent(fileToProcess.FullName)?.FullName) {
+        string fileToProcess = caseInsensitivePath;
+        string? parentDir = Path.GetDirectoryName(fileToProcess);
+        if (File.Exists(fileToProcess) || (parentDir != null &&
+            Directory.GetDirectories(parentDir).Length == 0)) {
             // file exists or root reached, no need to go further
             return caseInsensitivePath;
         }
 
-        string? parent = ToCaseSensitiveFileName(Directory.GetParent(fileToProcess.FullName)?.FullName);
+        string? parent = ToCaseSensitiveFileName(Directory.GetParent(fileToProcess)?.FullName);
         if (parent == null) {
             return null;
         }
 
         try {
             string? filename = Directory.GetFiles(parent)
-                .Where(x => FileSpecToRegex(fileToProcess.Name).IsMatch(x))
+                .Where(x => FileSpecToRegex(fileToProcess).IsMatch(x))
                 .FirstOrDefault();
             return filename;
         } catch (IOException e) {
@@ -493,9 +491,7 @@ public class DosFileManager {
     /// </ul>
     /// </summary>
     /// <param name="dosFileName"></param>
-    /// <param name="caseSensitiveOnlyParent">
-    ///          if true will try to find case sensitive match for only the parent of the file (useful when creating a
-    ///          file)</param>
+    /// <param name="caseSensitiveOnlyParent">if true will try to find case sensitive match for only the parent of the file (useful when creating a file)</param>
     /// <returns>the file name in the host file system, or null if nothing was found.</returns>
     private string? ToHostCaseSensitiveFileName(string dosFileName, bool caseSensitiveOnlyParent) {
         string fileName = ToHostFileName(dosFileName);
