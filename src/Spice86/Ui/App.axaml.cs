@@ -12,16 +12,20 @@ using Spice86.UI.Views;
 using System;
 using System.Runtime.Versioning;
 
+using Serilog;
+using System.Reactive;
+using ReactiveUI;
+
 public partial class App : Application {
+    private static readonly ILogger _logger = Log.Logger.ForContext<App>();
+
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
     private const string RegistryValueName = "AppsUseLightTheme";
 
-    // When any of the source files change, a new version of the assembly is built, and this
-    // method gets called. The returned content gets embedded into the LiveViewHost window.
-    public object CreateView(Window window) => new MainWindow();
-
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+    public override void Initialize() {
+        AvaloniaXamlLoader.Load(this);
+    }
 
     public override void OnFrameworkInitializationCompleted() {
         if (IsInDarkMode() == false) {
