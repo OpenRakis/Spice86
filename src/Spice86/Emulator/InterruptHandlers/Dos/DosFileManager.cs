@@ -520,8 +520,8 @@ public class DosFileManager {
         string fileName = dosFileName.Replace('\\', '/');
         if (fileName.Length >= 2 && fileName[1] == ':') {
             fileName = ReplaceDriveWithHostPath(fileName);
-        } else {
-            fileName = currentDir + fileName;
+        } else if(string.IsNullOrWhiteSpace(currentDir) == false) {
+            fileName = Path.Combine(currentDir, fileName);
         }
 
         return fileName.Replace("//", "/");
