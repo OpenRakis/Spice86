@@ -8,5 +8,8 @@
 		x:Class="Spice86.UI.Views.MainWindow"
 		Icon="/UI/Assets/Spice86.ico"
 		Title="{Binding MainTitle}">
-	<local:Gui x:Name="Gui" />
+	<StackPanel Orientation="Vertical">
+		<Label Content="Gui Control below"></Label>
+		<local:Gui x:Name="Gui" />
+	</StackPanel>
 </Window>

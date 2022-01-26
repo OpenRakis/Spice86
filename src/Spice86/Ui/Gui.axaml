@@ -5,17 +5,19 @@
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 			 x:Class="Spice86.UI.Gui"
 			 xmlns:controls="using:Spice86.UI.Controls"
-			 xmlns:local="using:Spice86.UI">
-	<UniformGrid x:Name="MyGrid">
-		<ItemsPresenter Items="{Binding VideoBuffers, ElementName=MyGrid}">
-			<ItemsPresenter.ItemTemplate>
-				<DataTemplate>
+			 xmlns:local="using:Spice86.UI"
+			 x:Name="MyGui">
+	<UniformGrid>
+		<ContentControl Content="{Binding VideoBuffers, ElementName=MyGui}">
+			<ContentControl.ContentTemplate>
+				<DataTemplate x:DataType="local:VideoBuffer">
 					<StackPanel Orientation="Vertical">
-						<Label Content="{Binding Path=Key.Name}"/>
-						<ContentControl Content="{Binding Key.Value.ScalableBitmapControl}" />
+						<Label Content="Gui content below... If not displayed bindings are probably borked" />
+						<Label Content="{Binding Address}"/>
+						<ContentControl Content="{Binding ScalableBitmapControl}" />
 					</StackPanel>
 				</DataTemplate>
-			</ItemsPresenter.ItemTemplate>
-		</ItemsPresenter>
+			</ContentControl.ContentTemplate>
+		</ContentControl>
 	</UniformGrid>
 </UserControl>

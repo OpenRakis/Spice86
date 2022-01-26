@@ -24,12 +24,12 @@ public class VgaCard : DefaultIOPortHandler {
     public const ushort VGA_STATUS_REGISTER_PORT = 0x03DA;
     public const ushort VGA_WRITE_INDEX_PORT = 0x03C8;
     private static readonly ILogger _logger = Log.Logger.ForContext<VgaCard>();
-    private readonly Gui? _gui;
+    private readonly IVideoKeyboardMouseIO? _gui;
     private readonly VgaDac _vgaDac;
     private byte _crtStatusRegister;
     private bool _drawing = false;
 
-    public VgaCard(Machine machine, Gui? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public VgaCard(Machine machine, IVideoKeyboardMouseIO? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
         this._gui = gui;
         this._vgaDac = new VgaDac(machine);
     }

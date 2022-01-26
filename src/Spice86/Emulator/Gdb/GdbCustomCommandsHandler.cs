@@ -280,7 +280,7 @@ public class GdbCustomCommandsHandler {
     private string Vbuffer(string[] args) {
         try {
             string action = ExtractAction(args);
-            Gui gui = _machine.GetGui();
+            IVideoKeyboardMouseIO? gui = _machine.GetGui();
             VgaCard vgaCard = _machine.GetVgaCard();
 
             // Actions for 1 parameter

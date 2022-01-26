@@ -15,9 +15,9 @@ public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
     private static readonly ILogger _logger = Log.Logger.ForContext<Keyboard>();
     private readonly KeyScancodeConverter _keyScancodeConverter = new();
-    private readonly Gui? gui;
+    private readonly IVideoKeyboardMouseIO? gui;
 
-    public Keyboard(Machine machine, Gui? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public Keyboard(Machine machine, IVideoKeyboardMouseIO? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
         this.gui = gui;
         if (gui != null) {
             gui.SetOnKeyPressedEvent(() => this.OnKeyEvent());

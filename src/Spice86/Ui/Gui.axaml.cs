@@ -39,7 +39,7 @@ public partial class Gui : UserControl {
     private Action? onKeyReleasedEvent;
 
     // Dictionary associating a start address to a ScalableBitmapControl
-    public Dictionary<uint, VideoBuffer> VideoBuffers {
+    public ObservableCollection<VideoBuffer> VideoBuffers {
         get => GetValue(VideoBuffersProperty);
         set {
             if (GetValue(VideoBuffersProperty) != value) {
@@ -48,8 +48,8 @@ public partial class Gui : UserControl {
         }
     }
 
-    public static StyledProperty<Dictionary<uint, VideoBuffer>> VideoBuffersProperty =
-        AvaloniaProperty.Register<Gui, Dictionary<uint, VideoBuffer>>(nameof(VideoBuffers), new());
+    public static StyledProperty<ObservableCollection<VideoBuffer>> VideoBuffersProperty =
+        AvaloniaProperty.Register<Gui, ObservableCollection<VideoBuffer>>(nameof(VideoBuffers), new());
     public Gui() {
         InitializeComponent();
         SetResolution(320, 200, 0);
@@ -159,11 +159,10 @@ public partial class Gui : UserControl {
         });
     }
 
-    public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, Action<ScalableBitmapControl> canvasPostSetupAction) {
+    public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, Action<ScalableBitmapControl>? canvasPostSetupAction) {
         VideoBuffer videoBuffer = new VideoBuffer(bufferWidth, bufferHeight, scale, address, VideoBuffers.Count);
         ScalableBitmapControl canvas = videoBuffer.GetScalableControl();
-        VideoBuffers.Add(address, videoBuffer);
-        this.RaisePropertyChanged(VideoBuffersProperty, VideoBuffers, VideoBuffers);
+        VideoBuffers.Add(videoBuffer);
         if (canvasPostSetupAction != null) {
             canvasPostSetupAction.Invoke(canvas);
         }
@@ -171,11 +170,11 @@ public partial class Gui : UserControl {
     }
 
     private IEnumerable<VideoBuffer> SortedBuffers() {
-        return VideoBuffers.OrderBy(x => x).Select(x => x.Value);
+        return VideoBuffers.OrderBy(x => x.Address).Select(x => x);
     }
 
     public void RemoveBuffer(uint address) {
-        VideoBuffers.Remove(address);
+        VideoBuffers.Remove(VideoBuffers.First(x => x.Address == address));
     }
 
     public void Draw(byte[] memory, Rgb[] palette) {
@@ -185,6 +184,6 @@ public partial class Gui : UserControl {
     }
 
     public Dictionary<uint, VideoBuffer> GetVideoBuffers() {
-        return VideoBuffers;
+        return VideoBuffers.ToDictionary(x => x.Address, x => x);
     }
 }

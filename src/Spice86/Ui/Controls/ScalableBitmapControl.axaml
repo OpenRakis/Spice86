@@ -5,12 +5,15 @@
 				mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 				x:Class="Spice86.UI.Controls.ScalableBitmapControl"
 				x:Name="Me">
-	<LayoutTransformControl Child="{Binding Bitmap, ElementName=Me}">
-		<LayoutTransformControl.LayoutTransform>
-			<ScaleTransform
-							ScaleX="{Binding ScaleFactor, ElementName=Me}"
-							ScaleY="{Binding ScaleFactor, ElementName=Me}">
-			</ScaleTransform>
-		</LayoutTransformControl.LayoutTransform>
-	</LayoutTransformControl>
+	<StackPanel Orientation="Vertical">
+		<Label Content="Scalable Bitmap"></Label>
+		<LayoutTransformControl Child="{Binding Bitmap, ElementName=Me}">
+			<LayoutTransformControl.LayoutTransform>
+				<ScaleTransform
+								ScaleX="{Binding ScaleFactor, ElementName=Me}"
+								ScaleY="{Binding ScaleFactor, ElementName=Me}">
+				</ScaleTransform>
+			</LayoutTransformControl.LayoutTransform>
+		</LayoutTransformControl>
+	</StackPanel>
 </UserControl>

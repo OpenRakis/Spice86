@@ -14,7 +14,7 @@ public class MouseInt33Handler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<MouseInt33Handler>();
     private static readonly ushort MOUSE_RANGE_X = 639;
     private static readonly ushort MOUSE_RANGE_Y = 199;
-    private readonly Gui? gui;
+    private readonly IVideoKeyboardMouseIO? gui;
     private ushort mouseMaxX = MOUSE_RANGE_X;
     private ushort mouseMaxY = MOUSE_RANGE_Y;
     private ushort mouseMinX;
@@ -23,7 +23,7 @@ public class MouseInt33Handler : InterruptHandler {
     private ushort userCallbackOffset;
     private ushort userCallbackSegment;
 
-    public MouseInt33Handler(Machine machine, Gui? gui) : base(machine) {
+    public MouseInt33Handler(Machine machine, IVideoKeyboardMouseIO? gui) : base(machine) {
         this.gui = gui;
         _dispatchTable.Add(0x00, new Callback(0x00, this.MouseInstalledFlag));
         _dispatchTable.Add(0x03, new Callback(0x03, this.GetMousePositionAndStatus));

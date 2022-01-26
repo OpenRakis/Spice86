@@ -17,8 +17,6 @@ using System.Reactive;
 using ReactiveUI;
 
 public partial class App : Application {
-    private static readonly ILogger _logger = Log.Logger.ForContext<App>();
-
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
     private const string RegistryValueName = "AppsUseLightTheme";

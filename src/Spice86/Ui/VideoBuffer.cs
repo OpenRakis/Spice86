@@ -30,6 +30,7 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
     private bool _disposedValue;
     private int _width;
     private int _height;
+    public uint Address => _address;
 
     public VideoBuffer(int width, int height, double scaleFactor, uint address, int index) {
         _width = width;
