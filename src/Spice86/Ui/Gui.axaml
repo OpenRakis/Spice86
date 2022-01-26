@@ -8,16 +8,15 @@
 			 xmlns:local="using:Spice86.UI"
 			 x:Name="MyGui">
 	<UniformGrid>
-		<ContentControl Content="{Binding VideoBuffers, ElementName=MyGui}">
-			<ContentControl.ContentTemplate>
+		<ItemsControl Items="{Binding VideoBuffers, ElementName=MyGui}">
+			<ItemsControl.ItemTemplate>
 				<DataTemplate x:DataType="local:VideoBuffer">
 					<StackPanel Orientation="Vertical">
-						<Label Content="Gui content below... If not displayed bindings are probably borked" />
 						<Label Content="{Binding Address}"/>
 						<ContentControl Content="{Binding ScalableBitmapControl}" />
 					</StackPanel>
 				</DataTemplate>
-			</ContentControl.ContentTemplate>
-		</ContentControl>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
 	</UniformGrid>
 </UserControl>

@@ -21,10 +21,10 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
     private uint _address;
     private int _index;
 
-    [IgnoreDataMember]
     [JsonIgnore]
     private ScalableBitmapControl _scalableBitmapControl;
 
+    [JsonIgnore]
     public ScalableBitmapControl ScalableBitmapControl => _scalableBitmapControl;
 
     private bool _disposedValue;
@@ -39,7 +39,8 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
         _scalableBitmapControl.Width = width;
         _scalableBitmapControl.Height = height;
         _scalableBitmapControl.ScaleFactor = scaleFactor;
-        _scalableBitmapControl.Bitmap = new WriteableBitmap(new PixelSize(640, 400), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+        var bitmap = new WriteableBitmap(new PixelSize(640, 400), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+        _scalableBitmapControl.SetValue(ScalableBitmapControl.BitmapProperty, bitmap);
         _address = address;
         _index = index;
     }
@@ -64,9 +65,9 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
             buffer.Add(argb);
         }
         buffer.Reverse();
-        using ILockedFramebuffer buf = _scalableBitmapControl.Bitmap.Lock();
+        using ILockedFramebuffer? buf = _scalableBitmapControl.Bitmap?.Lock();
         for (int i = 0; i < size; i++) {
-            var dst = (uint*)buf.Address;
+            var dst = (uint*)buf?.Address;
             var argb = buffer[i];
             dst[i] = argb;
         }
@@ -105,7 +106,7 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
         return this == obj || (obj is VideoBuffer other) && _index == other._index;
     }
 
-    public override string ToString() {
+    public override string? ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
     }
 }

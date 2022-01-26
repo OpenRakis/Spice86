@@ -53,7 +53,6 @@ public partial class Gui : UserControl {
     public Gui() {
         InitializeComponent();
         SetResolution(320, 200, 0);
-        this.Cursor = null;
         this.KeyDown += (s, e) => this.OnKeyPressed(e);
         this.KeyUp += (s, e) => this.OnKeyReleased(e);
     }

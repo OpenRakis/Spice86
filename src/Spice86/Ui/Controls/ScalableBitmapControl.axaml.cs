@@ -12,9 +12,20 @@ public partial class ScalableBitmapControl : UserControl, IDisposable {
 
     private bool _disposedValue;
 
+    public WriteableBitmap? Bitmap {
+        get => GetValue(BitmapProperty);
+        set {
+            if (GetValue(BitmapProperty) != value) {
+                SetValue(BitmapProperty, value);
+            }
+        }
+    }
+
+    public static StyledProperty<WriteableBitmap?> BitmapProperty =
+        AvaloniaProperty.Register<ScalableBitmapControl, WriteableBitmap?>(nameof(Bitmap), null);
+
     public ScalableBitmapControl() {
         InitializeComponent();
-
     }
 
     public double ScaleFactor {
@@ -29,23 +40,10 @@ public partial class ScalableBitmapControl : UserControl, IDisposable {
     public static StyledProperty<double> ScaleFactorProperty =
         AvaloniaProperty.Register<ScalableBitmapControl, double>(nameof(ScaleFactor), 1);
 
-    public WriteableBitmap Bitmap {
-        get => GetValue(BitmapProperty);
-        set {
-            if (GetValue(BitmapProperty) != value) {
-                SetValue(BitmapProperty, value);
-            }
-        }
-    }
-
-    public static StyledProperty<WriteableBitmap> BitmapProperty =
-        AvaloniaProperty.Register<ScalableBitmapControl, WriteableBitmap>(nameof(BitmapProperty),
-            new WriteableBitmap(new PixelSize(640,400), new Vector(96,96), PixelFormat.Rgba8888, AlphaFormat.Unpremul));
-
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                Bitmap.Dispose();
+                Bitmap?.Dispose();
             }
             _disposedValue = true;
         }
