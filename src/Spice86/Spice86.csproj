@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <OutputType>Exe</OutputType>
-	  <TargetFramework>net6.0</TargetFramework>
+	<OutputType>WinExe</OutputType>
+	<TargetFramework>net6.0</TargetFramework>
 	<Nullable>enable</Nullable>
 	<EnablePackageValidation>true</EnablePackageValidation>
 	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -29,13 +29,5 @@
   </ItemGroup>
   <ItemGroup>
 	<AvaloniaResource Include="UI\Assets\**" />
-  </ItemGroup>
-  <ItemGroup>
-	<Compile Update="UI\Controls\ScalableBitmapControl.axaml.cs">
-	  <DependentUpon>ScalableBitmapControl.axaml</DependentUpon>
-	</Compile>
-	<Compile Update="UI\Gui.axaml.cs">
-	  <DependentUpon>Gui.axaml</DependentUpon>
-	</Compile>
   </ItemGroup>
 </Project>

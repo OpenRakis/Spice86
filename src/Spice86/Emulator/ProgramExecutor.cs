@@ -31,7 +31,7 @@ public class ProgramExecutor : IDisposable {
     private GdbServer? _gdbServer;
     private Machine _machine;
 
-    public ProgramExecutor(Gui? gui, Configuration? configuration) {
+    public ProgramExecutor(IVideoKeyboardMouseIO? gui, Configuration? configuration) {
         if(configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
@@ -98,7 +98,7 @@ public class ProgramExecutor : IDisposable {
         return new BiosLoader(_machine);
     }
 
-    private Machine CreateMachine(Gui? gui, Configuration? configuration) {
+    private Machine CreateMachine(IVideoKeyboardMouseIO? gui, Configuration? configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }

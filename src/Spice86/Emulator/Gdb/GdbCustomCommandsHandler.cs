@@ -16,6 +16,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Spice86.UI.ViewModels;
 
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
@@ -280,35 +281,35 @@ public class GdbCustomCommandsHandler {
     private string Vbuffer(string[] args) {
         try {
             string action = ExtractAction(args);
-            Gui gui = _machine.GetGui();
+            IVideoKeyboardMouseIO? gui = _machine.GetGui();
             VgaCard vgaCard = _machine.GetVgaCard();
 
             // Actions for 1 parameter
             if ("refresh".Equals(action)) {
                 Memory memory = _machine.GetMemory();
-                gui.Draw(memory.GetRam(), vgaCard.GetVgaDac().GetRgbs());
+                gui?.Draw(memory.GetRam(), vgaCard.GetVgaDac().GetRgbs());
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
                 StringBuilder listBuilder = new StringBuilder();
-                gui.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\\n").ToList().ForEach(x => listBuilder.AppendLine(x));
+                gui?.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\\n").ToList().ForEach(x => listBuilder.AppendLine(x));
                 string list = listBuilder.ToString();
                 return _gdbIo.GenerateMessageToDisplayResponse(list);
             }
 
             uint address = ExtractAddress(args, action);
             if ("remove".Equals(action)) {
-                gui.RemoveBuffer(address);
+                gui?.RemoveBuffer(address);
                 return _gdbIo.GenerateMessageToDisplayResponse($"Removed buffer at address {address}");
             }
 
             int[] resolution = ExtractResolution(args, action);
             double scale = ExtractScale(args);
             if ("add".Equals(action)) {
-                if (!gui.GetVideoBuffers().TryGetValue(address, out VideoBuffer? existing)) {
+                if (gui?.GetVideoBuffers().TryGetValue(address, out VideoBufferViewModel? existing) == false) {
                     return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
                 }
 
-                gui.AddBuffer(address, scale, resolution[0], resolution[1], null);
+                gui?.AddBuffer(address, scale, resolution[0], resolution[1]);
                 return _gdbIo.GenerateMessageToDisplayResponse($"Added buffer to view address {address}");
             } else {
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand action {action}");
