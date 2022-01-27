@@ -1,12 +1,29 @@
 <Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="using:Spice86.UI.ViewModels"
-		xmlns:local="using:Spice86.UI"
+		xmlns:local="using:Spice86.UI.Views"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.UI.Views.MainWindow"
 		Icon="/UI/Assets/Spice86.ico"
-		Title="{Binding MainTitle}">
-		<local:Gui x:Name="Gui" />
+		Title="{Binding MainTitle}"
+		Width="1024"
+		Height="768"
+		WindowStartupLocation="CenterScreen"
+		CanResize="False">
+	<Design.DataContext>
+		<vm:MainWindowViewModel />
+	</Design.DataContext>
+	<DockPanel>
+		<TabControl DockPanel.Dock="Top" Items="{Binding VideoBuffers}">
+			<TabControl.ItemTemplate>
+				<DataTemplate x:DataType="vm:VideoBufferViewModel">
+					<TabItem Header="{Binding Address}">
+					</TabItem>
+				</DataTemplate>
+			</TabControl.ItemTemplate>
+		</TabControl>
+		<TextBlock DockPanel.Dock="Bottom" Text="{Binding FrameNumber}" />
+	</DockPanel>
 </Window>

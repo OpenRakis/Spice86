@@ -30,12 +30,4 @@
   <ItemGroup>
 	<AvaloniaResource Include="UI\Assets\**" />
   </ItemGroup>
-  <ItemGroup>
-	<Compile Update="UI\Controls\ScalableBitmapControl.axaml.cs">
-	  <DependentUpon>ScalableBitmapControl.axaml</DependentUpon>
-	</Compile>
-	<Compile Update="UI\Gui.axaml.cs">
-	  <DependentUpon>Gui.axaml</DependentUpon>
-	</Compile>
-  </ItemGroup>
 </Project>

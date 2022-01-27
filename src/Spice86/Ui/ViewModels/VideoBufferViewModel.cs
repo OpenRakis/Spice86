@@ -1,52 +1,82 @@
-﻿namespace Spice86.UI;
+﻿namespace Spice86.UI.ViewModels;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Threading;
 
 using ReactiveUI;
 
 using Spice86.Emulator.Devices.Video;
-using Spice86.UI.Controls;
-using Spice86.Utils;
+using Spice86.Emulator.UI;
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+using System.Threading;
 
-[Serializable]
-public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
+public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
+    private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
     private uint _address;
     private int _index;
+    private UIInvalidator? _invalidator;
 
-    [JsonIgnore]
-    private ScalableBitmapControl _scalableBitmapControl;
-
-    [JsonIgnore]
-    public ScalableBitmapControl ScalableBitmapControl => _scalableBitmapControl;
+    public UIInvalidator? Invalidator {
+        get => _invalidator;
+        set => _invalidator = value;
+    }
 
     private bool _disposedValue;
     private int _width;
     private int _height;
+
+    public int Width => _width;
+
+    public int Height => _height;
     public uint Address => _address;
 
-    public VideoBuffer(int width, int height, double scaleFactor, uint address, int index) {
-        _width = width;
-        _height = height;
-        _scalableBitmapControl = new ScalableBitmapControl();
-        _scalableBitmapControl.Width = width;
-        _scalableBitmapControl.Height = height;
-        _scalableBitmapControl.ScaleFactor = scaleFactor;
-        var bitmap = new WriteableBitmap(new PixelSize(640, 400), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-        _scalableBitmapControl.SetValue(ScalableBitmapControl.BitmapProperty, bitmap);
-        _address = address;
-        _index = index;
+    private double _scalFactor = 1;
+
+    public MainWindowViewModel? MainWindowViewModel {get; private set;}
+
+    public double ScaleFactor {
+        get => _scalFactor;
+        set => this.RaiseAndSetIfChanged(ref _scalFactor, value);
     }
 
-    public ScalableBitmapControl GetScalableControl() {
-        return _scalableBitmapControl;
+    [JsonIgnore]
+    private WriteableBitmap _bitmap = default!;
+
+    [JsonIgnore]
+    public WriteableBitmap Bitmap {
+        get => _bitmap;
+        set => this.RaiseAndSetIfChanged(ref _bitmap, value);
+    }
+
+    /// <summary>
+    /// For AvaloniaUI Designer
+    /// </summary>
+    public VideoBufferViewModel() {
+        if (Design.IsDesignMode == false) {
+            throw new InvalidOperationException("This constructor is not for runtime usage");
+        }
+        _width = 640;
+        _height = 480;
+        _scalFactor = 1;
+        var bitmap = new WriteableBitmap(new PixelSize(640, 400), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+        Bitmap = bitmap;
+        _address = 1;
+        _index = 1;
+    }
+
+    public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, double scaleFactor, uint address, int index) {
+        MainWindowViewModel = mainWindowViewModel;
+        _width = width;
+        _height = height;
+        _scalFactor = scaleFactor;
+        var bitmap = new WriteableBitmap(new PixelSize(640, 400), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+        Bitmap = bitmap;
+        _address = address;
+        _index = index;
     }
 
     public int GetIndex() {
@@ -54,6 +84,7 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
     }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
+
         int size = _width * _height;
         long endAddress = _address + size;
         uint startAddress = _address;
@@ -65,15 +96,17 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
             buffer.Add(argb);
         }
         buffer.Reverse();
-        using ILockedFramebuffer? buf = _scalableBitmapControl.Bitmap?.Lock();
+        using ILockedFramebuffer? buf = Bitmap.Lock();
         for (int i = 0; i < size; i++) {
             var dst = (uint*)buf?.Address;
             var argb = buffer[i];
             dst[i] = argb;
         }
+        
+        _invalidator?.Invalidate().Wait(this.cancellation.Token);
     }
 
-    public int CompareTo(VideoBuffer? other) {
+    public int CompareTo(VideoBufferViewModel? other) {
         if (_index < other?._index) {
             return -1;
         } else if (_index == other?._index) {
@@ -86,7 +119,7 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                _scalableBitmapControl.Dispose();
+                _bitmap.Dispose();
             }
             _disposedValue = true;
         }
@@ -103,7 +136,7 @@ public class VideoBuffer : IComparable<VideoBuffer>, IDisposable {
     }
 
     public override bool Equals(object? obj) {
-        return this == obj || (obj is VideoBuffer other) && _index == other._index;
+        return this == obj || (obj is VideoBufferViewModel other) && _index == other._index;
     }
 
     public override string? ToString() {

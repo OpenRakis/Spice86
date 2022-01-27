@@ -3,13 +3,15 @@
 using Avalonia.Input;
 
 using Spice86.Emulator.Devices.Video;
+using Spice86.UI.ViewModels;
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 public interface IVideoKeyboardMouseIO {
 
-    void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, Action<IInputElement>? canvasPostSetupAction);
+    void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight);
 
     void Draw(byte[] memory, Rgb[] palette);
 
@@ -21,7 +23,7 @@ public interface IVideoKeyboardMouseIO {
 
     int GetMouseY();
 
-    IDictionary<uint, VideoBuffer> GetVideoBuffers();
+    IDictionary<uint, VideoBufferViewModel> GetVideoBuffers();
 
     int GetWidth();
 

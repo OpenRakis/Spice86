@@ -15,6 +15,7 @@ using System.Runtime.Versioning;
 using Serilog;
 using System.Reactive;
 using ReactiveUI;
+using Avalonia.Controls.ApplicationLifetimes;
 
 public partial class App : Application {
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
@@ -30,10 +31,15 @@ public partial class App : Application {
             this.Styles.RemoveAt(1);
         }
 
-        var mainWindow = new MainWindow();
-        mainWindow.DataContext = MainWindowViewModel.Create(mainWindow);
-        mainWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        mainWindow.Show();
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+            var mainViewModel = new MainWindowViewModel();
+            desktop.MainWindow = new MainWindow {
+                DataContext = mainViewModel,
+            };
+            desktop.MainWindow.Closed += (s, e) => mainViewModel.Exit();
+
+            desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
+        }
         base.OnFrameworkInitializationCompleted();
     }
 
