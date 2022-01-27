@@ -27,33 +27,27 @@ using System.Threading.Tasks;
 /// </ul>
 /// </summary>
 public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDisposable {
-    private bool _leftButtonClicked;
-    private bool _rightButtonClicked;
     private static readonly ILogger _logger = Log.Logger.ForContext<MainWindowViewModel>();
     private readonly Configuration? _configuration;
+    private readonly AutoResetEvent nextFrame = new AutoResetEvent(false);
     private bool _disposedValue;
-    private ProgramExecutor? _programExecutor;
-
     private Thread? _drawThread;
+    private long _frameNumber = 0;
+    private int _height = 1;
+    private List<Key> _keysPressed = new();
+    private Key? _lastKeyCode = null;
+    private bool _leftButtonClicked;
+    private int _mainCanvasScale = 4;
+    private int _mouseX;
+    private int _mouseY;
+    private Action? _onKeyPressedEvent;
+    private Action? _onKeyReleasedEvent;
+    private ProgramExecutor? _programExecutor;
+    private bool _rightButtonClicked;
+    private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
+    private int _width = 1;
 
-    private int height = 1;
-
-    private List<Key> keysPressed = new();
-
-    private Key? lastKeyCode = null;
-
-
-    private int mainCanvasScale = 4;
-
-    private int mouseX;
-
-    private int mouseY;
-
-    private Action? onKeyPressedEvent;
-
-    private Action? onKeyReleasedEvent;
-
-    private int width = 1;
+    private FrameEventArgs? frame;
 
     public MainWindowViewModel() {
         if (Design.IsDesignMode) {
@@ -71,12 +65,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         _drawThread.Start();
     }
 
-    private void OnNextFrame(FrameEventArgs e) {
-        Interlocked.Exchange(ref this.frame, e);
-        this.nextFrame.Set();
-    }
-
-    private long _frameNumber = 0;
+    private event NextFrameEventHandler? NextFrame;
 
     public long FrameNumber {
         get { return _frameNumber; }
@@ -84,8 +73,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public string? MainTitle { get; private set; }
-
-    private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
 
     public AvaloniaList<VideoBufferViewModel> VideoBuffers {
         get => _videoBuffers;
@@ -103,25 +90,80 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         GC.SuppressFinalize(this);
     }
 
-    private readonly AutoResetEvent nextFrame = new AutoResetEvent(false);
-    private void DrawOnDedicatedThread() {
-        while (true) {
-            nextFrame.WaitOne(1000);
-            if (frame == null) {
-                continue;
-            }
-            foreach (VideoBufferViewModel videoBuffer in frame.SortedBuffers) {
-                {
-                    videoBuffer.Draw(frame.Memory, frame.Palette);
-                }
-            }
-
-        }
-    }
-
     public void Draw(byte[] memory, Rgb[] palette) {
         FrameNumber++;
         this.NextFrame?.Invoke(new FrameEventArgs(memory, palette, FrameNumber, SortedBuffers()));
+    }
+
+    public void Exit() {
+        if (Design.IsDesignMode) {
+            return;
+        }
+        _programExecutor?.Dispose();
+        Environment.Exit(0);
+    }
+
+    public int GetHeight() {
+        return _height;
+    }
+
+    public Key? GetLastKeyCode() {
+        return _lastKeyCode;
+    }
+
+    public int GetMouseX() {
+        return _mouseX;
+    }
+
+    public int GetMouseY() {
+        return _mouseY;
+    }
+
+    public IDictionary<uint, VideoBufferViewModel> GetVideoBuffers() {
+        return VideoBuffers.ToDictionary(x => x.Address, x => x);
+    }
+
+    public int GetWidth() {
+        return _width;
+    }
+
+    public bool IsKeyPressed(Key keyCode) {
+        return _keysPressed.Contains(keyCode);
+    }
+
+    public bool IsLeftButtonClicked() {
+        return _leftButtonClicked;
+    }
+
+    public bool IsRightButtonClicked() {
+        return _rightButtonClicked;
+    }
+
+    public void OnKeyPressed(KeyEventArgs @event) {
+        Key keyCode = @event.Key;
+        if (!_keysPressed.Contains(keyCode)) {
+            _logger.Information("Key pressed {@KeyPressed}", keyCode);
+            _keysPressed.Add(keyCode);
+            this._lastKeyCode = keyCode;
+            RunOnKeyEvent(this._onKeyPressedEvent);
+        }
+    }
+
+    public void OnKeyReleased(KeyEventArgs @event) {
+        this._lastKeyCode = @event.Key;
+        _logger.Information("Key released {@LastKeyCode}", _lastKeyCode);
+        _keysPressed.Remove(_lastKeyCode.Value);
+        RunOnKeyEvent(this._onKeyReleasedEvent);
+    }
+
+    /// <summary>
+    /// async void in the only case where an exception won't be silenced and crash the process : an event handler.
+    /// See: https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md
+    /// </summary>
+    public async void OnMainWindowOpened(object? sender, EventArgs e) {
+        if (sender is Window) {
+            await StartMachineAsync(_configuration);
+        }
     }
 
     public void OnMouseClick(PointerEventArgs @event, bool click) {
@@ -139,66 +181,30 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         SetMouseY((int)@event.GetPosition(image).Y);
     }
 
-    public int GetHeight() {
-        return height;
-    }
-
-    public Key? GetLastKeyCode() {
-        return lastKeyCode;
-    }
-
-    public int GetMouseX() {
-        return mouseX;
-    }
-
-    public int GetMouseY() {
-        return mouseY;
-    }
-
-    public IDictionary<uint, VideoBufferViewModel> GetVideoBuffers() {
-        return VideoBuffers.ToDictionary(x => x.Address, x => x);
-    }
-
-    public int GetWidth() {
-        return width;
-    }
-
-    public bool IsKeyPressed(Key keyCode) {
-        return keysPressed.Contains(keyCode);
-    }
-
-    public bool IsLeftButtonClicked() {
-        return _leftButtonClicked;
-    }
-
-    public bool IsRightButtonClicked() {
-        return _rightButtonClicked;
-    }
-
     public void RemoveBuffer(uint address) {
         VideoBuffers.Remove(VideoBuffers.First(x => x.Address == address));
     }
 
     public void SetMouseX(int mouseX) {
-        this.mouseX = mouseX;
+        this._mouseX = mouseX;
     }
 
     public void SetMouseY(int mouseY) {
-        this.mouseY = mouseY;
+        this._mouseY = mouseY;
     }
 
     public void SetOnKeyPressedEvent(Action onKeyPressedEvent) {
-        this.onKeyPressedEvent = onKeyPressedEvent;
+        this._onKeyPressedEvent = onKeyPressedEvent;
     }
 
     public void SetOnKeyReleasedEvent(Action onKeyReleasedEvent) {
-        this.onKeyReleasedEvent = onKeyReleasedEvent;
+        this._onKeyReleasedEvent = onKeyReleasedEvent;
     }
 
     public void SetResolution(int width, int height, uint address) {
-        this.width = width;
-        this.height = height;
-        AddBuffer(address, mainCanvasScale, width, height);
+        this._width = width;
+        this._height = height;
+        AddBuffer(address, _mainCanvasScale, width, height);
     }
 
     protected virtual void Dispose(bool disposing) {
@@ -212,43 +218,27 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         }
     }
 
-    public void Exit() {
-        if (Design.IsDesignMode) {
-            return;
+    private void DrawOnDedicatedThread() {
+        while (true) {
+            nextFrame.WaitOne(1000);
+            if (frame == null) {
+                continue;
+            }
+            foreach (VideoBufferViewModel videoBuffer in frame.SortedBuffers) {
+                {
+                    videoBuffer.Draw(frame.Memory, frame.Palette);
+                }
+            }
         }
-        _programExecutor?.Dispose();
-        Environment.Exit(0);
     }
 
     private Configuration? GenerateConfiguration() {
         return new CommandLineParser().ParseCommandLine(Environment.GetCommandLineArgs());
     }
 
-    public void OnKeyPressed(KeyEventArgs @event) {
-        Key keyCode = @event.Key;
-        if (!keysPressed.Contains(keyCode)) {
-            _logger.Information("Key pressed {@KeyPressed}", keyCode);
-            keysPressed.Add(keyCode);
-            this.lastKeyCode = keyCode;
-            RunOnKeyEvent(this.onKeyPressedEvent);
-        }
-    }
-
-    public void OnKeyReleased(KeyEventArgs @event) {
-        this.lastKeyCode = @event.Key;
-        _logger.Information("Key released {@LastKeyCode}", lastKeyCode);
-        keysPressed.Remove(lastKeyCode.Value);
-        RunOnKeyEvent(this.onKeyReleasedEvent);
-    }
-
-    /// <summary>
-    /// async void in the only case where an exception won't be silenced and crash the process : an event handler.
-    /// See: https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md
-    /// </summary>
-    public async void OnMainWindowOpened(object? sender, EventArgs e) {
-        if (sender is Window) {
-            await StartMachineAsync(_configuration);
-        }
+    private void OnNextFrame(FrameEventArgs e) {
+        Interlocked.Exchange(ref this.frame, e);
+        this.nextFrame.Set();
     }
 
     private void RunOnKeyEvent(Action? runnable) {
@@ -260,9 +250,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private IEnumerable<VideoBufferViewModel> SortedBuffers() {
         return VideoBuffers.OrderBy(x => x.Address).Select(x => x);
     }
-
-    private event NextFrameEventHandler? NextFrame;
-    private FrameEventArgs? frame;
 
     private async Task StartMachineAsync(Configuration? configuration) {
         await Task.Factory.StartNew(() => {

@@ -1,4 +1,5 @@
 ﻿namespace Spice86.UI.ViewModels;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
@@ -15,42 +16,20 @@ using System.Text.Json.Serialization;
 using System.Threading;
 
 public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
-    private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
+    private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
     private uint _address;
-    private int _index;
-    private UIInvalidator? _invalidator;
-
-    public UIInvalidator? Invalidator {
-        get => _invalidator;
-        set => _invalidator = value;
-    }
-
-    private bool _disposedValue;
-    private int _width;
-    private int _height;
-
-    public int Width => _width;
-
-    public int Height => _height;
-    public uint Address => _address;
-
-    private double _scalFactor = 1;
-
-    public MainWindowViewModel? MainWindowViewModel {get; private set;}
-
-    public double ScaleFactor {
-        get => _scalFactor;
-        set => this.RaiseAndSetIfChanged(ref _scalFactor, value);
-    }
 
     [JsonIgnore]
     private WriteableBitmap _bitmap = default!;
 
-    [JsonIgnore]
-    public WriteableBitmap Bitmap {
-        get => _bitmap;
-        set => this.RaiseAndSetIfChanged(ref _bitmap, value);
-    }
+    private bool _disposedValue;
+    private int _height;
+    private int _index;
+    private UIInvalidator? _invalidator;
+
+    private double _scalFactor = 1;
+
+    private int _width;
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -79,12 +58,47 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         _index = index;
     }
 
-    public int GetIndex() {
-        return _index;
+    public uint Address => _address;
+
+    [JsonIgnore]
+    public WriteableBitmap Bitmap {
+        get => _bitmap;
+        set => this.RaiseAndSetIfChanged(ref _bitmap, value);
+    }
+
+    public int Height => _height;
+
+    public UIInvalidator? Invalidator {
+        get => _invalidator;
+        set => _invalidator = value;
+    }
+
+    public MainWindowViewModel? MainWindowViewModel { get; private set; }
+
+    public double ScaleFactor {
+        get => _scalFactor;
+        set => this.RaiseAndSetIfChanged(ref _scalFactor, value);
+    }
+
+    public int Width => _width;
+
+    public int CompareTo(VideoBufferViewModel? other) {
+        if (_index < other?._index) {
+            return -1;
+        } else if (_index == other?._index) {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
-
         int size = _width * _height;
         long endAddress = _address + size;
         uint startAddress = _address;
@@ -102,18 +116,24 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             var argb = buffer[i];
             dst[i] = argb;
         }
-        
-        _invalidator?.Invalidate().Wait(this.cancellation.Token);
+
+        _invalidator?.Invalidate().Wait(this._cancellation.Token);
     }
 
-    public int CompareTo(VideoBufferViewModel? other) {
-        if (_index < other?._index) {
-            return -1;
-        } else if (_index == other?._index) {
-            return 0;
-        } else {
-            return 1;
-        }
+    public override bool Equals(object? obj) {
+        return this == obj || (obj is VideoBufferViewModel other) && _index == other._index;
+    }
+
+    public override int GetHashCode() {
+        return _index;
+    }
+
+    public int GetIndex() {
+        return _index;
+    }
+
+    public override string? ToString() {
+        return System.Text.Json.JsonSerializer.Serialize(this);
     }
 
     protected virtual void Dispose(bool disposing) {
@@ -123,23 +143,5 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             }
             _disposedValue = true;
         }
-    }
-
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    public override int GetHashCode() {
-        return _index;
-    }
-
-    public override bool Equals(object? obj) {
-        return this == obj || (obj is VideoBufferViewModel other) && _index == other._index;
-    }
-
-    public override string? ToString() {
-        return System.Text.Json.JsonSerializer.Serialize(this);
     }
 }
