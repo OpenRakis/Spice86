@@ -99,7 +99,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         if (Design.IsDesignMode) {
             return;
         }
-        _programExecutor?.Dispose();
+        this.Dispose();
         Environment.Exit(0);
     }
 
@@ -214,6 +214,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
                 foreach (VideoBufferViewModel buffer in VideoBuffers) {
                     buffer.Dispose();
                 }
+                _programExecutor?.Dispose();
             }
             _disposedValue = true;
         }
