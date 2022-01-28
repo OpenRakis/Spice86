@@ -43,7 +43,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         _width = 640;
         _height = 480;
         _scalFactor = 1;
-        var bitmap = new WriteableBitmap(new PixelSize(640, 400), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+        var bitmap = new WriteableBitmap(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
         Bitmap = bitmap;
         _address = 1;
         _index = 1;
@@ -55,7 +55,8 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         _width = width;
         _height = height;
         _scalFactor = scaleFactor;
-        var bitmap = new WriteableBitmap(new PixelSize(640, 400), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+        // Todo: compute the dpi parameter from the parent window size?
+        var bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
         Bitmap = bitmap;
         _address = address;
         _index = index;
@@ -112,11 +113,10 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             uint argb = pixel.ToArgb();
             buffer.Add(argb);
         }
-        buffer.Reverse();
         using ILockedFramebuffer? buf = Bitmap.Lock();
+        uint* dst = (uint*)buf?.Address;
         for (int i = 0; i < size; i++) {
-            var dst = (uint*)buf?.Address;
-            var argb = buffer[i];
+            uint argb = buffer[i];
             dst[i] = argb;
         }
 

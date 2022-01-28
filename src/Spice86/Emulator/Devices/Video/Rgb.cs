@@ -31,7 +31,7 @@ public class Rgb {
     }
 
     public uint ToArgb() {
-        return (uint)(0xff000000 | (r << 16) | (uint)(g << 8) | b);
+        return (0xFF000000 | ((uint)r << 16) | ((uint)g << 8) | b);
     }
 
     public override string ToString() {

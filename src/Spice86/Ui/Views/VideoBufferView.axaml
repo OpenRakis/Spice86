@@ -16,7 +16,7 @@
 				ScaleY="{Binding ScaleFactor}">
 			</ScaleTransform>
 		</LayoutTransformControl.LayoutTransform>
-		<Image x:Name="Image" Source="{Binding Bitmap}" Width="{Binding Width}" Height="{Binding Height}"  Cursor="None" />
+		<Image x:Name="Image" Source="{Binding Bitmap}" Width="{Binding Width}" Height="{Binding Height}" />
 	</LayoutTransformControl>
 
 

@@ -46,7 +46,6 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public byte GetStatusRegisterPort() {
-        _logger.Information("CHECKING RETRACE");
         TickRetrace();
         return _crtStatusRegister;
     }
@@ -132,11 +131,13 @@ public class VgaCard : DefaultIOPortHandler {
     /// <returns>true when in retrace</returns>
     public bool TickRetrace() {
         if (_drawing) {
+            _logger.Information("CHECKING RETRACE: Updating screen");
             // Means the CRT is busy drawing a line, tells the program it should not draw
             UpdateScreen();
             _crtStatusRegister = 0;
             _drawing = false;
         } else {
+            _logger.Information("CHECKING RETRACE: Not updating screen");
             // 4th bit is 1 when the CRT finished drawing and is returning to the beginning
             // of the screen (retrace).
             // Programs use this to know if it is safe to write to VRAM.
