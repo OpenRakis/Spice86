@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -32,8 +31,10 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private readonly AutoResetEvent nextFrame = new AutoResetEvent(false);
     private bool _disposedValue;
     private Thread? _drawThread;
+    private Thread? _emulatorThread;
     private long _frameNumber = 0;
     private int _height = 1;
+    private bool _isSettingResolution = false;
     private List<Key> _keysPressed = new();
     private Key? _lastKeyCode = null;
     private bool _leftButtonClicked;
@@ -61,16 +62,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         MainTitle = $"{nameof(Spice86)} {configuration?.Exe}";
         SetResolution(320, 200, 0);
         this.NextFrame += OnNextFrame;
-        _drawThread = new Thread(DrawOnDedicatedThread);
-        _drawThread.Start();
     }
 
     private event NextFrameEventHandler? NextFrame;
-
-    public long FrameNumber {
-        get { return _frameNumber; }
-        set => this.RaiseAndSetIfChanged(ref _frameNumber, value);
-    }
 
     public string? MainTitle { get; private set; }
 
@@ -91,8 +85,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public void Draw(byte[] memory, Rgb[] palette) {
-        FrameNumber++;
-        this.NextFrame?.Invoke(new FrameEventArgs(memory, palette, FrameNumber, SortedBuffers()));
+        this.NextFrame?.Invoke(new FrameEventArgs(memory, palette, _frameNumber, SortedBuffers()));
     }
 
     public void Exit() {
@@ -156,13 +149,12 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         RunOnKeyEvent(this._onKeyReleasedEvent);
     }
 
-    /// <summary>
-    /// async void in the only case where an exception won't be silenced and crash the process : an event handler.
-    /// See: https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md
-    /// </summary>
-    public async void OnMainWindowOpened(object? sender, EventArgs e) {
+    public void OnMainWindowOpened(object? sender, EventArgs e) {
         if (sender is Window) {
-            await StartMachineAsync(_configuration);
+            _drawThread = new Thread(Draw);
+            _drawThread.Start();
+            _emulatorThread = new Thread(RunMachine);
+            _emulatorThread.Start();
         }
     }
 
@@ -201,19 +193,21 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         this._onKeyReleasedEvent = onKeyReleasedEvent;
     }
 
-    private bool _isSettingResolution = false;
-
     public void SetResolution(int width, int height, uint address) {
         _isSettingResolution = true;
-        foreach (VideoBufferViewModel buffer in VideoBuffers) {
-            buffer.Dispose();
-        }
-        _videoBuffers.Clear();
+        DisposeBuffers();
         VideoBuffers = new();
         this._width = width;
         this._height = height;
         AddBuffer(address, _mainCanvasScale, width, height, true);
         _isSettingResolution = false;
+    }
+
+    private void DisposeBuffers() {
+        foreach (VideoBufferViewModel buffer in VideoBuffers) {
+            buffer.Dispose();
+        }
+        _videoBuffers.Clear();
     }
 
     protected virtual void Dispose(bool disposing) {
@@ -228,10 +222,10 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         }
     }
 
-    private void DrawOnDedicatedThread() {
+    private void Draw() {
         while (true) {
             nextFrame.WaitOne(1000);
-            if (frame == null) {
+            if (frame is null || _disposedValue || _isSettingResolution) {
                 continue;
             }
             foreach (VideoBufferViewModel videoBuffer in frame.SortedBuffers) {
@@ -249,10 +243,11 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private void OnNextFrame(FrameEventArgs e) {
         // VideoBuffers are recreated in SetResolution.
         // We don't want to draw buffers that are being disposed of.
-        if(_isSettingResolution == false) {
-            Interlocked.Exchange(ref this.frame, e);
-            this.nextFrame.Set();
+        if (_isSettingResolution || _disposedValue) {
+            return;
         }
+        Interlocked.Exchange(ref this.frame, e);
+        this.nextFrame.Set();
     }
 
     private void RunOnKeyEvent(Action? runnable) {
@@ -265,15 +260,13 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         return VideoBuffers.OrderBy(x => x.Address).Select(x => x);
     }
 
-    private async Task StartMachineAsync(Configuration? configuration) {
-        await Task.Factory.StartNew(() => {
-            try {
-                _programExecutor = new ProgramExecutor(this, configuration);
-                _programExecutor.Run();
-            } catch (Exception e) {
-                _logger.Error(e, "An error occurred during execution");
-            }
-            Exit();
-        });
+    private void RunMachine() {
+        try {
+            _programExecutor = new ProgramExecutor(this, _configuration);
+            _programExecutor.Run();
+        } catch (Exception e) {
+            _logger.Error(e, "An error occurred during execution");
+        }
+        Exit();
     }
 }
