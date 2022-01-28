@@ -22,6 +22,8 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     [JsonIgnore]
     private WriteableBitmap _bitmap = default!;
 
+    public bool IsPrimaryDisplay { get; private set; }
+
     private bool _disposedValue;
     private int _height;
     private int _index;
@@ -47,8 +49,9 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         _index = 1;
     }
 
-    public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, double scaleFactor, uint address, int index) {
+    public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, double scaleFactor, uint address, int index, bool isPrimaryDisplay) {
         MainWindowViewModel = mainWindowViewModel;
+        IsPrimaryDisplay = isPrimaryDisplay;
         _width = width;
         _height = height;
         _scalFactor = scaleFactor;

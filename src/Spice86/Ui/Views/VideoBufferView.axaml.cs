@@ -18,12 +18,13 @@ public partial class VideoBufferView : UserControl {
         if(this.DataContext is VideoBufferViewModel vm) {
             Image image = this.FindControl<Image>(nameof(Image));
             vm.Invalidator = new Emulator.UI.UIInvalidator(image);
-            // TODO: Might not make sense to set this for every video buffer ?
-            image.PointerMoved += (s, e) => vm.MainWindowViewModel?.OnMouseMoved(e, image);
-            image.PointerPressed += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, true);
-            image.PointerReleased += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, false);
-            image.KeyDown += (s, e) => vm.MainWindowViewModel?.OnKeyPressed(e);
-            image.KeyUp += (s, e) => vm.MainWindowViewModel?.OnKeyReleased(e);
+            if (vm.IsPrimaryDisplay) {
+                image.PointerMoved += (s, e) => vm.MainWindowViewModel?.OnMouseMoved(e, image);
+                image.PointerPressed += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, true);
+                image.PointerReleased += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, false);
+                image.KeyDown += (s, e) => vm.MainWindowViewModel?.OnKeyPressed(e);
+                image.KeyUp += (s, e) => vm.MainWindowViewModel?.OnKeyReleased(e);
+            }
         }
     }
 }

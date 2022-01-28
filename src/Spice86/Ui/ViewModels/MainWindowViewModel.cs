@@ -79,8 +79,8 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         set => this.RaiseAndSetIfChanged(ref _videoBuffers, value);
     }
 
-    public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight) {
-        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(this, bufferWidth, bufferHeight, scale, address, VideoBuffers.Count);
+    public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
+        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(this, bufferWidth, bufferHeight, scale, address, VideoBuffers.Count, isPrimaryDisplay);
         VideoBuffers.Add(videoBuffer);
     }
 
@@ -204,7 +204,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     public void SetResolution(int width, int height, uint address) {
         this._width = width;
         this._height = height;
-        AddBuffer(address, _mainCanvasScale, width, height);
+        AddBuffer(address, _mainCanvasScale, width, height, true);
     }
 
     protected virtual void Dispose(bool disposing) {

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 public interface IVideoKeyboardMouseIO {
 
-    void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight);
+    void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false);
 
     void Draw(byte[] memory, Rgb[] palette);
 
