@@ -16,9 +16,7 @@
 				ScaleY="{Binding ScaleFactor}">
 			</ScaleTransform>
 		</LayoutTransformControl.LayoutTransform>
-	<Border BorderThickness="0.5"  BorderBrush="Red">
 		<Image x:Name="Image" Source="{Binding Bitmap}" Width="{Binding Width}" Height="{Binding Height}"  Cursor="None" />
-	</Border>
 	</LayoutTransformControl>
 
 
