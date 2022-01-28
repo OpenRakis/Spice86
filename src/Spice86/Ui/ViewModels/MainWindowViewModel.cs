@@ -201,11 +201,19 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         this._onKeyReleasedEvent = onKeyReleasedEvent;
     }
 
+    private bool _isSettingResolution = false;
+
     public void SetResolution(int width, int height, uint address) {
-        VideoBuffers.Clear();
+        _isSettingResolution = true;
+        foreach (VideoBufferViewModel buffer in VideoBuffers) {
+            buffer.Dispose();
+        }
+        _videoBuffers.Clear();
+        VideoBuffers = new();
         this._width = width;
         this._height = height;
         AddBuffer(address, _mainCanvasScale, width, height, true);
+        _isSettingResolution = false;
     }
 
     protected virtual void Dispose(bool disposing) {
@@ -239,8 +247,12 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     private void OnNextFrame(FrameEventArgs e) {
-        Interlocked.Exchange(ref this.frame, e);
-        this.nextFrame.Set();
+        // VideoBuffers are recreated in SetResolution.
+        // We don't want to draw buffers that are being disposed of.
+        if(_isSettingResolution == false) {
+            Interlocked.Exchange(ref this.frame, e);
+            this.nextFrame.Set();
+        }
     }
 
     private void RunOnKeyEvent(Action? runnable) {
