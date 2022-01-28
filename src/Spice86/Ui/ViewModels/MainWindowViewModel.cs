@@ -202,6 +202,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public void SetResolution(int width, int height, uint address) {
+        VideoBuffers.Clear();
         this._width = width;
         this._height = height;
         AddBuffer(address, _mainCanvasScale, width, height, true);
