@@ -15,15 +15,12 @@
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<DockPanel>
-		<TabControl DockPanel.Dock="Top" Items="{Binding VideoBuffers, Mode=TwoWay}">
-			<TabControl.ItemTemplate>
-				<DataTemplate x:DataType="vm:VideoBufferViewModel">
-					<TabItem Header="{Binding Address}">
-					</TabItem>
-				</DataTemplate>
-			</TabControl.ItemTemplate>
-		</TabControl>
-		<TextBlock DockPanel.Dock="Bottom" Text="{Binding FrameNumber}" />
-	</DockPanel>
+	<TabControl Items="{Binding VideoBuffers, Mode=TwoWay}">
+		<TabControl.ItemTemplate>
+			<DataTemplate x:DataType="vm:VideoBufferViewModel">
+				<TabItem Header="{Binding Address}">
+				</TabItem>
+			</DataTemplate>
+		</TabControl.ItemTemplate>
+	</TabControl>
 </Window>
