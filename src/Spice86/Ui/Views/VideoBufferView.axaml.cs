@@ -1,6 +1,10 @@
 namespace Spice86.UI.Views;
+
+using System;
+
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 
 using Spice86.UI.ViewModels;
 
@@ -14,17 +18,27 @@ public partial class VideoBufferView : UserControl {
         Initialized += VideoBufferView_Initialized;
     }
 
-    private void VideoBufferView_Initialized(object? sender, System.EventArgs e) {
+    private Image? _image;
+
+    private void VideoBufferView_Initialized(object? sender, EventArgs e) {
         if(this.DataContext is VideoBufferViewModel vm) {
-            Image image = this.FindControl<Image>(nameof(Image));
-            vm.Invalidator = new Emulator.UI.UIInvalidator(image);
+            _image = this.FindControl<Image>(nameof(Image));
+            VideoBufferViewModel.IsDirty += VideoBufferViewModel_IsDirty;
             if (vm.IsPrimaryDisplay) {
-                image.PointerMoved += (s, e) => vm.MainWindowViewModel?.OnMouseMoved(e, image);
-                image.PointerPressed += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, true);
-                image.PointerReleased += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, false);
-                image.KeyDown += (s, e) => vm.MainWindowViewModel?.OnKeyPressed(e);
-                image.KeyUp += (s, e) => vm.MainWindowViewModel?.OnKeyReleased(e);
+                _image.PointerMoved += (s, e) => vm.MainWindowViewModel?.OnMouseMoved(e, _image);
+                _image.PointerPressed += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, true);
+                _image.PointerReleased += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, false);
+                _image.KeyDown += (s, e) => vm.MainWindowViewModel?.OnKeyPressed(e);
+                _image.KeyUp += (s, e) => vm.MainWindowViewModel?.OnKeyReleased(e);
             }
         }
+    }
+
+    private async void VideoBufferViewModel_IsDirty(object? sender, EventArgs e) {
+        await Dispatcher.UIThread.InvokeAsync(() => {
+            if (sender == this.DataContext) {
+                _image?.InvalidateVisual();
+            }
+        });
     }
 }

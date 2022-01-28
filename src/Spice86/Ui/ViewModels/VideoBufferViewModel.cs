@@ -8,7 +8,6 @@ using Avalonia.Platform;
 using ReactiveUI;
 
 using Spice86.Emulator.Devices.Video;
-using Spice86.Emulator.UI;
 
 using System;
 using System.Collections.Generic;
@@ -16,7 +15,6 @@ using System.Text.Json.Serialization;
 using System.Threading;
 
 public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
-    private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
     private uint _address;
 
     [JsonIgnore]
@@ -27,7 +25,6 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     private bool _disposedValue;
     private int _height;
     private int _index;
-    private UIInvalidator? _invalidator;
 
     private double _scalFactor = 1;
 
@@ -72,11 +69,6 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
 
     public int Height => _height;
 
-    public UIInvalidator? Invalidator {
-        get => _invalidator;
-        set => _invalidator = value;
-    }
-
     public MainWindowViewModel? MainWindowViewModel { get; private set; }
 
     public double ScaleFactor {
@@ -96,6 +88,8 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         }
     }
 
+    public static event EventHandler? IsDirty;
+
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
@@ -113,14 +107,15 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             uint argb = pixel.ToArgb();
             buffer.Add(argb);
         }
-        using ILockedFramebuffer? buf = Bitmap.Lock();
-        uint* dst = (uint*)buf?.Address;
-        for (int i = 0; i < size; i++) {
-            uint argb = buffer[i];
-            dst[i] = argb;
+        if(_disposedValue == false) {
+            using ILockedFramebuffer? buf = Bitmap.Lock();
+            uint* dst = (uint*)buf?.Address;
+            for (int i = 0; i < size; i++) {
+                uint argb = buffer[i];
+                dst[i] = argb;
+            }
+            IsDirty?.Invoke(this, EventArgs.Empty);
         }
-
-        _invalidator?.Invalidate().Wait(this._cancellation.Token);
     }
 
     public override bool Equals(object? obj) {
