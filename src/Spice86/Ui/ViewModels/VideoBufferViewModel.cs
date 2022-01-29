@@ -1,6 +1,4 @@
 ﻿namespace Spice86.UI.ViewModels;
-
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
