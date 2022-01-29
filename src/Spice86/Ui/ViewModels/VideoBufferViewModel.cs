@@ -55,8 +55,8 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     /// See also : https://github.com/AvaloniaUI/Avalonia/pull/1889 <br/>
     /// Also WriteableBitmap is an IImage implementation and not a UI Control,<br/>
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
-    /// TODO: As a workaround, we must least get the DPI from the Window.<br/>
-    /// The ViewModel is not aware of the View, so the Bitmap property is set in VideBufferView.xaml.cs.<br/>
+    /// Finally, the ViewModel is not aware of the View, so the Bitmap property is set in VideBufferView.xaml.cs.<br/>
+    /// TODO: As a workaround, we must at least get the DPI from the Window in VideoBufferView.xaml.cs.<br/>
     /// </summary>
     public WriteableBitmap? Bitmap {
         get => _bitmap;
