@@ -14,10 +14,10 @@ public class VgaDac {
     private const int Redindex = 0;
     private readonly Machine _machine;
     private readonly Rgb[] _rgbs = new Rgb[256];
+    /* 0 = red, 1 = green, 2 = blue */
     private int _colour;
     private int _readIndex;
     private int _state = 1;
-    /* 0 = red, 1 = green, 2 = blue */
     private int _writeIndex;
 
     public VgaDac(Machine machine) {
@@ -33,9 +33,9 @@ public class VgaDac {
         }
     }
 
-    public static byte From6bitColorTo8bit(byte color6bit) => (byte)((color6bit & 0b111111) << 2);
-
     public static byte From8bitTo6bitColor(byte color8bit) => (byte)((uint)color8bit >> 2);
+ 
+    public static byte From6bitColorTo8bit(byte color6bit) => (byte)((color6bit & 0b111111) << 2);
 
     public int GetColour() {
         return _colour;
@@ -94,14 +94,18 @@ public class VgaDac {
 
     public void WriteColor(byte colorValue) {
         Rgb rgb = _rgbs[_writeIndex];
-        if (_colour == Redindex) {
-            rgb.SetR(colorValue);
-        } else if (_colour == GreenIndex) {
-            rgb.SetG(colorValue);
-        } else if (_colour == BlueIndex) {
-            rgb.SetB(colorValue);
-        } else {
-            throw new InvalidColorIndexException(_machine, _colour);
+        switch (_colour) {
+            case Redindex:
+                rgb.SetR(colorValue);
+                break;
+            case GreenIndex:
+                rgb.SetG(colorValue);
+                break;
+            case BlueIndex:
+                rgb.SetB(colorValue);
+                break;
+            default:
+                throw new InvalidColorIndexException(_machine, _colour);
         }
 
         _colour = (_colour + 1) % 3;
