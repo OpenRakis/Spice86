@@ -116,13 +116,15 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             uint argb = pixel.ToArgb();
             buffer.Add(argb);
         }
-        using ILockedFramebuffer buf = Bitmap.Lock();
-        uint* dst = (uint*)buf.Address;
-        for (int i = 0; i < size; i++) {
-            uint argb = buffer[i];
-            dst[i] = argb;
+        if(Bitmap is not null) {
+            using ILockedFramebuffer buf = Bitmap.Lock();
+            uint* dst = (uint*)buf.Address;
+            for (int i = 0; i < size; i++) {
+                uint argb = buffer[i];
+                dst[i] = argb;
+            }
+            Dirty.Invoke(this, EventArgs.Empty);
         }
-        Dirty.Invoke(this, EventArgs.Empty);
     }
 
     public override bool Equals(object? obj) {
