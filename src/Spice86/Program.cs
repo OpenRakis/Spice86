@@ -16,7 +16,7 @@ using System.Linq;
 internal class Program {
 
     private static readonly ILogger _logger = new LoggerConfiguration()
-        .WriteTo.Debug()
+        .WriteTo.Console()
         .MinimumLevel.Information()
         .CreateLogger();
 
