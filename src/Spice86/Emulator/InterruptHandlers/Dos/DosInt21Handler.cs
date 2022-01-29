@@ -508,10 +508,8 @@ public class DosInt21Handler : InterruptHandler {
         switch (op) {
             case 0: {
                     _logger.Information("GET DEVICE INFORMATION");
-
                     // Character or block device?
                     ushort res = device < DosFileManager.FileHandleOffset ? (ushort)0x80D3 : (ushort)0x02;
-
                     _state.SetDX(res);
                     break;
                 }
@@ -533,7 +531,7 @@ public class DosInt21Handler : InterruptHandler {
     private void LogDosError(bool calledFromVm) {
         string returnMessage = "";
         if (calledFromVm) {
-            returnMessage = "Int will return to " + _machine.PeekReturn() + ". ";
+            returnMessage = $"Int will return to {_machine.PeekReturn()}. ";
         }
         _logger.Error("DOS operation failed with an error. {@ReturnMessage}. State is {@State}", returnMessage, _state);
     }

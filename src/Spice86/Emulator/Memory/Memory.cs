@@ -115,18 +115,21 @@ public class Memory {
     }
 
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
-        var type = breakPoint.GetBreakPointType();
-        if (type == BreakPointType.READ) {
-            readBreakPoints.ToggleBreakPoint(breakPoint, on);
+        BreakPointType? type = breakPoint.GetBreakPointType();
+        switch (type) {
+            case BreakPointType.READ:
+                readBreakPoints.ToggleBreakPoint(breakPoint, on);
+                break;
+            case BreakPointType.WRITE:
+                writeBreakPoints.ToggleBreakPoint(breakPoint, on);
+                break;
+            case BreakPointType.ACCESS:
+                readBreakPoints.ToggleBreakPoint(breakPoint, on);
+                writeBreakPoints.ToggleBreakPoint(breakPoint, on);
+                break;
+            default:
+                throw new UnrecoverableException($"Trying to add unsupported breakpoint of type {type}");
         }
-        if (type == BreakPointType.WRITE) {
-            writeBreakPoints.ToggleBreakPoint(breakPoint, on);
-        }
-        if (type == BreakPointType.ACCESS) {
-            readBreakPoints.ToggleBreakPoint(breakPoint, on);
-            writeBreakPoints.ToggleBreakPoint(breakPoint, on);
-        }
-        throw new UnrecoverableException($"Trying to add unsupported breakpoint of type {type}");
     }
 
     private void MonitorRangeWriteAccess(uint startAddress, uint endAddress) {

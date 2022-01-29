@@ -149,38 +149,41 @@ public class VideoBiosInt10Handler : InterruptHandler {
 
     private void VideoDisplayCombination() {
         byte op = _state.GetAL();
-        if (op == 0) {
-            _logger.Information("GET VIDEO DISPLAY COMBINATION");
-            // VGA with analog color display
-            _state.SetBX(0x08);
-        } else if (op == 1) {
-            _logger.Information("SET VIDEO DISPLAY COMBINATION");
-            throw new UnhandledOperationException(_machine, "Unimplemented");
-        } else {
-            throw new UnhandledOperationException(_machine,
-                $"Unhandled operation for videoDisplayCombination op={ConvertUtils.ToHex8(op)}");
+        switch (op) {
+            case 0:
+                _logger.Information("GET VIDEO DISPLAY COMBINATION");
+                // VGA with analog color display
+                _state.SetBX(0x08);
+                break;
+            case 1:
+                _logger.Information("SET VIDEO DISPLAY COMBINATION");
+                throw new UnhandledOperationException(_machine, "Unimplemented");
+            default:
+                throw new UnhandledOperationException(_machine,
+                    $"Unhandled operation for videoDisplayCombination op={ConvertUtils.ToHex8(op)}");
         }
         _state.SetAL(0x1A);
     }
 
     private void VideoSubsystemConfiguration() {
         byte op = _state.GetBL();
-        if (op == 0x0) {
-            _logger.Information("UNKNOWN!");
-            return;
+        switch (op) {
+            case 0x0:
+                _logger.Information("UNKNOWN!");
+                break;
+            case 0x10:
+                _logger.Information("GET VIDEO CONFIGURATION INFORMATION");
+                // color
+                _state.SetBH(0);
+                // 64k of vram
+                _state.SetBL(0);
+                // From dosbox source code ...
+                _state.SetCH(0);
+                _state.SetCL(0x09);
+                break;
+            default:
+                throw new UnhandledOperationException(_machine,
+                    $"Unhandled operation for videoSubsystemConfiguration op={ConvertUtils.ToHex8(op)}");
         }
-        if (op == 0x10) {
-            _logger.Information("GET VIDEO CONFIGURATION INFORMATION");
-            // color
-            _state.SetBH(0);
-            // 64k of vram
-            _state.SetBL(0);
-            // From dosbox source code ...
-            _state.SetCH(0);
-            _state.SetCL(0x09);
-            return;
-        }
-        throw new UnhandledOperationException(_machine,
-        $"Unhandled operation for videoSubsystemConfiguration op={ConvertUtils.ToHex8(op)}");
     }
 }

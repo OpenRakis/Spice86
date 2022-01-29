@@ -148,7 +148,17 @@ public class GdbCommandHandler {
             return gdbCommandMemoryHandler.SearchMemory(command);
         }
 
-        return "";
+        return command switch {
+            // The remote server attached to an existing process.
+            "Attached" => gdbIo.GenerateResponse("1"),
+            // Return the current thread ID.
+            "C" => gdbIo.GenerateResponse("QC1"),
+            // Ask the stub if there is a trace experiment running right now. -> No trace has been run yet.
+            "TStatus" => gdbIo.GenerateResponse(""),
+            "fThreadInfo" => gdbIo.GenerateResponse("m1"),
+            "sThreadInfo" => gdbIo.GenerateResponse("l"),
+            _ => gdbIo.GenerateUnsupportedResponse(),
+        };
     }
 
     private string ReasonHalted() {
