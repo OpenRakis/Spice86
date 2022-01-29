@@ -11,7 +11,6 @@ using Serilog;
 using Spice86.CLI;
 using Spice86.Emulator;
 using Spice86.Emulator.Devices.Video;
-using Spice86.UI.EventArgs;
 
 using System;
 using System.Collections.Generic;
@@ -28,9 +27,7 @@ using System.Threading;
 public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<MainWindowViewModel>();
     private readonly Configuration? _configuration;
-    private readonly AutoResetEvent nextFrame = new AutoResetEvent(false);
     private bool _disposedValue;
-    private Thread? _drawThread;
     private Thread? _emulatorThread;
     private long _frameNumber = 0;
     private int _height = 1;
@@ -38,7 +35,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private List<Key> _keysPressed = new();
     private Key? _lastKeyCode = null;
     private bool _leftButtonClicked;
-    private int _mainCanvasScale = 4;
+    private double _mainCanvasScale = 1.7;
     private int _mouseX;
     private int _mouseY;
     private Action? _onKeyPressedEvent;
@@ -47,8 +44,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private bool _rightButtonClicked;
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
     private int _width = 1;
-
-    private FrameEventArgs? frame;
 
     public MainWindowViewModel() {
         if (Design.IsDesignMode) {
@@ -61,10 +56,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         }
         MainTitle = $"{nameof(Spice86)} {configuration?.Exe}";
         SetResolution(320, 200, 0);
-        this.NextFrame += OnNextFrame;
     }
-
-    private event NextFrameEventHandler? NextFrame;
 
     public string? MainTitle { get; private set; }
 
@@ -85,7 +77,15 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public void Draw(byte[] memory, Rgb[] palette) {
-        this.NextFrame?.Invoke(new FrameEventArgs(memory, palette, _frameNumber, SortedBuffers()));
+        _frameNumber++;
+        if (_disposedValue || _isSettingResolution) {
+            return;
+        }
+        foreach (VideoBufferViewModel videoBuffer in SortedBuffers()) {
+            {
+                videoBuffer.Draw(memory, palette);
+            }
+        }
     }
 
     public void Exit() {
@@ -151,8 +151,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     public void OnMainWindowOpened(object? sender, EventArgs e) {
         if (sender is Window) {
-            _drawThread = new Thread(Draw);
-            _drawThread.Start();
             _emulatorThread = new Thread(RunMachine);
             _emulatorThread.Start();
         }
@@ -213,41 +211,15 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                foreach (VideoBufferViewModel buffer in VideoBuffers) {
-                    buffer.Dispose();
-                }
+                DisposeBuffers();
                 _programExecutor?.Dispose();
             }
             _disposedValue = true;
         }
     }
 
-    private void Draw() {
-        while (true) {
-            nextFrame.WaitOne(1000);
-            if (frame is null || _disposedValue || _isSettingResolution) {
-                continue;
-            }
-            foreach (VideoBufferViewModel videoBuffer in frame.SortedBuffers) {
-                {
-                    videoBuffer.Draw(frame.Memory, frame.Palette);
-                }
-            }
-        }
-    }
-
     private Configuration? GenerateConfiguration() {
         return new CommandLineParser().ParseCommandLine(Environment.GetCommandLineArgs());
-    }
-
-    private void OnNextFrame(FrameEventArgs e) {
-        // VideoBuffers are recreated in SetResolution.
-        // We don't want to draw buffers that are being disposed of.
-        if (_isSettingResolution || _disposedValue) {
-            return;
-        }
-        Interlocked.Exchange(ref this.frame, e);
-        this.nextFrame.Set();
     }
 
     private void RunOnKeyEvent(Action? runnable) {

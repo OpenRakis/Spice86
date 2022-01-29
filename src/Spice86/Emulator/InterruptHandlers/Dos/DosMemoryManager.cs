@@ -11,7 +11,7 @@ public class DosMemoryManager {
     private static readonly ILogger _logger = Log.Logger.ForContext<DosMemoryManager>();
     private Memory memory;
     private ushort pspSegment;
-    private DosMemoryControlBlock start;
+    private DosMemoryControlBlock? start;
 
     public DosMemoryManager(Memory memory) {
         this.memory = memory;
@@ -21,7 +21,7 @@ public class DosMemoryManager {
         IList<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
 
         // take the smallest
-        var blockOptional = candidates.OrderBy(x => x.GetSize()).FirstOrDefault();
+        DosMemoryControlBlock? blockOptional = candidates.OrderBy(x => x.GetSize()).FirstOrDefault();
         if (blockOptional is null) {
             // Nothing found
             _logger.Error("Could not find any MCB to fit {@RequestedSize}.", requestedSize);
@@ -116,20 +116,20 @@ public class DosMemoryManager {
     }
 
     private IList<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
-        DosMemoryControlBlock current = start;
+        DosMemoryControlBlock? current = start;
         List<DosMemoryControlBlock> candidates = new();
         while (true) {
             if (!CheckValidOrLogError(current)) {
                 return new List<DosMemoryControlBlock>();
             }
             JoinBlocks(current, true);
-            if (current.IsFree() && current.GetSize() >= requestedSize) {
+            if (current?.IsFree() == true && current.GetSize() >= requestedSize) {
                 candidates.Add(current);
             }
-            if (current.IsLast()) {
+            if (current?.IsLast() == true) {
                 return candidates;
             }
-            current = current.Next();
+            current = current?.Next();
         }
     }
 
@@ -137,13 +137,13 @@ public class DosMemoryManager {
         return new DosMemoryControlBlock(memory, MemoryUtils.ToPhysicalAddress(blockSegment, 0));
     }
 
-    private bool JoinBlocks(DosMemoryControlBlock block, bool onlyIfFree) {
-        if (onlyIfFree && !block.IsFree()) {
+    private bool JoinBlocks(DosMemoryControlBlock? block, bool onlyIfFree) {
+        if (onlyIfFree && block?.IsFree() == false) {
             // Do not touch blocks in use
             return true;
         }
 
-        while (block.IsNonLast()) {
+        while (block?.IsNonLast() == true) {
             DosMemoryControlBlock next = block.Next();
             if (!next.IsFree()) {
                 // end of the free blocks reached

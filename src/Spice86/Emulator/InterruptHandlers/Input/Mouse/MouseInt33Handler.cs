@@ -42,6 +42,9 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     public void GetMousePositionAndStatus() {
+        if(gui is null) {
+            return;
+        }
         ushort x = RestrictValue((ushort)gui.GetMouseX(), (ushort)gui.GetWidth(), mouseMinX, mouseMaxX);
         ushort y = RestrictValue((ushort)gui.GetMouseY(), (ushort)gui.GetHeight(), mouseMinY, mouseMaxY);
         bool leftClick = gui.IsLeftButtonClicked();
@@ -70,8 +73,8 @@ public class MouseInt33Handler : InterruptHandler {
         ushort x = _state.GetCX();
         ushort y = _state.GetDX();
         _logger.Information("SET MOUSE CURSOR POSITION {@MouseX}, {@MouseY}", x, y);
-        gui.SetMouseX(x);
-        gui.SetMouseY(y);
+        gui?.SetMouseX(x);
+        gui?.SetMouseY(y);
     }
 
     public void SetMouseDoubleSpeedThreshold() {

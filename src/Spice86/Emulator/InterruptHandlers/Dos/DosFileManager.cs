@@ -144,7 +144,7 @@ public class DosFileManager {
             try {
                 UpdateDTAFromFile(matchingFilesIterator.Current);
             } catch (IOException e) {
-                _logger.Warning("Error while getting attributes.");
+                _logger.Warning(e, "Error while getting attributes.");
                 return FileNotFoundError(null);
             }
         }

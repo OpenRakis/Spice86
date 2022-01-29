@@ -1,6 +1,4 @@
 ﻿namespace Spice86.UI.ViewModels;
-
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -12,23 +10,11 @@ using Spice86.Emulator.Devices.Video;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using System.Threading;
 
 public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
-    private uint _address;
-
-    [JsonIgnore]
-    private WriteableBitmap _bitmap = default!;
-
-    public bool IsPrimaryDisplay { get; private set; }
-
     private bool _disposedValue;
-    private int _height;
-    private int _index;
-
-    private double _scalFactor = 1;
-
-    private int _width;
+    private int _initialHeight;
+    private int _initialWidth;
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -37,58 +23,79 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         if (Design.IsDesignMode == false) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
-        _width = 640;
-        _height = 480;
-        _scalFactor = 1;
-        var bitmap = new WriteableBitmap(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-        Bitmap = bitmap;
-        _address = 1;
-        _index = 1;
+        Width = 320;
+        Height = 200;
+        ScaleFactor = 1;
+        Address = 1;
+        Index = 1;
     }
 
     public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, double scaleFactor, uint address, int index, bool isPrimaryDisplay) {
         MainWindowViewModel = mainWindowViewModel;
         IsPrimaryDisplay = isPrimaryDisplay;
-        _width = width;
-        _height = height;
-        _scalFactor = scaleFactor;
-        // Todo: compute the dpi parameter from the parent window size?
-        var bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-        Bitmap = bitmap;
-        _address = address;
-        _index = index;
+        Width = _initialWidth = width;
+        Height = _initialHeight = height;
+        ScaleFactor = scaleFactor;
+        Address = address;
+        Index = index;
     }
 
-    public uint Address => _address;
+    public event EventHandler? Dirty;
+
+    public uint Address { get; private set; }
 
     [JsonIgnore]
-    public WriteableBitmap Bitmap {
+
+    private WriteableBitmap? _bitmap;
+
+    /// <summary>
+    /// DPI: AvaloniaUI, like WPF, renders UI Controls in Device Independant Pixels.<br/>
+    /// According to searches online, DPI is tied to a TopLevel control (a Window).<br/>
+    /// Right now, the DPI is hardcoded for WriteableBitmap : https://github.com/AvaloniaUI/Avalonia/issues/1292 <br/>
+    /// See also : https://github.com/AvaloniaUI/Avalonia/pull/1889 <br/>
+    /// Also WriteableBitmap is an IImage implementation and not a UI Control,<br/>
+    /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
+    /// TODO: As a workaround, we must least get the DPI from the Window.<br/>
+    /// The ViewModel is not aware of the View, so the Bitmap property is set in VideBufferView.xaml.cs.<br/>
+    /// </summary>
+    public WriteableBitmap? Bitmap {
         get => _bitmap;
         set => this.RaiseAndSetIfChanged(ref _bitmap, value);
     }
 
-    public int Height => _height;
+    private int _height = 320;
 
+    public int Height {
+        get => _height;
+        private set => this.RaiseAndSetIfChanged(ref _height, value);
+    }
+    public bool IsPrimaryDisplay { get; private set; }
     public MainWindowViewModel? MainWindowViewModel { get; private set; }
 
+    private double _scaleFactor = 1;
     public double ScaleFactor {
-        get => _scalFactor;
-        set => this.RaiseAndSetIfChanged(ref _scalFactor, value);
+        get => _scaleFactor;
+        set => this.RaiseAndSetIfChanged(ref _scaleFactor, value);
     }
 
-    public int Width => _width;
+    private int _width = 200;
+
+    public int Width {
+        get => _width;
+        private set => this.RaiseAndSetIfChanged(ref _width, value);
+    }
+
+    private int Index { get; set; }
 
     public int CompareTo(VideoBufferViewModel? other) {
-        if (_index < other?._index) {
+        if (Index < other?.Index) {
             return -1;
-        } else if (_index == other?._index) {
+        } else if (Index == other?.Index) {
             return 0;
         } else {
             return 1;
         }
     }
-
-    public static event EventHandler? IsDirty;
 
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -97,37 +104,37 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
-        int size = _width * _height;
-        long endAddress = _address + size;
-        uint startAddress = _address;
+        if (_disposedValue || Dirty is null || Bitmap is null) {
+            return;
+        }
+        int size = Width * Height;
+        long endAddress = Address + size;
         var buffer = new List<uint>(size);
-        for (long i = startAddress; i < endAddress; i++) {
+        for (long i = Address; i < endAddress; i++) {
             byte colorIndex = memory[i];
             Rgb pixel = palette[colorIndex];
             uint argb = pixel.ToArgb();
             buffer.Add(argb);
         }
-        if(_disposedValue == false) {
-            using ILockedFramebuffer? buf = Bitmap.Lock();
-            uint* dst = (uint*)buf?.Address;
-            for (int i = 0; i < size; i++) {
-                uint argb = buffer[i];
-                dst[i] = argb;
-            }
-            IsDirty?.Invoke(this, EventArgs.Empty);
+        using ILockedFramebuffer buf = Bitmap.Lock();
+        uint* dst = (uint*)buf.Address;
+        for (int i = 0; i < size; i++) {
+            uint argb = buffer[i];
+            dst[i] = argb;
         }
+        Dirty.Invoke(this, EventArgs.Empty);
     }
 
     public override bool Equals(object? obj) {
-        return this == obj || (obj is VideoBufferViewModel other) && _index == other._index;
+        return this == obj || (obj is VideoBufferViewModel other) && Index == other.Index;
     }
 
     public override int GetHashCode() {
-        return _index;
+        return Index;
     }
 
     public int GetIndex() {
-        return _index;
+        return Index;
     }
 
     public override string? ToString() {
@@ -137,7 +144,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                _bitmap.Dispose();
+                Bitmap?.Dispose();
             }
             _disposedValue = true;
         }

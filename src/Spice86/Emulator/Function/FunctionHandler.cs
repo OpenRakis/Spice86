@@ -81,15 +81,22 @@ public class FunctionHandler {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, () => $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
     }
 
-    public SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType) {
+    public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType) {
         uint stackPhysicalAddress = GetStackPhysicalAddress();
         return PeekReturnAddressOnMachineStack(returnCallType, stackPhysicalAddress);
     }
 
-    public SegmentedAddress PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
+    public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
         Memory memory = _machine.GetMemory();
         State state = _machine.GetCpu().GetState();
-        return new SegmentedAddress(state.GetCS(), memory.GetUint16(stackPhysicalAddress));
+        return returnCallType switch {
+            CallType.NEAR => new SegmentedAddress(state.GetCS(), memory.GetUint16(stackPhysicalAddress)),
+            CallType.FAR or CallType.INTERRUPT => new SegmentedAddress(
+                memory.GetUint16(stackPhysicalAddress + 2),
+                memory.GetUint16(stackPhysicalAddress)),
+            CallType.MACHINE => null,
+            _ => null
+        };
     }
 
     public SegmentedAddress? PeekReturnAddressOnMachineStackForCurrentFunction() {
@@ -103,7 +110,7 @@ public class FunctionHandler {
 
     public bool Ret(CallType returnCallType) {
         if (_debugMode) {
-            if (_callerStack.TryDequeue(out var currentFunctionCall) == false) {
+            if (_callerStack.TryDequeue(out FunctionCall? currentFunctionCall) == false) {
                 _logger.Warning("Returning but no call was done before!!");
                 return false;
             }
@@ -131,7 +138,7 @@ public class FunctionHandler {
 
     private bool AddReturn(CallType returnCallType, FunctionCall currentFunctionCall, FunctionInformation? currentFunctionInformation) {
         FunctionReturn currentFunctionReturn = GenerateCurrentFunctionReturn(returnCallType);
-        SegmentedAddress actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
+        SegmentedAddress? actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
         bool returnAddressAlignedWithCallStack = IsReturnAddressAlignedWithCallStack(currentFunctionCall, actualReturnAddress, currentFunctionReturn);
         if (currentFunctionInformation != null && !UseOverride(currentFunctionInformation)) {
             SegmentedAddress? addressToRecord = actualReturnAddress;
@@ -161,7 +168,7 @@ public class FunctionHandler {
         if (_callerStack.Any() == false) {
             return null;
         }
-        return _callerStack.TryPeek(out var firstElement) ? firstElement : null;
+        return _callerStack.TryPeek(out FunctionCall? firstElement) ? firstElement : null;
     }
 
     private SegmentedAddress GetCurrentStackAddress() {
@@ -173,7 +180,7 @@ public class FunctionHandler {
         if (functionCall == null) {
             return null;
         }
-        if (_functionInformations.TryGetValue(functionCall.GetEntryPointAddress(), out var value)) {
+        if (_functionInformations.TryGetValue(functionCall.GetEntryPointAddress(), out FunctionInformation? value)) {
             return value;
         }
         return null;
@@ -194,8 +201,7 @@ public class FunctionHandler {
                 && !currentFunctionInformation.GetUnalignedReturns().ContainsKey(currentFunctionReturn)) {
                 CallType callType = currentFunctionCall.GetCallType();
                 SegmentedAddress stackAddressAfterCall = currentFunctionCall.GetStackAddressAfterCall();
-                SegmentedAddress returnAddressOnCallTimeStack =
-                    PeekReturnAddressOnMachineStack(callType, stackAddressAfterCall.ToPhysical());
+                SegmentedAddress? returnAddressOnCallTimeStack = PeekReturnAddressOnMachineStack(callType, stackAddressAfterCall.ToPhysical());
                 SegmentedAddress currentStackAddress = GetCurrentStackAddress();
                 string additionalInformation = Environment.NewLine;
                 if (!currentStackAddress.Equals(stackAddressAfterCall)) {

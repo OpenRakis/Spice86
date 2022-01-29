@@ -64,8 +64,60 @@ public class Machine {
     public Machine(IVideoKeyboardMouseIO? gui, CounterConfigurator counterConfigurator, bool failOnUnhandledPort, bool debugMode) {
         this.gui = gui;
         this.debugMode = debugMode;
-        InitHardware(counterConfigurator, failOnUnhandledPort);
-        InitServices();
+
+        // A full 1MB of addressable memory :)
+        memory = new Memory(0x100000);
+        cpu = new Cpu(this, debugMode);
+
+        // Breakpoints
+        machineBreakpoints = new MachineBreakpoints(this);
+
+        // IO devices
+        ioPortDispatcher = new IOPortDispatcher(this, failOnUnhandledPort);
+        cpu.SetIoPortDispatcher(ioPortDispatcher);
+        pic = new Pic(this, true, failOnUnhandledPort);
+        Register(pic);
+        vgaCard = new VgaCard(this, gui, failOnUnhandledPort);
+        Register(vgaCard);
+        timer = new Timer(this, pic, vgaCard, counterConfigurator, failOnUnhandledPort);
+        Register(timer);
+        keyboard = new Keyboard(this, gui, failOnUnhandledPort);
+        Register(keyboard);
+        joystick = new Joystick(this, failOnUnhandledPort);
+        Register(joystick);
+        pcSpeaker = new PcSpeaker(this, failOnUnhandledPort);
+        Register(pcSpeaker);
+        soundBlaster = new SoundBlaster(this, failOnUnhandledPort);
+        Register(soundBlaster);
+        gravisUltraSound = new GravisUltraSound(this, failOnUnhandledPort);
+        Register(gravisUltraSound);
+        midi = new Midi(this, failOnUnhandledPort);
+        Register(midi);
+
+        // Services
+        callbackHandler = new CallbackHandler(this, (ushort)INTERRUPT_HANDLERS_SEGMENT);
+        cpu.SetCallbackHandler(callbackHandler);
+        timerInt8Handler = new TimerInt8Handler(this);
+        Register(timerInt8Handler);
+        biosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this);
+        Register(biosKeyboardInt9Handler);
+        videoBiosInt10Handler = new VideoBiosInt10Handler(this, vgaCard);
+        videoBiosInt10Handler.InitRam();
+        Register(videoBiosInt10Handler);
+        biosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
+        Register(biosEquipmentDeterminationInt11Handler);
+        systemBiosInt15Handler = new SystemBiosInt15Handler(this);
+        Register(systemBiosInt15Handler);
+        keyboardInt16Handler = new KeyboardInt16Handler(this, biosKeyboardInt9Handler.GetBiosKeyboardBuffer());
+        Register(keyboardInt16Handler);
+        systemClockInt1AHandler = new SystemClockInt1AHandler(this, timerInt8Handler);
+        Register(systemClockInt1AHandler);
+        dosInt20Handler = new DosInt20Handler(this);
+        Register(dosInt20Handler);
+        dosInt21Handler = new DosInt21Handler(this);
+        Register(dosInt21Handler);
+        mouseInt33Handler = new MouseInt33Handler(this, gui);
+        Register(mouseInt33Handler);
     }
 
     public string DumpCallStack() {
@@ -213,63 +265,6 @@ public class Machine {
 
         machineBreakpoints.OnMachineStop();
         functionHandler.Ret(CallType.MACHINE);
-    }
-
-    private void InitHardware(CounterConfigurator counterConfigurator, bool failOnUnhandledPort) {
-        // A full 1MB of addressable memory :)
-        memory = new Memory(0x100000);
-        cpu = new Cpu(this, debugMode);
-
-        // Breakpoints
-        machineBreakpoints = new MachineBreakpoints(this);
-
-        // IO devices
-        ioPortDispatcher = new IOPortDispatcher(this, failOnUnhandledPort);
-        cpu.SetIoPortDispatcher(ioPortDispatcher);
-        pic = new Pic(this, true, failOnUnhandledPort);
-        Register(pic);
-        vgaCard = new VgaCard(this, gui, failOnUnhandledPort);
-        Register(vgaCard);
-        timer = new Timer(this, pic, vgaCard, counterConfigurator, failOnUnhandledPort);
-        Register(timer);
-        keyboard = new Keyboard(this, gui, failOnUnhandledPort);
-        Register(keyboard);
-        joystick = new Joystick(this, failOnUnhandledPort);
-        Register(joystick);
-        pcSpeaker = new PcSpeaker(this, failOnUnhandledPort);
-        Register(pcSpeaker);
-        soundBlaster = new SoundBlaster(this, failOnUnhandledPort);
-        Register(soundBlaster);
-        gravisUltraSound = new GravisUltraSound(this, failOnUnhandledPort);
-        Register(gravisUltraSound);
-        midi = new Midi(this, failOnUnhandledPort);
-        Register(midi);
-    }
-
-    private void InitServices() {
-        callbackHandler = new CallbackHandler(this, (ushort)INTERRUPT_HANDLERS_SEGMENT);
-        cpu.SetCallbackHandler(callbackHandler);
-        timerInt8Handler = new TimerInt8Handler(this);
-        Register(timerInt8Handler);
-        biosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this);
-        Register(biosKeyboardInt9Handler);
-        videoBiosInt10Handler = new VideoBiosInt10Handler(this, vgaCard);
-        videoBiosInt10Handler.InitRam();
-        Register(videoBiosInt10Handler);
-        biosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
-        Register(biosEquipmentDeterminationInt11Handler);
-        systemBiosInt15Handler = new SystemBiosInt15Handler(this);
-        Register(systemBiosInt15Handler);
-        keyboardInt16Handler = new KeyboardInt16Handler(this, biosKeyboardInt9Handler.GetBiosKeyboardBuffer());
-        Register(keyboardInt16Handler);
-        systemClockInt1AHandler = new SystemClockInt1AHandler(this, timerInt8Handler);
-        Register(systemClockInt1AHandler);
-        dosInt20Handler = new DosInt20Handler(this);
-        Register(dosInt20Handler);
-        dosInt21Handler = new DosInt21Handler(this);
-        Register(dosInt21Handler);
-        mouseInt33Handler = new MouseInt33Handler(this, gui);
-        Register(mouseInt33Handler);
     }
 
     private void RunLoop() {

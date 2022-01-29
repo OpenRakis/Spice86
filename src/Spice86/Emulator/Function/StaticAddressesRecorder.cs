@@ -40,7 +40,7 @@ public class StaticAddressesRecorder {
         if (_debugMode && _currentSegmentIndex != null && _currentOffset != null && _currentAddressOperation != null && _currentSegmentIndex != null) {
             ushort segmentValue = _segmentRegisters.GetRegister(_currentSegmentIndex.Value);
             uint physicalAddress = MemoryUtils.ToPhysicalAddress(segmentValue, _currentOffset.Value);
-            if (_segmentRegisterBasedAddress.TryGetValue(physicalAddress, out var value) == false) {
+            if (_segmentRegisterBasedAddress.TryGetValue(physicalAddress, out SegmentRegisterBasedAddress? value) == false) {
                 value = new SegmentRegisterBasedAddress(segmentValue, _currentOffset.Value, _names[physicalAddress]);
                 _segmentRegisterBasedAddress.Add(physicalAddress, value);
             }

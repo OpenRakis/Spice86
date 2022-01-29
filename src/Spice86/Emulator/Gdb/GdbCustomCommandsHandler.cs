@@ -55,11 +55,10 @@ public class GdbCustomCommandsHandler {
         }
 
         string scaleString = args[4];
-        if (!int.TryParse(scaleString, out var value)) {
+        if (!int.TryParse(scaleString, out var scale)) {
             throw new ArgumentException($"Could not parse scale {scaleString}");
         }
 
-        double scale = Double.Parse(scaleString);
         if (scale < 0.1) {
             throw new ArgumentException("Scale cannot be less than 0.1");
         }

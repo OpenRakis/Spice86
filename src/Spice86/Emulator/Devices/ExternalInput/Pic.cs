@@ -149,14 +149,18 @@ public class Pic : DefaultIOPortHandler {
     private void ProcessPortACommand(byte value) {
         if (!_inintialized) {
             // Process initialization commands
-            if (_currentCommand == 1) {
-                ProcessICW2(value);
-            } else if (_currentCommand == 2) {
-                ProcessICW3(value);
-            } else if (_currentCommand == 3) {
-                ProcessICW4(value);
-            } else {
-                throw new UnhandledOperationException(machine,
+            switch (_currentCommand) {
+                case 1:
+                    ProcessICW2(value);
+                    break;
+                case 2:
+                    ProcessICW3(value);
+                    break;
+                case 3:
+                    ProcessICW4(value);
+                    break;
+                default:
+                    throw new UnhandledOperationException(machine,
                     $"Invalid initialization command index {_currentCommand}, should never happen");
             }
         }

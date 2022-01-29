@@ -99,10 +99,10 @@ public abstract class FunctionInformationToStringConverter {
         return enumerable.OrderBy(x => x).ToList();
     }
 
-    protected Dictionary<K, V> Sort<K, V>(IDictionary<K, V> map) {
-        var ordered = map.OrderBy(x => x);
+    protected Dictionary<K, V> Sort<K, V>(IDictionary<K, V> map) where K : notnull {
+        IOrderedEnumerable<KeyValuePair<K, V>>? ordered = map.OrderBy(x => x);
         Dictionary<K, V> result = new();
-        foreach (var kv in ordered) {
+        foreach (KeyValuePair<K, V> kv in ordered) {
             result.Add(kv.Key, kv.Value);
         }
         return result;
