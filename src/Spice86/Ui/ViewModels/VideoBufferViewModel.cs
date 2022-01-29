@@ -5,6 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using ReactiveUI;
+
 using Spice86.Emulator.Devices.Video;
 
 using System;
@@ -21,11 +23,9 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         if (Design.IsDesignMode == false) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
-        Width = 640;
-        Height = 480;
+        Width = 320;
+        Height = 200;
         ScaleFactor = 1;
-        var bitmap = new WriteableBitmap(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-        Bitmap = bitmap;
         Address = 1;
         Index = 1;
     }
@@ -36,19 +36,32 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         Width = width;
         Height = height;
         ScaleFactor = scaleFactor;
-        // Todo: compute the dpi parameter from the parent window size?
-        var bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-        Bitmap = bitmap;
         Address = address;
         Index = index;
     }
 
-    public static event EventHandler? IsDirty;
+    public event EventHandler? Dirty;
 
     public uint Address { get; private set; }
 
     [JsonIgnore]
-    public WriteableBitmap Bitmap { get; private set; }
+
+    private WriteableBitmap? _bitmap;
+
+    /// <summary>
+    /// DPI: AvaloniaUI, like WPF, renders UI Controls in Device Independant Pixels.<br/>
+    /// According to searches online, DPI is tied to a TopLevel control (a Window).<br/>
+    /// Right now, the DPI is hardcoded for WriteableBitmap : https://github.com/AvaloniaUI/Avalonia/issues/1292 <br/>
+    /// See also : https://github.com/AvaloniaUI/Avalonia/pull/1889 <br/>
+    /// Also WriteableBitmap is an IImage implementation and not a UI Control,<br/>
+    /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
+    /// TODO: As a workaround, we must least get the DPI from the Window.<br/>
+    /// The ViewModel is not aware of the View, so the Bitmap property is set in VideBufferView.xaml.cs.<br/>
+    /// </summary>
+    public WriteableBitmap? Bitmap {
+        get => _bitmap;
+        set => this.RaiseAndSetIfChanged(ref _bitmap, value);
+    }
 
     public int Height { get; private set; }
     public bool IsPrimaryDisplay { get; private set; }
@@ -74,6 +87,9 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
+        if (_disposedValue || Dirty is null || Bitmap is null) {
+            return;
+        }
         int size = Width * Height;
         long endAddress = Address + size;
         var buffer = new List<uint>(size);
@@ -83,15 +99,13 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             uint argb = pixel.ToArgb();
             buffer.Add(argb);
         }
-        if (_disposedValue == false) {
-            using ILockedFramebuffer buf = Bitmap.Lock();
-            uint* dst = (uint*)buf.Address;
-            for (int i = 0; i < size; i++) {
-                uint argb = buffer[i];
-                dst[i] = argb;
-            }
-            IsDirty?.Invoke(this, EventArgs.Empty);
+        using ILockedFramebuffer buf = Bitmap.Lock();
+        uint* dst = (uint*)buf.Address;
+        for (int i = 0; i < size; i++) {
+            uint argb = buffer[i];
+            dst[i] = argb;
         }
+        Dirty.Invoke(this, EventArgs.Empty);
     }
 
     public override bool Equals(object? obj) {
@@ -113,7 +127,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                Bitmap.Dispose();
+                Bitmap?.Dispose();
             }
             _disposedValue = true;
         }
