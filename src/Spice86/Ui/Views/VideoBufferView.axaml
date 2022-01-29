@@ -9,25 +9,24 @@
 	<Design.DataContext>
 		<vm:VideoBufferViewModel />
 	</Design.DataContext>
-	<Grid>
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="*" />
-			<ColumnDefinition Width="Auto" />
-		</Grid.ColumnDefinitions>
-		<LayoutTransformControl Grid.Column="0">
-			<LayoutTransformControl.RenderTransform>
-				<ScaleTransform
-					ScaleX="{Binding ScaleFactor}"
-					ScaleY="{Binding ScaleFactor}">
-				</ScaleTransform>
-			</LayoutTransformControl.RenderTransform>
-			<Image x:Name="Image" Source="{Binding Bitmap}" Width="{Binding Width}" Height="{Binding Height}" />
-		</LayoutTransformControl>
-		<StackPanel Grid.Column="1">
-			<Label HorizontalContentAlignment="Center" Content="Scale Factor"/>
-			<NumericUpDown Value="{Binding ScaleFactor}" />
+	<Grid ColumnDefinitions="*,Auto">
+			<LayoutTransformControl Grid.Column="0" >
+				<LayoutTransformControl.RenderTransform>
+					<ScaleTransform
+						ScaleX="{Binding ScaleFactor}"
+						ScaleY="{Binding ScaleFactor}">
+					</ScaleTransform>
+				</LayoutTransformControl.RenderTransform>
+				<Border BorderThickness="0.2" BorderBrush="Teal">
+					<Image x:Name="Image"
+						Stretch="None"
+						RenderOptions.BitmapInterpolationMode="HighQuality"
+						Source="{Binding Bitmap}" />
+				</Border>
+			</LayoutTransformControl>
+			<StackPanel Grid.Column="1">
+				<Label HorizontalContentAlignment="Center" Content="Scale Factor"/>
+				<TextBox Text="{Binding ScaleFactor}" />
 		</StackPanel>
 	</Grid>
-
-
 </UserControl>

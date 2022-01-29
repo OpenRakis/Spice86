@@ -15,6 +15,8 @@ using System.Text.Json.Serialization;
 
 public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
+    private int _initialHeight;
+    private int _initialWidth;
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -33,8 +35,8 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, double scaleFactor, uint address, int index, bool isPrimaryDisplay) {
         MainWindowViewModel = mainWindowViewModel;
         IsPrimaryDisplay = isPrimaryDisplay;
-        Width = width;
-        Height = height;
+        Width = _initialWidth = width;
+        Height = _initialHeight = height;
         ScaleFactor = scaleFactor;
         Address = address;
         Index = index;
@@ -63,7 +65,12 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         set => this.RaiseAndSetIfChanged(ref _bitmap, value);
     }
 
-    public int Height { get; private set; }
+    private int _height = 320;
+
+    public int Height {
+        get => _height;
+        private set => this.RaiseAndSetIfChanged(ref _height, value);
+    }
     public bool IsPrimaryDisplay { get; private set; }
     public MainWindowViewModel? MainWindowViewModel { get; private set; }
 
@@ -73,7 +80,13 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         set => this.RaiseAndSetIfChanged(ref _scaleFactor, value);
     }
 
-    public int Width { get; private set; }
+    private int _width = 200;
+
+    public int Width {
+        get => _width;
+        private set => this.RaiseAndSetIfChanged(ref _width, value);
+    }
+
     private int Index { get; set; }
 
     public int CompareTo(VideoBufferViewModel? other) {

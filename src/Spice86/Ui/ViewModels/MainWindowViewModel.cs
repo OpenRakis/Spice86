@@ -36,7 +36,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private List<Key> _keysPressed = new();
     private Key? _lastKeyCode = null;
     private bool _leftButtonClicked;
-    private int _mainCanvasScale = 2;
+    private double _mainCanvasScale = 1.7;
     private int _mouseX;
     private int _mouseY;
     private Action? _onKeyPressedEvent;
@@ -221,14 +221,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     private Configuration? GenerateConfiguration() {
         return new CommandLineParser().ParseCommandLine(Environment.GetCommandLineArgs());
-    }
-
-    private void OnNextFrame(FrameEventArgs e) {
-        // VideoBuffers are recreated in SetResolution.
-        // We don't want to draw buffers that are being disposed of.
-        if (_isSettingResolution || _disposedValue) {
-            return;
-        }
     }
 
     private void RunOnKeyEvent(Action? runnable) {
