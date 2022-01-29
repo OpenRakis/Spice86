@@ -11,19 +11,20 @@ using Spice86.UI;
 /// Implementation of VGA card, currently only supports mode 0x13.<br/>
 /// </summary>
 public class VgaCard : DefaultIOPortHandler {
+    private static readonly ILogger _logger = Log.Logger.ForContext<VgaCard>();
+   
     public const ushort CRT_IO_PORT = 0x03D4;
-    public const ushort GRAPHICS_ADDRESS_REGISTER_PORT = 0x3CE;
-    public const byte MODE_320_200_256 = 0x13;
-    public const ushort VGA_READ_INDEX_PORT = 0x03C7;
-    public const ushort VGA_RGB_DATA_PORT = 0x3C9;
-
     // http://www.osdever.net/FreeVGA/vga/extreg.htm#3xAR
     public const ushort VGA_SEQUENCER_ADDRESS_REGISTER_PORT = 0x03C4;
-
     public const ushort VGA_SEQUENCER_DATA_REGISTER_PORT = 0x03C5;
-    public const ushort VGA_STATUS_REGISTER_PORT = 0x03DA;
+    public const ushort VGA_READ_INDEX_PORT = 0x03C7;
     public const ushort VGA_WRITE_INDEX_PORT = 0x03C8;
-    private static readonly ILogger _logger = Log.Logger.ForContext<VgaCard>();
+    public const ushort VGA_RGB_DATA_PORT = 0x3C9;
+    public const ushort GRAPHICS_ADDRESS_REGISTER_PORT = 0x3CE;
+    public const ushort VGA_STATUS_REGISTER_PORT = 0x03DA;
+
+    public const byte MODE_320_200_256 = 0x13;
+
     private readonly IVideoKeyboardMouseIO? _gui;
     private readonly VgaDac _vgaDac;
     private byte _crtStatusRegister;
@@ -46,6 +47,7 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public byte GetStatusRegisterPort() {
+        _logger.Information("CHECKING RETRACE");
         TickRetrace();
         return _crtStatusRegister;
     }
@@ -69,6 +71,21 @@ public class VgaCard : DefaultIOPortHandler {
         }
 
         return base.Inb(port);
+    }
+
+    public override void Outb(int port, byte value) {
+        if (port == VGA_READ_INDEX_PORT) {
+            SetVgaReadIndex(value);
+        } else if (port == VGA_WRITE_INDEX_PORT) {
+            SetVgaWriteIndex(value);
+        } else if (port == VGA_RGB_DATA_PORT) {
+            RgbDataWrite(value);
+        } else if (port == VGA_STATUS_REGISTER_PORT) {
+            bool vsync = (value & 0b100) != 1;
+            _logger.Information("Vsync value set to {@VSync} (this is not implemented)", vsync);
+        } else {
+            base.Outb(port, value);
+        }
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
