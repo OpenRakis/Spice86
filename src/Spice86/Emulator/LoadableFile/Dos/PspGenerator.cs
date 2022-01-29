@@ -14,7 +14,7 @@ public class PspGenerator {
         this.machine = machine;
     }
 
-    public void GeneratePsp(ushort pspSegment, string arguments) {
+    public void GeneratePsp(ushort pspSegment, string? arguments) {
         Memory memory = machine.GetMemory();
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 

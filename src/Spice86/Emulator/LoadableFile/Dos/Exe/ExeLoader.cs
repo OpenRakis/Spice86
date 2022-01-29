@@ -18,7 +18,7 @@ public class ExeLoader : ExecutableFileLoader {
         this.startSegment = startSegment;
     }
 
-    public override byte[] LoadFile(string file, string arguments) {
+    public override byte[] LoadFile(string file, string? arguments) {
         byte[] exe = this.ReadFile(file);
         _logger.Debug("Exe size: {@ExeSize}", exe.Length);
         ExeFile exeFile = new ExeFile(exe);

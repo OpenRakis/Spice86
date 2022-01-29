@@ -30,7 +30,7 @@ public class CommandLineParser {
                 initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClass);
                 return initialConfig;
             }, (error) => {
-                return null;
+                return null!;
             });
             return parsedConfig;
         }
