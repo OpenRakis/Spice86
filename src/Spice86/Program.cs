@@ -17,7 +17,7 @@ internal class Program {
 
     private static readonly ILogger _logger = new LoggerConfiguration()
         .WriteTo.Console()
-        .MinimumLevel.Debug()
+        .MinimumLevel.Information()
         .CreateLogger();
 
     static Program() {
