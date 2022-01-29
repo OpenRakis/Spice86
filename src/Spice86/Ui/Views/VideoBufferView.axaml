@@ -10,12 +10,12 @@
 		<vm:VideoBufferViewModel />
 	</Design.DataContext>
 	<LayoutTransformControl>
-		<LayoutTransformControl.LayoutTransform>
+		<LayoutTransformControl.RenderTransform>
 			<ScaleTransform
 				ScaleX="{Binding ScaleFactor}"
 				ScaleY="{Binding ScaleFactor}">
 			</ScaleTransform>
-		</LayoutTransformControl.LayoutTransform>
+		</LayoutTransformControl.RenderTransform>
 		<Image x:Name="Image" Source="{Binding Bitmap}" Width="{Binding Width}" Height="{Binding Height}" />
 	</LayoutTransformControl>
 
