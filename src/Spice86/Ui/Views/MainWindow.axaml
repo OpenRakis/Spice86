@@ -8,19 +8,21 @@
 		x:Class="Spice86.UI.Views.MainWindow"
 		Icon="/UI/Assets/Spice86.ico"
 		Title="{Binding MainTitle}"
-		Width="1024"
-		Height="768"
+		MinWidth="1024"
+		MinHeight="768"
 		WindowStartupLocation="CenterScreen"
 		CanResize="False">
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<TabControl Items="{Binding VideoBuffers, Mode=TwoWay}">
-		<TabControl.ItemTemplate>
-			<DataTemplate x:DataType="vm:VideoBufferViewModel">
-				<TabItem Header="{Binding Address}">
-				</TabItem>
-			</DataTemplate>
-		</TabControl.ItemTemplate>
-	</TabControl>
+	<ScrollViewer>
+		<TabControl Items="{Binding VideoBuffers, Mode=TwoWay}">
+			<TabControl.ItemTemplate>
+				<DataTemplate x:DataType="vm:VideoBufferViewModel">
+					<TabItem Header="{Binding Address}">
+					</TabItem>
+				</DataTemplate>
+			</TabControl.ItemTemplate>
+		</TabControl>
+	</ScrollViewer>
 </Window>

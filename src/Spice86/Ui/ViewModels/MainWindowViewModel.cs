@@ -36,7 +36,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private List<Key> _keysPressed = new();
     private Key? _lastKeyCode = null;
     private bool _leftButtonClicked;
-    private int _mainCanvasScale = 4;
+    private int _mainCanvasScale = 2;
     private int _mouseX;
     private int _mouseY;
     private Action? _onKeyPressedEvent;

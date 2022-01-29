@@ -66,7 +66,13 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     public int Height { get; private set; }
     public bool IsPrimaryDisplay { get; private set; }
     public MainWindowViewModel? MainWindowViewModel { get; private set; }
-    public double ScaleFactor { get; private set; }
+
+    private double _scaleFactor = 1;
+    public double ScaleFactor {
+        get => _scaleFactor;
+        set => this.RaiseAndSetIfChanged(ref _scaleFactor, value);
+    }
+
     public int Width { get; private set; }
     private int Index { get; set; }
 

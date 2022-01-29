@@ -9,15 +9,25 @@
 	<Design.DataContext>
 		<vm:VideoBufferViewModel />
 	</Design.DataContext>
-	<LayoutTransformControl>
-		<LayoutTransformControl.RenderTransform>
-			<ScaleTransform
-				ScaleX="{Binding ScaleFactor}"
-				ScaleY="{Binding ScaleFactor}">
-			</ScaleTransform>
-		</LayoutTransformControl.RenderTransform>
-		<Image x:Name="Image" Source="{Binding Bitmap}" Width="{Binding Width}" Height="{Binding Height}" />
-	</LayoutTransformControl>
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*" />
+			<ColumnDefinition Width="Auto" />
+		</Grid.ColumnDefinitions>
+		<LayoutTransformControl Grid.Column="0">
+			<LayoutTransformControl.RenderTransform>
+				<ScaleTransform
+					ScaleX="{Binding ScaleFactor}"
+					ScaleY="{Binding ScaleFactor}">
+				</ScaleTransform>
+			</LayoutTransformControl.RenderTransform>
+			<Image x:Name="Image" Source="{Binding Bitmap}" Width="{Binding Width}" Height="{Binding Height}" />
+		</LayoutTransformControl>
+		<StackPanel Grid.Column="1">
+			<Label HorizontalContentAlignment="Center" Content="Scale Factor"/>
+			<NumericUpDown Value="{Binding ScaleFactor}" />
+		</StackPanel>
+	</Grid>
 
 
 </UserControl>
