@@ -160,8 +160,7 @@ public class Pic : DefaultIOPortHandler {
                     ProcessICW4(value);
                     break;
                 default:
-                    throw new UnhandledOperationException(machine,
-                    $"Invalid initialization command index {_currentCommand}, should never happen");
+                    throw new UnhandledOperationException(machine, $"Invalid initialization command index {_currentCommand}, should never happen");
             }
         }
         _currentCommand = (_currentCommand + 1) % _commandsToProcess;
