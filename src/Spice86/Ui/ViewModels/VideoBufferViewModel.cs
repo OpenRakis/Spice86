@@ -6,6 +6,7 @@ using Avalonia.Platform;
 using ReactiveUI;
 
 using Spice86.Emulator.Devices.Video;
+using Spice86.UI.Views;
 
 using System;
 using System.Collections.Generic;
@@ -38,6 +39,11 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         ScaleFactor = scaleFactor;
         Address = address;
         Index = index;
+        MainWindow.AppClosing += MainWindow_AppClosing;
+    }
+
+    private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
+        _appClosing = true;
     }
 
     public event EventHandler? Dirty;
@@ -79,6 +85,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     }
 
     private int _width = 200;
+    private bool _appClosing;
 
     public int Width {
         get => _width;
@@ -116,7 +123,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             uint argb = pixel.ToArgb();
             buffer.Add(argb);
         }
-        if(Bitmap is not null) {
+        if(_appClosing == false) {
             using ILockedFramebuffer buf = Bitmap.Lock();
             uint* dst = (uint*)buf.Address;
             for (int i = 0; i < size; i++) {
