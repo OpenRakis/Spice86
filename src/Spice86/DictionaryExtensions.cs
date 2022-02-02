@@ -15,13 +15,13 @@ internal static class DictionaryExtensions {
     /// <param name="key">The input key to use</param>
     /// <param name="lambda">The lambda to call if the value is not found.</param>
     /// <returns>The found or computed value</returns>
-    public static TValue ComputeIfAbsent<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, Func<TValue> lambda) {
+    public static TValue ComputeIfAbsent<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue backupValue) {
         if (dict.TryGetValue(key, out TValue? value)) {
             if (value is not null) {
                 return value;
             }
         }
-        value = lambda.Invoke();
+        value = backupValue;
         _ = dict.TryAdd(key, value);
         return value;
     }

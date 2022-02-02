@@ -70,7 +70,7 @@
         private void ToggleConditionalBreakPoint(BreakPoint breakPoint, bool on) {
             long address = breakPoint.GetAddress();
             if (on) {
-                List<BreakPoint> breakPointList = _breakPoints.ComputeIfAbsent(address, () => new());
+                List<BreakPoint> breakPointList = _breakPoints.ComputeIfAbsent(address, new());
                 breakPointList.Add(breakPoint);
             } else {
                 if (_breakPoints.TryGetValue(address, out var breakPointList)) {
