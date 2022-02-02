@@ -109,6 +109,7 @@ public class Counter {
                 break;
             default: throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {_readWritePolicy}");
         }
+        OnValueWrite();
     }
 
     public override string ToString() {
