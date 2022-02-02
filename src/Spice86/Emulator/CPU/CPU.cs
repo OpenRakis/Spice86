@@ -6,13 +6,12 @@ using Spice86.Emulator.Callback;
 using Spice86.Emulator.Errors;
 using Spice86.Emulator.Function;
 using Spice86.Emulator.IOPorts;
-using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
+using Spice86.Emulator.VM;
 using Spice86.Utils;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
@@ -30,8 +29,8 @@ public class Cpu {
     private const int REG_INDEX_MASK = 0b111;
 
     private static readonly ILogger _logger = Log.Logger.ForContext<Cpu>();
-    private static readonly List<int> PREFIXES_OPCODES = new[] { 0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3 }.ToList();
-    private static readonly List<int> STRING_OPCODES = new[] { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F }.ToList();
+    private static readonly HashSet<int> PREFIXES_OPCODES = new() { 0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3 };
+    private static readonly HashSet<int> STRING_OPCODES = new() { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Alu _alu;
     private readonly FunctionHandler _functionHandler;
@@ -79,27 +78,27 @@ public class Cpu {
     public void ExecuteNextInstruction() {
         _internalIp = _state.GetIP();
         _staticAddressesRecorder.Reset();
-        String stateString = "";
-        if (IsLoggingEnabled()) {
-            stateString = _state.ToString();
-            _state.ResetCurrentInstructionPrefix();
-            _state.SetCurrentInstructionName("");
-        }
+        //String stateString = "";
+        //if (IsLoggingEnabled()) {
+        //    stateString = _state.ToString();
+        //    _state.ResetCurrentInstructionPrefix();
+        //    _state.SetCurrentInstructionName("");
+        //}
         byte opcode = ProcessPrefixes();
-        if (IsLoggingEnabled()) {
-            _logger.Debug("Before execution: {@OpCode} {@StateString} ", ConvertUtils.ToHex8(opcode),
-                stateString);
-        }
+        //if (IsLoggingEnabled()) {
+        //    _logger.Debug("Before execution: {@OpCode} {@StateString} ", ConvertUtils.ToHex8(opcode),
+        //        stateString);
+        //}
         if (_state.GetContinueZeroFlagValue() != null && IsStringOpcode(opcode)) {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
             ProcessRep(opcode);
         } else {
             ExecOpcode(opcode);
         }
-        if (IsLoggingEnabled()) {
-            String instructionName = _state.GetCurrentInstructionNameWithPrefix();
-            _logger.Debug("After execution of {@InstructionName} {@State}", instructionName, _state);
-        }
+        //if (IsLoggingEnabled()) {
+        //    String instructionName = _state.GetCurrentInstructionNameWithPrefix();
+        //    _logger.Debug("After execution of {@InstructionName} {@State}", instructionName, _state);
+        //}
         _state.ClearPrefixes();
         _staticAddressesRecorder.Commit();
         _state.IncCycles();
@@ -192,16 +191,16 @@ public class Cpu {
 
     private void AddCurrentInstructionPrefix(Func<String> getLog) {
         // Optimization, do not calculate the log if it is not used
-        if (IsLoggingEnabled()) {
-            _state.AddCurrentInstructionPrefix(getLog.Invoke());
-        }
+        //if (IsLoggingEnabled()) {
+        //    _state.AddCurrentInstructionPrefix(getLog.Invoke());
+        //}
     }
 
     private void Callback(ushort callbackIndex) {
         SetCurrentInstructionName(() => $"CALLBACK {callbackIndex}");
-        if (IsLoggingEnabled()) {
-            _logger.Debug("callback {@CallbackIndex}", ConvertUtils.ToHex16(callbackIndex));
-        }
+        //if (IsLoggingEnabled()) {
+        //    _logger.Debug("callback {@CallbackIndex}", ConvertUtils.ToHex16(callbackIndex));
+        //}
         _callbackHandler?.Run(callbackIndex);
     }
 
@@ -1306,7 +1305,7 @@ public class Cpu {
 
             case 0xF4:
                 SetCurrentInstructionName(() => "HLT");
-                _logger.Information("HLT instruction encountered, halting!");
+                //_logger.Information("HLT instruction encountered, halting!");
                 _running = false;
                 break;
 
@@ -1738,10 +1737,10 @@ public class Cpu {
     }
 
     private void HandleCall(CallType callType, ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
-        if (IsLoggingEnabled()) {
-            _logger.Debug("CALL {@TargetCsTargetIp}, will return to {@ReturnCsReturnIp}", ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP),
-                ConvertUtils.ToSegmentedAddressRepresentation(returnCS, returnIP));
-        }
+        //if (IsLoggingEnabled()) {
+        //    _logger.Debug("CALL {@TargetCsTargetIp}, will return to {@ReturnCsReturnIp}", ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP),
+        //        ConvertUtils.ToSegmentedAddressRepresentation(returnCS, returnIP));
+        //}
         _functionHandlerInUse.Call(callType, targetCS, targetIP, returnCS, returnIP);
     }
 
@@ -1755,9 +1754,9 @@ public class Cpu {
         if (_externalInterruptVectorNumber == null || !_state.GetInterruptFlag()) {
             return;
         }
-        if (IsLoggingEnabled()) {
-            _logger.Debug("Interrupted!, {@ExternalInterruptVectorNumber}", _externalInterruptVectorNumber);
-        }
+        //if (IsLoggingEnabled()) {
+        //    _logger.Debug("Interrupted!, {@ExternalInterruptVectorNumber}", _externalInterruptVectorNumber);
+        //}
         Interrupt(_externalInterruptVectorNumber, true);
         _externalInterruptVectorNumber = null;
     }
@@ -1790,10 +1789,10 @@ public class Cpu {
         }
         ushort returnCS = _state.GetCS();
         ushort returnIP = _internalIp;
-        if (IsLoggingEnabled()) {
-            _logger.Debug("int {@VectorNumber} handler found in memory, {@SegmentedAddressRepresentation}", ConvertUtils.ToHex(vectorNumber.Value),
-                ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP));
-        }
+        //if (IsLoggingEnabled()) {
+        //    _logger.Debug("int {@VectorNumber} handler found in memory, {@SegmentedAddressRepresentation}", ConvertUtils.ToHex(vectorNumber.Value),
+        //        ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP));
+        //}
         _stack.Push(_state.GetFlags().GetFlagRegister());
         _stack.Push(returnCS);
         _stack.Push(returnIP);
@@ -1817,7 +1816,7 @@ public class Cpu {
     }
 
     private bool IsLoggingEnabled() {
-        if (_forceLog == null) {
+        if (_forceLog is null) {
             return _logger.IsEnabled(Serilog.Events.LogEventLevel.Debug);
         }
         return _forceLog.Value;
@@ -1873,7 +1872,7 @@ public class Cpu {
             0x7F => "JG",
             0xE3 => "JCXZ",
             _ => ""
-        } + " " + address + " jump?" + jump);
+        } + $" {address} {nameof(jump)}? {jump}");
         if (jump) {
             HandleJump(_state.GetCS(), (ushort)(_internalIp + address));
         }
@@ -1950,7 +1949,7 @@ public class Cpu {
             {
                     bool continueZeroFlagValue = (opcode & 1) == 1;
                     _state.SetContinueZeroFlagValue(continueZeroFlagValue);
-                    AddCurrentInstructionPrefix(() => "REP" + (continueZeroFlagValue ? "Z" : ""));
+                    AddCurrentInstructionPrefix(() => $"REP{(continueZeroFlagValue ? "Z" : "")}");
                     break;
                 }
             default:
@@ -1981,11 +1980,11 @@ public class Cpu {
             ProcessString(opcode);
             cx--;
 
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _logger.Verbose("{@Rep} Loop, {@Cx}, {@If}, {@CheckZeroFlag}, {@ContinueZF}",
-                    _state.GetCurrentInstructionNameWithPrefix(),
-                    ConvertUtils.ToHex(cx), _state.GetZeroFlag(), checkZeroFlag, continueZeroFlagValue);
-            }
+            //if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            //    _logger.Verbose("{@Rep} Loop, {@Cx}, {@If}, {@CheckZeroFlag}, {@ContinueZF}",
+            //        _state.GetCurrentInstructionNameWithPrefix(),
+            //        ConvertUtils.ToHex(cx), _state.GetZeroFlag(), checkZeroFlag, continueZeroFlagValue);
+            //}
             // Not all the string operations require checking the zero flag...
             if (checkZeroFlag && _state.GetZeroFlag() != continueZeroFlagValue) {
                 break;
@@ -2107,9 +2106,9 @@ public class Cpu {
 
     private void SetCurrentInstructionName(Func<String> getLog) {
         // Optimization, do not calculate the log if it is not used
-        if (IsLoggingEnabled()) {
-            _state.SetCurrentInstructionName(getLog.Invoke());
-        }
+        //if (IsLoggingEnabled()) {
+        //    _state.SetCurrentInstructionName(getLog.Invoke());
+        //}
     }
 
     // SCASW

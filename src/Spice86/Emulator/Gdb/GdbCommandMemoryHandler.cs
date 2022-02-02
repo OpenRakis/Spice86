@@ -30,7 +30,9 @@ public class GdbCommandMemoryHandler {
                 length = ConvertUtils.ParseHex32(commandContentSplit[1]);
             }
 
-            _logger.Information("Reading memory at address {@Address} for a length of {@Length}", address, length);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Reading memory at address {@Address} for a length of {@Length}", address, length);
+            }
             Memory memory = machine.GetMemory();
             int memorySize = memory.GetSize();
             StringBuilder response = new StringBuilder((int)length * 2);
@@ -47,7 +49,9 @@ public class GdbCommandMemoryHandler {
 
             return gdbIo.GenerateResponse(response.ToString());
         } catch (FormatException nfe) {
-            _logger.Error(nfe, "Memory read requested but could not understand the request {@CommandContent}", commandContent);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(nfe, "Memory read requested but could not understand the request {@CommandContent}", commandContent);
+            }
             return gdbIo.GenerateUnsupportedResponse();
         }
     }
@@ -94,7 +98,9 @@ public class GdbCommandMemoryHandler {
             memory.LoadData(address, data);
             return gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
-            _logger.Error(nfe, "Memory write requested but could not understand the request {@CommandContent}", commandContent);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(nfe, "Memory write requested but could not understand the request {@CommandContent}", commandContent);
+            }
             return gdbIo.GenerateUnsupportedResponse();
         }
     }

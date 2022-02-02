@@ -30,8 +30,10 @@ public class GdbIo : IDisposable {
         tcpListener = new TcpListener(ip, port);
         serverSocket = tcpListener.Server;
         socket = tcpListener.AcceptSocket();
-        _logger.Information("GDB Server listening on port {@Port}", port);
-        _logger.Information("Client connected: {@CanonicalHostName}", socket.RemoteEndPoint);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GDB Server listening on port {@Port}", port);
+            _logger.Information("Client connected: {@CanonicalHostName}", socket.RemoteEndPoint);
+        }
         stream = new NetworkStream(socket);
         input = new StreamReader(stream);
         output = new StreamWriter(stream);
@@ -87,7 +89,9 @@ public class GdbIo : IDisposable {
 
     public void SendResponse(string? data) {
         if (data != null) {
-            _logger.Information("Sending response {@ResponseData}", data);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Sending response {@ResponseData}", data);
+            }
             output.Write(Encoding.UTF8.GetBytes(data));
         }
     }

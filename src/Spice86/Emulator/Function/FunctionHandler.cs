@@ -111,7 +111,9 @@ public class FunctionHandler {
     public bool Ret(CallType returnCallType) {
         if (_debugMode) {
             if (_callerStack.TryDequeue(out FunctionCall? currentFunctionCall) == false) {
-                _logger.Warning("Returning but no call was done before!!");
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                    _logger.Warning("Returning but no call was done before!!");
+                }
                 return false;
             }
             FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);

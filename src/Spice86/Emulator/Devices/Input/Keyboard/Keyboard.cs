@@ -34,10 +34,15 @@ public class Keyboard : DefaultIOPortHandler {
         if (keyCode != null) {
             if (gui.IsKeyPressed(keyCode.Value)) {
                 scancode = _keyScancodeConverter.GetKeyPressedScancode(keyCode.Value);
-                _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
+                if(_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
+
+                }
             } else {
                 scancode = _keyScancodeConverter.GetKeyReleasedScancode(keyCode.Value);
-                _logger.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _logger.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
+                }
             }
 
             if (scancode == null) {

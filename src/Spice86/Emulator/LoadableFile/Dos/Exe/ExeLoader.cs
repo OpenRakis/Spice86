@@ -20,14 +20,20 @@ public class ExeLoader : ExecutableFileLoader {
 
     public override byte[] LoadFile(string file, string? arguments) {
         byte[] exe = this.ReadFile(file);
-        _logger.Debug("Exe size: {@ExeSize}", exe.Length);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Exe size: {@ExeSize}", exe.Length);
+        }
         ExeFile exeFile = new ExeFile(exe);
-        _logger.Debug("Read header: {@ReadHeader}", exeFile);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Read header: {@ReadHeader}", exeFile);
+        }
         LoadExeFileInMemory(exeFile, startSegment);
         ushort pspSegment = (ushort)(startSegment - 0x10);
         SetupCpuForExe(exeFile, startSegment, pspSegment);
         new PspGenerator(_machine).GeneratePsp(pspSegment, arguments);
-        _logger.Debug("Initial CPU State: {@CpuState}", _cpu.GetState());
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Initial CPU State: {@CpuState}", _cpu.GetState());
+        }
         return exe;
     }
 

@@ -50,7 +50,9 @@ public class CSharpOverrideHelper {
         string name = $"{_prefix}.{suffix}";
         if (functionInformations.TryGetValue(address, out var existingFunctionInformation)) {
             string error = $"There is already a function defined at address {address} named {existingFunctionInformation.GetName()} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
-            _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.GetName(), name);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.GetName(), name);
+            }
             throw new UnrecoverableException(error);
         }
         FunctionInformation functionInformation = new(address, name, @override);
@@ -67,7 +69,9 @@ public class CSharpOverrideHelper {
         StaticAddressesRecorder recorder = _cpu.GetStaticAddressesRecorder();
         if (recorder.GetNames().TryGetValue(physicalAddress, out var existing)) {
             string error = $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
-            _logger.Error("There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existing, name);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error("There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existing, name);
+            }
             throw new UnrecoverableException(error);
         }
 
@@ -141,7 +145,9 @@ public class CSharpOverrideHelper {
     protected void FailAsUntested(string message) {
         string dumpedCallStack = _machine.DumpCallStack();
         string error = $"Untested code reached, please tell us how to reach this state.Here is the message: {message} Here is the call stack: {dumpedCallStack}";
-        _logger.Error("Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}", message, _machine.DumpCallStack());
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            _logger.Error("Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}", message, _machine.DumpCallStack());
+        }
         throw new UnrecoverableException(error);
     }
 }

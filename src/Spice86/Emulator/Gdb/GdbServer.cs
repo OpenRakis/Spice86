@@ -50,20 +50,26 @@ public class GdbServer : IDisposable {
     }
 
     private void RunServer(int port) {
-        _logger.Information("Starting GDB server");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Starting GDB server");
+        }
         try {
             while (running) {
                 try {
                     var gdbIo = new GdbIo(port);
                     AcceptOneConnection(gdbIo);
                 } catch (IOException e) {
-                    _logger.Error(e, "Error in the GDB server, restarting it...");
+                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                        _logger.Error(e, "Error in the GDB server, restarting it...");
+                    }
                 }
             }
         } finally {
             machine.GetCpu().SetRunning(false);
             machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
-            _logger.Information("GDB server stopped");
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("GDB server stopped");
+            }
         }
     }
 

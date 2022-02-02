@@ -30,7 +30,9 @@ public class SystemClockInt1AHandler : InterruptHandler {
 
     public void GetSystemClockCounter() {
         uint value = timerHandler.GetTickCounterValue();
-        _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+        }
 
         // let's say it never overflows
         _state.SetAL(0);
@@ -45,11 +47,15 @@ public class SystemClockInt1AHandler : InterruptHandler {
 
     public void SetSystemClockCounter() {
         uint value = (ushort)(_state.GetCX() << 16 | _state.GetDX());
-        _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+        }
         timerHandler.SetTickCounterValue(value);
     }
 
     private void TandySoundSystemUnhandled() {
-        _logger.Information("TANDY SOUND SYSTEM IS NOT IMPLEMENTED");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("TANDY SOUND SYSTEM IS NOT IMPLEMENTED");
+        }
     }
 }

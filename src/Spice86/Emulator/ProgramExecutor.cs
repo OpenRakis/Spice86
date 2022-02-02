@@ -131,7 +131,9 @@ public class ProgramExecutor : IDisposable {
     private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
-            _logger.Information("Override supplied: {@OverideSupplier}", supplier);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Override supplied: {@OverideSupplier}", supplier);
+            }
             foreach(KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier.GenerateFunctionInformations(entryPointSegment, machine)) {
                 res.Add(element.Key, element.Value);
             }
@@ -197,7 +199,9 @@ public class ProgramExecutor : IDisposable {
             throw new ArgumentNullException(nameof(executableFileName));
         }
         ExecutableFileLoader loader = CreateExecutableFileLoader(executableFileName, configuration.ProgramEntryPointSegment);
-        _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName, loader.GetType());
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName, loader.GetType());
+        }
         try {
             byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);

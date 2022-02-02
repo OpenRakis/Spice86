@@ -135,7 +135,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     public void OnKeyPressed(KeyEventArgs @event) {
         Key keyCode = @event.Key;
         if (!_keysPressed.Contains(keyCode)) {
-            _logger.Information("Key pressed {@KeyPressed}", keyCode);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Key pressed {@KeyPressed}", keyCode);
+            }
             _keysPressed.Add(keyCode);
             this._lastKeyCode = keyCode;
             RunOnKeyEvent(this._onKeyPressedEvent);
@@ -144,7 +146,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     public void OnKeyReleased(KeyEventArgs @event) {
         this._lastKeyCode = @event.Key;
-        _logger.Information("Key released {@LastKeyCode}", _lastKeyCode);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Key released {@LastKeyCode}", _lastKeyCode);
+        }
         _keysPressed.Remove(_lastKeyCode.Value);
         RunOnKeyEvent(this._onKeyReleasedEvent);
     }
@@ -237,7 +241,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
             _programExecutor = new ProgramExecutor(this, _configuration);
             _programExecutor.Run();
         } catch (Exception e) {
-            _logger.Error(e, "An error occurred during execution");
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(e, "An error occurred during execution");
+            }
         }
         Exit();
     }

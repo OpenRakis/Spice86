@@ -21,7 +21,9 @@ public class GdbCommandRegisterHandler {
     }
 
     public string ReadAllRegisters() {
-        _logger.Information("Reading all registers");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Reading all registers");
+        }
         StringBuilder response = new(2 * 4 * 16);
         for (int i = 0; i < 16; i++) {
             string regValue = gdbFormatter.FormatValueAsHex32(GetRegisterValue(i));
@@ -34,10 +36,14 @@ public class GdbCommandRegisterHandler {
     public string ReadRegister(string commandContent) {
         try {
             long index = ConvertUtils.ParseHex32(commandContent);
-            _logger.Information("Reading register {@RegisterIndex}", index);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Reading register {@RegisterIndex}", index);
+            }
             return gdbIo.GenerateResponse(gdbFormatter.FormatValueAsHex32(GetRegisterValue((int)index)));
         } catch (FormatException nfe) {
-            _logger.Error(nfe, "Register read requested but could not understand the request {@CommandContent}", commandContent);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(nfe, "Register read requested but could not understand the request {@CommandContent}", commandContent);
+            }
             return gdbIo.GenerateUnsupportedResponse();
         }
     }
@@ -52,7 +58,9 @@ public class GdbCommandRegisterHandler {
 
             return gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
-            _logger.Error(nfe, "Register write requested but could not understand the request {@CommandContent}", commandContent);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(nfe, "Register write requested but could not understand the request {@CommandContent}", commandContent);
+            }
             return gdbIo.GenerateUnsupportedResponse();
         }
     }
