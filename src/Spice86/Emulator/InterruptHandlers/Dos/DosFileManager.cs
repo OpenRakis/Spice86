@@ -117,17 +117,22 @@ public class DosFileManager {
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = ToHostFileName(fileSpec);
         currentMatchingFileSearchFolder = hostSearchSpec.Substring(0, hostSearchSpec.LastIndexOf('/') + 1);
-        currentMatchingFileSearchSpec = hostSearchSpec.Replace(currentMatchingFileSearchFolder, "");
-        Regex currentMatchingFileSearchSpecPattern = FileSpecToRegex(currentMatchingFileSearchSpec);
-        try {
-            string[] pathes = Directory.GetFiles(currentMatchingFileSearchFolder);
-            List<string> matchingPathes = pathes.Where((p) => MatchesSpec(currentMatchingFileSearchSpecPattern, new FileInfo(p))).ToList();
-            matchingFilesIterator = matchingPathes.GetEnumerator();
-            return FindNextMatchingFile();
-        } catch (IOException e) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(e, "Error while walking path {@CurrentMatchingFileSearchFolder} or getting attributes.", currentMatchingFileSearchFolder);
+        if(string.IsNullOrWhiteSpace(currentMatchingFileSearchFolder) == false) {
+            currentMatchingFileSearchSpec = hostSearchSpec.Replace(currentMatchingFileSearchFolder, "");
+            Regex currentMatchingFileSearchSpecPattern = FileSpecToRegex(currentMatchingFileSearchSpec);
+            try {
+                string[] pathes = Directory.GetFiles(currentMatchingFileSearchFolder);
+                List<string> matchingPathes = pathes.Where((p) => MatchesSpec(currentMatchingFileSearchSpecPattern, new FileInfo(p))).ToList();
+                matchingFilesIterator = matchingPathes.GetEnumerator();
+                return FindNextMatchingFile();
+            } catch (IOException e) {
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _logger.Error(e, "Error while walking path {@CurrentMatchingFileSearchFolder} or getting attributes.", currentMatchingFileSearchFolder);
+                }
+                return DosFileOperationResult.Error(0x03);
             }
+        }
+        else {
             return DosFileOperationResult.Error(0x03);
         }
     }
@@ -430,7 +435,7 @@ public class DosFileManager {
         // Absolute path
         char driveLetter = fileName[0];
 
-        if (driveMap.TryGetValue(driveLetter, out var pathForDrive)) {
+        if (driveMap.TryGetValue(driveLetter, out var pathForDrive) == false) {
             throw new UnrecoverableException("Could not find a mapping for drive " + driveLetter);
         }
 
