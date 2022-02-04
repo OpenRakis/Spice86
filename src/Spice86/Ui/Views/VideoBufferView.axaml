@@ -20,7 +20,6 @@
 				</LayoutTransformControl.RenderTransform>
 				<Image x:Name="Image"
 					Stretch="None"
-					Cursor="None"
 					RenderOptions.BitmapInterpolationMode="HighQuality"
 					Source="{Binding Bitmap}" />
 			</LayoutTransformControl>
