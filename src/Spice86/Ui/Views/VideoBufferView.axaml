@@ -9,24 +9,32 @@
 	<Design.DataContext>
 		<vm:VideoBufferViewModel />
 	</Design.DataContext>
-	<Grid ColumnDefinitions="*,Auto">
-			<LayoutTransformControl Grid.Column="0" >
+	<Grid>
+		<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+			<LayoutTransformControl>
 				<LayoutTransformControl.RenderTransform>
 					<ScaleTransform
 						ScaleX="{Binding ScaleFactor}"
 						ScaleY="{Binding ScaleFactor}">
 					</ScaleTransform>
 				</LayoutTransformControl.RenderTransform>
-				<Border BorderThickness="0.2" BorderBrush="Teal">
-					<Image x:Name="Image"
-						Stretch="None"
-						RenderOptions.BitmapInterpolationMode="HighQuality"
-						Source="{Binding Bitmap}" />
-				</Border>
+				<Image x:Name="Image"
+					Stretch="None"
+					Cursor="None"
+					RenderOptions.BitmapInterpolationMode="HighQuality"
+					Source="{Binding Bitmap}" />
 			</LayoutTransformControl>
-			<StackPanel Grid.Column="1">
+		</Grid>
+		<DockPanel>
+			<StackPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" HorizontalAlignment="Right">
 				<Label HorizontalContentAlignment="Center" Content="Scale Factor"/>
-				<TextBox Text="{Binding ScaleFactor}" />
-		</StackPanel>
+				<NumericUpDown Text="{Binding ScaleFactor}"/>
+				<StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+					<Button Command="{Binding ScaleMoreCommand}" Content="+" />
+					<Button Command="{Binding ScaleLessCommand}" Content="-" />
+				</StackPanel>
+				<Button HorizontalAlignment="Center" Command="{Binding ResetCommand}" Content="Reset" />
+			</StackPanel>
+		</DockPanel>
 	</Grid>
 </UserControl>

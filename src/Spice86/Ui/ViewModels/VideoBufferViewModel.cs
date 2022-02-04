@@ -9,8 +9,7 @@ using Spice86.Emulator.Devices.Video;
 using Spice86.UI.Views;
 
 using System;
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
+using System.Reactive;
 
 public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
@@ -28,7 +27,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         Height = 200;
         ScaleFactor = 1;
         Address = 1;
-        Index = 1;
+        _index = 1;
     }
 
     public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, double scaleFactor, uint address, int index, bool isPrimaryDisplay) {
@@ -38,9 +37,31 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         Height = _initialHeight = height;
         ScaleFactor = scaleFactor;
         Address = address;
-        Index = index;
+        _index = index;
         MainWindow.AppClosing += MainWindow_AppClosing;
+        ScaleLessCommand = ReactiveCommand.Create(ScaleLessMethod);
+        ScaleMoreCommand = ReactiveCommand.Create(ScaleMoreMethod);
+        ResetCommand = ReactiveCommand.Create(ResetMethod);
     }
+
+    private Unit ScaleLessMethod() {
+        ScaleFactor--;
+        return Unit.Default;
+    }
+
+    private Unit ScaleMoreMethod() {
+        ScaleFactor++;
+        return Unit.Default;
+    }
+
+    private Unit ResetMethod() {
+        ScaleFactor = 1.7;
+        return Unit.Default;
+    }
+
+    public ReactiveCommand<Unit,Unit>? ScaleMoreCommand { get; private set; }
+    public ReactiveCommand<Unit,Unit>? ScaleLessCommand { get; private set; }
+    public ReactiveCommand<Unit,Unit>? ResetCommand { get; private set; }
 
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
@@ -50,7 +71,6 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
 
     public uint Address { get; private set; }
 
-    [JsonIgnore]
 
     private WriteableBitmap? _bitmap;
 
@@ -81,7 +101,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     private double _scaleFactor = 1;
     public double ScaleFactor {
         get => _scaleFactor;
-        set => this.RaiseAndSetIfChanged(ref _scaleFactor, value);
+        set => this.RaiseAndSetIfChanged(ref _scaleFactor, Math.Max(value, 1.7));
     }
 
     private int _width = 200;
@@ -92,12 +112,12 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         private set => this.RaiseAndSetIfChanged(ref _width, value);
     }
 
-    private int Index { get; set; }
+    private int _index;
 
     public int CompareTo(VideoBufferViewModel? other) {
-        if (Index < other?.Index) {
+        if (_index < other?._index) {
             return -1;
-        } else if (Index == other?.Index) {
+        } else if (_index == other?._index) {
             return 0;
         } else {
             return 1;
@@ -131,19 +151,11 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     }
 
     public override bool Equals(object? obj) {
-        return this == obj || (obj is VideoBufferViewModel other) && Index == other.Index;
+        return this == obj || (obj is VideoBufferViewModel other) && _index == other._index;
     }
 
     public override int GetHashCode() {
-        return Index;
-    }
-
-    public int GetIndex() {
-        return Index;
-    }
-
-    public override string? ToString() {
-        return System.Text.Json.JsonSerializer.Serialize(this);
+        return _index;
     }
 
     protected virtual void Dispose(bool disposing) {
