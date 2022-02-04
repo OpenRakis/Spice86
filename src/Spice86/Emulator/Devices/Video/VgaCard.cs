@@ -47,7 +47,9 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public byte GetStatusRegisterPort() {
-        _logger.Information("CHECKING RETRACE");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("CHECKING RETRACE");
+        }
         TickRetrace();
         return _crtStatusRegister;
     }
@@ -57,7 +59,9 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public byte GetVgaReadIndex() {
-        _logger.Information("GET VGA READ INDEX");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET VGA READ INDEX");
+        }
         return _vgaDac.GetState() == VgaDac.VgaDacWrite ? (byte)0x3 : (byte)0x0;
     }
 
@@ -82,7 +86,9 @@ public class VgaCard : DefaultIOPortHandler {
             RgbDataWrite(value);
         } else if (port == VGA_STATUS_REGISTER_PORT) {
             bool vsync = (value & 0b100) != 1;
-            _logger.Information("Vsync value set to {@VSync} (this is not implemented)", vsync);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Vsync value set to {@VSync} (this is not implemented)", vsync);
+            }
         } else {
             base.Outb(port, value);
         }
@@ -99,12 +105,16 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public byte RgbDataRead() {
-        _logger.Information("PALETTE READ");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("PALETTE READ");
+        }
         return VgaDac.From8bitTo6bitColor(_vgaDac.ReadColor());
     }
 
     public void RgbDataWrite(byte value) {
-        _logger.Information("PALETTE WRITE {@Value}", value);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("PALETTE WRITE {@Value}", value);
+        }
         _vgaDac.WriteColor(VgaDac.From6bitColorTo8bit(value));
     }
 
@@ -120,14 +130,18 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public void SetVgaReadIndex(int value) {
-        _logger.Information("SET VGA READ INDEX {@Value}", value);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("SET VGA READ INDEX {@Value}", value);
+        }
         _vgaDac.SetReadIndex(value);
         _vgaDac.SetColour(0);
         _vgaDac.SetState(VgaDac.VgaDacRead);
     }
 
     public void SetVgaWriteIndex(int value) {
-        _logger.Information("SET VGA WRITE INDEX {@Value}", value);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("SET VGA WRITE INDEX {@Value}", value);
+        }
         _vgaDac.SetWriteIndex(value);
         _vgaDac.SetColour(0);
         _vgaDac.SetState(VgaDac.VgaDacWrite);
@@ -141,20 +155,22 @@ public class VgaCard : DefaultIOPortHandler {
                 _gui.SetResolution(videoWidth, videoHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
             }
         } else {
-            _logger.Error("UNSUPPORTED VIDEO MODE {@VideMode}", mode);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error("UNSUPPORTED VIDEO MODE {@VideMode}", mode);
+            }
         }
     }
 
     /// <returns>true when in retrace</returns>
     public bool TickRetrace() {
         if (_drawing) {
-            _logger.Information("CHECKING RETRACE: Updating screen");
+            //_logger.Information("CHECKING RETRACE: Updating screen");
             // Means the CRT is busy drawing a line, tells the program it should not draw
             UpdateScreen();
             _crtStatusRegister = 0;
             _drawing = false;
         } else {
-            _logger.Information("CHECKING RETRACE: Not updating screen");
+            //_logger.Information("CHECKING RETRACE: Not updating screen");
             // 4th bit is 1 when the CRT finished drawing and is returning to the beginning
             // of the screen (retrace).
             // Programs use this to know if it is safe to write to VRAM.

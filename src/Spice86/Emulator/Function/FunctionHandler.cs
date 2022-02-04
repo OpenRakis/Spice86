@@ -36,7 +36,7 @@ public class FunctionHandler {
 
     public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort? expectedReturnSegment, ushort? expectedReturnOffset, Func<String>? nameGenerator, bool recordReturn) {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
-        FunctionInformation currentFunction = _functionInformations.ComputeIfAbsent(entryAddress, () => new FunctionInformation(entryAddress, nameGenerator != null ? nameGenerator.Invoke() : "unknown"));
+        FunctionInformation currentFunction = getOrCreateFunctionInformation(entryAddress, nameGenerator);
         if (_debugMode) {
             FunctionInformation? caller = GetFunctionInformation(GetCurrentFunctionCall());
             SegmentedAddress? expectedReturnAddress = null;
@@ -56,6 +56,16 @@ public class FunctionHandler {
         if (_useCodeOverride) {
             currentFunction.CallOverride();
         }
+    }
+
+    private FunctionInformation getOrCreateFunctionInformation(SegmentedAddress entryAddress, Func<String>? nameGenerator) {
+        FunctionInformation res;
+        _functionInformations.TryGetValue(entryAddress, out res);
+        if (res is null) {
+            res = new FunctionInformation(entryAddress, nameGenerator == null ? "unknown" : nameGenerator.Invoke());
+            _functionInformations.Add(entryAddress, res);
+        }
+        return res;
     }
 
     public string DumpCallStack() {
@@ -111,7 +121,9 @@ public class FunctionHandler {
     public bool Ret(CallType returnCallType) {
         if (_debugMode) {
             if (_callerStack.TryDequeue(out FunctionCall? currentFunctionCall) == false) {
-                _logger.Warning("Returning but no call was done before!!");
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                    _logger.Warning("Returning but no call was done before!!");
+                }
                 return false;
             }
             FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);

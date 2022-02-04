@@ -147,7 +147,9 @@ public class Counter {
 
     private void UpdateDesiredFreqency(long desiredFrequency) {
         _activator.UpdateDesiredFrequency(desiredFrequency);
-        _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", _index, desiredFrequency);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", _index, desiredFrequency);
+        }
     }
 
     private void WriteLsb(byte partialValue) {

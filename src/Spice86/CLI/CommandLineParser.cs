@@ -22,7 +22,7 @@ public class CommandLineParser {
 
     public Configuration? ParseCommandLine(string[] args) {
         ParserResult<Configuration>? result = Parser.Default.ParseArguments<Configuration>(args)
-            .WithNotParsed((e) => _logger.Information("{@Errors}",e));
+            .WithNotParsed((e) => _logger.Error("{@Errors}",e));
         if (result != null) {
             Configuration? parsedConfig = result.MapResult((initialConfig) => {
                 initialConfig.Exe = ParseExePath(initialConfig.Exe);

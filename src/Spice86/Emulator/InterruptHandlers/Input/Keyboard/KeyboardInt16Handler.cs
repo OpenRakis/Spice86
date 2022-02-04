@@ -20,7 +20,9 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public void GetKeystroke() {
-        _logger.Information("READ KEY STROKE");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("READ KEY STROKE");
+        }
         ushort? keyCode = GetNextKeyCode();
         if (keyCode == null) {
             keyCode = 0;
@@ -32,7 +34,9 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public void GetKeystrokeStatus(bool calledFromVm) {
-        _logger.Information("KEY STROKE STATUS");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("KEY STROKE STATUS");
+        }
 
         // ZF = 0 if a key pressed (even Ctrl-Break)
         // AX = 0 if no scan code is available

@@ -81,14 +81,18 @@ public class GdbCustomCommandsHandler {
         long cyclesBreak = currentCycles + cyclesToWait;
         var breakPoint = new BreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
         _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
-        _logger.Debug("Breakpoint added for cycles!\\n{@BreakPoint}", breakPoint);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Breakpoint added for cycles!\\n{@BreakPoint}", breakPoint);
+        }
         return _gdbIo.GenerateMessageToDisplayResponse($"Breakpoint added for cycles. Current cycles is {currentCycles}. Will wait for {cyclesToWait}. Will stop at {cyclesBreak}");
     }
 
     private string BreakStop() {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
         _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
-        _logger.Debug("Breakpoint added for end of execution!\\n{@BreakPoint}", breakPoint);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Breakpoint added for end of execution!\\n{@BreakPoint}", breakPoint);
+        }
         return _gdbIo.GenerateMessageToDisplayResponse("Breakpoint added for end of execution.");
     }
 
@@ -100,7 +104,9 @@ public class GdbCustomCommandsHandler {
         try {
             fileNameConsumer.Invoke(fileName);
         } catch (IOException e) {
-            _logger.Error(e, "{@ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(e, "{@ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
+            }
             string errorWithException = $"{errorMessageInCaseIOException}: {e.Message}";
             return _gdbIo.GenerateMessageToDisplayResponse(errorWithException);
         }

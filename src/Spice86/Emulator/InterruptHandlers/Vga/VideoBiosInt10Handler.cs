@@ -54,12 +54,16 @@ public class VideoBiosInt10Handler : InterruptHandler {
     }
 
     public byte GetVideoModeValue() {
-        _logger.Information("GET VIDEO MODE");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET VIDEO MODE");
+        }
         return _memory.GetUint8(BIOS_VIDEO_MODE_ADDRESS);
     }
 
     public void GetVideoStatus() {
-        _logger.Debug("GET VIDEO STATUS");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("GET VIDEO STATUS");
+        }
         _state.SetAH(_numberOfScreenColumns);
         _state.SetAL(GetVideoModeValue());
         _state.SetBH(_currentDisplayPage);
@@ -96,7 +100,9 @@ public class VideoBiosInt10Handler : InterruptHandler {
     public void SetColorPalette() {
         byte colorId = _state.GetBH();
         byte colorValue = _state.GetBL();
-        _logger.Information("SET COLOR PALETTE {@ColorId}, {@ColorValue}", colorId, colorValue);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("SET COLOR PALETTE {@ColorId}, {@ColorValue}", colorId, colorValue);
+        }
     }
 
     public void SetCursorPosition() {
@@ -151,12 +157,16 @@ public class VideoBiosInt10Handler : InterruptHandler {
         byte op = _state.GetAL();
         switch (op) {
             case 0:
-                _logger.Information("GET VIDEO DISPLAY COMBINATION");
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _logger.Information("GET VIDEO DISPLAY COMBINATION");
+                }
                 // VGA with analog color display
                 _state.SetBX(0x08);
                 break;
             case 1:
-                _logger.Information("SET VIDEO DISPLAY COMBINATION");
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _logger.Information("SET VIDEO DISPLAY COMBINATION");
+                }
                 throw new UnhandledOperationException(_machine, "Unimplemented");
             default:
                 throw new UnhandledOperationException(_machine,
@@ -169,10 +179,14 @@ public class VideoBiosInt10Handler : InterruptHandler {
         byte op = _state.GetBL();
         switch (op) {
             case 0x0:
-                _logger.Information("UNKNOWN!");
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _logger.Information("UNKNOWN!");
+                }
                 break;
             case 0x10:
-                _logger.Information("GET VIDEO CONFIGURATION INFORMATION");
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _logger.Information("GET VIDEO CONFIGURATION INFORMATION");
+                }
                 // color
                 _state.SetBH(0);
                 // 64k of vram

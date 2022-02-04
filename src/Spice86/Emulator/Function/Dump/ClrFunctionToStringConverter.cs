@@ -50,7 +50,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     private Dictionary<int, IEnumerable<SegmentRegisterBasedAddress>> MapBySegment(IEnumerable<SegmentRegisterBasedAddress> globals) {
         Dictionary<int, IEnumerable<SegmentRegisterBasedAddress>> res = new();
         foreach (SegmentRegisterBasedAddress address in globals) {
-            address.GetAddressOperations().Values.SelectMany(x => x).ToList().ForEach((segmentIndex) => res.ComputeIfAbsent(segmentIndex, () => new List<SegmentRegisterBasedAddress>()).ToList().Add(address));
+            address.GetAddressOperations().Values.SelectMany(x => x).ToList().ForEach((segmentIndex) => res.ComputeIfAbsent(segmentIndex, new List<SegmentRegisterBasedAddress>()).ToList().Add(address));
         }
         return res;
     }
@@ -108,11 +108,11 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
             OperandSize operandSize = operation.GetOperandSize();
             ValueOperation valueOperation = operation.GetValueOperation();
             ValueOperation oppositeValueOperation = valueOperation.OppositeOperation();
-            res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, operandSize), () => new List<int>());
+            res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, operandSize), new List<int>());
             if (operandSize == OperandSize.Dword32) {
                 // Ensures getter and setters are generated for segmented address accessors
-                res.ComputeIfAbsent(new AddressOperation(valueOperation, OperandSize.Dword32Ptr), () => new List<int>());
-                res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, OperandSize.Dword32Ptr), () => new List<int>());
+                res.ComputeIfAbsent(new AddressOperation(valueOperation, OperandSize.Dword32Ptr), new List<int>());
+                res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, OperandSize.Dword32Ptr), new List<int>());
             }
         }
 

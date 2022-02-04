@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Emulator.VM;
 
+using Serilog;
+
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.CPU;
 using Spice86.Emulator.Devices.ExternalInput;

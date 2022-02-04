@@ -61,6 +61,8 @@ public class PauseHandler {
     }
 
     private void LogStatus(string message) {
-        _logger.Debug("{@Message}: {@PauseRequested},{@Paused},{@PauseEnded}", message, _pauseRequested, _paused, _pauseEnded);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("{@Message}: {@PauseRequested},{@Paused},{@PauseEnded}", message, _pauseRequested, _paused, _pauseEnded);
+        }
     }
 }

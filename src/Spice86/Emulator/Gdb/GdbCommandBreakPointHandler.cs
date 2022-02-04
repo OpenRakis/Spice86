@@ -23,7 +23,9 @@ public class GdbCommandBreakpointHandler {
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
-        _logger.Debug("Breakpoint added!\\n{@BreakPoint}", breakPoint);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Breakpoint added!\\n{@BreakPoint}", breakPoint);
+        }
         return gdbIo.GenerateResponse("OK");
     }
 
@@ -40,13 +42,17 @@ public class GdbCommandBreakpointHandler {
     }
 
     public void OnBreakPointReached(BreakPoint breakPoint) {
-        _logger.Debug("Breakpoint reached!\\n{@BreakPoint}", breakPoint);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Breakpoint reached!\\n{@BreakPoint}", breakPoint);
+        }
         machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
         resumeEmulatorOnCommandEnd = false;
         try {
             gdbIo.SendResponse(gdbIo.GenerateResponse("S05"));
         } catch (IOException e) {
-            _logger.Error(e, "IOException while sending breakpoint info");
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(e, "IOException while sending breakpoint info");
+            }
         }
     }
 
@@ -65,12 +71,16 @@ public class GdbCommandBreakpointHandler {
                 _ => null
             };
             if (breakPointType == null) {
-                _logger.Error("Cannot parse breakpoint type {@Type} for command {@Command}", type, command);
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _logger.Error("Cannot parse breakpoint type {@Type} for command {@Command}", type, command);
+                }
                 return null;
             }
             return new BreakPoint(breakPointType, address, this.OnBreakPointReached, false);
         } catch (FormatException nfe) {
-            _logger.Error(nfe, "Cannot parse breakpoint {@Command}", command);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(nfe, "Cannot parse breakpoint {@Command}", command);
+            }
             return null;
         }
     }
@@ -81,7 +91,9 @@ public class GdbCommandBreakpointHandler {
             return gdbIo.GenerateResponse("");
         }
         machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, false);
-        _logger.Debug("Breakpoint removed!\\n{@BreakPoint}", breakPoint);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Breakpoint removed!\\n{@BreakPoint}", breakPoint);
+        }
         return gdbIo.GenerateResponse("OK");
     }
 
@@ -95,7 +107,9 @@ public class GdbCommandBreakpointHandler {
         // will pause the CPU at the next instruction unconditionally
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, this.OnBreakPointReached, true);
         machine.GetMachineBreakpoints().ToggleBreakPoint(stepBreakPoint, true);
-        _logger.Debug("Breakpoint added for step!\\n{@StepBreakPoint}", stepBreakPoint);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("Breakpoint added for step!\\n{@StepBreakPoint}", stepBreakPoint);
+        }
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return null;

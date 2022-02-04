@@ -62,7 +62,9 @@ public class DosInt21Handler : InterruptHandler {
 
     public void ChangeCurrentDirectory(bool calledFromVm) {
         String newDirectory = GetStringAtDsDx();
-        _logger.Information("SET CURRENT DIRECTORY: {@NewDirectory}", newDirectory);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("SET CURRENT DIRECTORY: {@NewDirectory}", newDirectory);
+        }
         DosFileOperationResult dosFileOperationResult = dosFileManager.SetCurrentDir(newDirectory);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
@@ -85,7 +87,9 @@ public class DosInt21Handler : InterruptHandler {
     public void CreateFileUsingHandle(bool calledFromVm) {
         String fileName = GetStringAtDsDx();
         ushort fileAttribute = _state.GetCX();
-        _logger.Information("CREATE FILE USING HANDLE: {@FileName} with attribute {@FileAttribute}", fileName, fileAttribute);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("CREATE FILE USING HANDLE: {@FileName} with attribute {@FileAttribute}", fileName, fileAttribute);
+        }
         DosFileOperationResult dosFileOperationResult = dosFileManager.CreateFileUsingHandle(fileName, fileAttribute);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
@@ -106,7 +110,9 @@ public class DosInt21Handler : InterruptHandler {
             }
         } else {
             // Output
-            _logger.Information("DIRECT CONSOLE IO, {@Character}, {@Ascii}", character, ConvertUtils.ToChar(character));
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("DIRECT CONSOLE IO, {@Character}, {@Ascii}", character, ConvertUtils.ToChar(character));
+            }
         }
     }
 
@@ -126,12 +132,16 @@ public class DosInt21Handler : InterruptHandler {
             }
         } else {
             // Output
-            _logger.Information("DIRECT CONSOLE IO, {@Character}, {@Ascii}", character, ConvertUtils.ToChar(character));
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("DIRECT CONSOLE IO, {@Character}, {@Ascii}", character, ConvertUtils.ToChar(character));
+            }
         }
     }
 
     public void DiskReset() {
-        _logger.Information("DISK RESET (Nothing to do...)");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("DISK RESET (Nothing to do...)");
+        }
     }
 
     public void DisplayOutput() {
@@ -141,7 +151,9 @@ public class DosInt21Handler : InterruptHandler {
             _logger.Information("PRINT CHR: {@CharacterByte} ({@Character})", ConvertUtils.ToHex8(characterByte), character);
         }
         if (characterByte == '\r') {
-            _logger.Information("PRINT CHR LINE BREAK: {@DisplayOutputBuilder}", displayOutputBuilder);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("PRINT CHR LINE BREAK: {@DisplayOutputBuilder}", displayOutputBuilder);
+            }
             displayOutputBuilder = new StringBuilder();
         } else if (characterByte != '\n') {
             displayOutputBuilder.Append(character);
@@ -150,7 +162,9 @@ public class DosInt21Handler : InterruptHandler {
 
     public void DuplicateFileHandle(bool calledFromVm) {
         ushort fileHandle = _state.GetBX();
-        _logger.Information("DUPLICATE FILE HANDLE. {@FileHandle}", fileHandle);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("DUPLICATE FILE HANDLE. {@FileHandle}", fileHandle);
+        }
         DosFileOperationResult dosFileOperationResult = dosFileManager.DuplicateFileHandle(fileHandle);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
@@ -179,7 +193,9 @@ public class DosInt21Handler : InterruptHandler {
 
     public void FreeMemoryBlock(bool calledFromVm) {
         ushort blockSegment = _state.GetES();
-        _logger.Information("FREE ALLOCATED MEMORY {@BlockSegment}", blockSegment);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("FREE ALLOCATED MEMORY {@BlockSegment}", blockSegment);
+        }
         SetCarryFlag(false, calledFromVm);
         if (!_dosMemoryManager.FreeMemoryBlock((ushort)(blockSegment - 1))) {
             LogDosError(calledFromVm);
@@ -190,12 +206,16 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void GetCurrentDefaultDrive() {
-        _logger.Information("GET CURRENT DEFAULT DRIVE");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET CURRENT DEFAULT DRIVE");
+        }
         _state.SetAL(defaultDrive);
     }
 
     public void GetDate() {
-        _logger.Information("GET DATE");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET DATE");
+        }
         DateTime now = DateTime.Now;
         _state.SetAL((byte)now.DayOfWeek);
         _state.SetCX((ushort)now.Year);
@@ -213,7 +233,9 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void GetDosVersion() {
-        _logger.Information("GET DOS VERSION");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET DOS VERSION");
+        }
         // 5.0
         _state.SetAL(0x05);
         _state.SetAH(0x00);
@@ -226,7 +248,9 @@ public class DosInt21Handler : InterruptHandler {
 
     public void GetFreeDiskSpace() {
         byte driveNumber = _state.GetDL();
-        _logger.Information("GET FREE DISK SPACE FOR DRIVE {@DriveNumber}", driveNumber);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET FREE DISK SPACE FOR DRIVE {@DriveNumber}", driveNumber);
+        }
         // 127 sectors per cluster
         _state.SetAX(127);
         // 512 bytes per sector
@@ -256,11 +280,15 @@ public class DosInt21Handler : InterruptHandler {
     public void GetPspAddress() {
         ushort pspSegment = _dosMemoryManager.GetPspSegment();
         _state.SetBX(pspSegment);
-        _logger.Information("GET PSP ADDRESS {@PspSegment}", ConvertUtils.ToHex16(pspSegment));
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET PSP ADDRESS {@PspSegment}", ConvertUtils.ToHex16(pspSegment));
+        }
     }
 
     public void GetSetControlBreak() {
-        _logger.Information("GET/SET CTRL-C FLAG");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET/SET CTRL-C FLAG");
+        }
         byte op = _state.GetAL();
         if (op == 0) {
             // GET
@@ -274,7 +302,9 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void GetTime() {
-        _logger.Information("GET TIME");
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("GET TIME");
+        }
         DateTime now = DateTime.Now;
         _state.SetCH((byte)now.Hour);
         _state.SetCL((byte)now.Minute);
@@ -285,7 +315,9 @@ public class DosInt21Handler : InterruptHandler {
     public void ModifyMemoryBlock(bool calledFromVm) {
         ushort requestedSize = _state.GetBX();
         ushort blockSegment = _state.GetES();
-        _logger.Information("MODIFY MEMORY BLOCK {@Size}, {@BlockSegment}", requestedSize, blockSegment);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("MODIFY MEMORY BLOCK {@Size}, {@BlockSegment}", requestedSize, blockSegment);
+        }
         SetCarryFlag(false, calledFromVm);
         if (!_dosMemoryManager.ModifyBlock((ushort)(blockSegment - 1), requestedSize)) {
             LogDosError(calledFromVm);
@@ -300,8 +332,10 @@ public class DosInt21Handler : InterruptHandler {
         byte originOfMove = _state.GetAL();
         ushort fileHandle = _state.GetBX();
         uint offset = (uint)(_state.GetCX() << 16 | _state.GetDX());
-        _logger.Information("MOVE FILE POINTER USING HANDLE. {@OriginOfMove}, {@FileHandle}, {@Offset}", originOfMove, fileHandle,
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("MOVE FILE POINTER USING HANDLE. {@OriginOfMove}, {@FileHandle}, {@Offset}", originOfMove, fileHandle,
             offset);
+        }
 
         DosFileOperationResult dosFileOperationResult =
             dosFileManager.MoveFilePointerUsingHandle(originOfMove, fileHandle, offset);
@@ -322,7 +356,9 @@ public class DosInt21Handler : InterruptHandler {
 
     public void PrintString() {
         string str = GetDosString(_memory, _state.GetDS(), _state.GetDX(), '$');
-        _logger.Information("PRINT STRING: {@String}", str);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("PRINT STRING: {@String}", str);
+        }
     }
 
     public void QuitWithExitCode() {
@@ -352,7 +388,9 @@ public class DosInt21Handler : InterruptHandler {
 
     public void SelectDefaultDrive() {
         defaultDrive = _state.GetDL();
-        _logger.Information("SELECT DEFAULT DRIVE {@DefaultDrive}", defaultDrive);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("SELECT DEFAULT DRIVE {@DefaultDrive}", defaultDrive);
+        }
         // Number of valid drive letters
         _state.SetAL(26);
     }
@@ -479,7 +517,9 @@ public class DosInt21Handler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
         switch (op) {
             case 0: {
-                    _logger.Information("GET FILE ATTRIBUTE {@FilneName}", fileName);
+                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                        _logger.Information("GET FILE ATTRIBUTE {@FilneName}", fileName);
+                    }
                     FileAttributes attributes = File.GetAttributes(fileName);
                     // let's always return the file is read / write
                     bool canWrite = (attributes & FileAttributes.ReadOnly) != FileAttributes.ReadOnly;
@@ -488,7 +528,9 @@ public class DosInt21Handler : InterruptHandler {
                 }
             case 1: {
                     ushort attribute = _state.GetCX();
-                    _logger.Information("SET FILE ATTRIBUTE {@FileName}, {@Attribute}", fileName, attribute);
+                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                        _logger.Information("SET FILE ATTRIBUTE {@FileName}, {@Attribute}", fileName, attribute);
+                    }
                     break;
                 }
             default: throw new UnhandledOperationException(_machine, "getSetFileAttribute operation unhandled: " + op);
@@ -507,19 +549,25 @@ public class DosInt21Handler : InterruptHandler {
 
         switch (op) {
             case 0: {
-                    _logger.Information("GET DEVICE INFORMATION");
+                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                        _logger.Information("GET DEVICE INFORMATION");
+                    }
                     // Character or block device?
                     ushort res = device < DosFileManager.FileHandleOffset ? (ushort)0x80D3 : (ushort)0x02;
                     _state.SetDX(res);
                     break;
                 }
             case 1: {
-                    _logger.Information("SET DEVICE INFORMATION (unimplemented)");
+                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                        _logger.Information("SET DEVICE INFORMATION (unimplemented)");
+                    }
                     break;
                 }
             case 0xE: {
                     ushort driveNumber = _state.GetBL();
-                    _logger.Information("GET LOGICAL DRIVE FOR PHYSICAL DRIVE {@DriveNumber}", driveNumber);
+                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                        _logger.Information("GET LOGICAL DRIVE FOR PHYSICAL DRIVE {@DriveNumber}", driveNumber);
+                    }
                     // Only one drive
                     _state.SetAL(0);
                     break;
@@ -533,7 +581,9 @@ public class DosInt21Handler : InterruptHandler {
         if (calledFromVm) {
             returnMessage = $"Int will return to {_machine.PeekReturn()}. ";
         }
-        _logger.Error("DOS operation failed with an error. {@ReturnMessage}. State is {@State}", returnMessage, _state);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            _logger.Error("DOS operation failed with an error. {@ReturnMessage}. State is {@State}", returnMessage, _state);
+        }
     }
 
     private void SetStateFromDosFileOperationResult(bool calledFromVm, DosFileOperationResult dosFileOperationResult) {

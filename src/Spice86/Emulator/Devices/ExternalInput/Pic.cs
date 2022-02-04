@@ -9,7 +9,17 @@ using Spice86.Utils;
 
 using System.Collections.Generic;
 
+/// <summary>
+/// Emulates a PIC8259 Programmable Interrupt Controller.<br/>
+/// Some resources:
+/// <ul>
+/// <li>https://wiki.osdev.org/PIC</li>
+/// <li>https://k.lse.epita.fr/internals/8259a_controller.html</li>
+/// </ul>
+/// </summary>
 public class Pic : DefaultIOPortHandler {
+    private static readonly ILogger _logger = Log.Logger.ForContext<Pic>();
+    
     private const int MasterPortA = 0x20;
 
     private const int MasterPortB = 0x21;
@@ -17,28 +27,28 @@ public class Pic : DefaultIOPortHandler {
     private const int SlavePortA = 0xA0;
 
     private const int SlavePortB = 0xA1;
-
-    private static readonly ILogger _logger = Log.Logger.ForContext<Pic>();
-
+    
     private static readonly Dictionary<int, int> _vectorNumberToIrq = new();
 
     private int _commandsToProcess = 2;
 
     private int _currentCommand = 0;
 
-    private bool _inintialized = false;
+    private bool _initialized = false;
 
     private int _interruptMask = 0;
 
     private bool _lastIrqAcknowledged = true;
 
     static Pic() {
+        // timer
         _vectorNumberToIrq.Add(8, 0);
+        // keyboard
         _vectorNumberToIrq.Add(9, 1);
     }
 
     public Pic(Machine machine, bool initialized, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
-        this._inintialized = initialized;
+        _initialized = initialized;
     }
 
     public void AcknwowledgeInterrupt() {
@@ -80,7 +90,6 @@ public class Pic : DefaultIOPortHandler {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Cannot process interrupt {@ProcessInterrupt}, IRQ is masked.", ConvertUtils.ToHex8(vectorNumber));
             }
-
             return;
         }
 
@@ -147,7 +156,7 @@ public class Pic : DefaultIOPortHandler {
     }
 
     private void ProcessPortACommand(byte value) {
-        if (!_inintialized) {
+        if (!_initialized) {
             // Process initialization commands
             switch (_currentCommand) {
                 case 1:
@@ -162,18 +171,18 @@ public class Pic : DefaultIOPortHandler {
                 default:
                     throw new UnhandledOperationException(machine, $"Invalid initialization command index {_currentCommand}, should never happen");
             }
-        }
-        _currentCommand = (_currentCommand + 1) % _commandsToProcess;
-        if (_currentCommand == 0) {
-            _commandsToProcess = 2;
-            _inintialized = true;
+            _currentCommand = (_currentCommand + 1) % _commandsToProcess;
+            if (_currentCommand == 0) {
+                _commandsToProcess = 2;
+                _initialized = true;
+            }
         } else {
             ProcessOCW2(value);
         }
     }
 
     private void ProcessPortBCommand(byte value) {
-        if (!_inintialized) {
+        if (!_initialized) {
             ProcessICW1(value);
             _currentCommand = 1;
         } else {

@@ -37,7 +37,9 @@ public class GdbCommandHandler {
     }
 
     public void RunCommand(string command) {
-        _logger.Information("Received command {@Command}", command);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Received command {@Command}", command);
+        }
         char first = command[0];
         string commandContent = command.Substring(1);
         PauseHandler pauseHandler = machine.GetMachineBreakpoints().GetPauseHandler();

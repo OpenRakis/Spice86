@@ -9,7 +9,7 @@
         private readonly List<BreakPoint> _unconditionalBreakPoints = new();
 
         public bool IsEmpty() {
-            return _breakPoints.Any() == false && _unconditionalBreakPoints.Any() == false;
+            return _breakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
         }
 
         public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
@@ -21,28 +21,28 @@
         }
 
         public void TriggerBreakPointsWithAddressRange(long startAddress, long endAddress) {
-            if (!_breakPoints.Any() == false) {
+            if (_breakPoints.Count > 0) {
                 foreach (List<BreakPoint> breakPointList in _breakPoints.Values) {
                     TriggerBreakPointsWithAddressRangeFromList(breakPointList, startAddress, endAddress);
                 }
             }
 
-            if (!_unconditionalBreakPoints.Any() == false) {
+            if (_unconditionalBreakPoints.Count > 0) {
                 TriggerBreakPointsWithAddressRangeFromList(_unconditionalBreakPoints, startAddress, endAddress);
             }
         }
 
         public void TriggerMatchingBreakPoints(long address) {
-            if (!_breakPoints.Any() == false) {
+            if (_breakPoints.Count > 0) {
                 if (_breakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
                     TriggerBreakPointsFromList(breakPointList, address);
-                    if (breakPointList.Any() == false) {
+                    if (breakPointList.Count == 0) {
                         _breakPoints.Remove(address);
                     }
                 }
             }
 
-            if (!_unconditionalBreakPoints.Any() == false) {
+            if (_unconditionalBreakPoints.Count > 0) {
                 TriggerBreakPointsFromList(_unconditionalBreakPoints, address);
             }
         }
@@ -70,12 +70,12 @@
         private void ToggleConditionalBreakPoint(BreakPoint breakPoint, bool on) {
             long address = breakPoint.GetAddress();
             if (on) {
-                List<BreakPoint> breakPointList = _breakPoints.ComputeIfAbsent(address, () => new());
+                List<BreakPoint> breakPointList = _breakPoints.ComputeIfAbsent(address, new());
                 breakPointList.Add(breakPoint);
             } else {
                 if (_breakPoints.TryGetValue(address, out var breakPointList)) {
                     breakPointList.Remove(breakPoint);
-                    if (breakPointList.Any() == false) {
+                    if (breakPointList.Count == 0) {
                         _breakPoints.Remove(address);
                     }
                 }

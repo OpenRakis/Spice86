@@ -77,7 +77,9 @@ public class DosFileManager {
             return FileNotFoundError(fileName, @"Could not find parent of {fileName} so cannot create file.");
         }
 
-        _logger.Information("Creating file {@HostFileName} with attribute {@FileAttribute}", hostFileName, fileAttribute);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Creating file {@HostFileName} with attribute {@FileAttribute}", hostFileName, fileAttribute);
+        }
         var path = new FileInfo(hostFileName);
         try {
             if (File.Exists(path.FullName)) {
@@ -123,19 +125,25 @@ public class DosFileManager {
             matchingFilesIterator = matchingPathes.GetEnumerator();
             return FindNextMatchingFile();
         } catch (IOException e) {
-            _logger.Error(e, "Error while walking path {@CurrentMatchingFileSearchFolder} or getting attributes.", currentMatchingFileSearchFolder);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(e, "Error while walking path {@CurrentMatchingFileSearchFolder} or getting attributes.", currentMatchingFileSearchFolder);
+            }
             return DosFileOperationResult.Error(0x03);
         }
     }
 
     public DosFileOperationResult FindNextMatchingFile() {
         if (matchingFilesIterator == null) {
-            _logger.Warning("No search was done");
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _logger.Warning("No search was done");
+            }
             return FileNotFoundError(null);
         }
 
         if (!matchingFilesIterator.MoveNext()) {
-            _logger.Warning("No more files matching {@CurrentMatchingFileSearchSpec} in path {@CurrentMatchingFileSearchFolder}", currentMatchingFileSearchSpec, currentMatchingFileSearchFolder);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _logger.Warning("No more files matching {@CurrentMatchingFileSearchSpec} in path {@CurrentMatchingFileSearchFolder}", currentMatchingFileSearchSpec, currentMatchingFileSearchFolder);
+            }
             return FileNotFoundError(null);
         }
 
@@ -144,7 +152,9 @@ public class DosFileManager {
             try {
                 UpdateDTAFromFile(matchingFilesIterator.Current);
             } catch (IOException e) {
-                _logger.Warning(e, "Error while getting attributes.");
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                    _logger.Warning(e, "Error while getting attributes.");
+                }
                 return FileNotFoundError(null);
             }
         }
@@ -177,13 +187,17 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        _logger.Information("Moving in file {@FileMove}", file.GetName());
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Moving in file {@FileMove}", file.GetName());
+        }
         FileStream randomAccessFile = file.GetRandomAccessFile();
         try {
             uint newOffset = Seek(randomAccessFile, originOfMove, offset);
             return DosFileOperationResult.Value32(newOffset);
         } catch (IOException e) {
-            _logger.Error(e, "An error occurred while seeking file {@Error}", e);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(e, "An error occurred while seeking file {@Error}", e);
+            }
             return DosFileOperationResult.Error(0x19);
         }
     }
@@ -254,7 +268,9 @@ public class DosFileManager {
         }
 
         if (!IsValidFileHandle(fileHandle)) {
-            _logger.Warning("Invalid or unsupported file handle {@FileHandle}. Doing nothing.", fileHandle);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _logger.Warning("Invalid or unsupported file handle {@FileHandle}. Doing nothing.", fileHandle);
+            }
 
             // Fake that we wrote, this could be used to write to stdout / stderr ...
             return DosFileOperationResult.Value16(writeLength);
@@ -295,14 +311,18 @@ public class DosFileManager {
 
     private DosFileOperationResult FileNotFoundError(string? fileName, string message) {
         if (fileName != null) {
-            _logger.Warning("{@FileName} {@Message}", fileName, message);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _logger.Warning("{@FileName} {@Message}", fileName, message);
+            }
         }
 
         return DosFileOperationResult.Error(0x02);
     }
 
     private DosFileOperationResult FileNotOpenedError(int fileHandle) {
-        _logger.Warning("File not opened: {@FileHandle}", fileHandle);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            _logger.Warning("File not opened: {@FileHandle}", fileHandle);
+        }
         return DosFileOperationResult.Error(0x06);
     }
 
@@ -360,7 +380,9 @@ public class DosFileManager {
     }
 
     private DosFileOperationResult NoFreeHandleError() {
-        _logger.Warning("Could not find a free handle {@MethodName}", nameof(NoFreeHandleError));
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            _logger.Warning("Could not find a free handle {@MethodName}", nameof(NoFreeHandleError));
+        }
         return DosFileOperationResult.Error(0x04);
     }
 
@@ -459,7 +481,9 @@ public class DosFileManager {
                 .FirstOrDefault();
             return filename;
         } catch (IOException e) {
-            _logger.Warning(e, "Error while checking file {@CaseInsensitivePath}: {@Exception}", caseInsensitivePath, e);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _logger.Warning(e, "Error while checking file {@CaseInsensitivePath}: {@Exception}", caseInsensitivePath, e);
+            }
         }
 
         return null;
@@ -528,7 +552,9 @@ public class DosFileManager {
     }
 
     private void UpdateDTAFromFile(string matchingFile) {
-        _logger.Information("Found matching file {@MatchingFile}", matchingFile);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Found matching file {@MatchingFile}", matchingFile);
+        }
         DosDiskTransferArea dosDiskTransferArea = new(this.memory, this.GetDiskTransferAreaAddressPhysical());
         var attributes = new FileInfo(matchingFile);
         DateTime creationZonedDateTime = attributes.CreationTimeUtc;
