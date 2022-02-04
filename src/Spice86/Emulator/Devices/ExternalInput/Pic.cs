@@ -171,11 +171,11 @@ public class Pic : DefaultIOPortHandler {
                 default:
                     throw new UnhandledOperationException(machine, $"Invalid initialization command index {_currentCommand}, should never happen");
             }
-        }
-        _currentCommand = (_currentCommand + 1) % _commandsToProcess;
-        if (_currentCommand == 0) {
-            _commandsToProcess = 2;
-            _initialized = true;
+            _currentCommand = (_currentCommand + 1) % _commandsToProcess;
+            if (_currentCommand == 0) {
+                _commandsToProcess = 2;
+                _initialized = true;
+            }
         } else {
             ProcessOCW2(value);
         }
