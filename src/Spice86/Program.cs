@@ -18,7 +18,6 @@ internal class Program {
     private const string LogFormat = "[{Timestamp:HH:mm:ss} {Level:u3} {Properties}] {Message:lj}{NewLine}{Exception}";
     private static readonly ILogger _logger = new LoggerConfiguration()
         .WriteTo.Debug(outputTemplate: LogFormat)
-        .WriteTo.Console(outputTemplate: LogFormat)
         .MinimumLevel.Warning()
         //PIC can be very verbose when programs mistreat it ...
         .MinimumLevel.Override("Spice86.Emulator.Devices.ExternalInput.Pic", LogEventLevel.Warning)
