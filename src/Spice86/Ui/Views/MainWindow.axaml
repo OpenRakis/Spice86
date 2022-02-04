@@ -20,7 +20,7 @@
 		<TabControl Items="{Binding VideoBuffers, Mode=TwoWay}">
 			<TabControl.ItemTemplate>
 				<DataTemplate x:DataType="vm:VideoBufferViewModel">
-					<TabItem Header="{Binding Address}">
+					<TabItem Header="{Binding Address, StringFormat={}0x{0:X}}">
 					</TabItem>
 				</DataTemplate>
 			</TabControl.ItemTemplate>
