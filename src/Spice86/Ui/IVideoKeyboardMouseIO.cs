@@ -7,7 +7,6 @@ using Spice86.UI.ViewModels;
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 public interface IVideoKeyboardMouseIO {
 

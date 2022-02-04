@@ -1,9 +1,12 @@
 namespace Spice86.UI.Views;
 
 using System;
+using System.Linq;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -14,6 +17,29 @@ using Spice86.UI.ViewModels;
 public partial class VideoBufferView : UserControl {
     public VideoBufferView() {
         InitializeComponent();
+        this.AttachedToVisualTree += VideoBufferView_AttachedToVisualTree;
+
+    }
+
+    private MainWindow? ApplicationWindow => this.GetSelfAndLogicalAncestors().OfType<MainWindow>().FirstOrDefault();
+
+    private void VideoBufferView_AttachedToVisualTree(object? sender, EventArgs e) {
+        if (ApplicationWindow is MainWindow) {
+            ApplicationWindow.KeyUp += MainWindow_KeyUp;
+            ApplicationWindow.KeyDown += MainWindow_KeyDown;
+        }
+    }
+
+    private void MainWindow_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e) {
+        if (this.DataContext is VideoBufferViewModel vm) {
+            vm.MainWindowViewModel?.OnKeyPressed(e);
+        }
+    }
+
+    private void MainWindow_KeyUp(object? sender, Avalonia.Input.KeyEventArgs e) {
+        if (this.DataContext is VideoBufferViewModel vm) {
+            vm.MainWindowViewModel?.OnKeyReleased(e);
+        }
     }
 
     private void InitializeComponent() {
@@ -31,8 +57,6 @@ public partial class VideoBufferView : UserControl {
                 _image.PointerMoved += (s, e) => vm.MainWindowViewModel?.OnMouseMoved(e, _image);
                 _image.PointerPressed += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, true);
                 _image.PointerReleased += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, false);
-                _image.KeyDown += (s, e) => vm.MainWindowViewModel?.OnKeyPressed(e);
-                _image.KeyUp += (s, e) => vm.MainWindowViewModel?.OnKeyReleased(e);
             }
             vm.Dirty += VideoBufferViewModel_IsDirty;
         }
