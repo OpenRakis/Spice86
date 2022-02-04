@@ -18,6 +18,8 @@ using System.Collections.Generic;
 /// </ul>
 /// </summary>
 public class Pic : DefaultIOPortHandler {
+    private static readonly ILogger _logger = Log.Logger.ForContext<Pic>();
+    
     private const int MasterPortA = 0x20;
 
     private const int MasterPortB = 0x21;
@@ -25,9 +27,7 @@ public class Pic : DefaultIOPortHandler {
     private const int SlavePortA = 0xA0;
 
     private const int SlavePortB = 0xA1;
-
-    private static readonly ILogger _logger = Log.Logger.ForContext<Pic>();
-
+    
     private static readonly Dictionary<int, int> _vectorNumberToIrq = new();
 
     private int _commandsToProcess = 2;
