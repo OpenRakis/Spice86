@@ -116,19 +116,15 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         }
         int size = Width * Height;
         long endAddress = Address + size;
-        var buffer = new List<uint>(size);
-        for (long i = Address; i < endAddress; i++) {
-            byte colorIndex = memory[i];
-            Rgb pixel = palette[colorIndex];
-            uint argb = pixel.ToArgb();
-            buffer.Add(argb);
-        }
+        
         if(_appClosing == false) {
             using ILockedFramebuffer buf = Bitmap.Lock();
             uint* dst = (uint*)buf.Address;
-            for (int i = 0; i < size; i++) {
-                uint argb = buffer[i];
-                dst[i] = argb;
+            for (long i = Address; i < endAddress; i++) {
+                byte colorIndex = memory[i];
+                Rgb pixel = palette[colorIndex];
+                uint argb = pixel.ToArgb();
+                dst[i-Address] = argb;
             }
             Dirty.Invoke(this, EventArgs.Empty);
         }

@@ -156,6 +156,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     public void OnMainWindowOpened(object? sender, EventArgs e) {
         if (sender is Window) {
             _emulatorThread = new Thread(RunMachine);
+            _emulatorThread.Name = "Emulator";
             _emulatorThread.Start();
         }
     }

@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Emulator.Devices.Video;
 
+using Serilog;
+
 using Spice86.Emulator.VM;
 
 /// <summary>

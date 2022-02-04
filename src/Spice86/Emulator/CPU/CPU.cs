@@ -29,7 +29,6 @@ public class Cpu {
     private const int REG_INDEX_MASK = 0b111;
 
     private static readonly ILogger _logger = Log.Logger.ForContext<Cpu>();
-    private static readonly HashSet<int> PREFIXES_OPCODES = new() { 0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3 };
     private static readonly HashSet<int> STRING_OPCODES = new() { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Alu _alu;
@@ -1814,7 +1813,7 @@ public class Cpu {
         _state.SetInterruptFlag(false);
         _internalIp = targetIP;
         _state.SetCS(targetCS);
-        var recordReturn = true;
+        bool recordReturn = true;
         if (external) {
             _functionHandlerInUse = _functionHandlerInExternalInterrupt;
             recordReturn = false;
@@ -1836,8 +1835,6 @@ public class Cpu {
         }
         return _forceLog.Value;
     }
-
-    private bool IsPrefix(int opcode) => PREFIXES_OPCODES.Contains(opcode);
 
     private bool IsStringOpcode(int opcode) {
         return STRING_OPCODES.Contains(opcode);
@@ -1923,7 +1920,7 @@ public class Cpu {
         }
     }
 
-    private void ProcessPrefix(int opcode) {
+    private bool ProcessPrefix(int opcode) {
         switch (opcode) {
             case 0x26:
                 if (IsLoggingEnabled()) {
@@ -1984,15 +1981,14 @@ public class Cpu {
                     break;
                 }
             default:
-                throw new InvalidVMOperationException(_machine,
-                    $"processPrefix Called with a non prefix opcode {opcode}");
+                return false;
         }
+        return true;
     }
 
     private byte ProcessPrefixes() {
         byte opcode = NextUint8();
-        while (IsPrefix(opcode)) {
-            ProcessPrefix(opcode);
+        while (ProcessPrefix(opcode)) {
             opcode = NextUint8();
         }
         return opcode;

@@ -13,8 +13,8 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
 
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
         StringBuilder res = new StringBuilder();
-        Dictionary<FunctionReturn, List<SegmentedAddress>> returns = Sort(functionInformation.GetReturns());
-        Dictionary<FunctionReturn, List<SegmentedAddress>> unalignedReturns = Sort(functionInformation.GetUnalignedReturns());
+        Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns = Sort(functionInformation.GetReturns());
+        Dictionary<FunctionReturn, ISet<SegmentedAddress>> unalignedReturns = Sort(functionInformation.GetUnalignedReturns());
         List<FunctionInformation> callers = GetCallers(functionInformation);
         IEnumerable<FunctionInformation> calls = GetCalls(functionInformation, allFunctions);
         long approximateSize = ApproximateSize(functionInformation);
@@ -42,16 +42,16 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
         return res.ToString();
     }
 
-    private string DumpReturns(Dictionary<FunctionReturn, List<SegmentedAddress>> returns, string prefix) {
+    private string DumpReturns(Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns, string prefix) {
         StringBuilder res = new StringBuilder();
-        foreach (KeyValuePair<FunctionReturn, List<SegmentedAddress>> entry in returns) {
+        foreach (KeyValuePair<FunctionReturn, ISet<SegmentedAddress>> entry in returns) {
             FunctionReturn oneReturn = entry.Key;
             res.Append(" - ");
             res.Append(prefix);
             res.Append(": ");
             res.Append(oneReturn);
             res.Append('\n');
-            List<SegmentedAddress> targets = entry.Value;
+            ISet<SegmentedAddress> targets = entry.Value;
             foreach (SegmentedAddress target in targets) {
                 res.Append("   - target: ");
                 res.Append(target);

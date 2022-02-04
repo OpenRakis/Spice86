@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Emulator.VM;
 
+using Serilog;
+
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.CPU;
 using Spice86.Emulator.Devices.ExternalInput;
@@ -254,7 +256,7 @@ public class Machine {
     public void Run() {
         State state = cpu.GetState();
         FunctionHandler functionHandler = cpu.GetFunctionHandler();
-        functionHandler.Call(CallType.MACHINE, state.GetCS(), state.GetIP(), null, null, "entry", false);
+        functionHandler.Call(CallType.MACHINE, state.GetCS(), state.GetIP(), null, null, () => "entry", false);
         try {
             RunLoop();
         } catch (InvalidVMOperationException) {

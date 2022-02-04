@@ -9,15 +9,15 @@ using System.Collections.Generic;
 public class FunctionInformation : IComparable<FunctionInformation> {
     private readonly SegmentedAddress _address;
 
-    private readonly List<FunctionInformation> _callers = new();
+    private ISet<FunctionInformation>? _callers;
 
     private readonly string? _name;
 
     private readonly Func<Action>? _overrideRenamed;
 
-    private readonly Dictionary<FunctionReturn, List<SegmentedAddress>> _returns = new();
+    private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _returns;
 
-    private readonly Dictionary<FunctionReturn, List<SegmentedAddress>> _unalignedReturns = new();
+    private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _unalignedReturns;
 
     private int _calledCount;
 
@@ -31,11 +31,11 @@ public class FunctionInformation : IComparable<FunctionInformation> {
     }
 
     public void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
-        AddReturn(_returns, functionReturn, target);
+        AddReturn(GetReturns(), functionReturn, target);
     }
 
     public void AddUnalignedReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
-        AddReturn(_unalignedReturns, functionReturn, target);
+        AddReturn(GetUnalignedReturns(), functionReturn, target);
     }
 
     public void CallOverride() {
@@ -51,7 +51,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     public void Enter(FunctionInformation? caller) {
         if (caller != null) {
-            this._callers.Add(caller);
+            this.GetCallers().Add(caller);
         }
 
         _calledCount++;
@@ -75,7 +75,10 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         return _calledCount;
     }
 
-    public IEnumerable<FunctionInformation> GetCallers() {
+    public ISet<FunctionInformation> GetCallers() {
+        if (_callers == null) {
+            _callers = new HashSet<FunctionInformation>();
+        }
         return _callers;
     }
 
@@ -87,11 +90,17 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         return _name;
     }
 
-    public Dictionary<FunctionReturn, List<SegmentedAddress>> GetReturns() {
+    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> GetReturns() {
+        if (_returns == null) {
+            _returns = new();
+        }
         return _returns;
     }
 
-    public Dictionary<FunctionReturn, List<SegmentedAddress>> GetUnalignedReturns() {
+    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> GetUnalignedReturns() {
+        if (_unalignedReturns == null) {
+            _unalignedReturns = new();
+        }
         return _unalignedReturns;
     }
 
@@ -103,10 +112,16 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         return $"{this._name}_{ConvertUtils.ToCSharpStringWithPhysical(this._address)}";
     }
 
-    private static void AddReturn(Dictionary<FunctionReturn, List<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress? target) {
-        var addresses = returnsMap.ComputeIfAbsent(functionReturn, new());
-        if (target != null) {
-            addresses.Add(target);
+    private static void AddReturn(Dictionary<FunctionReturn, ISet<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress? target) {
+        if (target == null) {
+            return;
         }
+        ISet<SegmentedAddress>? addresses;
+        returnsMap.TryGetValue(functionReturn, out addresses);
+        if (addresses == null) {
+            addresses = new HashSet<SegmentedAddress>();
+            returnsMap.Add(functionReturn, addresses);
+        }
+        addresses.Add(target);
     }
 }

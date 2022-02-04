@@ -7,17 +7,17 @@ using System;
 /// </summary>
 public class TimeCounterActivator : ICounterActivator {
     private readonly double _multiplier;
-    private long _lastActivationTime = DateTime.Now.Ticks;
-    private long _hundredNanosBetweenTicks;
+    private long _lastActivationTime = Environment.TickCount;
+    private long _millisBetweenTicks;
 
     public TimeCounterActivator(double multiplier) {
         this._multiplier = multiplier;
     }
 
     public bool IsActivated() {
-        long currentTime = DateTime.Now.Ticks;
+        long currentTime = Environment.TickCount;
         long elapsedTime = currentTime - _lastActivationTime;
-        if (elapsedTime <= _hundredNanosBetweenTicks) {
+        if (elapsedTime <= _millisBetweenTicks) {
             return false;
         }
 
@@ -26,6 +26,6 @@ public class TimeCounterActivator : ICounterActivator {
     }
 
     public void UpdateDesiredFrequency(long desiredFrequency) {
-        _hundredNanosBetweenTicks = (long)(10000000 / (_multiplier * desiredFrequency));
+        _millisBetweenTicks = (long)(1000 / (_multiplier * desiredFrequency));
     }
 }

@@ -19,7 +19,6 @@ internal class Program {
     private static readonly ILogger _logger = new LoggerConfiguration()
         .WriteTo.Debug(outputTemplate: LogFormat)
         .WriteTo.Console(outputTemplate: LogFormat)
-        .MinimumLevel.Information()
         .MinimumLevel.Warning()
         //PIC can be very verbose when programs mistreat it ...
         .MinimumLevel.Override("Spice86.Emulator.Devices.ExternalInput.Pic", LogEventLevel.Warning)

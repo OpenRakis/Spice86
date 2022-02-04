@@ -15,9 +15,10 @@ public class StaticAddressesRecorder {
 
     private readonly SegmentRegisters _segmentRegisters;
 
-    private readonly HashSet<SegmentedAddress> _whiteListOfSegmentForOffset = new();
+    private readonly ISet<SegmentedAddress> _whiteListOfSegmentForOffset = new HashSet<SegmentedAddress>();
 
-    private AddressOperation? _currentAddressOperation;
+    private ValueOperation? CurrentValueOperation { get; set; }
+    private OperandSize? CurrentOperandSize { get; set; }
 
     private ushort? _currentOffset;
 
@@ -37,14 +38,15 @@ public class StaticAddressesRecorder {
     }
 
     public void Commit() {
-        if (_debugMode && _currentSegmentIndex != null && _currentOffset != null && _currentAddressOperation != null && _currentSegmentIndex != null) {
+        if (_debugMode && _currentSegmentIndex != null && _currentOffset != null && CurrentValueOperation != null && CurrentOperandSize!=null && _currentSegmentIndex != null) {
             ushort segmentValue = _segmentRegisters.GetRegister(_currentSegmentIndex.Value);
             uint physicalAddress = MemoryUtils.ToPhysicalAddress(segmentValue, _currentOffset.Value);
             if (_segmentRegisterBasedAddress.TryGetValue(physicalAddress, out SegmentRegisterBasedAddress? value) == false) {
                 value = new SegmentRegisterBasedAddress(segmentValue, _currentOffset.Value, _names[physicalAddress]);
                 _segmentRegisterBasedAddress.Add(physicalAddress, value);
             }
-            value.AddAddressOperation(_currentAddressOperation, _currentSegmentIndex.Value);
+            AddressOperation currentAddressOperation = new((ValueOperation)CurrentValueOperation, CurrentOperandSize);
+            value.AddAddressOperation(currentAddressOperation, _currentSegmentIndex.Value);
         }
     }
 
@@ -56,18 +58,20 @@ public class StaticAddressesRecorder {
         return _segmentRegisterBasedAddress.Values;
     }
 
-    public HashSet<SegmentedAddress> GetWhiteListOfSegmentForOffset() {
+    public ISet<SegmentedAddress> GetWhiteListOfSegmentForOffset() {
         return _whiteListOfSegmentForOffset;
     }
 
     public void Reset() {
         _currentSegmentIndex = null;
         _currentOffset = null;
-        _currentAddressOperation = null;
+        CurrentValueOperation = null;
+        CurrentOperandSize = null;
     }
 
     public void SetCurrentAddressOperation(ValueOperation valueOperation, OperandSize operandSize) {
-        _currentAddressOperation = new AddressOperation(valueOperation, operandSize);
+        CurrentValueOperation = valueOperation;
+        CurrentOperandSize = operandSize;
     }
 
     public void SetCurrentValue(int regIndex, ushort offset) {
