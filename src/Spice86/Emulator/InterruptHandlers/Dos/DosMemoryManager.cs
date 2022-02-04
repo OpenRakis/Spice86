@@ -115,7 +115,7 @@ public class DosMemoryManager {
     }
 
     private bool CheckValidOrLogError(DosMemoryControlBlock? block) {
-        if (block is null || block.IsValid()) {
+        if (block is null || !block.IsValid()) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("MCB {@Block} is invalid.", block);
             }

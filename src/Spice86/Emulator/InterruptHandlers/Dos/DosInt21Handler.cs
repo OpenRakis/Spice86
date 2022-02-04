@@ -506,8 +506,9 @@ public class DosInt21Handler : InterruptHandler {
 
     private void GetSetFileAttribute(bool calledFromVm) {
         byte op = _state.GetAL();
-        String fileName = GetStringAtDsDx();
-        if (File.Exists(fileName)) {
+        string dosFileName = GetStringAtDsDx();
+        string? fileName = dosFileManager.ToHostCaseSensitiveFileName(dosFileName, false);
+        if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);
             // File not found
@@ -582,10 +583,9 @@ public class DosInt21Handler : InterruptHandler {
             returnMessage = $"Int will return to {_machine.PeekReturn()}. ";
         }
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-            _logger.Error("DOS operation failed with an error. {@ReturnMessage}. State is {@State}", returnMessage, _state);
+            _logger.Error("DOS operation failed with an error. {@ReturnMessage}. State is {@State}", returnMessage, _state.ToString());
         }
     }
-
     private void SetStateFromDosFileOperationResult(bool calledFromVm, DosFileOperationResult dosFileOperationResult) {
         if (dosFileOperationResult.IsError()) {
             LogDosError(calledFromVm);

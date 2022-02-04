@@ -9,7 +9,7 @@ using System;
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public class Configuration {
 
-    [Option('c', nameof(CDrive), Required = false, HelpText = "path to C drive, default is .")]
+    [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]
     public string? CDrive { get; set; } = Environment.CurrentDirectory;
 
     [Option('d', nameof(DefaultDumpDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. Workin directory if blank")]

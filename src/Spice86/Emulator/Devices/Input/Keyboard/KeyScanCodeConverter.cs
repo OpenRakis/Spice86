@@ -158,11 +158,16 @@ public class KeyScancodeConverter {
         if (keypressedScancode > 0x7F) {
             keypressedScancode -= 0x80;
         }
-
+        if (!_scanCodeToAscii.ContainsKey(keypressedScancode)) {
+            return null;
+        }
         return _scanCodeToAscii[keypressedScancode];
     }
 
     public byte? GetKeyPressedScancode(Key keyCode) {
+        if (!_keyPressedScanCode.ContainsKey(keyCode)) {
+            return null;
+        }
         return _keyPressedScanCode[keyCode];
     }
 
@@ -171,7 +176,6 @@ public class KeyScancodeConverter {
         if (pressed != null) {
             return (byte)(pressed + 0x80);
         }
-
         return null;
     }
 }

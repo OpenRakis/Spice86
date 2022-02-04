@@ -92,7 +92,7 @@ public class ConvertUtils {
     }
 
     public static char ToChar(byte value) {
-        return Encoding.ASCII.GetString(new [] { value }).ToCharArray()[0];
+        return Encoding.ASCII.GetString(new[] { value }).ToCharArray()[0];
     }
 
     public static string ToCSharpString(SegmentedAddress address) {
@@ -164,5 +164,17 @@ public class ConvertUtils {
 
     public static ushort WriteMsb(ushort value, byte msb) {
         return (ushort)((value & 0x00FF) | ((msb << 8) & 0xFF00));
+    }
+
+    public static string toSlashPath(string path) {
+        return path.Replace('\\', '/').Replace("//", "/");
+    }
+
+    public static string toSlashFolderPath(string path) {
+        string res = toSlashPath(path);
+        if (!res.EndsWith('/')) {
+            res += '/';
+        }
+        return res;
     }
 }
