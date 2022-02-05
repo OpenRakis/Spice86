@@ -12,18 +12,16 @@
 		MinHeight="768"
 		WindowStartupLocation="CenterScreen"
 		CanResize="True"
-		SizeToContent="Height">
+		WindowState="Maximized">
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<ScrollViewer>
-		<TabControl Items="{Binding VideoBuffers, Mode=TwoWay}">
-			<TabControl.ItemTemplate>
-				<DataTemplate x:DataType="vm:VideoBufferViewModel">
-					<TabItem Header="{Binding Address, StringFormat={}0x{0:X}}">
-					</TabItem>
-				</DataTemplate>
-			</TabControl.ItemTemplate>
-		</TabControl>
-	</ScrollViewer>
+	<TabControl Items="{Binding VideoBuffers}">
+		<TabControl.ItemTemplate>
+			<DataTemplate x:DataType="vm:VideoBufferViewModel">
+				<TabItem Header="{Binding Address, StringFormat={}0x{0:X}}">
+				</TabItem>
+			</DataTemplate>
+		</TabControl.ItemTemplate>
+	</TabControl>
 </Window>

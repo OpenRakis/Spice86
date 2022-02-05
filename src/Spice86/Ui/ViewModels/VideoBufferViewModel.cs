@@ -105,6 +105,12 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     public MainWindowViewModel? MainWindowViewModel { get; private set; }
 
     private double _scaleFactor = 1;
+
+    /// <summary>
+    /// Not used by the UI, because the image might become cut-off unless Margins are used...
+    /// Instead, we use a ViewBox. <br/>
+    /// TOOO: Remove it... ?
+    /// </summary>
     public double ScaleFactor {
         get => _scaleFactor;
         set => this.RaiseAndSetIfChanged(ref _scaleFactor, Math.Max(value, 1.7));

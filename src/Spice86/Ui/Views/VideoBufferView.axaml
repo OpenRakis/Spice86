@@ -9,30 +9,8 @@
 	<Design.DataContext>
 		<vm:VideoBufferViewModel />
 	</Design.DataContext>
-	<Grid>
-		<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-			<LayoutTransformControl>
-				<LayoutTransformControl.RenderTransform>
-					<ScaleTransform
-						ScaleX="{Binding ScaleFactor}"
-						ScaleY="{Binding ScaleFactor}">
-					</ScaleTransform>
-				</LayoutTransformControl.RenderTransform>
-				<Image x:Name="Image"
-					Stretch="None"
-					RenderOptions.BitmapInterpolationMode="HighQuality" />
-			</LayoutTransformControl>
-		</Grid>
-		<DockPanel>
-			<StackPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" HorizontalAlignment="Right">
-				<Label HorizontalContentAlignment="Center" Content="Scale Factor"/>
-				<TextBlock HorizontalAlignment="Center" Text="{Binding ScaleFactor, Mode=OneWay, StringFormat={}{0:N2}}"/>
-				<StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
-					<Button Command="{Binding ScaleMoreCommand}" Content="+" />
-					<Button Command="{Binding ScaleLessCommand}" Content="-" />
-				</StackPanel>
-				<Button HorizontalAlignment="Center" Command="{Binding ResetCommand}" Content="Reset" />
-			</StackPanel>
-		</DockPanel>
-	</Grid>
+	<Viewbox>
+		<Image x:Name="Image"
+			Stretch="None" />
+	</Viewbox>
 </UserControl>
