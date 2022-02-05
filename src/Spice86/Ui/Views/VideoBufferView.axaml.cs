@@ -73,8 +73,13 @@ public partial class VideoBufferView : UserControl {
         // It isn't DesktopScaling or RenderScaling as this returns 1 when Windows Desktop Scaling is set at 100%
         // TODO: Find what is the (inherithed ?) event fired for when DPI changes, and react to it.
         var dpi = 75d;
-        var bitmap = new WriteableBitmap(new PixelSize(vm.Width, vm.Height), new Vector(dpi, dpi), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-        vm.Bitmap = bitmap;
+        var bitmapSize = new PixelSize(vm.Width, vm.Height);
+        var bitmapDpi = new Vector(dpi, dpi);
+        if (vm.Bitmap.Size.Width != bitmapSize.Width || vm.Bitmap.Size.Height != bitmapSize.Height || vm.Bitmap.Dpi != bitmapDpi) {
+            vm.Bitmap.Dispose();
+            var bitmap = new WriteableBitmap(bitmapSize, bitmapDpi, PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+            vm.Bitmap = bitmap;
+        }
     }
 
     private async void VideoBufferViewModel_IsDirty(object? sender, EventArgs e) {

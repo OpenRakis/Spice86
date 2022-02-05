@@ -1,4 +1,6 @@
 ﻿namespace Spice86.UI.ViewModels;
+
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -72,7 +74,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     public uint Address { get; private set; }
 
 
-    private WriteableBitmap? _bitmap;
+    private WriteableBitmap _bitmap = new WriteableBitmap(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
 
     /// <summary>
     /// DPI: AvaloniaUI, like WPF, renders UI Controls in Device Independant Pixels.<br/>
@@ -81,12 +83,16 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     /// See also : https://github.com/AvaloniaUI/Avalonia/pull/1889 <br/>
     /// Also WriteableBitmap is an IImage implementation and not a UI Control,<br/>
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
-    /// Finally, the ViewModel is not aware of the View, so the Bitmap property is set in VideBufferView.xaml.cs.<br/>
+    /// Finally, the ViewModel is not aware of the View, so the real value is set in VideBufferView.xaml.cs.<br/>
     /// TODO: As a workaround, we must at least get the DPI from the Window in VideoBufferView.xaml.cs.<br/>
     /// </summary>
-    public WriteableBitmap? Bitmap {
+    public WriteableBitmap Bitmap {
         get => _bitmap;
-        set => this.RaiseAndSetIfChanged(ref _bitmap, value);
+        set {
+            if(value is not null) {
+                this.RaiseAndSetIfChanged(ref _bitmap, value);
+            }
+        }
     }
 
     private int _height = 320;
