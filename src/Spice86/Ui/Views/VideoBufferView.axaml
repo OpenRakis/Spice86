@@ -26,7 +26,7 @@
 		<DockPanel>
 			<StackPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" HorizontalAlignment="Right">
 				<Label HorizontalContentAlignment="Center" Content="Scale Factor"/>
-				<NumericUpDown Text="{Binding ScaleFactor}"/>
+				<TextBlock HorizontalAlignment="Center" Text="{Binding ScaleFactor, Mode=OneWay, StringFormat={}{0:N2}}"/>
 				<StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
 					<Button Command="{Binding ScaleMoreCommand}" Content="+" />
 					<Button Command="{Binding ScaleLessCommand}" Content="-" />
