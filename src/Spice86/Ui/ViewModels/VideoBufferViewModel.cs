@@ -27,43 +27,19 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         }
         Width = 320;
         Height = 200;
-        ScaleFactor = 1;
         Address = 1;
         _index = 1;
     }
 
-    public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, double scaleFactor, uint address, int index, bool isPrimaryDisplay) {
+    public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, uint address, int index, bool isPrimaryDisplay) {
         MainWindowViewModel = mainWindowViewModel;
         IsPrimaryDisplay = isPrimaryDisplay;
         Width = _initialWidth = width;
         Height = _initialHeight = height;
-        ScaleFactor = scaleFactor;
         Address = address;
         _index = index;
         MainWindow.AppClosing += MainWindow_AppClosing;
-        ScaleLessCommand = ReactiveCommand.Create(ScaleLessMethod);
-        ScaleMoreCommand = ReactiveCommand.Create(ScaleMoreMethod);
-        ResetCommand = ReactiveCommand.Create(ResetMethod);
     }
-
-    private Unit ScaleLessMethod() {
-        ScaleFactor--;
-        return Unit.Default;
-    }
-
-    private Unit ScaleMoreMethod() {
-        ScaleFactor++;
-        return Unit.Default;
-    }
-
-    private Unit ResetMethod() {
-        ScaleFactor = 1.7;
-        return Unit.Default;
-    }
-
-    public ReactiveCommand<Unit,Unit>? ScaleMoreCommand { get; private set; }
-    public ReactiveCommand<Unit,Unit>? ScaleLessCommand { get; private set; }
-    public ReactiveCommand<Unit,Unit>? ResetCommand { get; private set; }
 
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
@@ -103,18 +79,6 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     }
     public bool IsPrimaryDisplay { get; private set; }
     public MainWindowViewModel? MainWindowViewModel { get; private set; }
-
-    private double _scaleFactor = 1;
-
-    /// <summary>
-    /// Not used by the UI, because the image might become cut-off unless Margins are used...
-    /// Instead, we use a ViewBox. <br/>
-    /// TOOO: Remove it... ?
-    /// </summary>
-    public double ScaleFactor {
-        get => _scaleFactor;
-        set => this.RaiseAndSetIfChanged(ref _scaleFactor, Math.Max(value, 1.7));
-    }
 
     private int _width = 200;
     private bool _appClosing;

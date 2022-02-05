@@ -29,13 +29,11 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private readonly Configuration? _configuration;
     private bool _disposedValue;
     private Thread? _emulatorThread;
-    private long _frameNumber = 0;
     private int _height = 1;
     private bool _isSettingResolution = false;
     private List<Key> _keysPressed = new();
     private Key? _lastKeyCode = null;
     private bool _leftButtonClicked;
-    private double _mainCanvasScale = 1.7;
     private int _mouseX;
     private int _mouseY;
     private Action? _onKeyPressedEvent;
@@ -66,7 +64,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
-        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(this, bufferWidth, bufferHeight, scale, address, VideoBuffers.Count, isPrimaryDisplay);
+        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(this, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         VideoBuffers.Add(videoBuffer);
     }
 
@@ -77,7 +75,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public void Draw(byte[] memory, Rgb[] palette) {
-        _frameNumber++;
         if (_disposedValue || _isSettingResolution) {
             return;
         }
@@ -202,7 +199,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         VideoBuffers = new();
         this._width = width;
         this._height = height;
-        AddBuffer(address, _mainCanvasScale, width, height, true);
+        AddBuffer(address, 1, width, height, true);
         _isSettingResolution = false;
     }
 
