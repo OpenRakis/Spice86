@@ -10,7 +10,7 @@ using System;
 public class Configuration {
 
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]
-    public string? CDrive { get; set; } = Environment.CurrentDirectory;
+    public string? CDrive { get; set; }
 
     [Option('d', nameof(DefaultDumpDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. Workin directory if blank")]
     public string? DefaultDumpDirectory { get; set; } = Environment.CurrentDirectory;
