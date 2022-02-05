@@ -28,12 +28,14 @@ public class GdbIo : IDisposable {
         IPHostEntry host = Dns.GetHostEntry("localhost");
         IPAddress ip = new IPAddress(host.AddressList.First().GetAddressBytes());
         tcpListener = new TcpListener(ip, port);
+        tcpListener.Start();
         serverSocket = tcpListener.Server;
         socket = tcpListener.AcceptSocket();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GDB Server listening on port {@Port}", port);
             _logger.Information("Client connected: {@CanonicalHostName}", socket.RemoteEndPoint);
         }
+
         stream = new NetworkStream(socket);
         input = new StreamReader(stream);
         output = new StreamWriter(stream);
@@ -74,13 +76,12 @@ public class GdbIo : IDisposable {
         while (chr >= 0) {
             rawCommand.Add((byte)chr);
             if ((char)chr == '#') {
+                // Ignore checksum
                 input.Read();
                 input.Read();
                 break;
-            } else {
-                resBuilder.Append((char)chr);
             }
-
+            resBuilder.Append((char)chr);
             chr = input.Read();
         }
 
@@ -92,6 +93,7 @@ public class GdbIo : IDisposable {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Sending response {@ResponseData}", data);
             }
+
             output.Write(Encoding.UTF8.GetBytes(data));
         }
     }
@@ -107,6 +109,7 @@ public class GdbIo : IDisposable {
                 serverSocket.Close();
                 socket.Close();
             }
+
             disposedValue = true;
         }
     }

@@ -77,11 +77,10 @@ public class GdbServer : IDisposable {
         using BackgroundWorker backgroundWorker = new();
         backgroundWorker.WorkerSupportsCancellation = false;
         backgroundWorker.DoWork += (s, e) => {
-            // wait for thread to start
-            while (!started) {
-                RunServer(port);
-            }
+            RunServer(port);
         };
         backgroundWorker.RunWorkerAsync();
+        // wait for thread to start
+        while (!started) ;
     }
 }
