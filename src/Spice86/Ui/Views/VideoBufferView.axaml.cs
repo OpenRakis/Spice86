@@ -50,7 +50,7 @@ public partial class VideoBufferView : UserControl {
     private Image? _image;
 
     private void VideoBufferView_Initialized(object? sender, EventArgs e) {
-        if(this.DataContext is VideoBufferViewModel vm) {
+        if (this.DataContext is VideoBufferViewModel vm) {
             _image = this.FindControl<Image>(nameof(Image));
             InitializeBitmap(vm);
             if (vm.IsPrimaryDisplay && _image is not null) {
@@ -83,11 +83,17 @@ public partial class VideoBufferView : UserControl {
     }
 
     private async void VideoBufferViewModel_IsDirty(object? sender, EventArgs e) {
-        if(_image is null) {
-            return;
-        }
         await Dispatcher.UIThread.InvokeAsync(() => {
-            _image.InvalidateVisual();
+            if (this.DataContext is VideoBufferViewModel vm) {
+                if (_image is null) {
+                    return;
+                }
+                if (_image.Source is null) {
+                    _image.Source = vm.Bitmap;
+                }
+                _image.InvalidateVisual();
+            }
+
         }, DispatcherPriority.MaxValue);
     }
 }

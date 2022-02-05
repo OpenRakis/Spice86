@@ -20,8 +20,7 @@
 				</LayoutTransformControl.RenderTransform>
 				<Image x:Name="Image"
 					Stretch="None"
-					RenderOptions.BitmapInterpolationMode="HighQuality"
-					Source="{Binding Bitmap}" />
+					RenderOptions.BitmapInterpolationMode="HighQuality" />
 			</LayoutTransformControl>
 		</Grid>
 		<DockPanel>
