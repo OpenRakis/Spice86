@@ -1,11 +1,7 @@
 namespace Spice86.UI.Views;
 
-using System;
-using System.Linq;
-
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
@@ -13,6 +9,9 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 
 using Spice86.UI.ViewModels;
+
+using System;
+using System.Linq;
 
 public partial class VideoBufferView : UserControl {
     public VideoBufferView() {
