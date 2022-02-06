@@ -59,7 +59,7 @@ public class FunctionHandler {
     }
 
     private FunctionInformation getOrCreateFunctionInformation(SegmentedAddress entryAddress, Func<String>? nameGenerator) {
-        FunctionInformation res;
+        FunctionInformation? res;
         _functionInformations.TryGetValue(entryAddress, out res);
         if (res is null) {
             res = new FunctionInformation(entryAddress, nameGenerator == null ? "unknown" : nameGenerator.Invoke());
