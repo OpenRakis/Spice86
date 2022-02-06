@@ -20,23 +20,23 @@ public class DosFileManager {
     private const int MaxOpenFiles = 15;
     private static readonly Dictionary<byte, string> FileOpenMode = new();
     private static readonly ILogger _logger = Log.Logger.ForContext<DosFileManager>();
-    private string? currentDir;
+    private string? _currentDir;
 
-    private string? currentMatchingFileSearchFolder;
+    private string? _currentMatchingFileSearchFolder;
 
-    private string? currentMatchingFileSearchSpec;
+    private string? _currentMatchingFileSearchSpec;
 
-    private ushort diskTransferAreaAddressOffset;
+    private ushort _diskTransferAreaAddressOffset;
 
-    private ushort diskTransferAreaAddressSegment;
+    private ushort _diskTransferAreaAddressSegment;
 
-    private Dictionary<char, string> driveMap = new();
+    private Dictionary<char, string> _driveMap = new();
 
-    private IEnumerator<string>? matchingFilesIterator;
+    private IEnumerator<string>? _matchingFilesIterator;
 
-    private Memory memory;
+    private Memory _memory;
 
-    private OpenFile?[] openFiles = new OpenFile[MaxOpenFiles];
+    private OpenFile?[] _openFiles = new OpenFile[MaxOpenFiles];
 
     static DosFileManager() {
         FileOpenMode.Add(0x00, "r");
@@ -45,7 +45,7 @@ public class DosFileManager {
     }
 
     public DosFileManager(Memory memory) {
-        this.memory = memory;
+        _memory = memory;
     }
 
     public DosFileOperationResult CloseFile(ushort fileHandle) {
@@ -116,18 +116,23 @@ public class DosFileManager {
     /// <returns></returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = ToHostFileName(fileSpec);
-        currentMatchingFileSearchFolder = hostSearchSpec.Substring(0, hostSearchSpec.LastIndexOf('/') + 1);
-        if(string.IsNullOrWhiteSpace(currentMatchingFileSearchFolder) == false) {
-            currentMatchingFileSearchSpec = hostSearchSpec.Replace(currentMatchingFileSearchFolder, "");
-            Regex currentMatchingFileSearchSpecPattern = FileSpecToRegex(currentMatchingFileSearchSpec);
+        _currentMatchingFileSearchFolder = hostSearchSpec.Substring(0, hostSearchSpec.LastIndexOf('/') + 1);
+        if(string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder) == false) {
+            _currentMatchingFileSearchSpec = hostSearchSpec.Replace(_currentMatchingFileSearchFolder, "");
             try {
-                string[] pathes = Directory.GetFiles(currentMatchingFileSearchFolder);
-                List<string> matchingPathes = pathes.Where((p) => MatchesSpec(currentMatchingFileSearchSpecPattern, new FileInfo(p))).ToList();
-                matchingFilesIterator = matchingPathes.GetEnumerator();
+                List<string> matchingPaths = Directory.GetFiles(
+                    _currentMatchingFileSearchFolder,
+                    _currentMatchingFileSearchSpec,
+                    new EnumerationOptions() {
+                        AttributesToSkip = FileAttributes.Directory,
+                        IgnoreInaccessible = true,
+                        RecurseSubdirectories = false
+                    }).ToList();
+                _matchingFilesIterator = matchingPaths.GetEnumerator();
                 return FindNextMatchingFile();
             } catch (IOException e) {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _logger.Error(e, "Error while walking path {@CurrentMatchingFileSearchFolder} or getting attributes.", currentMatchingFileSearchFolder);
+                    _logger.Error(e, "Error while walking path {@CurrentMatchingFileSearchFolder} or getting attributes.", _currentMatchingFileSearchFolder);
                 }
             }
         }
@@ -135,21 +140,21 @@ public class DosFileManager {
     }
 
     public DosFileOperationResult FindNextMatchingFile() {
-        if (matchingFilesIterator == null) {
+        if (_matchingFilesIterator == null) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _logger.Warning("No search was done");
             }
             return FileNotFoundError(null);
         }
 
-        if (!matchingFilesIterator.MoveNext()) {
-            return FileNotFoundErrorWithLog($"No more files matching {currentMatchingFileSearchSpec} in path {currentMatchingFileSearchFolder}");
+        if (!_matchingFilesIterator.MoveNext()) {
+            return FileNotFoundErrorWithLog($"No more files matching {_currentMatchingFileSearchSpec} in path {_currentMatchingFileSearchFolder}");
         }
 
-        var matching = matchingFilesIterator.MoveNext();
+        var matching = _matchingFilesIterator.MoveNext();
         if (matching) {
             try {
-                UpdateDTAFromFile(matchingFilesIterator.Current);
+                UpdateDTAFromFile(_matchingFilesIterator.Current);
             } catch (IOException e) {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                     _logger.Warning(e, "Error while getting attributes.");
@@ -173,11 +178,11 @@ public class DosFileManager {
     }
 
     public ushort GetDiskTransferAreaAddressOffset() {
-        return diskTransferAreaAddressOffset;
+        return _diskTransferAreaAddressOffset;
     }
 
     public ushort GetDiskTransferAreaAddressSegment() {
-        return diskTransferAreaAddressSegment;
+        return _diskTransferAreaAddressSegment;
     }
 
     public DosFileOperationResult MoveFilePointerUsingHandle(byte originOfMove, ushort fileHandle, uint offset) {
@@ -239,7 +244,7 @@ public class DosFileManager {
         }
 
         if (actualReadLength > 0) {
-            memory.LoadData(targetAddress, buffer, actualReadLength);
+            _memory.LoadData(targetAddress, buffer, actualReadLength);
             file.AddMemoryRange(new MemoryRange(targetAddress, (uint)(targetAddress + actualReadLength - 1), file.GetName()));
         }
 
@@ -247,18 +252,18 @@ public class DosFileManager {
     }
 
     public DosFileOperationResult SetCurrentDir(string currentDir) {
-        this.currentDir = ToHostCaseSensitiveFileName(currentDir, false);
+        this._currentDir = ToHostCaseSensitiveFileName(currentDir, false);
         return DosFileOperationResult.NoValue();
     }
 
     public void SetDiskParameters(string currentDir, Dictionary<char, string> driveMap) {
-        this.currentDir = currentDir;
-        this.driveMap = driveMap;
+        this._currentDir = currentDir;
+        this._driveMap = driveMap;
     }
 
     public void SetDiskTransferAreaAddress(ushort diskTransferAreaAddressSegment, ushort diskTransferAreaAddressOffset) {
-        this.diskTransferAreaAddressSegment = diskTransferAreaAddressSegment;
-        this.diskTransferAreaAddressOffset = diskTransferAreaAddressOffset;
+        this._diskTransferAreaAddressSegment = diskTransferAreaAddressSegment;
+        this._diskTransferAreaAddressOffset = diskTransferAreaAddressOffset;
     }
 
     public DosFileOperationResult WriteFileUsingHandle(ushort fileHandle, ushort writeLength, uint bufferAddress) {
@@ -281,7 +286,7 @@ public class DosFileManager {
         }
 
         try {
-            file.GetRandomAccessFile().Write(memory.GetRam(), (int)bufferAddress, writeLength);
+            file.GetRandomAccessFile().Write(_memory.GetRam(), (int)bufferAddress, writeLength);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }
@@ -291,7 +296,7 @@ public class DosFileManager {
 
     private int CountHandles(OpenFile openFileToCount) {
         int count = 0;
-        foreach (OpenFile? openFile in openFiles) {
+        foreach (OpenFile? openFile in _openFiles) {
             if (openFile == openFileToCount) {
                 count++;
             }
@@ -310,7 +315,7 @@ public class DosFileManager {
 
     private DosFileOperationResult FileNotFoundErrorWithLog(string message) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            _logger.Warning(message);
+            _logger.Warning("{@FileNotFoundErrorWithLog}: {@Message}", nameof(FileNotFoundErrorWithLog), message);
         }
 
         return DosFileOperationResult.Error(0x02);
@@ -337,8 +342,8 @@ public class DosFileManager {
     }
 
     private int? FindNextFreeFileIndex() {
-        for (int i = 0; i < openFiles.Length; i++) {
-            if (openFiles[i] == null) {
+        for (int i = 0; i < _openFiles.Length; i++) {
+            if (_openFiles[i] == null) {
                 return i;
             }
         }
@@ -347,11 +352,11 @@ public class DosFileManager {
     }
 
     private uint GetDiskTransferAreaAddressPhysical() {
-        return MemoryUtils.ToPhysicalAddress(diskTransferAreaAddressSegment, diskTransferAreaAddressOffset);
+        return MemoryUtils.ToPhysicalAddress(_diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
     }
 
     private OpenFile? GetOpenFile(ushort fileHandle) {
-        return openFiles[FileHandleToIndex(fileHandle)];
+        return _openFiles[FileHandleToIndex(fileHandle)];
     }
 
     private bool IsValidFileHandle(ushort fileHandle) {
@@ -360,21 +365,6 @@ public class DosFileManager {
 
     private bool IsWriteDeviceFileHandle(ushort fileHandle) {
         return fileHandle > 0 && fileHandle < FileHandleOffset;
-    }
-
-    /// <summary>
-    /// </summary>
-    /// <param name="fileSpecPattern">a regex to match for a file, lower case</param>
-    /// <param name="item">a path from which the file to match will be extracted</param>
-    /// <returns>true if it matched, false otherwise</returns>
-    private bool MatchesSpec(Regex fileSpecPattern, FileInfo item) {
-        if ((item.Attributes & FileAttributes.Directory) == FileAttributes.Directory) {
-            // Do not consider directories
-            return false;
-        }
-
-        string fileName = item.Name.ToLowerInvariant();
-        return fileSpecPattern.IsMatch(fileName);
     }
 
     private DosFileOperationResult NoFreeHandleError() {
@@ -419,11 +409,11 @@ public class DosFileManager {
         // Absolute path
         char driveLetter = fileName.ToUpper()[0];
 
-        if (driveMap.TryGetValue(driveLetter, out var pathForDrive) == false) {
-            throw new UnrecoverableException("Could not find a mapping for drive " + driveLetter);
+        if (_driveMap.TryGetValue(driveLetter, out var pathForDrive) == false) {
+            throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
         }
 
-        return fileName.Replace(driveLetter + ":", pathForDrive);
+        return fileName.Replace($"{driveLetter}:", pathForDrive);
     }
 
     private uint Seek(FileStream randomAccessFile, byte originOfMove, uint offset) {
@@ -443,7 +433,7 @@ public class DosFileManager {
     }
 
     private void SetOpenFile(ushort fileHandle, OpenFile? openFile) {
-        openFiles[FileHandleToIndex(fileHandle)] = openFile;
+        _openFiles[FileHandleToIndex(fileHandle)] = openFile;
     }
 
     private string? ToCaseSensitiveFileName(string? caseInsensitivePath) {
@@ -451,9 +441,10 @@ public class DosFileManager {
             return null;
         }
 
-        string fileToProcess = ConvertUtils.toSlashPath(caseInsensitivePath);
+        string fileToProcess = ConvertUtils.ToSlashPath(caseInsensitivePath);
         string? parentDir = Path.GetDirectoryName(fileToProcess);
-        if (File.Exists(fileToProcess) || Directory.Exists(fileToProcess) || (parentDir != null && Directory.GetDirectories(parentDir).Length == 0)) {
+        if (File.Exists(fileToProcess) || Directory.Exists(fileToProcess) ||
+            (string.IsNullOrWhiteSpace(parentDir) == false && Directory.GetDirectories(parentDir).Length == 0)) {
             // file exists or root reached, no need to go further. Path found.
             return caseInsensitivePath;
         }
@@ -529,21 +520,21 @@ public class DosFileManager {
     /// <param name="dosFileName"></param>
     /// <returns></returns>
     private string ToHostFileName(string dosFileName) {
-        string fileName = ConvertUtils.toSlashPath(dosFileName);
+        string fileName = ConvertUtils.ToSlashPath(dosFileName);
         if (fileName.Length >= 2 && fileName[1] == ':') {
             fileName = ReplaceDriveWithHostPath(fileName);
-        } else if(string.IsNullOrWhiteSpace(currentDir) == false) {
-            fileName = Path.Combine(currentDir, fileName);
+        } else if(string.IsNullOrWhiteSpace(_currentDir) == false) {
+            fileName = Path.Combine(_currentDir, fileName);
         }
 
-        return ConvertUtils.toSlashPath(fileName);
+        return ConvertUtils.ToSlashPath(fileName);
     }
 
     private void UpdateDTAFromFile(string matchingFile) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Found matching file {@MatchingFile}", matchingFile);
         }
-        DosDiskTransferArea dosDiskTransferArea = new(this.memory, this.GetDiskTransferAreaAddressPhysical());
+        DosDiskTransferArea dosDiskTransferArea = new(this._memory, this.GetDiskTransferAreaAddressPhysical());
         var attributes = new FileInfo(matchingFile);
         DateTime creationZonedDateTime = attributes.CreationTimeUtc;
         DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
@@ -556,8 +547,8 @@ public class DosFileManager {
 
     private DosFileOperationResult WriteToDevice(ushort fileHandle, ushort writeLength, uint bufferAddress) {
         string deviceName = GetDeviceName(fileHandle);
-        byte[] buffer = memory.GetData(bufferAddress, writeLength);
-        System.Console.WriteLine(deviceName + ConvertUtils.ToString(buffer));
+        byte[] buffer = _memory.GetData(bufferAddress, writeLength);
+        Console.WriteLine(deviceName + ConvertUtils.ToString(buffer));
         return DosFileOperationResult.Value16(writeLength);
     }
 }
