@@ -77,7 +77,7 @@ public class FunctionHandler {
             res.Append(functionInformation);
             res.Append(" expected to return to address ");
             res.Append(returnAddress);
-            res.Append('\\');
+            res.Append('\n');
         }
 
         return res.ToString();
@@ -225,19 +225,15 @@ public class FunctionHandler {
                     additionalInformation += "Return address on stack was modified";
                 }
                 _logger.Information(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
-                        Current function {@CurrentFunctionInformation}
-                        return {@CurrentFunctionReturn}
-                        will not go to the expected place:
-                        -At {@CallType}
-                        call time, return was supposed to be {@ExpectedReturnAddress}
-                        stored at SS: SP {@StackAddressAfterCall}. Value there is now {@ReturnAddressOnCallTimeStack}
+                        Current function {@CurrentFunctionInformation} return {@CurrentFunctionReturn} will not go to the expected place:
+                        - At {@CallType} call time, return was supposed to be {@ExpectedReturnAddress} stored at SS:SP {@StackAddressAfterCall}. Value there is now {@ReturnAddressOnCallTimeStack}
                         - On the stack it is now {@ActualReturnAddress} stored at SS:SP {@CurrentStackAddress}
                         {@AdditionalInformation}
                     ",
-                    currentFunctionInformation, currentFunctionReturn,
-                    callType, expectedReturnAddress, stackAddressAfterCall, returnAddressOnCallTimeStack,
-                    actualReturnAddress, currentStackAddress,
-                    additionalInformation);
+                    currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
+                    callType.ToString(), expectedReturnAddress?.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
+                    actualReturnAddress.ToString(), currentStackAddress.ToString(),
+                    additionalInformation.ToString());
             }
             return false;
         }

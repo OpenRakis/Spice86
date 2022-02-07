@@ -7,6 +7,7 @@ using Spice86.Emulator.VM;
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq.Expressions;
 
 public class GdbServer : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbServer>();
@@ -41,12 +42,13 @@ public class GdbServer : IDisposable {
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo, machine, defaultDumpDirectory);
         gdbCommandHandler.PauseEmulator();
         this.started = true;
-        while (gdbCommandHandler.IsConnected()) {
+        while (gdbCommandHandler.IsConnected() && gdbIo.IsClientConnected()) {
             string command = gdbIo.ReadCommand();
             if (string.IsNullOrWhiteSpace(command) == false) {
                 gdbCommandHandler.RunCommand(command);
             }
         }
+        _logger.Information("Client disconnected");
     }
 
     private void RunServer(int port) {
@@ -56,14 +58,14 @@ public class GdbServer : IDisposable {
         try {
             while (running) {
                 try {
-                    var gdbIo = new GdbIo(port);
+                    using GdbIo gdbIo = new GdbIo(port);
                     AcceptOneConnection(gdbIo);
                 } catch (IOException e) {
-                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                        _logger.Error(e, "Error in the GDB server, restarting it...");
-                    }
+                    _logger.Error(e, "Error in the GDB server, restarting it...");
                 }
             }
+        } catch (Exception e) {
+            _logger.Error(e, "Unhandled error in the GDB server, restarting it...");
         } finally {
             machine.GetCpu().SetRunning(false);
             machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();

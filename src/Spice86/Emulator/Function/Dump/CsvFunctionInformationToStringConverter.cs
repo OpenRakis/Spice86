@@ -16,7 +16,7 @@ public class CsvFunctionInformationToStringConverter : FunctionInformationToStri
         return GenerateLine(ToCSharpName(functionInformation, true), Size(functionInformation.GetReturns()), Size(functionInformation.GetUnalignedReturns()), Size(GetCallers(functionInformation)), functionInformation.GetCalledCount().ToString(), Size(calls), ApproximateSize(functionInformation).ToString(), IsOverridable(calls).ToString(), functionInformation.HasOverride().ToString());
     }
 
-    public override string GetFileHeader(IEnumerable<SegmentRegisterBasedAddress> allGlobals, IEnumerable<SegmentedAddress> whiteListOfSegmentForOffset) {
+    public override string GetFileHeader(List<SegmentRegisterBasedAddress> allGlobals, HashSet<SegmentedAddress> whiteListOfSegmentForOffset) {
         return GenerateLine("Name", "Returns", "UnalignedReturns", "Callers", "Called", "Calls", "ApproximateSize", "Overridable", "Overriden");
     }
 

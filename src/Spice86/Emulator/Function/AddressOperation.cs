@@ -35,7 +35,7 @@ public class AddressOperation : IComparable<AddressOperation> {
     }
 
     public override int GetHashCode() {
-        return _operandSize.Name.Ordinal() << 2 | _valueOperation.Ordinal();
+        return HashCode.Combine(_operandSize.GetHashCode(), _valueOperation.GetHashCode());
     }
 
     public OperandSize GetOperandSize() {

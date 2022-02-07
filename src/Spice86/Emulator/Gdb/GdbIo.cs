@@ -15,8 +15,6 @@ using System.Text;
 public class GdbIo : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbIo>();
     private readonly GdbFormatter gdbFormatter = new();
-    private readonly StreamReader input;
-    private readonly StreamWriter output;
     private readonly List<byte> rawCommand = new();
     private readonly Socket serverSocket;
     private readonly Socket socket;
@@ -37,8 +35,10 @@ public class GdbIo : IDisposable {
         }
 
         stream = new NetworkStream(socket);
-        input = new StreamReader(stream);
-        output = new StreamWriter(stream);
+    }
+
+    public bool IsClientConnected() {
+        return !((socket.Poll(1000, SelectMode.SelectRead) && (socket.Available == 0)) || !socket.Connected);
     }
 
     public void Dispose() {
@@ -71,21 +71,24 @@ public class GdbIo : IDisposable {
 
     public string ReadCommand() {
         rawCommand.Clear();
-        int chr = input.Read();
+        int chr = stream.ReadByte();
         StringBuilder resBuilder = new StringBuilder();
         while (chr >= 0) {
             rawCommand.Add((byte)chr);
             if ((char)chr == '#') {
                 // Ignore checksum
-                input.Read();
-                input.Read();
+                stream.ReadByte();
+                stream.ReadByte();
                 break;
             }
             resBuilder.Append((char)chr);
-            chr = input.Read();
+            chr = stream.ReadByte();
         }
-
-        return GetPayload(resBuilder);
+        String payload = GetPayload(resBuilder);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information($"Received command from GDB {payload}");
+        }
+        return payload;
     }
 
     public void SendResponse(string? data) {
@@ -93,8 +96,7 @@ public class GdbIo : IDisposable {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Sending response {@ResponseData}", data);
             }
-
-            output.Write(Encoding.UTF8.GetBytes(data));
+            stream.Write(Encoding.UTF8.GetBytes(data));
         }
     }
 
@@ -102,9 +104,6 @@ public class GdbIo : IDisposable {
         if (!disposedValue) {
             if (disposing) {
                 // dispose managed state (managed objects)
-                input.Close();
-                output.Flush();
-                output.Close();
                 tcpListener.Stop();
                 serverSocket.Close();
                 socket.Close();

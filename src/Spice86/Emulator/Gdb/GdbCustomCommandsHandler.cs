@@ -82,7 +82,7 @@ public class GdbCustomCommandsHandler {
         var breakPoint = new BreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
         _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint added for cycles!\\n{@BreakPoint}", breakPoint);
+            _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
         }
         return _gdbIo.GenerateMessageToDisplayResponse($"Breakpoint added for cycles. Current cycles is {currentCycles}. Will wait for {cyclesToWait}. Will stop at {cyclesBreak}");
     }
@@ -91,7 +91,7 @@ public class GdbCustomCommandsHandler {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
         _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint added for end of execution!\\n{@BreakPoint}", breakPoint);
+            _logger.Debug("Breakpoint added for end of execution!\n{@BreakPoint}", breakPoint);
         }
         return _gdbIo.GenerateMessageToDisplayResponse("Breakpoint added for end of execution.");
     }
@@ -119,7 +119,7 @@ public class GdbCustomCommandsHandler {
         DumpMemory(args);
         DumpFunctionsCsv(args);
         DumpFunctions(args);
-        DumpJavaStubs(args);
+        DumpCSharpStubs(args);
         return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_defaultDumpDirectory}");
     }
 
@@ -139,7 +139,7 @@ public class GdbCustomCommandsHandler {
         }, "Error while dumping functions");
     }
 
-    private string DumpJavaStubs(String[] args) {
+    private string DumpCSharpStubs(String[] args) {
         return DumpFunctionWithFormat(args, "CSharpStub.cs", new CSharpStubToStringConverter());
     }
 
@@ -160,7 +160,7 @@ public class GdbCustomCommandsHandler {
             "dumpmemory" => DumpMemory(args),
             "dumpfunctionscsv" => DumpFunctionsCsv(args),
             "dumpfunctions" => DumpFunctions(args),
-            "dumpjavastubs" => DumpJavaStubs(args),
+            "dumpcsharpstubs" => DumpCSharpStubs(args),
             "dumpall" => DumpAll(),
             "breakcycles" => BreakCycles(args),
             "vbuffer" => Vbuffer(args),
@@ -218,9 +218,8 @@ public class GdbCustomCommandsHandler {
              - dumpMemory < file path to dump >: dump the memory as a binary file
              - dumpFunctionsCsv < file path to dump >: dump information about the function calls executed in csv format
              - dumpFunctions < file path to dump >: dump information about the function calls executed with details in human readable format
-             - dumpJavaStubs < file path to dump >: dump java stubs for functions and globals to be used as override
-             - dumpKotlinStubs<file path to dump>: dump kotlin stubs for functions and globals to be used as override
-             - breakCycles<number of cycles to wait before break>: breaks after the given number of cycles is reached
+             - dumpCSharpStubs < file path to dump >: dump C# stubs for functions and globals to be used as override
+             - breakCycles <number of cycles to wait before break>: breaks after the given number of cycles is reached
              - breakStop: setups a breakpoint when machine shuts down
              - callStack: dumps the callstack to see in which function you are in the VM.
              - peekRet<optional type>: displays the return address of the current function as stored in the stack in RAM.If a parameter is provided, dump the return on the stack as if the return was one of the provided type. Valid values are: {GetValidRetValues()}
@@ -234,7 +233,7 @@ public class GdbCustomCommandsHandler {
     }
 
     private string InvalidCommand(string command) {
-        return Help($"Invalid command {command}\\n");
+        return Help($"Invalid command {command}\n");
     }
 
     private uint ParseAddress(string address) {
@@ -296,7 +295,7 @@ public class GdbCustomCommandsHandler {
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
                 StringBuilder listBuilder = new StringBuilder();
-                gui?.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\\n").ToList().ForEach(x => listBuilder.AppendLine(x));
+                gui?.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList().ForEach(x => listBuilder.AppendLine(x));
                 string list = listBuilder.ToString();
                 return _gdbIo.GenerateMessageToDisplayResponse(list);
             }
@@ -310,7 +309,7 @@ public class GdbCustomCommandsHandler {
             int[] resolution = ExtractResolution(args, action);
             double scale = ExtractScale(args);
             if ("add".Equals(action)) {
-                if (gui?.GetVideoBuffers().TryGetValue(address, out VideoBufferViewModel? existing) == false) {
+                if (gui?.GetVideoBuffers().TryGetValue(address, out VideoBufferViewModel? existing) == true) {
                     return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
                 }
 

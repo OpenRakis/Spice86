@@ -24,7 +24,7 @@ public class GdbCommandBreakpointHandler {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint added!\\n{@BreakPoint}", breakPoint);
+            _logger.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
         }
         return gdbIo.GenerateResponse("OK");
     }
@@ -43,7 +43,7 @@ public class GdbCommandBreakpointHandler {
 
     public void OnBreakPointReached(BreakPoint breakPoint) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint reached!\\n{@BreakPoint}", breakPoint);
+            _logger.Debug("Breakpoint reached!\n{@BreakPoint}", breakPoint);
         }
         machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
         resumeEmulatorOnCommandEnd = false;
@@ -92,7 +92,7 @@ public class GdbCommandBreakpointHandler {
         }
         machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, false);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint removed!\\n{@BreakPoint}", breakPoint);
+            _logger.Debug("Breakpoint removed!\n{@BreakPoint}", breakPoint);
         }
         return gdbIo.GenerateResponse("OK");
     }
@@ -108,7 +108,7 @@ public class GdbCommandBreakpointHandler {
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, this.OnBreakPointReached, true);
         machine.GetMachineBreakpoints().ToggleBreakPoint(stepBreakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint added for step!\\n{@StepBreakPoint}", stepBreakPoint);
+            _logger.Debug("Breakpoint added for step!\n{@StepBreakPoint}", stepBreakPoint);
         }
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
