@@ -166,12 +166,12 @@ public class ConvertUtils {
         return (ushort)((value & 0x00FF) | ((msb << 8) & 0xFF00));
     }
 
-    public static string toSlashPath(string path) {
+    public static string ToSlashPath(string path) {
         return path.Replace('\\', '/').Replace("//", "/");
     }
 
     public static string toSlashFolderPath(string path) {
-        string res = toSlashPath(path);
+        string res = ToSlashPath(path);
         if (!res.EndsWith('/')) {
             res += '/';
         }
