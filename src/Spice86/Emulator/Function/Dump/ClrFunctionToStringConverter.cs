@@ -152,7 +152,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
         OperandSize operandSize = addressOperation.GetOperandSize();
         string javaName = $"{operandSize}_{ConvertUtils.ToCSharpString(address)}";
-        string name = address.GetName();
+        string? name = address.GetName();
         if (string.IsNullOrWhiteSpace(name) == false) {
             javaName += "_" + name;
         }

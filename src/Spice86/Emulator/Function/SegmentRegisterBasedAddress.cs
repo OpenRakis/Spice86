@@ -11,9 +11,9 @@ public class SegmentRegisterBasedAddress : SegmentedAddress {
     /// </summary>
     private readonly Dictionary<AddressOperation, List<int>> _addressOperations = new();
 
-    private readonly string _name;
+    private readonly string? _name;
 
-    public SegmentRegisterBasedAddress(ushort segment, ushort offset, string name) : base(segment, offset) {
+    public SegmentRegisterBasedAddress(ushort segment, ushort offset, string? name) : base(segment, offset) {
         this._name = name;
     }
 
@@ -29,7 +29,7 @@ public class SegmentRegisterBasedAddress : SegmentedAddress {
         return _addressOperations;
     }
 
-    public string GetName() {
+    public string? GetName() {
         return _name;
     }
 }
