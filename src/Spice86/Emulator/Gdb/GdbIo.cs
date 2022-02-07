@@ -86,7 +86,7 @@ public class GdbIo : IDisposable {
         }
         String payload = GetPayload(resBuilder);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information($"Received command from GDB {payload}");
+            _logger.Information("Received command from GDB {@GDBPayload}", payload);
         }
         return payload;
     }
