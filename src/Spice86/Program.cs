@@ -20,7 +20,7 @@ internal class Program {
         .WriteTo.Console(outputTemplate: LogFormat)
         .WriteTo.Debug(outputTemplate: LogFormat)
         .MinimumLevel.Warning()
-        //PIC can be very verbose when programs mistreat it ...
+        /*//PIC can be very verbose when programs mistreat it ...
         .MinimumLevel.Override("Spice86.Emulator.Devices.ExternalInput.Pic", LogEventLevel.Warning)
         //Timer can be very verbose
         .MinimumLevel.Override("Spice86.Emulator.Devices.Timer.Timer", LogEventLevel.Warning)
@@ -33,7 +33,7 @@ internal class Program {
         //A few logs at load time
         .MinimumLevel.Override("Spice86.Emulator.LoadableFile", LogEventLevel.Information)
         //Display program load informations
-        .MinimumLevel.Override("Spice86.Emulator.ProgramExecutor", LogEventLevel.Information)
+        .MinimumLevel.Override("Spice86.Emulator.ProgramExecutor", LogEventLevel.Information)*/
         .CreateLogger();
 
     static Program() {

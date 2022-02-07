@@ -19,7 +19,7 @@ public class CounterConfigurator {
             // With GDB, force to instructions per seconds as time based timers could perturbate steps
             instructionsPerSecond = DEFAULT_INSTRUCTIONS_PER_SECONDS;
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _logger.Warning("Forcing Counter to use instructions per seconds since in GDB mode. " + "If speed is too slow or too fast adjust the --instructionsPerSecond parameter");
+                _logger.Warning("Forcing Counter to use instructions per seconds since in GDB mode. If speed is too slow or too fast adjust the --InstructionsPerSecond parameter");
             }
         }
 

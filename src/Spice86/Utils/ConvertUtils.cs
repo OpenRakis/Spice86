@@ -25,11 +25,11 @@ public class ConvertUtils {
         return Uint32(((data[start] << 24) & 0xFF000000) | (((uint)data[start + 1] << 16) & 0x00FF0000) | (((uint)data[start + 2] << 8) & 0x0000FF00) | (((uint)data[start + 3]) & 0x000000FF));
     }
 
-    public static byte[] HexToByteArray(string @string) {
-        byte[] res = new byte[@string.Length / 2];
-        for (int i = 0; i < @string.Length; i += 2) {
-            string hex = @string.Substring(i, i + 2);
-            var value = byte.Parse(hex, NumberStyles.HexNumber);
+    public static byte[] HexToByteArray(string valueString) {
+        byte[] res = new byte[valueString.Length / 2];
+        for (int i = 0; i < valueString.Length; i += 2) {
+            string hex = valueString.Substring(i, 2);
+            byte value = byte.Parse(hex, NumberStyles.HexNumber);
             res[i / 2] = value;
         }
 

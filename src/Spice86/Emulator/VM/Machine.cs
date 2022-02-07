@@ -126,7 +126,7 @@ public class Machine {
         FunctionHandler inUse = cpu.GetFunctionHandlerInUse();
         string callStack = "";
         if (inUse.Equals(cpu.GetFunctionHandlerInExternalInterrupt())) {
-            callStack += "From external interrupt:\\n";
+            callStack += "From external interrupt:\n";
         }
 
         callStack += inUse.DumpCallStack();

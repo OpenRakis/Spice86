@@ -35,7 +35,7 @@ public abstract class FunctionInformationToStringConverter {
     /// <param name="allGlobals">List of addresses encountered during the execution. Hacky to pass it there, but used by Java stub generator.</param>
     /// <param name="whiteListOfSegmentForOffset">Set of segmented addresses for which nothing should be displayed if the offset matches but not the segmen</param>
     /// <returns></returns>
-    public virtual string GetFileHeader(IEnumerable<SegmentRegisterBasedAddress> allGlobals, IEnumerable<SegmentedAddress> whiteListOfSegmentForOffset) {
+    public virtual string GetFileHeader(List<SegmentRegisterBasedAddress> allGlobals, HashSet<SegmentedAddress> whiteListOfSegmentForOffset) {
         return "";
     }
 
@@ -100,7 +100,7 @@ public abstract class FunctionInformationToStringConverter {
     }
 
     protected Dictionary<K, V> Sort<K, V>(IDictionary<K, V> map) where K : notnull {
-        IOrderedEnumerable<KeyValuePair<K, V>>? ordered = map.OrderBy(x => x);
+        IOrderedEnumerable<KeyValuePair<K, V>>? ordered = map.OrderBy(x => x.Key);
         Dictionary<K, V> result = new();
         foreach (KeyValuePair<K, V> kv in ordered) {
             result.Add(kv.Key, kv.Value);

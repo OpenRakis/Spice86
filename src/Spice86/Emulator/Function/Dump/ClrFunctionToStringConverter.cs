@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 public abstract class ClrFunctionToStringConverter : FunctionInformationToStringConverter {
     private static readonly SegmentRegisters _segmentRegisters = new();
-    public override string GetFileHeader(IEnumerable<SegmentRegisterBasedAddress> allPotentialGlobals, IEnumerable<SegmentedAddress> whiteListOfSegmentForOffset) {
+    public override string GetFileHeader(List<SegmentRegisterBasedAddress> allPotentialGlobals, HashSet<SegmentedAddress> whiteListOfSegmentForOffset) {
 
         // Take only addresses which have been accessed (and not only computed)
         List<SegmentRegisterBasedAddress> globals = allPotentialGlobals
@@ -19,8 +19,12 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         int numberOfGlobals = globals.Count;
 
         // Various classes with values per segment
-        string globalsContent = JoinNewLine(MapBySegment(globals).ToDictionary(x => x.Key, (x) => GenerateClassForGlobalsOnSegment(x.Key, x.Value)).Values);
-        string segmentValues = JoinNewLine(GetValuesTakenBySegments(globals).ToDictionary(x => x.Key, (x) => GetStringSegmentValuesForDisplay(x.Key, x.Value)).Values);
+        string globalsContent = JoinNewLine(MapBySegment(globals).ToDictionary(
+            x => x.Key, 
+            x => GenerateClassForGlobalsOnSegment(x.Key, x.Value)).Values);
+        string segmentValues = JoinNewLine(GetValuesTakenBySegments(globals).ToDictionary(
+            x => x.Key, 
+            x => GetStringSegmentValuesForDisplay(x.Key, x.Value)).Values);
         return GenerateFileHeaderWithAccessors(numberOfGlobals, globalsContent, segmentValues);
     }
 
@@ -35,27 +39,42 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         return $"{segmentName}:{segmentValues}";
     }
 
-    private Dictionary<int, IEnumerable<ushort>> GetValuesTakenBySegments(IEnumerable<SegmentRegisterBasedAddress> globals) {
-        return MapBySegment(globals).ToDictionary(x => x.Key, (x) => GetSegmentValues(x.Value));
+    private Dictionary<int, List<ushort>> GetValuesTakenBySegments(List<SegmentRegisterBasedAddress> globals) {
+        return MapBySegment(globals)
+            .ToDictionary(
+                x => x.Key,
+                (x) => GetSegmentValues(x.Value));
     }
 
-    private Dictionary<ushort, IEnumerable<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(IEnumerable<SegmentRegisterBasedAddress> globals) {
-        return globals.ToDictionary(x => x.GetSegment(), (x) => globals.Where(y => x.GetSegment() == y.GetSegment()));
+    private Dictionary<ushort, List<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(List<SegmentRegisterBasedAddress> globals) {
+        return globals
+            .ToDictionary(
+                x => x.GetSegment()
+                , (x) => globals
+                    .Where(y => x.GetSegment() == y.GetSegment()).ToList()
+                );
     }
 
-    private IEnumerable<ushort> GetSegmentValues(IEnumerable<SegmentRegisterBasedAddress> globals) {
-        return globals.ToDictionary(x => x.GetSegment()).Keys.ToList();
+    private List<ushort> GetSegmentValues(List<SegmentRegisterBasedAddress> globals) {
+        return globals.Select(x => x.GetSegment()).ToList();
     }
 
-    private Dictionary<int, IEnumerable<SegmentRegisterBasedAddress>> MapBySegment(IEnumerable<SegmentRegisterBasedAddress> globals) {
-        Dictionary<int, IEnumerable<SegmentRegisterBasedAddress>> res = new();
+    private Dictionary<int, List<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
+        Dictionary<int, List<SegmentRegisterBasedAddress>> res = new();
         foreach (SegmentRegisterBasedAddress address in globals) {
-            address.GetAddressOperations().Values.SelectMany(x => x).ToList().ForEach((segmentIndex) => res.ComputeIfAbsent(segmentIndex, new List<SegmentRegisterBasedAddress>()).ToList().Add(address));
+            List<int> segmentIndexes = address.GetAddressOperations()
+                .Values
+                .SelectMany(x => x)
+                .ToList();
+                
+            segmentIndexes.ForEach((segmentIndex) => res
+                    .ComputeIfAbsent(segmentIndex, new List<SegmentRegisterBasedAddress>())
+                    .Add(address));
         }
         return res;
     }
 
-    private string GenerateClassForGlobalsOnCS(IEnumerable<SegmentRegisterBasedAddress> globals) {
+    private string GenerateClassForGlobalsOnCS(List<SegmentRegisterBasedAddress> globals) {
         // CS is special, program cannot explicitly change it in the emulator, and it doesn't usually change in the
         // overrides when it should.
         return JoinNewLine(GetAddressesBySegmentValues(globals).Select(x => GenerateClassForGlobalsOnCSWithValue(x.Key, x.Value)));
@@ -68,7 +87,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     protected abstract string GenerateClassForGlobalsOnCSWithValue(string segmentValueHex, string globalsContent);
-    private string GenerateClassForGlobalsOnSegment(int segmentIndex, IEnumerable<SegmentRegisterBasedAddress> globals) {
+    private string GenerateClassForGlobalsOnSegment(int segmentIndex, List<SegmentRegisterBasedAddress> globals) {
         if (SegmentRegisters.CsIndex == segmentIndex) {
             return GenerateClassForGlobalsOnCS(globals);
         }
@@ -83,7 +102,9 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
     protected abstract string GenerateClassForGlobalsOnSegment(string segmentName, string segmentNameCamel, string globalsContent);
     private string GenerateGettersSettersForAddresses(IEnumerable<SegmentRegisterBasedAddress> addresses) {
-        return JoinNewLine(addresses.OrderBy(x => x).ToDictionary(x => this.GenerateGetterSetterForAddress(x)).Keys);
+        return JoinNewLine(addresses
+            .OrderBy(x => x)
+            .Select(x => this.GenerateGetterSetterForAddress(x)));
     }
 
     private string GenerateGetterSetterForAddress(SegmentRegisterBasedAddress address) {
@@ -122,8 +143,10 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     private string GenerateAddressOperationAsGetterOrSetter(AddressOperation addressOperation, IEnumerable<int> registerIndexes, SegmentRegisterBasedAddress address) {
         string comment = "// Operation not registered by running code";
         if (!registerIndexes.Any() == false) {
-            IEnumerable<string> registersArray = registerIndexes.ToDictionary(x => _segmentRegisters.GetRegName(x)).OrderBy(x => x).Select(x => string.Join(", ", x));
-            string registers = string.Join("", registersArray);
+            IEnumerable<string> registersArray = registerIndexes
+                .Select(x => _segmentRegisters.GetRegName(x))
+                .OrderBy(x => x);
+            string registers = string.Join(", ", registersArray);
             comment = "// Was accessed via the following registers: " + registers;
         }
 
@@ -189,7 +212,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
             // Cannot generate code with either no return or mixed returns
             string reason = "Function has no return";
             if (!returnTypes.Any() == false) {
-                reason = $"Function has different return types: {returnTypes}";
+                reason = $"Function has different return types: {string.Join(",", returnTypes)}";
             }
 
             return GetNoStubReasonCommentForMethod(functionInformation, reason);
@@ -213,6 +236,6 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     private string GetNoStubReasonCommentForMethod(FunctionInformation functionInformation, string reason) {
-        return $"  // Not providing stub for {functionInformation.GetName()}. Reason: {reason}\\";
+        return $"  // Not providing stub for {functionInformation.GetName()}. Reason: {reason}\n";
     }
 }
