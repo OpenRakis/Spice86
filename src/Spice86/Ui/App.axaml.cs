@@ -1,7 +1,7 @@
 namespace Spice86.UI;
 
 using Avalonia;
-using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
 using Microsoft.Win32;
@@ -11,11 +11,6 @@ using Spice86.UI.Views;
 
 using System;
 using System.Runtime.Versioning;
-
-using Serilog;
-using System.Reactive;
-using ReactiveUI;
-using Avalonia.Controls.ApplicationLifetimes;
 
 public partial class App : Application {
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
@@ -66,13 +61,5 @@ public partial class App : Application {
         }
 #pragma warning restore ERP022 // Unobserved exception in generic exception handler
         return false;
-    }
-
-    private static bool IsProduction() {
-#if DEBUG
-        return false;
-#else
-            return true;
-#endif
     }
 }
