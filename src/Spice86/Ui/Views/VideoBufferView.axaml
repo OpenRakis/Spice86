@@ -11,6 +11,7 @@
 	</Design.DataContext>
 	<Viewbox>
 		<Image x:Name="Image"
-			Stretch="None" />
+			Stretch="None"
+			Source="{Binding Bitmap}"/>
 	</Viewbox>
 </UserControl>

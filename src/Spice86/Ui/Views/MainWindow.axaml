@@ -16,12 +16,17 @@
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<TabControl Items="{Binding VideoBuffers}">
-		<TabControl.ItemTemplate>
+	<ItemsRepeater Items="{Binding VideoBuffers}">
+		<ItemsRepeater.ItemTemplate>
 			<DataTemplate x:DataType="vm:VideoBufferViewModel">
-				<TabItem Header="{Binding Address, StringFormat={}0x{0:X}}">
-				</TabItem>
+				<Grid RowDefinitions="Auto,*">
+					<Label Grid.Row="0" Content="{Binding Address, StringFormat={}0x{0:X}}" />
+					<local:VideoBufferView Grid.Row="1" />
+				</Grid>
 			</DataTemplate>
-		</TabControl.ItemTemplate>
-	</TabControl>
+		</ItemsRepeater.ItemTemplate>
+		<ItemsRepeater.Layout>
+			<StackLayout Orientation="Horizontal" Spacing="8" />
+		</ItemsRepeater.Layout>
+	</ItemsRepeater>
 </Window>

@@ -50,6 +50,8 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     public uint Address { get; private set; }
 
 
+    // TODO : Get current DPI from Avalonia or Skia.
+    // It isn't DesktopScaling or RenderScaling as this returns 1 when Windows Desktop Scaling is set at 100%
     private WriteableBitmap _bitmap = new WriteableBitmap(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
 
     /// <summary>
@@ -59,8 +61,6 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     /// See also : https://github.com/AvaloniaUI/Avalonia/pull/1889 <br/>
     /// Also WriteableBitmap is an IImage implementation and not a UI Control,<br/>
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
-    /// Finally, the ViewModel is not aware of the View, so the real value is set in VideBufferView.xaml.cs.<br/>
-    /// TODO: As a workaround, we must at least get the DPI from the Window in VideoBufferView.xaml.cs.<br/>
     /// </summary>
     public WriteableBitmap Bitmap {
         get => _bitmap;

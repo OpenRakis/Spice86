@@ -53,7 +53,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
             Exit();
         }
         MainTitle = $"{nameof(Spice86)} {configuration?.Exe}";
-        SetResolution(320, 200, 0);
     }
 
     public string? MainTitle { get; private set; }
