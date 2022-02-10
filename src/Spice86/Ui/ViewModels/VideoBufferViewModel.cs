@@ -29,15 +29,17 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         Height = 200;
         Address = 1;
         _index = 1;
+        Scale = 1;
     }
 
-    public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, int width, int height, uint address, int index, bool isPrimaryDisplay) {
+    public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
         MainWindowViewModel = mainWindowViewModel;
         IsPrimaryDisplay = isPrimaryDisplay;
         Width = _initialWidth = width;
         Height = _initialHeight = height;
         Address = address;
         _index = index;
+        Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
     }
 
@@ -69,6 +71,13 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
                 this.RaiseAndSetIfChanged(ref _bitmap, value);
             }
         }
+    }
+
+    private double _scale = 1;
+
+    public double Scale {
+        get => _scale;
+        set => this.RaiseAndSetIfChanged(ref _scale, Math.Max(value, 1));
     }
 
     private int _height = 320;

@@ -9,9 +9,23 @@
 	<Design.DataContext>
 		<vm:VideoBufferViewModel />
 	</Design.DataContext>
-	<Viewbox>
-		<Image x:Name="Image"
-			Stretch="None"
-			Source="{Binding Bitmap}"/>
-	</Viewbox>
+	<Grid RowDefinitions="*,Auto">
+		<LayoutTransformControl Grid.Row="0">
+			<LayoutTransformControl.RenderTransform>
+				<ScaleTransform
+					ScaleX="{Binding Scale}"
+					ScaleY="{Binding Scale}">
+				</ScaleTransform>
+			</LayoutTransformControl.RenderTransform>
+			<Viewbox>
+				<Image x:Name="Image"
+					Stretch="None"
+					Source="{Binding Bitmap}"/>
+			</Viewbox>
+		</LayoutTransformControl>
+		<WrapPanel Orientation="Horizontal" Grid.Row="1">
+			<Label Content="Scale" />
+			<NumericUpDown Text="{Binding Scale}" Margin="10,0,0,0" />
+		</WrapPanel>
+	</Grid>
 </UserControl>

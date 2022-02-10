@@ -63,7 +63,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
-        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(this, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
+        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(this, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         VideoBuffers.Add(videoBuffer);
     }
 
