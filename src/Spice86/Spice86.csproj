@@ -21,11 +21,11 @@
 	<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 	<PackageReference Include="System.Management" Version="6.0.0" />
 	<PackageReference Include="CommandLineParser" Version="2.8.0" />
-	<PackageReference Include="Avalonia" Version="0.10.11" />
-	<PackageReference Include="Avalonia.Desktop" Version="0.10.11" />
-	<PackageReference Include="Avalonia.ReactiveUI" Version="0.10.11" />
+	<PackageReference Include="Avalonia" Version="0.10.12" />
+	<PackageReference Include="Avalonia.Desktop" Version="0.10.12" />
+	<PackageReference Include="Avalonia.ReactiveUI" Version="0.10.12" />
 	<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-	<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.11" />
+	<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.12" />
   </ItemGroup>
   <ItemGroup>
 	<AvaloniaResource Include="UI\Assets\**" />
