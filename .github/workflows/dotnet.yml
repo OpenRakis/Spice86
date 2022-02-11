@@ -27,7 +27,7 @@ jobs:
       
     - name: Test with dotnet
       working-directory: ./src
-      run: dotnet test --configuration Release src/Spice86/Spice86.sln
+      run: dotnet test --configuration Release
 
     - name: Package NuGet
       working-directory: ./src
