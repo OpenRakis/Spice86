@@ -4,7 +4,8 @@
 	<OutputType>Exe</OutputType>
 	<TargetFramework>net6.0</TargetFramework>
 	<Nullable>enable</Nullable>
-	<EnablePackageValidation>true</EnablePackageValidation>
+	<WarningsAsErrors>nullable</WarningsAsErrors>
+    <EnablePackageValidation>true</EnablePackageValidation>
 	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
