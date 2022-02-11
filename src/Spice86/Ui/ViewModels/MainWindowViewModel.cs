@@ -78,9 +78,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
             return;
         }
         foreach (VideoBufferViewModel videoBuffer in SortedBuffers()) {
-            {
-                videoBuffer.Draw(memory, palette);
-            }
+            videoBuffer.Draw(memory, palette);
         }
     }
 
