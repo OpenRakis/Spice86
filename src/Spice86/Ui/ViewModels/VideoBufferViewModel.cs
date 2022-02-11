@@ -2,6 +2,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
@@ -71,6 +72,30 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
                 this.RaiseAndSetIfChanged(ref _bitmap, value);
             }
         }
+    }
+
+    private bool _showCursor = true;
+
+    public bool ShowCursor {
+        get => _showCursor;
+        set {
+            this.RaiseAndSetIfChanged(ref _showCursor, value);
+            if (_showCursor) {
+                Cursor?.Dispose();
+                Cursor = Cursor.Default;
+            }
+            else {
+                Cursor?.Dispose();
+                Cursor = new Cursor(StandardCursorType.None);
+            }
+        }
+    }
+
+    private Cursor? _cursor = Cursor.Default;
+
+    public Cursor? Cursor {
+        get => _cursor;
+        set => this.RaiseAndSetIfChanged(ref _cursor, value);
     }
 
     private double _scale = 1;
@@ -147,6 +172,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         if (!_disposedValue) {
             if (disposing) {
                 Bitmap?.Dispose();
+                Cursor?.Dispose();
             }
             _disposedValue = true;
         }
