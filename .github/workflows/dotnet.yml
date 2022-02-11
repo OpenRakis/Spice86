@@ -31,7 +31,7 @@ jobs:
 
     - name: Package NuGet
       working-directory: ./src
-      run: dotnet pack src/Spice86/Spice86.csproj --configuration Release
+      run: dotnet pack --configuration Release
 
     - name: Upload NuGet
       uses: actions/upload-artifact@v1.0.0
