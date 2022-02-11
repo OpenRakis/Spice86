@@ -44,12 +44,14 @@ internal class Program {
     /// Alternate Entry Point
     /// </summary>
     [STAThread]
-    public static void RunWithOverrides<T>(string[] args, T overrides, string expectedChecksum) where T : class, new() {
+    public static void RunWithOverrides<T>(string[] args, T overrides, string expectedChecksum = "") where T : class, new() {
         var argsList = args.ToList();
 
         // Inject override
         argsList.Add($"--overrideSupplierClassName={overrides.GetType().FullName}");
-        argsList.Add($"--expectedChecksum={expectedChecksum}");
+        if(string.IsNullOrWhiteSpace(expectedChecksum) == false) {
+            argsList.Add($"--expectedChecksum={expectedChecksum}");
+        }
         Program.Main(args.ToArray());
     }
 
