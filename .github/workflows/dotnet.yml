@@ -22,10 +22,10 @@ jobs:
         dotnet-version: '6.0.x'
 
     - name: Build with dotnet
-      run: dotnet build --configuration Release      
+      run: dotnet build --configuration Release src/Spice86/Spice86.sln
       
     - name: Test with dotnet
-      run: dotnet test --configuration Release
+      run: dotnet test --configuration Release src/Spice86/Spice86.sln
 
     - name: Package NuGet
       run: dotnet pack src/Spice86/Spice86.csproj --configuration Release
