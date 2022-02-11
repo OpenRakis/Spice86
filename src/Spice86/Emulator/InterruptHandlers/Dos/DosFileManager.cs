@@ -389,10 +389,16 @@ public class DosFileManager {
         try {
             FileStream? randomAccessFile = null;
             if (openMode == "r") {
+                if (File.Exists(hostFileName) == false) {
+                    return FileNotFoundError(fileName);
+                }
                 randomAccessFile = File.OpenRead(hostFileName);
             } else if (openMode == "w") {
                 randomAccessFile = File.OpenWrite(hostFileName);
             } else  if (openMode == "rw") {
+                if (File.Exists(hostFileName) == false) {
+                    return FileNotFoundError(fileName);
+                }
                 randomAccessFile = File.Open(hostFileName, FileMode.Open);
             }
             if (randomAccessFile != null) {
