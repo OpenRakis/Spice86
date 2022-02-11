@@ -264,13 +264,13 @@ public class MyOverrides : CSharpOverrideHelper {
     // incUnknown47A8_0x1ED_0xA1E8_0xC0B8 will get executed instead of the assembly code when a call to 1ED:A1E8 is performed.
     // Also when dumping functions, the name myOverides.incUnknown47A8 or instead of unknown
     // Note: the segment is provided in parameter as spice86 can load executables in different places depending on the configuration
-    DefineFunction(segment, 0xA1E8, "incDialogueCount47A8", incDialogueCount47A8_0x1ED_0xA1E8_0xC0B8);
-    DefineFunction(segment, 0x0100, "addOneToAX", addOneToAX_0x1ED_0x100_0x1FD0);
+    DefineFunction(segment, 0xA1E8, "incDialogueCount47A8", IncDialogueCount47A8_0x1ED_0xA1E8_0xC0B8);
+    DefineFunction(segment, 0x0100, "addOneToAX", AddOneToAX_0x1ED_0x100_0x1FD0);
   }
 
   public Action incDialogueCount47A8_0x1ED_0xA1E8_0xC0B8() {
     // Accessing the memory via accessors
-    globalsOnDs.SetDialogueCount47A8(globalsOnDs.getDialogueCount47A8() + 1);
+    globalsOnDs.SetDialogueCount47A8(globalsOnDs.GetDialogueCount47A8() + 1);
     // Depends on the actual return instruction performed by the function, needed to be called from the emulated code as
     // some programs like to mess with the stack ...
     return NearRet();
