@@ -34,4 +34,4 @@ jobs:
       run: dotnet pack --configuration Release
 
     - name: Upload NuGet
-     run: dotnet nuget push ./src/Spice86/bin/Release/Spice86.1.0.0.nupkg
+      run: dotnet nuget push ./src/Spice86/bin/Release/Spice86.1.0.0.nupkg
