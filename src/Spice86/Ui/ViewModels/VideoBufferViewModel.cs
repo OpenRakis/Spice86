@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 
 using ReactiveUI;
 
@@ -171,8 +172,10 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                Bitmap?.Dispose();
-                Cursor?.Dispose();
+                Dispatcher.UIThread.Post(() => {
+                    Bitmap?.Dispose();
+                    Cursor?.Dispose();
+                }, DispatcherPriority.MaxValue);
             }
             _disposedValue = true;
         }

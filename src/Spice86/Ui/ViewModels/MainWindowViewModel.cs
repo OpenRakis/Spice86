@@ -3,6 +3,7 @@
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Threading;
 
 using ReactiveUI;
 
@@ -83,10 +84,12 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public void Exit() {
-        if (Design.IsDesignMode) {
-            return;
-        }
-        this.Dispose();
+        Dispatcher.UIThread.Post(() => {
+            if (Design.IsDesignMode) {
+                return;
+            }
+            this.Dispose();
+        }, DispatcherPriority.MaxValue);
         Environment.Exit(0);
     }
 
@@ -202,7 +205,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     private void DisposeBuffers() {
         foreach (VideoBufferViewModel buffer in VideoBuffers) {
+        Dispatcher.UIThread.Post(() => {
             buffer.Dispose();
+        }, DispatcherPriority.MaxValue);
         }
         _videoBuffers.Clear();
     }
