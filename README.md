@@ -35,7 +35,7 @@ Spice86 speaks the [GDB](https://www.gnu.org/software/gdb/) remote protocol:
 ### Connecting
 You need to specify a port for the GDB server to start when launching Spice86:
 ```
-Spice86 --gdbPort=10000
+Spice86 --GdbPort=10000
 ```
 
 Spice86 will wait for GDB to connect before starting execution so that you can setup breakpoints and so on.
