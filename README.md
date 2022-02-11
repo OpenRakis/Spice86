@@ -268,7 +268,7 @@ public class MyOverrides : CSharpOverrideHelper {
     DefineFunction(segment, 0x0100, "addOneToAX", AddOneToAX_0x1ED_0x100_0x1FD0);
   }
 
-  public Action incDialogueCount47A8_0x1ED_0xA1E8_0xC0B8() {
+  public Func<Action> incDialogueCount47A8_0x1ED_0xA1E8_0xC0B8() {
     // Accessing the memory via accessors
     globalsOnDs.SetDialogueCount47A8(globalsOnDs.GetDialogueCount47A8() + 1);
     // Depends on the actual return instruction performed by the function, needed to be called from the emulated code as
@@ -276,7 +276,7 @@ public class MyOverrides : CSharpOverrideHelper {
     return NearRet();
   }
 
-  private Action AddOneToAX_0x1ED_0x100_0x1FD0() {
+  private Func<Action> AddOneToAX_0x1ED_0x100_0x1FD0() {
     // Assembly for this would be
     // INC AX
     // RETF
@@ -328,7 +328,7 @@ Generated stub look like this:
 ```csharp
 ...
 // defineFunction(0x2538, 0x151, "unknown", this::unknown_0x2538_0x151_0x254D1);
-public Action Unknown_0x2538_0x151_0x254D1() {
+public Func<Action> Unknown_0x2538_0x151_0x254D1() {
   return FarRet();
 }
         ...
