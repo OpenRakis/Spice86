@@ -249,7 +249,7 @@ public class MyProgramOverrideSupplier : IOverrideSupplier {
   }
 
   public override string ToString() {
-    return "Overrides My program exe. class is " + Type.GetType(this);
+    return "Overrides My program exe. class is " + Type.GetType(this).FullName;
   }
 }
 
