@@ -34,4 +34,4 @@ jobs:
       run: dotnet pack --configuration Release
 
     - name: Upload NuGet
-      uses: actions/upload-artifact@v1.0.0
+     run: dotnet nuget push ./src/Spice86/bin/Release/Spice86.1.0.0.nupkg
