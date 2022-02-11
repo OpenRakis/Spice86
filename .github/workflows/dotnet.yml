@@ -22,12 +22,15 @@ jobs:
         dotnet-version: '6.0.x'
 
     - name: Build with dotnet
-      run: dotnet build --configuration Release src/Spice86/Spice86.sln
+      working-directory: ./src
+      run: dotnet build --configuration Release
       
     - name: Test with dotnet
+      working-directory: ./src
       run: dotnet test --configuration Release src/Spice86/Spice86.sln
 
     - name: Package NuGet
+      working-directory: ./src
       run: dotnet pack src/Spice86/Spice86.csproj --configuration Release
 
     - name: Upload NuGet
