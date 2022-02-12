@@ -33,34 +33,18 @@ com files and bios files are also supported.
 
 ```
 Spice86 --help
-
   -c, --CDrive                      Path to C drive, default is exe parent
-
   -d, --DefaultDumpDirectory        Directory to dump data to when not specified otherwise. Workin directory if blank
-
   -e, --Exe                         Required. Path to executable
-
   -a, --ExeArgs                     List of parameters to give to the emulated program
-
   -x, --ExpectedChecksum            Hexadecimal string representing the expected checksum of the checksum
-
   -f, --FailOnUnhandledPort         (Default: false) If true, will fail when encountering an unhandled IO port. Useful to check for unimplemented hardware. false by default.
-
   -g, --GdbPort                     gdb port, if empty gdb server will not be created. If not empty, application will pause until gdb connects
-
   -o, --OverrideSupplierClass       Name of a class in the current folder that will generate the initial function informations. See documentation for more information.
-
   -p, --ProgramEntryPointSegment    (Default: 493) Segment where to load the program. DOS PSP and MCB will be created before it.
-
   -u, --UseCodeOverride             (Default: false) <true or false> if false it will use the names provided by overrideSupplierClassName but not the code
-
   -i, --InstructionsPerSecond       <number of instructions that have to be executed executed by the emulator to consider a second passed> if blank will use time based timer.
-
   -t, --TimeMultiplier              (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.
-
-  --help                            Display this help screen.
-
-  --version                         Display version information.
 ```
 
 ## Dynamic analysis
