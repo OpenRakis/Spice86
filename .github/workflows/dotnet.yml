@@ -21,10 +21,6 @@ jobs:
       with:
         dotnet-version: '6.0.x'
 
-    - name: Build with dotnet
-      working-directory: ./src
-      run: dotnet build --configuration Release
-
     - name: Test with dotnet
       working-directory: ./src
       run: dotnet test --configuration Release
@@ -34,6 +30,10 @@ jobs:
       with:
           version_files: "./src/Spice86/*.csproj"
           github_token: ${{ secrets.MY_GH_TOKEN }}
+
+    - name: Build with dotnet
+      working-directory: ./src
+      run: dotnet build --configuration Release
 
     - name: Package NuGet
       working-directory: ./src
