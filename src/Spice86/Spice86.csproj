@@ -9,7 +9,7 @@
 	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-  <PackageId>Modern.Forms</PackageId>
+    <PackageId>Spice86</PackageId>
     <Version>1.0.0</Version>  
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
