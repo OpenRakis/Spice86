@@ -374,51 +374,41 @@ public class DosFileManager {
         return DosFileOperationResult.Error(0x04);
     }
 
-    private string? GetActualCaseForFileName(string caseInsensitivePath)
-    {
+    private string? GetActualCaseForFileName(string caseInsensitivePath) {
         string? directory = Path.GetDirectoryName(caseInsensitivePath);
         string? directoryCaseSensitive = GetDirectoryCaseSensitive(directory);
-        if(string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false)
-        {
+        if(string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false) {
             return null;
         }
         string realFileName = "";
-        foreach(var file in Directory.GetFiles(directoryCaseSensitive))
-        {
+        foreach(var file in Directory.GetFiles(directoryCaseSensitive)) {
             var fileToUpper = file.ToUpperInvariant();
             var searchedFile = caseInsensitivePath.ToUpperInvariant();
-            if(fileToUpper == searchedFile)
-            {
+            if(fileToUpper == searchedFile) {
                 realFileName = file;
             }
         }
-        if(string.IsNullOrWhiteSpace(realFileName) || File.Exists(realFileName) == false)
-        {
+        if(string.IsNullOrWhiteSpace(realFileName) || File.Exists(realFileName) == false) {
             return null;
         }
         return realFileName;
     }
 
-    private string? GetDirectoryCaseSensitive(string? directory)
-    {
-        if(string.IsNullOrWhiteSpace(directory))
-        {
+    private string? GetDirectoryCaseSensitive(string? directory) {
+        if(string.IsNullOrWhiteSpace(directory)) {
             return null;
         }
         var directoryInfo = new DirectoryInfo(directory);
-        if (directoryInfo.Exists)
-        {
+        if (directoryInfo.Exists) {
             return directory;
         }
 
-        if (directoryInfo.Parent == null)
-        {
+        if (directoryInfo.Parent == null) {
             return null;
         }
 
         var parent = GetDirectoryCaseSensitive(directoryInfo.Parent.FullName);
-        if (parent == null)
-        {
+        if (parent == null) {
             return null;
         }
 
