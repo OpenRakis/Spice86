@@ -6,6 +6,9 @@
 *.doc
 *.pdf
 
+# VSCode settings
+.vscode/
+
 # VS debug settings
 launchSettings.json
 
