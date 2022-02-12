@@ -21,19 +21,19 @@ jobs:
       with:
         dotnet-version: '6.0.x'
 
+    - name: Build with dotnet
+      working-directory: ./src
+      run: dotnet build --configuration Release
+
+    - name: Test with dotnet
+      working-directory: ./src
+      run: dotnet test --configuration Release
+
     - name: Bump versions
       uses: SiqiLu/dotnet-bump-version@master
       with:
           version_files: "**/*.csproj"
           github_token: ${{ secrets.MY_GH_TOKEN }}
-
-    - name: Build with dotnet
-      working-directory: ./src
-      run: dotnet build --configuration Release
-      
-    - name: Test with dotnet
-      working-directory: ./src
-      run: dotnet test --configuration Release
 
     - name: Package NuGet
       working-directory: ./src
