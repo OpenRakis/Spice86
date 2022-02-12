@@ -29,6 +29,6 @@
 	<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.12" />
   </ItemGroup>
   <ItemGroup>
-	<AvaloniaResource Include="UI\Assets\**" />
+	<AvaloniaResource Include="Ui/Assets/**" />
   </ItemGroup>
 </Project>
