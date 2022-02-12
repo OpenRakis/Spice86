@@ -21,6 +21,12 @@ jobs:
       with:
         dotnet-version: '6.0.x'
 
+    - name: Bump versions
+      uses: SiqiLu/dotnet-bump-version@master
+      with:
+          version_files: "**/*.csproj"
+          github_token: ${{ secrets.MY_GH_TOKEN }}
+
     - name: Build with dotnet
       working-directory: ./src
       run: dotnet build --configuration Release
@@ -34,4 +40,5 @@ jobs:
       run: dotnet pack --configuration Release
 
     - name: Upload NuGet
-      run: dotnet nuget push ./src/Spice86/bin/Release/Spice86.1.0.0.nupkg
+      run: nuget push **\*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}}
+
