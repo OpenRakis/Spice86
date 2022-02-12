@@ -32,7 +32,7 @@ jobs:
     - name: Bump versions
       uses: SiqiLu/dotnet-bump-version@master
       with:
-          version_files: "*.csproj"
+          version_files: "./src/Spice86/*.csproj"
           github_token: ${{ secrets.MY_GH_TOKEN }}
 
     - name: Package NuGet
@@ -41,5 +41,5 @@ jobs:
 
     - name: Upload NuGet
       working-directory: ./src/Spice86/bin/Release
-      run: nuget push *.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}}
+      run: nuget push *.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}} -SkipDuplicate
 
