@@ -374,6 +374,57 @@ public class DosFileManager {
         return DosFileOperationResult.Error(0x04);
     }
 
+    private string? GetActualCaseForFileName(string caseInsensitivePath)
+    {
+        string? directory = Path.GetDirectoryName(caseInsensitivePath);
+        string? directoryCaseSensitive = GetDirectoryCaseSensitive(directory);
+        if(string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false)
+        {
+            return null;
+        }
+        string realFileName = "";
+        foreach(var file in Directory.GetFiles(directoryCaseSensitive))
+        {
+            var fileToUpper = file.ToUpperInvariant();
+            var searchedFile = caseInsensitivePath.ToUpperInvariant();
+            if(fileToUpper == searchedFile)
+            {
+                realFileName = file;
+            }
+        }
+        if(string.IsNullOrWhiteSpace(realFileName) || File.Exists(realFileName) == false)
+        {
+            return null;
+        }
+        return realFileName;
+    }
+
+    private string? GetDirectoryCaseSensitive(string? directory)
+    {
+        if(string.IsNullOrWhiteSpace(directory))
+        {
+            return null;
+        }
+        var directoryInfo = new DirectoryInfo(directory);
+        if (directoryInfo.Exists)
+        {
+            return directory;
+        }
+
+        if (directoryInfo.Parent == null)
+        {
+            return null;
+        }
+
+        var parent = GetDirectoryCaseSensitive(directoryInfo.Parent.FullName);
+        if (parent == null)
+        {
+            return null;
+        }
+
+        return new DirectoryInfo(parent).GetDirectories(directoryInfo.Name, new EnumerationOptions {MatchCasing = MatchCasing.CaseInsensitive}).FirstOrDefault()?.FullName;
+    }
+
     private DosFileOperationResult OpenFileInternal(string fileName, string? hostFileName, string openMode) {
         if (hostFileName == null) {
             // Not found
@@ -389,14 +440,16 @@ public class DosFileManager {
         try {
             FileStream? randomAccessFile = null;
             if (openMode == "r") {
-                if (File.Exists(hostFileName) == false) {
+                var realFileName = GetActualCaseForFileName(hostFileName);
+                if (string.IsNullOrWhiteSpace(realFileName)) {
                     return FileNotFoundError(fileName);
                 }
                 randomAccessFile = File.OpenRead(hostFileName);
             } else if (openMode == "w") {
                 randomAccessFile = File.OpenWrite(hostFileName);
             } else  if (openMode == "rw") {
-                if (File.Exists(hostFileName) == false) {
+                var realFileName = GetActualCaseForFileName(hostFileName);
+                if (string.IsNullOrWhiteSpace(realFileName)) {
                     return FileNotFoundError(fileName);
                 }
                 randomAccessFile = File.Open(hostFileName, FileMode.Open);
@@ -463,6 +516,11 @@ public class DosFileManager {
         
         // Now that parent is for sure on the disk, let's find the current file
         try {
+            string? fileNameOnFileSystem = GetActualCaseForFileName(caseInsensitivePath);
+            if(string.IsNullOrWhiteSpace(fileNameOnFileSystem) == false)
+            {
+                return fileNameOnFileSystem;
+            }
             Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(fileToProcess));
             string? filename = Directory
                 .GetFiles(parent)
