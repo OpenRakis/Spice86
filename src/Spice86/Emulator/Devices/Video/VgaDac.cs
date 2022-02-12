@@ -28,9 +28,9 @@ public class VgaDac {
         // Initial VGA default palette initialization
         for (int i = 0; i < _rgbs.Length; i++) {
             Rgb rgb = new();
-            rgb.SetR((byte)(((i >> 5) & 0x7) * 255 / 7));
-            rgb.SetG((byte)(((i >> 2) & 0x7) * 255 / 7));
-            rgb.SetB((byte)((i & 0x3) * 255 / 3));
+            rgb.R = (byte)(((i >> 5) & 0x7) * 255 / 7);
+            rgb.G = (byte)(((i >> 2) & 0x7) * 255 / 7);
+            rgb.B = (byte)((i & 0x3) * 255 / 3);
             _rgbs[i] = rgb;
         }
     }
@@ -62,9 +62,9 @@ public class VgaDac {
     public byte ReadColor() {
         Rgb rgb = _rgbs[_readIndex];
         byte value = _colour switch {
-            Redindex => rgb.GetR(),
-            GreenIndex => rgb.GetG(),
-            BlueIndex => rgb.GetB(),
+            Redindex => rgb.R,
+            GreenIndex => rgb.G,
+            BlueIndex => rgb.B,
             _ => throw new InvalidColorIndexException(_machine, _colour)
         };
         _colour = (_colour + 1) % 3;
@@ -98,13 +98,13 @@ public class VgaDac {
         Rgb rgb = _rgbs[_writeIndex];
         switch (_colour) {
             case Redindex:
-                rgb.SetR(colorValue);
+                rgb.R = colorValue;
                 break;
             case GreenIndex:
-                rgb.SetG(colorValue);
+                rgb.G = colorValue;
                 break;
             case BlueIndex:
-                rgb.SetB(colorValue);
+                rgb.B = colorValue;
                 break;
             default:
                 throw new InvalidColorIndexException(_machine, _colour);

@@ -4,34 +4,22 @@
 /// RGB representation of a color.
 /// </summary>
 public class Rgb {
-    private byte r;
-    private byte g;
-    private byte b;
+    public byte R { get; set; }
 
-    public byte GetR() {
-        return r;
-    }
-    public byte GetG() {
-        return g;
-    }
-    public byte GetB() {
-        return b;
+    public byte G { get; set; }
+
+    public byte B { get; set; }
+
+    public uint ToRgba() {
+        return (uint)(R << 16 | G << 8 | B) | 0xFF000000;
     }
 
-    public void SetR(byte r) {
-        this.r = r;
-    }
-
-    public void SetG(byte g) {
-        this.g = g;
-    }
-
-    public void SetB(byte b) {
-        this.b = b;
+    public uint ToBgra() {
+        return (uint)(B << 16 | G << 8 | R) | 0xFF000000;
     }
 
     public uint ToArgb() {
-        return (0xFF000000 | ((uint)r << 16) | ((uint)g << 8) | b);
+        return 0xFF000000 | ((uint)R << 16) | ((uint)G << 8) | B;
     }
 
     public override string ToString() {
