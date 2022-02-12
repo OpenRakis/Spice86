@@ -31,4 +31,7 @@
   <ItemGroup>
 	<AvaloniaResource Include="Ui/Assets/**" />
   </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="UI\Views\Spice86.ico" />
+  </ItemGroup>
 </Project>
