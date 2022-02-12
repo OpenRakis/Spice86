@@ -10,9 +10,10 @@
 		Title="{Binding MainTitle}"
 		MinWidth="1024"
 		MinHeight="768"
+		Width="1024"
+		Height="768"
 		WindowStartupLocation="CenterScreen"
-		CanResize="True"
-		WindowState="Maximized">
+		CanResize="True">
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
