@@ -431,18 +431,25 @@ public class DosFileManager {
             FileStream? randomAccessFile = null;
             if (openMode == "r") {
                 var realFileName = GetActualCaseForFileName(hostFileName);
-                if (string.IsNullOrWhiteSpace(realFileName)) {
+                if (File.Exists(hostFileName)) {
+                    randomAccessFile = File.OpenRead(hostFileName);
+                } else if (File.Exists(realFileName)) {
+                    randomAccessFile = File.OpenRead(realFileName);
+                }
+                else {
                     return FileNotFoundError(fileName);
                 }
-                randomAccessFile = File.OpenRead(hostFileName);
             } else if (openMode == "w") {
                 randomAccessFile = File.OpenWrite(hostFileName);
             } else  if (openMode == "rw") {
                 var realFileName = GetActualCaseForFileName(hostFileName);
-                if (string.IsNullOrWhiteSpace(realFileName)) {
+                if (File.Exists(hostFileName)) {
+                    randomAccessFile = File.Open(hostFileName, FileMode.Open);
+                } else if (File.Exists(realFileName)) {
+                    randomAccessFile = File.Open(realFileName, FileMode.Open);
+                } else {
                     return FileNotFoundError(fileName);
                 }
-                randomAccessFile = File.Open(hostFileName, FileMode.Open);
             }
             if (randomAccessFile != null) {
                 SetOpenFile(dosIndex, new OpenFile(fileName, dosIndex, randomAccessFile));
