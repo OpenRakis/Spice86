@@ -364,7 +364,7 @@ You can pass arguments (max 127 chars!) to the emulated program with the option 
 ### Time
 The emulated Timer hardware of the PC (Intel 8259) supports measuring time from either:
 - The real elapsed time. Speed can be altered with parameter **--timeMultiplier**.
-- The number of instructions the emulated CPU executed. This is the behaviour is activated with parameter **--instructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mine without the timer triggering.
+- The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--instructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mine without the timer triggering.
 
 ### Screen refresh
 Screen is refreshed 30 times per second and each time a VGA retrace wait is detected (see VideoBiosServicesDispatcher::tick3DA).
