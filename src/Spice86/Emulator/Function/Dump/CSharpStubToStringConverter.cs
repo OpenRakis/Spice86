@@ -10,11 +10,11 @@ public class CSharpStubToStringConverter : ClrFunctionToStringConverter {
         return
             $@"
             public class GlobalsOnCsSegment{segmentValueHex} : MemoryBasedDataStructureWithBaseAddress {{
-              public GlobalsOnCsSegment{segmentValueHex}(Machine machine) {{
-                base(machine.GetMemory(), {segmentValueHex} * 0x10);
-              }}
+                public GlobalsOnCsSegment{segmentValueHex}(Machine machine) {{
+                  base(machine.GetMemory(), {segmentValueHex} * 0x10);
+                }}
 
-            {globalsContent}
+                {globalsContent}
             }}
             ";
     }
@@ -56,19 +56,19 @@ public class CSharpStubToStringConverter : ClrFunctionToStringConverter {
             /// Stubs for overrides
             /// </summary>
             public class Stubs : CSharpOverrideHelper {{
-              public Stubs(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, string prefix, Machine machine) {{
-                base(functionInformations, prefix, machine);
-              }}
+                public Stubs(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, string prefix, Machine machine) {{
+                    base(functionInformations, prefix, machine);
+                }}
             ";
     }
 
     protected override string GenerateFunctionStub(string callsAsComments, string? functionName, string functionNameInCSharp, string segment, string offset, string retType) {
         return 
             $@"
-            // defineFunction({segment}, {offset}, ""{functionName}"", this.{functionNameInCSharp};
+            // defineFunction({segment}, {offset}, ""{functionName}"", this.{functionNameInCSharp});
             public Action {functionNameInCSharp}() {{
-            {callsAsComments.PadRight(2)}
-              return {retType}Ret();
+                {callsAsComments.PadRight(4)}
+                return {retType}Ret();
             }}";
     }
 
@@ -87,7 +87,7 @@ public class CSharpStubToStringConverter : ClrFunctionToStringConverter {
             $@"
             {comment}
             public void Set{cSharpName}(int value) {{
-              SetUint{bits}({offset}, value);
+                SetUint{bits}({offset}, value);
             }}
             ";
     }
@@ -97,7 +97,7 @@ public class CSharpStubToStringConverter : ClrFunctionToStringConverter {
             $@"
             {comment}
             public SegmentedAddress GetPtr{cSharpName}() {{
-                return new SegmetedAddress(GetUint16({offset} + 2), GetUint16({offset}));
+                return new SegmentedAddress(GetUint16({offset} + 2), GetUint16({offset}));
             }}
             ";
     }

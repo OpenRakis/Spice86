@@ -5,7 +5,9 @@ using Spice86.Emulator.Memory;
 using Spice86.Utils;
 
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
+
 public abstract class ClrFunctionToStringConverter : FunctionInformationToStringConverter {
     private static readonly SegmentRegisters _segmentRegisters = new();
     public override string GetFileHeader(List<SegmentRegisterBasedAddress> allPotentialGlobals, HashSet<SegmentedAddress> whiteListOfSegmentForOffset) {
@@ -13,18 +15,19 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         // Take only addresses which have been accessed (and not only computed)
         List<SegmentRegisterBasedAddress> globals = allPotentialGlobals
             .Where(x => (x.GetAddressOperations()).Any())
-                .Where(y => whiteListOfSegmentForOffset
-                    .All(z => IsOffsetEqualsAndSegmentDifferent(y, z) == false))
+            .Where(y => whiteListOfSegmentForOffset
+                .All(z => IsOffsetEqualsAndSegmentDifferent(y, z) == false))
             .ToList();
         int numberOfGlobals = globals.Count;
 
         // Various classes with values per segment
-        string globalsContent = JoinNewLine(MapBySegment(globals).ToDictionary(
-            x => x.Key, 
-            x => GenerateClassForGlobalsOnSegment(x.Key, x.Value)).Values);
-        string segmentValues = JoinNewLine(GetValuesTakenBySegments(globals).ToDictionary(
-            x => x.Key, 
-            x => GetStringSegmentValuesForDisplay(x.Key, x.Value)).Values);
+        string globalsContent = JoinNewLine(
+            MapBySegment(globals)
+                .Select(x => GenerateClassForGlobalsOnSegment(x.Key, x.Value))
+        );
+        string segmentValues = JoinNewLine(
+            GetValuesTakenBySegments(globals)
+                .Select(x => GetStringSegmentValuesForDisplay(x.Key, x.Value)));
         return GenerateFileHeaderWithAccessors(numberOfGlobals, globalsContent, segmentValues);
     }
 
@@ -46,35 +49,34 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
                 (x) => GetSegmentValues(x.Value));
     }
 
-    private Dictionary<ushort, List<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(List<SegmentRegisterBasedAddress> globals) {
-        return globals
-            .ToDictionary(
-                x => x.GetSegment()
-                , (x) => globals
-                    .Where(y => x.GetSegment() == y.GetSegment()).ToList()
-                );
+    private Dictionary<ushort, List<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
+        return globals.GroupBy(
+                x => x.GetSegment())
+            .ToDictionary(g => g.Key, g => g.ToList());
     }
 
-    private List<ushort> GetSegmentValues(List<SegmentRegisterBasedAddress> globals) {
-        return globals.Select(x => x.GetSegment()).ToList();
+    private List<ushort> GetSegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
+        return globals.Select(x => x.GetSegment()).Distinct().ToList();
     }
 
-    private Dictionary<int, List<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
-        Dictionary<int, List<SegmentRegisterBasedAddress>> res = new();
+    private Dictionary<int, ISet<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
+        Dictionary<int, ISet<SegmentRegisterBasedAddress>> res = new();
         foreach (SegmentRegisterBasedAddress address in globals) {
-            List<int> segmentIndexes = address.GetAddressOperations()
+            IEnumerable<int> segmentIndexes = address.GetAddressOperations()
                 .Values
-                .SelectMany(x => x)
-                .ToList();
-                
-            segmentIndexes.ForEach((segmentIndex) => res
-                    .ComputeIfAbsent(segmentIndex, new List<SegmentRegisterBasedAddress>())
-                    .Add(address));
+                .SelectMany(x => x);
+            foreach (int segmentIndex in segmentIndexes) {
+                if (!res.TryGetValue(segmentIndex, out ISet<SegmentRegisterBasedAddress>? addressesForSegment)) {
+                    addressesForSegment = new HashSet<SegmentRegisterBasedAddress>();
+                    res.Add(segmentIndex, addressesForSegment);
+                }
+                addressesForSegment.Add(address);
+            }
         }
         return res;
     }
 
-    private string GenerateClassForGlobalsOnCS(List<SegmentRegisterBasedAddress> globals) {
+    private string GenerateClassForGlobalsOnCS(ISet<SegmentRegisterBasedAddress> globals) {
         // CS is special, program cannot explicitly change it in the emulator, and it doesn't usually change in the
         // overrides when it should.
         return JoinNewLine(GetAddressesBySegmentValues(globals).Select(x => GenerateClassForGlobalsOnCSWithValue(x.Key, x.Value)));
@@ -87,7 +89,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     protected abstract string GenerateClassForGlobalsOnCSWithValue(string segmentValueHex, string globalsContent);
-    private string GenerateClassForGlobalsOnSegment(int segmentIndex, List<SegmentRegisterBasedAddress> globals) {
+    private string GenerateClassForGlobalsOnSegment(int segmentIndex, ISet<SegmentRegisterBasedAddress> globals) {
         if (SegmentRegisters.CsIndex == segmentIndex) {
             return GenerateClassForGlobalsOnCS(globals);
         }
@@ -108,32 +110,33 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     private string GenerateGetterSetterForAddress(SegmentRegisterBasedAddress address) {
-        Dictionary<AddressOperation, List<int>> addressOperations = address.GetAddressOperations();
+        Dictionary<AddressOperation, ISet<int>> addressOperations = address.GetAddressOperations();
         if (addressOperations.Any() == false) {
             // Nothing was ever read or written there
             return "";
         }
         // TreeMap so already sorted
         string gettersAndSetters = JoinNewLine(
-            CompleteWithOppositeOperationsAndPointers(addressOperations)
-            .Select(x => GenerateAddressOperationAsGetterOrSetter(x.Key, x.Value, address)));
+            new SortedDictionary<AddressOperation, ISet<int>>(CompleteWithOppositeOperationsAndPointers(addressOperations))
+                .Select(x => GenerateAddressOperationAsGetterOrSetter(x.Key, x.Value, address))
+            );
         return $"// Getters and Setters for address {address}.{gettersAndSetters}";
     }
 
-    private Dictionary<AddressOperation, List<int>> CompleteWithOppositeOperationsAndPointers(Dictionary<AddressOperation, List<int>> addressOperations) {
+    private Dictionary<AddressOperation, ISet<int>> CompleteWithOppositeOperationsAndPointers(Dictionary<AddressOperation, ISet<int>> addressOperations) {
 
         // Ensures that for each read there is a write, even with empty registers so that we can generate valid java
         // properties
-        Dictionary<AddressOperation, List<int>> res = new(addressOperations);
+        Dictionary<AddressOperation, ISet<int>> res = new(addressOperations);
         foreach (AddressOperation operation in addressOperations.Keys) {
             OperandSize operandSize = operation.GetOperandSize();
             ValueOperation valueOperation = operation.GetValueOperation();
             ValueOperation oppositeValueOperation = valueOperation.OppositeOperation();
-            res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, operandSize), new List<int>());
+            res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, operandSize), new HashSet<int>());
             if (operandSize == OperandSize.Dword32) {
                 // Ensures getter and setters are generated for segmented address accessors
-                res.ComputeIfAbsent(new AddressOperation(valueOperation, OperandSize.Dword32Ptr), new List<int>());
-                res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, OperandSize.Dword32Ptr), new List<int>());
+                res.ComputeIfAbsent(new AddressOperation(valueOperation, OperandSize.Dword32Ptr), new HashSet<int>());
+                res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, OperandSize.Dword32Ptr), new HashSet<int>());
             }
         }
 
@@ -151,7 +154,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         }
 
         OperandSize operandSize = addressOperation.GetOperandSize();
-        string javaName = $"{operandSize}_{ConvertUtils.ToCSharpString(address)}";
+        string javaName = $"{operandSize.Name.ToString()}_{ConvertUtils.ToCSharpString(address)}";
         string? name = address.GetName();
         if (string.IsNullOrWhiteSpace(name) == false) {
             javaName += "_" + name;
@@ -202,8 +205,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
             return GetNoStubReasonCommentForMethod(functionInformation, "Function already has an override");
         }
 
-        List<CallType> returnTypes = functionInformation.GetReturns().Keys.
-            Concat(functionInformation.GetUnalignedReturns().Keys)
+        List<CallType> returnTypes = functionInformation.GetReturns().Keys.Concat(functionInformation.GetUnalignedReturns().Keys)
             .Select(x => x.GetReturnCallType())
             .Distinct()
             .ToList();

@@ -7,6 +7,6 @@ public record OperandSize {
 
     private OperandSize() { }
 
-    public int Bits { get; init; } = 8;
-    public OperandSizeName Name { get; init; } = OperandSizeName.Byte8;
+    public int Bits { get; init; }
+    public OperandSizeName Name { get; init; }
 }

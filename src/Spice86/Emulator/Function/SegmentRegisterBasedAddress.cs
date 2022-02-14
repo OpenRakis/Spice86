@@ -9,7 +9,7 @@ public class SegmentRegisterBasedAddress : SegmentedAddress {
     /// <summary>
     ///  Dictionary mapping operation (read / write of 8,16,32 bits length) to segment registers
     /// </summary>
-    private readonly Dictionary<AddressOperation, List<int>> _addressOperations = new();
+    private readonly Dictionary<AddressOperation, ISet<int>> _addressOperations = new();
 
     private readonly string? _name;
 
@@ -18,14 +18,14 @@ public class SegmentRegisterBasedAddress : SegmentedAddress {
     }
 
     public void AddAddressOperation(AddressOperation addressOperation, int segmentRegisterIndex) {
-        if (!_addressOperations.TryGetValue(addressOperation, out List<int>? segmentRegisterIndexes)) {
-            segmentRegisterIndexes = new();
+        if (!_addressOperations.TryGetValue(addressOperation, out ISet<int>? segmentRegisterIndexes)) {
+            segmentRegisterIndexes = new HashSet<int>();
             _addressOperations.Add(addressOperation, segmentRegisterIndexes);
         }
         segmentRegisterIndexes.Add(segmentRegisterIndex);
     }
 
-    public Dictionary<AddressOperation, List<int>> GetAddressOperations() {
+    public Dictionary<AddressOperation, ISet<int>> GetAddressOperations() {
         return _addressOperations;
     }
 

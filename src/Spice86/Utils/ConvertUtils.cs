@@ -104,30 +104,30 @@ public class ConvertUtils {
     }
 
     public static string ToHex(byte value) {
-        return $"0x{value:x}";
+        return $"0x{value:X}";
     }
 
     public static string ToHex(short value) {
-        return $"0x{value:x}";
+        return $"0x{value:X}";
     }
 
     public static string ToHex(uint value) {
-        return $"0x{value:x}";
+        return $"0x{value:X}";
     }
 
     public static string ToHex16(ushort value) {
-        return $"0x{value:x}";
+        return $"0x{value:X}";
     }
 
     public static string ToHex16WithoutX(ushort value) {
-        return $"{value:x}";
+        return $"{value:X4}";
     }
     public static string ToHex32WithoutX(uint value) {
-        return $"{value:x}";
+        return $"{value:X5}";
     }
 
     public static string ToHex8(byte value) {
-        return $"0x{value:x}";
+        return $"0x{value:X}";
     }
 
     public static string ToSegmentedAddressRepresentation(ushort segment, ushort offset) {

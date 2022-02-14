@@ -15,7 +15,7 @@ using System.Text;
 public class FunctionHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<FunctionHandler>();
 
-    private readonly Queue<FunctionCall> _callerStack = new();
+    private readonly Stack<FunctionCall> _callerStack = new();
 
     private readonly bool _debugMode;
 
@@ -36,7 +36,7 @@ public class FunctionHandler {
 
     public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort? expectedReturnSegment, ushort? expectedReturnOffset, Func<String>? nameGenerator, bool recordReturn) {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
-        FunctionInformation currentFunction = getOrCreateFunctionInformation(entryAddress, nameGenerator);
+        FunctionInformation currentFunction = GetOrCreateFunctionInformation(entryAddress, nameGenerator);
         if (_debugMode) {
             FunctionInformation? caller = GetFunctionInformation(GetCurrentFunctionCall());
             SegmentedAddress? expectedReturnAddress = null;
@@ -45,7 +45,7 @@ public class FunctionHandler {
             }
 
             FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, GetCurrentStackAddress(), recordReturn);
-            _callerStack.Enqueue(currentFunctionCall);
+            _callerStack.Push(currentFunctionCall);
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
                 _logger.Debug("Calling {@CurrentFunction} from {@Caller}", currentFunction, caller);
             }
@@ -58,10 +58,8 @@ public class FunctionHandler {
         }
     }
 
-    private FunctionInformation getOrCreateFunctionInformation(SegmentedAddress entryAddress, Func<String>? nameGenerator) {
-        FunctionInformation? res;
-        _functionInformations.TryGetValue(entryAddress, out res);
-        if (res is null) {
+    private FunctionInformation GetOrCreateFunctionInformation(SegmentedAddress entryAddress, Func<String>? nameGenerator) {
+        if (!_functionInformations.TryGetValue(entryAddress, out FunctionInformation? res)) {
             res = new FunctionInformation(entryAddress, nameGenerator == null ? "unknown" : nameGenerator.Invoke());
             _functionInformations.Add(entryAddress, res);
         }
@@ -120,7 +118,7 @@ public class FunctionHandler {
 
     public bool Ret(CallType returnCallType) {
         if (_debugMode) {
-            if (_callerStack.TryDequeue(out FunctionCall? currentFunctionCall) == false) {
+            if (_callerStack.TryPop(out FunctionCall? currentFunctionCall) == false) {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                     _logger.Warning("Returning but no call was done before!!");
                 }
@@ -133,10 +131,10 @@ public class FunctionHandler {
             }
 
             if (!returnAddressAlignedWithCallStack) {
-                _callerStack.Enqueue(currentFunctionCall);
+                // Put it back in the stack, we did a jump not a return
+                _callerStack.Push(currentFunctionCall);
             }
         }
-
         return true;
     }
 
@@ -233,7 +231,7 @@ public class FunctionHandler {
                     currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
                     callType.ToString(), expectedReturnAddress?.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
                     actualReturnAddress.ToString(), currentStackAddress.ToString(),
-                    additionalInformation.ToString());
+                    additionalInformation);
             }
             return false;
         }
