@@ -5,6 +5,6 @@ using Spice86.Emulator.VM;
 
 public class MemoryBasedDataStructureWithGsBaseAddress : MemoryBasedDataStructureWithSegmentRegisterBaseAddress {
 
-    public MemoryBasedDataStructureWithGsBaseAddress(Machine machine) : base(machine, SegmentRegisters.CsIndex) {
+    public MemoryBasedDataStructureWithGsBaseAddress(Machine machine) : base(machine, SegmentRegisters.GsIndex) {
     }
 }
