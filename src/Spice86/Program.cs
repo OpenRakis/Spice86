@@ -14,7 +14,7 @@ using System.Linq;
 /// <summary>
 /// Spice86 Entry Point
 /// </summary>
-internal class Program {
+public class Program {
     private const string LogFormat = "[{Timestamp:HH:mm:ss} {Level:u3} {Properties}] {Message:lj}{NewLine}{Exception}";
     private static readonly ILogger _logger = new LoggerConfiguration()
         .WriteTo.Console(outputTemplate: LogFormat)
