@@ -192,7 +192,7 @@ Sometimes it's useful to see what kind of images programs are generating in memo
 ```
 
 ## Detailed reverse engineering process
-Concrete example with Cryo Dune [here](https://github.com/kevinferrare/cryodunere).
+Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).
 
 First run your program and make sure everything works fine in Spice86. If you encounter issues it could be due to unimplemented hardware / DOS / BIOS features.
 
@@ -250,7 +250,7 @@ You can provide your own C# code to override the program original assembly code.
 ### Defining overrides
 Spice86 can take in input an instance of spice86.emulator.function.OverrideSupplier that builds a mapping between the memory address of functions and their C# overrides.
 
-For a complete example you can check the source code of [Cryo Dune RE](https://github.com/kevinferrare/cryodunere).
+For a complete example you can check the source code of [Cryogenic](https://github.com/OpenRakis/Cryogenic).
 
 Here is a simple example of how it would look like:
 ```csharp
@@ -287,7 +287,7 @@ public class MyOverrides : CSharpOverrideHelper {
     DefineFunction(segment, 0x0100, "addOneToAX", AddOneToAX_0x1ED_0x100_0x1FD0);
   }
 
-  public Func<Action> incDialogueCount47A8_0x1ED_0xA1E8_0xC0B8() {
+  public Action incDialogueCount47A8_0x1ED_0xA1E8_0xC0B8() {
     // Accessing the memory via accessors
     globalsOnDs.SetDialogueCount47A8(globalsOnDs.GetDialogueCount47A8() + 1);
     // Depends on the actual return instruction performed by the function, needed to be called from the emulated code as
@@ -295,7 +295,7 @@ public class MyOverrides : CSharpOverrideHelper {
     return NearRet();
   }
 
-  private Func<Action> AddOneToAX_0x1ED_0x100_0x1FD0() {
+  private Action AddOneToAX_0x1ED_0x100_0x1FD0() {
     // Assembly for this would be
     // INC AX
     // RETF
@@ -347,7 +347,7 @@ Generated stub look like this:
 ```csharp
 ...
 // defineFunction(0x2538, 0x151, "unknown", this::unknown_0x2538_0x151_0x254D1);
-public Func<Action> Unknown_0x2538_0x151_0x254D1() {
+public Action Unknown_0x2538_0x151_0x254D1() {
   return FarRet();
 }
         ...
