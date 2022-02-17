@@ -10,7 +10,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>Spice86</PackageId>
-    <Version>1.1.0</Version>  
+    <Version>1.2.0</Version>  
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
     <Description>Reverse engineer and rewrite real mode dos programs</Description>
