@@ -17,6 +17,7 @@ using Spice86.UI;
 using Spice86.Utils;
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -75,7 +76,7 @@ public class ProgramExecutor : IDisposable {
             using SHA256 mySHA256 = SHA256.Create();
             byte[] actualHash = mySHA256.ComputeHash(file);
 
-            if (expectedHash != actualHash) {
+            if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
                 string error = $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
                 throw new UnrecoverableException(error);
             }
