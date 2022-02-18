@@ -63,13 +63,13 @@ public class Machine {
     private VgaCard vgaCard;
     private VideoBiosInt10Handler videoBiosInt10Handler;
 
-    public Machine(IVideoKeyboardMouseIO? gui, CounterConfigurator counterConfigurator, bool failOnUnhandledPort, bool debugMode) {
+    public Machine(IVideoKeyboardMouseIO? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, bool failOnUnhandledPort, bool debugMode) {
         this.gui = gui;
         this.debugMode = debugMode;
 
         // A full 1MB of addressable memory :)
         memory = new Memory(0x100000);
-        cpu = new Cpu(this, debugMode);
+        cpu = new Cpu(this, jumpHandler, debugMode);
 
         // Breakpoints
         machineBreakpoints = new MachineBreakpoints(this);

@@ -367,3 +367,6 @@ MigrationBackup/
 
 #Rider
 .idea/
+
+#Intellij
+*.iml

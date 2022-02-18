@@ -11,16 +11,18 @@ using System.Linq.Expressions;
 
 public class GdbServer : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbServer>();
-    private string? defaultDumpDirectory;
+    private Configuration _configuration;
     private bool disposedValue;
     private Machine machine;
     private bool running = true;
     private volatile bool started;
 
-    public GdbServer(Machine machine, int port, string? defaultDumpDirectory) {
+    public GdbServer(Machine machine, Configuration configuration) {
         this.machine = machine;
-        this.defaultDumpDirectory = defaultDumpDirectory;
-        Start(port);
+        this._configuration = configuration;
+        if (configuration.GdbPort != null) {
+            Start(configuration.GdbPort.Value);
+        }
     }
 
     public void Dispose() {
@@ -39,7 +41,7 @@ public class GdbServer : IDisposable {
     }
 
     private void AcceptOneConnection(GdbIo gdbIo) {
-        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo, machine, defaultDumpDirectory);
+        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo, machine, _configuration);
         gdbCommandHandler.PauseEmulator();
         this.started = true;
         while (gdbCommandHandler.IsConnected() && gdbIo.IsClientConnected()) {

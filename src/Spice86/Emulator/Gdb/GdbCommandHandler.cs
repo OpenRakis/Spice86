@@ -18,13 +18,13 @@ public class GdbCommandHandler {
     private GdbIo gdbIo;
     private Machine machine;
 
-    public GdbCommandHandler(GdbIo gdbIo, Machine machine, string? defaultDumpDirectory) {
+    public GdbCommandHandler(GdbIo gdbIo, Machine machine, Configuration configuration) {
         this.gdbIo = gdbIo;
         this.machine = machine;
         this.gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine);
         this.gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine);
         this.gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine);
-        this.gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, gdbCommandBreakpointHandler.OnBreakPointReached, defaultDumpDirectory);
+        this.gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, gdbCommandBreakpointHandler.OnBreakPointReached, configuration.DefaultDumpDirectory, configuration.JumpFile);
     }
 
     public bool IsConnected() {

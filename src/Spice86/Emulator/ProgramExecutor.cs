@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Emulator;
 
+using Function.Dump;
+
 using Serilog;
 
 using Spice86.Emulator.CPU;
@@ -33,7 +35,7 @@ public class ProgramExecutor : IDisposable {
     private Machine _machine;
 
     public ProgramExecutor(IVideoKeyboardMouseIO? gui, Configuration? configuration) {
-        if(configuration == null) {
+        if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
         _machine = CreateMachine(gui, configuration);
@@ -64,7 +66,7 @@ public class ProgramExecutor : IDisposable {
     }
 
     private void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
-        if(expectedHash is null) {
+        if (expectedHash is null) {
             throw new ArgumentNullException(nameof(expectedHash));
         }
         if (expectedHash.Length == 0) {
@@ -105,7 +107,9 @@ public class ProgramExecutor : IDisposable {
         }
         CounterConfigurator counterConfigurator = new CounterConfigurator(configuration);
         bool debugMode = configuration.GdbPort != null;
-        _machine = new Machine(gui, counterConfigurator, configuration.FailOnUnhandledPort, debugMode);
+        JumpHandler jumpHandler = new JumpDumper().ReadFromFileOrCreate(configuration.JumpFile);
+        jumpHandler.DebugMode = debugMode;
+        _machine = new Machine(gui, counterConfigurator, jumpHandler, configuration.FailOnUnhandledPort, debugMode);
         InitializeCpu();
         InitializeDos(configuration);
         if (configuration.InstallInterruptVector) {
@@ -123,7 +127,7 @@ public class ProgramExecutor : IDisposable {
     private GdbServer? StartGdbServer(Configuration configuration) {
         int? gdbPort = configuration.GdbPort;
         if (gdbPort != null) {
-            var gdbServer = new GdbServer(_machine, gdbPort.Value, configuration.DefaultDumpDirectory);
+            var gdbServer = new GdbServer(_machine, configuration);
             return gdbServer;
         }
         return null;
@@ -135,7 +139,7 @@ public class ProgramExecutor : IDisposable {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Override supplied: {@OverideSupplier}", supplier);
             }
-            foreach(KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier.GenerateFunctionInformations(entryPointSegment, machine)) {
+            foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier.GenerateFunctionInformations(entryPointSegment, machine)) {
                 res.Add(element.Key, element.Value);
             }
         }
@@ -173,7 +177,7 @@ public class ProgramExecutor : IDisposable {
         if (string.IsNullOrWhiteSpace(cDrive)) {
             cDrive = parentFolder;
         }
-        if(string.IsNullOrWhiteSpace(cDrive)) {
+        if (string.IsNullOrWhiteSpace(cDrive)) {
             throw new ArgumentNullException(nameof(cDrive));
         }
         cDrive = ConvertUtils.toSlashFolderPath(cDrive);
@@ -185,7 +189,7 @@ public class ProgramExecutor : IDisposable {
     }
 
     private void InitializeFunctionHandlers(Configuration configuration) {
-        if(configuration.OverrideSupplier is null) {
+        if (configuration.OverrideSupplier is null) {
             return;
         }
         Cpu cpu = _machine.GetCpu();
@@ -197,7 +201,7 @@ public class ProgramExecutor : IDisposable {
 
     private void LoadFileToRun(Configuration configuration) {
         string? executableFileName = configuration.Exe;
-        if(executableFileName is null) {
+        if (executableFileName is null) {
             throw new ArgumentNullException(nameof(executableFileName));
         }
         ExecutableFileLoader loader = CreateExecutableFileLoader(executableFileName, configuration.ProgramEntryPointSegment);

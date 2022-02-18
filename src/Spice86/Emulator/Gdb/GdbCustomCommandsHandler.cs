@@ -26,15 +26,17 @@ using Spice86.UI.ViewModels;
 public class GdbCustomCommandsHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCustomCommandsHandler>();
     private string? _defaultDumpDirectory;
+    private string? _jumpFile;
     private GdbIo _gdbIo;
     private Machine _machine;
     private Action<BreakPoint> _onBreakpointReached;
 
-    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string? defaultDumpDirectory) {
+    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string? defaultDumpDirectory, string? jumpFile) {
         this._gdbIo = gdbIo;
         this._machine = machine;
         this._onBreakpointReached = onBreakpointReached;
         this._defaultDumpDirectory = defaultDumpDirectory;
+        this._jumpFile = jumpFile;
     }
 
     public virtual string HandleCustomCommands(string command) {
@@ -138,7 +140,7 @@ public class GdbCustomCommandsHandler {
     }
 
     private string DumpFunctionWithFormat(String[] args, string defaultSuffix, FunctionInformationToStringConverter converter) {
-        string fileName = GetFirstArgumentOrDefaultFile(args, defaultSuffix);
+        string fileName = GetFirstArgumentOrDefaultFileSuffix(args, defaultSuffix);
         return DoFileAction(fileName, (f) => {
             Cpu cpu = _machine.GetCpu();
             new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.GetStaticAddressesRecorder(), cpu.GetFunctionHandler(), cpu.GetFunctionHandlerInExternalInterrupt());
@@ -150,13 +152,14 @@ public class GdbCustomCommandsHandler {
     }
 
     private string DumpMemory(String[] args) {
-        string fileName = GetFirstArgumentOrDefaultFile(args, "MemoryDump.bin");
+        string fileName = GetFirstArgumentOrDefaultFileSuffix(args, "MemoryDump.bin");
         return DoFileAction(fileName, (f) => _machine.GetMemory().DumpToFile(f), "Error while dumping memory");
     }
+
     private string DumpJumps(string[] args) {
-        string fileName = GetFirstArgumentOrDefaultFile(args, "jumps.json");
+        string fileName = GetFirstArgumentOrDefaultFile(args, _jumpFile ?? generateDumpFileSuffix("jumps.json"));
         return DoFileAction(fileName, (f) => {
-            new JumpDumper(_machine.GetCpu().JumpHandler).Dump(fileName);
+            new JumpDumper().Dump(_machine.GetCpu().JumpHandler, fileName);
         }, "Error while dumping jumps");
     }
     private string ExecuteCustomCommand(params string[] args) {
@@ -211,12 +214,19 @@ public class GdbCustomCommandsHandler {
         return ParseResolution(resolutionString);
     }
 
-    private string GetFirstArgumentOrDefaultFile(String[] args, string defaultSuffix) {
+    private string GetFirstArgumentOrDefaultFileSuffix(String[] args, string defaultSuffix) {
+        return GetFirstArgumentOrDefaultFile(args, generateDumpFileSuffix(defaultSuffix));
+    }
+
+    private string GetFirstArgumentOrDefaultFile(String[] args, string defaultFile) {
         if (args.Length >= 2) {
             return args[1];
         }
+        return defaultFile;
+    }
 
-        return $"{_defaultDumpDirectory}/spice86dump{defaultSuffix}";
+    private string generateDumpFileSuffix(String suffix) {
+        return $"{_defaultDumpDirectory}/spice86dump{suffix}";
     }
 
     private string GetValidRetValues() {

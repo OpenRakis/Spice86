@@ -40,11 +40,12 @@ public class Spice86 extends GhidraScript {
   private JumpsAndCalls jumpsAndCalls;
 
   public void run() throws Exception {
+    String baseFolder = "E:/Development/Spice86C/src/Spice86/bin/Release/net6.0//";//C:/tmp/dune/
     jumpsAndCalls =
-        readJumpMapFromFile("C:\\tmp\\dune\\c\\Spice86\\src\\Spice86\\bin\\Debug\\net6.0\\spice86dumpjumps.json");
-    try (Log log = new Log(this, "C:/tmp/dune/ghidrascriptout.txt", false)) {
+        readJumpMapFromFile(baseFolder + "spice86dumpjumps.json");
+    try (Log log = new Log(this, baseFolder + "ghidrascriptout.txt", false)) {
       this.log = log;
-      printWriterCode = new PrintWriter(new FileWriter("C:/tmp/dune/ghidrascriptoutcode.cs"));
+      printWriterCode = new PrintWriter(new FileWriter(baseFolder + "ghidrascriptoutcode.cs"));
       program = getCurrentProgram();
       listing = program.getListing();
       //Address entry = toAddr(0x1ED0);
