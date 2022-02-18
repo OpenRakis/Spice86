@@ -16,6 +16,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+
 using Spice86.UI.ViewModels;
 
 /// <summary>
@@ -117,6 +118,8 @@ public class GdbCustomCommandsHandler {
     private string DumpAll() {
         string[] args = Array.Empty<string>();
         DumpMemory(args);
+        DumpGhidraSymbols(args);
+        DumpJumps(args);
         DumpFunctionsCsv(args);
         DumpFunctions(args);
         DumpCSharpStubs(args);
@@ -129,6 +132,9 @@ public class GdbCustomCommandsHandler {
 
     private string DumpFunctionsCsv(String[] args) {
         return DumpFunctionWithFormat(args, "Functions.csv", new CsvFunctionInformationToStringConverter());
+    }
+    private string DumpGhidraSymbols(String[] args) {
+        return DumpFunctionWithFormat(args, "GhidraSymbols.txt", new GhidraSymbolsToStringConverter());
     }
 
     private string DumpFunctionWithFormat(String[] args, string defaultSuffix, FunctionInformationToStringConverter converter) {
@@ -147,7 +153,12 @@ public class GdbCustomCommandsHandler {
         string fileName = GetFirstArgumentOrDefaultFile(args, "MemoryDump.bin");
         return DoFileAction(fileName, (f) => _machine.GetMemory().DumpToFile(f), "Error while dumping memory");
     }
-
+    private string DumpJumps(string[] args) {
+        string fileName = GetFirstArgumentOrDefaultFile(args, "jumps.json");
+        return DoFileAction(fileName, (f) => {
+            new JumpDumper(_machine.GetCpu().JumpHandler).Dump(fileName);
+        }, "Error while dumping jumps");
+    }
     private string ExecuteCustomCommand(params string[] args) {
         string originalCommand = args[0];
         string command = originalCommand.ToLowerInvariant();
@@ -158,9 +169,11 @@ public class GdbCustomCommandsHandler {
             "callstack" => CallStack(),
             "peekret" => PeekRet(args),
             "dumpmemory" => DumpMemory(args),
+            "dumpghidrasymbols" => DumpGhidraSymbols(args),
             "dumpfunctionscsv" => DumpFunctionsCsv(args),
             "dumpfunctions" => DumpFunctions(args),
             "dumpcsharpstubs" => DumpCSharpStubs(args),
+            "dumpjumps" => DumpJumps(args),
             "dumpall" => DumpAll(),
             "breakcycles" => BreakCycles(args),
             "vbuffer" => Vbuffer(args),
@@ -214,8 +227,10 @@ public class GdbCustomCommandsHandler {
         return _gdbIo.GenerateMessageToDisplayResponse($@"{additionnalMessage}
             Supported custom commands:
              -help: display this
-             - dumpall: dumps everything possible in the default directory which is { _defaultDumpDirectory }
+             - dumpall: dumps everything possible in the default directory which is {_defaultDumpDirectory}
              - dumpMemory < file path to dump >: dump the memory as a binary file
+             - dumpGhidraSymbols < file path to dump >: dump the functions in a format that can be imported directly into ghidra with ImportSymbolsScript.py script
+             - dumpJumps < file path to dump >: dump the calls, jumps and returns destinations per instruction. To import in the spice86 code generator.
              - dumpFunctionsCsv < file path to dump >: dump information about the function calls executed in csv format
              - dumpFunctions < file path to dump >: dump information about the function calls executed with details in human readable format
              - dumpCSharpStubs < file path to dump >: dump C# stubs for functions and globals to be used as override
@@ -251,7 +266,7 @@ public class GdbCustomCommandsHandler {
         }
 
         try {
-            return new [] { int.Parse(split[0]), int.Parse(split[1]) };
+            return new[] { int.Parse(split[0]), int.Parse(split[1]) };
         } catch (FormatException nfe) {
             throw new ArgumentException($"Could not parse numbers in resolution {resolution}", nfe);
         }
