@@ -21,20 +21,22 @@ public class DosInt21Handler : InterruptHandler {
     private readonly Encoding CP850_CHARSET;
 
     private DosMemoryManager _dosMemoryManager;
-    private bool ctrlCFlag = false;
+    private bool _ctrlCFlag = false;
 
     // dosbox
-    private byte defaultDrive = 2;
+    private byte _defaultDrive = 2;
 
-    private StringBuilder displayOutputBuilder = new StringBuilder();
-    private DosFileManager dosFileManager;
+    private StringBuilder _displayOutputBuilder = new StringBuilder();
+    private DosFileManager _dosFileManager;
+
+    public DosFileManager DosFileManager => _dosFileManager;
 
     public DosInt21Handler(Machine machine) : base(machine) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var westernIbmPcCodePage = Encoding.GetEncoding("ibm850");
         CP850_CHARSET = westernIbmPcCodePage;
         _dosMemoryManager = new DosMemoryManager(machine.GetMemory());
-        dosFileManager = new DosFileManager(_memory);
+        _dosFileManager = new DosFileManager(_memory);
         FillDispatchTable();
     }
 
@@ -65,7 +67,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET CURRENT DIRECTORY: {@NewDirectory}", newDirectory);
         }
-        DosFileOperationResult dosFileOperationResult = dosFileManager.SetCurrentDir(newDirectory);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.SetCurrentDir(newDirectory);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -80,7 +82,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("CLOSE FILE handle {@FileHandle}", ConvertUtils.ToHex(fileHandle));
         }
-        DosFileOperationResult dosFileOperationResult = dosFileManager.CloseFile(fileHandle);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.CloseFile(fileHandle);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -90,7 +92,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("CREATE FILE USING HANDLE: {@FileName} with attribute {@FileAttribute}", fileName, fileAttribute);
         }
-        DosFileOperationResult dosFileOperationResult = dosFileManager.CreateFileUsingHandle(fileName, fileAttribute);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateFileUsingHandle(fileName, fileAttribute);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -152,11 +154,11 @@ public class DosInt21Handler : InterruptHandler {
         }
         if (characterByte == '\r') {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("PRINT CHR LINE BREAK: {@DisplayOutputBuilder}", displayOutputBuilder);
+                _logger.Information("PRINT CHR LINE BREAK: {@DisplayOutputBuilder}", _displayOutputBuilder);
             }
-            displayOutputBuilder = new StringBuilder();
+            _displayOutputBuilder = new StringBuilder();
         } else if (characterByte != '\n') {
-            displayOutputBuilder.Append(character);
+            _displayOutputBuilder.Append(character);
         }
     }
 
@@ -165,7 +167,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("DUPLICATE FILE HANDLE. {@FileHandle}", fileHandle);
         }
-        DosFileOperationResult dosFileOperationResult = dosFileManager.DuplicateFileHandle(fileHandle);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.DuplicateFileHandle(fileHandle);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -176,7 +178,7 @@ public class DosInt21Handler : InterruptHandler {
             _logger.Information("FIND FIRST MATCHING FILE {@Attributes}, {@FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
         }
         DosFileOperationResult dosFileOperationResult =
-            dosFileManager.FindFirstMatchingFile(fileSpec);
+            _dosFileManager.FindFirstMatchingFile(fileSpec);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -187,7 +189,7 @@ public class DosInt21Handler : InterruptHandler {
             _logger.Information("FIND NEXT MATCHING FILE {@Attributes}, {@FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
         }
         DosFileOperationResult dosFileOperationResult =
-            dosFileManager.FindNextMatchingFile();
+            _dosFileManager.FindNextMatchingFile();
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -209,7 +211,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET CURRENT DEFAULT DRIVE");
         }
-        _state.SetAL(defaultDrive);
+        _state.SetAL(_defaultDrive);
     }
 
     public void GetDate() {
@@ -224,8 +226,8 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void GetDiskTransferAddress() {
-        _state.SetES(dosFileManager.GetDiskTransferAreaAddressSegment());
-        _state.SetBX(dosFileManager.GetDiskTransferAreaAddressOffset());
+        _state.SetES(_dosFileManager.GetDiskTransferAreaAddressSegment());
+        _state.SetBX(_dosFileManager.GetDiskTransferAreaAddressOffset());
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET DTA (DISK TRANSFER ADDRESS) DS:DX {@DsDx}",
                 ConvertUtils.ToSegmentedAddressRepresentation(_state.GetES(), _state.GetBX()));
@@ -292,10 +294,10 @@ public class DosInt21Handler : InterruptHandler {
         byte op = _state.GetAL();
         if (op == 0) {
             // GET
-            _state.SetDL(ctrlCFlag ? (byte)1 : (byte)0);
+            _state.SetDL(_ctrlCFlag ? (byte)1 : (byte)0);
         } else if (op == 1 || op == 2) {
             // SET
-            ctrlCFlag = _state.GetDL() == 1;
+            _ctrlCFlag = _state.GetDL() == 1;
         } else {
             throw new UnhandledOperationException(_machine, "Ctrl-C get/set operation unhandled: " + op);
         }
@@ -338,7 +340,7 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         DosFileOperationResult dosFileOperationResult =
-            dosFileManager.MoveFilePointerUsingHandle(originOfMove, fileHandle, offset);
+            _dosFileManager.MoveFilePointerUsingHandle(originOfMove, fileHandle, offset);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -350,7 +352,7 @@ public class DosInt21Handler : InterruptHandler {
             _logger.Information("OPEN FILE {@FileName} with mode {@AccessMod} (rwAccessMode:{@RwAccessMode})", fileName, ConvertUtils.ToHex8(accessMode),
                 ConvertUtils.ToHex8(rwAccessMode));
         }
-        DosFileOperationResult dosFileOperationResult = dosFileManager.OpenFile(fileName, rwAccessMode);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.OpenFile(fileName, rwAccessMode);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -377,7 +379,7 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(_state.GetDS(), _state.GetDX()));
         }
         uint targetMemory = MemoryUtils.ToPhysicalAddress(_state.GetDS(), _state.GetDX());
-        DosFileOperationResult dosFileOperationResult = dosFileManager.ReadFile(fileHandle, readLength, targetMemory);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFile(fileHandle, readLength, targetMemory);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -387,9 +389,9 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void SelectDefaultDrive() {
-        defaultDrive = _state.GetDL();
+        _defaultDrive = _state.GetDL();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SELECT DEFAULT DRIVE {@DefaultDrive}", defaultDrive);
+            _logger.Information("SELECT DEFAULT DRIVE {@DefaultDrive}", _defaultDrive);
         }
         // Number of valid drive letters
         _state.SetAL(26);
@@ -402,7 +404,7 @@ public class DosInt21Handler : InterruptHandler {
             _logger.Information("SET DTA (DISK TRANSFER ADDRESS) DS:DX {@DsDxSegmentOffset}",
                 ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
         }
-        dosFileManager.SetDiskTransferAreaAddress(segment, offset);
+        _dosFileManager.SetDiskTransferAreaAddress(segment, offset);
     }
 
     public void SetInterruptVector() {
@@ -430,12 +432,12 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToHex(writeLength), ConvertUtils.ToSegmentedAddressRepresentation(_state.GetDS(), _state.GetDX()));
         }
         DosFileOperationResult dosFileOperationResult =
-            dosFileManager.WriteFileUsingHandle(fileHandle, writeLength, bufferAddress);
+            _dosFileManager.WriteFileUsingHandle(fileHandle, writeLength, bufferAddress);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
     internal DosFileManager GetDosFileManager() {
-        return this.dosFileManager;
+        return this._dosFileManager;
     }
 
     internal DosMemoryManager GetDosMemoryManager() {
@@ -507,7 +509,7 @@ public class DosInt21Handler : InterruptHandler {
     private void GetSetFileAttribute(bool calledFromVm) {
         byte op = _state.GetAL();
         string dosFileName = GetStringAtDsDx();
-        string? fileName = dosFileManager.ToHostCaseSensitiveFileName(dosFileName, false);
+        string? fileName = _dosFileManager.ToHostCaseSensitiveFileName(dosFileName, false);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);
