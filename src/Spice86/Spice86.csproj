@@ -5,16 +5,16 @@
 	<TargetFramework>net6.0</TargetFramework>
 	<Nullable>enable</Nullable>
 	<WarningsAsErrors>nullable</WarningsAsErrors>
-    <EnablePackageValidation>true</EnablePackageValidation>
+	<EnablePackageValidation>true</EnablePackageValidation>
 	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageId>Spice86</PackageId>
-    <Version>1.4.0</Version>  
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
-    <Description>Reverse engineer and rewrite real mode dos programs</Description>
-    <PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
+	<PackageId>Spice86</PackageId>
+	<Version>1.5.0</Version>  
+	<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+	<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
+	<Description>Reverse engineer and rewrite real mode dos programs</Description>
+	<PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
   </PropertyGroup>
   <ItemGroup>
 	<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
@@ -40,6 +40,6 @@
 	<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.12" />
   </ItemGroup>
   <ItemGroup>
-    <AvaloniaResource Include="Ui\Views\Spice86.ico" />
+	<AvaloniaResource Include="Ui\Views\Spice86.ico" />
   </ItemGroup>
 </Project>

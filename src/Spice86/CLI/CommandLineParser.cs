@@ -27,7 +27,7 @@ public class CommandLineParser {
             Configuration? parsedConfig = result.MapResult((initialConfig) => {
                 initialConfig.Exe = ParseExePath(initialConfig.Exe);
                 initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
-                initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClass);
+                initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
                 return initialConfig;
             }, (error) => {
                 return null!;
@@ -45,7 +45,8 @@ public class CommandLineParser {
         return unixPathValue;
     }
 
-    private static IOverrideSupplier? ParseFunctionInformationSupplierClassName(string? supplierClassName) {
+    private static IOverrideSupplier? ParseFunctionInformationSupplierClassName(Configuration configuration) {
+        string? supplierClassName = configuration.OverrideSupplierClassName;
         if (supplierClassName == null) {
             return null;
         }

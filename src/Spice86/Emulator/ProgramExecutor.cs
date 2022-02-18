@@ -75,7 +75,7 @@ public class ProgramExecutor : IDisposable {
             using SHA256 mySHA256 = SHA256.Create();
             byte[] actualHash = mySHA256.ComputeHash(file);
 
-            if (!Array.Equals(expectedHash, actualHash)) {
+            if (expectedHash != actualHash) {
                 string error = $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
                 throw new UnrecoverableException(error);
             }

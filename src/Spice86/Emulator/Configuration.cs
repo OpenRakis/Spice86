@@ -36,11 +36,11 @@ public class Configuration {
 
     public bool InstallInterruptVector { get; set; } = true;
 
-    [Option('o', nameof(OverrideSupplierClass), Default = null, Required = false, HelpText = "Name of a class in the current folder that will generate the initial function informations. See documentation for more information.")]
-    public string? OverrideSupplierClass { get; set; }
+    [Option('o', nameof(OverrideSupplierClassName), Default = null, Required = false, HelpText = "Name of a class in the current folder that will generate the initial function informations. See documentation for more information.")]
+    public string? OverrideSupplierClassName { get; set; }
 
     /// <summary>
-    /// Instantiated <see cref="OverrideSupplierClass"/>. Created by <see cref="CLI.CommandLineParser"/>
+    /// Instantiated <see cref="OverrideSupplierClassName"/>. Created by <see cref="CLI.CommandLineParser"/>
     /// </summary>
     public IOverrideSupplier? OverrideSupplier { get; set; }
 

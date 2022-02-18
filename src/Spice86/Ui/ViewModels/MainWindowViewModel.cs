@@ -27,7 +27,7 @@ using System.Threading;
 /// </summary>
 public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<MainWindowViewModel>();
-    private readonly Configuration? _configuration;
+    private Configuration? _configuration;
     private bool _disposedValue;
     private Thread? _emulatorThread;
     private int _height = 1;
@@ -48,9 +48,12 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         if (Design.IsDesignMode) {
             return;
         }
-        Configuration? configuration = GenerateConfiguration();
+    }
+
+    public void SetConfiguration(string[] args) {
+        Configuration? configuration = GenerateConfiguration(args);
         _configuration = configuration;
-        if (configuration == null) {
+        if (configuration is null) {
             Exit();
         }
         MainTitle = $"{nameof(Spice86)} {configuration?.Exe}";
@@ -222,8 +225,8 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         }
     }
 
-    private Configuration? GenerateConfiguration() {
-        return new CommandLineParser().ParseCommandLine(Environment.GetCommandLineArgs());
+    private Configuration? GenerateConfiguration(string[] args) {
+        return new CommandLineParser().ParseCommandLine(args);
     }
 
     private void RunOnKeyEvent(Action? runnable) {

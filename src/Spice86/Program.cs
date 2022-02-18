@@ -6,6 +6,7 @@ using Avalonia.ReactiveUI;
 using Serilog;
 using Serilog.Events;
 
+using Spice86.Emulator;
 using Spice86.UI;
 
 using System;
@@ -44,15 +45,13 @@ public class Program {
     /// Alternate Entry Point
     /// </summary>
     [STAThread]
-    public static void RunWithOverrides<T>(string[] args, T overrides, string expectedChecksum = "") where T : class, new() {
+    public static void RunWithOverrides<T>(string[] args, string expectedChecksum) where T : class, new() {
         var argsList = args.ToList();
 
         // Inject override
-        argsList.Add($"--overrideSupplierClassName={overrides.GetType().FullName}");
-        if(string.IsNullOrWhiteSpace(expectedChecksum) == false) {
-            argsList.Add($"--expectedChecksum={expectedChecksum}");
-        }
-        Program.Main(args.ToArray());
+        argsList.Add($"--{nameof(Configuration.OverrideSupplierClassName)}={typeof(T).AssemblyQualifiedName}");
+        argsList.Add($"--{nameof(Configuration.ExpectedChecksum)}={expectedChecksum}");
+        Program.Main(argsList.ToArray());
     }
 
     // Initialization code. Don't use any Avalonia, third-party APIs or any
@@ -60,7 +59,7 @@ public class Program {
     // yet and stuff might break.
     [STAThread]
     public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+        .StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
