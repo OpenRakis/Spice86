@@ -14,7 +14,7 @@ using System.Text;
 
 public class FunctionHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<FunctionHandler>();
-
+    
     private readonly Stack<FunctionCall> _callerStack = new();
 
     private readonly bool _debugMode;
