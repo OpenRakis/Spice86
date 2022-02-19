@@ -11,6 +11,8 @@ import ghidra.program.model.listing.Instruction;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.MemoryAccessException;
+import ghidra.program.model.symbol.Symbol;
+import ghidra.program.model.symbol.SymbolType;
 
 import java.io.Closeable;
 import java.io.FileReader;
@@ -29,10 +31,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-// https://class.malware.re/2021/03/21/ghidra-scripting-feature-extraction.html
-// quand il y a un jump remplacer en call c# si le target est une fonction? mais il va quand meme dumper les autres instructions.
-// pour les goto generer des labels en faisant une 1ere passe sur tous les jumps?
-public class Spice86 extends GhidraScript {
+//Generates CSharp code to run on with the Spice86 emulator as a backend (https://github.com/OpenRakis/Spice86/)
+//@author Kevin Ferrare kevinferrare@gmail.com
+//@category Assembly
+//@keybinding
+//@menupath
+//@toolbar
+public class Spice86CodeGenerator extends GhidraScript {
+  // https://class.malware.re/2021/03/21/ghidra-scripting-feature-extraction.html
   private Log log;
   private PrintWriter printWriterCode;
   private Program program;
@@ -40,11 +46,12 @@ public class Spice86 extends GhidraScript {
   private JumpsAndCalls jumpsAndCalls;
 
   public void run() throws Exception {
+    String baseFolder = "E:/Development/Spice86C/src/Spice86/bin/Release/net6.0//";//C:/tmp/dune/
     jumpsAndCalls =
-        readJumpMapFromFile("C:\\tmp\\dune\\c\\Spice86\\src\\Spice86\\bin\\Debug\\net6.0\\spice86dumpjumps.json");
-    try (Log log = new Log(this, "C:/tmp/dune/ghidrascriptout.txt", false)) {
+        readJumpMapFromFile(baseFolder + "spice86dumpjumps.json");
+    try (Log log = new Log(this, baseFolder + "ghidrascriptout.txt", false)) {
       this.log = log;
-      printWriterCode = new PrintWriter(new FileWriter("C:/tmp/dune/ghidrascriptoutcode.cs"));
+      printWriterCode = new PrintWriter(new FileWriter(baseFolder + "ghidrascriptoutcode.cs"));
       program = getCurrentProgram();
       listing = program.getListing();
       //Address entry = toAddr(0x1ED0);
@@ -105,9 +112,11 @@ class FunctionGenerator {
     this.jumpsAndCalls = jumpsAndCalls;
   }
 
-  public String outputCSharp(Function function) {
+  public String outputCSharp(Function function) throws Exception {
     StringBuilder res = new StringBuilder();
-    res.append("public Action " + function.getName() + "() {\n");
+    String name = function.getName();
+    Integer cs = extractCS(name);
+    res.append("public Action " + name + "() {\n");
     List<Instruction> instructionsBeforeEntry = new ArrayList<>();
     List<Instruction> instructionsAfterEntry = new ArrayList<>();
     boolean success = dispatchInstructions(function, instructionsBeforeEntry, instructionsAfterEntry);
@@ -116,22 +125,22 @@ class FunctionGenerator {
     }
     if (!instructionsBeforeEntry.isEmpty()) {
       res.append("  if(false) {\n");
-      writeInstructions(res, instructionsBeforeEntry, 4, false);
+      writeInstructions(res, instructionsBeforeEntry, 4, cs, false);
       res.append("  }\n");
     }
-    writeInstructions(res, instructionsAfterEntry, 2, true);
+    writeInstructions(res, instructionsAfterEntry, 2, cs, true);
     res.append("}\n");
     return res.toString();
   }
 
-  private void writeInstructions(StringBuilder stringBuilder, List<Instruction> instructions, int indent,
-      boolean returnExpected) {
+  private void writeInstructions(StringBuilder stringBuilder, List<Instruction> instructions, int indent, Integer cs,
+      boolean returnExpected) throws Exception {
     Iterator<Instruction> instructionIterator = instructions.iterator();
     while (instructionIterator.hasNext()) {
       Instruction instruction = instructionIterator.next();
       boolean isLast = !instructionIterator.hasNext();
       InstructionGenerator instructionGenerator =
-          new InstructionGenerator(log, ghidraScript, jumpsAndCalls, instruction, isLast);
+          new InstructionGenerator(log, ghidraScript, jumpsAndCalls, instruction, cs, isLast);
       stringBuilder.append(instructionGenerator.convertInstructionToSpice86(indent));
       if (isLast && returnExpected && !instructionGenerator.isFunctionReturn()) {
         // Last instruction should have been a return but it is not. It means the ASM code will continue to the next function. Generate a function call if possible.
@@ -148,7 +157,7 @@ class FunctionGenerator {
     }
     Address address = next.getAddress();
     return "// Function call generated as ASM continues to next function without return\n"
-        + jumpCallTranslator.functionToString(ghidraScript.getFunctionAt(address), address.toString());
+        + jumpCallTranslator.functionToString(ghidraScript.getFunctionAt(address), address.toString(), true);
   }
 
   /**
@@ -198,54 +207,77 @@ class FunctionGenerator {
       instructionsAfterEntry.add(instruction);
     }
   }
+
+  private Integer extractCS(String functionName) {
+    if (functionName.startsWith("FUN")) {
+      return null;
+    }
+    //unknown_01ED_D72B_0F5FB => CS is 01ED
+    String[] split = functionName.split("_");
+    if (split.length < 4) {
+      return null;
+    }
+    String csString = split[split.length - 3];
+    try {
+      return Utils.parseHex(csString);
+    } catch (NumberFormatException nfe) {
+      log.log("Could not parse " + csString + " to hex");
+      return null;
+    }
+  }
 }
 
 class ParameterTranslator {
   private Log log;
   private RegisterHandler registerHandler;
+  private Set<String> missingRegisters;
 
-  public ParameterTranslator(Log log) {
+  public ParameterTranslator(Log log, RegisterHandler registerHandler) {
     this.log = log;
-    this.registerHandler = new RegisterHandler(log);
+    this.registerHandler = registerHandler;
   }
 
-  public String toSpice86Value(String param, Set<String> missingRegisters, Integer bits, int offset) {
-    if (param.startsWith("0x")) {
+  public void setMissingRegisters(Set<String> missingRegisters) {
+    this.missingRegisters = missingRegisters;
+  }
+
+  public String toSpice86Value(String param, Integer bits, int offset) {
+    if (Utils.isNumber(param)) {
       // immediate value
-      return litteralToUpperHex(param);
+      return Utils.litteralToUpperHex(param);
     }
     if (param.length() == 2) {
       // register
-      return "state." + param;
+      return registerHandler.substituteRegister(param);
     }
     if (param.startsWith("byte ptr ")) {
-      return toSpice86Pointer(param.replaceAll("byte ptr ", ""), missingRegisters, 8, offset);
+      return toSpice86Pointer(param.replaceAll("byte ptr ", ""), 8, offset);
     }
     if (param.startsWith("word ptr ")) {
-      return toSpice86Pointer(param.replaceAll("word ptr ", ""), missingRegisters, 16, offset);
+      return toSpice86Pointer(param.replaceAll("word ptr ", ""), 16, offset);
     }
     if (bits != null) {
-      return toSpice86Pointer(param, missingRegisters, bits, offset);
+      return toSpice86Pointer(param, bits, offset);
     }
     log.log("Warning: Could not translate value " + param);
     return null;
   }
 
-  public String toSpice86Value(String param, Set<String> missingRegisters, Integer bits) {
-    return toSpice86Value(param, missingRegisters, bits, 0);
+  public String toSpice86Value(String param, Integer bits) {
+    return toSpice86Value(param, bits, 0);
   }
 
-  public String toSpice86Pointer(String param, Set<String> missingRegisters, int bits, int offset) {
+  public String toSpice86Pointer(String param, int bits, int offset) {
     String[] split = param.split(":");
     if (split.length == 2) {
       return toSpice86Pointer(split[0], split[1], bits, offset);
     } else {
-      String segmentRegister = getSegmentRegister(param, missingRegisters);
+      String segmentRegister = getSegmentRegister(param);
       return toSpice86Pointer(segmentRegister, param, bits, offset);
     }
   }
 
-  public String getSegmentRegister(String expression, Set<String> missingRegisters) {
+  public String getSegmentRegister(String expression) {
     String[] split = expression.split(":");
     if (split.length == 2) {
       return split[0];
@@ -262,12 +294,23 @@ class ParameterTranslator {
     return toSpice86Pointer(memoryAddressExpression, bits);
   }
 
+  public String toCsIpPointerValueInMemory(String expression) {
+    String ip = toSpice86Value(expression, 16, 0);
+    String cs = toSpice86Value(expression, 16, 2);
+    return cs + " * 0x10 + " + ip;
+  }
+
+  public String toIpPointerValueInMemory(String expression) {
+    String ip = toSpice86Value(expression, 16, 0);
+    return registerHandler.substituteRegister("CS") + " * 0x10 + " + ip;
+  }
+
   public String toSpice86MemoryAddressExpression(String segmentRegister, String offsetString, int offset) {
     String offsetExpression = pointerExpressionToOffset(offsetString);
     if (offset != 0) {
       offsetExpression += " + " + offset;
     }
-    return "state." + segmentRegister + " * 0x10 + " + offsetExpression;
+    return registerHandler.substituteRegister(segmentRegister) + " * 0x10 + " + offsetExpression;
   }
 
   public String toSpice86Pointer(String memoryAddressExpression, int bits) {
@@ -275,12 +318,8 @@ class ParameterTranslator {
   }
 
   private String pointerExpressionToOffset(String pointerString) {
-    String res = litteralToUpperHex(pointerString.replaceAll("\\[", "").replaceAll("\\]", ""));
+    String res = Utils.litteralToUpperHex(pointerString.replaceAll("\\[", "").replaceAll("\\]", ""));
     return registerHandler.substituteRegistersWithSpice86Expression(res);
-  }
-
-  private String litteralToUpperHex(String litteralString) {
-    return litteralString.toUpperCase().replaceAll("X", "x");
   }
 }
 
@@ -301,15 +340,27 @@ class RegisterHandler {
   }
 
   private Log log;
+  private Integer cs;
 
-  public RegisterHandler(Log log) {
+  public RegisterHandler(Log log, Integer cs) {
     this.log = log;
+    this.cs = cs;
+  }
+
+  public String substituteRegister(String registerName) {
+    if ("CS".equals(registerName)) {
+      if (cs != null) {
+        return "/* CS */" + Utils.toHexWith0X(cs);
+      }
+      return "/* WARNING, CS value could not be evaluated, CS will not have a correct value */ state.CS";
+    }
+    return "state." + registerName;
   }
 
   public String substituteRegistersWithSpice86Expression(String input) {
     String res = input;
     for (String registerName : ALL_REGISTER_NAMES) {
-      res = res.replaceAll(registerName, "state." + registerName);
+      res = res.replaceAll(registerName, substituteRegister(registerName));
     }
     return res.replaceAll(" \\+ 0x0", "");
   }
@@ -339,29 +390,29 @@ class RegisterHandler {
     return res;
   }
 
-  public Set<String> computeMissingSegmentRegisters(String[] params, Object[] inputObjects) {
+  public Set<String> computeMissingRegisters(String mnemonic, String[] params, Object[] inputObjects) {
     Set<String> registersInRepresentation = computeSegmentRegistersInInstructionRepresentation(params);
     Set<String> registersInInstruction = computeSegmentRegistersInInstruction(inputObjects);
     Set<String> res = new HashSet<>(registersInInstruction);
     res.removeAll(registersInRepresentation);
+    boolean usesCs =
+        "CALL".equals(mnemonic) || "CALLF".equals(mnemonic) || "RET".equals(mnemonic) || "RETF".equals(mnemonic);
+    if (usesCs) {
+      // Implicitely touched, but we don't care for address calculation
+      res.remove("CS");
+    }
+    if (usesCs || "PUSH".equals(mnemonic) || "POP".equals(mnemonic) || "PUSHA".equals(mnemonic) || "POPA".equals(
+        mnemonic)) {
+      // Implicitely touched, but we don't care for address calculation
+      res.remove("SS");
+      res.remove("SP");
+    }
     if (res.size() > 1) {
       log.log("Warning, found more than one missing segment register in instruction. Segment registers in instruction: "
           + registersInRepresentation + " Segment registers according to ghidra: " + registersInInstruction + " delta:"
           + res);
     }
     return res;
-  }
-
-  public Set<String> computeMissingRegisters(String mnemonic, String[] params, Object[] inputObjects) {
-    Set<String> missingRegisters;
-    if ("CALL".equals(mnemonic) || "CALLF".equals(mnemonic) || "RET".equals(mnemonic) || "RETF".equals(mnemonic)
-        || "PUSH".equals(mnemonic) || "POP".equals(mnemonic) || "PUSHA".equals(mnemonic) || "POPA".equals(mnemonic)) {
-      // Do not compute it for instructions with implicit register access that are fixed and known not to pollute the logs
-      missingRegisters = new HashSet<>();
-    } else {
-      missingRegisters = computeMissingSegmentRegisters(params, inputObjects);
-    }
-    return missingRegisters;
   }
 }
 
@@ -439,10 +490,11 @@ class InstructionGenerator {
   private RegisterHandler registerHandler;
   private InstructionAnalyzer instructionAnalyzer;
   private JumpCallTranslator jumpCallTranslator;
+  private Integer cs;
   private Instruction instruction;
   private long instructionAddress;
   private boolean isFunctionReturn;
-  private boolean showInstructionComment = false;
+  private boolean showInstructionComment = true;
 
   public JumpCallTranslator getJumpCallTranslator() {
     return jumpCallTranslator;
@@ -453,19 +505,20 @@ class InstructionGenerator {
   }
 
   public InstructionGenerator(Log log, GhidraScript ghidraScript, JumpsAndCalls jumpsAndCalls, Instruction instruction,
-      boolean isLast) {
+      Integer cs, boolean isLast) {
     this.log = log;
     this.ghidraScript = ghidraScript;
-    this.parameterTranslator = new ParameterTranslator(log);
-    this.registerHandler = new RegisterHandler(log);
+    this.registerHandler = new RegisterHandler(log, cs);
+    this.parameterTranslator = new ParameterTranslator(log, registerHandler);
     this.instructionAnalyzer = new InstructionAnalyzer(log);
+    this.cs = cs;
     this.instruction = instruction;
     this.instructionAddress = instruction.getAddress().getUnsignedOffset();
     this.jumpCallTranslator =
-        new JumpCallTranslator(ghidraScript, jumpsAndCalls, instructionAddress, isLast);
+        new JumpCallTranslator(log, ghidraScript, jumpsAndCalls, parameterTranslator, instruction.getAddress(), isLast);
   }
 
-  public String convertInstructionToSpice86(int indent) {
+  public String convertInstructionToSpice86(int indent) throws Exception {
     log.log("Processing instruction " + instruction + " at address " + instruction.getAddress());
     String mnemonicWithPrefix = instruction.getMnemonicString();
     String[] mnemonicSplit = mnemonicWithPrefix.split("\\.");
@@ -478,20 +531,21 @@ class InstructionGenerator {
     String[] params = representation.replaceAll(mnemonicWithPrefix, "").trim().split(",");
     Object[] inputObjects = instruction.getInputObjects();
     Set<String> missingRegisters = registerHandler.computeMissingRegisters(mnemonic, params, inputObjects);
+    parameterTranslator.setMissingRegisters(missingRegisters);
     Integer bits = instructionAnalyzer.guessBitLength(instruction);
     String label = jumpCallTranslator.getLabel();
-    String instructionString = convertInstructionWithPrefix(mnemonic, prefix, params, missingRegisters, bits);
+    String instructionString = convertInstructionWithPrefix(mnemonic, prefix, params, bits);
     isFunctionReturn = instructionString.contains("return ");
     return Utils.indent(label + instructionString, indent) + "\n";
   }
 
-  private String convertInstructionWithPrefix(String mnemonic, String prefix, String[] params,
-      Set<String> missingRegisters, Integer bits) {
+  private String convertInstructionWithPrefix(String mnemonic, String prefix, String[] params, Integer bits)
+      throws Exception {
     if (prefix.isEmpty()) {
-      return convertInstructionWithoutPrefix(mnemonic, params, missingRegisters, bits);
+      return convertInstructionWithoutPrefix(mnemonic, params, bits);
     }
     String ret = "while (state.CX-- != 0) {\n";
-    ret += Utils.indent(convertInstructionWithoutPrefix(mnemonic, params, missingRegisters, bits), 2) + "\n";
+    ret += Utils.indent(convertInstructionWithoutPrefix(mnemonic, params, bits), 2) + "\n";
     if (instructionAnalyzer.isStringCheckingZeroFlag(mnemonic)) {
       boolean continueZeroFlagValue = prefix.equals("REPE") || prefix.equals("REP");
       ret += "  if(state.ZeroFlag == " + continueZeroFlagValue + ") {\n";
@@ -502,100 +556,104 @@ class InstructionGenerator {
     return ret;
   }
 
-  private String toAssignmentWith1Parameter(String operation, String[] parameters, Set<String> missingRegisters,
+  private String generateAssignmentWith1Parameter(String operation, String[] parameters,
       Integer bits) {
-    String dest = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits);
+    String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
     return dest + " = " + operation + bits + "(" + dest + ");";
   }
 
-  private String toAssignmentWith2ParametersOnlyOneOperand(String operation, String[] parameters,
-      Set<String> missingRegisters,
-      Integer bits) {
-    String dest = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits);
-    String operand = parameterTranslator.toSpice86Value(parameters[1], missingRegisters, bits);
+  private String generateAssignmentWith2ParametersOnlyOneOperand(String operation, String[] parameters, Integer bits) {
+    String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
+    String operand = parameterTranslator.toSpice86Value(parameters[1], bits);
     return dest + " = " + operation + bits + "(" + operand + ");";
   }
 
-  private String toXor(String[] parameters, Set<String> missingRegisters, Integer bits) {
+  private String generateXor(String[] parameters, Integer bits) {
     if (parameters[0].equals(parameters[1])) {
       // this is a set to 0
-      String dest = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits);
+      String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
       return dest + " = 0;";
     }
-    return toAssignmentWith2Parameters("alu.Xor", parameters, missingRegisters, bits);
+    return generateAssignmentWith2Parameters("alu.Xor", parameters, bits);
   }
 
-  private String toAssignmentWith2Parameters(String operation, String[] parameters, Set<String> missingRegisters,
-      Integer bits) {
-    String dest = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits);
-    String operand = parameterTranslator.toSpice86Value(parameters[1], missingRegisters, bits);
+  private String generateAssignmentWith2Parameters(String operation, String[] parameters, Integer bits) {
+    String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
+    String operand = parameterTranslator.toSpice86Value(parameters[1], bits);
     return dest + " = " + operation + bits + "(" + dest + ", " + operand + ");";
   }
 
-  private String toNoAssignmentWith2Parameters(String operation, String[] parameters, Set<String> missingRegisters,
-      Integer bits) {
-    String dest = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits);
-    String operand = parameterTranslator.toSpice86Value(parameters[1], missingRegisters, bits);
+  private String generateNoAssignmentWith2Parameters(String operation, String[] parameters, Integer bits) {
+    String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
+    String operand = parameterTranslator.toSpice86Value(parameters[1], bits);
     return operation + bits + "(" + dest + ", " + operand + ");";
   }
 
-  private String toScas(String[] parameters, Set<String> missingRegisters, int bits) {
+  private String generateIns(String[] parameters, int bits) {
+    String destination = getDestination(parameters, bits);
+    String operation = destination + " = cpu.in" + bits + "(state.DX);";
+    return generateStringOperation(operation, false, true, bits);
+  }
+
+  private String generateOuts(String[] parameters, int bits) {
+    String source = getSource(parameters, bits);
+    String operation = "cpu.out" + bits + "(state.DX, " + source + ");";
+    return generateStringOperation(operation, false, true, bits);
+  }
+
+  private String generateScas(String[] parameters, int bits) {
     String param1 = getAXOrAL(bits);
-    String param2 = getDestination(parameters, missingRegisters, bits);
+    String param2 = getDestination(parameters, bits);
     String operation = "alu.Sub" + bits + "(state." + param1 + ", " + param2 + ");";
-    return toStringOperation(operation, false, true);
+    return generateStringOperation(operation, false, true, bits);
   }
 
-  private String toStos(String[] parameters, Set<String> missingRegisters, int bits) {
+  private String generateStos(String[] parameters, int bits) {
     String source = getAXOrAL(bits);
-    String destination = getDestination(parameters, missingRegisters, bits);
+    String destination = getDestination(parameters, bits);
     String operation = source + " = " + destination + ";";
-    return toStringOperation(operation, false, true);
+    return generateStringOperation(operation, false, true, bits);
   }
 
-  private String toLods(String[] parameters, Set<String> missingRegisters, int bits) {
-    String source = getSource(parameters, missingRegisters, bits);
+  private String generateLods(String[] parameters, int bits) {
+    String source = getSource(parameters, bits);
     String destination = getAXOrAL(bits);
     String operation = source + " = " + destination + ";";
-    return toStringOperation(operation, true, false);
+    return generateStringOperation(operation, true, false, bits);
   }
 
-  private String getAXOrAL(int bits) {
-    return bits == 8 ? "AL" : "AX";
-  }
-
-  private String toCmps(String[] parameters, Set<String> missingRegisters, int bits) {
-    String param1 = getSource(parameters, missingRegisters, bits);
-    String param2 = getDestination(parameters, missingRegisters, bits);
+  private String generateCmps(String[] parameters, int bits) {
+    String param1 = getSource(parameters, bits);
+    String param2 = getDestination(parameters, bits);
     String operation = "alu.Sub" + bits + "(" + param1 + ", " + param2 + ");";
-    return toStringOperation(operation, true, true);
+    return generateStringOperation(operation, true, true, bits);
   }
 
-  private String toMovs(String[] parameters, Set<String> missingRegisters, int bits) {
-    String destination = getDestination(parameters, missingRegisters, bits);
-    String source = getSource(parameters, missingRegisters, bits);
+  private String generateMovs(String[] parameters, int bits) {
+    String destination = getDestination(parameters, bits);
+    String source = getSource(parameters, bits);
     String operation =
         parameterTranslator.toSpice86Pointer(destination, bits) + " = " + parameterTranslator.toSpice86Pointer(
             source, bits) + ";";
-    return toStringOperation(operation, true, true);
+    return generateStringOperation(operation, true, true, bits);
   }
 
-  private String getSource(String[] parameters, Set<String> missingRegisters, int bits) {
-    return parameterTranslator.toSpice86Pointer(parameters[getSIParamIndex(parameters)], missingRegisters, bits, 0);
+  private String getSource(String[] parameters, int bits) {
+    return parameterTranslator.toSpice86Pointer(parameters[getSIParamIndex(parameters)], bits, 0);
   }
 
-  private String getDestination(String[] parameters, Set<String> missingRegisters, int bits) {
-    return parameterTranslator.toSpice86Pointer(parameters[getDIParamIndex(parameters)], missingRegisters, bits, 0);
+  private String getDestination(String[] parameters, int bits) {
+    return parameterTranslator.toSpice86Pointer(parameters[getDIParamIndex(parameters)], bits, 0);
   }
 
-  private String toStringOperation(String operation, boolean changeSI, boolean changeDI) {
+  private String generateStringOperation(String operation, boolean changeSI, boolean changeDI, int bits) {
     List<String> res = new ArrayList<>();
     res.add(operation);
     if (changeSI) {
-      res.add(advanceRegister("SI"));
+      res.add(advanceRegister("SI", bits));
     }
     if (changeDI) {
-      res.add(advanceRegister("DI"));
+      res.add(advanceRegister("DI", bits));
     }
     return Utils.joinLines(res);
   }
@@ -610,30 +668,32 @@ class InstructionGenerator {
     return parameters[0].contains("DI") ? 0 : 1;
   }
 
-  private String advanceRegister(String register) {
-    return "state." + register + " = (ushort)(state." + register + " + (state.DirectionFlag?-1:1));";
+  private String advanceRegister(String register, int bits) {
+    String advance = bits == 8 ? "1" : "2";
+    return "state." + register + " = (ushort)(state." + register + " + (state.DirectionFlag?-" + advance + ":" + advance
+        + "));";
   }
 
-  private String toNot(String[] parameters, Set<String> missingRegisters, Integer bits) {
-    String parameter = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits);
+  private String generateNot(String[] parameters, Integer bits) {
+    String parameter = parameterTranslator.toSpice86Value(parameters[0], bits);
     return parameter + " = (" + Utils.getType(bits) + ")~" + parameter + ";";
   }
 
-  private String toNeg(String[] parameters, Set<String> missingRegisters, Integer bits) {
-    String parameter = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits);
+  private String generateNeg(String[] parameters, Integer bits) {
+    String parameter = parameterTranslator.toSpice86Value(parameters[0], bits);
     return parameter + " = alu.Sub" + bits + "(0, " + parameter + ");";
   }
 
-  private String generateLXS(String register, String[] parameters, Set<String> missingRegisters) {
-    String destination1 = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, 16);
+  private String generateLXS(String register, String[] parameters) {
+    String destination1 = parameterTranslator.toSpice86Value(parameters[0], 16);
     String destination2 = "state." + register;
-    String value1 = parameterTranslator.toSpice86Value(parameters[1], missingRegisters, 16, 0);
-    String value2 = parameterTranslator.toSpice86Value(parameters[1], missingRegisters, 16, 2);
+    String value1 = parameterTranslator.toSpice86Value(parameters[1], 16, 0);
+    String value2 = parameterTranslator.toSpice86Value(parameters[1], 16, 2);
     return destination1 + " = " + value1 + ";\n"
         + destination2 + " = " + value2 + ";";
   }
 
-  private String generateLoop(String condition, String param) {
+  private String generateLoop(String condition, String param) throws Exception {
     String loopCondition = "state.CX-- != 0";
     if (!condition.isEmpty()) {
       if ("NZ".equals(condition)) {
@@ -643,46 +703,53 @@ class InstructionGenerator {
       }
     }
     String res = "if(" + loopCondition + ") {\n";
-    res += "  " + jumpCallTranslator.generateJump(param) + "\n";
+    res += "  " + jumpCallTranslator.generateJump(param, false) + "\n";
     res += "}\n";
     return res;
   }
 
-  private String toXlat(String[] parameters, Set<String> missingRegisters, Integer bits) {
-    return "state.AL = " + parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits) + " + state.AL";
+  private String getAXOrAL(int bits) {
+    return bits == 8 ? "AL" : "AX";
   }
 
-  private String toMul(String[] parameters, Set<String> missingRegisters, Integer bits) {
-    return "cpu.Mul" + bits + "(" + parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits) + ");";
+  private String generateXlat(String[] parameters, Integer bits) {
+    return "state.AL = " + parameterTranslator.toSpice86Value(parameters[0], bits) + " + state.AL";
   }
 
-  private String toIMul(String[] parameters, Set<String> missingRegisters, Integer bits) {
-    return "cpu.IMul" + bits + "(" + parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits) + ");";
+  private String generateMul(String[] parameters, Integer bits) {
+    return "cpu.Mul" + bits + "(" + parameterTranslator.toSpice86Value(parameters[0], bits) + ");";
   }
 
-  private String toDiv(String[] parameters, Set<String> missingRegisters, Integer bits) {
-    return "cpu.Div" + bits + "(" + parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits) + ");";
+  private String generateIMul(String[] parameters, Integer bits) {
+    return "cpu.IMul" + bits + "(" + parameterTranslator.toSpice86Value(parameters[0], bits) + ");";
   }
 
-  private String toIDiv(String[] parameters, Set<String> missingRegisters, Integer bits) {
-    return "cpu.IDiv" + bits + "(" + parameterTranslator.toSpice86Value(parameters[0], missingRegisters, bits) + ");";
+  private String generateDiv(String[] parameters, Integer bits) {
+    return "cpu.Div" + bits + "(" + parameterTranslator.toSpice86Value(parameters[0], bits) + ");";
   }
 
-  private String generateLea(String[] parameters, Set<String> missingRegisters) {
+  private String generateIDiv(String[] parameters, Integer bits) {
+    return "cpu.IDiv" + bits + "(" + parameterTranslator.toSpice86Value(parameters[0], bits) + ");";
+  }
+
+  private String generateLea(String[] parameters) {
     String memoryExpression = parameters[1];
-    String segmentRegister = parameterTranslator.getSegmentRegister(memoryExpression, missingRegisters);
-    String destination = parameterTranslator.toSpice86Value(parameters[0], missingRegisters, 16);
+    String segmentRegister = parameterTranslator.getSegmentRegister(memoryExpression);
+    String destination = parameterTranslator.toSpice86Value(parameters[0], 16);
     String offset = parameterTranslator.toSpice86MemoryAddressExpression(segmentRegister, memoryExpression, 0);
     return destination + " = " + offset + ";";
   }
 
-  private String generateTempVar() {
-    return "tmp" + this.instructionAddress;
+  private String generateTempVar(String prefix) {
+    return prefix + this.instructionAddress;
   }
 
-  private String convertInstructionWithoutPrefix(String mnemonic, String[] params, Set<String> missingRegisters,
-      Integer bits) {
-    String instruction = convertInstructionWithoutPrefixAndComment(mnemonic, params, missingRegisters, bits);
+  private String generateTempVar() {
+    return generateTempVar("tmp");
+  }
+
+  private String convertInstructionWithoutPrefix(String mnemonic, String[] params, Integer bits) throws Exception {
+    String instruction = convertInstructionWithoutPrefixAndComment(mnemonic, params, bits);
     if (instruction == null) {
       instruction = "UNIMPLEMENTED";
       showInstructionComment = true;
@@ -694,21 +761,22 @@ class InstructionGenerator {
     return instruction;
   }
 
-  private String convertInstructionWithoutPrefixAndComment(String mnemonic, String[] params,
-      Set<String> missingRegisters, Integer bits) {
+  private String convertInstructionWithoutPrefixAndComment(String mnemonic, String[] params, Integer bits)
+      throws Exception {
     log.log("Params are " + Arrays.stream(params).collect(Collectors.joining(",")));
     switch (mnemonic) {
       case "AAM":
-        return "cpu.Aam(" + parameterTranslator.toSpice86Value(params[0], missingRegisters, bits) + ");";
+        return "cpu.Aam(" + parameterTranslator.toSpice86Value(params[0], bits) + ");";
       case "ADC":
-        return toAssignmentWith2Parameters("alu.Adc", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Adc", params, bits);
       case "ADD":
-        return toAssignmentWith2Parameters("alu.Add", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Add", params, bits);
       case "AND":
-        return toAssignmentWith2Parameters("alu.And", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.And", params, bits);
       case "CALL":
+        return jumpCallTranslator.generateCall(params[0], false);
       case "CALLF":
-        return jumpCallTranslator.generateCall(params[0]);
+        return jumpCallTranslator.generateCall(params[0], true);
       case "CBW":
         return "state.AX = (ushort)((short)((sbyte)state.AL));";
       case "CLC":
@@ -720,70 +788,79 @@ class InstructionGenerator {
       case "CMC":
         return "state.CarryFlag = !state.CarryFlag;";
       case "CMP":
-        return toNoAssignmentWith2Parameters("alu.Sub", params, missingRegisters, bits);
+        return generateNoAssignmentWith2Parameters("alu.Sub", params, bits);
       case "CMPSB":
-        return toCmps(params, missingRegisters, 8);
+        return generateCmps(params, 8);
       case "CMPSW":
-        return toCmps(params, missingRegisters, 16);
+        return generateCmps(params, 16);
       case "CWD":
         return "state.DX = state.AX>=0x8000?0xFFFF:0;";
       case "DEC":
-        return toAssignmentWith1Parameter("alu.Dec", params, missingRegisters, bits);
+        return generateAssignmentWith1Parameter("alu.Dec", params, bits);
       case "DIV":
-        return toDiv(params, missingRegisters, bits);
+        return generateDiv(params, bits);
       case "IDIV":
-        return toIDiv(params, missingRegisters, bits);
+        return generateIDiv(params, bits);
       case "IMUL":
-        return toIMul(params, missingRegisters, bits);
+        return generateIMul(params, bits);
       case "IN":
-        return toAssignmentWith2ParametersOnlyOneOperand("cpu.In", params, missingRegisters, bits);
+        return generateAssignmentWith2ParametersOnlyOneOperand("cpu.In", params, bits);
       case "INC":
-        return toAssignmentWith1Parameter("alu.Inc", params, missingRegisters, bits);
+        return generateAssignmentWith1Parameter("alu.Inc", params, bits);
+      case "INSB":
+      case "INSW":
+        return generateIns(params, bits);
+
       case "INT":
         return "//TODO: cpu.Interrupt(" + params[0] + ", false);";
       case "IRET":
         return "return InterruptRet();";
       case "JA":
-        return jumpCallTranslator.generateJump("A", params[0]);
+        return jumpCallTranslator.generateJump("A", params[0], false);
       case "JBE":
-        return jumpCallTranslator.generateJump("BE", params[0]);
+        return jumpCallTranslator.generateJump("BE", params[0], false);
       case "JC":
-        return jumpCallTranslator.generateJump("C", params[0]);
+        return jumpCallTranslator.generateJump("C", params[0], false);
       case "JCXZ":
-        return jumpCallTranslator.generateJump("CXZ", params[0]);
+        return jumpCallTranslator.generateJump("CXZ", params[0], false);
       case "JG":
-        return jumpCallTranslator.generateJump("G", params[0]);
+        return jumpCallTranslator.generateJump("G", params[0], false);
       case "JGE":
-        return jumpCallTranslator.generateJump("GE", params[0]);
+        return jumpCallTranslator.generateJump("GE", params[0], false);
       case "JL":
-        return jumpCallTranslator.generateJump("L", params[0]);
+        return jumpCallTranslator.generateJump("L", params[0], false);
       case "JLE":
-        return jumpCallTranslator.generateJump("LE", params[0]);
+        return jumpCallTranslator.generateJump("LE", params[0], false);
       case "JMP":
+        return jumpCallTranslator.generateJump("", params[0], false);
       case "JMPF":
-        return jumpCallTranslator.generateJump("", params[0]);
+        return jumpCallTranslator.generateJump("", params[0], true);
       case "JNC":
-        return jumpCallTranslator.generateJump("NC", params[0]);
+        return jumpCallTranslator.generateJump("NC", params[0], false);
       case "JNS":
-        return jumpCallTranslator.generateJump("NS", params[0]);
+        return jumpCallTranslator.generateJump("NS", params[0], false);
       case "JNZ":
-        return jumpCallTranslator.generateJump("NZ", params[0]);
+        return jumpCallTranslator.generateJump("NZ", params[0], false);
+      case "JO":
+        return jumpCallTranslator.generateJump("O", params[0], false);
       case "JS":
-        return jumpCallTranslator.generateJump("S", params[0]);
+        return jumpCallTranslator.generateJump("S", params[0], false);
       case "JZ":
-        return jumpCallTranslator.generateJump("Z", params[0]);
+        return jumpCallTranslator.generateJump("Z", params[0], false);
       case "LAHF":
         return "state.AH = (byte)state.Flags.FlagRegisters";
       case "LDS":
-        return generateLXS("DS", params, missingRegisters);
+        return generateLXS("DS", params);
       case "LEA":
-        return generateLea(params, missingRegisters);
+        return generateLea(params);
       case "LES":
-        return generateLXS("ES", params, missingRegisters);
+        return generateLXS("ES", params);
+      case "LOCK":
+        return "";
       case "LODSB":
-        return toLods(params, missingRegisters, 8);
+        return generateLods(params, 8);
       case "LODSW":
-        return toLods(params, missingRegisters, 16);
+        return generateLods(params, 16);
       case "LOOP":
         return generateLoop("", params[0]);
       case "LOOPNZ":
@@ -791,26 +868,29 @@ class InstructionGenerator {
       case "LOOPZ":
         return generateLoop("Z", params[0]);
       case "MOV": {
-        String dest = parameterTranslator.toSpice86Value(params[0], missingRegisters, bits);
-        String source = parameterTranslator.toSpice86Value(params[1], missingRegisters, bits);
+        String dest = parameterTranslator.toSpice86Value(params[0], bits);
+        String source = parameterTranslator.toSpice86Value(params[1], bits);
         return dest + " = " + source + ";";
       }
       case "MOVSB":
-        return toMovs(params, missingRegisters, 8);
+        return generateMovs(params, 8);
       case "MOVSW":
-        return toMovs(params, missingRegisters, 16);
+        return generateMovs(params, 16);
       case "MUL":
-        return toMul(params, missingRegisters, bits);
+        return generateMul(params, bits);
       case "NEG":
-        return toNeg(params, missingRegisters, bits);
+        return generateNeg(params, bits);
       case "NOP":
         return "";
       case "NOT":
-        return toNot(params, missingRegisters, bits);
+        return generateNot(params, bits);
       case "OR":
-        return toAssignmentWith2Parameters("alu.Or", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Or", params, bits);
       case "OUT":
-        return toNoAssignmentWith2Parameters("cpu.Out", params, missingRegisters, bits);
+        return generateNoAssignmentWith2Parameters("cpu.Out", params, bits);
+      case "OUTSB":
+      case "OUTSW":
+        return generateOuts(params, bits);
       case "POP":
         return "state." + params[0] + " = stack.pop();";
       case "POPA":
@@ -826,33 +906,45 @@ class InstructionGenerator {
       case "POPF":
         return "state.Flags = stack.pop();";
       case "PUSH":
-        return "stack.push(state." + params[0] + ");";
+        return "stack.push(" + registerHandler.substituteRegister(params[0]) + ");";
+      case "PUSHA": {
+        String spTempVar = generateTempVar("sp");
+        return "int " + spTempVar + " = state.SP;\n"
+            + "stack.push(state.AX);\n"
+            + "stack.push(state.CX);\n"
+            + "stack.push(state.DX);\n"
+            + "stack.push(state.BX);\n"
+            + "stack.push(" + spTempVar + ");\n"
+            + "stack.push(state.BP);\n"
+            + "stack.push(state.SI);\n"
+            + "stack.push(state.DI);";
+      }
       case "PUSHF":
         return "stack.push(state.Flags);";
       case "RCL":
-        return toAssignmentWith2Parameters("alu.Rcl", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Rcl", params, bits);
       case "RCR":
-        return toAssignmentWith2Parameters("alu.Rcr", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Rcr", params, bits);
       case "RET":
         return "return NearRet();";
       case "RETF":
         return "return FarRet();";
       case "ROL":
-        return toAssignmentWith2Parameters("alu.Rol", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Rol", params, bits);
       case "ROR":
-        return toAssignmentWith2Parameters("alu.Ror", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Ror", params, bits);
       case "SAR":
-        return toAssignmentWith2Parameters("alu.Sar", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Sar", params, bits);
       case "SBB":
-        return toAssignmentWith2Parameters("alu.Sbb", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Sbb", params, bits);
       case "SCASB":
-        return toScas(params, missingRegisters, 8);
+        return generateScas(params, 8);
       case "SCASW":
-        return toScas(params, missingRegisters, 16);
+        return generateScas(params, 16);
       case "SHL":
-        return toAssignmentWith2Parameters("alu.Shl", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Shl", params, bits);
       case "SHR":
-        return toAssignmentWith2Parameters("alu.Shr", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Shr", params, bits);
       case "STC":
         return "state.CarryFlag = true;";
       case "STD":
@@ -860,17 +952,17 @@ class InstructionGenerator {
       case "STI":
         return "state.InterruptFlag = true;";
       case "STOSB":
-        return toStos(params, missingRegisters, 8);
+        return generateStos(params, 8);
       case "STOSW":
-        return toStos(params, missingRegisters, 16);
+        return generateStos(params, 16);
       case "SUB":
-        return toAssignmentWith2Parameters("alu.Sub", params, missingRegisters, bits);
+        return generateAssignmentWith2Parameters("alu.Sub", params, bits);
       case "TEST":
-        return toNoAssignmentWith2Parameters("alu.Test", params, missingRegisters, bits);
+        return generateNoAssignmentWith2Parameters("alu.Test", params, bits);
       case "XCHG": {
         String tempVarName = generateTempVar();
-        String var1 = parameterTranslator.toSpice86Value(params[0], missingRegisters, bits);
-        String var2 = parameterTranslator.toSpice86Value(params[1], missingRegisters, bits);
+        String var1 = parameterTranslator.toSpice86Value(params[0], bits);
+        String var2 = parameterTranslator.toSpice86Value(params[1], bits);
         String res =
             Utils.getType(bits) + " " + tempVarName + " = " + var1 + ";\n";
         res += "" + var1 + " = " + var2 + ";\n";
@@ -878,38 +970,58 @@ class InstructionGenerator {
         return res;
       }
       case "XLAT":
-        return toXlat(params, missingRegisters, bits);
+        return generateXlat(params, bits);
       case "XOR":
-        return toXor(params, missingRegisters, bits);
+        return generateXor(params, bits);
     }
     return null;
   }
 }
 
 class JumpCallTranslator {
-
+  private Log log;
   private GhidraScript ghidraScript;
   private JumpsAndCalls jumpsAndCalls;
+  private ParameterTranslator parameterTranslator;
+  private Address address;
   private long instructionAddress;
   private boolean isLast;
 
-  public JumpCallTranslator(GhidraScript ghidraScript, JumpsAndCalls jumpsAndCalls, long instructionAddress,
+  public JumpCallTranslator(Log log, GhidraScript ghidraScript, JumpsAndCalls jumpsAndCalls,
+      ParameterTranslator parameterTranslator, Address address,
       boolean isLast) {
+    this.log = log;
     this.ghidraScript = ghidraScript;
     this.jumpsAndCalls = jumpsAndCalls;
-    this.instructionAddress = instructionAddress;
+    this.parameterTranslator = parameterTranslator;
+    this.address = address;
+    this.instructionAddress = address.getUnsignedOffset();
     this.isLast = isLast;
   }
 
   public String getLabel() {
-    if (this.jumpsAndCalls.getJumpTargets().contains(this.instructionAddress)) {
+    if (hasGhidraLabel() || this.jumpsAndCalls.getJumpTargets().contains(this.instructionAddress)) {
       return getLabelToAddress(this.instructionAddress, true) + "\n";
     }
     return "";
   }
 
+  private boolean hasGhidraLabel() {
+    //Should look like this LAB_1000_020d
+    Symbol label = ghidraScript.getSymbolAt(address);
+    if (label == null || label.getSymbolType() != SymbolType.LABEL) {
+      return false;
+    }
+    String[] split = label.getName().split("_");
+    if (split.length != 3) {
+      log.log("Warning: cannot parse ghidra label " + label);
+      return false;
+    }
+    return true;
+  }
+
   private String getLabelToAddress(long address, boolean colon) {
-    return "label_" + String.format("%X", address) + (colon ? ":" : "");
+    return "label_" + Utils.toHexWithout0X(address) + (colon ? ":" : "");
   }
 
   public String generateJumpCondition(String condition) {
@@ -932,10 +1044,14 @@ class JumpCallTranslator {
         return "state.ZeroFlag || state.SignFlag != state.OverflowFlag";
       case "NC":
         return "!state.CarryFlag";
+      case "NO":
+        return "!state.OverflowFlag";
       case "NS":
         return "!state.SignFlag";
       case "NZ":
         return "!state.ZeroFlag";
+      case "O":
+        return "state.OverflowFlag";
       case "S":
         return "state.SignFlag";
       case "Z":
@@ -944,51 +1060,16 @@ class JumpCallTranslator {
     return "UNHANDLED CONDITION " + condition;
   }
 
-  public String generateJump(String condition, String param) {
+  public String generateJump(String condition, String param, boolean far)
+      throws Exception {
     if (!condition.isEmpty()) {
       String res = "// J" + condition + "\n";
       res += "if(" + generateJumpCondition(condition) + ") {\n";
-      res += "  " + generateJump(param) + "\n";
+      res += "  " + generateJump(param, far) + "\n";
       res += "}";
       return res;
     }
-    return generateJump(param);
-  }
-
-  public String generateJump(String param) {
-    List<String> res = new ArrayList<>();
-    if (param.contains("[")) {
-      res.add("// Warning, indirect jump!");
-    }
-    List<Long> targets = this.getTargetsOfJumpCall();
-    Function function = getFunctionAtAddress(param);
-    if (function == null) {
-      // Try indirect call
-      if (targets != null && targets.size() == 1) {
-        function = getFunctionAtLongAddress(targets.get(0));
-      }
-    }
-    if (function != null) {
-      res.add("// JMP converted to function call");
-      res.add(generateCall(param));
-    } else {
-      String label = param;
-      if (targets != null) {
-        if (targets.size() == 1) {
-          label = getLabelToAddress(targets.get(0), false);
-        } else {
-          res.add("LINES BELOW WILL NOT WORK, SHOW COMPILE ERROR, INDIRECT JUMP WITH MULTIPLE TARGETS");
-          res.addAll(
-              targets.stream()
-                  .map(address -> "// " + "goto " + getLabelToAddress(address, false) + ";")
-                  .collect(Collectors.toList()));
-        }
-      } else {
-        res.add("SHOW COMPILE ERROR, NO TARGET REGISTERED AT RUN TIME");
-      }
-      res.add("goto " + label + ";");
-    }
-    return Utils.joinLines(res);
+    return generateJump(param, far);
   }
 
   private Function getFunctionAtLongAddress(long addressLong) {
@@ -998,44 +1079,73 @@ class JumpCallTranslator {
 
   private String addressToFunctionCall(long addressLong) {
     Function function = getFunctionAtLongAddress(addressLong);
-    return functionToString(function, String.format("0x%X", addressLong));
+    return functionToString(function, Utils.toHexWith0X(addressLong), false);
   }
 
   private List<Long> getTargetsOfJumpCall() {
     return this.jumpsAndCalls.getCallsJumpsFromTo().get(this.instructionAddress);
   }
 
-  public String generateCall(String param) {
+  public String generateJump(String param, boolean far) throws Exception {
+    if (!param.startsWith("0x")) {
+      // Indirect address ...
+      List<Long> targets = getTargetsOfJumpCall();
+      List<String> res = new ArrayList<>();
+      res.add("// Indirect jump to " + param + ", generating possible targets from emulator records");
+      res.add(generateSwitchToIndirectTarget(param, far, targets,
+          "Error: Jump not registered at address ", address -> generateGoto(address)));
+      return Utils.joinLines(res);
+    }
+    Long labelAddress = parseGotoAddress(param);
+    return generateGoto(labelAddress);
+  }
+
+  private String jumpToCaseBody(long address) {
+    if (getFunctionAtAddress(address) != null) {
+      return this.functionToCaseBody(address);
+    }
+    return generateGoto(address);
+  }
+
+  private long parseGotoAddress(String param) throws Exception {
+    String[] split = param.split(":");
+    if (split.length != 2) {
+      throw new Exception("Cannot parse " + param + " as goto label, only one colon is expected.");
+    }
+    try {
+      int segment = Utils.parseHex(split[0]) * 0x10;
+      int offset = Utils.parseHex(split[1]);
+      return segment + offset;
+    } catch (NumberFormatException nfe) {
+      throw new Exception("Cannot parse " + param + " as goto label");
+    }
+  }
+
+  private String generateGoto(Long target) {
+    Function function = getFunctionAtAddress(target);
+    if (function != null) {
+      return functionToString(function, Utils.toHexWith0X(target), true);
+    }
+    return "goto " + getLabelToAddress(target, false) + ";";
+  }
+
+  public String generateCall(String param, boolean far) {
     if (param.contains("[")) {
       // Indirect address ...
       List<Long> targets = getTargetsOfJumpCall();
       List<String> res = new ArrayList<>();
-      if (targets != null) {
-        if (targets.size() == 1) {
-          res.add("// Warning, indirect call, generated function call may not be accurate.");
-          res.add(addressToFunctionCall(targets.get(0)));
-        } else {
-          res.add("// Warning, indirect call, several possible addresses destinations.");
-          res.add("LINES BELOW WILL NOT WORK, SHOW COMPILE ERROR, INDIRECT FUNCTION CALL WITH MULTIPLE TARGETS");
-          res.addAll(
-              targets.stream().map(address -> "// " + addressToFunctionCall(address)).collect(Collectors.toList()));
-        }
-      } else {
-        res.add("SHOW COMPILE ERROR, INDIRECT FUNCTION CALL BUT NO TARGET REGISTERED AT RUN TIME");
-      }
+      res.add("// Indirect call to " + param + ", generating possible targets from emulator records");
+      res.add(generateSwitchToIndirectTarget(param, far, targets,
+          "Error: Function not registered at address ", address -> functionToCaseBody(address)));
       return Utils.joinLines(res);
     }
-
     Function function = getFunctionAtAddress(param);
-    return functionToString(function, param);
+    return functionToString(function, param, false);
   }
 
-  public String functionToString(Function function, String addressString) {
-    if (function != null) {
-      String prefix = isLast ? "return " : "";
-      return prefix + function.getName() + "();";
-    }
-    return "// Warning, could not find a function at address " + addressString;
+  private String functionToCaseBody(long address) {
+    Function function = getFunctionAtAddress(address);
+    return functionToString(function, Utils.toHexWith0X(address), false) + "\n    break;";
   }
 
   private Function getFunctionAtAddress(String param) {
@@ -1044,6 +1154,38 @@ class JumpCallTranslator {
       return null;
     }
     return ghidraScript.getFunctionAt(address);
+  }
+
+  private Function getFunctionAtAddress(long addressLong) {
+    Address address = ghidraScript.getAddressFactory().getDefaultAddressSpace().getAddress(addressLong);
+    if (address == null) {
+      return null;
+    }
+    return ghidraScript.getFunctionAt(address);
+  }
+
+  public String functionToString(Function function, String addressString, boolean withReturn) {
+    if (function != null) {
+      String prefix = withReturn || isLast ? "return " : "";
+      return prefix + function.getName() + "();";
+    }
+    return "failAsUntested(\"Could not find a function at address " + addressString + "\");";
+  }
+
+  private String generateSwitchToIndirectTarget(String expression, boolean far, List<Long> targets,
+      String errorInCaseNotFound, java.util.function.Function<Long, String> toCSharp) {
+    String target = far ?
+        parameterTranslator.toCsIpPointerValueInMemory(expression) :
+        parameterTranslator.toIpPointerValueInMemory(expression);
+    String res = "switch(" + target + ") {\n";
+    if (targets != null) {
+      for (Long targetFromRecord : targets) {
+        res += "  case " + Utils.toHexWith0X(targetFromRecord) + " : " + toCSharp.apply(targetFromRecord) + "\n";
+      }
+    }
+    res += "  default: failAsUntested(\"" + errorInCaseNotFound + "\" + (" + target + "));\n"
+        + "}";
+    return res;
   }
 }
 
@@ -1109,5 +1251,30 @@ class Utils {
       return "uint";
     }
     return "unknown";
+  }
+
+  public static String litteralToUpperHex(String litteralString) {
+    return litteralString.toUpperCase().replaceAll("X", "x");
+  }
+
+  public static String toHexWithout0X(long addressLong) {
+    return String.format("%X", addressLong);
+  }
+
+  public static String toHexWith0X(long addressLong) {
+    return String.format("0x%X", addressLong);
+  }
+
+  public static int parseHex(String value) {
+    return Integer.parseInt(value.replaceAll("0x", ""), 16);
+  }
+
+  public static boolean isNumber(String value) {
+    try {
+      parseHex(value);
+      return true;
+    } catch (NumberFormatException nfe) {
+      return false;
+    }
   }
 }

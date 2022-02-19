@@ -59,13 +59,13 @@ public class Cpu {
 
     public JumpHandler JumpHandler { get; }
 
-    public Cpu(Machine machine, bool debugMode) {
+    public Cpu(Machine machine, JumpHandler jumpHandler, bool debugMode) {
         _machine = machine;
         _memory = machine.GetMemory();
         _state = new State();
         _alu = new Alu(_state);
         _stack = new Stack(_memory, _state);
-        JumpHandler = new JumpHandler(debugMode);
+        JumpHandler = jumpHandler;
         _functionHandler = new FunctionHandler(machine, debugMode);
         _functionHandlerInExternalInterrupt = new FunctionHandler(machine, debugMode);
         _functionHandlerInUse = _functionHandler;
@@ -2144,7 +2144,7 @@ public class Cpu {
                 ushort port = _state.GetDX();
                 byte value = In8(port);
                 _memory.SetUint8(GetMemoryAddressEsDi(), value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
+                _state.SetSI((ushort)(_state.GetDI() + diff));
                 break;
             }
             case 0x6D: {
@@ -2152,7 +2152,7 @@ public class Cpu {
                 ushort port = _state.GetDX();
                 ushort value = In16(port);
                 _memory.SetUint16(GetMemoryAddressEsDi(), value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
+                _state.SetSI((ushort)(_state.GetDI() + diff));
                 break;
             }
             case 0x6E: {
