@@ -170,7 +170,7 @@ public class ConvertUtils {
         return path.Replace('\\', '/').Replace("//", "/");
     }
 
-    public static string toSlashFolderPath(string path) {
+    public static string ToSlashFolderPath(string path) {
         string res = ToSlashPath(path);
         if (!res.EndsWith('/')) {
             res += '/';

@@ -32,7 +32,6 @@
 	  </PackageReference>
 	<PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
 	<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-	<PackageReference Include="System.Management" Version="6.0.0" />
 	<PackageReference Include="CommandLineParser" Version="2.8.0" />
 	<PackageReference Include="Avalonia" Version="0.10.12" />
 	<PackageReference Include="Avalonia.Desktop" Version="0.10.12" />

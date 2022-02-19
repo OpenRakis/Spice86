@@ -180,7 +180,7 @@ public class ProgramExecutor : IDisposable {
         if (string.IsNullOrWhiteSpace(cDrive)) {
             throw new ArgumentNullException(nameof(cDrive));
         }
-        cDrive = ConvertUtils.toSlashFolderPath(cDrive);
+        cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
         if (string.IsNullOrWhiteSpace(parentFolder)) {
             throw new ArgumentNullException(nameof(parentFolder));
         }

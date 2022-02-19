@@ -29,10 +29,10 @@ public class CSharpOverrideHelper {
     
     private readonly string _prefix;
 
-    private readonly Dictionary<SegmentedAddress, FunctionInformation> functionInformations;
+    private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, string prefix, Machine machine) {
-        this.functionInformations = functionInformations;
+        this._functionInformations = functionInformations;
         this._prefix = prefix;
         this._machine = machine;
         this._cpu = machine.GetCpu();
@@ -48,7 +48,7 @@ public class CSharpOverrideHelper {
     public void DefineFunction(ushort segment, ushort offset, string suffix, Func<Action>? @override) {
         SegmentedAddress address = new(segment, offset);
         string name = $"{_prefix}.{suffix}";
-        if (functionInformations.TryGetValue(address, out var existingFunctionInformation)) {
+        if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
             string error = $"There is already a function defined at address {address} named {existingFunctionInformation.GetName()} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.GetName(), name);
@@ -56,7 +56,7 @@ public class CSharpOverrideHelper {
             throw new UnrecoverableException(error);
         }
         FunctionInformation functionInformation = new(address, name, @override);
-        functionInformations.Add(address, functionInformation);
+        _functionInformations.Add(address, functionInformation);
     }
 
     public void DefineStaticAddress(ushort segment, ushort offset, string name) {
@@ -121,11 +121,11 @@ public class CSharpOverrideHelper {
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackAddresses) {
             byte callbackNumber = callbackAddressEntry.Key;
             SegmentedAddress callbackAddress = callbackAddressEntry.Value;
-            DefineFunction(callbackAddress.GetSegment(), callbackAddress.GetOffset(), $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}",
-            new Func<Action>(() => {
+            var runnable = new Func<Action>(() => {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
-            }));
+            });
+            DefineFunction(callbackAddress.GetSegment(), callbackAddress.GetOffset(), $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}", runnable);
         }
     }
 
@@ -140,7 +140,7 @@ public class CSharpOverrideHelper {
 
     /// <summary>
     /// Call this in your override when you re-implement a function with a branch that seems never
-    /// reached. @param message
+    /// reached.
     /// </summary>
     protected void FailAsUntested(string message) {
         string dumpedCallStack = _machine.DumpCallStack();

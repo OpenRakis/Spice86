@@ -96,28 +96,6 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
-    public void directConsoleIo(bool calledFromVm) {
-        byte character = _state.GetDL();
-        if (character == 0xFF) {
-            _logger.Debug("DIRECT CONSOLE IO, INPUT REQUESTED");
-            // Read from STDIN, not implemented, return no character ready
-            ushort? scancode = _machine.GetKeyboardInt16Handler().GetNextKeyCode();
-            if (scancode == null) {
-                SetZeroFlag(true, calledFromVm);
-                _state.SetAL(0);
-            } else {
-                byte ascii = (byte)scancode.Value;
-                SetZeroFlag(false, calledFromVm);
-                _state.SetAL(ascii);
-            }
-        } else {
-            // Output
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("DIRECT CONSOLE IO, {@Character}, {@Ascii}", character, ConvertUtils.ToChar(character));
-            }
-        }
-    }
-
     public void DirectConsoleIo(bool calledFromVm) {
         byte character = _state.GetDL();
         if (character == 0xFF) {
