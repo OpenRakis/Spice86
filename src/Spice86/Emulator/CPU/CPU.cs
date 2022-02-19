@@ -2144,7 +2144,7 @@ public class Cpu {
                 ushort port = _state.GetDX();
                 byte value = In8(port);
                 _memory.SetUint8(GetMemoryAddressEsDi(), value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
+                _state.SetSI((ushort)(_state.GetDI() + diff));
                 break;
             }
             case 0x6D: {
@@ -2152,7 +2152,7 @@ public class Cpu {
                 ushort port = _state.GetDX();
                 ushort value = In16(port);
                 _memory.SetUint16(GetMemoryAddressEsDi(), value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
+                _state.SetSI((ushort)(_state.GetDI() + diff));
                 break;
             }
             case 0x6E: {
