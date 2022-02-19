@@ -317,7 +317,7 @@ class ParameterTranslator {
     return "memory.UInt" + bits + "[" + memoryAddressExpression + "]";
   }
 
-  private String pointerExpressionToOffset(String pointerString) {
+  public String pointerExpressionToOffset(String pointerString) {
     String res = Utils.litteralToUpperHex(pointerString.replaceAll("\\[", "").replaceAll("\\]", ""));
     return registerHandler.substituteRegistersWithSpice86Expression(res);
   }
@@ -733,10 +733,8 @@ class InstructionGenerator {
   }
 
   private String generateLea(String[] parameters) {
-    String memoryExpression = parameters[1];
-    String segmentRegister = parameterTranslator.getSegmentRegister(memoryExpression);
+    String offset = parameterTranslator.pointerExpressionToOffset(parameters[1]);
     String destination = parameterTranslator.toSpice86Value(parameters[0], 16);
-    String offset = parameterTranslator.toSpice86MemoryAddressExpression(segmentRegister, memoryExpression, 0);
     return destination + " = " + offset + ";";
   }
 
@@ -1254,7 +1252,7 @@ class Utils {
   }
 
   public static String litteralToUpperHex(String litteralString) {
-    return litteralString.toUpperCase().replaceAll("X", "x");
+    return litteralString.toUpperCase().replaceAll("0X", "0x");
   }
 
   public static String toHexWithout0X(long addressLong) {
