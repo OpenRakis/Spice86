@@ -39,7 +39,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     }
 
     public ushort GetUsableSpaceSegment() {
-        return (ushort)(MemoryUtils.ToSegment(this.GetBaseAddress()) + 1);
+        return (ushort)(MemoryUtils.ToSegment(this.BaseAddress) + 1);
     }
 
     public bool IsFree() {
@@ -59,7 +59,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     }
 
     public DosMemoryControlBlock Next() {
-        return new DosMemoryControlBlock(this.GetMemory(), this.GetBaseAddress() + MemoryUtils.ToPhysicalAddress((ushort)(this.GetSize() + 1), 0));
+        return new DosMemoryControlBlock(Memory, BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(GetSize() + 1), 0));
     }
 
     public void SetFileName(string fileName) {

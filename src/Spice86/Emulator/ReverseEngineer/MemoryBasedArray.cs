@@ -13,10 +13,10 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructureWithBaseAddr
 
     public abstract T GetValueAt(int index);
 
-    public abstract int GetValueSize();
+    public abstract int ValueSize { get; }
 
     public int IndexToOffset(int index) {
-        return index * GetValueSize();
+        return index * ValueSize;
     }
 
     public abstract void SetValueAt(int index, T value);

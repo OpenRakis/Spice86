@@ -12,9 +12,7 @@ public class Uint16Array : MemoryBasedArray<ushort> {
         return GetUint16(offset);
     }
 
-    public override int GetValueSize() {
-        return 2;
-    }
+    public override int ValueSize => 2;
 
     public override void SetValueAt(int index, ushort value) {
         int offset = this.IndexToOffset(index);
