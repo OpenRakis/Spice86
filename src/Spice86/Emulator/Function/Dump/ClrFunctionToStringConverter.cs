@@ -129,8 +129,8 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         // properties
         Dictionary<AddressOperation, ISet<int>> res = new(addressOperations);
         foreach (AddressOperation operation in addressOperations.Keys) {
-            OperandSize operandSize = operation.GetOperandSize();
-            ValueOperation valueOperation = operation.GetValueOperation();
+            OperandSize operandSize = operation.OperandSize;
+            ValueOperation valueOperation = operation.ValueOperation;
             ValueOperation oppositeValueOperation = valueOperation.OppositeOperation();
             res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, operandSize), new HashSet<int>());
             if (operandSize == OperandSize.Dword32) {
@@ -153,7 +153,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
             comment = "// Was accessed via the following registers: " + registers;
         }
 
-        OperandSize operandSize = addressOperation.GetOperandSize();
+        OperandSize operandSize = addressOperation.OperandSize;
         string javaName = $"{operandSize.Name}_{ConvertUtils.ToCSharpString(address)}";
         string? name = address.GetName();
         if (string.IsNullOrWhiteSpace(name) == false) {
@@ -161,7 +161,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         }
 
         string offset = ConvertUtils.ToHex16(address.Offset);
-        if (ValueOperation.READ.Equals(addressOperation.GetValueOperation())) {
+        if (ValueOperation.READ.Equals(addressOperation.ValueOperation)) {
             return GenerateGetter(comment, operandSize, javaName, offset);
         }
 
