@@ -51,12 +51,12 @@ public class MachineBreakpoints {
     }
 
     private void CheckBreakPoints() {
-        if (!_executionBreakPoints.IsEmpty()) {
+        if (!_executionBreakPoints.IsEmpty) {
             uint address = _state.GetIpPhysicalAddress();
             _executionBreakPoints.TriggerMatchingBreakPoints(address);
         }
 
-        if (!_cycleBreakPoints.IsEmpty()) {
+        if (!_cycleBreakPoints.IsEmpty) {
             long cycles = _state.GetCycles();
             _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
         }

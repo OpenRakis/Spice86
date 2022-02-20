@@ -7,9 +7,7 @@ public class BreakPointHolder {
 
     private readonly List<BreakPoint> _unconditionalBreakPoints = new();
 
-    public bool IsEmpty() {
-        return _breakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
-    }
+    public bool IsEmpty => _breakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
 
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
         if (breakPoint is UnconditionalBreakPoint) {
