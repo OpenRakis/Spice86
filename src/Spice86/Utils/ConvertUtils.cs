@@ -6,7 +6,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-public class ConvertUtils {
+public static class ConvertUtils {
     private const string HexStringStartPattern = "0x";
 
     private const uint SegmentSize = 0x10000;

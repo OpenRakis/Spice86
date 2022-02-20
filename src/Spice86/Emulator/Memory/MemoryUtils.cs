@@ -4,7 +4,7 @@
 /// Utils to get and set values in an array. Words and DWords are considered to be stored
 /// little-endian. <br />
 /// </summary>
-public class MemoryUtils {
+public static class MemoryUtils {
 
     public static ushort GetUint16(byte[] memory, uint address) {
         return (ushort)((memory[address]) | ((memory[address + 1]) << 8));
