@@ -215,25 +215,25 @@ public class Cpu {
             case 0x00:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADD rmb rb"); }
                 _modRM.Read();
-                _modRM.SetRm8(_alu.Add8(_modRM.GetRm8(), _modRM.GetR8()));
+                _modRM.SetRm8(_alu.Add8(_modRM.GetRm8(), _modRM.R8));
                 break;
 
             case 0x01:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADD rmw rw"); }
                 _modRM.Read();
-                _modRM.SetRm16(_alu.Add16(_modRM.GetRm16(), _modRM.GetR16()));
+                _modRM.SetRm16(_alu.Add16(_modRM.GetRm16(), _modRM.R16));
                 break;
 
             case 0x02:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADD rb rmb"); }
                 _modRM.Read();
-                _modRM.SetR8(_alu.Add8(_modRM.GetR8(), _modRM.GetRm8()));
+                _modRM.R8 = _alu.Add8(_modRM.R8, _modRM.GetRm8());
                 break;
 
             case 0x03:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADD rw rmw"); }
                 _modRM.Read();
-                _modRM.SetR16(_alu.Add16(_modRM.GetR16(), _modRM.GetRm16()));
+                _modRM.R16 = _alu.Add16(_modRM.R16, _modRM.GetRm16());
                 break;
 
             case 0x04:
@@ -259,25 +259,25 @@ public class Cpu {
             case 0x08:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OR rmb rb"); }
                 _modRM.Read();
-                _modRM.SetRm8(_alu.Or8(_modRM.GetRm8(), _modRM.GetR8()));
+                _modRM.SetRm8(_alu.Or8(_modRM.GetRm8(), _modRM.R8));
                 break;
 
             case 0x09:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OR rmw rw"); }
                 _modRM.Read();
-                _modRM.SetRm16(_alu.Or16(_modRM.GetRm16(), _modRM.GetR16()));
+                _modRM.SetRm16(_alu.Or16(_modRM.GetRm16(), _modRM.R16));
                 break;
 
             case 0x0A:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OR rb rmb"); }
                 _modRM.Read();
-                _modRM.SetR8(_alu.Or8(_modRM.GetR8(), _modRM.GetRm8()));
+                _modRM.R8 = _alu.Or8(_modRM.R8, _modRM.GetRm8());
                 break;
 
             case 0x0B:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OR rw rmw"); }
                 _modRM.Read();
-                _modRM.SetR16(_alu.Or16(_modRM.GetR16(), _modRM.GetRm16()));
+                _modRM.R16 = _alu.Or16(_modRM.R16, _modRM.GetRm16());
                 break;
 
             case 0x0C:
@@ -302,25 +302,25 @@ public class Cpu {
             case 0x10:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADC rmb rb"); }
                 _modRM.Read();
-                _modRM.SetRm8(_alu.Adc8(_modRM.GetRm8(), _modRM.GetR8()));
+                _modRM.SetRm8(_alu.Adc8(_modRM.GetRm8(), _modRM.R8));
                 break;
 
             case 0x11:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADC rmw rw"); }
                 _modRM.Read();
-                _modRM.SetRm16(_alu.Adc16(_modRM.GetRm16(), _modRM.GetR16()));
+                _modRM.SetRm16(_alu.Adc16(_modRM.GetRm16(), _modRM.R16));
                 break;
 
             case 0x12:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADC rb rmb"); }
                 _modRM.Read();
-                _modRM.SetR8(_alu.Adc8(_modRM.GetR8(), _modRM.GetRm8()));
+                _modRM.R8 = _alu.Adc8(_modRM.R8, _modRM.GetRm8());
                 break;
 
             case 0x13:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADC rw rmw"); }
                 _modRM.Read();
-                _modRM.SetR16(_alu.Adc16(_modRM.GetR16(), _modRM.GetRm16()));
+                _modRM.R16 = _alu.Adc16(_modRM.R16, _modRM.GetRm16());
                 break;
 
             case 0x14:
@@ -346,25 +346,25 @@ public class Cpu {
             case 0x18:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SBB rmb rb"); }
                 _modRM.Read();
-                _modRM.SetRm8(_alu.Sbb8(_modRM.GetRm8(), _modRM.GetR8()));
+                _modRM.SetRm8(_alu.Sbb8(_modRM.GetRm8(), _modRM.R8));
                 break;
 
             case 0x19:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SBB rmw rw"); }
                 _modRM.Read();
-                _modRM.SetRm16(_alu.Sbb16(_modRM.GetRm16(), _modRM.GetR16()));
+                _modRM.SetRm16(_alu.Sbb16(_modRM.GetRm16(), _modRM.R16));
                 break;
 
             case 0x1A:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SBB rb rmb"); }
                 _modRM.Read();
-                _modRM.SetR8(_alu.Sbb8(_modRM.GetR8(), _modRM.GetRm8()));
+                _modRM.R8 = _alu.Sbb8(_modRM.R8, _modRM.GetRm8());
                 break;
 
             case 0x1B:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SBB rw rmw"); }
                 _modRM.Read();
-                _modRM.SetR16(_alu.Sbb16(_modRM.GetR16(), _modRM.GetRm16()));
+                _modRM.R16 = _alu.Sbb16(_modRM.R16, _modRM.GetRm16());
                 break;
 
             case 0x1C:
@@ -390,25 +390,25 @@ public class Cpu {
             case 0x20:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AND rmb rb"); }
                 _modRM.Read();
-                _modRM.SetRm8(_alu.And8(_modRM.GetRm8(), _modRM.GetR8()));
+                _modRM.SetRm8(_alu.And8(_modRM.GetRm8(), _modRM.R8));
                 break;
 
             case 0x21:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AND rmw rw"); }
                 _modRM.Read();
-                _modRM.SetRm16(_alu.And16(_modRM.GetRm16(), _modRM.GetR16()));
+                _modRM.SetRm16(_alu.And16(_modRM.GetRm16(), _modRM.R16));
                 break;
 
             case 0x22:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AND rb rmb"); }
                 _modRM.Read();
-                _modRM.SetR8(_alu.And8(_modRM.GetR8(), _modRM.GetRm8()));
+                _modRM.R8 = _alu.And8(_modRM.R8, _modRM.GetRm8());
                 break;
 
             case 0x23:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AND rw rmw"); }
                 _modRM.Read();
-                _modRM.SetR16(_alu.And16(_modRM.GetR16(), _modRM.GetRm16()));
+                _modRM.R16 = _alu.And16(_modRM.R16, _modRM.GetRm16());
                 break;
 
             case 0x24:
@@ -450,25 +450,25 @@ public class Cpu {
             case 0x28:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SUB rmb rb"); }
                 _modRM.Read();
-                _modRM.SetRm8(_alu.Sub8(_modRM.GetRm8(), _modRM.GetR8()));
+                _modRM.SetRm8(_alu.Sub8(_modRM.GetRm8(), _modRM.R8));
                 break;
 
             case 0x29:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SUB rmw rw"); }
                 _modRM.Read();
-                _modRM.SetRm16(_alu.Sub16(_modRM.GetRm16(), _modRM.GetR16()));
+                _modRM.SetRm16(_alu.Sub16(_modRM.GetRm16(), _modRM.R16));
                 break;
 
             case 0x2A:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SUB rb rmb"); }
                 _modRM.Read();
-                _modRM.SetR8(_alu.Sub8(_modRM.GetR8(), _modRM.GetRm8()));
+                _modRM.R8 = _alu.Sub8(_modRM.R8, _modRM.GetRm8());
                 break;
 
             case 0x2B:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SUB rw rmw"); }
                 _modRM.Read();
-                _modRM.SetR16(_alu.Sub16(_modRM.GetR16(), _modRM.GetRm16()));
+                _modRM.R16 = _alu.Sub16(_modRM.R16, _modRM.GetRm16());
                 break;
 
             case 0x2C:
@@ -510,25 +510,25 @@ public class Cpu {
             case 0x30:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XOR rmb rb"); }
                 _modRM.Read();
-                _modRM.SetRm8(_alu.Xor8(_modRM.GetRm8(), _modRM.GetR8()));
+                _modRM.SetRm8(_alu.Xor8(_modRM.GetRm8(), _modRM.R8));
                 break;
 
             case 0x31:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XOR rmw rw"); }
                 _modRM.Read();
-                _modRM.SetRm16(_alu.Xor16(_modRM.GetRm16(), _modRM.GetR16()));
+                _modRM.SetRm16(_alu.Xor16(_modRM.GetRm16(), _modRM.R16));
                 break;
 
             case 0x32:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XOR rb rmb"); }
                 _modRM.Read();
-                _modRM.SetR8(_alu.Xor8(_modRM.GetR8(), _modRM.GetRm8()));
+                _modRM.R8 = _alu.Xor8(_modRM.R8, _modRM.GetRm8());
                 break;
 
             case 0x33:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XOR rw rmw"); }
                 _modRM.Read();
-                _modRM.SetR16(_alu.Xor16(_modRM.GetR16(), _modRM.GetRm16()));
+                _modRM.R16 = _alu.Xor16(_modRM.R16, _modRM.GetRm16());
                 break;
 
             case 0x34:
@@ -564,25 +564,25 @@ public class Cpu {
             case 0x38:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMP rmb rb"); }
                 _modRM.Read();
-                _alu.Sub8(_modRM.GetRm8(), _modRM.GetR8());
+                _alu.Sub8(_modRM.GetRm8(), _modRM.R8);
                 break;
 
             case 0x39:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMP rmw rw"); }
                 _modRM.Read();
-                _alu.Sub16(_modRM.GetRm16(), _modRM.GetR16());
+                _alu.Sub16(_modRM.GetRm16(), _modRM.R16);
                 break;
 
             case 0x3A:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMP rb rmb"); }
                 _modRM.Read();
-                _alu.Sub8(_modRM.GetR8(), _modRM.GetRm8());
+                _alu.Sub8(_modRM.R8, _modRM.GetRm8());
                 break;
 
             case 0x3B:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMP rw rmw"); }
                 _modRM.Read();
-                _alu.Sub16(_modRM.GetR16(), _modRM.GetRm16());
+                _alu.Sub16(_modRM.R16, _modRM.GetRm16());
                 break;
 
             case 0x3C:
@@ -717,7 +717,7 @@ public class Cpu {
                 short value = (short)NextUint16();
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"IMUL16 rm16 {ConvertUtils.ToHex16((ushort)value)}"); }
                 int result = _alu.Imul16(value, (short)_modRM.GetRm16());
-                _modRM.SetR16((ushort)result);
+                _modRM.R16 = (ushort)result;
                 break;
             }
             case 0x6A: {
@@ -734,7 +734,7 @@ public class Cpu {
                 byte value = NextUint8();
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"IMUL16 rm16 {ConvertUtils.ToHex8(value)}"); }
                 int result = _alu.Imul16(value, (short)_modRM.GetRm16());
-                _modRM.SetR16((ushort)result);
+                _modRM.R16 = (ushort)result;
                 break;
             }
             case 0x6C:
@@ -773,21 +773,21 @@ public class Cpu {
             case 0x84:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("TEST rmb rb"); }
                 _modRM.Read();
-                _alu.And8(_modRM.GetRm8(), _modRM.GetR8());
+                _alu.And8(_modRM.GetRm8(), _modRM.R8);
                 break;
 
             case 0x85:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("TEST rmw rw"); }
                 _modRM.Read();
-                _alu.And16(_modRM.GetRm16(), _modRM.GetR16());
+                _alu.And16(_modRM.GetRm16(), _modRM.R16);
                 break;
 
             case 0x86: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XCHG8"); }
                 _modRM.Read();
                 byte value1 = _modRM.GetRm8();
-                byte value2 = _modRM.GetR8();
-                _modRM.SetR8(value1);
+                byte value2 = _modRM.R8;
+                _modRM.R8 = value1;
                 _modRM.SetRm8(value2);
                 break;
             }
@@ -795,55 +795,55 @@ public class Cpu {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XCHG16"); }
                 _modRM.Read();
                 ushort value1 = _modRM.GetRm16();
-                ushort value2 = _modRM.GetR16();
-                _modRM.SetR16(value1);
+                ushort value2 = _modRM.R16;
+                _modRM.R16 = value1;
                 _modRM.SetRm16(value2);
                 break;
             }
             case 0x88:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV rmb rb"); }
                 _modRM.Read();
-                _modRM.SetRm8(_modRM.GetR8());
+                _modRM.SetRm8(_modRM.R8);
                 break;
 
             case 0x89:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV rmw rw"); }
                 _modRM.Read();
-                _modRM.SetRm16(_modRM.GetR16());
+                _modRM.SetRm16(_modRM.R16);
                 break;
 
             case 0x8A:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV rb, rmb"); }
                 _modRM.Read();
-                _modRM.SetR8(_modRM.GetRm8());
+                _modRM.R8 = _modRM.GetRm8();
                 break;
 
             case 0x8B:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV rw rmw"); }
                 _modRM.Read();
-                _modRM.SetR16(_modRM.GetRm16());
+                _modRM.R16 = _modRM.GetRm16();
                 break;
 
             case 0x8C:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV rmw sreg"); }
                 _modRM.Read();
-                _modRM.SetRm16((ushort)_modRM.GetSegmentRegister());
+                _modRM.SetRm16((ushort)_modRM.SegmentRegister);
                 break;
 
             case 0x8D: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("LEA"); }
                 _modRM.Read();
-                ushort? memoryOffset = _modRM.GetMemoryOffset();
+                ushort? memoryOffset = _modRM.MemoryOffset;
                 if (memoryOffset == null) {
                     throw new InvalidVMOperationException(this._machine, "Memory address was not read by Mod R/M but it is needed for LEA");
                 }
-                _modRM.SetR16(memoryOffset.Value);
+                _modRM.R16 = memoryOffset.Value;
                 break;
             }
             case 0x8E:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV sreg rmw"); }
                 _modRM.Read();
-                _modRM.SetSegmentRegister(_modRM.GetRm16());
+                _modRM.SegmentRegister = _modRM.GetRm16();
                 break;
 
             case 0x8F:
@@ -1030,11 +1030,11 @@ public class Cpu {
                 // Copy segmented address that is in memory (32bits) into DS/ES and the
                 // specified register
                 _modRM.Read();
-                uint? memoryAddress = _modRM.GetMemoryAddress();
+                uint? memoryAddress = _modRM.MemoryAddress;
                 if (memoryAddress == null) {
                     throw new InvalidVMOperationException(this._machine, "Memory address was not read by Mod R/M but it is needed for LES / LDS");
                 }
-                _modRM.SetR16(_memory.GetUint16(memoryAddress.Value));
+                _modRM.R16 = _memory.GetUint16(memoryAddress.Value);
                 ushort value = _memory.GetUint16(memoryAddress.Value + 2);
                 GetStaticAddressesRecorder().SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32);
                 if (opcode == 0xC4) {
@@ -1135,7 +1135,7 @@ public class Cpu {
 
             case 0xD9: {
                 _modRM.Read();
-                int groupIndex = _modRM.GetRegisterIndex();
+                int groupIndex = _modRM.RegisterIndex;
                 switch (groupIndex) {
                     case 0x7: {
                         // Set the control word to the value expected after init since FPU is not supported.
@@ -1167,7 +1167,7 @@ public class Cpu {
 
             case 0xDD: {
                 _modRM.Read();
-                int groupIndex = _modRM.GetRegisterIndex();
+                int groupIndex = _modRM.RegisterIndex;
                 switch (groupIndex) {
                     case 0x7:
                         // Set non zero, means no FPU installed when called after FNINIT.
@@ -1441,7 +1441,7 @@ public class Cpu {
 
     private void Grp1(int opcode) {
         _modRM.Read();
-        int groupIndex = _modRM.GetRegisterIndex();
+        int groupIndex = _modRM.RegisterIndex;
         bool op1Byte = (opcode & 0b01) == 0;
         bool op2Byte = (opcode & 0b11) != 1;
         ushort op2;
@@ -1496,7 +1496,7 @@ public class Cpu {
     private void Grp2(int opcode) {
         // GRP2 rmb 1
         _modRM.Read();
-        int groupIndex = _modRM.GetRegisterIndex();
+        int groupIndex = _modRM.RegisterIndex;
         bool op1Byte = (opcode & 0b01) == 0;
 
         bool valueIsCL = (opcode & 0b10) == 0b10; // if it 0b10, it is CL
@@ -1541,7 +1541,7 @@ public class Cpu {
 
     private void Grp3a() {
         _modRM.Read();
-        int groupIndex = _modRM.GetRegisterIndex();
+        int groupIndex = _modRM.RegisterIndex;
         switch (groupIndex) {
             case 0: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("TEST8"); }
@@ -1588,7 +1588,7 @@ public class Cpu {
 
     private void Grp3b() {
         _modRM.Read();
-        int groupIndex = _modRM.GetRegisterIndex();
+        int groupIndex = _modRM.RegisterIndex;
         switch (groupIndex) {
             case 0:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("TEST16"); }
@@ -1635,7 +1635,7 @@ public class Cpu {
 
     private void Grp4() {
         _modRM.Read();
-        int groupIndex = _modRM.GetRegisterIndex();
+        int groupIndex = _modRM.RegisterIndex;
         switch (groupIndex) {
             case 0:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("INC"); }
@@ -1660,7 +1660,7 @@ public class Cpu {
 
     private void Grp5() {
         _modRM.Read();
-        int groupIndex = _modRM.GetRegisterIndex();
+        int groupIndex = _modRM.RegisterIndex;
         switch (groupIndex) {
             case 0:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("INC"); }
@@ -1680,7 +1680,7 @@ public class Cpu {
 
             case 3: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("FAR CALL"); }
-                uint? ipAddress = _modRM.GetMemoryAddress();
+                uint? ipAddress = _modRM.MemoryAddress;
                 if (ipAddress is null) {
                     return;
                 }
@@ -1696,7 +1696,7 @@ public class Cpu {
                 break;
             }
             case 5: {
-                uint? ipAddress = _modRM.GetMemoryAddress();
+                uint? ipAddress = _modRM.MemoryAddress;
                 if (ipAddress is null) {
                     return;
                 }
