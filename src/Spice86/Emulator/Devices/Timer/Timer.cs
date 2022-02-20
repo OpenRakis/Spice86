@@ -49,9 +49,7 @@ public class Timer : DefaultIOPortHandler {
         return _counters[counterIndex];
     }
 
-    public long GetNumberOfTicks() {
-        return _counters[0].GetTicks();
-    }
+    public long NumberOfTicks => _counters[0].GetTicks();
 
     public override byte Inb(int port) {
         if (IsCounterRegisterPort(port)) {

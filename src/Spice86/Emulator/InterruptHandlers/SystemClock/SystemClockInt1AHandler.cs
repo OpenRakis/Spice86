@@ -27,7 +27,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     public override byte Index => 0x1A;
 
     public void GetSystemClockCounter() {
-        uint value = _timerHandler.GetTickCounterValue();
+        uint value = _timerHandler.TickCounterValue;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }
