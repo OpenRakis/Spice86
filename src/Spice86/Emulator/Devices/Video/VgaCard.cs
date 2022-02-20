@@ -36,7 +36,7 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public void GetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, uint colorValuesAddress) {
-        Rgb[] rgbs = _vgaDac.GetRgbs();
+        Rgb[] rgbs = _vgaDac.Rgbs;
         for (int i = 0; i < numberOfColors; i++) {
             int registerToSet = firstRegister + i;
             Rgb rgb = rgbs[registerToSet];
@@ -62,7 +62,7 @@ public class VgaCard : DefaultIOPortHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET VGA READ INDEX");
         }
-        return _vgaDac.GetState() == VgaDac.VgaDacWrite ? (byte)0x3 : (byte)0x0;
+        return _vgaDac.State == VgaDac.VgaDacWrite ? (byte)0x3 : (byte)0x0;
     }
 
     public override byte Inb(int port) {
@@ -119,7 +119,7 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public void SetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, uint colorValuesAddress) {
-        Rgb[] rgbs = _vgaDac.GetRgbs();
+        Rgb[] rgbs = _vgaDac.Rgbs;
         for (int i = 0; i < numberOfColors; i++) {
             int registerToSet = firstRegister + i;
             Rgb rgb = rgbs[registerToSet];
@@ -136,18 +136,18 @@ public class VgaCard : DefaultIOPortHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET VGA READ INDEX {@Value}", value);
         }
-        _vgaDac.SetReadIndex(value);
-        _vgaDac.SetColour(0);
-        _vgaDac.SetState(VgaDac.VgaDacRead);
+        _vgaDac.ReadIndex = value;
+        _vgaDac.Colour = 0;
+        _vgaDac.State = VgaDac.VgaDacRead;
     }
 
     public void SetVgaWriteIndex(int value) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET VGA WRITE INDEX {@Value}", value);
         }
-        _vgaDac.SetWriteIndex(value);
-        _vgaDac.SetColour(0);
-        _vgaDac.SetState(VgaDac.VgaDacWrite);
+        _vgaDac.WriteIndex = value;
+        _vgaDac.Colour = 0;
+        _vgaDac.State = VgaDac.VgaDacWrite;
     }
 
     public void SetVideoModeValue(byte mode) {
@@ -190,7 +190,7 @@ public class VgaCard : DefaultIOPortHandler {
 
     public void UpdateScreen() {
         if (_gui != null) {
-            _gui.Draw(_memory.Ram, _vgaDac.GetRgbs());
+            _gui.Draw(_memory.Ram, _vgaDac.Rgbs);
         }
     }
 }
