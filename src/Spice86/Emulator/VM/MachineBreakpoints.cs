@@ -11,8 +11,6 @@ public class MachineBreakpoints {
 
     private readonly Memory _memory;
 
-    private readonly PauseHandler _pauseHandler = new();
-
     private readonly State _state;
 
     private BreakPoint? _machineStopBreakPoint;
@@ -24,17 +22,15 @@ public class MachineBreakpoints {
 
     public void CheckBreakPoint() {
         CheckBreakPoints();
-        _pauseHandler.WaitIfPaused();
+        PauseHandler.WaitIfPaused();
     }
 
-    public PauseHandler GetPauseHandler() {
-        return _pauseHandler;
-    }
+    public PauseHandler PauseHandler { get; private set; } = new();
 
     public void OnMachineStop() {
         if (_machineStopBreakPoint is not null) {
             _machineStopBreakPoint.Trigger();
-            _pauseHandler.WaitIfPaused();
+            PauseHandler.WaitIfPaused();
         }
     }
 

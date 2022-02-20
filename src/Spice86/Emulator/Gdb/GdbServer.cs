@@ -70,7 +70,7 @@ public class GdbServer : IDisposable {
             _logger.Error(e, "Unhandled error in the GDB server, restarting it...");
         } finally {
             _machine.GetCpu().SetRunning(false);
-            _machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
+            _machine.GetMachineBreakpoints().PauseHandler.RequestResume();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("GDB server stopped");
             }

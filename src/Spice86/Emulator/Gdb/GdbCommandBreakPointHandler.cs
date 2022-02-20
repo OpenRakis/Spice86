@@ -31,7 +31,7 @@ public class GdbCommandBreakpointHandler {
 
     public string ContinueCommand() {
         _resumeEmulatorOnCommandEnd = true;
-        _machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
+        _machine.GetMachineBreakpoints().PauseHandler.RequestResume();
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return _gdbIo.GenerateResponse("OK");
@@ -45,7 +45,7 @@ public class GdbCommandBreakpointHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint reached!\n{@BreakPoint}", breakPoint);
         }
-        _machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
+        _machine.GetMachineBreakpoints().PauseHandler.RequestPause();
         _resumeEmulatorOnCommandEnd = false;
         try {
             _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
