@@ -8,19 +8,19 @@ using Spice86.Emulator.VM;
 /// Gravis Ultra Sound implementation. Emulates an absent card :)
 /// </summary>
 public class GravisUltraSound : DefaultIOPortHandler {
-    private static readonly int IRQ_CONTROL_REGISTER = 0x24B;
-    private static readonly int IRQ_STATUS_REGISTER = 0x246;
-    private static readonly int MIX_CONTROL_REGISTER = 0x240;
-    private static readonly int READ_DATA_OR_TRIGGER_STATUS = 0x241;
-    private static readonly int REGISTER_CONTROLS = 0x24F;
-    private static readonly int TIMER_CONTROL_REGISTER = 0x248;
+    private const int IrqControlRegister = 0x24B;
+    private const int IrqStatusRegister = 0x246;
+    private const int MixControlRegister = 0x240;
+    private const int ReadDataOrTriggerStatus = 0x241;
+    private const int RegisterControls = 0x24F;
+    private const int TimerControlRegister = 0x248;
 
     public GravisUltraSound(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(MIX_CONTROL_REGISTER, this);
-        ioPortDispatcher.AddIOPortHandler(READ_DATA_OR_TRIGGER_STATUS, this);
+        ioPortDispatcher.AddIOPortHandler(MixControlRegister, this);
+        ioPortDispatcher.AddIOPortHandler(ReadDataOrTriggerStatus, this);
 
         // Not sure what those are but some programs search the card in those ports as well
         ioPortDispatcher.AddIOPortHandler(0x243, this);
@@ -30,9 +30,9 @@ public class GravisUltraSound : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(0x2C0, this);
         ioPortDispatcher.AddIOPortHandler(0x2C1, this);
         ioPortDispatcher.AddIOPortHandler(0x2C3, this);
-        ioPortDispatcher.AddIOPortHandler(IRQ_STATUS_REGISTER, this);
-        ioPortDispatcher.AddIOPortHandler(TIMER_CONTROL_REGISTER, this);
-        ioPortDispatcher.AddIOPortHandler(IRQ_CONTROL_REGISTER, this);
-        ioPortDispatcher.AddIOPortHandler(REGISTER_CONTROLS, this);
+        ioPortDispatcher.AddIOPortHandler(IrqStatusRegister, this);
+        ioPortDispatcher.AddIOPortHandler(TimerControlRegister, this);
+        ioPortDispatcher.AddIOPortHandler(IrqControlRegister, this);
+        ioPortDispatcher.AddIOPortHandler(RegisterControls, this);
     }
 }

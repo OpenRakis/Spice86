@@ -40,9 +40,9 @@ public class VgaCard : DefaultIOPortHandler {
         for (int i = 0; i < numberOfColors; i++) {
             int registerToSet = firstRegister + i;
             Rgb rgb = rgbs[registerToSet];
-            memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.R));
-            memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.G));
-            memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.B));
+            _memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.R));
+            _memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.G));
+            _memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.B));
         }
     }
 
@@ -123,9 +123,9 @@ public class VgaCard : DefaultIOPortHandler {
         for (int i = 0; i < numberOfColors; i++) {
             int registerToSet = firstRegister + i;
             Rgb rgb = rgbs[registerToSet];
-            byte r = VgaDac.From6bitColorTo8bit(memory.GetUint8(colorValuesAddress++));
-            byte g = VgaDac.From6bitColorTo8bit(memory.GetUint8(colorValuesAddress++));
-            byte b = VgaDac.From6bitColorTo8bit(memory.GetUint8(colorValuesAddress++));
+            byte r = VgaDac.From6bitColorTo8bit(_memory.GetUint8(colorValuesAddress++));
+            byte g = VgaDac.From6bitColorTo8bit(_memory.GetUint8(colorValuesAddress++));
+            byte b = VgaDac.From6bitColorTo8bit(_memory.GetUint8(colorValuesAddress++));
             rgb.R = r;
             rgb.G = g;
             rgb.B = b;
@@ -190,7 +190,7 @@ public class VgaCard : DefaultIOPortHandler {
 
     public void UpdateScreen() {
         if (_gui != null) {
-            _gui.Draw(memory.GetRam(), _vgaDac.GetRgbs());
+            _gui.Draw(_memory.GetRam(), _vgaDac.GetRgbs());
         }
     }
 }

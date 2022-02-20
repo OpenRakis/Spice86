@@ -17,8 +17,8 @@ using System.Reactive;
 
 public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
-    private int _initialHeight;
-    private int _initialWidth;
+    private readonly int _initialHeight;
+    private readonly int _initialWidth;
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -56,7 +56,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
 
     // TODO : Get current DPI from Avalonia or Skia.
     // It isn't DesktopScaling or RenderScaling as this returns 1 when Windows Desktop Scaling is set at 100%
-    private WriteableBitmap _bitmap = new WriteableBitmap(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+    private WriteableBitmap _bitmap = new(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
 
     /// <summary>
     /// DPI: AvaloniaUI, like WPF, renders UI Controls in Device Independant Pixels.<br/>
@@ -123,7 +123,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         private set => this.RaiseAndSetIfChanged(ref _width, value);
     }
 
-    private int _index;
+    private readonly int _index;
 
     public int CompareTo(VideoBufferViewModel? other) {
         if (_index < other?._index) {

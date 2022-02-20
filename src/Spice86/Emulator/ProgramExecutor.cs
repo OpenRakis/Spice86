@@ -31,7 +31,7 @@ using System.Security.Cryptography;
 public class ProgramExecutor : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<ProgramExecutor>();
     private bool _disposedValue;
-    private GdbServer? _gdbServer;
+    private readonly GdbServer? _gdbServer;
     private Machine _machine;
 
     public ProgramExecutor(IVideoKeyboardMouseIO? gui, Configuration? configuration) {
@@ -65,7 +65,7 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
+    private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
         if (expectedHash is null) {
             throw new ArgumentNullException(nameof(expectedHash));
         }
@@ -75,7 +75,7 @@ public class ProgramExecutor : IDisposable {
         }
 
         try {
-            using SHA256 mySHA256 = SHA256.Create();
+            using var mySHA256 = SHA256.Create();
             byte[] actualHash = mySHA256.ComputeHash(file);
 
             if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
@@ -105,7 +105,7 @@ public class ProgramExecutor : IDisposable {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
-        CounterConfigurator counterConfigurator = new CounterConfigurator(configuration);
+        var counterConfigurator = new CounterConfigurator(configuration);
         bool debugMode = configuration.GdbPort != null;
         JumpHandler jumpHandler = new JumpDumper().ReadFromFileOrCreate(configuration.JumpFile);
         jumpHandler.DebugMode = debugMode;
@@ -133,7 +133,7 @@ public class ProgramExecutor : IDisposable {
         return null;
     }
 
-    private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
+    private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
@@ -147,7 +147,7 @@ public class ProgramExecutor : IDisposable {
         return res;
     }
 
-    private string? GetExeParentFolder(Configuration configuration) {
+    private static string? GetExeParentFolder(Configuration configuration) {
         string? exe = configuration.Exe;
         if (exe == null) {
             return null;
@@ -216,7 +216,7 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private void SetupFunctionHandler(FunctionHandler functionHandler, Dictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
+    private static void SetupFunctionHandler(FunctionHandler functionHandler, Dictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.SetFunctionInformations(functionInformations);
         functionHandler.SetUseCodeOverride(useCodeOverride);
     }

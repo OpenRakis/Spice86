@@ -10,10 +10,10 @@ using System.IO;
 /// Represents a file opened by DOS.
 /// </summary>
 public class OpenFile {
-    private int _descriptor;
-    private List<MemoryRange> _loadMemoryRanges = new();
-    private string _name;
-    private FileStream _randomAccessFile;
+    private readonly int _descriptor;
+    private readonly List<MemoryRange> _loadMemoryRanges = new();
+    private readonly string _name;
+    private readonly FileStream _randomAccessFile;
 
     public OpenFile(string name, int descriptor, FileStream randomAccessFile) {
         _name = name;

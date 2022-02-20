@@ -25,10 +25,10 @@ using System.Collections.Generic;
 public class Cpu {
 
     // Extract regIndex from opcode
-    private const int REG_INDEX_MASK = 0b111;
+    private const int RegIndexMask = 0b111;
 
     private static readonly ILogger _logger = Log.Logger.ForContext<Cpu>();
-    private static readonly HashSet<int> STRING_OPCODES = new() { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
+    private static readonly HashSet<int> _stringOpCodes = new() { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Alu _alu;
     private readonly FunctionHandler _functionHandler;
@@ -55,7 +55,7 @@ public class Cpu {
     private ushort _internalIp;
 
     private IOPortDispatcher? _ioPortDispatcher;
-    private bool _running = true;
+    private bool _isRunning = true;
 
     public JumpHandler JumpHandler { get; }
 
@@ -75,7 +75,7 @@ public class Cpu {
 
     public StaticAddressesRecorder GetStaticAddresRecorder => _staticAddressesRecorder;
 
-    public bool IsRunning => _running;
+    public bool IsRunning => _isRunning;
 
     public void ExecuteNextInstruction() {
         _internalIp = _state.GetIP();
@@ -110,7 +110,7 @@ public class Cpu {
 
     public void ExternalInterrupt(byte vectorNumber) {
         // hack: do not let the timer overwrite keyboard.
-        if (_externalInterruptVectorNumber == null || _externalInterruptVectorNumber != 9) {
+        if (_externalInterruptVectorNumber is null or not 9) {
             _externalInterruptVectorNumber = vectorNumber;
         }
     }
@@ -175,9 +175,9 @@ public class Cpu {
         uint flagsAddress = MemoryUtils.ToPhysicalAddress(_state.GetSS(), (ushort)(_state.GetSP() + 4));
         int value = _memory.GetUint16(flagsAddress);
         if (flagValue) {
-            value = value | flagMask;
+            value |= flagMask;
         } else {
-            value = value & ~flagMask;
+            value &= ~flagMask;
         }
         _memory.SetUint16(flagsAddress, (ushort)value);
     }
@@ -186,13 +186,13 @@ public class Cpu {
 
     public void SetIoPortDispatcher(IOPortDispatcher? iOPortDispatcher) => _ioPortDispatcher = iOPortDispatcher;
 
-    public void SetRunning(bool running) => _running = running;
+    public void SetRunning(bool running) => _isRunning = running;
 
     private static bool IsStringOpUpdatingFlags(int stringOpCode)
-        => stringOpCode == 0xA6 // CMPSB
-            || stringOpCode == 0xA7 // CMPSW
-            || stringOpCode == 0xAE // SCASB
-            || stringOpCode == 0xAF;
+        => stringOpCode is 0xA6 // CMPSB
+            or 0xA7 // CMPSW
+            or 0xAE // SCASB
+            or 0xAF;
 
     private void AddCurrentInstructionPrefix(string log) {
         // Optimization, do not calculate the log if it is not used
@@ -624,7 +624,7 @@ public class Cpu {
             case 0x45:
             case 0x46:
             case 0x47:
-                regIndex = opcode & REG_INDEX_MASK;
+                regIndex = opcode & RegIndexMask;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"INC {_state.GetRegisters().GetRegName(regIndex)}"); }
                 _state.GetRegisters().SetRegister(regIndex, _alu.Inc16(_state.GetRegisters().GetRegister(regIndex)));
                 break;
@@ -637,7 +637,7 @@ public class Cpu {
             case 0x4D:
             case 0x4E:
             case 0x4F:
-                regIndex = opcode & REG_INDEX_MASK;
+                regIndex = opcode & RegIndexMask;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"DEC {_state.GetRegisters().GetRegName(regIndex)}"); }
                 _state.GetRegisters().SetRegister(regIndex, _alu.Dec16(_state.GetRegisters().GetRegister(regIndex)));
                 break;
@@ -650,7 +650,7 @@ public class Cpu {
             case 0x55:
             case 0x56:
             case 0x57:
-                regIndex = opcode & REG_INDEX_MASK;
+                regIndex = opcode & RegIndexMask;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"PUSH {_state.GetRegisters().GetRegName(regIndex)}"); }
                 _stack.Push(_state.GetRegisters().GetRegister(regIndex));
                 break;
@@ -663,7 +663,7 @@ public class Cpu {
             case 0x5D:
             case 0x5E:
             case 0x5F:
-                regIndex = opcode & REG_INDEX_MASK;
+                regIndex = opcode & RegIndexMask;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"POP {_state.GetRegisters().GetRegName(regIndex)}"); }
                 _state.GetRegisters().SetRegister(regIndex, _stack.Pop());
                 break;
@@ -863,7 +863,7 @@ public class Cpu {
             case 0x95:
             case 0x96:
             case 0x97: {
-                regIndex = opcode & REG_INDEX_MASK;
+                regIndex = opcode & RegIndexMask;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"XCHG AX,{_state.GetRegisters().GetRegName(regIndex)}"); }
                 ushort value1 = _state.GetAX();
                 ushort value2 = _state.GetRegisters().GetRegister(regIndex);
@@ -904,7 +904,7 @@ public class Cpu {
 
             case 0x9C:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("PUSHF"); }
-                _stack.Push(_state.GetFlags().GetFlagRegister());
+                _stack.Push(_state.GetFlags().FlagRegister);
                 break;
 
             case 0x9D:
@@ -919,7 +919,7 @@ public class Cpu {
 
             case 0x9F:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("LAHF"); }
-                _state.SetAH((byte)_state.GetFlags().GetFlagRegister());
+                _state.SetAH((byte)_state.GetFlags().FlagRegister);
                 break;
 
             case 0xA0:
@@ -980,7 +980,7 @@ public class Cpu {
             case 0xB5:
             case 0xB6:
             case 0xB7:
-                regIndex = opcode & REG_INDEX_MASK;
+                regIndex = opcode & RegIndexMask;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"MOV {_state.GetRegisters().GetReg8Name(regIndex)} ib"); }
                 _state.GetRegisters().SetRegisterFromHighLowIndex8(regIndex, NextUint8());
                 break;
@@ -993,7 +993,7 @@ public class Cpu {
             case 0xBD:
             case 0xBE:
             case 0xBF:
-                regIndex = opcode & REG_INDEX_MASK;
+                regIndex = opcode & RegIndexMask;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"MOV {_state.GetRegisters().GetRegName(regIndex)} iw"); }
                 _state.GetRegisters().SetRegister(regIndex, NextUint16());
                 break;
@@ -1311,7 +1311,7 @@ public class Cpu {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                     _logger.Information("HLT instruction encountered, halting!");
                 }
-                _running = false;
+                _isRunning = false;
                 break;
 
             case 0xF5:
@@ -1386,14 +1386,14 @@ public class Cpu {
         HandleCall(CallType.FAR, returnCS, returnIP, targetCS, targetIP);
     }
 
-    private string Generate8Or16Value(bool op1Byte, ushort op1, ushort op2) {
+    private static string Generate8Or16Value(bool op1Byte, ushort op1, ushort op2) {
         if (op1Byte) {
             return $"8 ({ConvertUtils.ToHex8((byte)op1)},{ConvertUtils.ToHex8((byte)op2)})";
         }
         return $"16 ({ConvertUtils.ToHex16(op1)},{ConvertUtils.ToHex16(op2)})";
     }
 
-    private string GenerateGrp1Name(int groupIndex, bool op1Byte, ushort op1, ushort op2) {
+    private static string GenerateGrp1Name(int groupIndex, bool op1Byte, ushort op1, ushort op2) {
         string opName = (groupIndex) switch {
             0 => "ADD",
             1 => "OR",
@@ -1408,7 +1408,7 @@ public class Cpu {
         return opName + Generate8Or16Value(op1Byte, op1, op2);
     }
 
-    private string GenerateGrp2Name(int groupIndex, bool op1Byte, ushort op1, ushort op2) {
+    private static string GenerateGrp2Name(int groupIndex, bool op1Byte, ushort op1, ushort op2) {
         var opName = (groupIndex) switch {
             0 => "ROL",
             1 => "ROR",
@@ -1734,7 +1734,7 @@ public class Cpu {
 
     public void Div8(byte v2) {
         ushort v1 = _state.GetAX();
-        byte? result = _alu.Div8(v1, v2);
+        byte? result = Alu.Div8(v1, v2);
         if (result == null) {
             HandleDivisionError();
             return;
@@ -1746,7 +1746,7 @@ public class Cpu {
     public void IDiv8(byte value) {
         short v1 = (short)_state.GetAX();
         sbyte v2 = (sbyte)value;
-        sbyte? result = _alu.Idiv8(v1, v2);
+        sbyte? result = Alu.Idiv8(v1, v2);
         if (result == null) {
             HandleDivisionError();
             return;
@@ -1760,7 +1760,7 @@ public class Cpu {
         // no sign extension for v1 as it is already a 32bit value
         int v1 = (_state.GetDX() << 16) | _state.GetAX();
         short v2 = (short)value;
-        short? result = _alu.Idiv16(v1, v2);
+        short? result = Alu.Idiv16(v1, v2);
         if (result == null) {
             HandleDivisionError();
             return;
@@ -1771,7 +1771,7 @@ public class Cpu {
 
     public void Div16(ushort v2) {
         uint v1 = (uint)((_state.GetDX() << 16) | _state.GetAX());
-        ushort? result = _alu.Div16(v1, v2);
+        ushort? result = Alu.Div16(v1, v2);
         if (result == null) {
             HandleDivisionError();
             return;
@@ -1853,7 +1853,7 @@ public class Cpu {
             _logger.Debug("int {@VectorNumber} handler found in memory, {@SegmentedAddressRepresentation}", ConvertUtils.ToHex(vectorNumber.Value),
                 ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP));
         }
-        _stack.Push(_state.GetFlags().GetFlagRegister());
+        _stack.Push(_state.GetFlags().FlagRegister);
         _stack.Push(returnCS);
         _stack.Push(returnIP);
         _state.SetInterruptFlag(false);
@@ -1882,8 +1882,8 @@ public class Cpu {
         return _forceLog.Value;
     }
 
-    private bool IsStringOpcode(int opcode) {
-        return STRING_OPCODES.Contains(opcode);
+    private static bool IsStringOpcode(int opcode) {
+        return _stringOpCodes.Contains(opcode);
     }
 
     /// <summary>

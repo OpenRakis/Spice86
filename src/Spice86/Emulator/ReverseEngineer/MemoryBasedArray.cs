@@ -6,12 +6,10 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructureWithBaseAddr
     private readonly int _length;
 
     protected MemoryBasedArray(Memory memory, uint baseAddress, int length) : base(memory, baseAddress) {
-        this._length = length;
+        _length = length;
     }
 
-    public int GetLength() {
-        return _length;
-    }
+    public int Length => _length;
 
     public abstract T GetValueAt(int index);
 

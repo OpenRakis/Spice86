@@ -7,12 +7,12 @@ using Spice86.Emulator.VM;
 /// Joystick implementation. Emulates an unplugged joystick for now.
 /// </summary>
 public class Joystick : DefaultIOPortHandler {
-    private static readonly int JOYSTIC_POSITON_AND_STATUS = 0x201;
+    private const int JoystickPositionAndStatus = 0x201;
 
     public Joystick(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(JOYSTIC_POSITON_AND_STATUS, this);
+        ioPortDispatcher.AddIOPortHandler(JoystickPositionAndStatus, this);
     }
 }

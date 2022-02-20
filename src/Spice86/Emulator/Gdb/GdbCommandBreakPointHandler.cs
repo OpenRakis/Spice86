@@ -11,44 +11,44 @@ using System.IO;
 
 public class GdbCommandBreakpointHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandBreakpointHandler>();
-    private GdbIo gdbIo;
-    private Machine machine;
-    private volatile bool resumeEmulatorOnCommandEnd;
+    private readonly GdbIo _gdbIo;
+    private readonly Machine _machine;
+    private volatile bool _resumeEmulatorOnCommandEnd;
 
     public GdbCommandBreakpointHandler(GdbIo gdbIo, Machine machine) {
-        this.gdbIo = gdbIo;
-        this.machine = machine;
+        _gdbIo = gdbIo;
+        _machine = machine;
     }
 
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
-        machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
         }
-        return gdbIo.GenerateResponse("OK");
+        return _gdbIo.GenerateResponse("OK");
     }
 
     public string ContinueCommand() {
-        resumeEmulatorOnCommandEnd = true;
-        machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
+        _resumeEmulatorOnCommandEnd = true;
+        _machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
-        return gdbIo.GenerateResponse("OK");
+        return _gdbIo.GenerateResponse("OK");
     }
 
     public bool IsResumeEmulatorOnCommandEnd() {
-        return resumeEmulatorOnCommandEnd;
+        return _resumeEmulatorOnCommandEnd;
     }
 
     public void OnBreakPointReached(BreakPoint breakPoint) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint reached!\n{@BreakPoint}", breakPoint);
         }
-        machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
-        resumeEmulatorOnCommandEnd = false;
+        _machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
+        _resumeEmulatorOnCommandEnd = false;
         try {
-            gdbIo.SendResponse(gdbIo.GenerateResponse("S05"));
+            _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
         } catch (IOException e) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "IOException while sending breakpoint info");
@@ -88,25 +88,25 @@ public class GdbCommandBreakpointHandler {
     public string RemoveBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         if (breakPoint == null) {
-            return gdbIo.GenerateResponse("");
+            return _gdbIo.GenerateResponse("");
         }
-        machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, false);
+        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, false);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint removed!\n{@BreakPoint}", breakPoint);
         }
-        return gdbIo.GenerateResponse("OK");
+        return _gdbIo.GenerateResponse("OK");
     }
 
     public void SetResumeEmulatorOnCommandEnd(bool resumeEmulatorOnCommandEnd) {
-        this.resumeEmulatorOnCommandEnd = resumeEmulatorOnCommandEnd;
+        this._resumeEmulatorOnCommandEnd = resumeEmulatorOnCommandEnd;
     }
 
     public string? Step() {
-        resumeEmulatorOnCommandEnd = true;
+        _resumeEmulatorOnCommandEnd = true;
 
         // will pause the CPU at the next instruction unconditionally
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, this.OnBreakPointReached, true);
-        machine.GetMachineBreakpoints().ToggleBreakPoint(stepBreakPoint, true);
+        _machine.GetMachineBreakpoints().ToggleBreakPoint(stepBreakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added for step!\n{@StepBreakPoint}", stepBreakPoint);
         }

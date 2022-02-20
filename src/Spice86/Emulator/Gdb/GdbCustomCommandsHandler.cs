@@ -25,18 +25,18 @@ using Spice86.UI.ViewModels;
 /// </summary>
 public class GdbCustomCommandsHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCustomCommandsHandler>();
-    private string? _defaultDumpDirectory;
-    private string? _jumpFile;
-    private GdbIo _gdbIo;
-    private Machine _machine;
-    private Action<BreakPoint> _onBreakpointReached;
+    private readonly string? _defaultDumpDirectory;
+    private readonly string? _jumpFile;
+    private readonly GdbIo _gdbIo;
+    private readonly Machine _machine;
+    private readonly Action<BreakPoint> _onBreakpointReached;
 
     public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string? defaultDumpDirectory, string? jumpFile) {
-        this._gdbIo = gdbIo;
-        this._machine = machine;
-        this._onBreakpointReached = onBreakpointReached;
-        this._defaultDumpDirectory = defaultDumpDirectory;
-        this._jumpFile = jumpFile;
+        _gdbIo = gdbIo;
+        _machine = machine;
+        _onBreakpointReached = onBreakpointReached;
+        _defaultDumpDirectory = defaultDumpDirectory;
+        _jumpFile = jumpFile;
     }
 
     public virtual string HandleCustomCommands(string command) {
@@ -157,7 +157,7 @@ public class GdbCustomCommandsHandler {
     }
 
     private string DumpJumps(string[] args) {
-        string fileName = GetFirstArgumentOrDefaultFile(args, _jumpFile ?? generateDumpFileSuffix("jumps.json"));
+        string fileName = GetFirstArgumentOrDefaultFile(args, _jumpFile ?? GenerateDumpFileSuffix("jumps.json"));
         return DoFileAction(fileName, (f) => {
             new JumpDumper().Dump(_machine.GetCpu().JumpHandler, fileName);
         }, "Error while dumping jumps");
@@ -215,7 +215,7 @@ public class GdbCustomCommandsHandler {
     }
 
     private string GetFirstArgumentOrDefaultFileSuffix(String[] args, string defaultSuffix) {
-        return GetFirstArgumentOrDefaultFile(args, generateDumpFileSuffix(defaultSuffix));
+        return GetFirstArgumentOrDefaultFile(args, GenerateDumpFileSuffix(defaultSuffix));
     }
 
     private string GetFirstArgumentOrDefaultFile(String[] args, string defaultFile) {
@@ -225,7 +225,7 @@ public class GdbCustomCommandsHandler {
         return defaultFile;
     }
 
-    private string generateDumpFileSuffix(String suffix) {
+    private string GenerateDumpFileSuffix(String suffix) {
         return $"{_defaultDumpDirectory}/spice86dump{suffix}";
     }
 
@@ -291,8 +291,8 @@ public class GdbCustomCommandsHandler {
             if (parsed == false) {
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand {returnType} as a return type. Valid values are: {GetValidRetValues()}");
             }
-            if (callType is CallType) {
-                return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn((CallType)callType));
+            if (callType is CallType type) {
+                return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn(type));
             }
         }
         return "";
@@ -319,7 +319,7 @@ public class GdbCustomCommandsHandler {
                 gui?.Draw(memory.GetRam(), vgaCard.GetVgaDac().GetRgbs());
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
-                StringBuilder listBuilder = new StringBuilder();
+                var listBuilder = new StringBuilder();
                 gui?.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList().ForEach(x => listBuilder.AppendLine(x));
                 string list = listBuilder.ToString();
                 return _gdbIo.GenerateMessageToDisplayResponse(list);

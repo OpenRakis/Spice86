@@ -9,33 +9,33 @@ using System.Text;
 /// Represents a MCB in memory. More info here: https://stanislavs.org/helppc/memory_control_block.html
 /// </summary>
 public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
-    private static readonly int FILENAME_FIELD_SIZE = 8;
-    private static readonly int TYPE_FIELD_OFFSET = 0;
-    private static readonly int PSP_SEGMENT_FIELD_OFFSET = TYPE_FIELD_OFFSET + 1;
-    private static readonly int SIZE_FIELD_OFFSET = PSP_SEGMENT_FIELD_OFFSET + 2;
-    private static readonly int FILENAME_FIELD_OFFSET = SIZE_FIELD_OFFSET + 2 + 3;
-    private static readonly byte FREE_MCB_MARKER = 0x0;
-    private static readonly byte MCB_LAST_ENTRY = 0x5A;
-    private static readonly byte MCB_NON_LAST_ENTRY = 0x4D;
+    private const int FilenameFieldSize = 8;
+    private const int TypeFieldOffset = 0;
+    private const int PspSegmentFieldOffset = TypeFieldOffset + 1;
+    private const int SizeFieldOffset = PspSegmentFieldOffset + 2;
+    private const int FilenameFieldOffset = SizeFieldOffset + 2 + 3;
+    private const byte FreeMcbMarker = 0x0;
+    private const byte McbLastEntry = 0x5A;
+    private const byte McbNonLastEntry = 0x4D;
 
     public DosMemoryControlBlock(Memory memory, uint baseAddress) : base(memory, baseAddress) {
     }
 
     public string GetFileName() {
-        return base.GetZeroTerminatedString(FILENAME_FIELD_OFFSET, FILENAME_FIELD_SIZE);
+        return base.GetZeroTerminatedString(FilenameFieldOffset, FilenameFieldSize);
     }
 
     public ushort GetPspSegment() {
-        return this.GetUint16(PSP_SEGMENT_FIELD_OFFSET);
+        return this.GetUint16(PspSegmentFieldOffset);
     }
 
     // Size is in paragraph (as are segments)
     public ushort GetSize() {
-        return this.GetUint16(SIZE_FIELD_OFFSET);
+        return this.GetUint16(SizeFieldOffset);
     }
 
     public byte GetTypeField() {
-        return this.GetUint8(TYPE_FIELD_OFFSET);
+        return this.GetUint8(TypeFieldOffset);
     }
 
     public ushort GetUsableSpaceSegment() {
@@ -43,15 +43,15 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     }
 
     public bool IsFree() {
-        return this.GetPspSegment() == FREE_MCB_MARKER;
+        return this.GetPspSegment() == FreeMcbMarker;
     }
 
     public bool IsLast() {
-        return this.GetTypeField() == MCB_LAST_ENTRY;
+        return this.GetTypeField() == McbLastEntry;
     }
 
     public bool IsNonLast() {
-        return this.GetTypeField() == MCB_NON_LAST_ENTRY;
+        return this.GetTypeField() == McbNonLastEntry;
     }
 
     public bool IsValid() {
@@ -63,32 +63,32 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     }
 
     public void SetFileName(string fileName) {
-        base.SetZeroTerminatedString(FILENAME_FIELD_OFFSET, fileName, FILENAME_FIELD_SIZE);
+        base.SetZeroTerminatedString(FilenameFieldOffset, fileName, FilenameFieldSize);
     }
 
     public void SetFree() {
-        this.SetPspSegment(FREE_MCB_MARKER);
+        this.SetPspSegment(FreeMcbMarker);
         this.SetFileName("");
     }
 
     public void SetLast() {
-        this.SetTypeField(MCB_LAST_ENTRY);
+        this.SetTypeField(McbLastEntry);
     }
 
     public void SetNonLast() {
-        this.SetTypeField(MCB_NON_LAST_ENTRY);
+        this.SetTypeField(McbNonLastEntry);
     }
 
     public void SetPspSegment(ushort value) {
-        this.SetUint16(PSP_SEGMENT_FIELD_OFFSET, value);
+        this.SetUint16(PspSegmentFieldOffset, value);
     }
 
     public void SetSize(ushort value) {
-        this.SetUint16(SIZE_FIELD_OFFSET, value);
+        this.SetUint16(SizeFieldOffset, value);
     }
 
     public void SetTypeField(byte value) {
-        this.SetUint8(TYPE_FIELD_OFFSET, value);
+        this.SetUint8(TypeFieldOffset, value);
     }
 
     public override string ToString() {

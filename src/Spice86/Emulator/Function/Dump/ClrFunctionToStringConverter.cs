@@ -32,34 +32,34 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     protected abstract string GenerateFileHeaderWithAccessors(int numberOfGlobals, string globalsContent, string segmentValues);
-    private bool IsOffsetEqualsAndSegmentDifferent(SegmentedAddress address1, SegmentedAddress address2) {
+    private static bool IsOffsetEqualsAndSegmentDifferent(SegmentedAddress address1, SegmentedAddress address2) {
         return address1.GetSegment() != address2.GetSegment() && address1.GetOffset() == address2.GetOffset();
     }
 
-    private string GetStringSegmentValuesForDisplay(int segmentIndex, IEnumerable<ushort> values) {
+    private static string GetStringSegmentValuesForDisplay(int segmentIndex, IEnumerable<ushort> values) {
         string segmentName = _segmentRegisters.GetRegName(segmentIndex);
         string segmentValues = string.Join(",", values.Select(x => $"{ConvertUtils.ToHex16(x)}"));
         return $"{segmentName}:{segmentValues}";
     }
 
-    private Dictionary<int, List<ushort>> GetValuesTakenBySegments(List<SegmentRegisterBasedAddress> globals) {
+    private static Dictionary<int, List<ushort>> GetValuesTakenBySegments(List<SegmentRegisterBasedAddress> globals) {
         return MapBySegment(globals)
             .ToDictionary(
                 x => x.Key,
                 (x) => GetSegmentValues(x.Value));
     }
 
-    private Dictionary<ushort, List<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
+    private static Dictionary<ushort, List<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
         return globals.GroupBy(
                 x => x.GetSegment())
             .ToDictionary(g => g.Key, g => g.ToList());
     }
 
-    private List<ushort> GetSegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
+    private static List<ushort> GetSegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
         return globals.Select(x => x.GetSegment()).Distinct().ToList();
     }
 
-    private Dictionary<int, ISet<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
+    private static Dictionary<int, ISet<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
         Dictionary<int, ISet<SegmentRegisterBasedAddress>> res = new();
         foreach (SegmentRegisterBasedAddress address in globals) {
             IEnumerable<int> segmentIndexes = address.GetAddressOperations()
@@ -123,7 +123,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         return $"// Getters and Setters for address {address}.{gettersAndSetters}";
     }
 
-    private Dictionary<AddressOperation, ISet<int>> CompleteWithOppositeOperationsAndPointers(Dictionary<AddressOperation, ISet<int>> addressOperations) {
+    private static Dictionary<AddressOperation, ISet<int>> CompleteWithOppositeOperationsAndPointers(Dictionary<AddressOperation, ISet<int>> addressOperations) {
 
         // Ensures that for each read there is a write, even with empty registers so that we can generate valid java
         // properties
@@ -154,7 +154,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         }
 
         OperandSize operandSize = addressOperation.GetOperandSize();
-        string javaName = $"{operandSize.Name.ToString()}_{ConvertUtils.ToCSharpString(address)}";
+        string javaName = $"{operandSize.Name}_{ConvertUtils.ToCSharpString(address)}";
         string? name = address.GetName();
         if (string.IsNullOrWhiteSpace(name) == false) {
             javaName += "_" + name;
@@ -237,7 +237,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         return JoinNewLine(calls.Select(x => $"// {ToCSharpName(x, true)}();"));
     }
 
-    private string GetNoStubReasonCommentForMethod(FunctionInformation functionInformation, string reason) {
+    private static string GetNoStubReasonCommentForMethod(FunctionInformation functionInformation, string reason) {
         return $"  // Not providing stub for {functionInformation.GetName()}. Reason: {reason}\n";
     }
 }

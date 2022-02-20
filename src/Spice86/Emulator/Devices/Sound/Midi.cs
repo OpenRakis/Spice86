@@ -7,14 +7,14 @@ using Spice86.Emulator.VM;
 /// MPU401 (Midi) implementation. Emulates an absent card :)
 /// </summary>
 public class Midi : DefaultIOPortHandler {
-    private static readonly int COMMAND = 0x331;
-    private static readonly int DATA = 0x330;
+    private const int Command = 0x331;
+    private const int Data = 0x330;
 
     public Midi(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
     }
 
     public override byte Inb(int port) {
-        if (port == DATA) {
+        if (port == Data) {
             return ReadData();
         } else {
             return ReadStatus();
@@ -22,12 +22,12 @@ public class Midi : DefaultIOPortHandler {
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(DATA, this);
-        ioPortDispatcher.AddIOPortHandler(COMMAND, this);
+        ioPortDispatcher.AddIOPortHandler(Data, this);
+        ioPortDispatcher.AddIOPortHandler(Command, this);
     }
 
     public override void Outb(int port, byte value) {
-        if (port == DATA) {
+        if (port == Data) {
             WriteData(value);
         } else {
             WriteCommand(value);

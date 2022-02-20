@@ -29,103 +29,103 @@ using System;
 /// Emulates an IBM PC
 /// </summary>
 public class Machine {
-    private static readonly int INTERRUPT_HANDLERS_SEGMENT = 0xF000;
-    private BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler;
-    private BiosKeyboardInt9Handler biosKeyboardInt9Handler;
-    private CallbackHandler callbackHandler;
-    private Cpu cpu;
-    private bool debugMode;
-    private DosInt20Handler dosInt20Handler;
-    private DosInt21Handler dosInt21Handler;
-    private GravisUltraSound gravisUltraSound;
-    private IVideoKeyboardMouseIO? gui;
+    private const int InterruptHandlersSegment = 0xF000;
+    private readonly BiosEquipmentDeterminationInt11Handler _biosEquipmentDeterminationInt11Handler;
+    private readonly BiosKeyboardInt9Handler _biosKeyboardInt9Handler;
+    private readonly CallbackHandler _callbackHandler;
+    private readonly Cpu _cpu;
+    private readonly bool _debugMode;
+    private readonly DosInt20Handler _dosInt20Handler;
+    private readonly DosInt21Handler _dosInt21Handler;
+    private readonly GravisUltraSound _gravisUltraSound;
+    private readonly IVideoKeyboardMouseIO? _gui;
 
     // IO Devices
-    private IOPortDispatcher ioPortDispatcher;
+    private readonly IOPortDispatcher _ioPortDispatcher;
 
-    private Joystick joystick;
-    private Keyboard keyboard;
-    private KeyboardInt16Handler keyboardInt16Handler;
-    private MachineBreakpoints machineBreakpoints;
-    private Memory memory;
-    private Midi midi;
-    private MouseInt33Handler mouseInt33Handler;
-    private PcSpeaker pcSpeaker;
-    private Pic pic;
-    private SoundBlaster soundBlaster;
-    private SystemBiosInt15Handler systemBiosInt15Handler;
-    private SystemClockInt1AHandler systemClockInt1AHandler;
-    private Timer timer;
+    private readonly Joystick _joystick;
+    private readonly Keyboard _keyboard;
+    private readonly KeyboardInt16Handler _keyboardInt16Handler;
+    private readonly MachineBreakpoints _machineBreakpoints;
+    private readonly Memory _memory;
+    private readonly Midi _midi;
+    private readonly MouseInt33Handler _mouseInt33Handler;
+    private readonly PcSpeaker _pcSpeaker;
+    private readonly Pic _pic;
+    private readonly SoundBlaster _soundBlaster;
+    private readonly SystemBiosInt15Handler _systemBiosInt15Handler;
+    private readonly SystemClockInt1AHandler _systemClockInt1AHandler;
+    private readonly Timer _timer;
 
     // Services for int callbacks
-    private TimerInt8Handler timerInt8Handler;
+    private readonly TimerInt8Handler _timerInt8Handler;
 
-    private VgaCard vgaCard;
-    private VideoBiosInt10Handler videoBiosInt10Handler;
+    private readonly VgaCard _vgaCard;
+    private readonly VideoBiosInt10Handler _videoBiosInt10Handler;
 
     public Machine(IVideoKeyboardMouseIO? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, bool failOnUnhandledPort, bool debugMode) {
-        this.gui = gui;
-        this.debugMode = debugMode;
+        _gui = gui;
+        _debugMode = debugMode;
 
         // A full 1MB of addressable memory :)
-        memory = new Memory(0x100000);
-        cpu = new Cpu(this, jumpHandler, debugMode);
+        _memory = new Memory(0x100000);
+        _cpu = new Cpu(this, jumpHandler, debugMode);
 
         // Breakpoints
-        machineBreakpoints = new MachineBreakpoints(this);
+        _machineBreakpoints = new MachineBreakpoints(this);
 
         // IO devices
-        ioPortDispatcher = new IOPortDispatcher(this, failOnUnhandledPort);
-        cpu.SetIoPortDispatcher(ioPortDispatcher);
-        pic = new Pic(this, true, failOnUnhandledPort);
-        Register(pic);
-        vgaCard = new VgaCard(this, gui, failOnUnhandledPort);
-        Register(vgaCard);
-        timer = new Timer(this, pic, vgaCard, counterConfigurator, failOnUnhandledPort);
-        Register(timer);
-        keyboard = new Keyboard(this, gui, failOnUnhandledPort);
-        Register(keyboard);
-        joystick = new Joystick(this, failOnUnhandledPort);
-        Register(joystick);
-        pcSpeaker = new PcSpeaker(this, failOnUnhandledPort);
-        Register(pcSpeaker);
-        soundBlaster = new SoundBlaster(this, failOnUnhandledPort);
-        Register(soundBlaster);
-        gravisUltraSound = new GravisUltraSound(this, failOnUnhandledPort);
-        Register(gravisUltraSound);
-        midi = new Midi(this, failOnUnhandledPort);
-        Register(midi);
+        _ioPortDispatcher = new IOPortDispatcher(this, failOnUnhandledPort);
+        _cpu.SetIoPortDispatcher(_ioPortDispatcher);
+        _pic = new Pic(this, true, failOnUnhandledPort);
+        Register(_pic);
+        _vgaCard = new VgaCard(this, gui, failOnUnhandledPort);
+        Register(_vgaCard);
+        _timer = new Timer(this, _pic, _vgaCard, counterConfigurator, failOnUnhandledPort);
+        Register(_timer);
+        _keyboard = new Keyboard(this, gui, failOnUnhandledPort);
+        Register(_keyboard);
+        _joystick = new Joystick(this, failOnUnhandledPort);
+        Register(_joystick);
+        _pcSpeaker = new PcSpeaker(this, failOnUnhandledPort);
+        Register(_pcSpeaker);
+        _soundBlaster = new SoundBlaster(this, failOnUnhandledPort);
+        Register(_soundBlaster);
+        _gravisUltraSound = new GravisUltraSound(this, failOnUnhandledPort);
+        Register(_gravisUltraSound);
+        _midi = new Midi(this, failOnUnhandledPort);
+        Register(_midi);
 
         // Services
-        callbackHandler = new CallbackHandler(this, (ushort)INTERRUPT_HANDLERS_SEGMENT);
-        cpu.SetCallbackHandler(callbackHandler);
-        timerInt8Handler = new TimerInt8Handler(this);
-        Register(timerInt8Handler);
-        biosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this);
-        Register(biosKeyboardInt9Handler);
-        videoBiosInt10Handler = new VideoBiosInt10Handler(this, vgaCard);
-        videoBiosInt10Handler.InitRam();
-        Register(videoBiosInt10Handler);
-        biosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
-        Register(biosEquipmentDeterminationInt11Handler);
-        systemBiosInt15Handler = new SystemBiosInt15Handler(this);
-        Register(systemBiosInt15Handler);
-        keyboardInt16Handler = new KeyboardInt16Handler(this, biosKeyboardInt9Handler.GetBiosKeyboardBuffer());
-        Register(keyboardInt16Handler);
-        systemClockInt1AHandler = new SystemClockInt1AHandler(this, timerInt8Handler);
-        Register(systemClockInt1AHandler);
-        dosInt20Handler = new DosInt20Handler(this);
-        Register(dosInt20Handler);
-        dosInt21Handler = new DosInt21Handler(this);
-        Register(dosInt21Handler);
-        mouseInt33Handler = new MouseInt33Handler(this, gui);
-        Register(mouseInt33Handler);
+        _callbackHandler = new CallbackHandler(this, (ushort)InterruptHandlersSegment);
+        _cpu.SetCallbackHandler(_callbackHandler);
+        _timerInt8Handler = new TimerInt8Handler(this);
+        Register(_timerInt8Handler);
+        _biosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this);
+        Register(_biosKeyboardInt9Handler);
+        _videoBiosInt10Handler = new VideoBiosInt10Handler(this, _vgaCard);
+        _videoBiosInt10Handler.InitRam();
+        Register(_videoBiosInt10Handler);
+        _biosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
+        Register(_biosEquipmentDeterminationInt11Handler);
+        _systemBiosInt15Handler = new SystemBiosInt15Handler(this);
+        Register(_systemBiosInt15Handler);
+        _keyboardInt16Handler = new KeyboardInt16Handler(this, _biosKeyboardInt9Handler.GetBiosKeyboardBuffer());
+        Register(_keyboardInt16Handler);
+        _systemClockInt1AHandler = new SystemClockInt1AHandler(this, _timerInt8Handler);
+        Register(_systemClockInt1AHandler);
+        _dosInt20Handler = new DosInt20Handler(this);
+        Register(_dosInt20Handler);
+        _dosInt21Handler = new DosInt21Handler(this);
+        Register(_dosInt21Handler);
+        _mouseInt33Handler = new MouseInt33Handler(this, gui);
+        Register(_mouseInt33Handler);
     }
 
     public string DumpCallStack() {
-        FunctionHandler inUse = cpu.GetFunctionHandlerInUse();
+        FunctionHandler inUse = _cpu.GetFunctionHandlerInUse();
         string callStack = "";
-        if (inUse.Equals(cpu.GetFunctionHandlerInExternalInterrupt())) {
+        if (inUse.Equals(_cpu.GetFunctionHandlerInExternalInterrupt())) {
             callStack += "From external interrupt:\n";
         }
 
@@ -134,128 +134,128 @@ public class Machine {
     }
 
     public BiosEquipmentDeterminationInt11Handler GetBiosEquipmentDeterminationInt11Handler() {
-        return biosEquipmentDeterminationInt11Handler;
+        return _biosEquipmentDeterminationInt11Handler;
     }
 
     public BiosKeyboardInt9Handler GetBiosKeyboardInt9Handler() {
-        return biosKeyboardInt9Handler;
+        return _biosKeyboardInt9Handler;
     }
 
     public CallbackHandler GetCallbackHandler() {
-        return callbackHandler;
+        return _callbackHandler;
     }
 
     public Cpu GetCpu() {
-        return cpu;
+        return _cpu;
     }
 
     public DosInt20Handler GetDosInt20Handler() {
-        return dosInt20Handler;
+        return _dosInt20Handler;
     }
 
     public DosInt21Handler GetDosInt21Handler() {
-        return dosInt21Handler;
+        return _dosInt21Handler;
     }
 
     public GravisUltraSound GetGravisUltraSound() {
-        return gravisUltraSound;
+        return _gravisUltraSound;
     }
 
     public IVideoKeyboardMouseIO? GetGui() {
-        return gui;
+        return _gui;
     }
 
     public IOPortDispatcher GetIoPortDispatcher() {
-        return ioPortDispatcher;
+        return _ioPortDispatcher;
     }
 
     public Joystick GetJoystick() {
-        return joystick;
+        return _joystick;
     }
 
     public Keyboard GetKeyboard() {
-        return keyboard;
+        return _keyboard;
     }
 
     public KeyboardInt16Handler GetKeyboardInt16Handler() {
-        return keyboardInt16Handler;
+        return _keyboardInt16Handler;
     }
 
     public MachineBreakpoints GetMachineBreakpoints() {
-        return machineBreakpoints;
+        return _machineBreakpoints;
     }
 
     public Memory GetMemory() {
-        return memory;
+        return _memory;
     }
 
     public Midi GetMidi() {
-        return midi;
+        return _midi;
     }
 
     public MouseInt33Handler GetMouseInt33Handler() {
-        return mouseInt33Handler;
+        return _mouseInt33Handler;
     }
 
     public PcSpeaker GetPcSpeaker() {
-        return pcSpeaker;
+        return _pcSpeaker;
     }
 
     public Pic GetPic() {
-        return pic;
+        return _pic;
     }
 
     public SoundBlaster GetSoundBlaster() {
-        return soundBlaster;
+        return _soundBlaster;
     }
 
     public SystemBiosInt15Handler GetSystemBiosInt15Handler() {
-        return systemBiosInt15Handler;
+        return _systemBiosInt15Handler;
     }
 
     public SystemClockInt1AHandler GetSystemClockInt1AHandler() {
-        return systemClockInt1AHandler;
+        return _systemClockInt1AHandler;
     }
 
     public Timer GetTimer() {
-        return timer;
+        return _timer;
     }
 
     public TimerInt8Handler GetTimerInt8Handler() {
-        return timerInt8Handler;
+        return _timerInt8Handler;
     }
 
     public VgaCard GetVgaCard() {
-        return vgaCard;
+        return _vgaCard;
     }
 
     public VideoBiosInt10Handler GetVideoBiosInt10Handler() {
-        return videoBiosInt10Handler;
+        return _videoBiosInt10Handler;
     }
 
     public void InstallAllCallbacksInInterruptTable() {
-        callbackHandler.InstallAllCallbacksInInterruptTable();
+        _callbackHandler.InstallAllCallbacksInInterruptTable();
     }
 
     public string PeekReturn() {
-        return ToString(cpu.GetFunctionHandlerInUse().PeekReturnAddressOnMachineStackForCurrentFunction());
+        return ToString(_cpu.GetFunctionHandlerInUse().PeekReturnAddressOnMachineStackForCurrentFunction());
     }
 
     public string PeekReturn(CallType returnCallType) {
-        return ToString(cpu.GetFunctionHandlerInUse().PeekReturnAddressOnMachineStack(returnCallType));
+        return ToString(_cpu.GetFunctionHandlerInUse().PeekReturnAddressOnMachineStack(returnCallType));
     }
 
     public void Register(IIOPortHandler ioPortHandler) {
-        ioPortHandler.InitPortHandlers(ioPortDispatcher);
+        ioPortHandler.InitPortHandlers(_ioPortDispatcher);
     }
 
     public void Register(ICallback callback) {
-        callbackHandler.AddCallback(callback);
+        _callbackHandler.AddCallback(callback);
     }
 
     public void Run() {
-        State state = cpu.GetState();
-        FunctionHandler functionHandler = cpu.GetFunctionHandler();
+        State state = _cpu.GetState();
+        FunctionHandler functionHandler = _cpu.GetFunctionHandler();
         functionHandler.Call(CallType.MACHINE, state.GetCS(), state.GetIP(), null, null, () => "entry", false);
         try {
             RunLoop();
@@ -265,23 +265,23 @@ public class Machine {
             throw new InvalidVMOperationException(this, e);
         }
 
-        machineBreakpoints.OnMachineStop();
+        _machineBreakpoints.OnMachineStop();
         functionHandler.Ret(CallType.MACHINE);
     }
 
     private void RunLoop() {
-        while (cpu.IsRunning) {
-            if (debugMode) {
-                machineBreakpoints.CheckBreakPoint();
+        while (_cpu.IsRunning) {
+            if (_debugMode) {
+                _machineBreakpoints.CheckBreakPoint();
             }
 
-            cpu.ExecuteNextInstruction();
-            timer.Tick();
+            _cpu.ExecuteNextInstruction();
+            _timer.Tick();
         }
     }
 
-    private string ToString(SegmentedAddress? segmentedAddress) {
-        if (segmentedAddress != null) {
+    private static string ToString(SegmentedAddress? segmentedAddress) {
+        if (segmentedAddress is not null) {
             return segmentedAddress.ToString();
         }
 

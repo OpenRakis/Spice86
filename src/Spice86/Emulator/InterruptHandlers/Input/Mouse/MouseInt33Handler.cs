@@ -12,19 +12,19 @@ using Spice86.UI;
 /// </summary>
 public class MouseInt33Handler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<MouseInt33Handler>();
-    private static readonly ushort MOUSE_RANGE_X = 639;
-    private static readonly ushort MOUSE_RANGE_Y = 199;
-    private readonly IVideoKeyboardMouseIO? gui;
-    private ushort mouseMaxX = MOUSE_RANGE_X;
-    private ushort mouseMaxY = MOUSE_RANGE_Y;
-    private ushort mouseMinX;
-    private ushort mouseMinY;
-    private ushort userCallbackMask;
-    private ushort userCallbackOffset;
-    private ushort userCallbackSegment;
+    private const ushort MOUSE_RANGE_X = 639;
+    private const ushort MOUSE_RANGE_Y = 199;
+    private readonly IVideoKeyboardMouseIO? _gui;
+    private ushort _mouseMaxX = MOUSE_RANGE_X;
+    private ushort _mouseMaxY = MOUSE_RANGE_Y;
+    private ushort _mouseMinX;
+    private ushort _mouseMinY;
+    private ushort _userCallbackMask;
+    private ushort _userCallbackOffset;
+    private ushort _userCallbackSegment;
 
     public MouseInt33Handler(Machine machine, IVideoKeyboardMouseIO? gui) : base(machine) {
-        this.gui = gui;
+        this._gui = gui;
         _dispatchTable.Add(0x00, new Callback(0x00, this.MouseInstalledFlag));
         _dispatchTable.Add(0x03, new Callback(0x03, this.GetMousePositionAndStatus));
         _dispatchTable.Add(0x04, new Callback(0x04, this.SetMouseCursorPosition));
@@ -42,13 +42,13 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     public void GetMousePositionAndStatus() {
-        if(gui is null) {
+        if(_gui is null) {
             return;
         }
-        ushort x = RestrictValue((ushort)gui.GetMouseX(), (ushort)gui.GetWidth(), mouseMinX, mouseMaxX);
-        ushort y = RestrictValue((ushort)gui.GetMouseY(), (ushort)gui.GetHeight(), mouseMinY, mouseMaxY);
-        bool leftClick = gui.IsLeftButtonClicked();
-        bool rightClick = gui.IsRightButtonClicked();
+        ushort x = RestrictValue((ushort)_gui.GetMouseX(), (ushort)_gui.GetWidth(), _mouseMinX, _mouseMaxX);
+        ushort y = RestrictValue((ushort)_gui.GetMouseY(), (ushort)_gui.GetHeight(), _mouseMinY, _mouseMaxY);
+        bool leftClick = _gui.IsLeftButtonClicked();
+        bool rightClick = _gui.IsRightButtonClicked();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET MOUSE POSITION AND STATUS {@MouseX}, {@MouseY}, {@LeftClick}, {@RightClick}", x, y, leftClick, rightClick);
         }
@@ -79,8 +79,8 @@ public class MouseInt33Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE CURSOR POSITION {@MouseX}, {@MouseY}", x, y);
         }
-        gui?.SetMouseX(x);
-        gui?.SetMouseY(y);
+        _gui?.SetMouseX(x);
+        _gui?.SetMouseY(y);
     }
 
     public void SetMouseDoubleSpeedThreshold() {
@@ -91,10 +91,10 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     public void SetMouseHorizontalMinMaxPosition() {
-        this.mouseMinX = _state.GetCX();
-        this.mouseMaxX = _state.GetDX();
+        this._mouseMinX = _state.GetCX();
+        this._mouseMaxX = _state.GetDX();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET MOUSE HORIZONTAL MIN MAX POSITION {@MinX}, {@MaxX}", mouseMinX, mouseMaxX);
+            _logger.Information("SET MOUSE HORIZONTAL MIN MAX POSITION {@MinX}, {@MaxX}", _mouseMinX, _mouseMaxX);
         }
     }
 
@@ -116,19 +116,19 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     public void SetMouseUserDefinedSubroutine() {
-        userCallbackMask = _state.GetCX();
-        userCallbackSegment = _state.GetES();
-        userCallbackOffset = _state.GetDX();
+        _userCallbackMask = _state.GetCX();
+        _userCallbackSegment = _state.GetES();
+        _userCallbackOffset = _state.GetDX();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET MOUSE USER DEFINED SUBROUTINE (unimplemented!) {@Mask}, {@Segment}, {@Offset}", userCallbackMask, userCallbackSegment, userCallbackOffset);
+            _logger.Information("SET MOUSE USER DEFINED SUBROUTINE (unimplemented!) {@Mask}, {@Segment}, {@Offset}", _userCallbackMask, _userCallbackSegment, _userCallbackOffset);
         }
     }
 
     public void SetMouseVerticalMinMaxPosition() {
-        this.mouseMinY = _state.GetCX();
-        this.mouseMaxY = _state.GetDX();
+        this._mouseMinY = _state.GetCX();
+        this._mouseMaxY = _state.GetDX();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET MOUSE VERTICAL MIN MAX POSITION {@MinY}, {@MaxY}", mouseMinY, mouseMaxY);
+            _logger.Information("SET MOUSE VERTICAL MIN MAX POSITION {@MinY}, {@MaxY}", _mouseMinY, _mouseMaxY);
         }
     }
 
@@ -139,12 +139,12 @@ public class MouseInt33Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SWAP MOUSE USER DEFINED SUBROUTINE (unimplemented!) {@Mask}, {@Segment}, {@Offset}", newUserCallbackMask, newUserCallbackSegment, newUserCallbackOffset);
         }
-        _state.SetCX(userCallbackMask);
-        _state.SetES(userCallbackSegment);
-        _state.SetDX(userCallbackOffset);
-        userCallbackMask = newUserCallbackMask;
-        userCallbackOffset = newUserCallbackOffset;
-        userCallbackSegment = newUserCallbackSegment;
+        _state.SetCX(_userCallbackMask);
+        _state.SetES(_userCallbackSegment);
+        _state.SetDX(_userCallbackOffset);
+        _userCallbackMask = newUserCallbackMask;
+        _userCallbackOffset = newUserCallbackOffset;
+        _userCallbackSegment = newUserCallbackSegment;
     }
 
     /// <summary>
@@ -154,7 +154,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// <param name="min">mix expected by program</param>
     /// <param name="max">max expected by program</param>
     /// <returns></returns>
-    private ushort RestrictValue(ushort value, ushort maxValue, ushort min, ushort max) {
+    private static ushort RestrictValue(ushort value, ushort maxValue, ushort min, ushort max) {
         int range = max - min;
         ushort valueInRange = (ushort)(value * range / maxValue);
         if (valueInRange > max) {

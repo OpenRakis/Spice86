@@ -14,31 +14,31 @@ using System.Text;
 
 public class GdbIo : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbIo>();
-    private readonly GdbFormatter gdbFormatter = new();
-    private readonly List<byte> rawCommand = new();
-    private readonly Socket serverSocket;
-    private readonly Socket socket;
-    private readonly TcpListener tcpListener;
-    private bool disposedValue;
-    private readonly NetworkStream stream;
+    private readonly GdbFormatter _gdbFormatter = new();
+    private readonly List<byte> _rawCommand = new();
+    private readonly Socket _serverSocket;
+    private readonly Socket _socket;
+    private readonly TcpListener _tcpListener;
+    private bool _disposedValue;
+    private readonly NetworkStream _stream;
 
     public GdbIo(int port) {
         IPHostEntry host = Dns.GetHostEntry("localhost");
-        IPAddress ip = new IPAddress(host.AddressList.First().GetAddressBytes());
-        tcpListener = new TcpListener(ip, port);
-        tcpListener.Start();
-        serverSocket = tcpListener.Server;
-        socket = tcpListener.AcceptSocket();
+        var ip = new IPAddress(host.AddressList.First().GetAddressBytes());
+        _tcpListener = new TcpListener(ip, port);
+        _tcpListener.Start();
+        _serverSocket = _tcpListener.Server;
+        _socket = _tcpListener.AcceptSocket();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GDB Server listening on port {@Port}", port);
-            _logger.Information("Client connected: {@CanonicalHostName}", socket.RemoteEndPoint);
+            _logger.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
         }
 
-        stream = new NetworkStream(socket);
+        _stream = new NetworkStream(_socket);
     }
 
     public bool IsClientConnected() {
-        return !((socket.Poll(1000, SelectMode.SelectRead) && (socket.Available == 0)) || !socket.Connected);
+        return !((_socket.Poll(1000, SelectMode.SelectRead) && (_socket.Available == 0)) || !_socket.Connected);
     }
 
     public void Dispose() {
@@ -58,7 +58,7 @@ public class GdbIo : IDisposable {
             checksum += b;
         }
 
-        return $"+${data}#{gdbFormatter.FormatValueAsHex8(checksum)}";
+        return $"+${data}#{_gdbFormatter.FormatValueAsHex8(checksum)}";
     }
 
     public string GenerateUnsupportedResponse() {
@@ -66,23 +66,23 @@ public class GdbIo : IDisposable {
     }
 
     public List<byte> GetRawCommand() {
-        return rawCommand;
+        return _rawCommand;
     }
 
     public string ReadCommand() {
-        rawCommand.Clear();
-        int chr = stream.ReadByte();
-        StringBuilder resBuilder = new StringBuilder();
+        _rawCommand.Clear();
+        int chr = _stream.ReadByte();
+        var resBuilder = new StringBuilder();
         while (chr >= 0) {
-            rawCommand.Add((byte)chr);
+            _rawCommand.Add((byte)chr);
             if ((char)chr == '#') {
                 // Ignore checksum
-                stream.ReadByte();
-                stream.ReadByte();
+                _stream.ReadByte();
+                _stream.ReadByte();
                 break;
             }
             resBuilder.Append((char)chr);
-            chr = stream.ReadByte();
+            chr = _stream.ReadByte();
         }
         String payload = GetPayload(resBuilder);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
@@ -96,20 +96,20 @@ public class GdbIo : IDisposable {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Sending response {@ResponseData}", data);
             }
-            stream.Write(Encoding.UTF8.GetBytes(data));
+            _stream.Write(Encoding.UTF8.GetBytes(data));
         }
     }
 
     protected void Dispose(bool disposing) {
-        if (!disposedValue) {
+        if (!_disposedValue) {
             if (disposing) {
                 // dispose managed state (managed objects)
-                tcpListener.Stop();
-                serverSocket.Close();
-                socket.Close();
+                _tcpListener.Stop();
+                _serverSocket.Close();
+                _socket.Close();
             }
 
-            disposedValue = true;
+            _disposedValue = true;
         }
     }
 

@@ -10,13 +10,13 @@ using Spice86.Emulator.Memory;
 /// </summary>
 public class TimerInt8Handler : InterruptHandler {
     private static readonly uint BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, MemoryMap.BiosDataAreaOffsetTickCounter);
-    private readonly Pic pic;
-    private readonly Timer timer;
+    private readonly Pic _pic;
+    private readonly Timer _timer;
 
     public TimerInt8Handler(Machine machine) : base(machine) {
-        timer = machine.GetTimer();
+        _timer = machine.GetTimer();
         _memory = machine.GetMemory();
-        pic = machine.GetPic();
+        _pic = machine.GetPic();
     }
 
     public override byte GetIndex() {
@@ -28,9 +28,9 @@ public class TimerInt8Handler : InterruptHandler {
     }
 
     public override void Run() {
-        long numberOfTicks = timer.GetNumberOfTicks();
+        long numberOfTicks = _timer.GetNumberOfTicks();
         SetTickCounterValue((uint)numberOfTicks);
-        pic.AcknwowledgeInterrupt();
+        _pic.AcknwowledgeInterrupt();
     }
 
     public void SetTickCounterValue(uint value) {

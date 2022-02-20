@@ -32,7 +32,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private Thread? _emulatorThread;
     private int _height = 1;
     private bool _isSettingResolution = false;
-    private List<Key> _keysPressed = new();
+    private readonly List<Key> _keysPressed = new();
     private Key? _lastKeyCode = null;
     private bool _leftButtonClicked;
     private int _mouseX;
@@ -67,7 +67,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
-        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(this, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
+        var videoBuffer = new VideoBufferViewModel(this, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         Dispatcher.UIThread.Post(() => {
             VideoBuffers.Add(videoBuffer);
         }, DispatcherPriority.MaxValue);
@@ -158,8 +158,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     public void OnMainWindowOpened(object? sender, EventArgs e) {
         if (sender is Window) {
-            _emulatorThread = new Thread(RunMachine);
-            _emulatorThread.Name = "Emulator";
+            _emulatorThread = new Thread(RunMachine) {
+                Name = "Emulator"
+            };
             _emulatorThread.Start();
         }
     }
@@ -228,11 +229,11 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         }
     }
 
-    private Configuration? GenerateConfiguration(string[] args) {
-        return new CommandLineParser().ParseCommandLine(args);
+    private static Configuration? GenerateConfiguration(string[] args) {
+        return CommandLineParser.ParseCommandLine(args);
     }
 
-    private void RunOnKeyEvent(Action? runnable) {
+    private static void RunOnKeyEvent(Action? runnable) {
         if (runnable != null) {
             runnable.Invoke();
         }

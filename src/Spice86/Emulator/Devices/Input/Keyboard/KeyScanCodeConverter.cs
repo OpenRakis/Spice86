@@ -4,7 +4,7 @@ using Avalonia.Input;
 
 using System.Collections.Generic;
 
-public class KeyScancodeConverter {
+public static class KeyScancodeConverter {
     private static readonly Dictionary<Key, byte> _keyPressedScanCode = new();
     private static readonly Dictionary<byte, byte> _scanCodeToAscii = new();
 
@@ -153,7 +153,7 @@ public class KeyScancodeConverter {
         _scanCodeToAscii.Add(0x4E, 0x2B);
     }
 
-    public byte? GetAsciiCode(byte scancode) {
+    public static byte? GetAsciiCode(byte scancode) {
         byte keypressedScancode = scancode;
         if (keypressedScancode > 0x7F) {
             keypressedScancode -= 0x80;
@@ -164,14 +164,14 @@ public class KeyScancodeConverter {
         return _scanCodeToAscii[keypressedScancode];
     }
 
-    public byte? GetKeyPressedScancode(Key keyCode) {
+    public static byte? GetKeyPressedScancode(Key keyCode) {
         if (!_keyPressedScanCode.ContainsKey(keyCode)) {
             return null;
         }
         return _keyPressedScanCode[keyCode];
     }
 
-    public byte? GetKeyReleasedScancode(Key keyCode) {
+    public static byte? GetKeyReleasedScancode(Key keyCode) {
         byte? pressed = GetKeyPressedScancode(keyCode);
         if (pressed != null) {
             return (byte)(pressed + 0x80);

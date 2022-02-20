@@ -11,10 +11,10 @@ using Spice86.Emulator.VM;
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<SystemClockInt1AHandler>();
-    private readonly TimerInt8Handler timerHandler;
+    private readonly TimerInt8Handler _timerHandler;
 
     public SystemClockInt1AHandler(Machine machine, TimerInt8Handler timerHandler) : base(machine) {
-        this.timerHandler = timerHandler;
+        _timerHandler = timerHandler;
         _dispatchTable.Add(0x00, new Callback(0x00, SetSystemClockCounter));
         _dispatchTable.Add(0x01, new Callback(0x01, GetSystemClockCounter));
         _dispatchTable.Add(0x81, new Callback(0x81, TandySoundSystemUnhandled));
@@ -29,7 +29,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     }
 
     public void GetSystemClockCounter() {
-        uint value = timerHandler.GetTickCounterValue();
+        uint value = _timerHandler.GetTickCounterValue();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }
@@ -50,7 +50,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }
-        timerHandler.SetTickCounterValue(value);
+        _timerHandler.SetTickCounterValue(value);
     }
 
     private void TandySoundSystemUnhandled() {

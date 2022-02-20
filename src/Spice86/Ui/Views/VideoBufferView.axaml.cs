@@ -19,7 +19,7 @@ public partial class VideoBufferView : UserControl {
     private MainWindow? ApplicationWindow => this.GetSelfAndLogicalAncestors().OfType<MainWindow>().FirstOrDefault();
 
     private void VideoBufferView_AttachedToVisualTree(object? sender, EventArgs e) {
-        if (ApplicationWindow is MainWindow) {
+        if (ApplicationWindow is not null) {
             ApplicationWindow.KeyUp += MainWindow_KeyUp;
             ApplicationWindow.KeyDown += MainWindow_KeyDown;
         }

@@ -7,9 +7,8 @@ using Spice86.Emulator.VM;
 /// Crude implementation of Int9
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
-    private BiosKeyboardBuffer _biosKeyboardBuffer;
-    private Keyboard _keyboard;
-    private KeyScancodeConverter _keyScancodeConverter = new();
+    private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
+    private readonly Keyboard _keyboard;
 
     public BiosKeyboardInt9Handler(Machine machine) : base(machine) {
         this._keyboard = machine.GetKeyboard();
@@ -31,7 +30,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
             return;
         }
 
-        byte? ascii = _keyScancodeConverter.GetAsciiCode(scancode.Value);
+        byte? ascii = KeyScancodeConverter.GetAsciiCode(scancode.Value);
         if (ascii == null) {
             ascii = 0;
         }

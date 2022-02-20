@@ -6,16 +6,16 @@ using Spice86.Emulator.Memory;
 using System.Text;
 
 public class PspGenerator {
-    private static readonly ushort DTA_OR_COMMAND_LINE_OFFSET = 0x80;
-    private static readonly ushort LAST_FREE_SEGMENT_OFFSET = 0x02;
-    private readonly Machine machine;
+    private const ushort DTA_OR_COMMAND_LINE_OFFSET = 0x80;
+    private const ushort LAST_FREE_SEGMENT_OFFSET = 0x02;
+    private readonly Machine _machine;
 
     public PspGenerator(Machine machine) {
-        this.machine = machine;
+        _machine = machine;
     }
 
     public void GeneratePsp(ushort pspSegment, string? arguments) {
-        Memory memory = machine.GetMemory();
+        Memory memory = _machine.GetMemory();
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 
         // https://en.wikipedia.org/wiki/Program_Segment_Prefix
@@ -25,12 +25,12 @@ public class PspGenerator {
         ushort lastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
         memory.SetUint16(pspAddress + LAST_FREE_SEGMENT_OFFSET, lastFreeSegment);
         memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
-        DosInt21Handler dosFunctionDispatcher = machine.GetDosInt21Handler();
+        DosInt21Handler dosFunctionDispatcher = _machine.GetDosInt21Handler();
         dosFunctionDispatcher.GetDosMemoryManager().Init(pspSegment, lastFreeSegment);
         dosFunctionDispatcher.GetDosFileManager().SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
     }
 
-    private byte[] ArgumentsToDosBytes(string? arguments) {
+    private static byte[] ArgumentsToDosBytes(string? arguments) {
         byte[] res = new byte[128];
         string correctLengthArguments = "";
         if (string.IsNullOrWhiteSpace(arguments) == false) {

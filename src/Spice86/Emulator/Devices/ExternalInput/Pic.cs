@@ -102,7 +102,7 @@ public class Pic : DefaultIOPortHandler {
         }
 
         _lastIrqAcknowledged = false;
-        cpu.ExternalInterrupt(vectorNumber);
+        _cpu.ExternalInterrupt(vectorNumber);
     }
 
     private static void ProcessICW2(byte value) {
@@ -169,7 +169,7 @@ public class Pic : DefaultIOPortHandler {
                     ProcessICW4(value);
                     break;
                 default:
-                    throw new UnhandledOperationException(machine, $"Invalid initialization command index {_currentCommand}, should never happen");
+                    throw new UnhandledOperationException(_machine, $"Invalid initialization command index {_currentCommand}, should never happen");
             }
             _currentCommand = (_currentCommand + 1) % _commandsToProcess;
             if (_currentCommand == 0) {

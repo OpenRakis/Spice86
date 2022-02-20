@@ -18,23 +18,23 @@ using System.Text;
 public class DosInt21Handler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<DosInt21Handler>();
 
-    private readonly Encoding CP850_CHARSET;
+    private readonly Encoding _cp850CharSet;
 
-    private DosMemoryManager _dosMemoryManager;
-    private bool _ctrlCFlag = false;
+    private readonly DosMemoryManager _dosMemoryManager;
+    private bool _isCtrlCFlag = false;
 
     // dosbox
     private byte _defaultDrive = 2;
 
-    private StringBuilder _displayOutputBuilder = new StringBuilder();
-    private DosFileManager _dosFileManager;
+    private StringBuilder _displayOutputBuilder = new();
+    private readonly DosFileManager _dosFileManager;
 
     public DosFileManager DosFileManager => _dosFileManager;
 
     public DosInt21Handler(Machine machine) : base(machine) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var westernIbmPcCodePage = Encoding.GetEncoding("ibm850");
-        CP850_CHARSET = westernIbmPcCodePage;
+        _cp850CharSet = westernIbmPcCodePage;
         _dosMemoryManager = new DosMemoryManager(machine.GetMemory());
         _dosFileManager = new DosFileManager(_memory);
         FillDispatchTable();
@@ -272,10 +272,10 @@ public class DosInt21Handler : InterruptHandler {
         byte op = _state.GetAL();
         if (op == 0) {
             // GET
-            _state.SetDL(_ctrlCFlag ? (byte)1 : (byte)0);
-        } else if (op == 1 || op == 2) {
+            _state.SetDL(_isCtrlCFlag ? (byte)1 : (byte)0);
+        } else if (op is 1 or 2) {
             // SET
-            _ctrlCFlag = _state.GetDL() == 1;
+            _isCtrlCFlag = _state.GetDL() == 1;
         } else {
             throw new UnhandledOperationException(_machine, "Ctrl-C get/set operation unhandled: " + op);
         }
@@ -423,7 +423,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     private string ConvertDosChar(byte characterByte) {
-        return CP850_CHARSET.GetString(new [] { characterByte });
+        return _cp850CharSet.GetString(new [] { characterByte });
     }
 
     private void FillDispatchTable() {
@@ -476,7 +476,7 @@ public class DosInt21Handler : InterruptHandler {
 
     private String GetDosString(Memory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
-        StringBuilder stringBuilder = new StringBuilder();
+        var stringBuilder = new StringBuilder();
         while (memory.GetUint8(stringStart) != end) {
             String c = ConvertDosChar(memory.GetUint8(stringStart++));
             stringBuilder.Append(c);

@@ -40,7 +40,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     public void CallOverride() {
         if (HasOverride()) {
-            var retHandler = _overrideRenamed;
+            Func<Action>? retHandler = _overrideRenamed;
             retHandler?.Invoke();
         }
     }
@@ -116,8 +116,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         if (target == null) {
             return;
         }
-        ISet<SegmentedAddress>? addresses;
-        returnsMap.TryGetValue(functionReturn, out addresses);
+        returnsMap.TryGetValue(functionReturn, out ISet<SegmentedAddress>? addresses);
         if (addresses == null) {
             addresses = new HashSet<SegmentedAddress>();
             returnsMap.Add(functionReturn, addresses);

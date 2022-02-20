@@ -12,10 +12,10 @@ using Spice86.Emulator.CPU;
 /// </summary>
 public class ExeLoader : ExecutableFileLoader {
     private static readonly ILogger _logger = Log.Logger.ForContext<ExeLoader>();
-    private readonly ushort startSegment;
+    private readonly ushort _startSegment;
 
     public ExeLoader(Machine machine, ushort startSegment) : base(machine) {
-        this.startSegment = startSegment;
+        _startSegment = startSegment;
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
@@ -23,13 +23,13 @@ public class ExeLoader : ExecutableFileLoader {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Exe size: {@ExeSize}", exe.Length);
         }
-        ExeFile exeFile = new ExeFile(exe);
+        var exeFile = new ExeFile(exe);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Read header: {@ReadHeader}", exeFile);
         }
-        LoadExeFileInMemory(exeFile, startSegment);
-        ushort pspSegment = (ushort)(startSegment - 0x10);
-        SetupCpuForExe(exeFile, startSegment, pspSegment);
+        LoadExeFileInMemory(exeFile, _startSegment);
+        ushort pspSegment = (ushort)(_startSegment - 0x10);
+        SetupCpuForExe(exeFile, _startSegment, pspSegment);
         new PspGenerator(_machine).GeneratePsp(pspSegment, arguments);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Initial CPU State: {@CpuState}", _cpu.GetState());

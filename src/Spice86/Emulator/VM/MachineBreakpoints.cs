@@ -5,36 +5,36 @@ using Spice86.Emulator.VM.Breakpoint;
 using Spice86.Emulator.Memory;
 
 public class MachineBreakpoints {
-    private readonly BreakPointHolder cycleBreakPoints = new();
+    private readonly BreakPointHolder _cycleBreakPoints = new();
 
-    private readonly BreakPointHolder executionBreakPoints = new();
+    private readonly BreakPointHolder _executionBreakPoints = new();
 
-    private readonly Memory memory;
+    private readonly Memory _memory;
 
-    private readonly PauseHandler pauseHandler = new();
+    private readonly PauseHandler _pauseHandler = new();
 
-    private readonly State state;
+    private readonly State _state;
 
-    private BreakPoint? machineStopBreakPoint;
+    private BreakPoint? _machineStopBreakPoint;
 
     public MachineBreakpoints(Machine machine) {
-        this.state = machine.GetCpu().GetState();
-        this.memory = machine.GetMemory();
+        _state = machine.GetCpu().GetState();
+        _memory = machine.GetMemory();
     }
 
     public void CheckBreakPoint() {
         CheckBreakPoints();
-        pauseHandler.WaitIfPaused();
+        _pauseHandler.WaitIfPaused();
     }
 
     public PauseHandler GetPauseHandler() {
-        return pauseHandler;
+        return _pauseHandler;
     }
 
     public void OnMachineStop() {
-        if (machineStopBreakPoint is not null) {
-            machineStopBreakPoint.Trigger();
-            pauseHandler.WaitIfPaused();
+        if (_machineStopBreakPoint is not null) {
+            _machineStopBreakPoint.Trigger();
+            _pauseHandler.WaitIfPaused();
         }
     }
 
@@ -44,25 +44,25 @@ public class MachineBreakpoints {
         }
         BreakPointType? breakPointType = breakPoint.GetBreakPointType();
         if (breakPointType == BreakPointType.EXECUTION) {
-            executionBreakPoints.ToggleBreakPoint(breakPoint, on);
+            _executionBreakPoints.ToggleBreakPoint(breakPoint, on);
         } else if (breakPointType == BreakPointType.CYCLES) {
-            cycleBreakPoints.ToggleBreakPoint(breakPoint, on);
+            _cycleBreakPoints.ToggleBreakPoint(breakPoint, on);
         } else if (breakPointType == BreakPointType.MACHINE_STOP) {
-            machineStopBreakPoint = breakPoint;
+            _machineStopBreakPoint = breakPoint;
         } else {
-            memory.ToggleBreakPoint(breakPoint, on);
+            _memory.ToggleBreakPoint(breakPoint, on);
         }
     }
 
     private void CheckBreakPoints() {
-        if (!executionBreakPoints.IsEmpty()) {
-            uint address = state.GetIpPhysicalAddress();
-            executionBreakPoints.TriggerMatchingBreakPoints(address);
+        if (!_executionBreakPoints.IsEmpty()) {
+            uint address = _state.GetIpPhysicalAddress();
+            _executionBreakPoints.TriggerMatchingBreakPoints(address);
         }
 
-        if (!cycleBreakPoints.IsEmpty()) {
-            long cycles = state.GetCycles();
-            cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
+        if (!_cycleBreakPoints.IsEmpty()) {
+            long cycles = _state.GetCycles();
+            _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
         }
     }
 }

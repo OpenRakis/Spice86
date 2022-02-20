@@ -6,26 +6,26 @@ using Spice86.Utils;
 using System;
 
 public class State {
-    private readonly Flags flags = new();
+    private readonly Flags _flags = new();
 
-    private readonly Registers registers = new();
+    private readonly Registers _registers = new();
 
-    private readonly SegmentRegisters segmentRegisters = new();
+    private readonly SegmentRegisters _segmentRegisters = new();
 
-    private bool? continueZeroFlagValue = null;
+    private bool? _continueZeroFlagValue = null;
 
-    private string currentInstructionName = "";
+    private string _currentInstructionName = "";
 
-    private string currentInstructionPrefix = "";
+    private string _currentInstructionPrefix = "";
 
-    private long cycles;
+    private long _cycles;
 
-    private ushort ip;
+    private ushort _ip;
 
-    private int? segmentOverrideIndex = null;
+    private int? _segmentOverrideIndex = null;
 
     public void AddCurrentInstructionPrefix(string currentInstructionPrefix) {
-        this.currentInstructionPrefix += currentInstructionPrefix + " ";
+        this._currentInstructionPrefix += currentInstructionPrefix + " ";
     }
 
     public void ClearPrefixes() {
@@ -49,125 +49,125 @@ public class State {
         res += " ES=" + ConvertUtils.ToHex16(GetES());
         res += " FS=" + ConvertUtils.ToHex16(GetFS());
         res += " GS=" + ConvertUtils.ToHex16(GetGS());
-        res += " flags=" + ConvertUtils.ToHex16(flags.GetFlagRegister());
-        res += " (" + flags + ")";
+        res += " flags=" + ConvertUtils.ToHex16(_flags.FlagRegister);
+        res += " (" + _flags + ")";
         return res;
     }
 
     public byte GetAH() {
-        return registers.GetRegister8H(Registers.AxIndex);
+        return _registers.GetRegister8H(Registers.AxIndex);
     }
 
     public byte GetAL() {
-        return registers.GetRegister8L(Registers.AxIndex);
+        return _registers.GetRegister8L(Registers.AxIndex);
     }
 
     public bool GetAuxiliaryFlag() {
-        return flags.GetFlag(Flags.Auxiliary);
+        return _flags.GetFlag(Flags.Auxiliary);
     }
 
     public ushort GetAX() {
-        return registers.GetRegister(Registers.AxIndex);
+        return _registers.GetRegister(Registers.AxIndex);
     }
 
     public byte GetBH() {
-        return registers.GetRegister8H(Registers.BxIndex);
+        return _registers.GetRegister8H(Registers.BxIndex);
     }
 
     public byte GetBL() {
-        return registers.GetRegister8L(Registers.BxIndex);
+        return _registers.GetRegister8L(Registers.BxIndex);
     }
 
     public ushort GetBP() {
-        return registers.GetRegister(Registers.BpIndex);
+        return _registers.GetRegister(Registers.BpIndex);
     }
 
     public ushort GetBX() {
-        return registers.GetRegister(Registers.BxIndex);
+        return _registers.GetRegister(Registers.BxIndex);
     }
 
     public bool GetCarryFlag() {
-        return flags.GetFlag(Flags.Carry);
+        return _flags.GetFlag(Flags.Carry);
     }
 
     public byte GetCH() {
-        return registers.GetRegister8H(Registers.CxIndex);
+        return _registers.GetRegister8H(Registers.CxIndex);
     }
 
     public byte GetCL() {
-        return registers.GetRegister8L(Registers.CxIndex);
+        return _registers.GetRegister8L(Registers.CxIndex);
     }
 
     public bool? GetContinueZeroFlagValue() {
-        return continueZeroFlagValue;
+        return _continueZeroFlagValue;
     }
 
     public ushort GetCS() {
-        return segmentRegisters.GetRegister(SegmentRegisters.CsIndex);
+        return _segmentRegisters.GetRegister(SegmentRegisters.CsIndex);
     }
 
     public string GetCurrentInstructionNameWithPrefix() {
-        return currentInstructionPrefix + currentInstructionName;
+        return _currentInstructionPrefix + _currentInstructionName;
     }
 
     public ushort GetCX() {
-        return registers.GetRegister(Registers.CxIndex);
+        return _registers.GetRegister(Registers.CxIndex);
     }
 
     public long GetCycles() {
-        return cycles;
+        return _cycles;
     }
 
     public byte GetDH() {
-        return registers.GetRegister8H(Registers.DxIndex);
+        return _registers.GetRegister8H(Registers.DxIndex);
     }
 
     public ushort GetDI() {
-        return registers.GetRegister(Registers.DiIndex);
+        return _registers.GetRegister(Registers.DiIndex);
     }
 
     public bool GetDirectionFlag() {
-        return flags.GetFlag(Flags.Direction);
+        return _flags.GetFlag(Flags.Direction);
     }
 
     public byte GetDL() {
-        return registers.GetRegister8L(Registers.DxIndex);
+        return _registers.GetRegister8L(Registers.DxIndex);
     }
 
     public ushort GetDS() {
-        return segmentRegisters.GetRegister(SegmentRegisters.DsIndex);
+        return _segmentRegisters.GetRegister(SegmentRegisters.DsIndex);
     }
 
     public ushort GetDX() {
-        return registers.GetRegister(Registers.DxIndex);
+        return _registers.GetRegister(Registers.DxIndex);
     }
 
     public ushort GetES() {
-        return segmentRegisters.GetRegister(SegmentRegisters.EsIndex);
+        return _segmentRegisters.GetRegister(SegmentRegisters.EsIndex);
     }
 
     public Flags GetFlags() {
-        return flags;
+        return _flags;
     }
 
     public ushort GetFS() {
-        return segmentRegisters.GetRegister(SegmentRegisters.FsIndex);
+        return _segmentRegisters.GetRegister(SegmentRegisters.FsIndex);
     }
 
     public ushort GetGS() {
-        return segmentRegisters.GetRegister(SegmentRegisters.GsIndex);
+        return _segmentRegisters.GetRegister(SegmentRegisters.GsIndex);
     }
 
     public override int GetHashCode() {
-        return HashCode.Combine(ip, flags, registers, segmentRegisters);
+        return HashCode.Combine(_ip, _flags, _registers, _segmentRegisters);
     }
 
     public bool GetInterruptFlag() {
-        return flags.GetFlag(Flags.Interrupt);
+        return _flags.GetFlag(Flags.Interrupt);
     }
 
     public ushort GetIP() {
-        return ip;
+        return _ip;
     }
 
     public uint GetIpPhysicalAddress() {
@@ -175,39 +175,39 @@ public class State {
     }
 
     public bool GetOverflowFlag() {
-        return flags.GetFlag(Flags.Overflow);
+        return _flags.GetFlag(Flags.Overflow);
     }
 
     public bool GetParityFlag() {
-        return flags.GetFlag(Flags.Parity);
+        return _flags.GetFlag(Flags.Parity);
     }
 
     public Registers GetRegisters() {
-        return registers;
+        return _registers;
     }
 
     public int? GetSegmentOverrideIndex() {
-        return segmentOverrideIndex;
+        return _segmentOverrideIndex;
     }
 
     public SegmentRegisters GetSegmentRegisters() {
-        return segmentRegisters;
+        return _segmentRegisters;
     }
 
     public ushort GetSI() {
-        return registers.GetRegister(Registers.SiIndex);
+        return _registers.GetRegister(Registers.SiIndex);
     }
 
     public bool GetSignFlag() {
-        return flags.GetFlag(Flags.Sign);
+        return _flags.GetFlag(Flags.Sign);
     }
 
     public ushort GetSP() {
-        return registers.GetRegister(Registers.SpIndex);
+        return _registers.GetRegister(Registers.SpIndex);
     }
 
     public ushort GetSS() {
-        return segmentRegisters.GetRegister(SegmentRegisters.SsIndex);
+        return _segmentRegisters.GetRegister(SegmentRegisters.SsIndex);
     }
 
     public uint GetStackPhysicalAddress() {
@@ -215,163 +215,163 @@ public class State {
     }
 
     public bool GetTrapFlag() {
-        return flags.GetFlag(Flags.Trap);
+        return _flags.GetFlag(Flags.Trap);
     }
 
     public bool GetZeroFlag() {
-        return flags.GetFlag(Flags.Zero);
+        return _flags.GetFlag(Flags.Zero);
     }
 
     public void IncCycles() {
-        cycles++;
+        _cycles++;
     }
 
     public void ResetCurrentInstructionPrefix() {
-        this.currentInstructionPrefix = "";
+        this._currentInstructionPrefix = "";
     }
 
     public void SetAH(byte value) {
-        registers.SetRegister8H(Registers.AxIndex, value);
+        _registers.SetRegister8H(Registers.AxIndex, value);
     }
 
     public void SetAL(byte value) {
-        registers.SetRegister8L(Registers.AxIndex, value);
+        _registers.SetRegister8L(Registers.AxIndex, value);
     }
 
     public void SetAuxiliaryFlag(bool value) {
-        flags.SetFlag(Flags.Auxiliary, value);
+        _flags.SetFlag(Flags.Auxiliary, value);
     }
 
     public void SetAX(ushort value) {
-        registers.SetRegister(Registers.AxIndex, value);
+        _registers.SetRegister(Registers.AxIndex, value);
     }
 
     public void SetBH(byte value) {
-        registers.SetRegister8H(Registers.BxIndex, value);
+        _registers.SetRegister8H(Registers.BxIndex, value);
     }
 
     public void SetBL(byte value) {
-        registers.SetRegister8L(Registers.BxIndex, value);
+        _registers.SetRegister8L(Registers.BxIndex, value);
     }
 
     public void SetBP(ushort value) {
-        registers.SetRegister(Registers.BpIndex, value);
+        _registers.SetRegister(Registers.BpIndex, value);
     }
 
     public void SetBX(ushort value) {
-        registers.SetRegister(Registers.BxIndex, value);
+        _registers.SetRegister(Registers.BxIndex, value);
     }
 
     public void SetCarryFlag(bool value) {
-        flags.SetFlag(Flags.Carry, value);
+        _flags.SetFlag(Flags.Carry, value);
     }
 
     public void SetCH(byte value) {
-        registers.SetRegister8H(Registers.CxIndex, value);
+        _registers.SetRegister8H(Registers.CxIndex, value);
     }
 
     public void SetCL(byte value) {
-        registers.SetRegister8L(Registers.CxIndex, value);
+        _registers.SetRegister8L(Registers.CxIndex, value);
     }
 
     public void SetContinueZeroFlagValue(bool? continueZeroFlagValue) {
-        this.continueZeroFlagValue = continueZeroFlagValue;
+        this._continueZeroFlagValue = continueZeroFlagValue;
     }
 
     public void SetCS(ushort value) {
-        segmentRegisters.SetRegister(SegmentRegisters.CsIndex, value);
+        _segmentRegisters.SetRegister(SegmentRegisters.CsIndex, value);
     }
 
     public void SetCurrentInstructionName(string currentInstructionName) {
-        this.currentInstructionName = currentInstructionName;
+        this._currentInstructionName = currentInstructionName;
     }
 
     public void SetCX(ushort value) {
-        registers.SetRegister(Registers.CxIndex, value);
+        _registers.SetRegister(Registers.CxIndex, value);
     }
 
     public void SetCycles(long cycles) {
-        this.cycles = cycles;
+        this._cycles = cycles;
     }
 
     public void SetDH(byte value) {
-        registers.SetRegister8H(Registers.DxIndex, value);
+        _registers.SetRegister8H(Registers.DxIndex, value);
     }
 
     public void SetDI(ushort value) {
-        registers.SetRegister(Registers.DiIndex, value);
+        _registers.SetRegister(Registers.DiIndex, value);
     }
 
     public void SetDirectionFlag(bool value) {
-        flags.SetFlag(Flags.Direction, value);
+        _flags.SetFlag(Flags.Direction, value);
     }
 
     public void SetDL(byte value) {
-        registers.SetRegister8L(Registers.DxIndex, value);
+        _registers.SetRegister8L(Registers.DxIndex, value);
     }
 
     public void SetDS(ushort value) {
-        segmentRegisters.SetRegister(SegmentRegisters.DsIndex, value);
+        _segmentRegisters.SetRegister(SegmentRegisters.DsIndex, value);
     }
 
     public void SetDX(ushort value) {
-        registers.SetRegister(Registers.DxIndex, value);
+        _registers.SetRegister(Registers.DxIndex, value);
     }
 
     public void SetES(ushort value) {
-        segmentRegisters.SetRegister(SegmentRegisters.EsIndex, value);
+        _segmentRegisters.SetRegister(SegmentRegisters.EsIndex, value);
     }
 
     public void SetFS(ushort value) {
-        segmentRegisters.SetRegister(SegmentRegisters.FsIndex, value);
+        _segmentRegisters.SetRegister(SegmentRegisters.FsIndex, value);
     }
 
     public void SetGS(ushort value) {
-        segmentRegisters.SetRegister(SegmentRegisters.GsIndex, value);
+        _segmentRegisters.SetRegister(SegmentRegisters.GsIndex, value);
     }
 
     public void SetInterruptFlag(bool value) {
-        flags.SetFlag(Flags.Interrupt, value);
+        _flags.SetFlag(Flags.Interrupt, value);
     }
 
     public void SetIP(ushort value) {
-        ip = value;
+        _ip = value;
     }
 
     public void SetOverflowFlag(bool value) {
-        flags.SetFlag(Flags.Overflow, value);
+        _flags.SetFlag(Flags.Overflow, value);
     }
 
     public void SetParityFlag(bool value) {
-        flags.SetFlag(Flags.Parity, value);
+        _flags.SetFlag(Flags.Parity, value);
     }
 
     public void SetSegmentOverrideIndex(int? segmentOverrideIndex) {
-        this.segmentOverrideIndex = segmentOverrideIndex;
+        this._segmentOverrideIndex = segmentOverrideIndex;
     }
 
     public void SetSI(ushort value) {
-        registers.SetRegister(Registers.SiIndex, value);
+        _registers.SetRegister(Registers.SiIndex, value);
     }
 
     public void SetSignFlag(bool value) {
-        flags.SetFlag(Flags.Sign, value);
+        _flags.SetFlag(Flags.Sign, value);
     }
 
     public void SetSP(ushort value) {
-        registers.SetRegister(Registers.SpIndex, value);
+        _registers.SetRegister(Registers.SpIndex, value);
     }
 
     public void SetSS(ushort value) {
-        segmentRegisters.SetRegister(SegmentRegisters.SsIndex, value);
+        _segmentRegisters.SetRegister(SegmentRegisters.SsIndex, value);
     }
 
     public void SetTrapFlag(bool value) {
-        flags.SetFlag(Flags.Trap, value);
+        _flags.SetFlag(Flags.Trap, value);
     }
 
     public void SetZeroFlag(bool value) {
-        flags.SetFlag(Flags.Zero, value);
+        _flags.SetFlag(Flags.Zero, value);
     }
 
     public override string ToString() {

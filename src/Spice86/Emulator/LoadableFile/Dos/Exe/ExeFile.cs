@@ -6,33 +6,33 @@ using System.Collections.Generic;
 using System.Text;
 
 public class ExeFile {
-    private ushort checkSum;
-    private ushort extraBytes;
-    private ushort headerSize;
-    private ushort initCS;
+    private ushort _checkSum;
+    private ushort _extraBytes;
+    private ushort _headerSize;
+    private ushort _initCS;
 
     // 0012 - Checksum
-    private ushort initIP;
+    private ushort _initIP;
 
-    private ushort initSP;
-    private ushort initSS;
-    private ushort maxAlloc;
+    private ushort _initSP;
+    private ushort _initSS;
+    private ushort _maxAlloc;
 
     // 0008 - Size of header in paragraphs
-    private ushort minAlloc;
+    private ushort _minAlloc;
 
-    private ushort overlay;
+    private ushort _overlay;
 
     // 0002 - Bytes on last page of file
-    private ushort pages;
+    private ushort _pages;
 
-    private byte[] programImage;
+    private byte[] _programImage;
 
     // 001A - Overlay number
-    private List<SegmentedAddress> relocationTable = new();
+    private List<SegmentedAddress> _relocationTable = new();
 
     // 0004 - Pages in file
-    private ushort relocItems;
+    private ushort _relocItems;
 
     // 0006 - Relocations
     // 000A - Minimum extra paragraphs needed
@@ -41,171 +41,171 @@ public class ExeFile {
     // 0010 - Initial SP value
     // 0014 - Initial IP value
     // 0016 - Initial (relative) CS value
-    private ushort relocTable;
+    private ushort _relocTable;
 
-    private string signature; // 0000 - Magic number
+    private string _signature; // 0000 - Magic number
 
     // 0018 - File address of relocation table
     public ExeFile(byte[] exe) {
-        this.signature = new string(Encoding.UTF8.GetChars(exe), 0, 2);
-        this.extraBytes = MemoryUtils.GetUint16(exe, 0x02);
-        this.pages = MemoryUtils.GetUint16(exe, 0x04);
-        this.relocItems = MemoryUtils.GetUint16(exe, 0x06);
-        this.headerSize = MemoryUtils.GetUint16(exe, 0x08);
-        this.minAlloc = MemoryUtils.GetUint16(exe, 0x0A);
-        this.maxAlloc = MemoryUtils.GetUint16(exe, 0x0C);
-        this.initSS = MemoryUtils.GetUint16(exe, 0x0E);
-        this.initSP = MemoryUtils.GetUint16(exe, 0x10);
-        this.checkSum = MemoryUtils.GetUint16(exe, 0x12);
-        this.initIP = MemoryUtils.GetUint16(exe, 0x14);
-        this.initCS = MemoryUtils.GetUint16(exe, 0x16);
-        this.relocTable = MemoryUtils.GetUint16(exe, 0x18);
-        this.overlay = MemoryUtils.GetUint16(exe, 0x1A);
-        int relocationTableOffset = this.relocTable;
-        int numRelocationEntries = this.relocItems;
+        this._signature = new string(Encoding.UTF8.GetChars(exe), 0, 2);
+        this._extraBytes = MemoryUtils.GetUint16(exe, 0x02);
+        this._pages = MemoryUtils.GetUint16(exe, 0x04);
+        this._relocItems = MemoryUtils.GetUint16(exe, 0x06);
+        this._headerSize = MemoryUtils.GetUint16(exe, 0x08);
+        this._minAlloc = MemoryUtils.GetUint16(exe, 0x0A);
+        this._maxAlloc = MemoryUtils.GetUint16(exe, 0x0C);
+        this._initSS = MemoryUtils.GetUint16(exe, 0x0E);
+        this._initSP = MemoryUtils.GetUint16(exe, 0x10);
+        this._checkSum = MemoryUtils.GetUint16(exe, 0x12);
+        this._initIP = MemoryUtils.GetUint16(exe, 0x14);
+        this._initCS = MemoryUtils.GetUint16(exe, 0x16);
+        this._relocTable = MemoryUtils.GetUint16(exe, 0x18);
+        this._overlay = MemoryUtils.GetUint16(exe, 0x1A);
+        int relocationTableOffset = this._relocTable;
+        int numRelocationEntries = this._relocItems;
         for (int i = 0; i < numRelocationEntries; i++) {
             uint currentEntry = (uint)(relocationTableOffset + i * 4);
             ushort offset = MemoryUtils.GetUint16(exe, currentEntry);
             ushort segment = MemoryUtils.GetUint16(exe, currentEntry + 2);
-            relocationTable.Add(new SegmentedAddress(segment, offset));
+            _relocationTable.Add(new SegmentedAddress(segment, offset));
         }
 
-        int actualHeaderSize = headerSize * 16;
+        int actualHeaderSize = _headerSize * 16;
         int programSize = exe.Length - actualHeaderSize;
-        programImage = new byte[programSize];
-        System.Array.Copy(exe, actualHeaderSize, programImage, 0, programSize);
+        _programImage = new byte[programSize];
+        System.Array.Copy(exe, actualHeaderSize, _programImage, 0, programSize);
     }
 
     public ushort GetCheckSum() {
-        return checkSum;
+        return _checkSum;
     }
 
     public int GetCodeSize() {
-        return programImage.Length;
+        return _programImage.Length;
     }
 
     public ushort GetExtraBytes() {
-        return extraBytes;
+        return _extraBytes;
     }
 
     public ushort GetHeaderSize() {
-        return headerSize;
+        return _headerSize;
     }
 
     public ushort GetInitCS() {
-        return initCS;
+        return _initCS;
     }
 
     public ushort GetInitIP() {
-        return initIP;
+        return _initIP;
     }
 
     public ushort GetInitSP() {
-        return initSP;
+        return _initSP;
     }
 
     public ushort GetInitSS() {
-        return initSS;
+        return _initSS;
     }
 
     public ushort GetMaxAlloc() {
-        return maxAlloc;
+        return _maxAlloc;
     }
 
     public ushort GetMinAlloc() {
-        return minAlloc;
+        return _minAlloc;
     }
 
     public ushort GetOverlay() {
-        return overlay;
+        return _overlay;
     }
 
     public ushort GetPages() {
-        return pages;
+        return _pages;
     }
 
     public byte[] GetProgramImage() {
-        return programImage;
+        return _programImage;
     }
 
     public IList<SegmentedAddress> GetRelocationTable() {
-        return relocationTable;
+        return _relocationTable;
     }
 
     public ushort GetRelocItems() {
-        return relocItems;
+        return _relocItems;
     }
 
     public ushort GetRelocTable() {
-        return relocTable;
+        return _relocTable;
     }
 
     public string GetSignature() {
-        return signature;
+        return _signature;
     }
 
     public void SetCheckSum(ushort checkSum) {
-        this.checkSum = checkSum;
+        this._checkSum = checkSum;
     }
 
     public void SetExtraBytes(ushort extraBytes) {
-        this.extraBytes = extraBytes;
+        this._extraBytes = extraBytes;
     }
 
     public void SetHeaderSize(ushort headerSize) {
-        this.headerSize = headerSize;
+        this._headerSize = headerSize;
     }
 
     public void SetInitCS(ushort initCS) {
-        this.initCS = initCS;
+        this._initCS = initCS;
     }
 
     public void SetInitIP(ushort initIP) {
-        this.initIP = initIP;
+        this._initIP = initIP;
     }
 
     public void SetInitSP(ushort initSP) {
-        this.initSP = initSP;
+        this._initSP = initSP;
     }
 
     public void SetInitSS(ushort initSS) {
-        this.initSS = initSS;
+        this._initSS = initSS;
     }
 
     public void SetMaxAlloc(ushort maxAlloc) {
-        this.maxAlloc = maxAlloc;
+        this._maxAlloc = maxAlloc;
     }
 
     public void SetMinAlloc(ushort minAlloc) {
-        this.minAlloc = minAlloc;
+        this._minAlloc = minAlloc;
     }
 
     public void SetOverlay(ushort overlay) {
-        this.overlay = overlay;
+        this._overlay = overlay;
     }
 
     public void SetPages(ushort pages) {
-        this.pages = pages;
+        this._pages = pages;
     }
 
     public void SetProgramImage(byte[] programImage) {
-        this.programImage = programImage;
+        this._programImage = programImage;
     }
 
     public void SetRelocationTable(List<SegmentedAddress> relocationTable) {
-        this.relocationTable = relocationTable;
+        this._relocationTable = relocationTable;
     }
 
     public void SetRelocItems(ushort relocItems) {
-        this.relocItems = relocItems;
+        this._relocItems = relocItems;
     }
 
     public void SetRelocTable(ushort relocTable) {
-        this.relocTable = relocTable;
+        this._relocTable = relocTable;
     }
 
     public void SetSignature(string signature) {
-        this.signature = signature;
+        this._signature = signature;
     }
 
     public override string ToString() {

@@ -4,12 +4,12 @@ using Spice86.Emulator.Memory;
 using Spice86.Emulator.ReverseEngineer;
 
 public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
-    private static readonly ushort END = 0x482;
-    private static readonly ushort HEAD = 0x41A;
-    private static readonly int INITIAL_LENGTH = 0x20;
-    private static readonly ushort INITIAL_START_ADDRESS = 0x41E;
-    private static readonly ushort START = 0x480;
-    private static readonly ushort TAIL = 0x41C;
+    private const ushort End = 0x482;
+    private const ushort Head = 0x41A;
+    private const int InitialLength = 0x20;
+    private const ushort InitialStartAddress = 0x41E;
+    private const ushort Start = 0x480;
+    private const ushort Tail = 0x41C;
 
     public BiosKeyboardBuffer(Memory memory) : base(memory, 0) {
     }
@@ -34,11 +34,11 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
     }
 
     public ushort GetEndAddress() {
-        return this.GetUint16(END);
+        return this.GetUint16(End);
     }
 
     public ushort GetHeadAddress() {
-        return this.GetUint16(HEAD);
+        return this.GetUint16(Head);
     }
 
     public ushort? GetKeyCode() {
@@ -53,34 +53,34 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
     }
 
     public ushort GetStartAddress() {
-        return this.GetUint16(START);
+        return this.GetUint16(Start);
     }
 
     public ushort GetTailAddress() {
-        return this.GetUint16(TAIL);
+        return this.GetUint16(Tail);
     }
 
     public void Init() {
-        this.SetStartAddress(INITIAL_START_ADDRESS);
-        this.SetEndAddress((ushort)(INITIAL_START_ADDRESS + INITIAL_LENGTH));
-        this.SetHeadAddress(INITIAL_START_ADDRESS);
-        this.SetTailAddress(INITIAL_START_ADDRESS);
+        this.SetStartAddress(InitialStartAddress);
+        this.SetEndAddress((ushort)(InitialStartAddress + InitialLength));
+        this.SetHeadAddress(InitialStartAddress);
+        this.SetTailAddress(InitialStartAddress);
     }
 
     public void SetEndAddress(ushort value) {
-        this.SetUint16(END, value);
+        this.SetUint16(End, value);
     }
 
     public void SetHeadAddress(ushort value) {
-        this.SetUint16(HEAD, value);
+        this.SetUint16(Head, value);
     }
 
     public void SetStartAddress(ushort value) {
-        this.SetUint16(START, value);
+        this.SetUint16(Start, value);
     }
 
     public void SetTailAddress(ushort value) {
-        this.SetUint16(TAIL, value);
+        this.SetUint16(Tail, value);
     }
 
     private ushort AdvancePointer(ushort value) {

@@ -12,7 +12,7 @@ using System.Text;
 public class DetailedFunctionInformationToStringConverter : FunctionInformationToStringConverter {
 
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
-        StringBuilder res = new StringBuilder();
+        var res = new StringBuilder();
         Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns = Sort(functionInformation.GetReturns());
         Dictionary<FunctionReturn, ISet<SegmentedAddress>> unalignedReturns = Sort(functionInformation.GetUnalignedReturns());
         List<FunctionInformation> callers = GetCallers(functionInformation);
@@ -43,7 +43,7 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
     }
 
     private string DumpReturns(Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns, string prefix) {
-        StringBuilder res = new StringBuilder();
+        var res = new StringBuilder();
         foreach (KeyValuePair<FunctionReturn, ISet<SegmentedAddress>> entry in returns) {
             FunctionReturn oneReturn = entry.Key;
             res.Append(" - ");

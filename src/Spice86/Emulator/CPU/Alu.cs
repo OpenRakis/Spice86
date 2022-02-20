@@ -37,7 +37,7 @@ public class Alu {
     private readonly State _state;
 
     public Alu(State state) {
-        this._state = state;
+        _state = state;
     }
 
     public ushort Adc16(ushort value1, ushort value2) {
@@ -110,7 +110,7 @@ public class Alu {
         return res;
     }
 
-    public ushort? Div16(uint value1, ushort value2) {
+    public static ushort? Div16(uint value1, ushort value2) {
         if (value2 == 0) {
             return null;
         }
@@ -121,7 +121,7 @@ public class Alu {
         return (ushort)res;
     }
 
-    public byte? Div8(ushort value1, byte value2) {
+    public static byte? Div8(ushort value1, byte value2) {
         if (value2 == 0) {
             return null;
         }
@@ -132,14 +132,14 @@ public class Alu {
         return (byte)res;
     }
 
-    public short? Idiv16(int value1, short value2) {
+    public static short? Idiv16(int value1, short value2) {
         if (value2 == 0) {
             return null;
         }
 
         long res = value1 / value2;
         unchecked {
-            if ((res > 0x7FFF) || (res < (short)0x8000)) {
+            if (res is > 0x7FFF or < ((short)0x8000)) {
                 return null;
             }
         }
@@ -147,14 +147,14 @@ public class Alu {
         return (short)res;
     }
 
-    public sbyte? Idiv8(short value1, sbyte value2) {
+    public static sbyte? Idiv8(short value1, sbyte value2) {
         if (value2 == 0) {
             return null;
         }
 
         int res = value1 / value2;
         unchecked {
-            if ((res > 0x7F) || (res < (sbyte)0x80)) {
+            if (res is > 0x7F or < ((sbyte)0x80)) {
                 return null;
             }
         }
@@ -520,11 +520,11 @@ public class Alu {
     }
 
     private static uint BorrowBitsSub(uint value1, uint value2, uint dst) {
-        return (((value1 ^ value2) ^ dst) ^ ((value1 ^ dst) & (value1 ^ value2)));
+        return ((value1 ^ value2 ^ dst) ^ ((value1 ^ dst) & (value1 ^ value2)));
     }
 
     private static uint CarryBitsAdd(uint value1, uint value2, uint dst) {
-        return (((value1 ^ value2) ^ dst) ^ ((value1 ^ dst) & (~(value1 ^ value2))));
+        return ((value1 ^ value2 ^ dst) ^ ((value1 ^ dst) & (~(value1 ^ value2))));
     }
 
     private static bool IsParity(byte value) {
@@ -535,11 +535,11 @@ public class Alu {
 
     // from https://www.vogons.org/viewtopic.php?t=55377
     private static uint OverflowBitsAdd(uint value1, uint value2, uint dst) {
-        return ((value1 ^ dst) & (~(value1 ^ value2)));
+        return (value1 ^ dst) & (~(value1 ^ value2));
     }
 
     private static uint OverflowBitsSub(uint value1, uint value2, uint dst) {
-        return ((value1 ^ dst) & (value1 ^ value2));
+        return (value1 ^ dst) & (value1 ^ value2);
     }
 
     private void SetCarryFlagForRightShifts(int value, int count) {

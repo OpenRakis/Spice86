@@ -27,8 +27,6 @@ public class Flags {
     // rflag mask to OR with flags, useful to compare values with dosbox which emulates
     private ushort _additionalFlagMask;
 
-    private ushort _flagRegister;
-
     public Flags() {
         this.SetFlagRegister(0);
     }
@@ -54,19 +52,17 @@ public class Flags {
         if (obj is not Flags other) {
             return false;
         }
-        return _flagRegister == other._flagRegister;
+        return FlagRegister == other.FlagRegister;
     }
 
     public bool GetFlag(ushort mask) {
-        return (_flagRegister & mask) == mask;
+        return (FlagRegister & mask) == mask;
     }
 
-    public ushort GetFlagRegister() {
-        return _flagRegister;
-    }
+    public ushort FlagRegister { get; private set; }
 
     public override int GetHashCode() {
-        return _flagRegister;
+        return FlagRegister;
     }
 
     public void SetDosboxCompatibility(bool compatible) {
@@ -79,9 +75,9 @@ public class Flags {
 
     public void SetFlag(ushort mask, bool value) {
         if (value) {
-            _flagRegister |= mask;
+            FlagRegister |= mask;
         } else {
-            _flagRegister &= (ushort)~mask;
+            FlagRegister &= (ushort)~mask;
         }
     }
 
@@ -91,11 +87,11 @@ public class Flags {
 
         // dosbox
         modifedValue |= _additionalFlagMask;
-        _flagRegister = ConvertUtils.Uint16(modifedValue);
+        FlagRegister = ConvertUtils.Uint16(modifedValue);
     }
 
     public override string ToString() {
-        return DumpFlags(_flagRegister);
+        return DumpFlags(FlagRegister);
     }
 
     private static char GetFlag(int flags, int mask, char representation) {

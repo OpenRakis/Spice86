@@ -42,11 +42,11 @@ public class CsvFunctionInformationToStringConverter : FunctionInformationToStri
         return res.ToString();
     }
 
-    private string Size<K, V>(IDictionary<K, V> map) {
+    private static string Size<K, V>(IDictionary<K, V> map) {
         return map.Count.ToString();
     }
 
-    private string Size<T>(IEnumerable<T> collection) {
+    private static string Size<T>(IEnumerable<T> collection) {
         return collection.Count().ToString();
     }
 }
