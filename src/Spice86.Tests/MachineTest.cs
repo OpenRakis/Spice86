@@ -159,7 +159,7 @@ public class MachineTest {
         configuration.InstallInterruptVector = false;
 
         using ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
-        Machine machine = programExecutor.GetMachine();
+        Machine machine = programExecutor.Machine;
         Cpu cpu = machine.GetCpu();
         // Disabling custom IO handling
         cpu.SetIoPortDispatcher(null);
