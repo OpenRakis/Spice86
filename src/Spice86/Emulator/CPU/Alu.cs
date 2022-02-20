@@ -49,14 +49,14 @@ public class Alu {
     }
 
     public ushort Add16(ushort value1, ushort value2, bool useCarry) {
-        int carry = (useCarry && _state.GetCarryFlag()) ? 1 : 0;
+        int carry = (useCarry && _state.CarryFlag) ? 1 : 0;
         ushort res = (ushort)(value1 + value2 + carry);
         UpdateFlags16(res);
         uint carryBits = CarryBitsAdd(value1, value2, res);
         uint overflowBits = OverflowBitsAdd(value1, value2, res);
-        _state.SetCarryFlag(((carryBits >> 15) & 1) == 1);
-        _state.SetAuxiliaryFlag(((carryBits >> 3) & 1) == 1);
-        _state.SetOverflowFlag(((overflowBits >> 15) & 1) == 1);
+        _state.CarryFlag = ((carryBits >> 15) & 1) == 1;
+        _state.AuxiliaryFlag = ((carryBits >> 3) & 1) == 1;
+        _state.OverflowFlag = ((overflowBits >> 15) & 1) == 1;
         return res;
     }
 
@@ -65,14 +65,14 @@ public class Alu {
     }
 
     public byte Add8(byte value1, byte value2, bool useCarry) {
-        int carry = (useCarry && _state.GetCarryFlag()) ? 1 : 0;
+        int carry = (useCarry && _state.CarryFlag) ? 1 : 0;
         byte res = (byte)(value1 + value2 + carry);
         UpdateFlags8(res);
         uint carryBits = CarryBitsAdd(value1, value2, res);
         uint overflowBits = OverflowBitsAdd(value1, value2, res);
-        _state.SetCarryFlag(((carryBits >> 7) & 1) == 1);
-        _state.SetAuxiliaryFlag(((carryBits >> 3) & 1) == 1);
-        _state.SetOverflowFlag(((overflowBits >> 7) & 1) == 1);
+        _state.CarryFlag = ((carryBits >> 7) & 1) == 1;
+        _state.AuxiliaryFlag = ((carryBits >> 3) & 1) == 1;
+        _state.OverflowFlag = ((overflowBits >> 7) & 1) == 1;
         return res;
     }
 
@@ -83,30 +83,30 @@ public class Alu {
     public ushort And16(ushort value1, ushort value2) {
         ushort res = (ushort)(value1 & value2);
         UpdateFlags16(res);
-        _state.SetCarryFlag(false);
-        _state.SetOverflowFlag(false);
+        _state.CarryFlag = false;
+        _state.OverflowFlag = false;
         return res;
     }
 
     public byte And8(byte value1, byte value2) {
         byte res = (byte)(value1 & value2);
         UpdateFlags8(res);
-        _state.SetCarryFlag(false);
-        _state.SetOverflowFlag(false);
+        _state.CarryFlag = false;
+        _state.OverflowFlag = false;
         return res;
     }
 
     public ushort Dec16(ushort value1) {
-        bool carry = _state.GetCarryFlag();
+        bool carry = _state.CarryFlag;
         ushort res = Sub16(value1, 1, false);
-        _state.SetCarryFlag(carry);
+        _state.CarryFlag = carry;
         return res;
     }
 
     public byte Dec8(byte value1) {
-        bool carry = _state.GetCarryFlag();
+        bool carry = _state.CarryFlag;
         byte res = Sub8(value1, 1, false);
-        _state.SetCarryFlag(carry);
+        _state.CarryFlag = carry;
         return res;
     }
 
@@ -165,40 +165,40 @@ public class Alu {
     public int Imul16(short value1, short value2) {
         int res = value1 * value2;
         bool doesNotFitInWord = res != (short)(res);
-        _state.SetOverflowFlag(doesNotFitInWord);
-        _state.SetCarryFlag(doesNotFitInWord);
+        _state.OverflowFlag = doesNotFitInWord;
+        _state.CarryFlag = doesNotFitInWord;
         return res;
     }
 
     public short Imul8(sbyte value1, sbyte value2) {
         int res = value1 * value2;
         bool doesNotFitInByte = res != (sbyte)(res);
-        _state.SetOverflowFlag(doesNotFitInByte);
-        _state.SetCarryFlag(doesNotFitInByte);
+        _state.OverflowFlag = doesNotFitInByte;
+        _state.CarryFlag = doesNotFitInByte;
         return (short)res;
     }
 
     public ushort Inc16(ushort value) {
         // CF is not modified
-        bool carry = _state.GetCarryFlag();
+        bool carry = _state.CarryFlag;
         ushort res = Add16(value, 1, false);
-        _state.SetCarryFlag(carry);
+        _state.CarryFlag = carry;
         return res;
     }
 
     public byte Inc8(byte value) {
         // CF is not modified
-        bool carry = _state.GetCarryFlag();
+        bool carry = _state.CarryFlag;
         byte res = Add8(value, 1, false);
-        _state.SetCarryFlag(carry);
+        _state.CarryFlag = carry;
         return res;
     }
 
     public uint Mul16(uint value1, uint value2) {
         uint res = value1 * value2;
         bool upperHalfNonZero = (res & 0xFFFF0000) != 0;
-        _state.SetOverflowFlag(upperHalfNonZero);
-        _state.SetCarryFlag(upperHalfNonZero);
+        _state.OverflowFlag = upperHalfNonZero;
+        _state.CarryFlag = upperHalfNonZero;
         SetZeroFlag(res);
         SetParityFlag(res);
         SetSignFlag16((ushort)res);
@@ -208,8 +208,8 @@ public class Alu {
     public ushort Mul8(byte value1, byte value2) {
         ushort res = (ushort)(value1 * value2);
         bool upperHalfNonZero = (res & 0xFF00) != 0;
-        _state.SetOverflowFlag(upperHalfNonZero);
-        _state.SetCarryFlag(upperHalfNonZero);
+        _state.OverflowFlag = upperHalfNonZero;
+        _state.CarryFlag = upperHalfNonZero;
         SetZeroFlag(res);
         SetParityFlag(res);
         SetSignFlag8((byte)res);
@@ -219,16 +219,16 @@ public class Alu {
     public ushort Or16(ushort value1, ushort value2) {
         ushort res = (ushort)(value1 | value2);
         UpdateFlags16(res);
-        _state.SetCarryFlag(false);
-        _state.SetOverflowFlag(false);
+        _state.CarryFlag = false;
+        _state.OverflowFlag = false;
         return res;
     }
 
     public byte Or8(byte value1, byte value2) {
         byte res = (byte)(value1 | value2);
         UpdateFlags8(res);
-        _state.SetCarryFlag(false);
-        _state.SetOverflowFlag(false);
+        _state.CarryFlag = false;
+        _state.OverflowFlag = false;
         return res;
     }
 
@@ -242,12 +242,12 @@ public class Alu {
         ushort res = (ushort)(value << count);
         int mask = (1 << (count - 1)) - 1;
         res = (ushort)(res | ((value >> (17 - count)) & mask));
-        if (_state.GetCarryFlag()) {
+        if (_state.CarryFlag) {
             res = (ushort)(res | (1 << (count - 1)));
         }
-        _state.SetCarryFlag(carry != 0);
+        _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask16) != 0;
-        _state.SetOverflowFlag(msb ^ _state.GetCarryFlag());
+        _state.OverflowFlag = msb ^ _state.CarryFlag;
         return res;
     }
 
@@ -261,12 +261,12 @@ public class Alu {
         byte res = (byte)((value << count));
         int mask = (1 << (count - 1)) - 1;
         res = (byte)(res | ((value >> (9 - count)) & mask));
-        if (_state.GetCarryFlag()) {
+        if (_state.CarryFlag) {
             res = (byte)(res | (1 << (count - 1)));
         }
-        _state.SetCarryFlag(carry != 0);
+        _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask8) != 0;
-        _state.SetOverflowFlag(msb ^ _state.GetCarryFlag());
+        _state.OverflowFlag = msb ^ _state.CarryFlag;
         return res;
     }
 
@@ -280,10 +280,10 @@ public class Alu {
         int mask = (1 << (16 - count)) - 1;
         ushort res = (ushort)((value >> count) & mask);
         res = (ushort)(res | (value << (17 - count)));
-        if (_state.GetCarryFlag()) {
+        if (_state.CarryFlag) {
             res = (ushort)(res | (1 << (16 - count)));
         }
-        _state.SetCarryFlag(carry != 0);
+        _state.CarryFlag = carry != 0;
         SetOverflowForRigthRotate16(res);
         return res;
     }
@@ -298,10 +298,10 @@ public class Alu {
         int mask = (1 << (8 - count)) - 1;
         byte res = (byte)((value >> count) & mask);
         res = (byte)(res | (value << (9 - count)));
-        if (_state.GetCarryFlag()) {
+        if (_state.CarryFlag) {
             res = (byte)(res | (1 << (8 - count)));
         }
-        _state.SetCarryFlag(carry != 0);
+        _state.CarryFlag = carry != 0;
         SetOverflowForRigthRotate8(res);
         return res;
     }
@@ -315,9 +315,9 @@ public class Alu {
         int carry = (value >> (16 - count)) & 0x1;
         ushort res = (ushort)((value << count));
         res = (ushort)(res | (value >> (16 - count)));
-        _state.SetCarryFlag(carry != 0);
+        _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask16) != 0;
-        _state.SetOverflowFlag(msb ^ _state.GetCarryFlag());
+        _state.OverflowFlag = msb ^ _state.CarryFlag;
         return res;
     }
 
@@ -330,9 +330,9 @@ public class Alu {
         int carry = (value >> (8 - count)) & 0x1;
         byte res = (byte)(value << count);
         res = (byte)(res | (value >> (8 - count)));
-        _state.SetCarryFlag(carry != 0);
+        _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask8) != 0;
-        _state.SetOverflowFlag(msb ^ _state.GetCarryFlag());
+        _state.OverflowFlag = msb ^ _state.CarryFlag;
         return res;
     }
 
@@ -346,7 +346,7 @@ public class Alu {
         int mask = (1 << (16 - count)) - 1;
         ushort res = (ushort)((value >> count) & mask);
         res = (ushort)(res | (value << (16 - count)));
-        _state.SetCarryFlag(carry != 0);
+        _state.CarryFlag = carry != 0;
         SetOverflowForRigthRotate16(res);
         return res;
     }
@@ -361,7 +361,7 @@ public class Alu {
         int mask = (1 << (8 - count)) - 1;
         byte res = (byte)((value >> count) & mask);
         res = (byte)(res | (value << (8 - count)));
-        _state.SetCarryFlag(carry != 0);
+        _state.CarryFlag = carry != 0;
         SetOverflowForRigthRotate8(res);
         return res;
     }
@@ -376,7 +376,7 @@ public class Alu {
         SetCarryFlagForRightShifts(res, count);
         res >>= count;
         UpdateFlags16((ushort)res);
-        _state.SetOverflowFlag(false);
+        _state.OverflowFlag = false;
         return (ushort)res;
     }
 
@@ -389,7 +389,7 @@ public class Alu {
         SetCarryFlagForRightShifts(res, count);
         res >>= count;
         UpdateFlags8((byte)res);
-        _state.SetOverflowFlag(false);
+        _state.OverflowFlag = false;
         return (byte)res;
     }
 
@@ -408,11 +408,11 @@ public class Alu {
         }
 
         int msbBefore = (value << (count - 1)) & MsbMask16;
-        _state.SetCarryFlag(msbBefore != 0);
+        _state.CarryFlag = msbBefore != 0;
         ushort res = (ushort)(value << count);
         UpdateFlags16(res);
         int msb = res & MsbMask16;
-        _state.SetOverflowFlag((msb ^ msbBefore) != 0);
+        _state.OverflowFlag = (msb ^ msbBefore) != 0;
         return res;
     }
 
@@ -423,11 +423,11 @@ public class Alu {
         }
 
         int msbBefore = (value << (count - 1)) & MsbMask8;
-        _state.SetCarryFlag(msbBefore != 0);
+        _state.CarryFlag = msbBefore != 0;
         byte res = (byte)(value << count);
         UpdateFlags8(res);
         int msb = res & MsbMask8;
-        _state.SetOverflowFlag((msb ^ msbBefore) != 0);
+        _state.OverflowFlag = (msb ^ msbBefore) != 0;
         return res;
     }
 
@@ -438,7 +438,7 @@ public class Alu {
         }
 
         int msb = value & MsbMask16;
-        _state.SetOverflowFlag(msb != 0);
+        _state.OverflowFlag = msb != 0;
         SetCarryFlagForRightShifts(value, count);
         ushort res = (ushort)(value >> count);
         UpdateFlags16(res);
@@ -452,7 +452,7 @@ public class Alu {
         }
 
         int msb = value & MsbMask8;
-        _state.SetOverflowFlag(msb != 0);
+        _state.OverflowFlag = msb != 0;
         SetCarryFlagForRightShifts(value, count);
         byte res = (byte)(value >> count);
         UpdateFlags8(res);
@@ -464,14 +464,14 @@ public class Alu {
     }
 
     public ushort Sub16(ushort value1, ushort value2, bool useCarry) {
-        int carry = (useCarry && _state.GetCarryFlag()) ? 1 : 0;
+        int carry = (useCarry && _state.CarryFlag) ? 1 : 0;
         ushort res = (ushort)(value1 - value2 - carry);
         UpdateFlags16(res);
         uint borrowBits = BorrowBitsSub(value1, value2, res);
         uint overflowBits = OverflowBitsSub(value1, value2, res);
-        _state.SetCarryFlag(((borrowBits >> 15) & 1) == 1);
-        _state.SetAuxiliaryFlag(((borrowBits >> 3) & 1) == 1);
-        _state.SetOverflowFlag(((overflowBits >> 15) & 1) == 1);
+        _state.CarryFlag = ((borrowBits >> 15) & 1) == 1;
+        _state.AuxiliaryFlag = ((borrowBits >> 3) & 1) == 1;
+        _state.OverflowFlag = ((overflowBits >> 15) & 1) == 1;
         return res;
     }
 
@@ -480,14 +480,14 @@ public class Alu {
     }
 
     public byte Sub8(byte value1, byte value2, bool useCarry) {
-        int carry = (useCarry && _state.GetCarryFlag()) ? 1 : 0;
+        int carry = (useCarry && _state.CarryFlag) ? 1 : 0;
         byte res = (byte)(value1 - value2 - carry);
         UpdateFlags8(res);
         uint borrowBits = BorrowBitsSub(value1, value2, res);
         uint overflowBits = OverflowBitsSub(value1, value2, res);
-        _state.SetCarryFlag(((borrowBits >> 7) & 1) == 1);
-        _state.SetAuxiliaryFlag(((borrowBits >> 3) & 1) == 1);
-        _state.SetOverflowFlag(((overflowBits >> 7) & 1) == 1);
+        _state.CarryFlag = ((borrowBits >> 7) & 1) == 1;
+        _state.AuxiliaryFlag = ((borrowBits >> 3) & 1) == 1;
+        _state.OverflowFlag = ((overflowBits >> 7) & 1) == 1;
         return res;
     }
 
@@ -506,16 +506,16 @@ public class Alu {
     public ushort Xor16(ushort value1, ushort value2) {
         ushort res = (ushort)(value1 ^ value2);
         UpdateFlags16(res);
-        _state.SetCarryFlag(false);
-        _state.SetOverflowFlag(false);
+        _state.CarryFlag = false;
+        _state.OverflowFlag = false;
         return res;
     }
 
     public byte Xor8(byte value1, byte value2) {
         byte res = (byte)(value1 ^ value2);
         UpdateFlags8(res);
-        _state.SetCarryFlag(false);
-        _state.SetOverflowFlag(false);
+        _state.CarryFlag = false;
+        _state.OverflowFlag = false;
         return res;
     }
 
@@ -544,34 +544,34 @@ public class Alu {
 
     private void SetCarryFlagForRightShifts(int value, int count) {
         int lastBit = (value >> (count - 1)) & 0x1;
-        _state.SetCarryFlag(lastBit == 1);
+        _state.CarryFlag = lastBit == 1;
     }
 
     private void SetOverflowForRigthRotate16(ushort res) {
         bool msb = (res & MsbMask16) != 0;
         bool beforeMsb = (res & BeforeMsbMask16) != 0;
-        _state.SetOverflowFlag(msb ^ beforeMsb);
+        _state.OverflowFlag = msb ^ beforeMsb;
     }
 
     private void SetOverflowForRigthRotate8(byte res) {
         bool msb = (res & MsbMask8) != 0;
         bool beforeMsb = (res & BeforeMsbMask8) != 0;
-        _state.SetOverflowFlag(msb ^ beforeMsb);
+        _state.OverflowFlag = msb ^ beforeMsb;
     }
 
     private void SetParityFlag(uint value) {
-        _state.SetParityFlag(IsParity((byte)(value)));
+        _state.ParityFlag = IsParity((byte)value);
     }
 
     private void SetSignFlag16(ushort value) {
-        _state.SetSignFlag((value & MsbMask16) != 0);
+        _state.SignFlag = (value & MsbMask16) != 0;
     }
 
     private void SetSignFlag8(byte value) {
-        _state.SetSignFlag((value & MsbMask8) != 0);
+        _state.SignFlag = (value & MsbMask8) != 0;
     }
 
     private void SetZeroFlag(uint value) {
-        _state.SetZeroFlag(value == 0);
+        _state.ZeroFlag = value == 0;
     }
 }

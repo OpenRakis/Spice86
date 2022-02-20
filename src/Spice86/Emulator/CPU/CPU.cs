@@ -78,34 +78,34 @@ public class Cpu {
     public bool IsRunning => _isRunning;
 
     public void ExecuteNextInstruction() {
-        _internalIp = _state.GetIP();
+        _internalIp = _state.IP;
         _staticAddressesRecorder.Reset();
         String stateString = "";
         if (IsLoggingEnabled()) {
             stateString = _state.ToString();
             _state.ResetCurrentInstructionPrefix();
-            _state.SetCurrentInstructionName("");
+            _state.CurrentInstructionName = "";
         }
         byte opcode = ProcessPrefixes();
         if (IsLoggingEnabled()) {
             _logger.Debug("Before execution: {@OpCode} {@StateString} ", ConvertUtils.ToHex8(opcode),
                 stateString);
         }
-        if (_state.GetContinueZeroFlagValue() != null && IsStringOpcode(opcode)) {
+        if (_state.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
             ProcessRep(opcode);
         } else {
             ExecOpcode(opcode);
         }
         if (IsLoggingEnabled()) {
-            String instructionName = _state.GetCurrentInstructionNameWithPrefix();
+            String instructionName = _state.CurrentInstructionNameWithPrefix;
             _logger.Debug("After execution of {@InstructionName} {@State}", instructionName, _state);
         }
         _state.ClearPrefixes();
         _staticAddressesRecorder.Commit();
         _state.IncCycles();
         HandleExternalInterrupt();
-        _state.SetIP(_internalIp);
+        _state.IP = _internalIp;
     }
 
     public void ExternalInterrupt(byte vectorNumber) {
@@ -119,9 +119,9 @@ public class Cpu {
         _functionHandlerInUse.Ret(CallType.FAR);
         _internalIp = _stack.Pop();
         ushort cs = _stack.Pop();
-        JumpHandler.RegisterReturn(_state.GetCS(), _state.GetIP(), cs, _internalIp);
-        _state.SetCS(cs);
-        _state.SetSP((ushort)(numberOfBytesToPop + _state.GetSP()));
+        JumpHandler.RegisterReturn(_state.CS, _state.IP, cs, _internalIp);
+        _state.CS = cs;
+        _state.SP = (ushort)(numberOfBytesToPop + _state.SP);
     }
 
     public Alu GetAlu() => _alu;
@@ -141,16 +141,16 @@ public class Cpu {
     public void InterruptRet() {
         _functionHandlerInUse.Ret(CallType.INTERRUPT);
         _internalIp = _stack.Pop();
-        _state.SetCS(_stack.Pop());
-        _state.GetFlags().SetFlagRegister(_stack.Pop());
+        _state.CS = _stack.Pop();
+        _state.Flags.SetFlagRegister(_stack.Pop());
         _functionHandlerInUse = _functionHandler;
     }
 
     public void NearRet(int numberOfBytesToPop) {
         _functionHandlerInUse.Ret(CallType.NEAR);
         _internalIp = _stack.Pop();
-        JumpHandler.RegisterReturn(_state.GetCS(), _state.GetIP(), _state.GetCS(), _internalIp);
-        _state.SetSP((ushort)(numberOfBytesToPop + _state.GetSP()));
+        JumpHandler.RegisterReturn(_state.CS, _state.IP, _state.CS, _internalIp);
+        _state.SP = (ushort)(numberOfBytesToPop + _state.SP);
     }
 
     public ushort NextUint16() {
@@ -172,7 +172,7 @@ public class Cpu {
     }
 
     public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
-        uint flagsAddress = MemoryUtils.ToPhysicalAddress(_state.GetSS(), (ushort)(_state.GetSP() + 4));
+        uint flagsAddress = MemoryUtils.ToPhysicalAddress(_state.SS, (ushort)(_state.SP + 4));
         int value = _memory.GetUint16(flagsAddress);
         if (flagValue) {
             value |= flagMask;
@@ -238,22 +238,22 @@ public class Cpu {
 
             case 0x04:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADD AL ib"); }
-                _state.SetAL(_alu.Add8(_state.GetAL(), NextUint8()));
+                _state.AL = _alu.Add8(_state.AL, NextUint8());
                 break;
 
             case 0x05:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADD AX iw"); }
-                _state.SetAX(_alu.Add16(_state.GetAX(), NextUint16()));
+                _state.AX = _alu.Add16(_state.AX, NextUint16());
                 break;
 
             case 0x06:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("PUSH ES"); }
-                _stack.Push(_state.GetES());
+                _stack.Push(_state.ES);
                 break;
 
             case 0x07:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("POP ES"); }
-                _state.SetES(_stack.Pop());
+                _state.ES = _stack.Pop();
                 break;
 
             case 0x08:
@@ -282,17 +282,17 @@ public class Cpu {
 
             case 0x0C:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OR AL ib"); }
-                _state.SetAL(_alu.Or8(_state.GetAL(), NextUint8()));
+                _state.AL = _alu.Or8(_state.AL, NextUint8());
                 break;
 
             case 0x0D:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OR AX iw"); }
-                _state.SetAX(_alu.Or16(_state.GetAX(), NextUint16()));
+                _state.AX = _alu.Or16(_state.AX, NextUint16());
                 break;
 
             case 0x0E:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("PUSH CS"); }
-                _stack.Push(_state.GetCS());
+                _stack.Push(_state.CS);
                 break;
 
             case 0x0F:
@@ -325,22 +325,22 @@ public class Cpu {
 
             case 0x14:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADC AL ib"); }
-                _state.SetAL(_alu.Adc8(_state.GetAL(), NextUint8()));
+                _state.AL = _alu.Adc8(_state.AL, NextUint8());
                 break;
 
             case 0x15:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADC AX iw"); }
-                _state.SetAX(_alu.Adc16(_state.GetAX(), NextUint16()));
+                _state.AX = _alu.Adc16(_state.AX, NextUint16());
                 break;
 
             case 0x16:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("PUSH SS"); }
-                _stack.Push(_state.GetSS());
+                _stack.Push(_state.SS);
                 break;
 
             case 0x17:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("POP SS"); }
-                _state.SetSS(_stack.Pop());
+                _state.SS = _stack.Pop();
                 break;
 
             case 0x18:
@@ -369,22 +369,22 @@ public class Cpu {
 
             case 0x1C:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SBB AL ib"); }
-                _state.SetAL(_alu.Sbb8(_state.GetAL(), NextUint8()));
+                _state.AL = _alu.Sbb8(_state.AL, NextUint8());
                 break;
 
             case 0x1D:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SBB AX iw"); }
-                _state.SetAX(_alu.Sbb16(_state.GetAX(), NextUint16()));
+                _state.AX = _alu.Sbb16(_state.AX, NextUint16());
                 break;
 
             case 0x1E:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("PUSH DS"); }
-                _stack.Push(_state.GetDS());
+                _stack.Push(_state.DS);
                 break;
 
             case 0x1F:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("POP DS"); }
-                _state.SetDS(_stack.Pop());
+                _state.DS = _stack.Pop();
                 break;
 
             case 0x20:
@@ -413,12 +413,12 @@ public class Cpu {
 
             case 0x24:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AND AL ib"); }
-                _state.SetAL(_alu.And8(_state.GetAL(), NextUint8()));
+                _state.AL = _alu.And8(_state.AL, NextUint8());
                 break;
 
             case 0x25:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AND AX iw"); }
-                _state.SetAX(_alu.And16(_state.GetAX(), NextUint16()));
+                _state.AX = _alu.And16(_state.AX, NextUint16());
                 break;
 
             case 0x26:
@@ -427,24 +427,24 @@ public class Cpu {
 
             case 0x27: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("DAA"); }
-                byte initialAL = _state.GetAL();
-                bool initialCF = _state.GetCarryFlag();
+                byte initialAL = _state.AL;
+                bool initialCF = _state.CarryFlag;
                 bool finalAuxillaryFlag = false;
-                if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag()) {
-                    _state.SetAL((byte)(_state.GetAL() + 6));
+                if ((_state.AL & 0x0F) > 9 || _state.AuxiliaryFlag) {
+                    _state.AL = (byte)(_state.AL + 6);
                     finalAuxillaryFlag = true;
                 }
                 bool finalCarryFlag;
                 if (initialAL > 0x99 || initialCF) {
-                    _state.SetAL((byte)(_state.GetAL() + 0x60));
+                    _state.AL = (byte)(_state.AL + 0x60);
                     finalCarryFlag = true;
                 } else {
                     finalCarryFlag = false;
                 }
                 // Undocumented behaviour
-                _alu.UpdateFlags8(_state.GetAL());
-                _state.SetAuxiliaryFlag(finalAuxillaryFlag);
-                _state.SetCarryFlag(finalCarryFlag);
+                _alu.UpdateFlags8(_state.AL);
+                _state.AuxiliaryFlag = finalAuxillaryFlag;
+                _state.CarryFlag = finalCarryFlag;
                 break;
             }
             case 0x28:
@@ -473,12 +473,12 @@ public class Cpu {
 
             case 0x2C:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SUB AL ib"); }
-                _state.SetAL(_alu.Sub8(_state.GetAL(), NextUint8()));
+                _state.AL = _alu.Sub8(_state.AL, NextUint8());
                 break;
 
             case 0x2D:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SUB AX iw"); }
-                _state.SetAX(_alu.Sub16(_state.GetAX(), NextUint16()));
+                _state.AX = _alu.Sub16(_state.AX, NextUint16());
                 break;
 
             case 0x2E:
@@ -487,24 +487,24 @@ public class Cpu {
 
             case 0x2F: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("DAS"); }
-                byte initialAL = _state.GetAL();
-                bool initialCF = _state.GetCarryFlag();
+                byte initialAL = _state.AL;
+                bool initialCF = _state.CarryFlag;
                 bool finalAuxillaryFlag = false;
                 bool finalCarryFlag = false;
-                _state.SetCarryFlag(false);
-                if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag()) {
-                    _state.SetAL((byte)(_state.GetAL() - 6));
-                    finalCarryFlag = _state.GetCarryFlag() || initialCF;
+                _state.CarryFlag = false;
+                if ((_state.AL & 0x0F) > 9 || _state.AuxiliaryFlag) {
+                    _state.AL = (byte)(_state.AL - 6);
+                    finalCarryFlag = _state.CarryFlag || initialCF;
                     finalAuxillaryFlag = true;
                 }
                 if (initialAL > 0x99 || initialCF) {
-                    _state.SetAL((byte)(_state.GetAL() - 0x60));
+                    _state.AL = (byte)(_state.AL - 0x60);
                     finalCarryFlag = true;
                 }
                 // Undocumented behaviour
-                _alu.UpdateFlags8(_state.GetAL());
-                _state.SetAuxiliaryFlag(finalAuxillaryFlag);
-                _state.SetCarryFlag(finalCarryFlag);
+                _alu.UpdateFlags8(_state.AL);
+                _state.AuxiliaryFlag = finalAuxillaryFlag;
+                _state.CarryFlag = finalCarryFlag;
                 break;
             }
             case 0x30:
@@ -533,12 +533,12 @@ public class Cpu {
 
             case 0x34:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XOR AL mb"); }
-                _state.SetAL(_alu.Xor8(_state.GetAL(), NextUint8()));
+                _state.AL = _alu.Xor8(_state.AL, NextUint8());
                 break;
 
             case 0x35:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XOR AX mw"); }
-                _state.SetAX(_alu.Xor16(_state.GetAX(), NextUint16()));
+                _state.AX = _alu.Xor16(_state.AX, NextUint16());
                 break;
 
             case 0x36:
@@ -549,16 +549,16 @@ public class Cpu {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AAA"); }
                 bool finalAuxillaryFlag = false;
                 bool finalCarryFlag = false;
-                if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag()) {
-                    _state.SetAX((ushort)(_state.GetAX() + 0x106));
+                if ((_state.AL & 0x0F) > 9 || _state.AuxiliaryFlag) {
+                    _state.AX = (ushort)(_state.AX + 0x106);
                     finalAuxillaryFlag = true;
                     finalCarryFlag = true;
                 }
-                _state.SetAL((byte)(_state.GetAL() & 0x0F));
+                _state.AL = (byte)(_state.AL & 0x0F);
                 // Undocumented behaviour
-                _alu.UpdateFlags8(_state.GetAL());
-                _state.SetAuxiliaryFlag(finalAuxillaryFlag);
-                _state.SetCarryFlag(finalCarryFlag);
+                _alu.UpdateFlags8(_state.AL);
+                _state.AuxiliaryFlag = finalAuxillaryFlag;
+                _state.CarryFlag = finalCarryFlag;
                 break;
             }
             case 0x38:
@@ -587,12 +587,12 @@ public class Cpu {
 
             case 0x3C:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMP AL ib"); }
-                _alu.Sub8(_state.GetAL(), NextUint8());
+                _alu.Sub8(_state.AL, NextUint8());
                 break;
 
             case 0x3D:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMP AX iw"); }
-                _alu.Sub16(_state.GetAX(), NextUint16());
+                _alu.Sub16(_state.AX, NextUint16());
                 break;
 
             case 0x3E:
@@ -603,17 +603,17 @@ public class Cpu {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AAS"); }
                 bool finalAuxillaryFlag = false;
                 bool finalCarryFlag = false;
-                if ((_state.GetAL() & 0x0F) > 9 || _state.GetAuxiliaryFlag()) {
-                    _state.SetAX((ushort)(_state.GetAX() - 6));
-                    _state.SetAH((byte)(_state.GetAH() - 1));
+                if ((_state.AL & 0x0F) > 9 || _state.AuxiliaryFlag) {
+                    _state.AX = (ushort)(_state.AX - 6);
+                    _state.AH = (byte)(_state.AH - 1);
                     finalAuxillaryFlag = true;
                     finalCarryFlag = true;
                 }
-                _state.SetAL((byte)(_state.GetAL() & 0x0F));
+                _state.AL = (byte)(_state.AL & 0x0F);
                 // Undocumented behaviour
-                _alu.UpdateFlags8(_state.GetAL());
-                _state.SetAuxiliaryFlag(finalAuxillaryFlag);
-                _state.SetCarryFlag(finalCarryFlag);
+                _alu.UpdateFlags8(_state.AL);
+                _state.AuxiliaryFlag = finalAuxillaryFlag;
+                _state.CarryFlag = finalCarryFlag;
                 break;
             }
             case 0x40:
@@ -625,8 +625,8 @@ public class Cpu {
             case 0x46:
             case 0x47:
                 regIndex = opcode & RegIndexMask;
-                if (IsLoggingEnabled()) { SetCurrentInstructionName($"INC {_state.GetRegisters().GetRegName(regIndex)}"); }
-                _state.GetRegisters().SetRegister(regIndex, _alu.Inc16(_state.GetRegisters().GetRegister(regIndex)));
+                if (IsLoggingEnabled()) { SetCurrentInstructionName($"INC {_state.Registers.GetRegName(regIndex)}"); }
+                _state.Registers.SetRegister(regIndex, _alu.Inc16(_state.Registers.GetRegister(regIndex)));
                 break;
 
             case 0x48:
@@ -638,8 +638,8 @@ public class Cpu {
             case 0x4E:
             case 0x4F:
                 regIndex = opcode & RegIndexMask;
-                if (IsLoggingEnabled()) { SetCurrentInstructionName($"DEC {_state.GetRegisters().GetRegName(regIndex)}"); }
-                _state.GetRegisters().SetRegister(regIndex, _alu.Dec16(_state.GetRegisters().GetRegister(regIndex)));
+                if (IsLoggingEnabled()) { SetCurrentInstructionName($"DEC {_state.Registers.GetRegName(regIndex)}"); }
+                _state.Registers.SetRegister(regIndex, _alu.Dec16(_state.Registers.GetRegister(regIndex)));
                 break;
 
             case 0x50:
@@ -651,8 +651,8 @@ public class Cpu {
             case 0x56:
             case 0x57:
                 regIndex = opcode & RegIndexMask;
-                if (IsLoggingEnabled()) { SetCurrentInstructionName($"PUSH {_state.GetRegisters().GetRegName(regIndex)}"); }
-                _stack.Push(_state.GetRegisters().GetRegister(regIndex));
+                if (IsLoggingEnabled()) { SetCurrentInstructionName($"PUSH {_state.Registers.GetRegName(regIndex)}"); }
+                _stack.Push(_state.Registers.GetRegister(regIndex));
                 break;
 
             case 0x58:
@@ -664,36 +664,36 @@ public class Cpu {
             case 0x5E:
             case 0x5F:
                 regIndex = opcode & RegIndexMask;
-                if (IsLoggingEnabled()) { SetCurrentInstructionName($"POP {_state.GetRegisters().GetRegName(regIndex)}"); }
-                _state.GetRegisters().SetRegister(regIndex, _stack.Pop());
+                if (IsLoggingEnabled()) { SetCurrentInstructionName($"POP {_state.Registers.GetRegName(regIndex)}"); }
+                _state.Registers.SetRegister(regIndex, _stack.Pop());
                 break;
 
             case 0x60:
                 // 80186
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("PUSHA"); }
-                ushort sp = _state.GetSP();
-                _stack.Push(_state.GetAX());
-                _stack.Push(_state.GetCX());
-                _stack.Push(_state.GetDX());
-                _stack.Push(_state.GetBX());
+                ushort sp = _state.SP;
+                _stack.Push(_state.AX);
+                _stack.Push(_state.CX);
+                _stack.Push(_state.DX);
+                _stack.Push(_state.BX);
                 _stack.Push(sp);
-                _stack.Push(_state.GetBP());
-                _stack.Push(_state.GetSI());
-                _stack.Push(_state.GetDI());
+                _stack.Push(_state.BP);
+                _stack.Push(_state.SI);
+                _stack.Push(_state.DI);
                 break;
 
             case 0x61:
                 // 80186
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("POPA"); }
-                _state.SetDI(_stack.Pop());
-                _state.SetSI(_stack.Pop());
-                _state.SetBP(_stack.Pop());
+                _state.DI = _stack.Pop();
+                _state.SI = _stack.Pop();
+                _state.BP = _stack.Pop();
                 // not restoring SP
                 _stack.Pop();
-                _state.SetBX(_stack.Pop());
-                _state.SetDX(_stack.Pop());
-                _state.SetCX(_stack.Pop());
-                _state.SetAX(_stack.Pop());
+                _state.BX = _stack.Pop();
+                _state.DX = _stack.Pop();
+                _state.CX = _stack.Pop();
+                _state.AX = _stack.Pop();
                 break;
 
             case 0x62:
@@ -864,28 +864,28 @@ public class Cpu {
             case 0x96:
             case 0x97: {
                 regIndex = opcode & RegIndexMask;
-                if (IsLoggingEnabled()) { SetCurrentInstructionName($"XCHG AX,{_state.GetRegisters().GetRegName(regIndex)}"); }
-                ushort value1 = _state.GetAX();
-                ushort value2 = _state.GetRegisters().GetRegister(regIndex);
-                _state.SetAX(value2);
-                _state.GetRegisters().SetRegister(regIndex, value1);
+                if (IsLoggingEnabled()) { SetCurrentInstructionName($"XCHG AX,{_state.Registers.GetRegName(regIndex)}"); }
+                ushort value1 = _state.AX;
+                ushort value2 = _state.Registers.GetRegister(regIndex);
+                _state.AX = value2;
+                _state.Registers.SetRegister(regIndex, value1);
                 break;
             }
             case 0x98: {
                 // Convert byte to word
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CBW"); }
-                sbyte value = (sbyte)_state.GetAL();
+                sbyte value = (sbyte)_state.AL;
                 short shortValue = value;
-                _state.SetAX((ushort)shortValue);
+                _state.AX = (ushort)shortValue;
                 break;
             }
             case 0x99:
                 // Sign extend AX into DX (word to dword)
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CWD"); }
-                if (_state.GetAX() >= 0x8000) {
-                    _state.SetDX(0xFFFF);
+                if (_state.AX >= 0x8000) {
+                    _state.DX = 0xFFFF;
                 } else {
-                    _state.SetDX(0);
+                    _state.DX = 0;
                 }
                 break;
 
@@ -894,7 +894,7 @@ public class Cpu {
                 ushort ip = NextUint16();
                 ushort cs = NextUint16();
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("FAR CALL"); }
-                FarCall(_state.GetCS(), _internalIp, cs, ip);
+                FarCall(_state.CS, _internalIp, cs, ip);
                 break;
             }
             // Do nothing, this is to wait for the FPU which is not implemented
@@ -904,45 +904,45 @@ public class Cpu {
 
             case 0x9C:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("PUSHF"); }
-                _stack.Push(_state.GetFlags().FlagRegister);
+                _stack.Push(_state.Flags.FlagRegister);
                 break;
 
             case 0x9D:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("POPF"); }
-                _state.GetFlags().SetFlagRegister(_stack.Pop());
+                _state.Flags.SetFlagRegister(_stack.Pop());
                 break;
 
             case 0x9E:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SAHF"); }
-                _state.GetFlags().SetFlagRegister(_state.GetAH());
+                _state.Flags.SetFlagRegister(_state.AH);
                 break;
 
             case 0x9F:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("LAHF"); }
-                _state.SetAH((byte)_state.GetFlags().FlagRegister);
+                _state.AH = (byte)_state.Flags.FlagRegister;
                 break;
 
             case 0xA0:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV AL moffs8"); }
-                _state.SetAL(_memory.GetUint8(GetDsNextUint16Address()));
+                _state.AL = _memory.GetUint8(GetDsNextUint16Address());
                 _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Byte8);
                 break;
 
             case 0xA1:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV AX moffs16"); }
-                _state.SetAX(_memory.GetUint16(GetDsNextUint16Address()));
+                _state.AX = _memory.GetUint16(GetDsNextUint16Address());
                 _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Word16);
                 break;
 
             case 0xA2:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV moffs8 AL"); }
-                _memory.SetUint8(GetDsNextUint16Address(), _state.GetAL());
+                _memory.SetUint8(GetDsNextUint16Address(), _state.AL);
                 _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Byte8);
                 break;
 
             case 0xA3:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV moffs16 AX"); }
-                _memory.SetUint16(GetDsNextUint16Address(), _state.GetAX());
+                _memory.SetUint16(GetDsNextUint16Address(), _state.AX);
                 _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Word16);
                 break;
 
@@ -955,12 +955,12 @@ public class Cpu {
 
             case 0xA8:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("TEST AL ib"); }
-                _alu.And8(_state.GetAL(), NextUint8());
+                _alu.And8(_state.AL, NextUint8());
                 break;
 
             case 0xA9:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("TEST AX iw"); }
-                _alu.And16(_state.GetAX(), NextUint16());
+                _alu.And16(_state.AX, NextUint16());
                 break;
 
             case 0xAA:
@@ -981,8 +981,8 @@ public class Cpu {
             case 0xB6:
             case 0xB7:
                 regIndex = opcode & RegIndexMask;
-                if (IsLoggingEnabled()) { SetCurrentInstructionName($"MOV {_state.GetRegisters().GetReg8Name(regIndex)} ib"); }
-                _state.GetRegisters().SetRegisterFromHighLowIndex8(regIndex, NextUint8());
+                if (IsLoggingEnabled()) { SetCurrentInstructionName($"MOV {_state.Registers.GetReg8Name(regIndex)} ib"); }
+                _state.Registers.SetRegisterFromHighLowIndex8(regIndex, NextUint8());
                 break;
 
             case 0xB8:
@@ -994,8 +994,8 @@ public class Cpu {
             case 0xBE:
             case 0xBF:
                 regIndex = opcode & RegIndexMask;
-                if (IsLoggingEnabled()) { SetCurrentInstructionName($"MOV {_state.GetRegisters().GetRegName(regIndex)} iw"); }
-                _state.GetRegisters().SetRegister(regIndex, NextUint16());
+                if (IsLoggingEnabled()) { SetCurrentInstructionName($"MOV {_state.Registers.GetRegName(regIndex)} iw"); }
+                _state.Registers.SetRegister(regIndex, NextUint16());
                 break;
 
             case 0xC0: {
@@ -1040,11 +1040,11 @@ public class Cpu {
                 if (opcode == 0xC4) {
                     // LES
                     if (IsLoggingEnabled()) { SetCurrentInstructionName("LES rw md"); }
-                    _state.SetES(value);
+                    _state.ES = value;
                 } else {
                     // LDS
                     if (IsLoggingEnabled()) { SetCurrentInstructionName("LDS rw md"); }
-                    _state.SetDS(value);
+                    _state.DS = value;
                 }
                 break;
             }
@@ -1088,7 +1088,7 @@ public class Cpu {
 
             case 0xCE:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("INTO"); }
-                if (_state.GetOverflowFlag()) {
+                if (_state.OverflowFlag) {
                     Interrupt(4, false);
                 }
                 break;
@@ -1112,10 +1112,10 @@ public class Cpu {
             }
             case 0xD5: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AAD ib"); }
-                byte result = (byte)(_state.GetAL() + (_state.GetAH() * NextUint8()));
-                _state.SetAL(result);
-                _state.SetAH(0);
-                _state.GetFlags().SetFlagRegister(0);
+                byte result = (byte)(_state.AL + (_state.AH * NextUint8()));
+                _state.AL = result;
+                _state.AH = 0;
+                _state.Flags.SetFlagRegister(0);
                 _alu.UpdateFlags8(result);
                 break;
             }
@@ -1125,8 +1125,8 @@ public class Cpu {
 
             case 0xD7: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("XLAT"); }
-                uint address = _modRM.GetAddress(SegmentRegisters.DsIndex, _state.GetBX()) + _state.GetAL();
-                _state.SetAL(_memory.GetUint8(address));
+                uint address = _modRM.GetAddress(SegmentRegisters.DsIndex, _state.BX) + _state.AL;
+                _state.AL = _memory.GetUint8(address);
                 break;
             }
             case 0xD8:
@@ -1194,11 +1194,11 @@ public class Cpu {
                 } else {
                     if (IsLoggingEnabled()) { SetCurrentInstructionName($"LOOPNZ {address}"); }
                 }
-                ushort cx = (ushort)(_state.GetCX() - 1);
-                _state.SetCX(cx);
-                if (cx != 0 && _state.GetZeroFlag() == zeroFlag) {
+                ushort cx = (ushort)(_state.CX - 1);
+                _state.CX = cx;
+                if (cx != 0 && _state.ZeroFlag == zeroFlag) {
                     ushort targetIp = (ushort)(_internalIp + address);
-                    JumpHandler.RegisterJump(_state.GetCS(), _state.GetIP(), _state.GetCS(), targetIp);
+                    JumpHandler.RegisterJump(_state.CS, _state.IP, _state.CS, targetIp);
                     _internalIp = targetIp;
                 }
                 break;
@@ -1207,11 +1207,11 @@ public class Cpu {
             {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("LOOP"); }
                 sbyte address = (sbyte)NextUint8();
-                ushort cx = (ushort)(_state.GetCX() - 1);
-                _state.SetCX(cx);
+                ushort cx = (ushort)(_state.CX - 1);
+                _state.CX = cx;
                 if (cx != 0) {
                     ushort targetIp = (ushort)(_internalIp + address);
-                    JumpHandler.RegisterJump(_state.GetCS(), _state.GetIP(), _state.GetCS(), targetIp);
+                    JumpHandler.RegisterJump(_state.CS, _state.IP, _state.CS, targetIp);
                     _internalIp = targetIp;
                 }
                 break;
@@ -1223,25 +1223,25 @@ public class Cpu {
             case 0xE4: {
                 byte port = NextUint8();
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"IN AL {ConvertUtils.ToHex8(port)}"); }
-                _state.SetAL(In8(port));
+                _state.AL = In8(port);
                 break;
             }
             case 0xE5: {
                 ushort port = NextUint16();
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"IN AL {ConvertUtils.ToHex16(port)}"); }
-                _state.SetAX(In16(port));
+                _state.AX = In16(port);
                 break;
             }
             case 0xE6: {
                 byte port = NextUint8();
-                byte value = _state.GetAL();
+                byte value = _state.AL;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"OUT {ConvertUtils.ToHex8(port)} AL={ConvertUtils.ToHex8(value)}"); }
                 Out8(port, value);
                 break;
             }
             case 0xE7: {
                 ushort port = NextUint16();
-                ushort value = _state.GetAX();
+                ushort value = _state.AX;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName($"OUT {ConvertUtils.ToHex16(port)} AX={ConvertUtils.ToHex16(value)}"); }
                 Out16(port, value);
                 break;
@@ -1271,27 +1271,27 @@ public class Cpu {
                 break;
             }
             case 0xEC: {
-                ushort port = _state.GetDX();
+                ushort port = _state.DX;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("IN AL DX=" + ConvertUtils.ToHex16(port)); }
-                _state.SetAL(In8(port));
+                _state.AL = In8(port);
                 break;
             }
             case 0xED: {
-                ushort port = _state.GetDX();
+                ushort port = _state.DX;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("IN AX DX=" + ConvertUtils.ToHex16(port)); }
-                _state.SetAX(In16(port));
+                _state.AX = In16(port);
                 break;
             }
             case 0xEE: {
-                ushort port = _state.GetDX();
-                byte value = _state.GetAL();
+                ushort port = _state.DX;
+                byte value = _state.AL;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OUT DX=" + ConvertUtils.ToHex16(port) + " AL=" + ConvertUtils.ToHex8(value)); }
                 Out8(port, value);
                 break;
             }
             case 0xEF: {
-                ushort port = _state.GetDX();
-                ushort value = _state.GetAX();
+                ushort port = _state.DX;
+                ushort value = _state.AX;
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OUT DX=" + ConvertUtils.ToHex16(port) + " AX=" + ConvertUtils.ToHex16(value)); }
                 Out16(port, value);
                 break;
@@ -1316,7 +1316,7 @@ public class Cpu {
 
             case 0xF5:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMC"); }
-                _state.SetCarryFlag(!_state.GetCarryFlag());
+                _state.CarryFlag = !_state.CarryFlag;
                 break;
 
             case 0xF6: // GRP3a rmb
@@ -1329,32 +1329,32 @@ public class Cpu {
 
             case 0xF8:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CLC"); }
-                _state.SetCarryFlag(false);
+                _state.CarryFlag = false;
                 break;
 
             case 0xF9:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("STC"); }
-                _state.SetCarryFlag(true);
+                _state.CarryFlag = true;
                 break;
 
             case 0xFA:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CLI"); }
-                _state.SetInterruptFlag(false);
+                _state.InterruptFlag = false;
                 break;
 
             case 0xFB:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("STI"); }
-                _state.SetInterruptFlag(true);
+                _state.InterruptFlag = true;
                 break;
 
             case 0xFC:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CLD"); }
-                _state.SetDirectionFlag(false);
+                _state.DirectionFlag = false;
                 break;
 
             case 0xFD:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("STD"); }
-                _state.SetDirectionFlag(true);
+                _state.DirectionFlag = true;
                 break;
 
             case 0xFE: // GRP4 rmb
@@ -1367,21 +1367,21 @@ public class Cpu {
         }
     }
     public void Aam(byte v2) {
-        byte v1 = _state.GetAL();
+        byte v1 = _state.AL;
         if (v2 == 0) {
             HandleDivisionError();
             return;
         }
         byte result = (byte)(v1 % v2);
-        _state.SetAH((byte)(v1 / v2));
-        _state.SetAL(result);
+        _state.AH = (byte)(v1 / v2);
+        _state.AL = result;
         _alu.UpdateFlags8(result);
     }
 
     private void FarCall(ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
         _stack.Push(returnCS);
         _stack.Push(returnIP);
-        _state.SetCS(targetCS);
+        _state.CS = targetCS;
         _internalIp = targetIP;
         HandleCall(CallType.FAR, returnCS, returnIP, targetCS, targetIP);
     }
@@ -1426,11 +1426,11 @@ public class Cpu {
         return _modRM.GetAddress(SegmentRegisters.DsIndex, NextUint16(), true);
     }
 
-    private uint GetInternalIpPhysicalAddress() => MemoryUtils.ToPhysicalAddress(_state.GetCS(), _internalIp);
+    private uint GetInternalIpPhysicalAddress() => MemoryUtils.ToPhysicalAddress(_state.CS, _internalIp);
 
-    private uint GetMemoryAddressEsDi() => MemoryUtils.ToPhysicalAddress(_state.GetES(), _state.GetDI());
+    private uint GetMemoryAddressEsDi() => MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
 
-    private uint GetMemoryAddressOverridableDsSi() => _modRM.GetAddress(SegmentRegisters.DsIndex, _state.GetSI());
+    private uint GetMemoryAddressOverridableDsSi() => _modRM.GetAddress(SegmentRegisters.DsIndex, _state.SI);
 
     private ushort GetRm8Or16(bool op1Byte) {
         if (op1Byte) {
@@ -1502,7 +1502,7 @@ public class Cpu {
         bool valueIsCL = (opcode & 0b10) == 0b10; // if it 0b10, it is CL
         ushort op2;
         if (valueIsCL) {
-            op2 = _state.GetCL();
+            op2 = _state.CL;
         } else {
             op2 = 1;
         }
@@ -1558,7 +1558,7 @@ public class Cpu {
                 byte value = _modRM.GetRm8();
                 value = _alu.Sub8(0, value);
                 _modRM.SetRm8(value);
-                _state.SetCarryFlag(value != 0);
+                _state.CarryFlag = value != 0;
                 break;
             }
             case 4: {
@@ -1605,7 +1605,7 @@ public class Cpu {
                 ushort value = _modRM.GetRm16();
                 value = _alu.Sub16(0, value);
                 _modRM.SetRm16(value);
-                _state.SetCarryFlag(value != 0);
+                _state.CarryFlag = value != 0;
                 break;
             }
             case 4: {
@@ -1687,7 +1687,7 @@ public class Cpu {
                 GetStaticAddressesRecorder().SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32Ptr);
                 ushort ip = _memory.GetUint16(ipAddress.Value);
                 ushort cs = _memory.GetUint16(ipAddress.Value + 2);
-                FarCall(_state.GetCS(), _internalIp, cs, ip);
+                FarCall(_state.CS, _internalIp, cs, ip);
                 break;
             }
             case 4: {
@@ -1718,80 +1718,80 @@ public class Cpu {
 
     
     public void Mul8(byte value) {
-        ushort result = _alu.Mul8(_state.GetAL(), value);
+        ushort result = _alu.Mul8(_state.AL, value);
         // Upper part of the result goes in AH
-        _state.SetAH((byte)(result >> 8));
-        _state.SetAL((byte)result);
+        _state.AH = (byte)(result >> 8);
+        _state.AL = (byte)result;
     }
 
     public void IMul8(byte value) {
         sbyte v2 = (sbyte)value;
-        short result = _alu.Imul8((sbyte)_state.GetAL(), v2);
+        short result = _alu.Imul8((sbyte)_state.AL, v2);
         // Upper part of the result goes in AH
-        _state.SetAH((byte)(result >> 8));
-        _state.SetAL((byte)result);
+        _state.AH = (byte)(result >> 8);
+        _state.AL = (byte)result;
     }
 
     public void Div8(byte v2) {
-        ushort v1 = _state.GetAX();
+        ushort v1 = _state.AX;
         byte? result = Alu.Div8(v1, v2);
         if (result == null) {
             HandleDivisionError();
             return;
         }
-        _state.SetAL(result.Value);
-        _state.SetAH((byte)(v1 % v2));
+        _state.AL = result.Value;
+        _state.AH = (byte)(v1 % v2);
     }
 
     public void IDiv8(byte value) {
-        short v1 = (short)_state.GetAX();
+        short v1 = (short)_state.AX;
         sbyte v2 = (sbyte)value;
         sbyte? result = Alu.Idiv8(v1, v2);
         if (result == null) {
             HandleDivisionError();
             return;
         }
-        _state.SetAL((byte)result.Value);
-        _state.SetAH((byte)(v1 % v2));
+        _state.AL = (byte)result.Value;
+        _state.AH = (byte)(v1 % v2);
     }
 
 
     public void IDiv16(ushort value) {
         // no sign extension for v1 as it is already a 32bit value
-        int v1 = (_state.GetDX() << 16) | _state.GetAX();
+        int v1 = (_state.DX << 16) | _state.AX;
         short v2 = (short)value;
         short? result = Alu.Idiv16(v1, v2);
         if (result == null) {
             HandleDivisionError();
             return;
         }
-        _state.SetAX((ushort)result.Value);
-        _state.SetDX((ushort)(v1 % v2));
+        _state.AX = (ushort)result.Value;
+        _state.DX = (ushort)(v1 % v2);
     }
 
     public void Div16(ushort v2) {
-        uint v1 = (uint)((_state.GetDX() << 16) | _state.GetAX());
+        uint v1 = (uint)((_state.DX << 16) | _state.AX);
         ushort? result = Alu.Div16(v1, v2);
         if (result == null) {
             HandleDivisionError();
             return;
         }
-        _state.SetAX(result.Value);
-        _state.SetDX((ushort)(v1 % v2));
+        _state.AX = result.Value;
+        _state.DX = (ushort)(v1 % v2);
     }
 
     public void Mul16(ushort value) {
-        uint result = _alu.Mul16(_state.GetAX(), value);
+        uint result = _alu.Mul16(_state.AX, value);
         // Upper part of the result goes in DX
-        _state.SetDX((ushort)(result >> 16));
-        _state.SetAX((ushort)result);
+        _state.DX = (ushort)(result >> 16);
+        _state.AX = (ushort)result;
     }
 
     public void IMul16(ushort value) {
-        int result = _alu.Imul16((short)_state.GetAX(), (short)value);
+        int result = _alu.Imul16((short)_state.AX, (short)value);
         // Upper part of the result goes in DX
-        _state.SetDX((ushort)(result >> 16));
-        _state.SetAX((ushort)result);
+        _state.DX = (ushort)(result >> 16);
+        _state.AX = (ushort)result;
     }
 
     private void HandleCall(CallType callType, ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
@@ -1799,18 +1799,18 @@ public class Cpu {
             _logger.Debug("CALL {@TargetCsTargetIp}, will return to {@ReturnCsReturnIp}", ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP),
                 ConvertUtils.ToSegmentedAddressRepresentation(returnCS, returnIP));
         }
-        JumpHandler.RegisterCall(_state.GetCS(), _state.GetIP(), targetCS, targetIP);
+        JumpHandler.RegisterCall(_state.CS, _state.IP, targetCS, targetIP);
         _functionHandlerInUse.Call(callType, targetCS, targetIP, returnCS, returnIP);
     }
 
     private void HandleDivisionError() {
         // Reset IP because instruction is not finished (this is how an actual CPU behaves)
-        _internalIp = _state.GetIP();
+        _internalIp = _state.IP;
         Interrupt(0, false);
     }
 
     private void HandleExternalInterrupt() {
-        if (_externalInterruptVectorNumber == null || !_state.GetInterruptFlag()) {
+        if (_externalInterruptVectorNumber == null || !_state.InterruptFlag) {
             return;
         }
         if (IsLoggingEnabled()) {
@@ -1825,9 +1825,9 @@ public class Cpu {
     private void HandleInvalidOpcodeBecausePrefix(byte opcode) => throw new InvalidOpCodeException(_machine, opcode, true);
 
     private void HandleJump(ushort cs, ushort ip) {
-        JumpHandler.RegisterJump(_state.GetCS(), _state.GetIP(), cs, ip);
+        JumpHandler.RegisterJump(_state.CS, _state.IP, cs, ip);
         _internalIp = ip;
-        _state.SetCS(cs);
+        _state.CS = cs;
     }
 
     private byte In8(int port) {
@@ -1847,18 +1847,18 @@ public class Cpu {
             throw new UnhandledOperationException(_machine,
                 $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");
         }
-        ushort returnCS = _state.GetCS();
+        ushort returnCS = _state.CS;
         ushort returnIP = _internalIp;
         if (IsLoggingEnabled()) {
             _logger.Debug("int {@VectorNumber} handler found in memory, {@SegmentedAddressRepresentation}", ConvertUtils.ToHex(vectorNumber.Value),
                 ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP));
         }
-        _stack.Push(_state.GetFlags().FlagRegister);
+        _stack.Push(_state.Flags.FlagRegister);
         _stack.Push(returnCS);
         _stack.Push(returnIP);
-        _state.SetInterruptFlag(false);
+        _state.InterruptFlag = false;
         _internalIp = targetIP;
-        _state.SetCS(targetCS);
+        _state.CS = targetCS;
         bool recordReturn = true;
         if (external) {
             _functionHandlerInUse = _functionHandlerInExternalInterrupt;
@@ -1892,23 +1892,23 @@ public class Cpu {
     private void Jcc(ushort opcode) {
         sbyte address = (sbyte)NextUint8();
         bool jump = opcode switch {
-            0x70 => _state.GetOverflowFlag(),
-            0x71 => !_state.GetOverflowFlag(),
-            0x72 => _state.GetCarryFlag(),
-            0x73 => !_state.GetCarryFlag(),
-            0x74 => _state.GetZeroFlag(),
-            0x75 => !_state.GetZeroFlag(),
-            0x76 => _state.GetCarryFlag() || _state.GetZeroFlag(),
-            0x77 => !_state.GetCarryFlag() && !_state.GetZeroFlag(),
-            0x78 => _state.GetSignFlag(),
-            0x79 => !_state.GetSignFlag(),
-            0x7A => _state.GetParityFlag(),
-            0x7B => !_state.GetParityFlag(),
-            0x7C => _state.GetSignFlag() != _state.GetOverflowFlag(),
-            0x7D => _state.GetSignFlag() == _state.GetOverflowFlag(),
-            0x7E => _state.GetZeroFlag() || _state.GetSignFlag() != _state.GetOverflowFlag(),
-            0x7F => !_state.GetZeroFlag() && _state.GetSignFlag() == _state.GetOverflowFlag(),
-            0xE3 => _state.GetCX() == 0,
+            0x70 => _state.OverflowFlag,
+            0x71 => !_state.OverflowFlag,
+            0x72 => _state.CarryFlag,
+            0x73 => !_state.CarryFlag,
+            0x74 => _state.ZeroFlag,
+            0x75 => !_state.ZeroFlag,
+            0x76 => _state.CarryFlag || _state.ZeroFlag,
+            0x77 => !_state.CarryFlag && !_state.ZeroFlag,
+            0x78 => _state.SignFlag,
+            0x79 => !_state.SignFlag,
+            0x7A => _state.ParityFlag,
+            0x7B => !_state.ParityFlag,
+            0x7C => _state.SignFlag != _state.OverflowFlag,
+            0x7D => _state.SignFlag == _state.OverflowFlag,
+            0x7E => _state.ZeroFlag || _state.SignFlag != _state.OverflowFlag,
+            0x7F => !_state.ZeroFlag && _state.SignFlag == _state.OverflowFlag,
+            0xE3 => _state.CX == 0,
             _ => throw new InvalidOpCodeException(_machine, opcode, false)
         };
         if (IsLoggingEnabled()) {
@@ -1934,7 +1934,7 @@ public class Cpu {
             } + $" {address} {nameof(jump)}? {jump}");
         }
         if (jump) {
-            HandleJump(_state.GetCS(), (ushort)(_internalIp + address));
+            HandleJump(_state.CS, (ushort)(_internalIp + address));
         }
     }
 
@@ -1944,14 +1944,14 @@ public class Cpu {
     }
 
     private void JumpNear(ushort ip) {
-        if (IsLoggingEnabled()) { SetCurrentInstructionName($"JMP NEAR {ConvertUtils.ToSegmentedAddressRepresentation(_state.GetCS(), ip)}"); }
-        HandleJump(_state.GetCS(), ip);
+        if (IsLoggingEnabled()) { SetCurrentInstructionName($"JMP NEAR {ConvertUtils.ToSegmentedAddressRepresentation(_state.CS, ip)}"); }
+        HandleJump(_state.CS, ip);
     }
 
     private void NearCall(ushort returnIP, ushort callIP) {
         _stack.Push(returnIP);
         _internalIp = callIP;
-        HandleCall(CallType.NEAR, _state.GetCS(), returnIP, _state.GetCS(), callIP);
+        HandleCall(CallType.NEAR, _state.CS, returnIP, _state.CS, callIP);
     }
 
     public void Out8(int port, byte val) {
@@ -1972,42 +1972,42 @@ public class Cpu {
                 if (IsLoggingEnabled()) {
                     AddCurrentInstructionPrefix("ES:");
                 }
-                _state.SetSegmentOverrideIndex(SegmentRegisters.EsIndex);
+                _state.SegmentOverrideIndex = SegmentRegisters.EsIndex;
                 break;
 
             case 0x2E:
                 if (IsLoggingEnabled()) {
                     AddCurrentInstructionPrefix("CS:");
                 }
-                _state.SetSegmentOverrideIndex(SegmentRegisters.CsIndex);
+                _state.SegmentOverrideIndex = SegmentRegisters.CsIndex;
                 break;
 
             case 0x36:
                 if (IsLoggingEnabled()) {
                     AddCurrentInstructionPrefix("SS:");
                 }
-                _state.SetSegmentOverrideIndex(SegmentRegisters.SsIndex);
+                _state.SegmentOverrideIndex = SegmentRegisters.SsIndex;
                 break;
 
             case 0x3E:
                 if (IsLoggingEnabled()) {
                     AddCurrentInstructionPrefix("DS:");
                 }
-                _state.SetSegmentOverrideIndex(SegmentRegisters.DsIndex);
+                _state.SegmentOverrideIndex = SegmentRegisters.DsIndex;
                 break;
 
             case 0x64:
                 if (IsLoggingEnabled()) {
                     AddCurrentInstructionPrefix("FS:");
                 }
-                _state.SetSegmentOverrideIndex(SegmentRegisters.FsIndex);
+                _state.SegmentOverrideIndex = SegmentRegisters.FsIndex;
                 break;
 
             case 0x65:
                 if (IsLoggingEnabled()) {
                     AddCurrentInstructionPrefix("GS:");
                 }
-                _state.SetSegmentOverrideIndex(SegmentRegisters.GsIndex);
+                _state.SegmentOverrideIndex = SegmentRegisters.GsIndex;
                 break;
 
             case 0xF0:
@@ -2020,7 +2020,7 @@ public class Cpu {
             case 0xF3: // REPNZ, REPZ
             {
                 bool continueZeroFlagValue = (opcode & 1) == 1;
-                _state.SetContinueZeroFlagValue(continueZeroFlagValue);
+                _state.ContinueZeroFlagValue = continueZeroFlagValue;
                 if (IsLoggingEnabled()) {
                     AddCurrentInstructionPrefix($"REP{(continueZeroFlagValue ? "Z" : "")}");
                 }
@@ -2043,10 +2043,10 @@ public class Cpu {
     private void ProcessRep(byte opcode) {
         // repeat while zero flag is false for REPNZ (last bit is 0)
         // or while zero flag is true for REPZ (last bit is 1)
-        bool? continueZeroFlagValue = _state.GetContinueZeroFlagValue();
+        bool? continueZeroFlagValue = _state.ContinueZeroFlagValue;
         // For some instructions, zero flag is not to be checked
         bool checkZeroFlag = IsStringOpUpdatingFlags(opcode);
-        ushort cx = _state.GetCX();
+        ushort cx = _state.CX;
         while (cx != 0) {
             // re-set the segment override that may have been cleared. No need to reset ip
             // as string instructions don't modify it and are only one byte.
@@ -2055,120 +2055,120 @@ public class Cpu {
 
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
                 _logger.Verbose("{@Rep} Loop, {@Cx}, {@If}, {@CheckZeroFlag}, {@ContinueZF}",
-                    _state.GetCurrentInstructionNameWithPrefix(),
-                    ConvertUtils.ToHex(cx), _state.GetZeroFlag(), checkZeroFlag, continueZeroFlagValue);
+                    _state.CurrentInstructionNameWithPrefix,
+                    ConvertUtils.ToHex(cx), _state.ZeroFlag, checkZeroFlag, continueZeroFlagValue);
             }
             // Not all the string operations require checking the zero flag...
-            if (checkZeroFlag && _state.GetZeroFlag() != continueZeroFlagValue) {
+            if (checkZeroFlag && _state.ZeroFlag != continueZeroFlagValue) {
                 break;
             }
         }
-        _state.SetCX(cx);
+        _state.CX = cx;
     }
 
     private void ProcessString(ushort opcode) {
-        int diff = (_state.GetDirectionFlag() ? -1 : 1) << (opcode & 1);
+        int diff = (_state.DirectionFlag ? -1 : 1) << (opcode & 1);
         switch (opcode) {
             case 0xA4: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOVSB"); }
                 byte value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
                 _memory.SetUint8(GetMemoryAddressEsDi(), value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
-                _state.SetDI((ushort)(_state.GetDI() + diff));
+                _state.SI = (ushort)(_state.SI + diff);
+                _state.DI = (ushort)(_state.DI + diff);
                 break;
             }
             case 0xA5: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("MOVSW"); }
                 ushort value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
                 _memory.SetUint16(GetMemoryAddressEsDi(), value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
-                _state.SetDI((ushort)(_state.GetDI() + diff));
+                _state.SI = (ushort)(_state.SI + diff);
+                _state.DI = (ushort)(_state.DI + diff);
                 break;
             }
             case 0xA6: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMPSB"); }
                 byte value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
                 _alu.Sub8(value, _memory.GetUint8(GetMemoryAddressEsDi()));
-                _state.SetSI((ushort)(_state.GetSI() + diff));
-                _state.SetDI((ushort)(_state.GetDI() + diff));
+                _state.SI = (ushort)(_state.SI + diff);
+                _state.DI = (ushort)(_state.DI + diff);
                 break;
             }
             case 0xA7: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("CMPSW"); }
                 ushort value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
                 _alu.Sub16(value, _memory.GetUint16(GetMemoryAddressEsDi()));
-                _state.SetSI((ushort)(_state.GetSI() + diff));
-                _state.SetDI((ushort)(_state.GetDI() + diff));
+                _state.SI = (ushort)(_state.SI + diff);
+                _state.DI = (ushort)(_state.DI + diff);
                 break;
             }
             case 0xAA:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("STOSB"); }
-                _memory.SetUint8(GetMemoryAddressEsDi(), _state.GetAL());
-                _state.SetDI((ushort)(_state.GetDI() + diff));
+                _memory.SetUint8(GetMemoryAddressEsDi(), _state.AL);
+                _state.DI = (ushort)(_state.DI + diff);
                 break;
 
             case 0xAB:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("STOSW"); }
-                _memory.SetUint16(GetMemoryAddressEsDi(), _state.GetAX());
-                _state.SetDI((ushort)(_state.GetDI() + diff));
+                _memory.SetUint16(GetMemoryAddressEsDi(), _state.AX);
+                _state.DI = (ushort)(_state.DI + diff);
                 break;
 
             case 0xAC: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("LODSB"); }
                 byte value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
-                _state.SetAL(value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
+                _state.AL = value;
+                _state.SI = (ushort)(_state.SI + diff);
                 break;
             }
             case 0xAD: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("LODSW"); }
                 ushort value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
-                _state.SetAX(value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
+                _state.AX = value;
+                _state.SI = (ushort)(_state.SI + diff);
                 break;
             }
             case 0xAE:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SCASB"); }
-                _alu.Sub8(_state.GetAL(), _memory.GetUint8(GetMemoryAddressEsDi()));
-                _state.SetDI((ushort)(_state.GetDI() + diff));
+                _alu.Sub8(_state.AL, _memory.GetUint8(GetMemoryAddressEsDi()));
+                _state.DI = (ushort)(_state.DI + diff);
                 break;
 
             case 0xAF:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SCASW"); }
-                _alu.Sub16(_state.GetAX(), _memory.GetUint16(GetMemoryAddressEsDi()));
-                _state.SetDI((ushort)(_state.GetDI() + diff));
+                _alu.Sub16(_state.AX, _memory.GetUint16(GetMemoryAddressEsDi()));
+                _state.DI = (ushort)(_state.DI + diff);
                 break;
 
             case 0x6C: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("INSB"); }
-                ushort port = _state.GetDX();
+                ushort port = _state.DX;
                 byte value = In8(port);
                 _memory.SetUint8(GetMemoryAddressEsDi(), value);
-                _state.SetSI((ushort)(_state.GetDI() + diff));
+                _state.SI = (ushort)(_state.DI + diff);
                 break;
             }
             case 0x6D: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("INSW"); }
-                ushort port = _state.GetDX();
+                ushort port = _state.DX;
                 ushort value = In16(port);
                 _memory.SetUint16(GetMemoryAddressEsDi(), value);
-                _state.SetSI((ushort)(_state.GetDI() + diff));
+                _state.SI = (ushort)(_state.DI + diff);
                 break;
             }
             case 0x6E: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OUTSB"); }
-                ushort port = _state.GetDX();
+                ushort port = _state.DX;
                 byte value = _memory.GetUint8(GetMemoryAddressOverridableDsSi());
                 Out8(port, value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
+                _state.SI = (ushort)(_state.SI + diff);
                 break;
             }
             case 0x6F: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("OUTSW"); }
-                ushort port = _state.GetDX();
+                ushort port = _state.DX;
                 ushort value = _memory.GetUint16(GetMemoryAddressOverridableDsSi());
                 Out16(port, value);
-                _state.SetSI((ushort)(_state.GetSI() + diff));
+                _state.SI = (ushort)(_state.SI + diff);
                 break;
             }
             default:
@@ -2180,7 +2180,7 @@ public class Cpu {
     private void SetCurrentInstructionName(string log) {
         // Optimization, do not calculate the log if it is not used
         if (IsLoggingEnabled()) {
-            _state.SetCurrentInstructionName(log);
+            _state.CurrentInstructionName = log;
         }
     }
 

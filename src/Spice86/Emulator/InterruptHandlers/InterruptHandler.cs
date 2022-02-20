@@ -32,14 +32,14 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
     }
 
     protected void SetCarryFlag(bool value, bool setOnStack) {
-        _state.SetCarryFlag(value);
+        _state.CarryFlag = value;
         if (setOnStack) {
             _cpu.SetFlagOnInterruptStack(Flags.Carry, value);
         }
     }
 
     protected void SetZeroFlag(bool value, bool setOnStack) {
-        _state.SetZeroFlag(value);
+        _state.ZeroFlag = value;
         if (setOnStack) {
             _cpu.SetFlagOnInterruptStack(Flags.Zero, value);
         }

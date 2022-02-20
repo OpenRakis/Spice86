@@ -33,18 +33,18 @@ public class SystemClockInt1AHandler : InterruptHandler {
         }
 
         // let's say it never overflows
-        _state.SetAL(0);
-        _state.SetCX((ushort)(value >> 16));
-        _state.SetDX((ushort)value);
+        _state.AL = 0;
+        _state.CX = (ushort)(value >> 16);
+        _state.DX = (ushort)value;
     }
 
     public override void Run() {
-        byte operation = _state.GetAH();
+        byte operation = _state.AH;
         Run(operation);
     }
 
     public void SetSystemClockCounter() {
-        uint value = (ushort)(_state.GetCX() << 16 | _state.GetDX());
+        uint value = (ushort)(_state.CX << 16 | _state.DX);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }

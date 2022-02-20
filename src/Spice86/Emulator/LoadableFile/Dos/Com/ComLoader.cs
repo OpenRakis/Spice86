@@ -21,8 +21,8 @@ public class ComLoader : ExecutableFileLoader {
         State? state = _cpu.GetState();
 
         // Make DS and ES point to the PSP
-        state.SetDS(_startSegment);
-        state.SetES(_startSegment);
+        state.DS = _startSegment;
+        state.ES = _startSegment;
         SetEntryPoint(_startSegment, ComOffset);
         return com;
     }

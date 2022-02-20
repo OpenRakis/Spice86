@@ -65,13 +65,7 @@ public class Flags {
         return FlagRegister;
     }
 
-    public void SetDosboxCompatibility(bool compatible) {
-        if (compatible) {
-            _additionalFlagMask = 0b111000000000000;
-        } else {
-            _additionalFlagMask = 0;
-        }
-    }
+    public bool IsDOSBoxCompatible { get => _additionalFlagMask == 0b111000000000000; set { if (value) { _additionalFlagMask = 0b111000000000000; } else { _additionalFlagMask = 0; } } }
 
     public void SetFlag(ushort mask, bool value) {
         if (value) {

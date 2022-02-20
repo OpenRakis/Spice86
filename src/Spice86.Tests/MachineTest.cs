@@ -88,7 +88,7 @@ public class MachineTest {
         byte[] expected = new byte[] { 0x01, 0x40 };
         Machine emulator = TestOneBin("jmpmov", expected);
         State state = emulator.Cpu.GetState();
-        uint endAddress = MemoryUtils.ToPhysicalAddress(state.GetCS(), state.GetIP());
+        uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
         // Last instruction HLT is one byte long and is at 0xF400C
         Assert.Equal((uint)0xF400D, endAddress);
     }
@@ -165,7 +165,7 @@ public class MachineTest {
         cpu.SetIoPortDispatcher(null);
         cpu.SetErrorOnUninitializedInterruptHandler(false);
         State state = cpu.GetState();
-        state.GetFlags().SetDosboxCompatibility(false);
+        state.Flags.IsDOSBoxCompatible = false;
         programExecutor.Run();
         return machine;
     }

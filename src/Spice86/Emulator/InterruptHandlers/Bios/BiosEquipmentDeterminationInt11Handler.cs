@@ -13,6 +13,6 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     public override byte Index => 0x11;
 
     public override void Run() {
-        _state.SetAX(0);
+        _state.AX = 0;
     }
 }

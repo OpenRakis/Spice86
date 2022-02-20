@@ -55,12 +55,12 @@ public class ExeLoader : ExecutableFileLoader {
         // MS-DOS uses the values in the file header to set the SP and SS registers and
         // adjusts the initial value of the SS register by adding the start-segment
         // address to it.
-        state.SetSS((ushort)(exeFile.InitSS + startSegment));
-        state.SetSP(exeFile.InitSP);
+        state.SS = (ushort)(exeFile.InitSS + startSegment);
+        state.SP = exeFile.InitSP;
 
         // Make DS and ES point to the PSP
-        state.SetDS(pspSegment);
-        state.SetES(pspSegment);
+        state.DS = pspSegment;
+        state.ES = pspSegment;
 
         // Finally, MS-DOS reads the initial CS and IP values from the program's file
         // header, adjusts the CS register value by adding the start-segment address to

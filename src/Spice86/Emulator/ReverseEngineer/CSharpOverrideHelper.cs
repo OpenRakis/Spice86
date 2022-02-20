@@ -83,8 +83,8 @@ public class CSharpOverrideHelper {
 
     public Action FarJump(ushort cs, ushort ip) {
         return () => {
-            _state.SetCS(cs);
-            _state.SetIP(ip);
+            _state.CS = cs;
+            _state.IP = ip;
         };
     }
 
@@ -97,7 +97,7 @@ public class CSharpOverrideHelper {
     }
 
     public Action NearJump(ushort ip) {
-        return () => _state.SetIP(ip);
+        return () => _state.IP = ip;
     }
 
     public Action NearRet() {
@@ -130,7 +130,7 @@ public class CSharpOverrideHelper {
     }
 
     protected void CheckVtableContainsExpected(int segmentRegisterIndex, ushort offset, ushort expectedSegment, ushort expectedOffset) {
-        uint address = MemoryUtils.ToPhysicalAddress(_state.GetSegmentRegisters().GetRegister(segmentRegisterIndex), offset);
+        uint address = MemoryUtils.ToPhysicalAddress(_state.SegmentRegisters.GetRegister(segmentRegisterIndex), offset);
         ushort foundOffset = _memory.GetUint16(address);
         ushort foundSegment = _memory.GetUint16(address + 2);
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {

@@ -50,30 +50,30 @@ public class MouseInt33Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET MOUSE POSITION AND STATUS {@MouseX}, {@MouseY}, {@LeftClick}, {@RightClick}", x, y, leftClick, rightClick);
         }
-        _state.SetCX(x);
-        _state.SetDX(y);
+        _state.CX = x;
+        _state.DX = y;
         ushort clickStatus = (ushort)((leftClick ? 1 : 0) | ((rightClick ? 1 : 0) << 1));
-        _state.SetBX(clickStatus);
+        _state.BX = clickStatus;
     }
 
     public void MouseInstalledFlag() {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("MOUSE INSTALLED FLAG");
         }
-        _state.SetAX(0xFFFF);
+        _state.AX = 0xFFFF;
 
         // 3 buttons
-        _state.SetBX(3);
+        _state.BX = 3;
     }
 
     public override void Run() {
-        byte operation = _state.GetAL();
+        byte operation = _state.AL;
         this.Run(operation);
     }
 
     public void SetMouseCursorPosition() {
-        ushort x = _state.GetCX();
-        ushort y = _state.GetDX();
+        ushort x = _state.CX;
+        ushort y = _state.DX;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE CURSOR POSITION {@MouseX}, {@MouseY}", x, y);
         }
@@ -84,64 +84,64 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     public void SetMouseDoubleSpeedThreshold() {
-        ushort threshold = _state.GetDX();
+        ushort threshold = _state.DX;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE DOUBLE SPEED THRESHOLD {@Threshold}", threshold);
         }
     }
 
     public void SetMouseHorizontalMinMaxPosition() {
-        this._mouseMinX = _state.GetCX();
-        this._mouseMaxX = _state.GetDX();
+        this._mouseMinX = _state.CX;
+        this._mouseMaxX = _state.DX;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE HORIZONTAL MIN MAX POSITION {@MinX}, {@MaxX}", _mouseMinX, _mouseMaxX);
         }
     }
 
     public void SetMouseMickeyPixelRatio() {
-        ushort rx = _state.GetCX();
-        ushort ry = _state.GetDX();
+        ushort rx = _state.CX;
+        ushort ry = _state.DX;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE MICKEY PIXEL RATIO {@Rx}, {@Ry}", rx, ry);
         }
     }
 
     public void SetMouseSensitivity() {
-        ushort horizontalSpeed = _state.GetBX();
-        ushort verticalSpeed = _state.GetCX();
-        ushort threshold = _state.GetDX();
+        ushort horizontalSpeed = _state.BX;
+        ushort verticalSpeed = _state.CX;
+        ushort threshold = _state.DX;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE SENSITIVITY {@HorizontalSpeed}, {@VerticalSpeed}, {@Threshold}", horizontalSpeed, verticalSpeed, threshold);
         }
     }
 
     public void SetMouseUserDefinedSubroutine() {
-        _userCallbackMask = _state.GetCX();
-        _userCallbackSegment = _state.GetES();
-        _userCallbackOffset = _state.GetDX();
+        _userCallbackMask = _state.CX;
+        _userCallbackSegment = _state.ES;
+        _userCallbackOffset = _state.DX;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE USER DEFINED SUBROUTINE (unimplemented!) {@Mask}, {@Segment}, {@Offset}", _userCallbackMask, _userCallbackSegment, _userCallbackOffset);
         }
     }
 
     public void SetMouseVerticalMinMaxPosition() {
-        this._mouseMinY = _state.GetCX();
-        this._mouseMaxY = _state.GetDX();
+        this._mouseMinY = _state.CX;
+        this._mouseMaxY = _state.DX;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE VERTICAL MIN MAX POSITION {@MinY}, {@MaxY}", _mouseMinY, _mouseMaxY);
         }
     }
 
     public void SwapMouseUserDefinedSubroutine() {
-        ushort newUserCallbackMask = _state.GetCX();
-        ushort newUserCallbackSegment = _state.GetES();
-        ushort newUserCallbackOffset = _state.GetDX();
+        ushort newUserCallbackMask = _state.CX;
+        ushort newUserCallbackSegment = _state.ES;
+        ushort newUserCallbackOffset = _state.DX;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SWAP MOUSE USER DEFINED SUBROUTINE (unimplemented!) {@Mask}, {@Segment}, {@Offset}", newUserCallbackMask, newUserCallbackSegment, newUserCallbackOffset);
         }
-        _state.SetCX(_userCallbackMask);
-        _state.SetES(_userCallbackSegment);
-        _state.SetDX(_userCallbackOffset);
+        _state.CX = _userCallbackMask;
+        _state.ES = _userCallbackSegment;
+        _state.DX = _userCallbackOffset;
         _userCallbackMask = newUserCallbackMask;
         _userCallbackOffset = newUserCallbackOffset;
         _userCallbackSegment = newUserCallbackSegment;

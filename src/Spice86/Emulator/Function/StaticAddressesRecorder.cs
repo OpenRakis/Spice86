@@ -26,7 +26,7 @@ public class StaticAddressesRecorder {
 
     public StaticAddressesRecorder(State state, bool debugMode) {
         this._debugMode = debugMode;
-        this._segmentRegisters = state.GetSegmentRegisters();
+        this._segmentRegisters = state.SegmentRegisters;
     }
 
     public void AddName(uint physicalAddress, string name) {

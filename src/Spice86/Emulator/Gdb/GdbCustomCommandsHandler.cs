@@ -80,7 +80,7 @@ public class GdbCustomCommandsHandler {
         }
 
         long cyclesToWait = long.Parse(cyclesToWaitString);
-        long currentCycles = _machine.Cpu.GetState().GetCycles();
+        long currentCycles = _machine.Cpu.GetState().Cycles;
         long cyclesBreak = currentCycles + cyclesToWait;
         var breakPoint = new BreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);

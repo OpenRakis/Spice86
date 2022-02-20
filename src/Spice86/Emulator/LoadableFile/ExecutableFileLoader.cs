@@ -32,8 +32,8 @@ public abstract class ExecutableFileLoader {
 
     protected void SetEntryPoint(ushort cs, ushort ip) {
         State state = _cpu.GetState();
-        state.SetCS(cs);
-        state.SetIP(ip);
+        state.CS = cs;
+        state.IP = ip;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Program entry point is {@ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }

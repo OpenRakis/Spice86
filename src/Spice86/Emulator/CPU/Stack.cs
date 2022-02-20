@@ -13,21 +13,21 @@ public class Stack {
     }
 
     public ushort Peek(int index) {
-        return memory.GetUint16((uint)(state.GetStackPhysicalAddress() + index));
+        return memory.GetUint16((uint)(state.StackPhysicalAddress + index));
     }
 
     public void Poke(int index, ushort value) {
-        memory.SetUint16((uint)(state.GetStackPhysicalAddress() + index), value);
+        memory.SetUint16((uint)(state.StackPhysicalAddress + index), value);
     }
 
     public ushort Pop() {
-        ushort res = memory.GetUint16(state.GetStackPhysicalAddress());
-        state.SetSP((ushort)(state.GetSP() + 2));
+        ushort res = memory.GetUint16(state.StackPhysicalAddress);
+        state.SP = (ushort)(state.SP + 2);
         return res;
     }
 
     public void Push(ushort value) {
-        state.SetSP((ushort)(state.GetSP() - 2));
-        memory.SetUint16(state.GetStackPhysicalAddress(), value);
+        state.SP = (ushort)(state.SP - 2);
+        memory.SetUint16(state.StackPhysicalAddress, value);
     }
 }

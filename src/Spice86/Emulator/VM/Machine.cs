@@ -177,7 +177,7 @@ public class Machine {
     public void Run() {
         State state = Cpu.GetState();
         FunctionHandler functionHandler = Cpu.GetFunctionHandler();
-        functionHandler.Call(CallType.MACHINE, state.GetCS(), state.GetIP(), null, null, () => "entry", false);
+        functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, () => "entry", false);
         try {
             RunLoop();
         } catch (InvalidVMOperationException) {

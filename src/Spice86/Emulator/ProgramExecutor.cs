@@ -161,7 +161,7 @@ public class ProgramExecutor : IDisposable {
         Cpu cpu = Machine.Cpu;
         cpu.SetErrorOnUninitializedInterruptHandler(true);
         State state = cpu.GetState();
-        state.GetFlags().SetDosboxCompatibility(true);
+        state.Flags.IsDOSBoxCompatible = true;
     }
 
     private void InitializeDos(Configuration configuration) {

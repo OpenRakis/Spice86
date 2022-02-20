@@ -28,7 +28,7 @@ public class KeyboardInt16Handler : InterruptHandler {
 
         // AH = keyboard scan code
         // AL = ASCII character or zero if special function key
-        _state.SetAX(keyCode.Value);
+        _state.AX = keyCode.Value;
     }
 
     public void GetKeystrokeStatus(bool calledFromVm) {
@@ -42,12 +42,12 @@ public class KeyboardInt16Handler : InterruptHandler {
         // AL = ASCII character or zero if special function key
         if (_biosKeyboardBuffer.Empty()) {
             SetZeroFlag(true, calledFromVm);
-            _state.SetAX(0);
+            _state.AX = 0;
         } else {
             ushort? keyCode = _biosKeyboardBuffer.GetKeyCode();
             if (keyCode != null) {
                 SetZeroFlag(false, calledFromVm);
-                _state.SetAX(keyCode.Value);
+                _state.AX = keyCode.Value;
             }
         }
     }
@@ -57,7 +57,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public override void Run() {
-        byte operation = _state.GetAH();
+        byte operation = _state.AH;
         this.Run(operation);
     }
 }

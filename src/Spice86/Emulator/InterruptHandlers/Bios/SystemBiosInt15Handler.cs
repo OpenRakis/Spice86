@@ -14,13 +14,13 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public override byte Index => 0x15;
 
     public override void Run() {
-        byte operation = _state.GetAH();
+        byte operation = _state.AH;
         this.Run(operation);
     }
 
     private void Unsupported() {
         // We are not an IBM PS/2
         this.SetCarryFlag(true, true);
-        _state.SetAH(0x86);
+        _state.AH = 0x86;
     }
 }

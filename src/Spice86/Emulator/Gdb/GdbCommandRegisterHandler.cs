@@ -76,19 +76,19 @@ public class GdbCommandRegisterHandler {
     private uint GetRegisterValue(int regIndex) {
         State state = _machine.Cpu.GetState();
         if (regIndex < 8) {
-            return state.GetRegisters().GetRegister(regIndex);
+            return state.Registers.GetRegister(regIndex);
         }
 
         if (regIndex == 8) {
-            return state.GetIpPhysicalAddress();
+            return state.IpPhysicalAddress;
         }
 
         if (regIndex == 9) {
-            return state.GetFlags().FlagRegister;
+            return state.Flags.FlagRegister;
         }
 
         if (regIndex < 16) {
-            return state.GetSegmentRegisters().GetRegister(GetSegmentRegisterIndex(regIndex));
+            return state.SegmentRegisters.GetRegister(GetSegmentRegisterIndex(regIndex));
         }
 
         return 0;
@@ -110,13 +110,13 @@ public class GdbCommandRegisterHandler {
     private void SetRegisterValue(int regIndex, ushort value) {
         State state = _machine.Cpu.GetState();
         if (regIndex < 8) {
-            state.GetRegisters().SetRegister(regIndex, value);
+            state.Registers.SetRegister(regIndex, value);
         } else if (regIndex == 8) {
-            state.SetIP(value);
+            state.IP = value;
         } else if (regIndex == 9) {
-            state.GetFlags().SetFlagRegister(value);
+            state.Flags.SetFlagRegister(value);
         } else if (regIndex < 16) {
-            state.GetSegmentRegisters().SetRegister(GetSegmentRegisterIndex(regIndex), value);
+            state.SegmentRegisters.SetRegister(GetSegmentRegisterIndex(regIndex), value);
         }
     }
 }
