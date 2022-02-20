@@ -13,7 +13,7 @@ public class CsvFunctionInformationToStringConverter : FunctionInformationToStri
 
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
         IEnumerable<FunctionInformation>? calls = GetCalls(functionInformation, allFunctions);
-        return GenerateLine(ToCSharpName(functionInformation, true), Size(functionInformation.GetReturns()), Size(functionInformation.GetUnalignedReturns()), Size(GetCallers(functionInformation)), functionInformation.GetCalledCount().ToString(), Size(calls), ApproximateSize(functionInformation).ToString(), IsOverridable(calls).ToString(), functionInformation.HasOverride().ToString());
+        return GenerateLine(ToCSharpName(functionInformation, true), Size(functionInformation.Returns), Size(functionInformation.UnalignedReturns), Size(GetCallers(functionInformation)), functionInformation.CalledCount.ToString(), Size(calls), ApproximateSize(functionInformation).ToString(), IsOverridable(calls).ToString(), functionInformation.HasOverride.ToString());
     }
 
     public override string GetFileHeader(List<SegmentRegisterBasedAddress> allGlobals, HashSet<SegmentedAddress> whiteListOfSegmentForOffset) {

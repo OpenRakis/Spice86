@@ -47,23 +47,23 @@ public abstract class FunctionInformationToStringConverter {
     }
 
     protected bool ContainsNonOverride(IEnumerable<FunctionInformation> calls) {
-        return calls.Any((function) => !function.HasOverride());
+        return calls.Any((function) => !function.HasOverride);
     }
 
     protected List<SegmentedAddress> GetBoundaries(FunctionInformation functionInformation) {
         List<SegmentedAddress> boundaries = new();
-        boundaries.AddRange(functionInformation.GetReturns().Keys.ToDictionary(x => x.GetAddress()).Select(x => x.Key));
-        boundaries.Add(functionInformation.GetAddress());
+        boundaries.AddRange(functionInformation.Returns.Keys.ToDictionary(x => x.Address).Select(x => x.Key));
+        boundaries.Add(functionInformation.Address);
         return boundaries.OrderBy(x => x).ToList();
     }
 
     protected List<FunctionInformation> GetCallers(FunctionInformation functionInformation) {
-        return Sort(functionInformation.GetCallers()).ToList();
+        return Sort(functionInformation.Callers).ToList();
     }
 
     protected IEnumerable<FunctionInformation> GetCalls(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
         // calls made by this function is the list of functions that get called by it
-        return Sort(allFunctions.Where((callee) => callee.GetCallers().Contains(functionInformation)));
+        return Sort(allFunctions.Where((callee) => callee.Callers.Contains(functionInformation)));
     }
 
     protected bool IsOverridable(IEnumerable<FunctionInformation> calls) {
@@ -109,11 +109,11 @@ public abstract class FunctionInformationToStringConverter {
     }
 
     protected string ToCSharpName(FunctionInformation functionInformation, bool dots) {
-        string? nameToUse = functionInformation.GetName();
+        string? nameToUse = functionInformation.Name;
         if (!dots) {
             nameToUse = RemoveDotsFromFunctionName(nameToUse);
         }
 
-        return $"{nameToUse}_{ConvertUtils.ToCSharpStringWithPhysical(functionInformation.GetAddress())}";
+        return $"{nameToUse}_{ConvertUtils.ToCSharpStringWithPhysical(functionInformation.Address)}";
     }
 }

@@ -21,25 +21,15 @@ public class FunctionCall {
         this._recordReturn = recordReturn;
     }
 
-    public CallType GetCallType() {
-        return _callType;
-    }
+    public CallType CallType => _callType;
 
-    public SegmentedAddress GetEntryPointAddress() {
-        return _entryPointAddress;
-    }
+    public SegmentedAddress EntryPointAddress =>_entryPointAddress;
 
-    public SegmentedAddress? GetExpectedReturnAddress() {
-        return _expectedReturnAddress;
-    }
+    public SegmentedAddress? ExpectedReturnAddress =>_expectedReturnAddress;
 
-    public SegmentedAddress GetStackAddressAfterCall() {
-        return _stackAddressAfterCall;
-    }
+    public SegmentedAddress StackAddressAfterCall => _stackAddressAfterCall;
 
-    public bool IsRecordReturn() {
-        return _recordReturn;
-    }
+    public bool IsRecordReturn => _recordReturn;
 
     public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);

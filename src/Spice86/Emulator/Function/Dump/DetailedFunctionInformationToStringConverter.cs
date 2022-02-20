@@ -13,15 +13,15 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
 
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
         var res = new StringBuilder();
-        Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns = Sort(functionInformation.GetReturns());
-        Dictionary<FunctionReturn, ISet<SegmentedAddress>> unalignedReturns = Sort(functionInformation.GetUnalignedReturns());
+        Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns = Sort(functionInformation.Returns);
+        Dictionary<FunctionReturn, ISet<SegmentedAddress>> unalignedReturns = Sort(functionInformation.UnalignedReturns);
         List<FunctionInformation> callers = GetCallers(functionInformation);
         IEnumerable<FunctionInformation> calls = GetCalls(functionInformation, allFunctions);
         long approximateSize = ApproximateSize(functionInformation);
         string header = $"function {functionInformation}";
         header += $" returns:{returns.Count}";
         header += $" callers:{callers.Count}";
-        header += $" called: {functionInformation.GetCalledCount()}";
+        header += $" called: {functionInformation.CalledCount}";
         header += $" calls:{calls.Count()}";
         header += $" approximateSize:{approximateSize}";
         if (IsOverridable(calls)) {

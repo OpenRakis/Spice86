@@ -49,9 +49,9 @@ public class CSharpOverrideHelper {
         SegmentedAddress address = new(segment, offset);
         string name = $"{_prefix}.{suffix}";
         if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
-            string error = $"There is already a function defined at address {address} named {existingFunctionInformation.GetName()} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
+            string error = $"There is already a function defined at address {address} named {existingFunctionInformation.Name} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.GetName(), name);
+                _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.Name, name);
             }
             throw new UnrecoverableException(error);
         }

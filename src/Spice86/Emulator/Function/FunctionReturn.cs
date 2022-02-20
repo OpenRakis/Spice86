@@ -30,17 +30,13 @@ public class FunctionReturn : IComparable<FunctionReturn> {
             && _returnCallType.Equals(other._returnCallType);
     }
 
-    public SegmentedAddress GetAddress() {
-        return _instructionAddress;
-    }
+    public SegmentedAddress Address => _instructionAddress;
 
     public override int GetHashCode() {
         return HashCode.Combine(_instructionAddress, _returnCallType);
     }
 
-    public CallType GetReturnCallType() {
-        return _returnCallType;
-    }
+    public CallType ReturnCallType =>_returnCallType;
 
     public override string ToString() {
         return $"{_returnCallType} at {_instructionAddress}";

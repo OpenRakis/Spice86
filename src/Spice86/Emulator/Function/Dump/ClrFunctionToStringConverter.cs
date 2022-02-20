@@ -155,7 +155,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
         OperandSize operandSize = addressOperation.OperandSize;
         string javaName = $"{operandSize.Name}_{ConvertUtils.ToCSharpString(address)}";
-        string? name = address.GetName();
+        string? name = address.Name;
         if (string.IsNullOrWhiteSpace(name) == false) {
             javaName += "_" + name;
         }
@@ -201,12 +201,12 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
-        if (functionInformation.HasOverride()) {
+        if (functionInformation.HasOverride) {
             return GetNoStubReasonCommentForMethod(functionInformation, "Function already has an override");
         }
 
-        List<CallType> returnTypes = functionInformation.GetReturns().Keys.Concat(functionInformation.GetUnalignedReturns().Keys)
-            .Select(x => x.GetReturnCallType())
+        List<CallType> returnTypes = functionInformation.Returns.Keys.Concat(functionInformation.UnalignedReturns.Keys)
+            .Select(x => x.ReturnCallType)
             .Distinct()
             .ToList();
         if (returnTypes.Count != 1) {
@@ -223,8 +223,8 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         IEnumerable<FunctionInformation> calls = this.GetCalls(functionInformation, allFunctions);
         string callsAsComments = this.GetCallsAsComments(calls);
         CallType returnType = returnTypes[0];
-        string? functionName = RemoveDotsFromFunctionName(functionInformation.GetName());
-        SegmentedAddress functionAddress = functionInformation.GetAddress();
+        string? functionName = RemoveDotsFromFunctionName(functionInformation.Name);
+        SegmentedAddress functionAddress = functionInformation.Address;
         string functionNameInJava = ToCSharpName(functionInformation, false);
         string segment = ConvertUtils.ToHex16(functionAddress.Segment);
         string offset = ConvertUtils.ToHex16(functionAddress.Offset);
@@ -238,6 +238,6 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     private static string GetNoStubReasonCommentForMethod(FunctionInformation functionInformation, string reason) {
-        return $"  // Not providing stub for {functionInformation.GetName()}. Reason: {reason}\n";
+        return $"  // Not providing stub for {functionInformation.Name}. Reason: {reason}\n";
     }
 }

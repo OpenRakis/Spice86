@@ -27,7 +27,7 @@ public class FunctionInformationDumper {
             }
 
             foreach (FunctionInformation functionInformation in functionInformations) {
-                if (functionInformation.GetCalledCount() == 0) {
+                if (functionInformation.CalledCount == 0) {
                     continue;
                 }
 

@@ -7,6 +7,6 @@ using Utils;
 public class GhidraSymbolsToStringConverter : FunctionInformationToStringConverter {
 
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
-        return $"{ToCSharpName(functionInformation, true)} {ConvertUtils.ToHex(functionInformation.GetAddress().ToPhysical())} f";
+        return $"{ToCSharpName(functionInformation, true)} {ConvertUtils.ToHex(functionInformation.Address.ToPhysical())} f";
     }
 }

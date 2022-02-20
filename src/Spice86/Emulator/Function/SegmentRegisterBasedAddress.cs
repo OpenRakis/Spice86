@@ -29,7 +29,5 @@ public class SegmentRegisterBasedAddress : SegmentedAddress {
         return _addressOperations;
     }
 
-    public string? GetName() {
-        return _name;
-    }
+    public string? Name => _name;
 }
