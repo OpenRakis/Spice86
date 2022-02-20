@@ -11,7 +11,7 @@ using System.IO;
 /// </summary>
 public class OpenFile {
     private readonly int _descriptor;
-    private readonly List<MemoryRange> _loadMemoryRanges = new();
+    private readonly List<MemoryRange> _loadedMemoryRanges = new();
     private readonly string _name;
     private readonly FileStream _randomAccessFile;
 
@@ -22,7 +22,7 @@ public class OpenFile {
     }
 
     public void AddMemoryRange(MemoryRange memoryRange) {
-        foreach (MemoryRange loadMemoryRange in _loadMemoryRanges) {
+        foreach (MemoryRange loadMemoryRange in _loadedMemoryRanges) {
             if (loadMemoryRange.StartAddress == memoryRange.StartAddress && loadMemoryRange.EndAddress == memoryRange.EndAddress) {
                 // Same, nothing to do
                 return;
@@ -42,22 +42,14 @@ public class OpenFile {
             }
         }
 
-        _loadMemoryRanges.Add(memoryRange);
+        _loadedMemoryRanges.Add(memoryRange);
     }
 
-    public int GetDescriptor() {
-        return _descriptor;
-    }
+    public int Descriptor =>_descriptor;
 
-    public IList<MemoryRange> GetLoadMemoryRanges() {
-        return _loadMemoryRanges;
-    }
+    public IList<MemoryRange> LoadedMemoryRanges => _loadedMemoryRanges;
 
-    public string GetName() {
-        return _name;
-    }
+    public string Name => _name;
 
-    public FileStream GetRandomAccessFile() {
-        return _randomAccessFile;
-    }
+    public FileStream RandomAccessFile => _randomAccessFile;
 }

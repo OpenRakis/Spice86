@@ -55,14 +55,14 @@ public class DosFileManager {
         }
 
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Closed {@ClosedFileName}, file was loaded in ram in those addresses: {@ClosedFileAddresses}", file.GetName(), file.GetLoadMemoryRanges());
+            _logger.Information("Closed {@ClosedFileName}, file was loaded in ram in those addresses: {@ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
         }
 
         SetOpenFile(fileHandle, null);
         try {
             if (CountHandles(file) == 0) {
                 // Only close the file if no other handle to it exist.
-                file.GetRandomAccessFile().Close();
+                file.RandomAccessFile.Close();
             }
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while closing file", e);
@@ -192,9 +192,9 @@ public class DosFileManager {
         }
 
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Moving in file {@FileMove}", file.GetName());
+            _logger.Information("Moving in file {@FileMove}", file.Name);
         }
-        FileStream randomAccessFile = file.GetRandomAccessFile();
+        FileStream randomAccessFile = file.RandomAccessFile;
         try {
             uint newOffset = Seek(randomAccessFile, originOfMove, offset);
             return DosFileOperationResult.Value32(newOffset);
@@ -227,13 +227,13 @@ public class DosFileManager {
         }
 
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Reading from file {@FileName}", file.GetName());
+            _logger.Information("Reading from file {@FileName}", file.Name);
         }
 
         byte[] buffer = new byte[readLength];
         int actualReadLength;
         try {
-            actualReadLength = file.GetRandomAccessFile().Read(buffer, 0, readLength);
+            actualReadLength = file.RandomAccessFile.Read(buffer, 0, readLength);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while reading file", e);
         }
@@ -245,7 +245,7 @@ public class DosFileManager {
 
         if (actualReadLength > 0) {
             _memory.LoadData(targetAddress, buffer, actualReadLength);
-            file.AddMemoryRange(new MemoryRange(targetAddress, (uint)(targetAddress + actualReadLength - 1), file.GetName()));
+            file.AddMemoryRange(new MemoryRange(targetAddress, (uint)(targetAddress + actualReadLength - 1), file.Name));
         }
 
         return DosFileOperationResult.Value16((ushort)actualReadLength);
@@ -286,7 +286,7 @@ public class DosFileManager {
         }
 
         try {
-            file.GetRandomAccessFile().Write(_memory.Ram, (int)bufferAddress, writeLength);
+            file.RandomAccessFile.Write(_memory.Ram, (int)bufferAddress, writeLength);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }
