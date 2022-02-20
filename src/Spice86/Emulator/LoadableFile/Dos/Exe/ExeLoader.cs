@@ -39,8 +39,8 @@ public class ExeLoader : ExecutableFileLoader {
 
     private void LoadExeFileInMemory(ExeFile exeFile, ushort startSegment) {
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
-        _memory.LoadData(physicalStartAddress, exeFile.GetProgramImage());
-        foreach (SegmentedAddress address in exeFile.GetRelocationTable()) {
+        _memory.LoadData(physicalStartAddress, exeFile.ProgramImage);
+        foreach (SegmentedAddress address in exeFile.RelocationTable) {
             // Read value from memory, add the start segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset) + physicalStartAddress;
             int segmentToRelocate = _memory.GetUint16(addressToEdit);
@@ -55,8 +55,8 @@ public class ExeLoader : ExecutableFileLoader {
         // MS-DOS uses the values in the file header to set the SP and SS registers and
         // adjusts the initial value of the SS register by adding the start-segment
         // address to it.
-        state.SetSS((ushort)(exeFile.GetInitSS() + startSegment));
-        state.SetSP(exeFile.GetInitSP());
+        state.SetSS((ushort)(exeFile.InitSS + startSegment));
+        state.SetSP(exeFile.InitSP);
 
         // Make DS and ES point to the PSP
         state.SetDS(pspSegment);
@@ -65,6 +65,6 @@ public class ExeLoader : ExecutableFileLoader {
         // Finally, MS-DOS reads the initial CS and IP values from the program's file
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
-        SetEntryPoint((ushort)(exeFile.GetInitCS() + startSegment), exeFile.GetInitIP());
+        SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
     }
 }
