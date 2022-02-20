@@ -28,7 +28,7 @@ public class Keyboard : DefaultIOPortHandler {
         if (_gui == null) {
             return null;
         }
-        Key? keyCode = _gui.GetLastKeyCode();
+        Key? keyCode = _gui.LastKeyCode;
         byte? scancode = null;
         if (keyCode != null) {
             if (_gui.IsKeyPressed(keyCode.Value)) {

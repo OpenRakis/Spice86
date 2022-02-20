@@ -320,7 +320,7 @@ public class GdbCustomCommandsHandler {
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
                 var listBuilder = new StringBuilder();
-                gui?.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList().ForEach(x => listBuilder.AppendLine(x));
+                gui?.VideoBuffersAsDictionary.ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList().ForEach(x => listBuilder.AppendLine(x));
                 string list = listBuilder.ToString();
                 return _gdbIo.GenerateMessageToDisplayResponse(list);
             }
@@ -334,7 +334,7 @@ public class GdbCustomCommandsHandler {
             int[] resolution = ExtractResolution(args, action);
             double scale = ExtractScale(args);
             if ("add".Equals(action)) {
-                if (gui?.GetVideoBuffers().TryGetValue(address, out VideoBufferViewModel? existing) == true) {
+                if (gui?.VideoBuffersAsDictionary.TryGetValue(address, out VideoBufferViewModel? existing) == true) {
                     return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
                 }
 

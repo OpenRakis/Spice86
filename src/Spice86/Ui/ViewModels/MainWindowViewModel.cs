@@ -30,19 +30,12 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private Configuration? _configuration;
     private bool _disposedValue;
     private Thread? _emulatorThread;
-    private int _height = 1;
     private bool _isSettingResolution = false;
     private readonly List<Key> _keysPressed = new();
-    private Key? _lastKeyCode = null;
-    private bool _leftButtonClicked;
-    private int _mouseX;
-    private int _mouseY;
     private Action? _onKeyPressedEvent;
     private Action? _onKeyReleasedEvent;
     private ProgramExecutor? _programExecutor;
-    private bool _rightButtonClicked;
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
-    private int _width = 1;
 
     public MainWindowViewModel() {
         if (Design.IsDesignMode) {
@@ -99,41 +92,26 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         Environment.Exit(0);
     }
 
-    public int GetHeight() {
-        return _height;
-    }
+    public int Height {get; private set;}
 
-    public Key? GetLastKeyCode() {
-        return _lastKeyCode;
-    }
+    public Key? LastKeyCode { get; private set; }
 
-    public int GetMouseX() {
-        return _mouseX;
-    }
+    public int MouseX { get; set; }
 
-    public int GetMouseY() {
-        return _mouseY;
-    }
+    public int MouseY { get; set; }
 
-    public IDictionary<uint, VideoBufferViewModel> GetVideoBuffers() {
-        return VideoBuffers.ToDictionary(x => x.Address, x => x);
-    }
+    public IDictionary<uint, VideoBufferViewModel> VideoBuffersAsDictionary => VideoBuffers.ToDictionary(x => x.Address, x => x);
 
-    public int GetWidth() {
-        return _width;
-    }
+    public int Width { get; private set; }
 
     public bool IsKeyPressed(Key keyCode) {
         return _keysPressed.Contains(keyCode);
     }
 
-    public bool IsLeftButtonClicked() {
-        return _leftButtonClicked;
-    }
+    public bool IsLeftButtonClicked { get; private set; }
 
-    public bool IsRightButtonClicked() {
-        return _rightButtonClicked;
-    }
+
+    public bool IsRightButtonClicked { get; private set; }
 
     public void OnKeyPressed(KeyEventArgs @event) {
         Key keyCode = @event.Key;
@@ -142,17 +120,17 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
                 _logger.Information("Key pressed {@KeyPressed}", keyCode);
             }
             _keysPressed.Add(keyCode);
-            this._lastKeyCode = keyCode;
+            LastKeyCode = keyCode;
             RunOnKeyEvent(this._onKeyPressedEvent);
         }
     }
 
     public void OnKeyReleased(KeyEventArgs @event) {
-        this._lastKeyCode = @event.Key;
+        LastKeyCode = @event.Key;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Key released {@LastKeyCode}", _lastKeyCode);
+            _logger.Information("Key released {@LastKeyCode}", LastKeyCode);
         }
-        _keysPressed.Remove(_lastKeyCode.Value);
+        _keysPressed.Remove(LastKeyCode.Value);
         RunOnKeyEvent(this._onKeyReleasedEvent);
     }
 
@@ -167,29 +145,21 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     public void OnMouseClick(PointerEventArgs @event, bool click) {
         if (@event.Pointer.IsPrimary) {
-            _leftButtonClicked = click;
+            IsLeftButtonClicked = click;
         }
 
         if (@event.Pointer.IsPrimary == false) {
-            _rightButtonClicked = click;
+            IsRightButtonClicked = click;
         }
     }
 
     public void OnMouseMoved(PointerEventArgs @event, Image image) {
-        SetMouseX((int)@event.GetPosition(image).X);
-        SetMouseY((int)@event.GetPosition(image).Y);
+        MouseX = (int)@event.GetPosition(image).X;
+        MouseY = (int)@event.GetPosition(image).Y;
     }
 
     public void RemoveBuffer(uint address) {
         VideoBuffers.Remove(VideoBuffers.First(x => x.Address == address));
-    }
-
-    public void SetMouseX(int mouseX) {
-        this._mouseX = mouseX;
-    }
-
-    public void SetMouseY(int mouseY) {
-        this._mouseY = mouseY;
     }
 
     public void SetOnKeyPressedEvent(Action onKeyPressedEvent) {
@@ -204,8 +174,8 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         _isSettingResolution = true;
         DisposeBuffers();
         VideoBuffers = new();
-        this._width = width;
-        this._height = height;
+        Width = width;
+        Height = height;
         AddBuffer(address, 1, width, height, true);
         _isSettingResolution = false;
     }

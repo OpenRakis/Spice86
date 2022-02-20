@@ -45,10 +45,10 @@ public class MouseInt33Handler : InterruptHandler {
         if(_gui is null) {
             return;
         }
-        ushort x = RestrictValue((ushort)_gui.GetMouseX(), (ushort)_gui.GetWidth(), _mouseMinX, _mouseMaxX);
-        ushort y = RestrictValue((ushort)_gui.GetMouseY(), (ushort)_gui.GetHeight(), _mouseMinY, _mouseMaxY);
-        bool leftClick = _gui.IsLeftButtonClicked();
-        bool rightClick = _gui.IsRightButtonClicked();
+        ushort x = RestrictValue((ushort)_gui.MouseX, (ushort)_gui.Width, _mouseMinX, _mouseMaxX);
+        ushort y = RestrictValue((ushort)_gui.MouseY, (ushort)_gui.Height, _mouseMinY, _mouseMaxY);
+        bool leftClick = _gui.IsLeftButtonClicked;
+        bool rightClick = _gui.IsRightButtonClicked;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET MOUSE POSITION AND STATUS {@MouseX}, {@MouseY}, {@LeftClick}, {@RightClick}", x, y, leftClick, rightClick);
         }
@@ -79,8 +79,10 @@ public class MouseInt33Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE CURSOR POSITION {@MouseX}, {@MouseY}", x, y);
         }
-        _gui?.SetMouseX(x);
-        _gui?.SetMouseY(y);
+        if(_gui is not null) {
+            _gui.MouseX = x;
+            _gui.MouseY = y;
+        }
     }
 
     public void SetMouseDoubleSpeedThreshold() {
