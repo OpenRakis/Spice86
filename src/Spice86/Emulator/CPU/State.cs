@@ -4,6 +4,7 @@ using Spice86.Emulator.Memory;
 using Spice86.Utils;
 
 using System;
+using System.Text;
 
 public class State {
     private readonly Flags _flags = new();
@@ -25,7 +26,7 @@ public class State {
     private int? _segmentOverrideIndex = null;
 
     public void AddCurrentInstructionPrefix(string currentInstructionPrefix) {
-        this._currentInstructionPrefix += currentInstructionPrefix + " ";
+        _currentInstructionPrefix += $"{currentInstructionPrefix} ";
     }
 
     public void ClearPrefixes() {
@@ -34,24 +35,28 @@ public class State {
     }
 
     public string DumpRegFlags() {
-        string res = "cycles=" + this.GetCycles();
-        res += " CS:IP=" + ConvertUtils.ToSegmentedAddressRepresentation(GetCS(), GetIP()) + '/' + ConvertUtils.ToHex(MemoryUtils.ToPhysicalAddress(GetCS(), GetIP()));
-        res += " AX=" + ConvertUtils.ToHex16(GetAX());
-        res += " BX=" + ConvertUtils.ToHex16(GetBX());
-        res += " CX=" + ConvertUtils.ToHex16(GetCX());
-        res += " DX=" + ConvertUtils.ToHex16(GetDX());
-        res += " SI=" + ConvertUtils.ToHex16(GetSI());
-        res += " DI=" + ConvertUtils.ToHex16(GetDI());
-        res += " BP=" + ConvertUtils.ToHex16(GetBP());
-        res += " SP=" + ConvertUtils.ToHex16(GetSP());
-        res += " SS=" + ConvertUtils.ToHex16(GetSS());
-        res += " DS=" + ConvertUtils.ToHex16(GetDS());
-        res += " ES=" + ConvertUtils.ToHex16(GetES());
-        res += " FS=" + ConvertUtils.ToHex16(GetFS());
-        res += " GS=" + ConvertUtils.ToHex16(GetGS());
-        res += " flags=" + ConvertUtils.ToHex16(_flags.FlagRegister);
-        res += " (" + _flags + ")";
-        return res;
+        var res = new StringBuilder();
+        res.Append("cycles=");
+        res.Append(GetCycles());
+        res.Append($" CS:IP={ConvertUtils.ToSegmentedAddressRepresentation(GetCS(), GetIP())}/{ConvertUtils.ToHex(MemoryUtils.ToPhysicalAddress(GetCS(), GetIP()))}");
+        res.Append($" AX={ConvertUtils.ToHex16(GetAX())}");
+        res.Append($" BX={ConvertUtils.ToHex16(GetBX())}");
+        res.Append($" CX={ConvertUtils.ToHex16(GetCX())}");
+        res.Append($" DX={ConvertUtils.ToHex16(GetDX())}");
+        res.Append($" SI={ConvertUtils.ToHex16(GetSI())}");
+        res.Append($" DI={ConvertUtils.ToHex16(GetDI())}");
+        res.Append($" BP={ConvertUtils.ToHex16(GetBP())}");
+        res.Append($" SP={ConvertUtils.ToHex16(GetSP())}");
+        res.Append($" SS={ConvertUtils.ToHex16(GetSS())}");
+        res.Append($" DS={ConvertUtils.ToHex16(GetDS())}");
+        res.Append($" ES={ConvertUtils.ToHex16(GetES())}");
+        res.Append($" FS={ConvertUtils.ToHex16(GetFS())}");
+        res.Append($" GS={ConvertUtils.ToHex16(GetGS())}");
+        res.Append($" flags={ConvertUtils.ToHex16(_flags.FlagRegister)}");
+        res.Append(" (");
+        res.Append(_flags);
+        res.Append(")");
+        return res.ToString();
     }
 
     public byte GetAH() {
