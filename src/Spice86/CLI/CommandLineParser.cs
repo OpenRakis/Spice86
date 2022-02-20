@@ -20,7 +20,7 @@ using System.Reflection;
 public class CommandLineParser {
     private static readonly ILogger _logger = Log.Logger.ForContext<CommandLineParser>();
 
-    public Configuration? ParseCommandLine(string[] args) {
+    public static Configuration? ParseCommandLine(string[] args) {
         ParserResult<Configuration>? result = Parser.Default.ParseArguments<Configuration>(args)
             .WithNotParsed((e) => _logger.Error("{@Errors}",e));
         if (result != null) {

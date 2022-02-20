@@ -38,13 +38,9 @@ public class AddressOperation : IComparable<AddressOperation> {
         return HashCode.Combine(_operandSize.GetHashCode(), _valueOperation.GetHashCode());
     }
 
-    public OperandSize GetOperandSize() {
-        return _operandSize;
-    }
+    public OperandSize OperandSize =>_operandSize;
 
-    public ValueOperation GetValueOperation() {
-        return _valueOperation;
-    }
+    public ValueOperation ValueOperation => _valueOperation;
 
     private class NaturalOrderComparator : IComparer<AddressOperation> {
 

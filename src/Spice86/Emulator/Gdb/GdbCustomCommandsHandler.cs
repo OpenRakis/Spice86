@@ -25,18 +25,18 @@ using Spice86.UI.ViewModels;
 /// </summary>
 public class GdbCustomCommandsHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCustomCommandsHandler>();
-    private string? _defaultDumpDirectory;
-    private string? _jumpFile;
-    private GdbIo _gdbIo;
-    private Machine _machine;
-    private Action<BreakPoint> _onBreakpointReached;
+    private readonly string? _defaultDumpDirectory;
+    private readonly string? _jumpFile;
+    private readonly GdbIo _gdbIo;
+    private readonly Machine _machine;
+    private readonly Action<BreakPoint> _onBreakpointReached;
 
     public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string? defaultDumpDirectory, string? jumpFile) {
-        this._gdbIo = gdbIo;
-        this._machine = machine;
-        this._onBreakpointReached = onBreakpointReached;
-        this._defaultDumpDirectory = defaultDumpDirectory;
-        this._jumpFile = jumpFile;
+        _gdbIo = gdbIo;
+        _machine = machine;
+        _onBreakpointReached = onBreakpointReached;
+        _defaultDumpDirectory = defaultDumpDirectory;
+        _jumpFile = jumpFile;
     }
 
     public virtual string HandleCustomCommands(string command) {
@@ -80,10 +80,10 @@ public class GdbCustomCommandsHandler {
         }
 
         long cyclesToWait = long.Parse(cyclesToWaitString);
-        long currentCycles = _machine.GetCpu().GetState().GetCycles();
+        long currentCycles = _machine.Cpu.State.Cycles;
         long cyclesBreak = currentCycles + cyclesToWait;
         var breakPoint = new BreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
-        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
         }
@@ -92,7 +92,7 @@ public class GdbCustomCommandsHandler {
 
     private string BreakStop() {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
-        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added for end of execution!\n{@BreakPoint}", breakPoint);
         }
@@ -142,8 +142,8 @@ public class GdbCustomCommandsHandler {
     private string DumpFunctionWithFormat(String[] args, string defaultSuffix, FunctionInformationToStringConverter converter) {
         string fileName = GetFirstArgumentOrDefaultFileSuffix(args, defaultSuffix);
         return DoFileAction(fileName, (f) => {
-            Cpu cpu = _machine.GetCpu();
-            new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.GetStaticAddressesRecorder(), cpu.GetFunctionHandler(), cpu.GetFunctionHandlerInExternalInterrupt());
+            Cpu cpu = _machine.Cpu;
+            new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.StaticAddressesRecorder, cpu.FunctionHandler, cpu.FunctionHandlerInExternalInterrupt);
         }, "Error while dumping functions");
     }
 
@@ -153,13 +153,13 @@ public class GdbCustomCommandsHandler {
 
     private string DumpMemory(String[] args) {
         string fileName = GetFirstArgumentOrDefaultFileSuffix(args, "MemoryDump.bin");
-        return DoFileAction(fileName, (f) => _machine.GetMemory().DumpToFile(f), "Error while dumping memory");
+        return DoFileAction(fileName, (f) => _machine.Memory.DumpToFile(f), "Error while dumping memory");
     }
 
     private string DumpJumps(string[] args) {
-        string fileName = GetFirstArgumentOrDefaultFile(args, _jumpFile ?? generateDumpFileSuffix("jumps.json"));
+        string fileName = GetFirstArgumentOrDefaultFile(args, _jumpFile ?? GenerateDumpFileSuffix("jumps.json"));
         return DoFileAction(fileName, (f) => {
-            new JumpDumper().Dump(_machine.GetCpu().JumpHandler, fileName);
+            new JumpDumper().Dump(_machine.Cpu.JumpHandler, fileName);
         }, "Error while dumping jumps");
     }
     private string ExecuteCustomCommand(params string[] args) {
@@ -215,7 +215,7 @@ public class GdbCustomCommandsHandler {
     }
 
     private string GetFirstArgumentOrDefaultFileSuffix(String[] args, string defaultSuffix) {
-        return GetFirstArgumentOrDefaultFile(args, generateDumpFileSuffix(defaultSuffix));
+        return GetFirstArgumentOrDefaultFile(args, GenerateDumpFileSuffix(defaultSuffix));
     }
 
     private string GetFirstArgumentOrDefaultFile(String[] args, string defaultFile) {
@@ -225,7 +225,7 @@ public class GdbCustomCommandsHandler {
         return defaultFile;
     }
 
-    private string generateDumpFileSuffix(String suffix) {
+    private string GenerateDumpFileSuffix(String suffix) {
         return $"{_defaultDumpDirectory}/spice86dump{suffix}";
     }
 
@@ -291,8 +291,8 @@ public class GdbCustomCommandsHandler {
             if (parsed == false) {
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand {returnType} as a return type. Valid values are: {GetValidRetValues()}");
             }
-            if (callType is CallType) {
-                return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn((CallType)callType));
+            if (callType is CallType type) {
+                return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn(type));
             }
         }
         return "";
@@ -303,24 +303,24 @@ public class GdbCustomCommandsHandler {
     }
 
     private string State() {
-        string state = _machine.GetCpu().GetState().ToString();
+        string state = _machine.Cpu.State.ToString();
         return _gdbIo.GenerateMessageToDisplayResponse(state);
     }
 
     private string Vbuffer(string[] args) {
         try {
             string action = ExtractAction(args);
-            IVideoKeyboardMouseIO? gui = _machine.GetGui();
-            VgaCard vgaCard = _machine.GetVgaCard();
+            IVideoKeyboardMouseIO? gui = _machine.Gui;
+            VgaCard vgaCard = _machine.VgaCard;
 
             // Actions for 1 parameter
             if ("refresh".Equals(action)) {
-                Memory memory = _machine.GetMemory();
-                gui?.Draw(memory.GetRam(), vgaCard.GetVgaDac().GetRgbs());
+                Memory memory = _machine.Memory;
+                gui?.Draw(memory.Ram, vgaCard.VgaDac.Rgbs);
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
-                StringBuilder listBuilder = new StringBuilder();
-                gui?.GetVideoBuffers().ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList().ForEach(x => listBuilder.AppendLine(x));
+                var listBuilder = new StringBuilder();
+                gui?.VideoBuffersAsDictionary.ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList().ForEach(x => listBuilder.AppendLine(x));
                 string list = listBuilder.ToString();
                 return _gdbIo.GenerateMessageToDisplayResponse(list);
             }
@@ -334,7 +334,7 @@ public class GdbCustomCommandsHandler {
             int[] resolution = ExtractResolution(args, action);
             double scale = ExtractScale(args);
             if ("add".Equals(action)) {
-                if (gui?.GetVideoBuffers().TryGetValue(address, out VideoBufferViewModel? existing) == true) {
+                if (gui?.VideoBuffersAsDictionary.TryGetValue(address, out VideoBufferViewModel? existing) == true) {
                     return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
                 }
 

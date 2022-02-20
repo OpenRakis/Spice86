@@ -18,28 +18,28 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
 
     protected InterruptHandler(Machine machine) {
         this._machine = machine;
-        _memory = machine.GetMemory();
-        _cpu = machine.GetCpu();
-        _state = _cpu.GetState();
+        _memory = machine.Memory;
+        _cpu = machine.Cpu;
+        _state = _cpu.State;
     }
 
-    public abstract byte GetIndex();
+    public abstract byte Index { get; }
 
     public abstract void Run();
 
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
-        return new UnhandledInterruptException(_machine, GetIndex(), index);
+        return new UnhandledInterruptException(_machine, Index, index);
     }
 
     protected void SetCarryFlag(bool value, bool setOnStack) {
-        _state.SetCarryFlag(value);
+        _state.CarryFlag = value;
         if (setOnStack) {
             _cpu.SetFlagOnInterruptStack(Flags.Carry, value);
         }
     }
 
     protected void SetZeroFlag(bool value, bool setOnStack) {
-        _state.SetZeroFlag(value);
+        _state.ZeroFlag = value;
         if (setOnStack) {
             _cpu.SetFlagOnInterruptStack(Flags.Zero, value);
         }

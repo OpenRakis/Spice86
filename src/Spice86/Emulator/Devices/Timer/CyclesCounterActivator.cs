@@ -17,8 +17,8 @@ public class CyclesCounterActivator : ICounterActivator {
     }
 
     public bool IsActivated() {
-        long currentCycles = _state.GetCycles();
-        long elapsedInstructions = _state.GetCycles() - _lastActivationCycle;
+        long currentCycles = _state.Cycles;
+        long elapsedInstructions = _state.Cycles - _lastActivationCycle;
         if (elapsedInstructions <= _cyclesBetweenActivations) {
             return false;
         }

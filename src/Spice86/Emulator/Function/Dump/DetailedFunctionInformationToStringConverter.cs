@@ -12,16 +12,16 @@ using System.Text;
 public class DetailedFunctionInformationToStringConverter : FunctionInformationToStringConverter {
 
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
-        StringBuilder res = new StringBuilder();
-        Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns = Sort(functionInformation.GetReturns());
-        Dictionary<FunctionReturn, ISet<SegmentedAddress>> unalignedReturns = Sort(functionInformation.GetUnalignedReturns());
+        var res = new StringBuilder();
+        Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns = Sort(functionInformation.Returns);
+        Dictionary<FunctionReturn, ISet<SegmentedAddress>> unalignedReturns = Sort(functionInformation.UnalignedReturns);
         List<FunctionInformation> callers = GetCallers(functionInformation);
         IEnumerable<FunctionInformation> calls = GetCalls(functionInformation, allFunctions);
         long approximateSize = ApproximateSize(functionInformation);
         string header = $"function {functionInformation}";
         header += $" returns:{returns.Count}";
         header += $" callers:{callers.Count}";
-        header += $" called: {functionInformation.GetCalledCount()}";
+        header += $" called: {functionInformation.CalledCount}";
         header += $" calls:{calls.Count()}";
         header += $" approximateSize:{approximateSize}";
         if (IsOverridable(calls)) {
@@ -43,7 +43,7 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
     }
 
     private string DumpReturns(Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns, string prefix) {
-        StringBuilder res = new StringBuilder();
+        var res = new StringBuilder();
         foreach (KeyValuePair<FunctionReturn, ISet<SegmentedAddress>> entry in returns) {
             FunctionReturn oneReturn = entry.Key;
             res.Append(" - ");

@@ -4,16 +4,11 @@ using System.Text.Json;
 
 /// <summary> Represents a range in memory. </summary>
 public class MemoryRange {
-    private uint endAddress;
-
-    private string name;
-
-    private uint startAddress;
 
     public MemoryRange(uint startAddress, uint endAddress, string name) {
-        this.startAddress = startAddress;
-        this.endAddress = endAddress;
-        this.name = name;
+        StartAddress = startAddress;
+        EndAddress = endAddress;
+        Name = name;
     }
 
     public static MemoryRange FromSegment(ushort segmentStart, ushort length, string name) {
@@ -26,36 +21,18 @@ public class MemoryRange {
         return new MemoryRange(start, end, name);
     }
 
-    public uint GetEndAddress() {
-        return endAddress;
-    }
+    public uint EndAddress { get; set; }
 
-    public string GetName() {
-        return name;
-    }
+    public string? Name { get; set; }
 
-    public uint GetStartAddress() {
-        return startAddress;
-    }
+    public uint StartAddress { get; set; }
 
     public bool IsInRange(uint rangeStartAddress, uint rangeEndAddress) {
-        return rangeStartAddress <= endAddress && rangeEndAddress >= startAddress;
+        return rangeStartAddress <= EndAddress && rangeEndAddress >= StartAddress;
     }
 
     public bool IsInRange(uint address) {
-        return startAddress <= address && address <= endAddress;
-    }
-
-    public void SetEndAddress(uint endAddress) {
-        this.endAddress = endAddress;
-    }
-
-    public void SetName(string name) {
-        this.name = name;
-    }
-
-    public void SetStartAddress(uint startAddress) {
-        this.startAddress = startAddress;
+        return StartAddress <= address && address <= EndAddress;
     }
 
     public override string ToString() {

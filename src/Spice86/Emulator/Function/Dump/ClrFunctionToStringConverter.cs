@@ -32,34 +32,34 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     protected abstract string GenerateFileHeaderWithAccessors(int numberOfGlobals, string globalsContent, string segmentValues);
-    private bool IsOffsetEqualsAndSegmentDifferent(SegmentedAddress address1, SegmentedAddress address2) {
-        return address1.GetSegment() != address2.GetSegment() && address1.GetOffset() == address2.GetOffset();
+    private static bool IsOffsetEqualsAndSegmentDifferent(SegmentedAddress address1, SegmentedAddress address2) {
+        return address1.Segment != address2.Segment && address1.Offset == address2.Offset;
     }
 
-    private string GetStringSegmentValuesForDisplay(int segmentIndex, IEnumerable<ushort> values) {
+    private static string GetStringSegmentValuesForDisplay(int segmentIndex, IEnumerable<ushort> values) {
         string segmentName = _segmentRegisters.GetRegName(segmentIndex);
         string segmentValues = string.Join(",", values.Select(x => $"{ConvertUtils.ToHex16(x)}"));
         return $"{segmentName}:{segmentValues}";
     }
 
-    private Dictionary<int, List<ushort>> GetValuesTakenBySegments(List<SegmentRegisterBasedAddress> globals) {
+    private static Dictionary<int, List<ushort>> GetValuesTakenBySegments(List<SegmentRegisterBasedAddress> globals) {
         return MapBySegment(globals)
             .ToDictionary(
                 x => x.Key,
                 (x) => GetSegmentValues(x.Value));
     }
 
-    private Dictionary<ushort, List<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
+    private static Dictionary<ushort, List<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
         return globals.GroupBy(
-                x => x.GetSegment())
+                x => x.Segment)
             .ToDictionary(g => g.Key, g => g.ToList());
     }
 
-    private List<ushort> GetSegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
-        return globals.Select(x => x.GetSegment()).Distinct().ToList();
+    private static List<ushort> GetSegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
+        return globals.Select(x => x.Segment).Distinct().ToList();
     }
 
-    private Dictionary<int, ISet<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
+    private static Dictionary<int, ISet<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
         Dictionary<int, ISet<SegmentRegisterBasedAddress>> res = new();
         foreach (SegmentRegisterBasedAddress address in globals) {
             IEnumerable<int> segmentIndexes = address.GetAddressOperations()
@@ -123,14 +123,14 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         return $"// Getters and Setters for address {address}.{gettersAndSetters}";
     }
 
-    private Dictionary<AddressOperation, ISet<int>> CompleteWithOppositeOperationsAndPointers(Dictionary<AddressOperation, ISet<int>> addressOperations) {
+    private static Dictionary<AddressOperation, ISet<int>> CompleteWithOppositeOperationsAndPointers(Dictionary<AddressOperation, ISet<int>> addressOperations) {
 
         // Ensures that for each read there is a write, even with empty registers so that we can generate valid java
         // properties
         Dictionary<AddressOperation, ISet<int>> res = new(addressOperations);
         foreach (AddressOperation operation in addressOperations.Keys) {
-            OperandSize operandSize = operation.GetOperandSize();
-            ValueOperation valueOperation = operation.GetValueOperation();
+            OperandSize operandSize = operation.OperandSize;
+            ValueOperation valueOperation = operation.ValueOperation;
             ValueOperation oppositeValueOperation = valueOperation.OppositeOperation();
             res.ComputeIfAbsent(new AddressOperation(oppositeValueOperation, operandSize), new HashSet<int>());
             if (operandSize == OperandSize.Dword32) {
@@ -153,15 +153,15 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
             comment = "// Was accessed via the following registers: " + registers;
         }
 
-        OperandSize operandSize = addressOperation.GetOperandSize();
-        string javaName = $"{operandSize.Name.ToString()}_{ConvertUtils.ToCSharpString(address)}";
-        string? name = address.GetName();
+        OperandSize operandSize = addressOperation.OperandSize;
+        string javaName = $"{operandSize.Name}_{ConvertUtils.ToCSharpString(address)}";
+        string? name = address.Name;
         if (string.IsNullOrWhiteSpace(name) == false) {
             javaName += "_" + name;
         }
 
-        string offset = ConvertUtils.ToHex16(address.GetOffset());
-        if (ValueOperation.READ.Equals(addressOperation.GetValueOperation())) {
+        string offset = ConvertUtils.ToHex16(address.Offset);
+        if (ValueOperation.READ.Equals(addressOperation.ValueOperation)) {
             return GenerateGetter(comment, operandSize, javaName, offset);
         }
 
@@ -201,12 +201,12 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
-        if (functionInformation.HasOverride()) {
+        if (functionInformation.HasOverride) {
             return GetNoStubReasonCommentForMethod(functionInformation, "Function already has an override");
         }
 
-        List<CallType> returnTypes = functionInformation.GetReturns().Keys.Concat(functionInformation.GetUnalignedReturns().Keys)
-            .Select(x => x.GetReturnCallType())
+        List<CallType> returnTypes = functionInformation.Returns.Keys.Concat(functionInformation.UnalignedReturns.Keys)
+            .Select(x => x.ReturnCallType)
             .Distinct()
             .ToList();
         if (returnTypes.Count != 1) {
@@ -223,11 +223,11 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         IEnumerable<FunctionInformation> calls = this.GetCalls(functionInformation, allFunctions);
         string callsAsComments = this.GetCallsAsComments(calls);
         CallType returnType = returnTypes[0];
-        string? functionName = RemoveDotsFromFunctionName(functionInformation.GetName());
-        SegmentedAddress functionAddress = functionInformation.GetAddress();
+        string? functionName = RemoveDotsFromFunctionName(functionInformation.Name);
+        SegmentedAddress functionAddress = functionInformation.Address;
         string functionNameInJava = ToCSharpName(functionInformation, false);
-        string segment = ConvertUtils.ToHex16(functionAddress.GetSegment());
-        string offset = ConvertUtils.ToHex16(functionAddress.GetOffset());
+        string segment = ConvertUtils.ToHex16(functionAddress.Segment);
+        string offset = ConvertUtils.ToHex16(functionAddress.Offset);
         string retType = returnType.ToString().ToLowerInvariant();
         return GenerateFunctionStub(callsAsComments, functionName, functionNameInJava, segment, offset, retType);
     }
@@ -237,7 +237,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         return JoinNewLine(calls.Select(x => $"// {ToCSharpName(x, true)}();"));
     }
 
-    private string GetNoStubReasonCommentForMethod(FunctionInformation functionInformation, string reason) {
-        return $"  // Not providing stub for {functionInformation.GetName()}. Reason: {reason}\n";
+    private static string GetNoStubReasonCommentForMethod(FunctionInformation functionInformation, string reason) {
+        return $"  // Not providing stub for {functionInformation.Name}. Reason: {reason}\n";
     }
 }

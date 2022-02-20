@@ -67,7 +67,7 @@ public class CSharpStubToStringConverter : ClrFunctionToStringConverter {
             $@"
             // defineFunction({segment}, {offset}, ""{functionName}"", this.{functionNameInCSharp});
             public Action {functionNameInCSharp}() {{
-                {callsAsComments.PadRight(4)}
+                {callsAsComments,-4}
                 return {retType}Ret();
             }}";
     }

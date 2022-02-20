@@ -11,10 +11,10 @@ using Spice86.Emulator.VM;
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<SystemClockInt1AHandler>();
-    private readonly TimerInt8Handler timerHandler;
+    private readonly TimerInt8Handler _timerHandler;
 
     public SystemClockInt1AHandler(Machine machine, TimerInt8Handler timerHandler) : base(machine) {
-        this.timerHandler = timerHandler;
+        _timerHandler = timerHandler;
         _dispatchTable.Add(0x00, new Callback(0x00, SetSystemClockCounter));
         _dispatchTable.Add(0x01, new Callback(0x01, GetSystemClockCounter));
         _dispatchTable.Add(0x81, new Callback(0x81, TandySoundSystemUnhandled));
@@ -24,33 +24,31 @@ public class SystemClockInt1AHandler : InterruptHandler {
         _dispatchTable.Add(0x85, new Callback(0x85, TandySoundSystemUnhandled));
     }
 
-    public override byte GetIndex() {
-        return 0x1A;
-    }
+    public override byte Index => 0x1A;
 
     public void GetSystemClockCounter() {
-        uint value = timerHandler.GetTickCounterValue();
+        uint value = _timerHandler.TickCounterValue;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }
 
         // let's say it never overflows
-        _state.SetAL(0);
-        _state.SetCX((ushort)(value >> 16));
-        _state.SetDX((ushort)value);
+        _state.AL = 0;
+        _state.CX = (ushort)(value >> 16);
+        _state.DX = (ushort)value;
     }
 
     public override void Run() {
-        byte operation = _state.GetAH();
+        byte operation = _state.AH;
         Run(operation);
     }
 
     public void SetSystemClockCounter() {
-        uint value = (ushort)(_state.GetCX() << 16 | _state.GetDX());
+        uint value = (ushort)(_state.CX << 16 | _state.DX);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }
-        timerHandler.SetTickCounterValue(value);
+        _timerHandler.SetTickCounterValue(value);
     }
 
     private void TandySoundSystemUnhandled() {

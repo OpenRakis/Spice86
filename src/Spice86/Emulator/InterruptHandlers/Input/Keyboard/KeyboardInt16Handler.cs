@@ -7,17 +7,15 @@ using Spice86.Emulator.VM;
 
 public class KeyboardInt16Handler : InterruptHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<KeyboardInt16Handler>();
-    private BiosKeyboardBuffer biosKeyboardBuffer;
+    private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
     public KeyboardInt16Handler(Machine machine, BiosKeyboardBuffer biosKeyboardBuffer) : base(machine) {
-        this.biosKeyboardBuffer = biosKeyboardBuffer;
+        _biosKeyboardBuffer = biosKeyboardBuffer;
         _dispatchTable.Add(0x00, new Callback(0x00, () => this.GetKeystroke()));
         _dispatchTable.Add(0x01, new Callback(0x01, () => GetKeystrokeStatus(true)));
     }
 
-    public override byte GetIndex() {
-        return 0x16;
-    }
+    public override byte Index => 0x16;
 
     public void GetKeystroke() {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
@@ -30,7 +28,7 @@ public class KeyboardInt16Handler : InterruptHandler {
 
         // AH = keyboard scan code
         // AL = ASCII character or zero if special function key
-        _state.SetAX(keyCode.Value);
+        _state.AX = keyCode.Value;
     }
 
     public void GetKeystrokeStatus(bool calledFromVm) {
@@ -42,24 +40,24 @@ public class KeyboardInt16Handler : InterruptHandler {
         // AX = 0 if no scan code is available
         // AH = scan code
         // AL = ASCII character or zero if special function key
-        if (biosKeyboardBuffer.Empty()) {
+        if (_biosKeyboardBuffer.Empty()) {
             SetZeroFlag(true, calledFromVm);
-            _state.SetAX(0);
+            _state.AX = 0;
         } else {
-            ushort? keyCode = biosKeyboardBuffer.GetKeyCode();
+            ushort? keyCode = _biosKeyboardBuffer.GetKeyCode();
             if (keyCode != null) {
                 SetZeroFlag(false, calledFromVm);
-                _state.SetAX(keyCode.Value);
+                _state.AX = keyCode.Value;
             }
         }
     }
 
     public ushort? GetNextKeyCode() {
-        return biosKeyboardBuffer.GetKeyCode();
+        return _biosKeyboardBuffer.GetKeyCode();
     }
 
     public override void Run() {
-        byte operation = _state.GetAH();
+        byte operation = _state.AH;
         this.Run(operation);
     }
 }

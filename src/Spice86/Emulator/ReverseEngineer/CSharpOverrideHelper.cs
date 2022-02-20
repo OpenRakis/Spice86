@@ -35,10 +35,10 @@ public class CSharpOverrideHelper {
         this._functionInformations = functionInformations;
         this._prefix = prefix;
         this._machine = machine;
-        this._cpu = machine.GetCpu();
-        this._memory = machine.GetMemory();
-        this._state = _cpu.GetState();
-        this._stack = _cpu.GetStack();
+        this._cpu = machine.Cpu;
+        this._memory = machine.Memory;
+        this._state = _cpu.State;
+        this._stack = _cpu.Stack;
     }
 
     public void DefineFunction(ushort segment, ushort offset, string suffix) {
@@ -49,9 +49,9 @@ public class CSharpOverrideHelper {
         SegmentedAddress address = new(segment, offset);
         string name = $"{_prefix}.{suffix}";
         if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
-            string error = $"There is already a function defined at address {address} named {existingFunctionInformation.GetName()} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
+            string error = $"There is already a function defined at address {address} named {existingFunctionInformation.Name} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.GetName(), name);
+                _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.Name, name);
             }
             throw new UnrecoverableException(error);
         }
@@ -66,8 +66,8 @@ public class CSharpOverrideHelper {
     public void DefineStaticAddress(ushort segment, ushort offset, string name, bool whiteListOnlyThisSegment) {
         SegmentedAddress address = new(segment, offset);
         uint physicalAddress = address.ToPhysical();
-        StaticAddressesRecorder recorder = _cpu.GetStaticAddressesRecorder();
-        if (recorder.GetNames().TryGetValue(physicalAddress, out var existing)) {
+        StaticAddressesRecorder recorder = _cpu.StaticAddressesRecorder;
+        if (recorder.Names.TryGetValue(physicalAddress, out var existing)) {
             string error = $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existing, name);
@@ -83,8 +83,8 @@ public class CSharpOverrideHelper {
 
     public Action FarJump(ushort cs, ushort ip) {
         return () => {
-            _state.SetCS(cs);
-            _state.SetIP(ip);
+            _state.CS = cs;
+            _state.IP = ip;
         };
     }
 
@@ -97,7 +97,7 @@ public class CSharpOverrideHelper {
     }
 
     public Action NearJump(ushort ip) {
-        return () => _state.SetIP(ip);
+        return () => _state.IP = ip;
     }
 
     public Action NearRet() {
@@ -112,11 +112,11 @@ public class CSharpOverrideHelper {
                 offset),
             (b) => renamedOverride.Invoke()
         , false);
-        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
     public void SetProvidedInterruptHandlersAsOverridden() {
-        CallbackHandler callbackHandler = _machine.GetCallbackHandler();
+        CallbackHandler callbackHandler = _machine.CallbackHandler;
         Dictionary<byte, SegmentedAddress> callbackAddresses = callbackHandler.GetCallbackAddresses();
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackAddresses) {
             byte callbackNumber = callbackAddressEntry.Key;
@@ -125,12 +125,12 @@ public class CSharpOverrideHelper {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
             });
-            DefineFunction(callbackAddress.GetSegment(), callbackAddress.GetOffset(), $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}", runnable);
+            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}", runnable);
         }
     }
 
     protected void CheckVtableContainsExpected(int segmentRegisterIndex, ushort offset, ushort expectedSegment, ushort expectedOffset) {
-        uint address = MemoryUtils.ToPhysicalAddress(_state.GetSegmentRegisters().GetRegister(segmentRegisterIndex), offset);
+        uint address = MemoryUtils.ToPhysicalAddress(_state.SegmentRegisters.GetRegister(segmentRegisterIndex), offset);
         ushort foundOffset = _memory.GetUint16(address);
         ushort foundSegment = _memory.GetUint16(address + 2);
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {

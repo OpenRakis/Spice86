@@ -11,14 +11,14 @@ using System.Linq.Expressions;
 
 public class GdbServer : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbServer>();
-    private Configuration _configuration;
-    private bool disposedValue;
-    private Machine machine;
-    private bool running = true;
-    private volatile bool started;
+    private readonly Configuration _configuration;
+    private bool _disposedValue;
+    private readonly Machine _machine;
+    private bool _isRunning = true;
+    private volatile bool _started;
 
     public GdbServer(Machine machine, Configuration configuration) {
-        this.machine = machine;
+        this._machine = machine;
         this._configuration = configuration;
         if (configuration.GdbPort != null) {
             Start(configuration.GdbPort.Value);
@@ -32,18 +32,18 @@ public class GdbServer : IDisposable {
     }
 
     protected void Dispose(bool disposing) {
-        if (!disposedValue) {
+        if (!_disposedValue) {
             if (disposing) {
-                running = false;
+                _isRunning = false;
             }
-            disposedValue = true;
+            _disposedValue = true;
         }
     }
 
     private void AcceptOneConnection(GdbIo gdbIo) {
-        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo, machine, _configuration);
+        var gdbCommandHandler = new GdbCommandHandler(gdbIo, _machine, _configuration);
         gdbCommandHandler.PauseEmulator();
-        this.started = true;
+        this._started = true;
         while (gdbCommandHandler.IsConnected() && gdbIo.IsClientConnected()) {
             string command = gdbIo.ReadCommand();
             if (string.IsNullOrWhiteSpace(command) == false) {
@@ -58,9 +58,9 @@ public class GdbServer : IDisposable {
             _logger.Information("Starting GDB server");
         }
         try {
-            while (running) {
+            while (_isRunning) {
                 try {
-                    using GdbIo gdbIo = new GdbIo(port);
+                    using var gdbIo = new GdbIo(port);
                     AcceptOneConnection(gdbIo);
                 } catch (IOException e) {
                     _logger.Error(e, "Error in the GDB server, restarting it...");
@@ -69,8 +69,8 @@ public class GdbServer : IDisposable {
         } catch (Exception e) {
             _logger.Error(e, "Unhandled error in the GDB server, restarting it...");
         } finally {
-            machine.GetCpu().SetRunning(false);
-            machine.GetMachineBreakpoints().GetPauseHandler().RequestResume();
+            _machine.Cpu.IsRunning = false;
+            _machine.MachineBreakpoints.PauseHandler.RequestResume();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("GDB server stopped");
             }
@@ -85,6 +85,6 @@ public class GdbServer : IDisposable {
         };
         backgroundWorker.RunWorkerAsync();
         // wait for thread to start
-        while (!started) ;
+        while (!_started) ;
     }
 }

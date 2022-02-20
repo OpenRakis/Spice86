@@ -87,8 +87,8 @@ public class MachineTest {
         // 0x4001 in little endian
         byte[] expected = new byte[] { 0x01, 0x40 };
         Machine emulator = TestOneBin("jmpmov", expected);
-        State state = emulator.GetCpu().GetState();
-        uint endAddress = MemoryUtils.ToPhysicalAddress(state.GetCS(), state.GetIP());
+        State state = emulator.Cpu.State;
+        uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
         // Last instruction HLT is one byte long and is at 0xF400C
         Assert.Equal((uint)0xF400D, endAddress);
     }
@@ -144,7 +144,7 @@ public class MachineTest {
 
     private Machine TestOneBin(string binName, byte[] expected) {
         Machine machine = Execute(binName);
-        Memory memory = machine.GetMemory();
+        Memory memory = machine.Memory;
         CompareMemoryWithExpected(memory, expected, 0, expected.Length - 1);
         return machine;
     }
@@ -159,13 +159,13 @@ public class MachineTest {
         configuration.InstallInterruptVector = false;
 
         using ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
-        Machine machine = programExecutor.GetMachine();
-        Cpu cpu = machine.GetCpu();
+        Machine machine = programExecutor.Machine;
+        Cpu cpu = machine.Cpu;
         // Disabling custom IO handling
-        cpu.SetIoPortDispatcher(null);
-        cpu.SetErrorOnUninitializedInterruptHandler(false);
-        State state = cpu.GetState();
-        state.GetFlags().SetDosboxCompatibility(false);
+        cpu.IoPortDispatcher = null;
+        cpu.ErrorOnUninitializedInterruptHandler = false;
+        State state = cpu.State;
+        state.Flags.IsDOSBoxCompatible = false;
         programExecutor.Run();
         return machine;
     }
@@ -180,7 +180,7 @@ public class MachineTest {
     }
 
     private void CompareMemoryWithExpected(Memory memory, byte[] expected, int start, int end) {
-        byte[] actual = memory.GetRam();
+        byte[] actual = memory.Ram;
         for (uint i = 0; i < end; i++) {
             byte actualByte = actual[i];
             byte expectedByte = expected[i];

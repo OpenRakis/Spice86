@@ -10,10 +10,10 @@ using System.IO;
 /// Represents a file opened by DOS.
 /// </summary>
 public class OpenFile {
-    private int _descriptor;
-    private List<MemoryRange> _loadMemoryRanges = new();
-    private string _name;
-    private FileStream _randomAccessFile;
+    private readonly int _descriptor;
+    private readonly List<MemoryRange> _loadedMemoryRanges = new();
+    private readonly string _name;
+    private readonly FileStream _randomAccessFile;
 
     public OpenFile(string name, int descriptor, FileStream randomAccessFile) {
         _name = name;
@@ -22,42 +22,34 @@ public class OpenFile {
     }
 
     public void AddMemoryRange(MemoryRange memoryRange) {
-        foreach (MemoryRange loadMemoryRange in _loadMemoryRanges) {
-            if (loadMemoryRange.GetStartAddress() == memoryRange.GetStartAddress() && loadMemoryRange.GetEndAddress() == memoryRange.GetEndAddress()) {
+        foreach (MemoryRange loadMemoryRange in _loadedMemoryRanges) {
+            if (loadMemoryRange.StartAddress == memoryRange.StartAddress && loadMemoryRange.EndAddress == memoryRange.EndAddress) {
                 // Same, nothing to do
                 return;
             }
 
-            if (loadMemoryRange.IsInRange(memoryRange.GetStartAddress(), memoryRange.GetEndAddress())) {
+            if (loadMemoryRange.IsInRange(memoryRange.StartAddress, memoryRange.EndAddress)) {
                 // Fuse
-                loadMemoryRange.SetStartAddress(Math.Min(loadMemoryRange.GetStartAddress(), memoryRange.GetStartAddress()));
-                loadMemoryRange.SetEndAddress(Math.Max(loadMemoryRange.GetEndAddress(), memoryRange.GetEndAddress()));
+                loadMemoryRange.StartAddress = Math.Min(loadMemoryRange.StartAddress, memoryRange.StartAddress);
+                loadMemoryRange.EndAddress = Math.Max(loadMemoryRange.EndAddress, memoryRange.EndAddress);
                 return;
             }
 
-            if (loadMemoryRange.GetEndAddress() + 1 == memoryRange.GetStartAddress()) {
+            if (loadMemoryRange.EndAddress + 1 == memoryRange.StartAddress) {
                 // We are the next block, extend
-                loadMemoryRange.SetEndAddress(memoryRange.GetEndAddress());
+                loadMemoryRange.EndAddress = memoryRange.EndAddress;
                 return;
             }
         }
 
-        _loadMemoryRanges.Add(memoryRange);
+        _loadedMemoryRanges.Add(memoryRange);
     }
 
-    public int GetDescriptor() {
-        return _descriptor;
-    }
+    public int Descriptor =>_descriptor;
 
-    public IList<MemoryRange> GetLoadMemoryRanges() {
-        return _loadMemoryRanges;
-    }
+    public IList<MemoryRange> LoadedMemoryRanges => _loadedMemoryRanges;
 
-    public string GetName() {
-        return _name;
-    }
+    public string Name => _name;
 
-    public FileStream GetRandomAccessFile() {
-        return _randomAccessFile;
-    }
+    public FileStream RandomAccessFile => _randomAccessFile;
 }

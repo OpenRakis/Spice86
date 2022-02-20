@@ -9,48 +9,45 @@ using System.IO;
 
 /// <summary> Addressable memory of the machine. </summary>
 public class Memory {
-    private readonly byte[] physicalMemory;
+    private readonly byte[] _physicalMemory;
 
-    private readonly BreakPointHolder readBreakPoints = new();
+    private readonly BreakPointHolder _readBreakPoints = new();
 
-    private readonly BreakPointHolder writeBreakPoints = new();
+    private readonly BreakPointHolder _writeBreakPoints = new();
 
     public Memory(uint size) {
-        this.physicalMemory = new byte[size];
+        this._physicalMemory = new byte[size];
     }
 
     public void DumpToFile(string path) {
-        File.WriteAllBytes(path, physicalMemory);
+        File.WriteAllBytes(path, _physicalMemory);
     }
 
     public byte[] GetData(uint address, int length) {
         byte[] res = new byte[length];
-        Array.Copy(physicalMemory, address, res, 0, length);
+        Array.Copy(_physicalMemory, address, res, 0, length);
         return res;
     }
 
-    public byte[] GetRam() {
-        return physicalMemory;
-    }
+    public byte[] Ram => _physicalMemory;
 
-    public int GetSize() {
-        return physicalMemory.Length;
-    }
+    public int Size => _physicalMemory.Length;
+    
 
     public ushort GetUint16(uint address) {
-        ushort res = MemoryUtils.GetUint16(physicalMemory, address);
+        ushort res = MemoryUtils.GetUint16(_physicalMemory, address);
         MonitorReadAccess(address);
         return res;
     }
 
     public uint GetUint32(uint address) {
-        var res = MemoryUtils.GetUint32(physicalMemory, address);
+        var res = MemoryUtils.GetUint32(_physicalMemory, address);
         MonitorReadAccess(address);
         return res;
     }
 
     public byte GetUint8(uint addr) {
-        var res = MemoryUtils.GetUint8(physicalMemory, addr);
+        var res = MemoryUtils.GetUint8(_physicalMemory, addr);
         MonitorReadAccess(addr);
         return res;
     }
@@ -61,31 +58,31 @@ public class Memory {
 
     public void LoadData(uint address, byte[] data, int length) {
         MonitorRangeWriteAccess(address, (uint)(address + length));
-        Array.Copy(data, 0, physicalMemory, address, length);
+        Array.Copy(data, 0, _physicalMemory, address, length);
     }
 
     public void MemCopy(uint sourceAddress, uint destinationAddress, int length) {
-        Array.Copy(physicalMemory, sourceAddress, physicalMemory, destinationAddress, length);
+        Array.Copy(_physicalMemory, sourceAddress, _physicalMemory, destinationAddress, length);
     }
 
     public void Memset(uint address, byte value, uint length) {
-        Array.Fill(physicalMemory, (byte)address, (int)(address + length), value);
+        Array.Fill(_physicalMemory, (byte)address, (int)(address + length), value);
     }
 
     public uint? SearchValue(uint address, int len, IList<byte> value) {
         int end = (int)(address + len);
-        if (end >= physicalMemory.Length) {
-            end = physicalMemory.Length;
+        if (end >= _physicalMemory.Length) {
+            end = _physicalMemory.Length;
         }
 
         for (long i = address; i < end; i++) {
             long endValue = value.Count;
-            if (endValue + i >= physicalMemory.Length) {
-                endValue = physicalMemory.Length - i;
+            if (endValue + i >= _physicalMemory.Length) {
+                endValue = _physicalMemory.Length - i;
             }
 
             int j = 0;
-            while (j < endValue && physicalMemory[i + j] == value[j]) {
+            while (j < endValue && _physicalMemory[i + j] == value[j]) {
                 j++;
             }
 
@@ -99,33 +96,33 @@ public class Memory {
 
     public void SetUint16(uint address, ushort value) {
         MonitorWriteAccess(address);
-        MemoryUtils.SetUint16(physicalMemory, address, value);
+        MemoryUtils.SetUint16(_physicalMemory, address, value);
     }
 
     public void SetUint32(uint address, uint value) {
         MonitorWriteAccess(address);
 
         // For convenience, no get as 16 bit apps are not supposed call this directly
-        MemoryUtils.SetUint32(physicalMemory, address, value);
+        MemoryUtils.SetUint32(_physicalMemory, address, value);
     }
 
     public void SetUint8(uint address, byte value) {
         MonitorWriteAccess(address);
-        MemoryUtils.SetUint8(physicalMemory, address, value);
+        MemoryUtils.SetUint8(_physicalMemory, address, value);
     }
 
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
-        BreakPointType? type = breakPoint.GetBreakPointType();
+        BreakPointType? type = breakPoint.BreakPointType;
         switch (type) {
             case BreakPointType.READ:
-                readBreakPoints.ToggleBreakPoint(breakPoint, on);
+                _readBreakPoints.ToggleBreakPoint(breakPoint, on);
                 break;
             case BreakPointType.WRITE:
-                writeBreakPoints.ToggleBreakPoint(breakPoint, on);
+                _writeBreakPoints.ToggleBreakPoint(breakPoint, on);
                 break;
             case BreakPointType.ACCESS:
-                readBreakPoints.ToggleBreakPoint(breakPoint, on);
-                writeBreakPoints.ToggleBreakPoint(breakPoint, on);
+                _readBreakPoints.ToggleBreakPoint(breakPoint, on);
+                _writeBreakPoints.ToggleBreakPoint(breakPoint, on);
                 break;
             default:
                 throw new UnrecoverableException($"Trying to add unsupported breakpoint of type {type}");
@@ -133,14 +130,14 @@ public class Memory {
     }
 
     private void MonitorRangeWriteAccess(uint startAddress, uint endAddress) {
-        writeBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
+        _writeBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
     }
 
     private void MonitorReadAccess(uint address) {
-        readBreakPoints.TriggerMatchingBreakPoints(address);
+        _readBreakPoints.TriggerMatchingBreakPoints(address);
     }
 
     private void MonitorWriteAccess(uint address) {
-        writeBreakPoints.TriggerMatchingBreakPoints(address);
+        _writeBreakPoints.TriggerMatchingBreakPoints(address);
     }
 }

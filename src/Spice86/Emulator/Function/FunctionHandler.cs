@@ -14,7 +14,7 @@ using System.Text;
 
 public class FunctionHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<FunctionHandler>();
-    
+
     private readonly Stack<FunctionCall> _callerStack = new();
 
     private readonly bool _debugMode;
@@ -38,13 +38,13 @@ public class FunctionHandler {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
         FunctionInformation currentFunction = GetOrCreateFunctionInformation(entryAddress, nameGenerator);
         if (_debugMode) {
-            FunctionInformation? caller = GetFunctionInformation(GetCurrentFunctionCall());
+            FunctionInformation? caller = GetFunctionInformation(CurrentFunctionCall);
             SegmentedAddress? expectedReturnAddress = null;
             if (expectedReturnSegment != null && expectedReturnOffset != null) {
                 expectedReturnAddress = new SegmentedAddress(expectedReturnSegment.Value, expectedReturnOffset.Value);
             }
 
-            FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, GetCurrentStackAddress(), recordReturn);
+            FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, recordReturn);
             _callerStack.Push(currentFunctionCall);
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
                 _logger.Debug("Calling {@CurrentFunction} from {@Caller}", currentFunction, caller);
@@ -69,7 +69,7 @@ public class FunctionHandler {
     public string DumpCallStack() {
         StringBuilder res = new();
         foreach (FunctionCall functionCall in this._callerStack) {
-            SegmentedAddress? returnAddress = functionCall.GetExpectedReturnAddress();
+            SegmentedAddress? returnAddress = functionCall.ExpectedReturnAddress;
             FunctionInformation? functionInformation = GetFunctionInformation(functionCall);
             res.Append(" - ");
             res.Append(functionInformation);
@@ -90,15 +90,15 @@ public class FunctionHandler {
     }
 
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType) {
-        uint stackPhysicalAddress = GetStackPhysicalAddress();
+        uint stackPhysicalAddress = StackPhysicalAddress;
         return PeekReturnAddressOnMachineStack(returnCallType, stackPhysicalAddress);
     }
 
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
-        Memory memory = _machine.GetMemory();
-        State state = _machine.GetCpu().GetState();
+        Memory memory = _machine.Memory;
+        State state = _machine.Cpu.State;
         return returnCallType switch {
-            CallType.NEAR => new SegmentedAddress(state.GetCS(), memory.GetUint16(stackPhysicalAddress)),
+            CallType.NEAR => new SegmentedAddress(state.CS, memory.GetUint16(stackPhysicalAddress)),
             CallType.FAR or CallType.INTERRUPT => new SegmentedAddress(
                 memory.GetUint16(stackPhysicalAddress + 2),
                 memory.GetUint16(stackPhysicalAddress)),
@@ -108,12 +108,12 @@ public class FunctionHandler {
     }
 
     public SegmentedAddress? PeekReturnAddressOnMachineStackForCurrentFunction() {
-        FunctionCall? currentFunctionCall = GetCurrentFunctionCall();
+        FunctionCall? currentFunctionCall = CurrentFunctionCall;
         if (currentFunctionCall == null) {
             return null;
         }
 
-        return PeekReturnAddressOnMachineStack(currentFunctionCall.GetCallType());
+        return PeekReturnAddressOnMachineStack(currentFunctionCall.CallType);
     }
 
     public bool Ret(CallType returnCallType) {
@@ -127,7 +127,7 @@ public class FunctionHandler {
             FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
             bool returnAddressAlignedWithCallStack = AddReturn(returnCallType, currentFunctionCall, currentFunctionInformation);
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _logger.Debug("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(GetCurrentFunctionCall()));
+                _logger.Debug("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
             }
 
             if (!returnAddressAlignedWithCallStack) {
@@ -152,7 +152,7 @@ public class FunctionHandler {
         bool returnAddressAlignedWithCallStack = IsReturnAddressAlignedWithCallStack(currentFunctionCall, actualReturnAddress, currentFunctionReturn);
         if (currentFunctionInformation != null && !UseOverride(currentFunctionInformation)) {
             SegmentedAddress? addressToRecord = actualReturnAddress;
-            if (!currentFunctionCall.IsRecordReturn()) {
+            if (!currentFunctionCall.IsRecordReturn) {
                 addressToRecord = null;
             }
 
@@ -167,52 +167,56 @@ public class FunctionHandler {
     }
 
     private FunctionReturn GenerateCurrentFunctionReturn(CallType returnCallType) {
-        Cpu cpu = _machine.GetCpu();
-        State state = cpu.GetState();
-        ushort cs = state.GetCS();
-        ushort ip = state.GetIP();
+        Cpu cpu = _machine.Cpu;
+        State state = cpu.State;
+        ushort cs = state.CS;
+        ushort ip = state.IP;
         return new FunctionReturn(returnCallType, new SegmentedAddress(cs, ip));
     }
 
-    private FunctionCall? GetCurrentFunctionCall() {
-        if (_callerStack.Any() == false) {
-            return null;
+    private FunctionCall? CurrentFunctionCall {
+        get {
+
+            if (_callerStack.Any() == false) {
+                return null;
+            }
+            return _callerStack.TryPeek(out FunctionCall? firstElement) ? firstElement : null;
         }
-        return _callerStack.TryPeek(out FunctionCall? firstElement) ? firstElement : null;
     }
 
-    private SegmentedAddress GetCurrentStackAddress() {
-        State state = _machine.GetCpu().GetState();
-        return new SegmentedAddress(state.GetSS(), state.GetSP());
+
+    private SegmentedAddress CurrentStackAddress {
+        get {
+            State state = _machine.Cpu.State;
+            return new SegmentedAddress(state.SS, state.SP);
+        }
     }
 
     private FunctionInformation? GetFunctionInformation(FunctionCall? functionCall) {
         if (functionCall == null) {
             return null;
         }
-        if (_functionInformations.TryGetValue(functionCall.GetEntryPointAddress(), out FunctionInformation? value)) {
+        if (_functionInformations.TryGetValue(functionCall.EntryPointAddress, out FunctionInformation? value)) {
             return value;
         }
         return null;
     }
 
-    private uint GetStackPhysicalAddress() {
-        return _machine.GetCpu().GetState().GetStackPhysicalAddress();
-    }
+    private uint StackPhysicalAddress => _machine.Cpu.State.StackPhysicalAddress;
 
     private bool IsReturnAddressAlignedWithCallStack(FunctionCall currentFunctionCall, SegmentedAddress? actualReturnAddress, FunctionReturn currentFunctionReturn) {
-        SegmentedAddress? expectedReturnAddress = currentFunctionCall.GetExpectedReturnAddress();
+        SegmentedAddress? expectedReturnAddress = currentFunctionCall.ExpectedReturnAddress;
 
         // Null check necessary for machine stop call, in this case it won't be equals to what is in
         // the stack but it's expected.
         if (actualReturnAddress != null && !actualReturnAddress.Equals(expectedReturnAddress)) {
             FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information) && currentFunctionInformation != null
-                && !currentFunctionInformation.GetUnalignedReturns().ContainsKey(currentFunctionReturn)) {
-                CallType callType = currentFunctionCall.GetCallType();
-                SegmentedAddress stackAddressAfterCall = currentFunctionCall.GetStackAddressAfterCall();
+                && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {
+                CallType callType = currentFunctionCall.CallType;
+                SegmentedAddress stackAddressAfterCall = currentFunctionCall.StackAddressAfterCall;
                 SegmentedAddress? returnAddressOnCallTimeStack = PeekReturnAddressOnMachineStack(callType, stackAddressAfterCall.ToPhysical());
-                SegmentedAddress currentStackAddress = GetCurrentStackAddress();
+                SegmentedAddress currentStackAddress = CurrentStackAddress;
                 string additionalInformation = Environment.NewLine;
                 if (!currentStackAddress.Equals(stackAddressAfterCall)) {
                     int delta = (int)Math.Abs((long)currentStackAddress.ToPhysical() - (long)stackAddressAfterCall.ToPhysical());
@@ -239,6 +243,6 @@ public class FunctionHandler {
     }
 
     private bool UseOverride(FunctionInformation? functionInformation) {
-        return this._useCodeOverride && functionInformation != null && functionInformation.HasOverride();
+        return this._useCodeOverride && functionInformation != null && functionInformation.HasOverride;
     }
 }

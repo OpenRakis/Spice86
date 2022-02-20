@@ -20,8 +20,8 @@ public abstract class ExecutableFileLoader {
 
     protected ExecutableFileLoader(Machine machine) {
         _machine = machine;
-        _cpu = machine.GetCpu();
-        _memory = machine.GetMemory();
+        _cpu = machine.Cpu;
+        _memory = machine.Memory;
     }
 
     public abstract byte[] LoadFile(string file, string? arguments);
@@ -31,9 +31,9 @@ public abstract class ExecutableFileLoader {
     }
 
     protected void SetEntryPoint(ushort cs, ushort ip) {
-        State state = _cpu.GetState();
-        state.SetCS(cs);
-        state.SetIP(ip);
+        State state = _cpu.State;
+        state.CS = cs;
+        state.IP = ip;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Program entry point is {@ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }

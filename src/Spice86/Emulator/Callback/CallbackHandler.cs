@@ -24,12 +24,12 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
 
     public CallbackHandler(Machine machine, ushort interruptHandlerSegment) {
         this._machine = machine;
-        this._memory = machine.GetMemory();
+        this._memory = machine.Memory;
         this._callbackHandlerSegment = interruptHandlerSegment;
     }
 
     public void AddCallback(ICallback callback) {
-        AddService(callback.GetIndex(), callback);
+        AddService(callback.Index, callback);
     }
 
     public Dictionary<byte, SegmentedAddress> GetCallbackAddresses() {
@@ -37,7 +37,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     }
 
     public void InstallAllCallbacksInInterruptTable() {
-        foreach (ICallback callback in _dispatchTable.Values.OrderBy(x => x.GetIndex())) {
+        foreach (ICallback callback in _dispatchTable.Values.OrderBy(x => x.Index)) {
             this.InstallCallbackInInterruptTable(callback);
         }
     }
@@ -47,7 +47,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     }
 
     private void InstallCallbackInInterruptTable(ICallback callback) {
-        _offset += InstallInterruptWithCallback(callback.GetIndex(), _callbackHandlerSegment, _offset);
+        _offset += InstallInterruptWithCallback(callback.Index, _callbackHandlerSegment, _offset);
     }
 
     private ushort InstallInterruptWithCallback(byte vectorNumber, ushort segment, ushort offset) {

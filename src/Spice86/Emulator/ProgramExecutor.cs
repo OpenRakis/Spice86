@@ -19,7 +19,6 @@ using Spice86.UI;
 using Spice86.Utils;
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -31,14 +30,13 @@ using System.Security.Cryptography;
 public class ProgramExecutor : IDisposable {
     private static readonly ILogger _logger = Log.Logger.ForContext<ProgramExecutor>();
     private bool _disposedValue;
-    private GdbServer? _gdbServer;
-    private Machine _machine;
+    private readonly GdbServer? _gdbServer;
 
     public ProgramExecutor(IVideoKeyboardMouseIO? gui, Configuration? configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
-        _machine = CreateMachine(gui, configuration);
+        Machine = CreateMachine(gui, configuration);
         _gdbServer = StartGdbServer(configuration);
     }
 
@@ -48,13 +46,9 @@ public class ProgramExecutor : IDisposable {
         GC.SuppressFinalize(this);
     }
 
-    public Machine GetMachine() {
-        return _machine;
-    }
+    public Machine Machine { get; private set; }
 
-    public void Run() {
-        _machine.Run();
-    }
+    public void Run() => Machine.Run();
 
     protected void Dispose(bool disposing) {
         if (!_disposedValue) {
@@ -65,7 +59,7 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
+    private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
         if (expectedHash is null) {
             throw new ArgumentNullException(nameof(expectedHash));
         }
@@ -75,7 +69,7 @@ public class ProgramExecutor : IDisposable {
         }
 
         try {
-            using SHA256 mySHA256 = SHA256.Create();
+            using var mySHA256 = SHA256.Create();
             byte[] actualHash = mySHA256.ComputeHash(file);
 
             if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
@@ -93,47 +87,47 @@ public class ProgramExecutor : IDisposable {
         }
         string lowerCaseFileName = fileName.ToLowerInvariant();
         if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(_machine, (ushort)entryPointSegment);
+            return new ExeLoader(Machine, (ushort)entryPointSegment);
         } else if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(_machine, (ushort)entryPointSegment);
+            return new ComLoader(Machine, (ushort)entryPointSegment);
         }
 
-        return new BiosLoader(_machine);
+        return new BiosLoader(Machine);
     }
 
     private Machine CreateMachine(IVideoKeyboardMouseIO? gui, Configuration? configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
-        CounterConfigurator counterConfigurator = new CounterConfigurator(configuration);
+        var counterConfigurator = new CounterConfigurator(configuration);
         bool debugMode = configuration.GdbPort != null;
         JumpHandler jumpHandler = new JumpDumper().ReadFromFileOrCreate(configuration.JumpFile);
         jumpHandler.DebugMode = debugMode;
-        _machine = new Machine(gui, counterConfigurator, jumpHandler, configuration.FailOnUnhandledPort, debugMode);
+        Machine = new Machine(gui, counterConfigurator, jumpHandler, configuration.FailOnUnhandledPort, debugMode);
         InitializeCpu();
         InitializeDos(configuration);
         if (configuration.InstallInterruptVector) {
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
-            _machine.InstallAllCallbacksInInterruptTable();
+            Machine.InstallAllCallbacksInInterruptTable();
         }
 
         InitializeFunctionHandlers(configuration);
         LoadFileToRun(configuration);
-        return _machine;
+        return Machine;
     }
 
 
     private GdbServer? StartGdbServer(Configuration configuration) {
         int? gdbPort = configuration.GdbPort;
         if (gdbPort != null) {
-            var gdbServer = new GdbServer(_machine, configuration);
+            var gdbServer = new GdbServer(Machine, configuration);
             return gdbServer;
         }
         return null;
     }
 
-    private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
+    private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
@@ -147,7 +141,7 @@ public class ProgramExecutor : IDisposable {
         return res;
     }
 
-    private string? GetExeParentFolder(Configuration configuration) {
+    private static string? GetExeParentFolder(Configuration configuration) {
         string? exe = configuration.Exe;
         if (exe == null) {
             return null;
@@ -164,10 +158,10 @@ public class ProgramExecutor : IDisposable {
     }
 
     private void InitializeCpu() {
-        Cpu cpu = _machine.GetCpu();
-        cpu.SetErrorOnUninitializedInterruptHandler(true);
-        State state = cpu.GetState();
-        state.GetFlags().SetDosboxCompatibility(true);
+        Cpu cpu = Machine.Cpu;
+        cpu.ErrorOnUninitializedInterruptHandler = true;
+        State state = cpu.State;
+        state.Flags.IsDOSBoxCompatible = true;
     }
 
     private void InitializeDos(Configuration configuration) {
@@ -185,18 +179,18 @@ public class ProgramExecutor : IDisposable {
             throw new ArgumentNullException(nameof(parentFolder));
         }
         driveMap.Add('C', cDrive);
-        _machine.GetDosInt21Handler().GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
+        Machine.DosInt21Handler.GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration) {
         if (configuration.OverrideSupplier is null) {
             return;
         }
-        Cpu cpu = _machine.GetCpu();
-        Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, _machine);
+        Cpu cpu = Machine.Cpu;
+        Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, Machine);
         bool useCodeOverride = configuration.UseCodeOverride;
-        SetupFunctionHandler(cpu.GetFunctionHandler(), functionInformations, useCodeOverride);
-        SetupFunctionHandler(cpu.GetFunctionHandlerInExternalInterrupt(), functionInformations, useCodeOverride);
+        SetupFunctionHandler(cpu.FunctionHandler, functionInformations, useCodeOverride);
+        SetupFunctionHandler(cpu.FunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
     }
 
     private void LoadFileToRun(Configuration configuration) {
@@ -216,7 +210,7 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private void SetupFunctionHandler(FunctionHandler functionHandler, Dictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
+    private static void SetupFunctionHandler(FunctionHandler functionHandler, Dictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.SetFunctionInformations(functionInformations);
         functionHandler.SetUseCodeOverride(useCodeOverride);
     }

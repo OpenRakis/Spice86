@@ -14,29 +14,25 @@ public interface IVideoKeyboardMouseIO {
 
     void Draw(byte[] memory, Rgb[] palette);
 
-    int GetHeight();
+    int Height { get; }
 
-    Key? GetLastKeyCode();
+    Key? LastKeyCode { get; }
 
-    int GetMouseX();
+    int MouseX { get; set; }
 
-    int GetMouseY();
+    int MouseY { get; set; }
 
-    IDictionary<uint, VideoBufferViewModel> GetVideoBuffers();
+    IDictionary<uint, VideoBufferViewModel> VideoBuffersAsDictionary { get; }
 
-    int GetWidth();
+    int Width { get; }
 
     bool IsKeyPressed(Key keyCode);
 
-    bool IsLeftButtonClicked();
+    bool IsLeftButtonClicked { get; }
 
-    bool IsRightButtonClicked();
+    bool IsRightButtonClicked { get; }
 
     void RemoveBuffer(uint address);
-
-    void SetMouseX(int mouseX);
-
-    void SetMouseY(int mouseY);
 
     void SetOnKeyPressedEvent(Action onKeyPressedEvent);
 

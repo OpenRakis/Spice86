@@ -11,13 +11,13 @@ using System.Text;
 
 public class GdbCommandRegisterHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandRegisterHandler>();
-    private GdbFormatter gdbFormatter = new GdbFormatter();
-    private GdbIo gdbIo;
-    private Machine machine;
+    private readonly GdbFormatter _gdbFormatter = new();
+    private readonly GdbIo _gdbIo;
+    private readonly Machine _machine;
 
     public GdbCommandRegisterHandler(GdbIo gdbIo, Machine machine) {
-        this.gdbIo = gdbIo;
-        this.machine = machine;
+        _gdbIo = gdbIo;
+        _machine = machine;
     }
 
     public string ReadAllRegisters() {
@@ -26,11 +26,11 @@ public class GdbCommandRegisterHandler {
         }
         StringBuilder response = new(2 * 4 * 16);
         for (int i = 0; i < 16; i++) {
-            string regValue = gdbFormatter.FormatValueAsHex32(GetRegisterValue(i));
+            string regValue = _gdbFormatter.FormatValueAsHex32(GetRegisterValue(i));
             response.Append(regValue);
         }
 
-        return gdbIo.GenerateResponse(response.ToString());
+        return _gdbIo.GenerateResponse(response.ToString());
     }
 
     public string ReadRegister(string commandContent) {
@@ -39,12 +39,12 @@ public class GdbCommandRegisterHandler {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Reading register {@RegisterIndex}", index);
             }
-            return gdbIo.GenerateResponse(gdbFormatter.FormatValueAsHex32(GetRegisterValue((int)index)));
+            return _gdbIo.GenerateResponse(_gdbFormatter.FormatValueAsHex32(GetRegisterValue((int)index)));
         } catch (FormatException nfe) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(nfe, "Register read requested but could not understand the request {@CommandContent}", commandContent);
             }
-            return gdbIo.GenerateUnsupportedResponse();
+            return _gdbIo.GenerateUnsupportedResponse();
         }
     }
 
@@ -56,12 +56,12 @@ public class GdbCommandRegisterHandler {
                 SetRegisterValue(i / 4, (ushort)value);
             }
 
-            return gdbIo.GenerateResponse("OK");
+            return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(nfe, "Register write requested but could not understand the request {@CommandContent}", commandContent);
             }
-            return gdbIo.GenerateUnsupportedResponse();
+            return _gdbIo.GenerateUnsupportedResponse();
         }
     }
 
@@ -70,25 +70,25 @@ public class GdbCommandRegisterHandler {
         int registerIndex = (int)ConvertUtils.ParseHex32(split[0]);
         uint registerValue = ConvertUtils.Swap32(ConvertUtils.ParseHex32(split[1]));
         SetRegisterValue(registerIndex, (ushort)registerValue);
-        return gdbIo.GenerateResponse("OK");
+        return _gdbIo.GenerateResponse("OK");
     }
 
     private uint GetRegisterValue(int regIndex) {
-        State state = machine.GetCpu().GetState();
+        State state = _machine.Cpu.State;
         if (regIndex < 8) {
-            return state.GetRegisters().GetRegister(regIndex);
+            return state.Registers.GetRegister(regIndex);
         }
 
         if (regIndex == 8) {
-            return state.GetIpPhysicalAddress();
+            return state.IpPhysicalAddress;
         }
 
         if (regIndex == 9) {
-            return state.GetFlags().GetFlagRegister();
+            return state.Flags.FlagRegister;
         }
 
         if (regIndex < 16) {
-            return state.GetSegmentRegisters().GetRegister(GetSegmentRegisterIndex(regIndex));
+            return state.SegmentRegisters.GetRegister(GetSegmentRegisterIndex(regIndex));
         }
 
         return 0;
@@ -108,15 +108,15 @@ public class GdbCommandRegisterHandler {
     }
 
     private void SetRegisterValue(int regIndex, ushort value) {
-        State state = machine.GetCpu().GetState();
+        State state = _machine.Cpu.State;
         if (regIndex < 8) {
-            state.GetRegisters().SetRegister(regIndex, value);
+            state.Registers.SetRegister(regIndex, value);
         } else if (regIndex == 8) {
-            state.SetIP(value);
+            state.IP = value;
         } else if (regIndex == 9) {
-            state.GetFlags().SetFlagRegister(value);
+            state.Flags.SetFlagRegister(value);
         } else if (regIndex < 16) {
-            state.GetSegmentRegisters().SetRegister(GetSegmentRegisterIndex(regIndex), value);
+            state.SegmentRegisters.SetRegister(GetSegmentRegisterIndex(regIndex), value);
         }
     }
 }

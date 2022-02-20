@@ -10,30 +10,30 @@ using System.Linq;
 
 public class GdbCommandHandler {
     private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandHandler>();
-    private bool connected = true;
-    private GdbCommandBreakpointHandler gdbCommandBreakpointHandler;
-    private GdbCommandMemoryHandler gdbCommandMemoryHandler;
-    private GdbCommandRegisterHandler gdbCommandRegisterHandler;
-    private GdbCustomCommandsHandler gdbCustomCommandsHandler;
-    private GdbIo gdbIo;
-    private Machine machine;
+    private bool _isConnected = true;
+    private readonly GdbCommandBreakpointHandler _gdbCommandBreakpointHandler;
+    private readonly GdbCommandMemoryHandler _gdbCommandMemoryHandler;
+    private readonly GdbCommandRegisterHandler _gdbCommandRegisterHandler;
+    private readonly GdbCustomCommandsHandler _gdbCustomCommandsHandler;
+    private readonly GdbIo _gdbIo;
+    private readonly Machine _machine;
 
     public GdbCommandHandler(GdbIo gdbIo, Machine machine, Configuration configuration) {
-        this.gdbIo = gdbIo;
-        this.machine = machine;
-        this.gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine);
-        this.gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine);
-        this.gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine);
-        this.gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, gdbCommandBreakpointHandler.OnBreakPointReached, configuration.DefaultDumpDirectory, configuration.JumpFile);
+        this._gdbIo = gdbIo;
+        this._machine = machine;
+        this._gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine);
+        this._gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine);
+        this._gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine);
+        this._gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.DefaultDumpDirectory, configuration.JumpFile);
     }
 
     public bool IsConnected() {
-        return connected;
+        return _isConnected;
     }
 
     public void PauseEmulator() {
-        gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(false);
-        machine.GetMachineBreakpoints().GetPauseHandler().RequestPause();
+        _gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(false);
+        _machine.MachineBreakpoints.PauseHandler.RequestPause();
     }
 
     public void RunCommand(string command) {
@@ -41,62 +41,62 @@ public class GdbCommandHandler {
             _logger.Information("Received command {@Command}", command);
         }
         char first = command[0];
-        string commandContent = command.Substring(1);
-        PauseHandler pauseHandler = machine.GetMachineBreakpoints().GetPauseHandler();
+        string commandContent = command[1..];
+        PauseHandler pauseHandler = _machine.MachineBreakpoints.PauseHandler;
         pauseHandler.RequestPauseAndWait();
         try {
             string? response = first switch {
-                (char)0x03 => gdbCommandBreakpointHandler.Step(),
+                (char)0x03 => _gdbCommandBreakpointHandler.Step(),
                 'k' => Kill(),
                 'D' => Detach(),
-                'c' => gdbCommandBreakpointHandler.ContinueCommand(),
+                'c' => _gdbCommandBreakpointHandler.ContinueCommand(),
                 'H' => SetThreadContext(),
                 'q' => QueryVariable(commandContent),
                 '?' => ReasonHalted(),
-                'g' => gdbCommandRegisterHandler.ReadAllRegisters(),
-                'G' => gdbCommandRegisterHandler.WriteAllRegisters(commandContent),
-                'p' => gdbCommandRegisterHandler.ReadRegister(commandContent),
-                'P' => gdbCommandRegisterHandler.WriteRegister(commandContent),
-                'm' => gdbCommandMemoryHandler.ReadMemory(commandContent),
-                'M' => gdbCommandMemoryHandler.WriteMemory(commandContent),
+                'g' => _gdbCommandRegisterHandler.ReadAllRegisters(),
+                'G' => _gdbCommandRegisterHandler.WriteAllRegisters(commandContent),
+                'p' => _gdbCommandRegisterHandler.ReadRegister(commandContent),
+                'P' => _gdbCommandRegisterHandler.WriteRegister(commandContent),
+                'm' => _gdbCommandMemoryHandler.ReadMemory(commandContent),
+                'M' => _gdbCommandMemoryHandler.WriteMemory(commandContent),
                 'T' => HandleThreadALive(),
                 'v' => ProcessVPacket(commandContent),
-                's' => gdbCommandBreakpointHandler.Step(),
-                'z' => gdbCommandBreakpointHandler.RemoveBreakpoint(commandContent),
-                'Z' => gdbCommandBreakpointHandler.AddBreakpoint(commandContent),
-                _ => gdbIo.GenerateUnsupportedResponse()
+                's' => _gdbCommandBreakpointHandler.Step(),
+                'z' => _gdbCommandBreakpointHandler.RemoveBreakpoint(commandContent),
+                'Z' => _gdbCommandBreakpointHandler.AddBreakpoint(commandContent),
+                _ => _gdbIo.GenerateUnsupportedResponse()
             };
             if (response != null) {
-                gdbIo.SendResponse(response);
+                _gdbIo.SendResponse(response);
             }
         } finally {
-            if (gdbCommandBreakpointHandler.IsResumeEmulatorOnCommandEnd()) {
+            if (_gdbCommandBreakpointHandler.IsResumeEmulatorOnCommandEnd()) {
                 pauseHandler.RequestResume();
             }
         }
     }
 
     private string Detach() {
-        connected = false;
-        gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(true);
-        return gdbIo.GenerateResponse("");
+        _isConnected = false;
+        _gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(true);
+        return _gdbIo.GenerateResponse("");
     }
 
     private string HandleThreadALive() {
-        return gdbIo.GenerateResponse("OK");
+        return _gdbIo.GenerateResponse("OK");
     }
 
     private string Kill() {
-        machine.GetCpu().SetRunning(false);
+        _machine.Cpu.IsRunning = false;
         return Detach();
     }
 
     private Tuple<string, object> ParseSupportedQuery(string item) {
         Tuple<string, object> res;
         if (item.EndsWith("+")) {
-            res = Tuple.Create(item.Substring(0, item.Length - 1), (object)true);
+            res = Tuple.Create(item[0..^1], (object)true);
         } else if (item.EndsWith("-")) {
-            res = Tuple.Create(item.Substring(0, item.Length - 1), (object)false);
+            res = Tuple.Create(item[0..^1], (object)false);
         } else {
             String[] split = item.Split("=");
             res = Tuple.Create(split[0], new object());
@@ -110,64 +110,64 @@ public class GdbCommandHandler {
 
     private string ProcessVPacket(string commandContent) {
         return (commandContent) switch {
-            "MustReplyEmpty" => gdbIo.GenerateResponse(""),
-            "Cont?" => gdbIo.GenerateResponse(""),
-            _ => gdbIo.GenerateUnsupportedResponse()
+            "MustReplyEmpty" => _gdbIo.GenerateResponse(""),
+            "Cont?" => _gdbIo.GenerateResponse(""),
+            _ => _gdbIo.GenerateUnsupportedResponse()
         };
     }
 
     private string QueryVariable(string command) {
         if (command.StartsWith("Supported:")) {
             string[] supportedRequestItems = command.Replace("Supported:", "").Split(";");
-            Dictionary<string, object> supportedRequest = supportedRequestItems
+            var supportedRequest = supportedRequestItems
                 .ToDictionary(x => ParseSupportedQuery(x))
                 .ToDictionary(data => data.Key.Item1, data => data.Key.Item2);
             if (supportedRequest.TryGetValue("xmlRegisters", out var value) == false || value.Equals("i386") == false) {
-                return gdbIo.GenerateUnsupportedResponse();
+                return _gdbIo.GenerateUnsupportedResponse();
             }
 
-            return gdbIo.GenerateResponse("");
+            return _gdbIo.GenerateResponse("");
         }
 
         if (command.StartsWith("L")) {
-            string nextthread = command.Substring(4);
-            return gdbIo.GenerateResponse($"qM011{nextthread}00000001");
+            string nextthread = command[4..];
+            return _gdbIo.GenerateResponse($"qM011{nextthread}00000001");
         }
 
         if (command.StartsWith("P")) {
-            return gdbIo.GenerateResponse("");
+            return _gdbIo.GenerateResponse("");
         }
 
         if (command.StartsWith("ThreadExtraInfo")) {
-            return gdbIo.GenerateMessageToDisplayResponse("spice86");
+            return _gdbIo.GenerateMessageToDisplayResponse("spice86");
         }
 
         if (command.StartsWith("Rcmd")) {
-            return gdbCustomCommandsHandler.HandleCustomCommands(command);
+            return _gdbCustomCommandsHandler.HandleCustomCommands(command);
         }
 
         if (command.StartsWith("Search")) {
-            return gdbCommandMemoryHandler.SearchMemory(command);
+            return _gdbCommandMemoryHandler.SearchMemory(command);
         }
 
         return command switch {
             // The remote server attached to an existing process.
-            "Attached" => gdbIo.GenerateResponse("1"),
+            "Attached" => _gdbIo.GenerateResponse("1"),
             // Return the current thread ID.
-            "C" => gdbIo.GenerateResponse("QC1"),
+            "C" => _gdbIo.GenerateResponse("QC1"),
             // Ask the stub if there is a trace experiment running right now. -> No trace has been run yet.
-            "TStatus" => gdbIo.GenerateResponse(""),
-            "fThreadInfo" => gdbIo.GenerateResponse("m1"),
-            "sThreadInfo" => gdbIo.GenerateResponse("l"),
-            _ => gdbIo.GenerateUnsupportedResponse(),
+            "TStatus" => _gdbIo.GenerateResponse(""),
+            "fThreadInfo" => _gdbIo.GenerateResponse("m1"),
+            "sThreadInfo" => _gdbIo.GenerateResponse("l"),
+            _ => _gdbIo.GenerateUnsupportedResponse(),
         };
     }
 
     private string ReasonHalted() {
-        return gdbIo.GenerateResponse("S05");
+        return _gdbIo.GenerateResponse("S05");
     }
 
     private string SetThreadContext() {
-        return gdbIo.GenerateResponse("OK");
+        return _gdbIo.GenerateResponse("OK");
     }
 }

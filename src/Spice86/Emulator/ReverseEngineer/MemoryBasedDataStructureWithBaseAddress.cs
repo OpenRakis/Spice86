@@ -6,10 +6,8 @@ public class MemoryBasedDataStructureWithBaseAddress : MemoryBasedDataStructureW
     private readonly uint _baseAddress;
 
     public MemoryBasedDataStructureWithBaseAddress(Memory memory, uint baseAddress) : base(memory) {
-        this._baseAddress = baseAddress;
+        _baseAddress = baseAddress;
     }
 
-    public override uint GetBaseAddress() {
-        return _baseAddress;
-    }
+    public override uint BaseAddress => _baseAddress;
 }

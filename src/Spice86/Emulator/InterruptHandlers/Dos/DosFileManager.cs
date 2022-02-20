@@ -18,7 +18,7 @@ using System.Text.RegularExpressions;
 public class DosFileManager {
     public const ushort FileHandleOffset = 5;
     private const int MaxOpenFiles = 15;
-    private static readonly Dictionary<byte, string> FileOpenMode = new();
+    private static readonly Dictionary<byte, string> _fileOpenMode = new();
     private static readonly ILogger _logger = Log.Logger.ForContext<DosFileManager>();
     private string? _currentDir;
 
@@ -34,14 +34,14 @@ public class DosFileManager {
 
     private IEnumerator<string>? _matchingFilesIterator;
 
-    private Memory _memory;
+    private readonly Memory _memory;
 
-    private OpenFile?[] _openFiles = new OpenFile[MaxOpenFiles];
+    private readonly OpenFile?[] _openFiles = new OpenFile[MaxOpenFiles];
 
     static DosFileManager() {
-        FileOpenMode.Add(0x00, "r");
-        FileOpenMode.Add(0x01, "w");
-        FileOpenMode.Add(0x02, "rw");
+        _fileOpenMode.Add(0x00, "r");
+        _fileOpenMode.Add(0x01, "w");
+        _fileOpenMode.Add(0x02, "rw");
     }
 
     public DosFileManager(Memory memory) {
@@ -55,14 +55,14 @@ public class DosFileManager {
         }
 
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Closed {@ClosedFileName}, file was loaded in ram in those addresses: {@ClosedFileAddresses}", file.GetName(), file.GetLoadMemoryRanges());
+            _logger.Information("Closed {@ClosedFileName}, file was loaded in ram in those addresses: {@ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
         }
 
         SetOpenFile(fileHandle, null);
         try {
             if (CountHandles(file) == 0) {
                 // Only close the file if no other handle to it exist.
-                file.GetRandomAccessFile().Close();
+                file.RandomAccessFile.Close();
             }
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while closing file", e);
@@ -116,11 +116,11 @@ public class DosFileManager {
     /// <returns></returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = ToHostFileName(fileSpec);
-        _currentMatchingFileSearchFolder = hostSearchSpec.Substring(0, hostSearchSpec.LastIndexOf('/') + 1);
+        _currentMatchingFileSearchFolder = hostSearchSpec[..(hostSearchSpec.LastIndexOf('/') + 1)];
         if(string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder) == false) {
             _currentMatchingFileSearchSpec = hostSearchSpec.Replace(_currentMatchingFileSearchFolder, "");
             try {
-                List<string> matchingPaths = Directory.GetFiles(
+                var matchingPaths = Directory.GetFiles(
                     _currentMatchingFileSearchFolder,
                     _currentMatchingFileSearchSpec,
                     new EnumerationOptions() {
@@ -192,9 +192,9 @@ public class DosFileManager {
         }
 
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Moving in file {@FileMove}", file.GetName());
+            _logger.Information("Moving in file {@FileMove}", file.Name);
         }
-        FileStream randomAccessFile = file.GetRandomAccessFile();
+        FileStream randomAccessFile = file.RandomAccessFile;
         try {
             uint newOffset = Seek(randomAccessFile, originOfMove, offset);
             return DosFileOperationResult.Value32(newOffset);
@@ -212,7 +212,7 @@ public class DosFileManager {
             return this.FileNotFoundError(fileName);
         }
 
-        string openMode = FileOpenMode[rwAccessMode];
+        string openMode = _fileOpenMode[rwAccessMode];
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Opening file {@HostFileName} with mode {@OpenMode}", hostFileName, openMode);
         }
@@ -227,13 +227,13 @@ public class DosFileManager {
         }
 
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Reading from file {@FileName}", file.GetName());
+            _logger.Information("Reading from file {@FileName}", file.Name);
         }
 
         byte[] buffer = new byte[readLength];
         int actualReadLength;
         try {
-            actualReadLength = file.GetRandomAccessFile().Read(buffer, 0, readLength);
+            actualReadLength = file.RandomAccessFile.Read(buffer, 0, readLength);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while reading file", e);
         }
@@ -245,7 +245,7 @@ public class DosFileManager {
 
         if (actualReadLength > 0) {
             _memory.LoadData(targetAddress, buffer, actualReadLength);
-            file.AddMemoryRange(new MemoryRange(targetAddress, (uint)(targetAddress + actualReadLength - 1), file.GetName()));
+            file.AddMemoryRange(new MemoryRange(targetAddress, (uint)(targetAddress + actualReadLength - 1), file.Name));
         }
 
         return DosFileOperationResult.Value16((ushort)actualReadLength);
@@ -286,7 +286,7 @@ public class DosFileManager {
         }
 
         try {
-            file.GetRandomAccessFile().Write(_memory.GetRam(), (int)bufferAddress, writeLength);
+            file.RandomAccessFile.Write(_memory.Ram, (int)bufferAddress, writeLength);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }
@@ -360,11 +360,11 @@ public class DosFileManager {
     }
 
     private bool IsValidFileHandle(ushort fileHandle) {
-        return fileHandle >= FileHandleOffset && fileHandle <= MaxOpenFiles + FileHandleOffset;
+        return fileHandle is >= FileHandleOffset and <= (MaxOpenFiles + FileHandleOffset);
     }
 
-    private bool IsWriteDeviceFileHandle(ushort fileHandle) {
-        return fileHandle > 0 && fileHandle < FileHandleOffset;
+    private static bool IsWriteDeviceFileHandle(ushort fileHandle) {
+        return fileHandle is > 0 and < FileHandleOffset;
     }
 
     private DosFileOperationResult NoFreeHandleError() {
@@ -472,7 +472,7 @@ public class DosFileManager {
         return fileName.Replace($"{driveLetter}:", pathForDrive);
     }
 
-    private uint Seek(FileStream randomAccessFile, byte originOfMove, uint offset) {
+    private static uint Seek(FileStream randomAccessFile, byte originOfMove, uint offset) {
         long newOffset;
         if (originOfMove == 0) {
             newOffset = offset; // seek from beginning, offset is good
@@ -532,7 +532,7 @@ public class DosFileManager {
         return null;
     }
 
-    private ushort ToDosDate(DateTime localDate) {
+    private static ushort ToDosDate(DateTime localDate) {
         // https://stanislavs.org/helppc/file_attributes.html
         int day = localDate.Day;
         int month = localDate.Month;
@@ -540,7 +540,7 @@ public class DosFileManager {
         return (ushort)((day & 0b11111) | ((month & 0b1111) << 5) | ((dosYear & 0b1111111) << 9));
     }
 
-    private ushort ToDosTime(DateTime localTime) {
+    private static ushort ToDosTime(DateTime localTime) {
         // https://stanislavs.org/helppc/file_attributes.html
         int dosSeconds = localTime.Second / 2;
         int minutes = localTime.Minute;

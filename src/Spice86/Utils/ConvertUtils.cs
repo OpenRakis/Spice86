@@ -6,7 +6,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-public class ConvertUtils {
+public static class ConvertUtils {
     private const string HexStringStartPattern = "0x";
 
     private const uint SegmentSize = 0x10000;
@@ -96,11 +96,11 @@ public class ConvertUtils {
     }
 
     public static string ToCSharpString(SegmentedAddress address) {
-        return $"{ToHex16WithoutX(address.GetSegment())}_{ToHex16WithoutX(address.GetOffset())}";
+        return $"{ToHex16WithoutX(address.Segment)}_{ToHex16WithoutX(address.Offset)}";
     }
 
     public static string ToCSharpStringWithPhysical(SegmentedAddress address) {
-        return $"{ToHex16WithoutX(address.GetSegment())}_{ToHex16WithoutX(address.GetOffset())}_{ToHex32WithoutX(address.ToPhysical())}";
+        return $"{ToHex16WithoutX(address.Segment)}_{ToHex16WithoutX(address.Offset)}_{ToHex32WithoutX(address.ToPhysical())}";
     }
 
     public static string ToHex(byte value) {

@@ -31,27 +31,27 @@ public class FunctionInformation : IComparable<FunctionInformation> {
     }
 
     public void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
-        AddReturn(GetReturns(), functionReturn, target);
+        AddReturn(Returns, functionReturn, target);
     }
 
     public void AddUnalignedReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
-        AddReturn(GetUnalignedReturns(), functionReturn, target);
+        AddReturn(UnalignedReturns, functionReturn, target);
     }
 
     public void CallOverride() {
-        if (HasOverride()) {
-            var retHandler = _overrideRenamed;
+        if (HasOverride) {
+            Func<Action>? retHandler = _overrideRenamed;
             retHandler?.Invoke();
         }
     }
 
     public int CompareTo(FunctionInformation? other) {
-        return this.GetAddress().CompareTo(other?.GetAddress());
+        return this.Address.CompareTo(other?.Address);
     }
 
     public void Enter(FunctionInformation? caller) {
         if (caller != null) {
-            this.GetCallers().Add(caller);
+            this.Callers.Add(caller);
         }
 
         _calledCount++;
@@ -67,46 +67,44 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         return _address.Equals(other._address);
     }
 
-    public SegmentedAddress GetAddress() {
-        return _address;
-    }
+    public SegmentedAddress Address => _address;
 
-    public int GetCalledCount() {
-        return _calledCount;
-    }
+    public int CalledCount => _calledCount;
 
-    public ISet<FunctionInformation> GetCallers() {
-        if (_callers == null) {
-            _callers = new HashSet<FunctionInformation>();
+    public ISet<FunctionInformation> Callers {
+        get {
+            if (_callers == null) {
+                _callers = new HashSet<FunctionInformation>();
+            }
+            return _callers;
         }
-        return _callers;
     }
 
     public override int GetHashCode() {
         return _address.GetHashCode();
     }
 
-    public string? GetName() {
-        return _name;
-    }
+    public string? Name => _name;
 
-    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> GetReturns() {
-        if (_returns == null) {
-            _returns = new();
+    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
+        get {
+            if (_returns == null) {
+                _returns = new();
+            }
+            return _returns;
         }
-        return _returns;
     }
 
-    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> GetUnalignedReturns() {
-        if (_unalignedReturns == null) {
-            _unalignedReturns = new();
+    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> UnalignedReturns {
+        get {
+            if (_unalignedReturns == null) {
+                _unalignedReturns = new();
+            }
+            return _unalignedReturns;
         }
-        return _unalignedReturns;
     }
 
-    public bool HasOverride() {
-        return _overrideRenamed != null;
-    }
+    public bool HasOverride => _overrideRenamed != null;
 
     public override string ToString() {
         return $"{this._name}_{ConvertUtils.ToCSharpStringWithPhysical(this._address)}";
@@ -116,8 +114,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         if (target == null) {
             return;
         }
-        ISet<SegmentedAddress>? addresses;
-        returnsMap.TryGetValue(functionReturn, out addresses);
+        returnsMap.TryGetValue(functionReturn, out ISet<SegmentedAddress>? addresses);
         if (addresses == null) {
             addresses = new HashSet<SegmentedAddress>();
             returnsMap.Add(functionReturn, addresses);

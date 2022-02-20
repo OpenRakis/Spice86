@@ -9,12 +9,12 @@ using System.Linq;
 
 public class DosMemoryManager {
     private static readonly ILogger _logger = Log.Logger.ForContext<DosMemoryManager>();
-    private Memory memory;
-    private ushort pspSegment;
-    private DosMemoryControlBlock? start;
+    private readonly Memory _memory;
+    private ushort _pspSegment;
+    private DosMemoryControlBlock? _start;
 
     public DosMemoryManager(Memory memory) {
-        this.memory = memory;
+        _memory = memory;
     }
 
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSize) {
@@ -39,12 +39,12 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.SetPspSegment(pspSegment);
+        block.SetPspSegment(_pspSegment);
         return block;
     }
 
     public DosMemoryControlBlock? FindLargestFree() {
-        DosMemoryControlBlock? current = start;
+        DosMemoryControlBlock? current = _start;
         DosMemoryControlBlock? largest = null;
         while (true) {
             if (current != null && current.IsFree() && (largest == null || current.GetSize() > largest.GetSize())) {
@@ -70,19 +70,19 @@ public class DosMemoryManager {
     }
 
     public ushort GetPspSegment() {
-        return pspSegment;
+        return _pspSegment;
     }
 
     public void Init(ushort pspSegment, ushort lastFreeSegment) {
         ushort startSegment = (ushort)(pspSegment - 1);
-        this.pspSegment = pspSegment;
+        this._pspSegment = pspSegment;
         ushort size = (ushort)(lastFreeSegment - startSegment);
-        start = GetDosMemoryControlBlockFromSegment(startSegment);
+        _start = GetDosMemoryControlBlockFromSegment(startSegment);
 
         // size -1 because the mcb itself takes 16 bytes which is 1 paragraph
-        start.SetSize((ushort)(size - 1));
-        start.SetFree();
-        start.SetLast();
+        _start.SetSize((ushort)(size - 1));
+        _start.SetFree();
+        _start.SetLast();
     }
 
     public bool ModifyBlock(ushort blockSegment, ushort requestedSize) {
@@ -110,7 +110,7 @@ public class DosMemoryManager {
             SplitBlock(block, requestedSize);
         }
 
-        block.SetPspSegment(pspSegment);
+        block.SetPspSegment(_pspSegment);
         return true;
     }
 
@@ -126,7 +126,7 @@ public class DosMemoryManager {
     }
 
     private IList<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
-        DosMemoryControlBlock? current = start;
+        DosMemoryControlBlock? current = _start;
         List<DosMemoryControlBlock> candidates = new();
         while (true) {
             if (!CheckValidOrLogError(current)) {
@@ -144,7 +144,7 @@ public class DosMemoryManager {
     }
 
     private DosMemoryControlBlock GetDosMemoryControlBlockFromSegment(ushort blockSegment) {
-        return new DosMemoryControlBlock(memory, MemoryUtils.ToPhysicalAddress(blockSegment, 0));
+        return new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(blockSegment, 0));
     }
 
     private bool JoinBlocks(DosMemoryControlBlock? block, bool onlyIfFree) {

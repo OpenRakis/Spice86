@@ -38,8 +38,6 @@ public class Pic : DefaultIOPortHandler {
 
     private int _interruptMask = 0;
 
-    private bool _lastIrqAcknowledged = true;
-
     static Pic() {
         // timer
         _vectorNumberToIrq.Add(8, 0);
@@ -52,7 +50,7 @@ public class Pic : DefaultIOPortHandler {
     }
 
     public void AcknwowledgeInterrupt() {
-        _lastIrqAcknowledged = true;
+        IsLastIrqAcknowledged = true;
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
@@ -70,9 +68,7 @@ public class Pic : DefaultIOPortHandler {
         return (maskForVectorNumber & _interruptMask) != 0;
     }
 
-    public bool IsLastIrqAcknowledged() {
-        return _lastIrqAcknowledged;
-    }
+    public bool IsLastIrqAcknowledged { get; private set; } = true;
 
     public override void Outb(int port, byte value) {
         if (port == MasterPortA) {
@@ -93,7 +89,7 @@ public class Pic : DefaultIOPortHandler {
             return;
         }
 
-        if (!IsLastIrqAcknowledged()) {
+        if (!IsLastIrqAcknowledged) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Cannot process interrupt {@ProcessInterrupt}, Last IRQ was not acknowledged.", ConvertUtils.ToHex8(vectorNumber));
             }
@@ -101,8 +97,8 @@ public class Pic : DefaultIOPortHandler {
             return;
         }
 
-        _lastIrqAcknowledged = false;
-        cpu.ExternalInterrupt(vectorNumber);
+        IsLastIrqAcknowledged = false;
+        _cpu.ExternalInterrupt(vectorNumber);
     }
 
     private static void ProcessICW2(byte value) {
@@ -145,7 +141,7 @@ public class Pic : DefaultIOPortHandler {
     private void ProcessOCW2(byte value) {
         int interruptLevel = value & 0b111;
         bool sendEndOfInterruptCommand = (value & 0b100000) != 0;
-        _lastIrqAcknowledged = sendEndOfInterruptCommand;
+        IsLastIrqAcknowledged = sendEndOfInterruptCommand;
         bool sendSpecificCommand = (value & 0b1000000) != 0;
         bool rotatePriorities = (value & 0b10000000) != 0;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
@@ -169,7 +165,7 @@ public class Pic : DefaultIOPortHandler {
                     ProcessICW4(value);
                     break;
                 default:
-                    throw new UnhandledOperationException(machine, $"Invalid initialization command index {_currentCommand}, should never happen");
+                    throw new UnhandledOperationException(_machine, $"Invalid initialization command index {_currentCommand}, should never happen");
             }
             _currentCommand = (_currentCommand + 1) % _commandsToProcess;
             if (_currentCommand == 0) {

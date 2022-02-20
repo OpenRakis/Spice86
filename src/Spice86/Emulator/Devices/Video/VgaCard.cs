@@ -26,23 +26,22 @@ public class VgaCard : DefaultIOPortHandler {
     public const byte MODE_320_200_256 = 0x13;
 
     private readonly IVideoKeyboardMouseIO? _gui;
-    private readonly VgaDac _vgaDac;
     private byte _crtStatusRegister;
     private bool _drawing = false;
 
     public VgaCard(Machine machine, IVideoKeyboardMouseIO? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
         this._gui = gui;
-        this._vgaDac = new VgaDac(machine);
+        VgaDac = new VgaDac(machine);
     }
 
     public void GetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, uint colorValuesAddress) {
-        Rgb[] rgbs = _vgaDac.GetRgbs();
+        Rgb[] rgbs = VgaDac.Rgbs;
         for (int i = 0; i < numberOfColors; i++) {
             int registerToSet = firstRegister + i;
             Rgb rgb = rgbs[registerToSet];
-            memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.R));
-            memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.G));
-            memory.SetUint8(colorValuesAddress++, VgaDac.From8bitTo6bitColor(rgb.B));
+            _memory.SetUint8(colorValuesAddress++, Video.VgaDac.From8bitTo6bitColor(rgb.R));
+            _memory.SetUint8(colorValuesAddress++, Video.VgaDac.From8bitTo6bitColor(rgb.G));
+            _memory.SetUint8(colorValuesAddress++, Video.VgaDac.From8bitTo6bitColor(rgb.B));
         }
     }
 
@@ -54,15 +53,13 @@ public class VgaCard : DefaultIOPortHandler {
         return _crtStatusRegister;
     }
 
-    public VgaDac GetVgaDac() {
-        return _vgaDac;
-    }
+    public VgaDac VgaDac { get; private set; }
 
     public byte GetVgaReadIndex() {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET VGA READ INDEX");
         }
-        return _vgaDac.GetState() == VgaDac.VgaDacWrite ? (byte)0x3 : (byte)0x0;
+        return VgaDac.State == Video.VgaDac.VgaDacWrite ? (byte)0x3 : (byte)0x0;
     }
 
     public override byte Inb(int port) {
@@ -108,24 +105,24 @@ public class VgaCard : DefaultIOPortHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PALETTE READ");
         }
-        return VgaDac.From8bitTo6bitColor(_vgaDac.ReadColor());
+        return Video.VgaDac.From8bitTo6bitColor(VgaDac.ReadColor());
     }
 
     public void RgbDataWrite(byte value) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PALETTE WRITE {@Value}", value);
         }
-        _vgaDac.WriteColor(VgaDac.From6bitColorTo8bit(value));
+        VgaDac.WriteColor(Video.VgaDac.From6bitColorTo8bit(value));
     }
 
     public void SetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, uint colorValuesAddress) {
-        Rgb[] rgbs = _vgaDac.GetRgbs();
+        Rgb[] rgbs = VgaDac.Rgbs;
         for (int i = 0; i < numberOfColors; i++) {
             int registerToSet = firstRegister + i;
             Rgb rgb = rgbs[registerToSet];
-            byte r = VgaDac.From6bitColorTo8bit(memory.GetUint8(colorValuesAddress++));
-            byte g = VgaDac.From6bitColorTo8bit(memory.GetUint8(colorValuesAddress++));
-            byte b = VgaDac.From6bitColorTo8bit(memory.GetUint8(colorValuesAddress++));
+            byte r = Video.VgaDac.From6bitColorTo8bit(_memory.GetUint8(colorValuesAddress++));
+            byte g = Video.VgaDac.From6bitColorTo8bit(_memory.GetUint8(colorValuesAddress++));
+            byte b = Video.VgaDac.From6bitColorTo8bit(_memory.GetUint8(colorValuesAddress++));
             rgb.R = r;
             rgb.G = g;
             rgb.B = b;
@@ -136,18 +133,18 @@ public class VgaCard : DefaultIOPortHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET VGA READ INDEX {@Value}", value);
         }
-        _vgaDac.SetReadIndex(value);
-        _vgaDac.SetColour(0);
-        _vgaDac.SetState(VgaDac.VgaDacRead);
+        VgaDac.ReadIndex = value;
+        VgaDac.Colour = 0;
+        VgaDac.State = Video.VgaDac.VgaDacRead;
     }
 
     public void SetVgaWriteIndex(int value) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET VGA WRITE INDEX {@Value}", value);
         }
-        _vgaDac.SetWriteIndex(value);
-        _vgaDac.SetColour(0);
-        _vgaDac.SetState(VgaDac.VgaDacWrite);
+        VgaDac.WriteIndex = value;
+        VgaDac.Colour = 0;
+        VgaDac.State = Video.VgaDac.VgaDacWrite;
     }
 
     public void SetVideoModeValue(byte mode) {
@@ -190,7 +187,7 @@ public class VgaCard : DefaultIOPortHandler {
 
     public void UpdateScreen() {
         if (_gui != null) {
-            _gui.Draw(memory.GetRam(), _vgaDac.GetRgbs());
+            _gui.Draw(_memory.Ram, VgaDac.Rgbs);
         }
     }
 }

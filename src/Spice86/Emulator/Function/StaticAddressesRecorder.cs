@@ -26,7 +26,7 @@ public class StaticAddressesRecorder {
 
     public StaticAddressesRecorder(State state, bool debugMode) {
         this._debugMode = debugMode;
-        this._segmentRegisters = state.GetSegmentRegisters();
+        this._segmentRegisters = state.SegmentRegisters;
     }
 
     public void AddName(uint physicalAddress, string name) {
@@ -42,8 +42,7 @@ public class StaticAddressesRecorder {
             ushort segmentValue = _segmentRegisters.GetRegister(_currentSegmentIndex.Value);
             uint physicalAddress = MemoryUtils.ToPhysicalAddress(segmentValue, _currentOffset.Value);
             if (_segmentRegisterBasedAddress.TryGetValue(physicalAddress, out SegmentRegisterBasedAddress? value) == false) {
-                string? name;
-                _names.TryGetValue(physicalAddress, out name);
+                _names.TryGetValue(physicalAddress, out string? name);
                 value = new SegmentRegisterBasedAddress(segmentValue, _currentOffset.Value, name);
                 _segmentRegisterBasedAddress.Add(physicalAddress, value);
             }
@@ -52,9 +51,7 @@ public class StaticAddressesRecorder {
         }
     }
 
-    public Dictionary<uint, String> GetNames() {
-        return _names;
-    }
+    public Dictionary<uint, String> Names => _names;
 
     public ICollection<SegmentRegisterBasedAddress> GetSegmentRegisterBasedAddress() {
         return _segmentRegisterBasedAddress.Values;
