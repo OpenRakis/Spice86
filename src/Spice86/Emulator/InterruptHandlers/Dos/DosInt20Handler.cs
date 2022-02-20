@@ -13,9 +13,7 @@ public class DosInt20Handler : InterruptHandler {
     public DosInt20Handler(Machine machine) : base(machine) {
     }
 
-    public override byte GetIndex() {
-        return 0x20;
-    }
+    public override byte Index => 0x20;
 
     public override void Run() {
         _logger.Information("PROGRAM TERMINATE");

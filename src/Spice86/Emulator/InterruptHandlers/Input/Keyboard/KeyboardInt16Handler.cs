@@ -15,9 +15,7 @@ public class KeyboardInt16Handler : InterruptHandler {
         _dispatchTable.Add(0x01, new Callback(0x01, () => GetKeystrokeStatus(true)));
     }
 
-    public override byte GetIndex() {
-        return 0x16;
-    }
+    public override byte Index => 0x16;
 
     public void GetKeystroke() {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {

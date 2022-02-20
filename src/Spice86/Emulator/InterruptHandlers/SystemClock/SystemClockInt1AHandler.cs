@@ -24,9 +24,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         _dispatchTable.Add(0x85, new Callback(0x85, TandySoundSystemUnhandled));
     }
 
-    public override byte GetIndex() {
-        return 0x1A;
-    }
+    public override byte Index => 0x1A;
 
     public void GetSystemClockCounter() {
         uint value = _timerHandler.GetTickCounterValue();

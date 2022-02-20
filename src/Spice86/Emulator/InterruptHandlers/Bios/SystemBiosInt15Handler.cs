@@ -11,9 +11,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         _dispatchTable.Add(0xC4, new Callback(0xC4, Unsupported));
     }
 
-    public override byte GetIndex() {
-        return 0x15;
-    }
+    public override byte Index => 0x15;
 
     public override void Run() {
         byte operation = _state.GetAH();

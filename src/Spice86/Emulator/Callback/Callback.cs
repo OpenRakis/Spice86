@@ -3,17 +3,14 @@
 using System;
 
 public class Callback : ICallback {
-    private readonly byte _index;
     private readonly Action _runnable;
 
     public Callback(byte index, Action runnable) {
-        _index = index;
+        Index = index;
         _runnable = runnable;
     }
 
-    public byte GetIndex() {
-        return _index;
-    }
+    public byte Index { get; private set; }
 
     public void Run() {
         _runnable.Invoke();

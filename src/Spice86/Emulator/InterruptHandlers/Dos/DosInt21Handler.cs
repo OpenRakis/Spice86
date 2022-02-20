@@ -241,9 +241,7 @@ public class DosInt21Handler : InterruptHandler {
         _state.SetDX(8192);
     }
 
-    public override byte GetIndex() {
-        return 0x21;
-    }
+    public override byte Index => 0x21;
 
     public void GetInterruptVector() {
         byte vectorNumber = _state.GetAL();

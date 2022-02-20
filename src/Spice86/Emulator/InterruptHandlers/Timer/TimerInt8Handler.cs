@@ -19,9 +19,7 @@ public class TimerInt8Handler : InterruptHandler {
         _pic = machine.GetPic();
     }
 
-    public override byte GetIndex() {
-        return 0x8;
-    }
+    public override byte Index => 0x8;
 
     public uint GetTickCounterValue() {
         return _memory.GetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS);

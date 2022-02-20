@@ -34,9 +34,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
         _vgaCard.GetBlockOfDacColorRegisters(firstRegisterToGet, numberOfColorsToGet, colorValuesAddress);
     }
 
-    public override byte GetIndex() {
-        return 0x10;
-    }
+    public override byte Index => 0x10;
 
     public void GetSetPaletteRegisters() {
         byte op = _state.GetAL();

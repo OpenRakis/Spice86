@@ -2,5 +2,5 @@
 
 public interface ICallback : IRunnable {
 
-    public byte GetIndex();
+    public byte Index { get; }
 }

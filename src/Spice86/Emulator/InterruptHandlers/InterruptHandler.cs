@@ -23,12 +23,12 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
         _state = _cpu.GetState();
     }
 
-    public abstract byte GetIndex();
+    public abstract byte Index { get; }
 
     public abstract void Run();
 
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
-        return new UnhandledInterruptException(_machine, GetIndex(), index);
+        return new UnhandledInterruptException(_machine, Index, index);
     }
 
     protected void SetCarryFlag(bool value, bool setOnStack) {

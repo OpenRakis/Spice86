@@ -37,9 +37,7 @@ public class MouseInt33Handler : InterruptHandler {
         _dispatchTable.Add(0x1A, new Callback(0x1A, this.SetMouseSensitivity));
     }
 
-    public override byte GetIndex() {
-        return 0x33;
-    }
+    public override byte Index => 0x33;
 
     public void GetMousePositionAndStatus() {
         if(_gui is null) {
