@@ -8,9 +8,9 @@ public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : MemoryBase
 
     private readonly SegmentRegisters _segmentRegisters;
 
-    public MemoryBasedDataStructureWithSegmentRegisterBaseAddress(Machine machine, int segmentRegisterIndex) : base(machine.GetMemory()) {
+    public MemoryBasedDataStructureWithSegmentRegisterBaseAddress(Machine machine, int segmentRegisterIndex) : base(machine.Memory) {
         _segmentRegisterIndex = segmentRegisterIndex;
-        _segmentRegisters = machine.GetCpu().GetState().GetSegmentRegisters();
+        _segmentRegisters = machine.Cpu.GetState().GetSegmentRegisters();
     }
 
     public override uint BaseAddress => (uint)(_segmentRegisters.GetRegister(_segmentRegisterIndex) * 0x10);

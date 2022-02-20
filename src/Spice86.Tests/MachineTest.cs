@@ -87,7 +87,7 @@ public class MachineTest {
         // 0x4001 in little endian
         byte[] expected = new byte[] { 0x01, 0x40 };
         Machine emulator = TestOneBin("jmpmov", expected);
-        State state = emulator.GetCpu().GetState();
+        State state = emulator.Cpu.GetState();
         uint endAddress = MemoryUtils.ToPhysicalAddress(state.GetCS(), state.GetIP());
         // Last instruction HLT is one byte long and is at 0xF400C
         Assert.Equal((uint)0xF400D, endAddress);
@@ -144,7 +144,7 @@ public class MachineTest {
 
     private Machine TestOneBin(string binName, byte[] expected) {
         Machine machine = Execute(binName);
-        Memory memory = machine.GetMemory();
+        Memory memory = machine.Memory;
         CompareMemoryWithExpected(memory, expected, 0, expected.Length - 1);
         return machine;
     }
@@ -160,7 +160,7 @@ public class MachineTest {
 
         using ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
         Machine machine = programExecutor.Machine;
-        Cpu cpu = machine.GetCpu();
+        Cpu cpu = machine.Cpu;
         // Disabling custom IO handling
         cpu.SetIoPortDispatcher(null);
         cpu.SetErrorOnUninitializedInterruptHandler(false);

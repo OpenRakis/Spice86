@@ -95,8 +95,8 @@ public class FunctionHandler {
     }
 
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
-        Memory memory = _machine.GetMemory();
-        State state = _machine.GetCpu().GetState();
+        Memory memory = _machine.Memory;
+        State state = _machine.Cpu.GetState();
         return returnCallType switch {
             CallType.NEAR => new SegmentedAddress(state.GetCS(), memory.GetUint16(stackPhysicalAddress)),
             CallType.FAR or CallType.INTERRUPT => new SegmentedAddress(
@@ -167,7 +167,7 @@ public class FunctionHandler {
     }
 
     private FunctionReturn GenerateCurrentFunctionReturn(CallType returnCallType) {
-        Cpu cpu = _machine.GetCpu();
+        Cpu cpu = _machine.Cpu;
         State state = cpu.GetState();
         ushort cs = state.GetCS();
         ushort ip = state.GetIP();
@@ -182,7 +182,7 @@ public class FunctionHandler {
     }
 
     private SegmentedAddress GetCurrentStackAddress() {
-        State state = _machine.GetCpu().GetState();
+        State state = _machine.Cpu.GetState();
         return new SegmentedAddress(state.GetSS(), state.GetSP());
     }
 
@@ -197,7 +197,7 @@ public class FunctionHandler {
     }
 
     private uint GetStackPhysicalAddress() {
-        return _machine.GetCpu().GetState().GetStackPhysicalAddress();
+        return _machine.Cpu.GetState().GetStackPhysicalAddress();
     }
 
     private bool IsReturnAddressAlignedWithCallStack(FunctionCall currentFunctionCall, SegmentedAddress? actualReturnAddress, FunctionReturn currentFunctionReturn) {

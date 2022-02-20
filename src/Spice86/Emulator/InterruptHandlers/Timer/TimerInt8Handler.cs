@@ -14,9 +14,9 @@ public class TimerInt8Handler : InterruptHandler {
     private readonly Timer _timer;
 
     public TimerInt8Handler(Machine machine) : base(machine) {
-        _timer = machine.GetTimer();
-        _memory = machine.GetMemory();
-        _pic = machine.GetPic();
+        _timer = machine.Timer;
+        _memory = machine.Memory;
+        _pic = machine.Pic;
     }
 
     public override byte Index => 0x8;

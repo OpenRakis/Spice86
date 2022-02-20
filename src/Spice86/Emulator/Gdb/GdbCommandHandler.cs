@@ -33,7 +33,7 @@ public class GdbCommandHandler {
 
     public void PauseEmulator() {
         _gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(false);
-        _machine.GetMachineBreakpoints().PauseHandler.RequestPause();
+        _machine.MachineBreakpoints.PauseHandler.RequestPause();
     }
 
     public void RunCommand(string command) {
@@ -42,7 +42,7 @@ public class GdbCommandHandler {
         }
         char first = command[0];
         string commandContent = command[1..];
-        PauseHandler pauseHandler = _machine.GetMachineBreakpoints().PauseHandler;
+        PauseHandler pauseHandler = _machine.MachineBreakpoints.PauseHandler;
         pauseHandler.RequestPauseAndWait();
         try {
             string? response = first switch {
@@ -87,7 +87,7 @@ public class GdbCommandHandler {
     }
 
     private string Kill() {
-        _machine.GetCpu().SetRunning(false);
+        _machine.Cpu.SetRunning(false);
         return Detach();
     }
 

@@ -20,8 +20,8 @@ public abstract class ExecutableFileLoader {
 
     protected ExecutableFileLoader(Machine machine) {
         _machine = machine;
-        _cpu = machine.GetCpu();
-        _memory = machine.GetMemory();
+        _cpu = machine.Cpu;
+        _memory = machine.Memory;
     }
 
     public abstract byte[] LoadFile(string file, string? arguments);

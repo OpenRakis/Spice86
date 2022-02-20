@@ -18,8 +18,8 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
 
     protected InterruptHandler(Machine machine) {
         this._machine = machine;
-        _memory = machine.GetMemory();
-        _cpu = machine.GetCpu();
+        _memory = machine.Memory;
+        _cpu = machine.Cpu;
         _state = _cpu.GetState();
     }
 

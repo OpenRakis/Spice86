@@ -22,7 +22,7 @@ public class GdbCommandBreakpointHandler {
 
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
-        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
         }
@@ -31,7 +31,7 @@ public class GdbCommandBreakpointHandler {
 
     public string ContinueCommand() {
         _resumeEmulatorOnCommandEnd = true;
-        _machine.GetMachineBreakpoints().PauseHandler.RequestResume();
+        _machine.MachineBreakpoints.PauseHandler.RequestResume();
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return _gdbIo.GenerateResponse("OK");
@@ -45,7 +45,7 @@ public class GdbCommandBreakpointHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint reached!\n{@BreakPoint}", breakPoint);
         }
-        _machine.GetMachineBreakpoints().PauseHandler.RequestPause();
+        _machine.MachineBreakpoints.PauseHandler.RequestPause();
         _resumeEmulatorOnCommandEnd = false;
         try {
             _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
@@ -90,7 +90,7 @@ public class GdbCommandBreakpointHandler {
         if (breakPoint == null) {
             return _gdbIo.GenerateResponse("");
         }
-        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, false);
+        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, false);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint removed!\n{@BreakPoint}", breakPoint);
         }
@@ -106,7 +106,7 @@ public class GdbCommandBreakpointHandler {
 
         // will pause the CPU at the next instruction unconditionally
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, this.OnBreakPointReached, true);
-        _machine.GetMachineBreakpoints().ToggleBreakPoint(stepBreakPoint, true);
+        _machine.MachineBreakpoints.ToggleBreakPoint(stepBreakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added for step!\n{@StepBreakPoint}", stepBreakPoint);
         }

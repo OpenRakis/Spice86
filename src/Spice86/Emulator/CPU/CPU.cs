@@ -61,7 +61,7 @@ public class Cpu {
 
     public Cpu(Machine machine, JumpHandler jumpHandler, bool debugMode) {
         _machine = machine;
-        _memory = machine.GetMemory();
+        _memory = machine.Memory;
         _state = new State();
         _alu = new Alu(_state);
         _stack = new Stack(_memory, _state);

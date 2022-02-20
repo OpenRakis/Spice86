@@ -16,8 +16,8 @@ public class MachineBreakpoints {
     private BreakPoint? _machineStopBreakPoint;
 
     public MachineBreakpoints(Machine machine) {
-        _state = machine.GetCpu().GetState();
-        _memory = machine.GetMemory();
+        _state = machine.Cpu.GetState();
+        _memory = machine.Memory;
     }
 
     public void CheckBreakPoint() {

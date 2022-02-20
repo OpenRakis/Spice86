@@ -15,7 +15,7 @@ public class PspGenerator {
     }
 
     public void GeneratePsp(ushort pspSegment, string? arguments) {
-        Memory memory = _machine.GetMemory();
+        Memory memory = _machine.Memory;
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 
         // https://en.wikipedia.org/wiki/Program_Segment_Prefix
@@ -25,7 +25,7 @@ public class PspGenerator {
         ushort lastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
         memory.SetUint16(pspAddress + LAST_FREE_SEGMENT_OFFSET, lastFreeSegment);
         memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
-        DosInt21Handler dosFunctionDispatcher = _machine.GetDosInt21Handler();
+        DosInt21Handler dosFunctionDispatcher = _machine.DosInt21Handler;
         dosFunctionDispatcher.GetDosMemoryManager().Init(pspSegment, lastFreeSegment);
         dosFunctionDispatcher.GetDosFileManager().SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
     }

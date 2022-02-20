@@ -15,8 +15,8 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
 
     protected DefaultIOPortHandler(Machine machine, bool failOnUnhandledPort) {
         this._machine = machine;
-        this._memory = machine.GetMemory();
-        this._cpu = machine.GetCpu();
+        this._memory = machine.Memory;
+        this._cpu = machine.Cpu;
         this._failOnUnhandledPort = failOnUnhandledPort;
     }
 

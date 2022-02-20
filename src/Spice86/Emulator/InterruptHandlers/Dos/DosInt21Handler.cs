@@ -35,7 +35,7 @@ public class DosInt21Handler : InterruptHandler {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var westernIbmPcCodePage = Encoding.GetEncoding("ibm850");
         _cp850CharSet = westernIbmPcCodePage;
-        _dosMemoryManager = new DosMemoryManager(machine.GetMemory());
+        _dosMemoryManager = new DosMemoryManager(machine.Memory);
         _dosFileManager = new DosFileManager(_memory);
         FillDispatchTable();
     }
@@ -101,7 +101,7 @@ public class DosInt21Handler : InterruptHandler {
         if (character == 0xFF) {
             _logger.Debug("DIRECT CONSOLE IO, INPUT REQUESTED");
             // Read from STDIN, not implemented, return no character ready
-            ushort? scancode = _machine.GetKeyboardInt16Handler().GetNextKeyCode();
+            ushort? scancode = _machine.KeyboardInt16Handler.GetNextKeyCode();
             if (scancode == null) {
                 SetZeroFlag(true, calledFromVm);
                 _state.SetAL(0);

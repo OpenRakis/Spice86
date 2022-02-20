@@ -18,7 +18,7 @@ public class ModRM {
     public ModRM(Machine machine, Cpu cpu) {
         _machine = machine;
         _cpu = cpu;
-        _memory = machine.GetMemory();
+        _memory = machine.Memory;
         _state = cpu.GetState();
         _staticAddressesRecorder = cpu.GetStaticAddressesRecorder();
     }

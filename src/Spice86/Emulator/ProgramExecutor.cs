@@ -158,7 +158,7 @@ public class ProgramExecutor : IDisposable {
     }
 
     private void InitializeCpu() {
-        Cpu cpu = Machine.GetCpu();
+        Cpu cpu = Machine.Cpu;
         cpu.SetErrorOnUninitializedInterruptHandler(true);
         State state = cpu.GetState();
         state.GetFlags().SetDosboxCompatibility(true);
@@ -179,14 +179,14 @@ public class ProgramExecutor : IDisposable {
             throw new ArgumentNullException(nameof(parentFolder));
         }
         driveMap.Add('C', cDrive);
-        Machine.GetDosInt21Handler().GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
+        Machine.DosInt21Handler.GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration) {
         if (configuration.OverrideSupplier is null) {
             return;
         }
-        Cpu cpu = Machine.GetCpu();
+        Cpu cpu = Machine.Cpu;
         Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, Machine);
         bool useCodeOverride = configuration.UseCodeOverride;
         SetupFunctionHandler(cpu.GetFunctionHandler(), functionInformations, useCodeOverride);

@@ -31,7 +31,7 @@ public class Timer : DefaultIOPortHandler {
     public Timer(Machine machine, Pic pic, VgaCard vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
         this._pic = pic;
         this._vgaCard = vgaCard;
-        this._cpu = machine.GetCpu();
+        this._cpu = machine.Cpu;
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(machine, i, counterConfigurator.InstanciateCounterActivator(_cpu.GetState()));
         }

@@ -11,8 +11,8 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
 
     public BiosKeyboardInt9Handler(Machine machine) : base(machine) {
-        this._keyboard = machine.GetKeyboard();
-        this._biosKeyboardBuffer = new BiosKeyboardBuffer(machine.GetMemory());
+        this._keyboard = machine.Keyboard;
+        this._biosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
         _biosKeyboardBuffer.Init();
     }
 

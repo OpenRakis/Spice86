@@ -74,7 +74,7 @@ public class GdbCommandRegisterHandler {
     }
 
     private uint GetRegisterValue(int regIndex) {
-        State state = _machine.GetCpu().GetState();
+        State state = _machine.Cpu.GetState();
         if (regIndex < 8) {
             return state.GetRegisters().GetRegister(regIndex);
         }
@@ -108,7 +108,7 @@ public class GdbCommandRegisterHandler {
     }
 
     private void SetRegisterValue(int regIndex, ushort value) {
-        State state = _machine.GetCpu().GetState();
+        State state = _machine.Cpu.GetState();
         if (regIndex < 8) {
             state.GetRegisters().SetRegister(regIndex, value);
         } else if (regIndex == 8) {

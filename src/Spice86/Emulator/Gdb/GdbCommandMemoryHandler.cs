@@ -33,7 +33,7 @@ public class GdbCommandMemoryHandler {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Reading memory at address {@Address} for a length of {@Length}", address, length);
             }
-            Memory memory = _machine.GetMemory();
+            Memory memory = _machine.Memory;
             int memorySize = memory.Size;
             var response = new StringBuilder((int)length * 2);
             for (long i = 0; i < length; i++) {
@@ -71,7 +71,7 @@ public class GdbCommandMemoryHandler {
         // variable 2 hex strings
         int patternStartIndex = 3 + "Search:memory:".Length + 2 + parameters[0].Length + parameters[1].Length;
         List<Byte> patternBytesList = rawCommand.GetRange(patternStartIndex, rawCommand.Count - 1);
-        Memory memory = _machine.GetMemory();
+        Memory memory = _machine.Memory;
         uint? address = memory.SearchValue(start, (int)end, patternBytesList);
         if (address == null) {
             return _gdbIo.GenerateResponse("0");
@@ -90,7 +90,7 @@ public class GdbCommandMemoryHandler {
                 return _gdbIo.GenerateResponse("E01");
             }
 
-            Memory memory = _machine.GetMemory();
+            Memory memory = _machine.Memory;
             if (address + length > memory.Size) {
                 return _gdbIo.GenerateResponse("E02");
             }

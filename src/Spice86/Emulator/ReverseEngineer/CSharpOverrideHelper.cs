@@ -35,8 +35,8 @@ public class CSharpOverrideHelper {
         this._functionInformations = functionInformations;
         this._prefix = prefix;
         this._machine = machine;
-        this._cpu = machine.GetCpu();
-        this._memory = machine.GetMemory();
+        this._cpu = machine.Cpu;
+        this._memory = machine.Memory;
         this._state = _cpu.GetState();
         this._stack = _cpu.GetStack();
     }
@@ -112,11 +112,11 @@ public class CSharpOverrideHelper {
                 offset),
             (b) => renamedOverride.Invoke()
         , false);
-        _machine.GetMachineBreakpoints().ToggleBreakPoint(breakPoint, true);
+        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
     public void SetProvidedInterruptHandlersAsOverridden() {
-        CallbackHandler callbackHandler = _machine.GetCallbackHandler();
+        CallbackHandler callbackHandler = _machine.CallbackHandler;
         Dictionary<byte, SegmentedAddress> callbackAddresses = callbackHandler.GetCallbackAddresses();
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackAddresses) {
             byte callbackNumber = callbackAddressEntry.Key;
