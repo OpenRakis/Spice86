@@ -18,7 +18,7 @@ public class ComLoader : ExecutableFileLoader {
         byte[] com = this.ReadFile(file);
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(_startSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
-        State? state = _cpu.GetState();
+        State? state = _cpu.State;
 
         // Make DS and ES point to the PSP
         state.DS = _startSegment;

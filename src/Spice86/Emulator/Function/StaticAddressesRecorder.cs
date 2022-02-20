@@ -51,9 +51,7 @@ public class StaticAddressesRecorder {
         }
     }
 
-    public Dictionary<uint, String> GetNames() {
-        return _names;
-    }
+    public Dictionary<uint, String> Names => _names;
 
     public ICollection<SegmentRegisterBasedAddress> GetSegmentRegisterBasedAddress() {
         return _segmentRegisterBasedAddress.Values;

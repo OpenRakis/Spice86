@@ -80,7 +80,7 @@ public class GdbCustomCommandsHandler {
         }
 
         long cyclesToWait = long.Parse(cyclesToWaitString);
-        long currentCycles = _machine.Cpu.GetState().Cycles;
+        long currentCycles = _machine.Cpu.State.Cycles;
         long cyclesBreak = currentCycles + cyclesToWait;
         var breakPoint = new BreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
@@ -143,7 +143,7 @@ public class GdbCustomCommandsHandler {
         string fileName = GetFirstArgumentOrDefaultFileSuffix(args, defaultSuffix);
         return DoFileAction(fileName, (f) => {
             Cpu cpu = _machine.Cpu;
-            new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.GetStaticAddressesRecorder(), cpu.GetFunctionHandler(), cpu.GetFunctionHandlerInExternalInterrupt());
+            new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.StaticAddressesRecorder, cpu.FunctionHandler, cpu.FunctionHandlerInExternalInterrupt);
         }, "Error while dumping functions");
     }
 
@@ -303,7 +303,7 @@ public class GdbCustomCommandsHandler {
     }
 
     private string State() {
-        string state = _machine.Cpu.GetState().ToString();
+        string state = _machine.Cpu.State.ToString();
         return _gdbIo.GenerateMessageToDisplayResponse(state);
     }
 

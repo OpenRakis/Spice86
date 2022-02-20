@@ -37,8 +37,8 @@ public class CSharpOverrideHelper {
         this._machine = machine;
         this._cpu = machine.Cpu;
         this._memory = machine.Memory;
-        this._state = _cpu.GetState();
-        this._stack = _cpu.GetStack();
+        this._state = _cpu.State;
+        this._stack = _cpu.Stack;
     }
 
     public void DefineFunction(ushort segment, ushort offset, string suffix) {
@@ -66,8 +66,8 @@ public class CSharpOverrideHelper {
     public void DefineStaticAddress(ushort segment, ushort offset, string name, bool whiteListOnlyThisSegment) {
         SegmentedAddress address = new(segment, offset);
         uint physicalAddress = address.ToPhysical();
-        StaticAddressesRecorder recorder = _cpu.GetStaticAddressesRecorder();
-        if (recorder.GetNames().TryGetValue(physicalAddress, out var existing)) {
+        StaticAddressesRecorder recorder = _cpu.StaticAddressesRecorder;
+        if (recorder.Names.TryGetValue(physicalAddress, out var existing)) {
             string error = $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existing, name);

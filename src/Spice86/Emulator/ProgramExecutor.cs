@@ -159,8 +159,8 @@ public class ProgramExecutor : IDisposable {
 
     private void InitializeCpu() {
         Cpu cpu = Machine.Cpu;
-        cpu.SetErrorOnUninitializedInterruptHandler(true);
-        State state = cpu.GetState();
+        cpu.ErrorOnUninitializedInterruptHandler = true;
+        State state = cpu.State;
         state.Flags.IsDOSBoxCompatible = true;
     }
 
@@ -189,8 +189,8 @@ public class ProgramExecutor : IDisposable {
         Cpu cpu = Machine.Cpu;
         Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, Machine);
         bool useCodeOverride = configuration.UseCodeOverride;
-        SetupFunctionHandler(cpu.GetFunctionHandler(), functionInformations, useCodeOverride);
-        SetupFunctionHandler(cpu.GetFunctionHandlerInExternalInterrupt(), functionInformations, useCodeOverride);
+        SetupFunctionHandler(cpu.FunctionHandler, functionInformations, useCodeOverride);
+        SetupFunctionHandler(cpu.FunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
     }
 
     private void LoadFileToRun(Configuration configuration) {

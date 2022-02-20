@@ -33,7 +33,7 @@ public class Timer : DefaultIOPortHandler {
         this._vgaCard = vgaCard;
         this._cpu = machine.Cpu;
         for (int i = 0; i < _counters.Length; i++) {
-            _counters[i] = new Counter(machine, i, counterConfigurator.InstanciateCounterActivator(_cpu.GetState()));
+            _counters[i] = new Counter(machine, i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         }
 
         _vgaCounter = new Counter(machine, 4, new TimeCounterActivator(1));
@@ -96,7 +96,7 @@ public class Timer : DefaultIOPortHandler {
     }
 
     public void Tick() {
-        long cycles = _cpu.GetState().Cycles;
+        long cycles = _cpu.State.Cycles;
         if (_counters[0].ProcessActivation(cycles)) {
             _pic.ProcessInterrupt(0x8);
         }

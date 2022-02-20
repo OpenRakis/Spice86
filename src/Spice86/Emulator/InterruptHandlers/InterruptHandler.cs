@@ -20,7 +20,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
         this._machine = machine;
         _memory = machine.Memory;
         _cpu = machine.Cpu;
-        _state = _cpu.GetState();
+        _state = _cpu.State;
     }
 
     public abstract byte Index { get; }

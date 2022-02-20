@@ -17,6 +17,6 @@ public class DosInt20Handler : InterruptHandler {
 
     public override void Run() {
         _logger.Information("PROGRAM TERMINATE");
-        _cpu.SetRunning(false);
+        _cpu.IsRunning = false;
     }
 }

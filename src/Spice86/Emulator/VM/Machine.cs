@@ -45,7 +45,7 @@ public class Machine {
 
         // IO devices
         IoPortDispatcher = new IOPortDispatcher(this, failOnUnhandledPort);
-        Cpu.SetIoPortDispatcher(IoPortDispatcher);
+        Cpu.IoPortDispatcher = IoPortDispatcher;
         Pic = new Pic(this, true, failOnUnhandledPort);
         Register(Pic);
         VgaCard = new VgaCard(this, gui, failOnUnhandledPort);
@@ -67,7 +67,7 @@ public class Machine {
 
         // Services
         CallbackHandler = new CallbackHandler(this, (ushort)InterruptHandlersSegment);
-        Cpu.SetCallbackHandler(CallbackHandler);
+        Cpu.CallbackHandler = CallbackHandler;
         TimerInt8Handler = new TimerInt8Handler(this);
         Register(TimerInt8Handler);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this);
@@ -94,9 +94,9 @@ public class Machine {
     public bool DebugMode { get; private set; }
 
     public string DumpCallStack() {
-        FunctionHandler inUse = Cpu.GetFunctionHandlerInUse();
+        FunctionHandler inUse = Cpu.FunctionHandlerInUse;
         string callStack = "";
-        if (inUse.Equals(Cpu.GetFunctionHandlerInExternalInterrupt())) {
+        if (inUse.Equals(Cpu.FunctionHandlerInExternalInterrupt)) {
             callStack += "From external interrupt:\n";
         }
 
@@ -159,11 +159,11 @@ public class Machine {
     }
 
     public string PeekReturn() {
-        return ToString(Cpu.GetFunctionHandlerInUse().PeekReturnAddressOnMachineStackForCurrentFunction());
+        return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
     }
 
     public string PeekReturn(CallType returnCallType) {
-        return ToString(Cpu.GetFunctionHandlerInUse().PeekReturnAddressOnMachineStack(returnCallType));
+        return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
     }
 
     public void Register(IIOPortHandler ioPortHandler) {
@@ -175,8 +175,8 @@ public class Machine {
     }
 
     public void Run() {
-        State state = Cpu.GetState();
-        FunctionHandler functionHandler = Cpu.GetFunctionHandler();
+        State state = Cpu.State;
+        FunctionHandler functionHandler = Cpu.FunctionHandler;
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, () => "entry", false);
         try {
             RunLoop();

@@ -344,7 +344,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("QUIT WITH EXIT CODE {@ExitCode}", ConvertUtils.ToHex8(exitCode));
         }
-        _cpu.SetRunning(false);
+        _cpu.IsRunning = false;
     }
 
     public void ReadFile(bool calledFromVm) {

@@ -32,7 +32,7 @@ public class ExeLoader : ExecutableFileLoader {
         SetupCpuForExe(exeFile, _startSegment, pspSegment);
         new PspGenerator(_machine).GeneratePsp(pspSegment, arguments);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Initial CPU State: {@CpuState}", _cpu.GetState());
+            _logger.Debug("Initial CPU State: {@CpuState}", _cpu.State);
         }
         return exe;
     }
@@ -50,7 +50,7 @@ public class ExeLoader : ExecutableFileLoader {
     }
 
     private void SetupCpuForExe(ExeFile exeFile, ushort startSegment, ushort pspSegment) {
-        State state = _cpu.GetState();
+        State state = _cpu.State;
 
         // MS-DOS uses the values in the file header to set the SP and SS registers and
         // adjusts the initial value of the SS register by adding the start-segment

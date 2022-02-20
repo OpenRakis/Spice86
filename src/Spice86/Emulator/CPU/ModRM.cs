@@ -16,8 +16,8 @@ public class ModRM {
         _machine = machine;
         _cpu = cpu;
         _memory = machine.Memory;
-        _state = cpu.GetState();
-        _staticAddressesRecorder = cpu.GetStaticAddressesRecorder();
+        _state = cpu.State;
+        _staticAddressesRecorder = cpu.StaticAddressesRecorder;
     }
 
     public uint GetAddress(int defaultSegmentRegisterIndex, ushort offset, bool recordAddress) {
