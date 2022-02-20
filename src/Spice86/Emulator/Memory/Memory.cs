@@ -112,7 +112,7 @@ public class Memory {
     }
 
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
-        BreakPointType? type = breakPoint.GetBreakPointType();
+        BreakPointType? type = breakPoint.BreakPointType;
         switch (type) {
             case BreakPointType.READ:
                 _readBreakPoints.ToggleBreakPoint(breakPoint, on);

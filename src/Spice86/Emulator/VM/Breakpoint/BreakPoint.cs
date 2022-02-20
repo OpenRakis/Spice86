@@ -3,42 +3,30 @@
 using System;
 
 public class BreakPoint {
-    private readonly long _address;
-
-    private readonly BreakPointType? _breakPointType;
-
-    private readonly Action<BreakPoint> _onReached;
-
-    private readonly bool _removeOnTrigger;
-
-    public BreakPoint(BreakPointType? breakPointType, long address, Action<BreakPoint> onReached, bool removeOnTrigger) {
-        this._breakPointType = breakPointType;
-        this._address = address;
-        this._onReached = onReached;
-        this._removeOnTrigger = removeOnTrigger;
+    public BreakPoint(BreakPointType? breakPointType, long address, Action<BreakPoint> onReached, bool isRemovedOnTrigger) {
+        BreakPointType = breakPointType;
+        Address = address;
+        OnReached = onReached;
+        IsRemovedOnTrigger = isRemovedOnTrigger;
     }
 
-    public long GetAddress() {
-        return _address;
-    }
+    public Action<BreakPoint> OnReached { get; private set; }
 
-    public BreakPointType? GetBreakPointType() {
-        return _breakPointType;
-    }
+    public long Address { get; private set; }
 
-    public bool IsRemoveOnTrigger() {
-        return _removeOnTrigger;
-    }
+    public BreakPointType? BreakPointType { get; private set; }
+
+    public bool IsRemovedOnTrigger { get; private set; }
 
     public virtual bool Matches(long address) {
-        return this._address == address;
+        return Address == address;
     }
 
     public virtual bool Matches(long startAddress, long endAddress) {
-        return this._address >= startAddress && this._address < endAddress;
+        return Address >= startAddress && this.Address < endAddress;
     }
 
     public void Trigger() {
-        _onReached.Invoke(this);
+        OnReached.Invoke(this);
     }
 }

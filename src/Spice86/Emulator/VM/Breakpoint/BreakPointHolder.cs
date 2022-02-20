@@ -51,7 +51,7 @@ public class BreakPointHolder {
             BreakPoint breakPoint = breakPointList[i];
             if (breakPoint.Matches(address)) {
                 breakPoint.Trigger();
-                if (breakPoint.IsRemoveOnTrigger()) {
+                if (breakPoint.IsRemovedOnTrigger) {
                     breakPointList.Remove(breakPoint);
                 }
             }
@@ -67,7 +67,7 @@ public class BreakPointHolder {
     }
 
     private void ToggleConditionalBreakPoint(BreakPoint breakPoint, bool on) {
-        long address = breakPoint.GetAddress();
+        long address = breakPoint.Address;
         if (on) {
             List<BreakPoint> breakPointList = _breakPoints.ComputeIfAbsent(address, new());
             breakPointList.Add(breakPoint);

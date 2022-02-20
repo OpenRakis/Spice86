@@ -38,7 +38,7 @@ public class MachineBreakpoints {
         if (breakPoint is null) {
             return;
         }
-        BreakPointType? breakPointType = breakPoint.GetBreakPointType();
+        BreakPointType? breakPointType = breakPoint.BreakPointType;
         if (breakPointType == BreakPointType.EXECUTION) {
             _executionBreakPoints.ToggleBreakPoint(breakPoint, on);
         } else if (breakPointType == BreakPointType.CYCLES) {
