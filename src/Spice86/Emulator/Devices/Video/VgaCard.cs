@@ -190,7 +190,7 @@ public class VgaCard : DefaultIOPortHandler {
 
     public void UpdateScreen() {
         if (_gui != null) {
-            _gui.Draw(_memory.GetRam(), _vgaDac.GetRgbs());
+            _gui.Draw(_memory.Ram, _vgaDac.GetRgbs());
         }
     }
 }

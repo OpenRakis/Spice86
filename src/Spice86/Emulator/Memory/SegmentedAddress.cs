@@ -5,13 +5,9 @@ using System;
 
 /// <summary> An address that is represented with a real mode segment and an offset. </summary>
 public class SegmentedAddress : IComparable<SegmentedAddress> {
-    private readonly ushort _offset;
-
-    private readonly ushort _segment;
-
     public SegmentedAddress(ushort segment, ushort offset) {
-        _segment = segment;
-        _offset = offset;
+        Segment = segment;
+        Offset = offset;
     }
 
     public int CompareTo(SegmentedAddress? other) {
@@ -30,27 +26,23 @@ public class SegmentedAddress : IComparable<SegmentedAddress> {
         if (obj is not SegmentedAddress other) {
             return false;
         }
-        return MemoryUtils.ToPhysicalAddress(_segment, _offset) == MemoryUtils.ToPhysicalAddress(other._segment, other._offset);
+        return MemoryUtils.ToPhysicalAddress(Segment, Offset) == MemoryUtils.ToPhysicalAddress(other.Segment, other.Offset);
     }
 
     public override int GetHashCode() {
         return (int)ToPhysical();
     }
 
-    public ushort GetOffset() {
-        return _offset;
-    }
+    public ushort Offset { get; private set; }
 
-    public ushort GetSegment() {
-        return _segment;
-    }
+    public ushort Segment { get; private set; }
 
     public uint ToPhysical() {
-        return MemoryUtils.ToPhysicalAddress(_segment, _offset);
+        return MemoryUtils.ToPhysicalAddress(Segment, Offset);
     }
 
     public string ToSegmentOffsetRepresentation() {
-        return ConvertUtils.ToSegmentedAddressRepresentation(_segment, _offset);
+        return ConvertUtils.ToSegmentedAddressRepresentation(Segment, Offset);
     }
 
     public override string ToString() {

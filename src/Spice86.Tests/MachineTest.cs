@@ -180,7 +180,7 @@ public class MachineTest {
     }
 
     private void CompareMemoryWithExpected(Memory memory, byte[] expected, int start, int end) {
-        byte[] actual = memory.GetRam();
+        byte[] actual = memory.Ram;
         for (uint i = 0; i < end; i++) {
             byte actualByte = actual[i];
             byte expectedByte = expected[i];

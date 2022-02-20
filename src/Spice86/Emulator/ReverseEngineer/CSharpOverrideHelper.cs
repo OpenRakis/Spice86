@@ -125,7 +125,7 @@ public class CSharpOverrideHelper {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
             });
-            DefineFunction(callbackAddress.GetSegment(), callbackAddress.GetOffset(), $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}", runnable);
+            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}", runnable);
         }
     }
 

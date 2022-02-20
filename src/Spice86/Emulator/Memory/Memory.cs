@@ -29,13 +29,10 @@ public class Memory {
         return res;
     }
 
-    public byte[] GetRam() {
-        return _physicalMemory;
-    }
+    public byte[] Ram => _physicalMemory;
 
-    public int GetSize() {
-        return _physicalMemory.Length;
-    }
+    public int Size => _physicalMemory.Length;
+    
 
     public ushort GetUint16(uint address) {
         ushort res = MemoryUtils.GetUint16(_physicalMemory, address);

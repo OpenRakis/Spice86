@@ -316,7 +316,7 @@ public class GdbCustomCommandsHandler {
             // Actions for 1 parameter
             if ("refresh".Equals(action)) {
                 Memory memory = _machine.GetMemory();
-                gui?.Draw(memory.GetRam(), vgaCard.GetVgaDac().GetRgbs());
+                gui?.Draw(memory.Ram, vgaCard.GetVgaDac().GetRgbs());
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
                 var listBuilder = new StringBuilder();

@@ -286,7 +286,7 @@ public class DosFileManager {
         }
 
         try {
-            file.GetRandomAccessFile().Write(_memory.GetRam(), (int)bufferAddress, writeLength);
+            file.GetRandomAccessFile().Write(_memory.Ram, (int)bufferAddress, writeLength);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }

@@ -33,7 +33,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
     protected abstract string GenerateFileHeaderWithAccessors(int numberOfGlobals, string globalsContent, string segmentValues);
     private static bool IsOffsetEqualsAndSegmentDifferent(SegmentedAddress address1, SegmentedAddress address2) {
-        return address1.GetSegment() != address2.GetSegment() && address1.GetOffset() == address2.GetOffset();
+        return address1.Segment != address2.Segment && address1.Offset == address2.Offset;
     }
 
     private static string GetStringSegmentValuesForDisplay(int segmentIndex, IEnumerable<ushort> values) {
@@ -51,12 +51,12 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
     private static Dictionary<ushort, List<SegmentRegisterBasedAddress>> GetAddressesBySegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
         return globals.GroupBy(
-                x => x.GetSegment())
+                x => x.Segment)
             .ToDictionary(g => g.Key, g => g.ToList());
     }
 
     private static List<ushort> GetSegmentValues(ISet<SegmentRegisterBasedAddress> globals) {
-        return globals.Select(x => x.GetSegment()).Distinct().ToList();
+        return globals.Select(x => x.Segment).Distinct().ToList();
     }
 
     private static Dictionary<int, ISet<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
@@ -160,7 +160,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
             javaName += "_" + name;
         }
 
-        string offset = ConvertUtils.ToHex16(address.GetOffset());
+        string offset = ConvertUtils.ToHex16(address.Offset);
         if (ValueOperation.READ.Equals(addressOperation.GetValueOperation())) {
             return GenerateGetter(comment, operandSize, javaName, offset);
         }
@@ -226,8 +226,8 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         string? functionName = RemoveDotsFromFunctionName(functionInformation.GetName());
         SegmentedAddress functionAddress = functionInformation.GetAddress();
         string functionNameInJava = ToCSharpName(functionInformation, false);
-        string segment = ConvertUtils.ToHex16(functionAddress.GetSegment());
-        string offset = ConvertUtils.ToHex16(functionAddress.GetOffset());
+        string segment = ConvertUtils.ToHex16(functionAddress.Segment);
+        string offset = ConvertUtils.ToHex16(functionAddress.Offset);
         string retType = returnType.ToString().ToLowerInvariant();
         return GenerateFunctionStub(callsAsComments, functionName, functionNameInJava, segment, offset, retType);
     }

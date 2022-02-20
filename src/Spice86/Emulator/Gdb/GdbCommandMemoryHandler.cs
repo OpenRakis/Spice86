@@ -34,7 +34,7 @@ public class GdbCommandMemoryHandler {
                 _logger.Information("Reading memory at address {@Address} for a length of {@Length}", address, length);
             }
             Memory memory = _machine.GetMemory();
-            int memorySize = memory.GetSize();
+            int memorySize = memory.Size;
             var response = new StringBuilder((int)length * 2);
             for (long i = 0; i < length; i++) {
                 long readAddress = address + i;
@@ -91,7 +91,7 @@ public class GdbCommandMemoryHandler {
             }
 
             Memory memory = _machine.GetMemory();
-            if (address + length > memory.GetSize()) {
+            if (address + length > memory.Size) {
                 return _gdbIo.GenerateResponse("E02");
             }
 
