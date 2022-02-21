@@ -32,7 +32,22 @@ public class Memory {
     public byte[] Ram => _physicalMemory;
 
     public int Size => _physicalMemory.Length;
-    
+
+    public byte this[uint i] {
+        get { return GetUint8(i); }
+        set { SetUint8(i, value); }
+    }
+
+    public ushort this[ushort i] {
+        get { return GetUint16(i); }
+        set { SetUint16(i, value); }
+    }
+
+    public uint this[int i] {
+        get { return GetUint32((uint)i); }
+        set { SetUint32((uint)i, value); }
+    }
+
 
     public ushort GetUint16(uint address) {
         ushort res = MemoryUtils.GetUint16(_physicalMemory, address);
