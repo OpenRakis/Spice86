@@ -21,7 +21,7 @@ public class DosMemoryManager {
         IList<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
 
         // take the smallest
-        DosMemoryControlBlock? blockOptional = candidates.OrderBy(x => x.GetSize()).FirstOrDefault();
+        DosMemoryControlBlock? blockOptional = candidates.OrderBy(x => x.Size).FirstOrDefault();
         if (blockOptional is null) {
             // Nothing found
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
@@ -39,7 +39,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.SetPspSegment(_pspSegment);
+        block.PspSegment = _pspSegment;
         return block;
     }
 
@@ -47,11 +47,11 @@ public class DosMemoryManager {
         DosMemoryControlBlock? current = _start;
         DosMemoryControlBlock? largest = null;
         while (true) {
-            if (current != null && current.IsFree() && (largest == null || current.GetSize() > largest.GetSize())) {
+            if (current != null && current.IsFree && (largest == null || current.Size > largest.Size)) {
                 largest = current;
             }
 
-            if (current != null && current.IsLast() && largest != null) {
+            if (current != null && current.IsLast && largest != null) {
                 return largest;
             }
 
@@ -78,7 +78,7 @@ public class DosMemoryManager {
         _start = GetDosMemoryControlBlockFromSegment(startSegment);
 
         // size -1 because the mcb itself takes 16 bytes which is 1 paragraph
-        _start.SetSize((ushort)(size - 1));
+        _start.Size = (ushort)(size - 1);
         _start.SetFree();
         _start.SetLast();
     }
@@ -97,23 +97,23 @@ public class DosMemoryManager {
             return false;
         }
 
-        if (block.GetSize() < requestedSize - 1) {
+        if (block.Size < requestedSize - 1) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("MCB {@Block} is too small for requested size {@RequestedSize}.", block, requestedSize);
             }
             return false;
         }
 
-        if (block.GetSize() > requestedSize) {
+        if (block.Size > requestedSize) {
             SplitBlock(block, requestedSize);
         }
 
-        block.SetPspSegment(_pspSegment);
+        block.PspSegment = _pspSegment;
         return true;
     }
 
     private bool CheckValidOrLogError(DosMemoryControlBlock? block) {
-        if (block is null || !block.IsValid()) {
+        if (block is null || !block.IsValid) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("MCB {@Block} is invalid.", block);
             }
@@ -131,10 +131,10 @@ public class DosMemoryManager {
                 return new List<DosMemoryControlBlock>();
             }
             JoinBlocks(current, true);
-            if (current?.IsFree() == true && current.GetSize() >= requestedSize) {
+            if (current?.IsFree == true && current.Size >= requestedSize) {
                 candidates.Add(current);
             }
-            if (current?.IsLast() == true) {
+            if (current?.IsLast == true) {
                 return candidates;
             }
             current = current?.Next();
@@ -146,14 +146,14 @@ public class DosMemoryManager {
     }
 
     private bool JoinBlocks(DosMemoryControlBlock? block, bool onlyIfFree) {
-        if (onlyIfFree && block?.IsFree() == false) {
+        if (onlyIfFree && block?.IsFree == false) {
             // Do not touch blocks in use
             return true;
         }
 
-        while (block?.IsNonLast() == true) {
+        while (block?.IsNonLast == true) {
             DosMemoryControlBlock next = block.Next();
-            if (!next.IsFree()) {
+            if (!next.IsFree) {
                 // end of the free blocks reached
                 break;
             }
@@ -172,10 +172,10 @@ public class DosMemoryManager {
     }
 
     private void JoinContiguousBlocks(DosMemoryControlBlock destination, DosMemoryControlBlock next) {
-        destination.SetTypeField(next.GetTypeField());
+        destination.TypeField = next.TypeField;
 
         // +1 because next block metadata is going to free space
-        destination.SetSize((ushort)(destination.GetSize() + next.GetSize() + 1));
+        destination.Size = (ushort)(destination.Size + next.Size + 1);
     }
 
     /// <summary>
@@ -190,7 +190,7 @@ public class DosMemoryManager {
     /// <param name="size"></param>
     /// <returns></returns>
     private bool SplitBlock(DosMemoryControlBlock block, ushort size) {
-        ushort blockSize = block.GetSize();
+        ushort blockSize = block.Size;
         if (blockSize == size) {
             // nothing to do
             return true;
@@ -204,18 +204,18 @@ public class DosMemoryManager {
             return false;
         }
 
-        block.SetSize(size);
+        block.Size = size;
         DosMemoryControlBlock next = block.Next();
 
         // if it was last propagate it
-        next.SetTypeField(block.GetTypeField());
+        next.TypeField = block.TypeField;
 
         // we are non last now for sure
         block.SetNonLast();
 
         // next is free
         next.SetFree();
-        next.SetSize((ushort)(nextBlockSize));
+        next.Size = (ushort)(nextBlockSize);
         return true;
     }
 }

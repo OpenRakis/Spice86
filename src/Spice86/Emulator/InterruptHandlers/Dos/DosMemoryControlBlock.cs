@@ -21,77 +21,45 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     public DosMemoryControlBlock(Memory memory, uint baseAddress) : base(memory, baseAddress) {
     }
 
-    public string GetFileName() {
-        return base.GetZeroTerminatedString(FilenameFieldOffset, FilenameFieldSize);
-    }
+    public string FileName { get => base.GetZeroTerminatedString(FilenameFieldOffset, FilenameFieldSize); set => base.SetZeroTerminatedString(FilenameFieldOffset, value, FilenameFieldSize); }
 
-    public ushort GetPspSegment() {
-        return this.GetUint16(PspSegmentFieldOffset);
-    }
+    public ushort PspSegment { get => this.GetUint16(PspSegmentFieldOffset); set => this.SetUint16(PspSegmentFieldOffset, value); }
 
-    // Size is in paragraph (as are segments)
-    public ushort GetSize() {
-        return this.GetUint16(SizeFieldOffset);
-    }
+    /// <summary>
+    /// <see cref="Size"/> is in paragraph (as are segments)
+    /// </summary>
+    public ushort Size { get => this.GetUint16(SizeFieldOffset); set => this.SetUint16(SizeFieldOffset, value); }
 
-    public byte GetTypeField() {
-        return this.GetUint8(TypeFieldOffset);
-    }
+    public byte TypeField { get => this.GetUint8(TypeFieldOffset); set => this.SetUint8(TypeFieldOffset, value); }
 
-    public ushort GetUsableSpaceSegment() {
-        return (ushort)(MemoryUtils.ToSegment(this.BaseAddress) + 1);
-    }
+    public ushort UsableSpaceSegment => (ushort)(MemoryUtils.ToSegment(this.BaseAddress) + 1);
 
-    public bool IsFree() {
-        return this.GetPspSegment() == FreeMcbMarker;
-    }
+    public bool IsFree => this.PspSegment == FreeMcbMarker;
 
-    public bool IsLast() {
-        return this.GetTypeField() == McbLastEntry;
-    }
+    public bool IsLast => this.TypeField == McbLastEntry;
 
-    public bool IsNonLast() {
-        return this.GetTypeField() == McbNonLastEntry;
-    }
+    public bool IsNonLast => this.TypeField == McbNonLastEntry;
 
-    public bool IsValid() {
-        return IsLast() || IsNonLast();
-    }
+    public bool IsValid =>  IsLast || IsNonLast;
 
     public DosMemoryControlBlock Next() {
-        return new DosMemoryControlBlock(Memory, BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(GetSize() + 1), 0));
-    }
-
-    public void SetFileName(string fileName) {
-        base.SetZeroTerminatedString(FilenameFieldOffset, fileName, FilenameFieldSize);
+        return new DosMemoryControlBlock(Memory, BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(Size + 1), 0));
     }
 
     public void SetFree() {
-        this.SetPspSegment(FreeMcbMarker);
-        this.SetFileName("");
+        this.PspSegment = FreeMcbMarker;
+        this.FileName = "";
     }
 
     public void SetLast() {
-        this.SetTypeField(McbLastEntry);
+        this.TypeField = McbLastEntry;
     }
 
     public void SetNonLast() {
-        this.SetTypeField(McbNonLastEntry);
-    }
-
-    public void SetPspSegment(ushort value) {
-        this.SetUint16(PspSegmentFieldOffset, value);
-    }
-
-    public void SetSize(ushort value) {
-        this.SetUint16(SizeFieldOffset, value);
-    }
-
-    public void SetTypeField(byte value) {
-        this.SetUint8(TypeFieldOffset, value);
+        this.TypeField = McbNonLastEntry;
     }
 
     public override string ToString() {
-        return new StringBuilder(System.Text.Json.JsonSerializer.Serialize(this)).Append($"typeField: {this.GetTypeField()}").Append($"pspSegment: {this.GetPspSegment()}").Append($"size: {this.GetSize()}").Append($"fileName: {this.GetFileName()}").ToString();
+        return new StringBuilder(System.Text.Json.JsonSerializer.Serialize(this)).Append($"typeField: {TypeField}").Append($"pspSegment: {PspSegment}").Append($"size: {Size}").Append($"fileName: {FileName}").ToString();
     }
 }

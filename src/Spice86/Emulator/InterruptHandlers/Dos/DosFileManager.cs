@@ -177,13 +177,9 @@ public class DosFileManager {
         };
     }
 
-    public ushort GetDiskTransferAreaAddressOffset() {
-        return _diskTransferAreaAddressOffset;
-    }
+    public ushort DiskTransferAreaAddressOffset => _diskTransferAreaAddressOffset;
 
-    public ushort GetDiskTransferAreaAddressSegment() {
-        return _diskTransferAreaAddressSegment;
-    }
+    public ushort DiskTransferAreaAddressSegment =>_diskTransferAreaAddressSegment;
 
     public DosFileOperationResult MoveFilePointerUsingHandle(byte originOfMove, ushort fileHandle, uint offset) {
         OpenFile? file = GetOpenFile(fileHandle);

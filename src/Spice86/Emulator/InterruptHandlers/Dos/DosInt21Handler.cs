@@ -53,13 +53,13 @@ public class DosInt21Handler : InterruptHandler {
             // INSUFFICIENT MEMORY
             _state.AX = 0x08;
             if (largest != null) {
-                _state.BX = largest.GetSize();
+                _state.BX = largest.Size;
             } else {
                 _state.BX = 0;
             }
             return;
         }
-        _state.AX = res.GetUsableSpaceSegment();
+        _state.AX = res.UsableSpaceSegment;
     }
 
     public void ChangeCurrentDirectory(bool calledFromVm) {
@@ -204,8 +204,8 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void GetDiskTransferAddress() {
-        _state.ES = _dosFileManager.GetDiskTransferAreaAddressSegment();
-        _state.BX = _dosFileManager.GetDiskTransferAreaAddressOffset();
+        _state.ES = _dosFileManager.DiskTransferAreaAddressSegment;
+        _state.BX = _dosFileManager.DiskTransferAreaAddressOffset;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET DTA (DISK TRANSFER ADDRESS) DS:DX {@DsDx}",
                 ConvertUtils.ToSegmentedAddressRepresentation(_state.ES, _state.BX));
