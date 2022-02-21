@@ -27,7 +27,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
         return true;
     }
 
-    public bool Empty() {
+    public bool IsEmpty() {
         int head = GetHeadAddress();
         int tail = GetTailAddress();
         return head == tail;
@@ -43,7 +43,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
 
     public ushort? GetKeyCode() {
         ushort head = GetHeadAddress();
-        if (Empty()) {
+        if (IsEmpty()) {
             return null;
         }
 
