@@ -9,6 +9,11 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructureWithBaseAddr
         _length = length;
     }
 
+    public abstract T this[int i] {
+        get;
+        set;
+    }
+
     public int Length => _length;
 
     public abstract T GetValueAt(int index);

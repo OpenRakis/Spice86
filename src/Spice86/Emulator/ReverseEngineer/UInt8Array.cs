@@ -14,6 +14,11 @@ public class Uint8Array : MemoryBasedArray<byte> {
 
     public override int ValueSize => 1;
 
+    public override byte this[int i] {
+        get { return GetValueAt(i); }
+        set { SetValueAt(i, value); }
+    }
+
     public override void SetValueAt(int index, byte value) {
         int offset = this.IndexToOffset(index);
         SetUint8(offset, value);
