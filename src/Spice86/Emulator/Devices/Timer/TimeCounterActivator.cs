@@ -12,19 +12,21 @@ public class TimeCounterActivator : ICounterActivator {
         this._multiplier = multiplier;
     }
 
-    public bool IsActivated() {
-        _ticks++;
-        if (_ticks % 100 != 0) {
-            // System.Diagnostics.Stopwatch.GetTimestamp is quite slow, let's not call it every time.
-            return false;
+    public bool IsActivated {
+        get {
+            _ticks++;
+            if (_ticks % 100 != 0) {
+                // System.Diagnostics.Stopwatch.GetTimestamp is quite slow, let's not call it every time.
+                return false;
+            }
+            long currentTime = System.Diagnostics.Stopwatch.GetTimestamp();
+            long elapsedTime = currentTime - _lastActivationTime;
+            if (elapsedTime <= _hundredNanosBetweenTicks) {
+                return false;
+            }
+            _lastActivationTime = currentTime;
+            return true;
         }
-        long currentTime = System.Diagnostics.Stopwatch.GetTimestamp();
-        long elapsedTime = currentTime - _lastActivationTime;
-        if (elapsedTime <= _hundredNanosBetweenTicks) {
-            return false;
-        }
-        _lastActivationTime = currentTime;
-        return true;
     }
 
     public void UpdateDesiredFrequency(long desiredFrequency) {

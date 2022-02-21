@@ -16,15 +16,17 @@ public class CyclesCounterActivator : ICounterActivator {
         this._instructionsPerSecond = instructionsPerSecond;
     }
 
-    public bool IsActivated() {
-        long currentCycles = _state.Cycles;
-        long elapsedInstructions = _state.Cycles - _lastActivationCycle;
-        if (elapsedInstructions <= _cyclesBetweenActivations) {
-            return false;
-        }
+    public bool IsActivated {
+        get {
+            long currentCycles = _state.Cycles;
+            long elapsedInstructions = _state.Cycles - _lastActivationCycle;
+            if (elapsedInstructions <= _cyclesBetweenActivations) {
+                return false;
+            }
 
-        _lastActivationCycle = currentCycles;
-        return true;
+            _lastActivationCycle = currentCycles;
+            return true;
+        }
     }
 
     public void UpdateDesiredFrequency(long desiredFrequency) {

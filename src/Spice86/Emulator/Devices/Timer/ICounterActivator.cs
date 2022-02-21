@@ -4,7 +4,7 @@ public interface ICounterActivator {
 
     /// <summary> True when activation can occur. </summary>
     /// <returns> </returns>
-    public bool IsActivated();
+    public bool IsActivated { get; }
 
     public void UpdateDesiredFrequency(long desiredFrequency);
 }

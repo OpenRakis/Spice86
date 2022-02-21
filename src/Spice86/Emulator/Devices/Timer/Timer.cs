@@ -49,12 +49,12 @@ public class Timer : DefaultIOPortHandler {
         return _counters[counterIndex];
     }
 
-    public long NumberOfTicks => _counters[0].GetTicks();
+    public long NumberOfTicks => _counters[0].Ticks;
 
     public override byte Inb(int port) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
-            byte value = counter.GetValueUsingMode();
+            byte value = counter.ValueUsingMode;
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("READING COUNTER {@Counter}, partial value is {@Value}", counter, value);
             }
@@ -76,15 +76,15 @@ public class Timer : DefaultIOPortHandler {
             Counter counter = GetCounterIndexFromPortNumber(port);
             counter.SetValueUsingMode(value);
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("SETTING COUNTER {@Index} to partial value {@Value}. {@Counter}", counter.GetIndex(), value, counter);
+                _logger.Information("SETTING COUNTER {@Index} to partial value {@Value}. {@Counter}", counter.Index, value, counter);
             }
             return;
         } else if (port == ModeCommandeRegister) {
             int counterIndex = (value >> 6);
             Counter counter = GetCounter(counterIndex);
-            counter.SetReadWritePolicy((value >> 4) & 0b11);
-            counter.SetMode((value >> 1) & 0b111);
-            counter.SetBcd(value & 1);
+            counter.ReadWritePolicy = (value >> 4) & 0b11;
+            counter.Mode = (value >> 1) & 0b111;
+            counter.Bcd = value & 1;
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("SETTING CONTROL REGISTER FOR COUNTER {@CounterIndex}. {@Counter}", counterIndex, counter);
             }

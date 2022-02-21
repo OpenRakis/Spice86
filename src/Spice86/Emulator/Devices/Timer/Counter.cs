@@ -10,64 +10,47 @@ public class Counter {
     public const long HardwareFrequency = 1193182;
     private static readonly ILogger _logger = Log.Logger.ForContext<Counter>();
     private readonly ICounterActivator _activator;
-    private readonly int _index;
     private readonly Machine _machine;
-    private int _bcd;
 
     private bool _firstByteRead;
 
     private bool _firstByteWritten;
 
-    private int _mode;
-
-    // Some programs don't set it so let's use by default the simplest mode
-    private int _readWritePolicy = 1;
-
-    private long _ticks;
-    private ushort _value;
-
     public Counter(Machine machine, int index, ICounterActivator activator) {
         this._machine = machine;
-        this._index = index;
+        Index = index;
         this._activator = activator;
 
         // Default is 18.2 times per second
         UpdateDesiredFreqency(18);
     }
 
-    public int GetBcd() {
-        return _bcd;
-    }
+    public int Bcd { get; set; }
 
-    public int GetIndex() {
-        return _index;
-    }
+    public int Index { get; private set; }
 
-    public int GetMode() {
-        return _mode;
-    }
+    public int Mode { get; set; }
 
-    public int GetReadWritePolicy() {
-        return _readWritePolicy;
-    }
+    /// <summary>
+    // Some programs don't set it so let's use by default the simplest mode (1)
+    /// </summary>
+    public int ReadWritePolicy { get; set; } = 1;
 
-    public long GetTicks() {
-        return _ticks;
-    }
+    public long Ticks { get; private set; }
 
-    public int GetValue() {
-        return _value;
-    }
+    public ushort Value { get; private set; }
 
-    public byte GetValueUsingMode() {
-        return _readWritePolicy switch {
-            0 => throw new UnhandledOperationException(_machine,
-                "Latch read is not implemented yet"),
-            1 => ReadLsb(),
-            2 => ReadMsb(),
-            3 => ReadPolicy3(),
-            _ => throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {_readWritePolicy}")
-        };
+    public byte ValueUsingMode {
+        get {
+            return ReadWritePolicy switch {
+                0 => throw new UnhandledOperationException(_machine,
+                    "Latch read is not implemented yet"),
+                1 => Lsb,
+                2 => Msb,
+                3 => Policy3,
+                _ => throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {ReadWritePolicy}")
+            };
+        }
     }
 
     /// <summary>
@@ -76,33 +59,21 @@ public class Counter {
     /// <param name="currentCycles"></param>
     /// <returns></returns>
     public bool ProcessActivation(long currentCycles) {
-        if (_activator.IsActivated()) {
-            _ticks++;
+        if (_activator.IsActivated) {
+            Ticks++;
             return true;
         }
 
         return false;
     }
 
-    public void SetBcd(int bcd) {
-        this._bcd = bcd;
-    }
-
-    public void SetMode(int mode) {
-        this._mode = mode;
-    }
-
-    public void SetReadWritePolicy(int readWritePolicy) {
-        this._readWritePolicy = readWritePolicy;
-    }
-
     public void SetValue(ushort counter) {
-        this._value = counter;
+        Value = counter;
         OnValueWrite();
     }
 
     public void SetValueUsingMode(byte partialValue) {
-        switch (_readWritePolicy) {
+        switch (ReadWritePolicy) {
             case 1:
                 WriteLsb(partialValue);
                 break;
@@ -112,7 +83,7 @@ public class Counter {
             case 3:
                 WritePolicy3(partialValue);
                 break;
-            default: throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {_readWritePolicy}");
+            default: throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {ReadWritePolicy}");
         }
         OnValueWrite();
     }
@@ -122,47 +93,44 @@ public class Counter {
     }
 
     private void OnValueWrite() {
-        if (_value == 0) {
+        if (Value == 0) {
             UpdateDesiredFreqency(HardwareFrequency / 0x10000);
         } else {
-            UpdateDesiredFreqency(HardwareFrequency / _value);
+            UpdateDesiredFreqency(HardwareFrequency / Value);
         }
     }
 
-    private byte ReadLsb() {
-        return ConvertUtils.ReadLsb(_value);
-    }
+    private byte Lsb =>ConvertUtils.ReadLsb(Value);
 
-    private byte ReadMsb() {
-        return ConvertUtils.ReadMsb(_value);
-    }
+    private byte Msb => ConvertUtils.ReadMsb(Value);
 
-    private byte ReadPolicy3() {
-        // LSB first, then MSB
-        if (_firstByteRead) {
-            // return msb
-            _firstByteRead = false;
-            return ReadMsb();
+    private byte Policy3 {
+        get {
+            // LSB first, then MSB
+            if (_firstByteRead) {
+                // return msb
+                _firstByteRead = false;
+                return Msb;
+            }
+            // else return lsb
+            _firstByteRead = true;
+            return Lsb;
         }
-
-        // else return lsb
-        _firstByteRead = true;
-        return ReadLsb();
     }
 
     private void UpdateDesiredFreqency(long desiredFrequency) {
         _activator.UpdateDesiredFrequency(desiredFrequency);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", _index, desiredFrequency);
+            _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", Index, desiredFrequency);
         }
     }
 
     private void WriteLsb(byte partialValue) {
-        _value = ConvertUtils.WriteLsb(_value, partialValue);
+        Value = ConvertUtils.WriteLsb(Value, partialValue);
     }
 
     private void WriteMsb(byte partialValue) {
-        _value = ConvertUtils.WriteMsb(_value, partialValue);
+        Value = ConvertUtils.WriteMsb(Value, partialValue);
     }
 
     private void WritePolicy3(byte partialValue) {
