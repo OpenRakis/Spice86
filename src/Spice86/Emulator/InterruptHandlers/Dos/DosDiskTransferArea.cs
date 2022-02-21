@@ -14,46 +14,15 @@ public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress {
     private const int FileSizeOffset = 0x1A;
     private const int FileTimeOffset = 0x16;
 
-    public DosDiskTransferArea(Memory memory, uint baseAddress) : base(memory, baseAddress) {
-    }
+    public DosDiskTransferArea(Memory memory, uint baseAddress) : base(memory, baseAddress) { }
 
-    public byte GetAttribute() {
-        return this.GetUint8(AttributeOffset);
-    }
+    public byte Attribute { get => this.GetUint8(AttributeOffset); set => this.SetUint8(AttributeOffset, value); }
 
-    public ushort GetFileDate() {
-        return this.GetUint16(FileDateOffset);
-    }
+    public ushort FileDate { get => this.GetUint16(FileDateOffset); set => this.SetUint16(FileDateOffset, value); }
 
-    public string GetFileName() {
-        return this.GetZeroTerminatedString(FileNameOffset, FileNameSize);
-    }
+    public string FileName { get => this.GetZeroTerminatedString(FileNameOffset, FileNameSize); set => this.SetZeroTerminatedString(FileNameOffset, value, FileNameSize); }
 
-    public ushort GetFileSize() {
-        return this.GetUint16(FileSizeOffset);
-    }
+    public ushort FileSize { get => this.GetUint16(FileSizeOffset); set => this.SetUint16(FileSizeOffset, value); }
 
-    public ushort GetFileTime() {
-        return this.GetUint16(FileTimeOffset);
-    }
-
-    public void SetAttribute(byte value) {
-        this.SetUint8(AttributeOffset, value);
-    }
-
-    public void SetFileDate(ushort value) {
-        this.SetUint16(FileDateOffset, value);
-    }
-
-    public void SetFileName(string value) {
-        this.SetZeroTerminatedString(FileNameOffset, value, FileNameSize);
-    }
-
-    public void SetFileSize(ushort value) {
-        this.SetUint16(FileSizeOffset, value);
-    }
-
-    public void SetFileTime(ushort value) {
-        this.SetUint16(FileTimeOffset, value);
-    }
+    public ushort FileTime { get => this.GetUint16(FileTimeOffset); set => this.SetUint16(FileTimeOffset, value); }
 }

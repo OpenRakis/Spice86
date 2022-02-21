@@ -600,10 +600,10 @@ public class DosFileManager {
         DateTime creationZonedDateTime = attributes.CreationTimeUtc;
         DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
         DateTime creationLocalTime = creationZonedDateTime.ToLocalTime();
-        dosDiskTransferArea.SetFileDate(ToDosDate(creationLocalDate));
-        dosDiskTransferArea.SetFileTime(ToDosTime(creationLocalTime));
-        dosDiskTransferArea.SetFileSize((ushort)attributes.Length);
-        dosDiskTransferArea.SetFileName(Path.GetFileName(matchingFile));
+        dosDiskTransferArea.FileDate = ToDosDate(creationLocalDate);
+        dosDiskTransferArea.FileTime = ToDosTime(creationLocalTime);
+        dosDiskTransferArea.FileSize = (ushort)attributes.Length;
+        dosDiskTransferArea.FileName = Path.GetFileName(matchingFile);
     }
 
     private DosFileOperationResult WriteToDevice(ushort fileHandle, ushort writeLength, uint bufferAddress) {
