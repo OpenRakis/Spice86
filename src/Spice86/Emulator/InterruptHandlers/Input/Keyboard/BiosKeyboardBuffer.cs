@@ -15,78 +15,56 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
     }
 
     public bool AddKeyCode(ushort code) {
-        ushort tail = GetTailAddress();
+        ushort tail = TailAddress;
         ushort newTail = AdvancePointer(tail);
-        if (newTail == GetHeadAddress()) {
+        if (newTail == HeadAddress) {
             // buffer full
             return false;
         }
 
         this.SetUint16(tail, code);
-        this.SetTailAddress(newTail);
+        this.TailAddress = newTail;
         return true;
     }
 
-    public bool IsEmpty() {
-        int head = GetHeadAddress();
-        int tail = GetTailAddress();
-        return head == tail;
+    public bool IsEmpty {
+        get {
+            int head = HeadAddress;
+            int tail = TailAddress;
+            return head == tail;
+        }
     }
 
-    public ushort GetEndAddress() {
-        return this.GetUint16(End);
-    }
+    public ushort EndAddress { get => this.GetUint16(End); set => this.SetUint16(End, value); }
 
-    public ushort GetHeadAddress() {
-        return this.GetUint16(Head);
-    }
+    public ushort HeadAddress { get => this.GetUint16(Head); set => this.SetUint16(Head, value); }
 
     public ushort? GetKeyCode() {
-        ushort head = GetHeadAddress();
-        if (IsEmpty()) {
+        ushort head = HeadAddress;
+        if (IsEmpty) {
             return null;
         }
 
-        ushort newHead = AdvancePointer(GetHeadAddress());
-        this.SetHeadAddress(newHead);
+        ushort newHead = AdvancePointer(HeadAddress);
+        HeadAddress = newHead;
         return this.GetUint16(head);
     }
 
-    public ushort GetStartAddress() {
-        return this.GetUint16(Start);
-    }
+    public ushort StartAddress { get => this.GetUint16(Start); set => this.SetUint16(Start, value); }
 
-    public ushort GetTailAddress() {
-        return this.GetUint16(Tail);
-    }
+    public ushort TailAddress { get => this.GetUint16(Tail); set => this.SetUint16(Tail, value); }
 
     public void Init() {
-        this.SetStartAddress(InitialStartAddress);
-        this.SetEndAddress((ushort)(InitialStartAddress + InitialLength));
-        this.SetHeadAddress(InitialStartAddress);
-        this.SetTailAddress(InitialStartAddress);
-    }
-
-    public void SetEndAddress(ushort value) {
-        this.SetUint16(End, value);
-    }
-
-    public void SetHeadAddress(ushort value) {
-        this.SetUint16(Head, value);
-    }
-
-    public void SetStartAddress(ushort value) {
-        this.SetUint16(Start, value);
-    }
-
-    public void SetTailAddress(ushort value) {
-        this.SetUint16(Tail, value);
+        this.StartAddress = InitialStartAddress;
+        this.EndAddress = (ushort)(InitialStartAddress + InitialLength);
+        this.HeadAddress = InitialStartAddress;
+        this.TailAddress = InitialStartAddress;
     }
 
     private ushort AdvancePointer(ushort value) {
         ushort res = (ushort)(value + 2);
-        if (res >= GetEndAddress()) {
-            return GetStartAddress();
+        if (res >= EndAddress) {
+            return StartAddress;
         }
 
         return res;

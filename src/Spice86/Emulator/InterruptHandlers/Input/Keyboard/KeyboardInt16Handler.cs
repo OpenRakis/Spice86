@@ -40,7 +40,7 @@ public class KeyboardInt16Handler : InterruptHandler {
         // AX = 0 if no scan code is available
         // AH = scan code
         // AL = ASCII character or zero if special function key
-        if (_biosKeyboardBuffer.IsEmpty()) {
+        if (_biosKeyboardBuffer.IsEmpty) {
             SetZeroFlag(true, calledFromVm);
             _state.AX = 0;
         } else {
