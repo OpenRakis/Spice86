@@ -48,7 +48,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }
-        _timerHandler.SetTickCounterValue(value);
+        _timerHandler.TickCounterValue = value;
     }
 
     private void TandySoundSystemUnhandled() {

@@ -21,15 +21,11 @@ public class TimerInt8Handler : InterruptHandler {
 
     public override byte Index => 0x8;
 
-    public uint TickCounterValue => _memory.GetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS);
-
+    public uint TickCounterValue { get => _memory.GetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS); set => _memory.SetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS, value); }
+    
     public override void Run() {
         long numberOfTicks = _timer.NumberOfTicks;
-        SetTickCounterValue((uint)numberOfTicks);
+        TickCounterValue = (uint)numberOfTicks;
         _pic.AcknwowledgeInterrupt();
-    }
-
-    public void SetTickCounterValue(uint value) {
-        _memory.SetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS, value);
     }
 }
