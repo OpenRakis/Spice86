@@ -51,11 +51,13 @@ public class VideoBiosInt10Handler : InterruptHandler {
         }
     }
 
-    public byte GetVideoModeValue() {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("GET VIDEO MODE");
+    public byte VideoModeValue {
+        get {
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("GET VIDEO MODE");
+            }
+            return _memory.GetUint8(BIOS_VIDEO_MODE_ADDRESS);
         }
-        return _memory.GetUint8(BIOS_VIDEO_MODE_ADDRESS);
     }
 
     public void GetVideoStatus() {
@@ -63,7 +65,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
             _logger.Debug("GET VIDEO STATUS");
         }
         _state.AH = _numberOfScreenColumns;
-        _state.AL = GetVideoModeValue();
+        _state.AL = VideoModeValue;
         _state.BH = _currentDisplayPage;
     }
 
