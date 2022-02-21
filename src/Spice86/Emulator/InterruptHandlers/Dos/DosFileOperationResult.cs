@@ -27,15 +27,9 @@ public class DosFileOperationResult {
         return new DosFileOperationResult(false, true, value);
     }
 
-    public uint? GetValue() {
-        return _value;
-    }
+    public uint? Value => _value;
 
-    public bool IsError() {
-        return _error;
-    }
+    public bool IsError => _error;
 
-    public bool IsValueIsUint32() {
-        return _valueIsUint32;
-    }
+    public bool IsValueIsUint32 => _valueIsUint32;
 }

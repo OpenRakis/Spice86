@@ -565,18 +565,18 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
     private void SetStateFromDosFileOperationResult(bool calledFromVm, DosFileOperationResult dosFileOperationResult) {
-        if (dosFileOperationResult.IsError()) {
+        if (dosFileOperationResult.IsError) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);
         } else {
             SetCarryFlag(false, calledFromVm);
         }
-        uint? value = dosFileOperationResult.GetValue();
+        uint? value = dosFileOperationResult.Value;
         if (value == null) {
             return;
         }
         _state.AX = (ushort)value.Value;
-        if (dosFileOperationResult.IsValueIsUint32()) {
+        if (dosFileOperationResult.IsValueIsUint32) {
             _state.DX = (ushort)(value >> 16);
         }
     }
