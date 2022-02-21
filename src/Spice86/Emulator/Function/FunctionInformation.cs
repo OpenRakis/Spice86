@@ -13,7 +13,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     private readonly string? _name;
 
-    private readonly Func<Action>? _overrideRenamed;
+    private readonly Func<Action>? _funtionOverride;
 
     private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _returns;
 
@@ -24,10 +24,10 @@ public class FunctionInformation : IComparable<FunctionInformation> {
     public FunctionInformation(SegmentedAddress address, string name) : this(address, name, null) {
     }
 
-    public FunctionInformation(SegmentedAddress address, string name, Func<Action>? overrideRenamed) {
+    public FunctionInformation(SegmentedAddress address, string name, Func<Action>? funtionOverride) {
         this._address = address;
         this._name = name;
-        this._overrideRenamed = overrideRenamed;
+        this._funtionOverride = funtionOverride;
     }
 
     public void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
@@ -40,7 +40,8 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     public void CallOverride() {
         if (HasOverride) {
-            Func<Action>? retHandler = _overrideRenamed;
+            Action? retHandler =  _funtionOverride?.Invoke();
+            // The override returns what to do when going back to emu mode, so let's do it!
             retHandler?.Invoke();
         }
     }
@@ -104,7 +105,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         }
     }
 
-    public bool HasOverride => _overrideRenamed != null;
+    public bool HasOverride => _funtionOverride != null;
 
     public override string ToString() {
         return $"{this._name}_{ConvertUtils.ToCSharpStringWithPhysical(this._address)}";

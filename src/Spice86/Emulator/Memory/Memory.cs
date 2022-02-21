@@ -66,7 +66,7 @@ public class Memory {
     }
 
     public void Memset(uint address, byte value, uint length) {
-        Array.Fill(_physicalMemory, (byte)address, (int)(address + length), value);
+        Array.Fill(_physicalMemory, value, (int)address, (int)length);
     }
 
     public uint? SearchValue(uint address, int len, IList<byte> value) {
