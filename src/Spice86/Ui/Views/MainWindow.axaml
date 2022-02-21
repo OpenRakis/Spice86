@@ -20,14 +20,14 @@
 	<ItemsRepeater Items="{Binding VideoBuffers}">
 		<ItemsRepeater.ItemTemplate>
 			<DataTemplate x:DataType="vm:VideoBufferViewModel">
-				<Grid RowDefinitions="Auto,*" ColumnDefinitions="Auto,Auto">
+				<Grid RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
 					<Label Grid.Row="0" Grid.Column="0" Content="{Binding Address, StringFormat={}0x{0:X}}" />
 					<WrapPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="1">
 						<Label Content="Scale" />
 						<NumericUpDown Text="{Binding Scale}" Margin="10,0,0,0" />
 						<CheckBox Margin="5,0,0,0" Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 					</WrapPanel>
-					<local:VideoBufferView Grid.Row="1" Grid.ColumnSpan="2" />
+					<local:VideoBufferView HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Row="1" Grid.ColumnSpan="2" />
 				</Grid>
 			</DataTemplate>
 		</ItemsRepeater.ItemTemplate>
