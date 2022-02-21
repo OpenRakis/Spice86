@@ -21,10 +21,6 @@ public class FunctionHandler {
 
     private readonly Machine _machine;
 
-    private Dictionary<SegmentedAddress, FunctionInformation> _functionInformations = new();
-
-    private bool _useCodeOverride;
-
     public FunctionHandler(Machine machine, bool debugMode) {
         this._machine = machine;
         this._debugMode = debugMode;
@@ -53,15 +49,15 @@ public class FunctionHandler {
             currentFunction.Enter(caller);
         }
 
-        if (_useCodeOverride) {
+        if (UseCodeOverride) {
             currentFunction.CallOverride();
         }
     }
 
     private FunctionInformation GetOrCreateFunctionInformation(SegmentedAddress entryAddress, Func<String>? nameGenerator) {
-        if (!_functionInformations.TryGetValue(entryAddress, out FunctionInformation? res)) {
+        if (!FunctionInformations.TryGetValue(entryAddress, out FunctionInformation? res)) {
             res = new FunctionInformation(entryAddress, nameGenerator == null ? "unknown" : nameGenerator.Invoke());
-            _functionInformations.Add(entryAddress, res);
+            FunctionInformations.Add(entryAddress, res);
         }
         return res;
     }
@@ -81,9 +77,7 @@ public class FunctionHandler {
         return res.ToString();
     }
 
-    public Dictionary<SegmentedAddress, FunctionInformation> GetFunctionInformations() {
-        return _functionInformations;
-    }
+    public Dictionary<SegmentedAddress, FunctionInformation> FunctionInformations { get; set; } = new();
 
     public void Icall(CallType callType, ushort entrySegment, ushort entryOffset, ushort expectedReturnSegment, ushort expectedReturnOffset, byte vectorNumber, bool recordReturn) {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, () => $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
@@ -138,13 +132,7 @@ public class FunctionHandler {
         return true;
     }
 
-    public void SetFunctionInformations(Dictionary<SegmentedAddress, FunctionInformation> functionInformations) {
-        this._functionInformations = functionInformations;
-    }
-
-    public void SetUseCodeOverride(bool useCodeOverride) {
-        this._useCodeOverride = useCodeOverride;
-    }
+    public bool UseCodeOverride { get; set; }
 
     private bool AddReturn(CallType returnCallType, FunctionCall currentFunctionCall, FunctionInformation? currentFunctionInformation) {
         FunctionReturn currentFunctionReturn = GenerateCurrentFunctionReturn(returnCallType);
@@ -196,7 +184,7 @@ public class FunctionHandler {
         if (functionCall == null) {
             return null;
         }
-        if (_functionInformations.TryGetValue(functionCall.EntryPointAddress, out FunctionInformation? value)) {
+        if (FunctionInformations.TryGetValue(functionCall.EntryPointAddress, out FunctionInformation? value)) {
             return value;
         }
         return null;
@@ -243,6 +231,6 @@ public class FunctionHandler {
     }
 
     private bool UseOverride(FunctionInformation? functionInformation) {
-        return this._useCodeOverride && functionInformation != null && functionInformation.HasOverride;
+        return UseCodeOverride && functionInformation != null && functionInformation.HasOverride;
     }
 }

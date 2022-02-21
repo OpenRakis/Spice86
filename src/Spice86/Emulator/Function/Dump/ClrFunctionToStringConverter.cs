@@ -14,7 +14,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
         // Take only addresses which have been accessed (and not only computed)
         List<SegmentRegisterBasedAddress> globals = allPotentialGlobals
-            .Where(x => (x.GetAddressOperations()).Any())
+            .Where(x => (x.AddressOperations).Any())
             .Where(y => whiteListOfSegmentForOffset
                 .All(z => IsOffsetEqualsAndSegmentDifferent(y, z) == false))
             .ToList();
@@ -62,7 +62,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     private static Dictionary<int, ISet<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
         Dictionary<int, ISet<SegmentRegisterBasedAddress>> res = new();
         foreach (SegmentRegisterBasedAddress address in globals) {
-            IEnumerable<int> segmentIndexes = address.GetAddressOperations()
+            IEnumerable<int> segmentIndexes = address.AddressOperations
                 .Values
                 .SelectMany(x => x);
             foreach (int segmentIndex in segmentIndexes) {
@@ -110,7 +110,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     private string GenerateGetterSetterForAddress(SegmentRegisterBasedAddress address) {
-        Dictionary<AddressOperation, ISet<int>> addressOperations = address.GetAddressOperations();
+        Dictionary<AddressOperation, ISet<int>> addressOperations = address.AddressOperations;
         if (addressOperations.Any() == false) {
             // Nothing was ever read or written there
             return "";

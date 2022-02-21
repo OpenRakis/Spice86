@@ -25,9 +25,7 @@ public class SegmentRegisterBasedAddress : SegmentedAddress {
         segmentRegisterIndexes.Add(segmentRegisterIndex);
     }
 
-    public Dictionary<AddressOperation, ISet<int>> GetAddressOperations() {
-        return _addressOperations;
-    }
+    public Dictionary<AddressOperation, ISet<int>> AddressOperations => _addressOperations;
 
     public string? Name => _name;
 }

@@ -211,7 +211,7 @@ public class ProgramExecutor : IDisposable {
     }
 
     private static void SetupFunctionHandler(FunctionHandler functionHandler, Dictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
-        functionHandler.SetFunctionInformations(functionInformations);
-        functionHandler.SetUseCodeOverride(useCodeOverride);
+        functionHandler.FunctionInformations = functionInformations;
+        functionHandler.UseCodeOverride = useCodeOverride;
     }
 }
