@@ -256,7 +256,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void GetPspAddress() {
-        ushort pspSegment = _dosMemoryManager.GetPspSegment();
+        ushort pspSegment = _dosMemoryManager.PspSegment;
         _state.BX = pspSegment;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET PSP ADDRESS {@PspSegment}", ConvertUtils.ToHex16(pspSegment));
