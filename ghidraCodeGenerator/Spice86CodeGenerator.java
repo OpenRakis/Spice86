@@ -46,7 +46,7 @@ public class Spice86CodeGenerator extends GhidraScript {
   private JumpsAndCalls jumpsAndCalls;
 
   public void run() throws Exception {
-    String baseFolder = "E:/Development/Spice86C/src/Spice86/bin/Release/net6.0//";//C:/tmp/dune/
+    String baseFolder = "C:/tmp/dune/";
     jumpsAndCalls =
         readJumpMapFromFile(baseFolder + "spice86dumpjumps.json");
     try (Log log = new Log(this, baseFolder + "ghidrascriptout.txt", false)) {

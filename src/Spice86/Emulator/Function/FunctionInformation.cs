@@ -11,7 +11,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     private ISet<FunctionInformation>? _callers;
 
-    private readonly string? _name;
+    private readonly string _name;
 
     private readonly Func<Action>? _funtionOverride;
 
@@ -85,7 +85,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         return _address.GetHashCode();
     }
 
-    public string? Name => _name;
+    public string Name => _name;
 
     public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
         get {

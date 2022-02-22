@@ -46,7 +46,13 @@ public class FunctionInformationDumper {
         }
     }
 
-    private static IEnumerable<FunctionInformation> MergeFunctionHandlers(params FunctionHandler[] functionHandlers) {
-        return functionHandlers.ToDictionary(x => x.FunctionInformations).Select(x => x.Key.Values).Select(x => x).SelectMany(x => x).Distinct().OrderBy(x => x);
+    public static IEnumerable<FunctionInformation> MergeFunctionHandlers(params FunctionHandler[] functionHandlers) {
+        return functionHandlers
+            .ToDictionary(x => x.FunctionInformations)
+            .Select(x => x.Key.Values)
+            .Select(x => x)
+            .SelectMany(x => x)
+            .Distinct()
+            .OrderBy(x => x);
     }
 }
