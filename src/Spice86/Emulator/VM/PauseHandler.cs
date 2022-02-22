@@ -7,7 +7,7 @@ using Spice86.Emulator.Errors;
 using System.Threading;
 
 public class PauseHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<PauseHandler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<PauseHandler>();
 
     private volatile bool _paused;
 

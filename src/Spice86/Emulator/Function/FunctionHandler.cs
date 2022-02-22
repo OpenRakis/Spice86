@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 
 public class FunctionHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<FunctionHandler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<FunctionHandler>();
 
     private readonly Stack<FunctionCall> _callerStack = new();
 

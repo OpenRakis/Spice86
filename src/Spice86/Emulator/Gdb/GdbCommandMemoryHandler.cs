@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Text;
 
 public class GdbCommandMemoryHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandMemoryHandler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<GdbCommandMemoryHandler>();
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;

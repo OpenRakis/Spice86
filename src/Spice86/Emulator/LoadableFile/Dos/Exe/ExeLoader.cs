@@ -11,7 +11,7 @@ using Spice86.Emulator.CPU;
 /// Loads a DOS 16 bits EXE file in memory.
 /// </summary>
 public class ExeLoader : ExecutableFileLoader {
-    private static readonly ILogger _logger = Log.Logger.ForContext<ExeLoader>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<ExeLoader>();
     private readonly ushort _startSegment;
 
     public ExeLoader(Machine machine, ushort startSegment) : base(machine) {

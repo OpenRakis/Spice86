@@ -15,7 +15,7 @@ using System;
 using System.Collections.Generic;
 
 public class CSharpOverrideHelper {
-    private static readonly ILogger _logger = Log.Logger.ForContext<CSharpOverrideHelper>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<CSharpOverrideHelper>();
 
     protected readonly Cpu _cpu;
 

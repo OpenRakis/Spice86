@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 public class GdbCommandHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandHandler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<GdbCommandHandler>();
     private bool _isConnected = true;
     private readonly GdbCommandBreakpointHandler _gdbCommandBreakpointHandler;
     private readonly GdbCommandMemoryHandler _gdbCommandMemoryHandler;

@@ -13,7 +13,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
     public const int BiosVideoMode = 0x49;
     public static readonly uint BIOS_VIDEO_MODE_ADDRESS = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, BiosVideoMode);
     public static readonly uint CRT_IO_PORT_ADDRESS_IN_RAM = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, MemoryMap.BiosDataAreaOffsetCrtIoPort);
-    private static readonly ILogger _logger = Log.Logger.ForContext<VideoBiosInt10Handler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<VideoBiosInt10Handler>();
     private readonly byte _currentDisplayPage = 0;
     private readonly byte _numberOfScreenColumns = 80;
     private readonly VgaCard _vgaCard;

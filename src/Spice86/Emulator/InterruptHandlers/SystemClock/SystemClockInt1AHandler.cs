@@ -10,7 +10,7 @@ using Spice86.Emulator.VM;
 /// Implementation of int1A.
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<SystemClockInt1AHandler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<SystemClockInt1AHandler>();
     private readonly TimerInt8Handler _timerHandler;
 
     public SystemClockInt1AHandler(Machine machine, TimerInt8Handler timerHandler) : base(machine) {

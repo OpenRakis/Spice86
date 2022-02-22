@@ -6,7 +6,7 @@ using Spice86.Emulator.Callback;
 using Spice86.Emulator.VM;
 
 public class KeyboardInt16Handler : InterruptHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<KeyboardInt16Handler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<KeyboardInt16Handler>();
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
     public KeyboardInt16Handler(Machine machine, BiosKeyboardBuffer biosKeyboardBuffer) : base(machine) {

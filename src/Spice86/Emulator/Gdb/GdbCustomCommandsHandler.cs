@@ -24,7 +24,7 @@ using Spice86.UI.ViewModels;
 /// Custom commands list can be seen with the monitor help command.
 /// </summary>
 public class GdbCustomCommandsHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<GdbCustomCommandsHandler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<GdbCustomCommandsHandler>();
     private readonly string? _defaultDumpDirectory;
     private readonly string? _jumpFile;
     private readonly GdbIo _gdbIo;

@@ -8,7 +8,7 @@ using Spice86.Emulator.VM;
 /// Reimplementation of int20
 /// </summary>
 public class DosInt20Handler : InterruptHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<DosInt20Handler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<DosInt20Handler>();
 
     public DosInt20Handler(Machine machine) : base(machine) {
     }

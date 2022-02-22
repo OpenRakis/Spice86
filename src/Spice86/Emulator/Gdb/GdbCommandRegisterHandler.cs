@@ -10,7 +10,7 @@ using System;
 using System.Text;
 
 public class GdbCommandRegisterHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<GdbCommandRegisterHandler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<GdbCommandRegisterHandler>();
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;

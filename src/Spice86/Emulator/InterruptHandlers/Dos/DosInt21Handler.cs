@@ -16,7 +16,7 @@ using System.Text;
 /// Reimplementation of int21
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<DosInt21Handler>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<DosInt21Handler>();
 
     private readonly Encoding _cp850CharSet;
 

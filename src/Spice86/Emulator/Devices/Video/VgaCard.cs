@@ -11,7 +11,7 @@ using Spice86.UI;
 /// Implementation of VGA card, currently only supports mode 0x13.<br/>
 /// </summary>
 public class VgaCard : DefaultIOPortHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<VgaCard>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<VgaCard>();
    
     public const ushort CRT_IO_PORT = 0x03D4;
     // http://www.osdever.net/FreeVGA/vga/extreg.htm#3xAR

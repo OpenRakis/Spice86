@@ -10,7 +10,7 @@ using Spice86.Utils;
 /// PC speaker implementation. Does not produce any sound, just handles the bare minimum to make programs run.
 /// </summary>
 public class PcSpeaker : DefaultIOPortHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<PcSpeaker>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<PcSpeaker>();
     private const int PcSpeakerPortNumber = 0x61;
     private byte _value;
 

@@ -37,9 +37,7 @@ public class Program {
         .MinimumLevel.Override("Spice86.Emulator.ProgramExecutor", LogEventLevel.Information)*/
         .CreateLogger();
 
-    static Program() {
-        Log.Logger = _logger;
-    }
+    public static ILogger Logger => _logger;
 
     /// <summary>
     /// Alternate Entry Point

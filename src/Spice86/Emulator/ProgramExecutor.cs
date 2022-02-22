@@ -28,7 +28,7 @@ using System.Security.Cryptography;
 /// Currently only supports DOS exe files.
 /// </summary>
 public class ProgramExecutor : IDisposable {
-    private static readonly ILogger _logger = Log.Logger.ForContext<ProgramExecutor>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<ProgramExecutor>();
     private bool _disposedValue;
     private readonly GdbServer? _gdbServer;
 

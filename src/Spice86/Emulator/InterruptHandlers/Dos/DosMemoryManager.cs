@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 public class DosMemoryManager {
-    private static readonly ILogger _logger = Log.Logger.ForContext<DosMemoryManager>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<DosMemoryManager>();
     private readonly Memory _memory;
     private ushort _pspSegment;
     private DosMemoryControlBlock? _start;

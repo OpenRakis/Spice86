@@ -27,7 +27,7 @@ public class Cpu {
     // Extract regIndex from opcode
     private const int RegIndexMask = 0b111;
 
-    private static readonly ILogger _logger = Log.Logger.ForContext<Cpu>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<Cpu>();
     private static readonly HashSet<int> _stringOpCodes = new() { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Machine _machine;

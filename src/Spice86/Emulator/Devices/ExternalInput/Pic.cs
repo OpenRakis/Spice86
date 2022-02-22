@@ -18,7 +18,7 @@ using System.Collections.Generic;
 /// </ul>
 /// </summary>
 public class Pic : DefaultIOPortHandler {
-    private static readonly ILogger _logger = Log.Logger.ForContext<Pic>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<Pic>();
     
     private const int MasterPortA = 0x20;
 

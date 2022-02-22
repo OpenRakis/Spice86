@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq.Expressions;
 
 public class GdbServer : IDisposable {
-    private static readonly ILogger _logger = Log.Logger.ForContext<GdbServer>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<GdbServer>();
     private readonly Configuration _configuration;
     private bool _disposedValue;
     private readonly Machine _machine;

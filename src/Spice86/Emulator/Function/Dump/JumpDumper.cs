@@ -10,7 +10,7 @@ using System;
 using System.IO;
 
 public class JumpDumper {
-    private static readonly ILogger _logger = Log.Logger.ForContext<JumpDumper>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<JumpDumper>();
 
     public void Dump(JumpHandler jumpHandler, string destinationFilePath) {
         using var printWriter = new StreamWriter(destinationFilePath);

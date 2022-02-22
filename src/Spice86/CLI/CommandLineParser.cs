@@ -18,7 +18,7 @@ using System.Reflection;
 /// Displays help when configuration could not be parsed.
 /// </summary>
 public class CommandLineParser {
-    private static readonly ILogger _logger = Log.Logger.ForContext<CommandLineParser>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<CommandLineParser>();
 
     public static Configuration? ParseCommandLine(string[] args) {
         ParserResult<Configuration>? result = Parser.Default.ParseArguments<Configuration>(args)

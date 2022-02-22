@@ -13,7 +13,7 @@ using Spice86.UI;
 /// </summary>
 public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
-    private static readonly ILogger _logger = Log.Logger.ForContext<Keyboard>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<Keyboard>();
     private readonly IVideoKeyboardMouseIO? _gui;
 
     public Keyboard(Machine machine, IVideoKeyboardMouseIO? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {

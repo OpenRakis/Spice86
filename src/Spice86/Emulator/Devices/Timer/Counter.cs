@@ -8,7 +8,7 @@ using Spice86.Utils;
 
 public class Counter {
     public const long HardwareFrequency = 1193182;
-    private static readonly ILogger _logger = Log.Logger.ForContext<Counter>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<Counter>();
     private readonly ICounterActivator _activator;
     private readonly Machine _machine;
 

@@ -26,7 +26,7 @@ using System.Threading;
 /// </ul>
 /// </summary>
 public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDisposable {
-    private static readonly ILogger _logger = Log.Logger.ForContext<MainWindowViewModel>();
+    private static readonly ILogger _logger = Program.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposedValue;
     private Thread? _emulatorThread;
