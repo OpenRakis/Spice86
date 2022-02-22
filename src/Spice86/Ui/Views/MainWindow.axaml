@@ -21,15 +21,17 @@
 		<ItemsRepeater.ItemTemplate>
 			<DataTemplate x:DataType="vm:VideoBufferViewModel">
 				<DockPanel LastChildFill="True">
-					<WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Grid.Column="1">
-						<Label Content="{Binding Address, StringFormat={}0x{0:X}}" />
-						<StackPanel Orientation="Vertical">
-							<Label Content="Scale" HorizontalAlignment="Center" />
-							<NumericUpDown Text="{Binding Scale}" Margin="10,0,0,0" />							
+					<Grid ColumnDefinitions="Auto,*" DockPanel.Dock="Top">
+						<Label Grid.Column="0" VerticalContentAlignment="Bottom" HorizontalContentAlignment="Left" Content="{Binding Address, StringFormat={}0x{0:X}}" />
+						<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+							<StackPanel Orientation="Vertical">
+								<Label Content="Scale" HorizontalAlignment="Center" />
+								<NumericUpDown Text="{Binding Scale}" Margin="10,0,0,0" />
+							</StackPanel>
+							<CheckBox Margin="5,0,0,0" Content="Show Cursor" IsChecked="{Binding ShowCursor}" IsVisible="{Binding IsPrimaryDisplay}" />
 						</StackPanel>
-						<CheckBox Margin="5,0,0,0" VerticalAlignment="Center" Content="Show Cursor" IsChecked="{Binding ShowCursor}" IsVisible="{Binding IsPrimaryDisplay}" />
-					</WrapPanel>
-					<local:VideoBufferView DockPanel.Dock="Bottom" />
+					</Grid>
+					<local:VideoBufferView />
 				</DockPanel>
 			</DataTemplate>
 		</ItemsRepeater.ItemTemplate>
