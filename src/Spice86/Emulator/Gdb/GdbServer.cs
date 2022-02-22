@@ -44,7 +44,7 @@ public class GdbServer : IDisposable {
         var gdbCommandHandler = new GdbCommandHandler(gdbIo, _machine, _configuration);
         gdbCommandHandler.PauseEmulator();
         this._started = true;
-        while (gdbCommandHandler.IsConnected() && gdbIo.IsClientConnected()) {
+        while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
             string command = gdbIo.ReadCommand();
             if (string.IsNullOrWhiteSpace(command) == false) {
                 gdbCommandHandler.RunCommand(command);

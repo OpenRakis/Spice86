@@ -37,9 +37,7 @@ public class GdbCommandBreakpointHandler {
         return _gdbIo.GenerateResponse("OK");
     }
 
-    public bool IsResumeEmulatorOnCommandEnd() {
-        return _resumeEmulatorOnCommandEnd;
-    }
+    public bool ResumeEmulatorOnCommandEnd { get => _resumeEmulatorOnCommandEnd; set => _resumeEmulatorOnCommandEnd = value; }
 
     public void OnBreakPointReached(BreakPoint breakPoint) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
@@ -95,10 +93,6 @@ public class GdbCommandBreakpointHandler {
             _logger.Debug("Breakpoint removed!\n{@BreakPoint}", breakPoint);
         }
         return _gdbIo.GenerateResponse("OK");
-    }
-
-    public void SetResumeEmulatorOnCommandEnd(bool resumeEmulatorOnCommandEnd) {
-        this._resumeEmulatorOnCommandEnd = resumeEmulatorOnCommandEnd;
     }
 
     public string? Step() {

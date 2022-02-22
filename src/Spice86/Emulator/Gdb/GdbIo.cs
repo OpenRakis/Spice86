@@ -37,9 +37,7 @@ public class GdbIo : IDisposable {
         _stream = new NetworkStream(_socket);
     }
 
-    public bool IsClientConnected() {
-        return !((_socket.Poll(1000, SelectMode.SelectRead) && (_socket.Available == 0)) || !_socket.Connected);
-    }
+    public bool IsClientConnected => !((_socket.Poll(1000, SelectMode.SelectRead) && (_socket.Available == 0)) || !_socket.Connected);
 
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -65,9 +63,7 @@ public class GdbIo : IDisposable {
         return "";
     }
 
-    public List<byte> GetRawCommand() {
-        return _rawCommand;
-    }
+    public List<byte> RawCommand =>_rawCommand;
 
     public string ReadCommand() {
         _rawCommand.Clear();

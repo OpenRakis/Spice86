@@ -62,7 +62,7 @@ public class GdbCommandMemoryHandler {
         uint end = ConvertUtils.ParseHex32(parameters[1]);
 
         // read the bytes from the raw command as GDB does not send them as hex
-        List<Byte> rawCommand = _gdbIo.GetRawCommand();
+        List<Byte> rawCommand = _gdbIo.RawCommand;
 
         // Extract the original hex sent by GDB, read from
         // 3: +$q

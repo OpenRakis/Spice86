@@ -27,12 +27,10 @@ public class GdbCommandHandler {
         this._gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.DefaultDumpDirectory, configuration.JumpFile);
     }
 
-    public bool IsConnected() {
-        return _isConnected;
-    }
+    public bool IsConnected =>_isConnected;
 
     public void PauseEmulator() {
-        _gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(false);
+        _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = false;
         _machine.MachineBreakpoints.PauseHandler.RequestPause();
     }
 
@@ -70,7 +68,7 @@ public class GdbCommandHandler {
                 _gdbIo.SendResponse(response);
             }
         } finally {
-            if (_gdbCommandBreakpointHandler.IsResumeEmulatorOnCommandEnd()) {
+            if (_gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd) {
                 pauseHandler.RequestResume();
             }
         }
@@ -78,7 +76,7 @@ public class GdbCommandHandler {
 
     private string Detach() {
         _isConnected = false;
-        _gdbCommandBreakpointHandler.SetResumeEmulatorOnCommandEnd(true);
+        _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = true;
         return _gdbIo.GenerateResponse("");
     }
 
