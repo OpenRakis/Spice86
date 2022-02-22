@@ -18,7 +18,6 @@
 		</LayoutTransformControl.RenderTransform>
 		<Viewbox Stretch="UniformToFill">
 			<Image x:Name="Image"
-				RenderOptions.BitmapInterpolationMode="HighQuality"
 				Cursor="{Binding Cursor}"
 				Source="{Binding Bitmap}"
 				 />
