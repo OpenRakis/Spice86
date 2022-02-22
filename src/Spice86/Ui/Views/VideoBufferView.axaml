@@ -16,9 +16,8 @@
 				ScaleY="{Binding Scale}">
 			</ScaleTransform>
 		</LayoutTransformControl.RenderTransform>
-		<Viewbox>
+		<Viewbox Stretch="UniformToFill">
 			<Image x:Name="Image"
-				Stretch="None"
 				RenderOptions.BitmapInterpolationMode="HighQuality"
 				Cursor="{Binding Cursor}"
 				Source="{Binding Bitmap}"
