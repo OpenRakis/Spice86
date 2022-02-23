@@ -28,7 +28,12 @@ public class JumpDumper {
             return new JumpHandler();
         }
         try {
-            return JsonConvert.DeserializeObject<JumpHandler>(File.ReadAllText(filePath));
+            if(string.IsNullOrWhiteSpace(filePath) == false && File.Exists(filePath)) {
+                return JsonConvert.DeserializeObject<JumpHandler>(File.ReadAllText(filePath)) ?? new();
+            }
+            else {
+                return new();
+            }
         } catch (JsonException e) {
             throw new UnrecoverableException($"File {filePath} is not valid", e);
         }
