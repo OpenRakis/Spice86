@@ -26,7 +26,7 @@ using System.Threading;
 /// <li>Communicates keyboard and mouse events to the emulator</li>
 /// </ul>
 /// </summary>
-public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDisposable {
+public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposedValue;

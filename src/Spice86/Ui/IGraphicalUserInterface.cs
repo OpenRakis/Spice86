@@ -8,7 +8,7 @@ using Spice86.UI.ViewModels;
 using System;
 using System.Collections.Generic;
 
-public interface IVideoKeyboardMouseIO {
+public interface IGraphicalUserInterface {
 
     bool IsPaused { get; }
 

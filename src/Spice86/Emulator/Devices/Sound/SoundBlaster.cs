@@ -23,6 +23,7 @@ public class SoundBlaster : DefaultIOPortHandler {
     private const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222;
 
     public SoundBlaster(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {

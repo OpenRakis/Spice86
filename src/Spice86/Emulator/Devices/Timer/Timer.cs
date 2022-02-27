@@ -7,6 +7,8 @@ using Spice86.Emulator.Devices.Video;
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.VM;
 
+using System.Diagnostics;
+
 /// <summary>
 /// Emulates a PIT8254 Programmable Interval Timer.<br/>
 /// As a shortcut also triggers screen refreshes 60 times per second.<br/>
@@ -19,6 +21,11 @@ public class Timer : DefaultIOPortHandler {
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
     private const int ModeCommandeRegister = 0x43;
+
+    /// <summary>
+    /// The number of <see cref="System.Diagnostics.Stopwatch"/> timer ticks per millisecond.
+    /// </summary>
+    public static readonly long StopwatchTicksPerMillisecond = Stopwatch.Frequency / 1000;
 
     private readonly Counter[] _counters = new Counter[3];
     private readonly Pic _pic;

@@ -25,11 +25,11 @@ public class VgaCard : DefaultIOPortHandler {
 
     public const byte MODE_320_200_256 = 0x13;
 
-    private readonly IVideoKeyboardMouseIO? _gui;
+    private readonly IGraphicalUserInterface? _gui;
     private byte _crtStatusRegister;
     private bool _drawing = false;
 
-    public VgaCard(Machine machine, IVideoKeyboardMouseIO? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public VgaCard(Machine machine, IGraphicalUserInterface? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
         this._gui = gui;
         VgaDac = new VgaDac(machine);
     }

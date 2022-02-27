@@ -24,6 +24,7 @@ using Spice86.Emulator.Memory;
 using Spice86.UI;
 
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// Emulates an IBM PC
@@ -32,7 +33,7 @@ public class Machine {
     private const int InterruptHandlersSegment = 0xF000;
 
 
-    public Machine(IVideoKeyboardMouseIO? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, bool failOnUnhandledPort, bool debugMode) {
+    public Machine(IGraphicalUserInterface? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, bool failOnUnhandledPort, bool debugMode) {
         Gui = gui;
         DebugMode = debugMode;
 
@@ -42,6 +43,9 @@ public class Machine {
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this);
+
+        this.DmaController = new DmaController();
+
 
         // IO devices
         IoPortDispatcher = new IOPortDispatcher(this, failOnUnhandledPort);
@@ -120,7 +124,7 @@ public class Machine {
 
     public GravisUltraSound GravisUltraSound { get; private set; }
 
-    public IVideoKeyboardMouseIO? Gui { get; private set; }
+    public IGraphicalUserInterface? Gui { get; private set; }
 
     public IOPortDispatcher IoPortDispatcher { get; private set; }
 
@@ -155,6 +159,12 @@ public class Machine {
     public VgaCard VgaCard { get; private set; }
 
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; private set; }
+    public DmaController DmaController { get; private set; }
+    /// <summary>
+    /// Gets the current DOS environment variables.
+    /// TODO: Make use of it by allocating the block of memory corresponding to it in virtual memory.
+    /// </summary>
+    public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
 
     public void InstallAllCallbacksInInterruptTable() {
         CallbackHandler.InstallAllCallbacksInInterruptTable();
@@ -212,5 +222,14 @@ public class Machine {
         }
 
         return "null";
+    }
+
+    private readonly List<DmaChannel> dmaDeviceChannels = new();
+
+    internal void PerformDmaTransfers() {
+        foreach (DmaChannel? channel in this.dmaDeviceChannels) {
+            if (channel.IsActive && !channel.IsMasked)
+                channel.Transfer(this.Memory);
+        }
     }
 }
