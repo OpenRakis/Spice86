@@ -9,11 +9,13 @@
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
 	</PropertyGroup>
+	
+	<!-- Properties geared towards NuGet -->
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.1.4</Version>
-		<PackageReleaseNotes>Added SourceLink.</PackageReleaseNotes>
+		<Version>2.1.5</Version>
+		<PackageReleaseNotes>Enabled SourceLink.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
@@ -24,15 +26,12 @@
 	</PropertyGroup>
 	
 	<!-- Source Link configuration -->
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<EmbedUntrackedSources>true</EmbedUntrackedSources>
-		<!--TODO: FIX: '(The package does not contain any symbol (.pdb) files.)' in CD build-->
-		<!--<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>-->
 		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
 	</PropertyGroup>
-	<ItemGroup>
+	<ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
 			<PrivateAssets>all</PrivateAssets>
