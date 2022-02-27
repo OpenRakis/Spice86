@@ -16,6 +16,7 @@ using Spice86.Emulator.Devices.Video;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive;
 using System.Threading;
 
 /// <summary>
@@ -37,9 +38,34 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     private ProgramExecutor? _programExecutor;
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
 
+    ManualResetEvent _okayToContinueEvent = new ManualResetEvent(true);
+
+    private bool _isPaused = false;
+
+    public bool IsPaused { get => _isPaused; set => this.RaiseAndSetIfChanged(ref _isPaused, value); }
+
+    public ReactiveCommand<Unit, Unit> PlayCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit> PauseCommand { get; private set; }
+
     public MainWindowViewModel() {
+        PlayCommand = ReactiveCommand.Create(PlayCommandMethod);
+        PauseCommand = ReactiveCommand.Create(PauseCommandMethod);
         if (Design.IsDesignMode) {
             return;
+        }
+    }
+
+    private void PauseCommandMethod() {
+        if(_emulatorThread is not null) {
+            _okayToContinueEvent.Reset();
+            IsPaused = true;
+        }
+    }
+
+    private void PlayCommandMethod() {
+        if (_emulatorThread is not null) {
+            _okayToContinueEvent.Set();
+            IsPaused = false;
         }
     }
 
@@ -215,6 +241,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     private void RunMachine() {
         try {
+            _okayToContinueEvent.Set();
             _programExecutor = new ProgramExecutor(this, _configuration);
             _programExecutor.Run();
         } catch (Exception e) {
@@ -223,5 +250,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
             }
         }
         Exit();
+    }
+
+    public void WaitOne() {
+        _okayToContinueEvent.WaitOne();
     }
 }

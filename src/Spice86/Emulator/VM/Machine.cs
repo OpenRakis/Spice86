@@ -192,6 +192,9 @@ public class Machine {
 
     private void RunLoop() {
         while (Cpu.IsRunning) {
+            if(Gui?.IsPaused == true) {
+                Gui?.WaitOne();
+            }
             if (DebugMode) {
                 MachineBreakpoints.CheckBreakPoint();
             }

@@ -10,6 +10,13 @@ using System.Collections.Generic;
 
 public interface IVideoKeyboardMouseIO {
 
+    bool IsPaused { get; }
+
+    /// <summary>
+    /// Makes sure it's safe to continue (ie. a pause wasn't requested)
+    /// </summary>
+    void WaitOne();
+
     void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false);
 
     void Draw(byte[] memory, Rgb[] palette);
