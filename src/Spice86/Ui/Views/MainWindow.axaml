@@ -17,34 +17,40 @@
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<DockPanel LastChildFill="True">
-		<Menu DockPanel.Dock="Top">
-			<WrapPanel>
-				<Button Content="⏸︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
-				<Button Content="⏵︎" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
-			</WrapPanel>
+	<WrapPanel Orientation="Horizontal">
+		<Menu>
+			<MenuItem Header="⏸︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
+			<MenuItem Header="⏵︎" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
 		</Menu>
 		<ItemsRepeater Items="{Binding VideoBuffers}">
 			<ItemsRepeater.ItemTemplate>
 				<DataTemplate x:DataType="vm:VideoBufferViewModel">
-					<DockPanel LastChildFill="True">
-						<Grid ColumnDefinitions="Auto,*" DockPanel.Dock="Top">
-							<Label Grid.Column="0" VerticalContentAlignment="Bottom" HorizontalContentAlignment="Left" Content="{Binding Address, StringFormat={}0x{0:X}}" />
-							<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-								<StackPanel Orientation="Vertical">
-									<Label Content="Scale" HorizontalAlignment="Center" />
-									<NumericUpDown Text="{Binding Scale}" Margin="10,0,0,0" />
-								</StackPanel>
-								<CheckBox Margin="5,0,0,0" Content="Show Cursor" IsChecked="{Binding ShowCursor}" IsVisible="{Binding IsPrimaryDisplay}" />
-							</StackPanel>
-						</Grid>
+					<WrapPanel Orientation="Horizontal">
+						<Menu>
+							<MenuItem Header="Options">
+								<Label Content="{Binding Address, StringFormat={}0x{0:X}}" />
+								<MenuItem>
+									<MenuItem.Header>
+										<StackPanel Orientation="Horizontal">
+											<Label Content="Scale" HorizontalContentAlignment="Center" />
+											<NumericUpDown Text="{Binding Scale}" Margin="5,0,0,0" />
+										</StackPanel>
+									</MenuItem.Header>
+								</MenuItem>
+								<MenuItem IsVisible="{Binding IsPrimaryDisplay}">
+									<MenuItem.Header>
+										<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
+									</MenuItem.Header>
+								</MenuItem>
+							</MenuItem>
+						</Menu>
 						<local:VideoBufferView />
-					</DockPanel>
+					</WrapPanel>
 				</DataTemplate>
 			</ItemsRepeater.ItemTemplate>
 			<ItemsRepeater.Layout>
 				<StackLayout Orientation="Horizontal" Spacing="8" />
 			</ItemsRepeater.Layout>
 		</ItemsRepeater>
-	</DockPanel>
+	</WrapPanel>
 </Window>

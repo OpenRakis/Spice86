@@ -26,14 +26,14 @@ public partial class VideoBufferView : UserControl {
     }
 
     private void MainWindow_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e) {
-        if (this.DataContext is VideoBufferViewModel vm) {
-            vm.MainWindowViewModel?.OnKeyPressed(e);
+        if (ApplicationWindow?.DataContext is MainWindowViewModel vm) {
+            vm.OnKeyPressed(e);
         }
     }
 
     private void MainWindow_KeyUp(object? sender, Avalonia.Input.KeyEventArgs e) {
-        if (this.DataContext is VideoBufferViewModel vm) {
-            vm.MainWindowViewModel?.OnKeyReleased(e);
+        if (ApplicationWindow?.DataContext is MainWindowViewModel vm) {
+            vm.OnKeyReleased(e);
         }
     }
 
@@ -47,10 +47,10 @@ public partial class VideoBufferView : UserControl {
     private void VideoBufferView_Initialized(object? sender, EventArgs e) {
         if (this.DataContext is VideoBufferViewModel vm) {
             _image = this.FindControl<Image>(nameof(Image));
-            if (vm.IsPrimaryDisplay && _image is not null) {
-                _image.PointerMoved += (s, e) => vm.MainWindowViewModel?.OnMouseMoved(e, _image);
-                _image.PointerPressed += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, true);
-                _image.PointerReleased += (s, e) => vm.MainWindowViewModel?.OnMouseClick(e, false);
+            if (vm.IsPrimaryDisplay && _image is not null && ApplicationWindow?.DataContext is MainWindowViewModel mainVm) {
+                _image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, _image);
+                _image.PointerPressed += (s, e) => mainVm.OnMouseClick(e, true);
+                _image.PointerReleased += (s, e) => mainVm.OnMouseClick(e, false);
             }
             vm.Dirty += VideoBufferViewModel_IsDirty;
         }

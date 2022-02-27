@@ -34,8 +34,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         Scale = 1;
     }
 
-    public VideoBufferViewModel(MainWindowViewModel mainWindowViewModel, double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
-        MainWindowViewModel = mainWindowViewModel;
+    public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
         IsPrimaryDisplay = isPrimaryDisplay;
         Width = _initialWidth = width;
         Height = _initialHeight = height;
@@ -113,7 +112,6 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         private set => this.RaiseAndSetIfChanged(ref _height, value);
     }
     public bool IsPrimaryDisplay { get; private set; }
-    public MainWindowViewModel? MainWindowViewModel { get; private set; }
 
     private int _width = 200;
     private bool _appClosing;

@@ -14,8 +14,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.1.6</Version>
-		<PackageReleaseNotes>Added Pause Button to UI.</PackageReleaseNotes>
+		<Version>2.1.7</Version>
+		<PackageReleaseNotes>Larger image for primary video buffer</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
