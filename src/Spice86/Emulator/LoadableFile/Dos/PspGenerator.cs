@@ -26,8 +26,8 @@ public class PspGenerator {
         memory.SetUint16(pspAddress + LAST_FREE_SEGMENT_OFFSET, lastFreeSegment);
         memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
         DosInt21Handler dosFunctionDispatcher = _machine.DosInt21Handler;
-        dosFunctionDispatcher.GetDosMemoryManager().Init(pspSegment, lastFreeSegment);
-        dosFunctionDispatcher.GetDosFileManager().SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
+        dosFunctionDispatcher.DosMemoryManager.Init(pspSegment, lastFreeSegment);
+        dosFunctionDispatcher.DosFileManager.SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
     }
 
     private static byte[] ArgumentsToDosBytes(string? arguments) {

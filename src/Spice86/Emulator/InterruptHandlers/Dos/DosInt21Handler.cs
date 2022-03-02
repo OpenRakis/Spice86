@@ -412,13 +412,7 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
-    internal DosFileManager GetDosFileManager() {
-        return this._dosFileManager;
-    }
-
-    internal DosMemoryManager GetDosMemoryManager() {
-        return this._dosMemoryManager;
-    }
+    internal DosMemoryManager DosMemoryManager => _dosMemoryManager;
 
     private string ConvertDosChar(byte characterByte) {
         return _cp850CharSet.GetString(new [] { characterByte });

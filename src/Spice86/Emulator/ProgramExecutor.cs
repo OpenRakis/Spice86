@@ -179,7 +179,7 @@ public class ProgramExecutor : IDisposable {
             throw new ArgumentNullException(nameof(parentFolder));
         }
         driveMap.Add('C', cDrive);
-        Machine.DosInt21Handler.GetDosFileManager().SetDiskParameters(parentFolder, driveMap);
+        Machine.DosInt21Handler.DosFileManager.SetDiskParameters(parentFolder, driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration) {
