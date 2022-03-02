@@ -6,7 +6,7 @@ using Spice86.Emulator.CPU;
 
 public class CounterConfigurator {
     private static readonly ILogger _logger = Program.Logger.ForContext<CounterConfigurator>();
-    private const long DefaultInstructionsPerSecond = 2000000L;
+    private const long DefaultInstructionsPerSecond = 1000000L;
     private readonly Configuration _configuration;
 
     public CounterConfigurator(Configuration configuration) {

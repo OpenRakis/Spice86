@@ -26,7 +26,7 @@ public class CSharpOverrideHelper {
     protected readonly Stack _stack;
 
     protected readonly State _state;
-    
+
     private readonly string _prefix;
 
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
@@ -41,15 +41,10 @@ public class CSharpOverrideHelper {
         this._stack = _cpu.Stack;
     }
 
-    public void DefineFunction(ushort segment, ushort offset, string suffix) {
-        this.DefineFunction(segment, offset, suffix, null);
-    }
-
-    public void DefineFunction(ushort segment, ushort offset, string suffix, Func<Action>? @override) {
+    public void DefineFunction(ushort segment, ushort offset, string name, Func<Action>? @override = null) {
         SegmentedAddress address = new(segment, offset);
-        string name = $"{_prefix}.{suffix}";
-        if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
-            string error = $"There is already a function defined at address {address} named {existingFunctionInformation.Name} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
+        if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation) && existingFunctionInformation.HasOverride) {
+            string error = $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.Name, name);
             }
@@ -111,7 +106,7 @@ public class CSharpOverrideHelper {
                 segment,
                 offset),
             (b) => renamedOverride.Invoke()
-        , false);
+            , false);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 

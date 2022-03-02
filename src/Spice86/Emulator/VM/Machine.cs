@@ -30,7 +30,7 @@ using System;
 /// </summary>
 public class Machine {
     private const int InterruptHandlersSegment = 0xF000;
-    
+
 
     public Machine(IVideoKeyboardMouseIO? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, bool failOnUnhandledPort, bool debugMode) {
         Gui = gui;
@@ -192,7 +192,7 @@ public class Machine {
 
     private void RunLoop() {
         while (Cpu.IsRunning) {
-            if(Gui?.IsPaused == true) {
+            if (Gui?.IsPaused == true) {
                 Gui?.WaitOne();
             }
             if (DebugMode) {

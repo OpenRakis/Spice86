@@ -183,11 +183,18 @@ public class ProgramExecutor : IDisposable {
     }
 
     private void InitializeFunctionHandlers(Configuration configuration) {
-        if (configuration.OverrideSupplier is null) {
+        IDictionary<SegmentedAddress, FunctionInformation> functionInformations = new Dictionary<SegmentedAddress, FunctionInformation>();
+        if (configuration.SymbolsFile != null) {
+            // Extract functions with names from symbols
+            DictionaryUtils.AddAll(functionInformations, new GhidraSymbolsDumper().ReadFromFileOrCreate(configuration.SymbolsFile));
+        }
+        if (configuration.OverrideSupplier != null) {
+            DictionaryUtils.AddAll(functionInformations, GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, Machine));
+        }
+        if (functionInformations.Count == 0) {
             return;
         }
         Cpu cpu = Machine.Cpu;
-        Dictionary<SegmentedAddress, FunctionInformation> functionInformations = GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, Machine);
         bool useCodeOverride = configuration.UseCodeOverride;
         SetupFunctionHandler(cpu.FunctionHandler, functionInformations, useCodeOverride);
         SetupFunctionHandler(cpu.FunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
@@ -210,7 +217,7 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    private static void SetupFunctionHandler(FunctionHandler functionHandler, Dictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
+    private static void SetupFunctionHandler(FunctionHandler functionHandler, IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.FunctionInformations = functionInformations;
         functionHandler.UseCodeOverride = useCodeOverride;
     }

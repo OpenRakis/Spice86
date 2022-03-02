@@ -24,7 +24,7 @@ public class GdbCommandHandler {
         this._gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine);
         this._gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine);
         this._gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine);
-        this._gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.DefaultDumpDirectory, configuration.JumpFile);
+        this._gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.DefaultDumpDirectory, configuration.JumpFile, configuration.SymbolsFile);
     }
 
     public bool IsConnected =>_isConnected;

@@ -54,10 +54,18 @@ public static class ConvertUtils {
     /// <param name="value"> </param>
     /// <returns>the value as a uint</returns>
     public static uint ParseHex32(string value) {
-        string hex = new Regex(HexStringStartPattern).Replace(value, "");
-        return uint.Parse(hex, NumberStyles.HexNumber);
+        return uint.Parse(replace0xWithBlank(value), NumberStyles.HexNumber);
     }
 
+    /// <summary> </summary>
+    /// <param name="value"> </param>
+    /// <returns>the value as a ushort</returns>
+    public static ushort ParseHex16(string value) {
+        return ushort.Parse(replace0xWithBlank(value), NumberStyles.HexNumber);
+    }
+    private static string replace0xWithBlank(string value) {
+        return new Regex(HexStringStartPattern).Replace(value, "");
+    }
     public static byte ReadLsb(ushort value) {
         return (byte)value;
     }

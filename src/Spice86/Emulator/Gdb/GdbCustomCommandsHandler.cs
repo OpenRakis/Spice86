@@ -27,16 +27,18 @@ public class GdbCustomCommandsHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<GdbCustomCommandsHandler>();
     private readonly string? _defaultDumpDirectory;
     private readonly string? _jumpFile;
+    private readonly string? _symbolsFile;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
-    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string? defaultDumpDirectory, string? jumpFile) {
+    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string? defaultDumpDirectory, string? jumpFile, string? symbolsFile) {
         _gdbIo = gdbIo;
         _machine = machine;
         _onBreakpointReached = onBreakpointReached;
         _defaultDumpDirectory = defaultDumpDirectory;
         _jumpFile = jumpFile;
+        _symbolsFile = symbolsFile;
     }
 
     public virtual string HandleCustomCommands(string command) {
@@ -136,14 +138,17 @@ public class GdbCustomCommandsHandler {
         return DumpFunctionWithFormat(args, "Functions.csv", new CsvFunctionInformationToStringConverter());
     }
     private string DumpGhidraSymbols(String[] args) {
-        return DumpFunctionWithFormat(args, "GhidraSymbols.txt", new GhidraSymbolsToStringConverter());
+        string fileName = GetFirstArgumentOrDefaultFile(args, _symbolsFile ?? GenerateDumpFileSuffix("GhidraSymbols.txt"));
+        return DoFileAction(fileName, (f) => {
+            new GhidraSymbolsDumper().Dump(_machine, fileName);
+        }, "Error while dumping jumps");
     }
 
     private string DumpFunctionWithFormat(String[] args, string defaultSuffix, FunctionInformationToStringConverter converter) {
         string fileName = GetFirstArgumentOrDefaultFileSuffix(args, defaultSuffix);
         return DoFileAction(fileName, (f) => {
             Cpu cpu = _machine.Cpu;
-            new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.StaticAddressesRecorder, cpu.FunctionHandler, cpu.FunctionHandlerInExternalInterrupt);
+            new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.StaticAddressesRecorder, cpu.FunctionHandler);
         }, "Error while dumping functions");
     }
 
