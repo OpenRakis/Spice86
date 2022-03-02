@@ -91,6 +91,8 @@ public class Machine {
         Register(MouseInt33Handler);
     }
 
+    public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
+
     public bool DebugMode { get; private set; }
 
     public string DumpCallStack() {
