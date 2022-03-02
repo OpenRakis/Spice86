@@ -11,9 +11,9 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     private ISet<FunctionInformation>? _callers;
 
-    private readonly string? _name;
+    private readonly string _name;
 
-    private readonly Func<Action>? _funtionOverride;
+    public Func<Action>? FuntionOverride { private get; set; }
 
     private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _returns;
 
@@ -27,7 +27,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
     public FunctionInformation(SegmentedAddress address, string name, Func<Action>? funtionOverride) {
         this._address = address;
         this._name = name;
-        this._funtionOverride = funtionOverride;
+        this.FuntionOverride = funtionOverride;
     }
 
     public void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
@@ -40,7 +40,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     public void CallOverride() {
         if (HasOverride) {
-            Action? retHandler =  _funtionOverride?.Invoke();
+            Action? retHandler =  FuntionOverride?.Invoke();
             // The override returns what to do when going back to emu mode, so let's do it!
             retHandler?.Invoke();
         }
@@ -85,7 +85,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         return _address.GetHashCode();
     }
 
-    public string? Name => _name;
+    public string Name => _name;
 
     public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
         get {
@@ -105,7 +105,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         }
     }
 
-    public bool HasOverride => _funtionOverride != null;
+    public bool HasOverride => FuntionOverride != null;
 
     public override string ToString() {
         return $"{this._name}_{ConvertUtils.ToCSharpStringWithPhysical(this._address)}";

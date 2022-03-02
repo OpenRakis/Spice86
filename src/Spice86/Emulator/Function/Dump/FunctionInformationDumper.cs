@@ -11,8 +11,8 @@ using System.Linq;
 /// </summary>
 public class FunctionInformationDumper {
 
-    public void DumpFunctionHandlers(string destinationFilePath, FunctionInformationToStringConverter converter, StaticAddressesRecorder staticAddressesRecorder, params FunctionHandler[] functionHandlers) {
-        List<FunctionInformation> functionInformations = MergeFunctionHandlers(functionHandlers).ToList();
+    public void DumpFunctionHandlers(string destinationFilePath, FunctionInformationToStringConverter converter, StaticAddressesRecorder staticAddressesRecorder, FunctionHandler functionHandler) {
+        ICollection<FunctionInformation> functionInformations = functionHandler.FunctionInformations.Values;
 
         // Set for search purposes
         HashSet<FunctionInformation> functionInformationsSet = new(functionInformations);
@@ -44,9 +44,5 @@ public class FunctionInformationDumper {
         } finally {
             printWriter?.Dispose();
         }
-    }
-
-    private static IEnumerable<FunctionInformation> MergeFunctionHandlers(params FunctionHandler[] functionHandlers) {
-        return functionHandlers.ToDictionary(x => x.FunctionInformations).Select(x => x.Key.Values).Select(x => x).SelectMany(x => x).Distinct().OrderBy(x => x);
     }
 }
