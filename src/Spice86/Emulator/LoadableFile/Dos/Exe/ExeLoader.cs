@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Loadablefile.Dos.Exe;
+﻿namespace Spice86.Emulator.LoadableFile.Dos.Exe;
 
 using Serilog;
 
@@ -6,6 +6,7 @@ using Spice86.Emulator.LoadableFile;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 using Spice86.Emulator.CPU;
+using Spice86.Emulator.Errors;
 
 /// <summary>
 /// Loads a DOS 16 bits EXE file in memory.
@@ -27,6 +28,22 @@ public class ExeLoader : ExecutableFileLoader {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Read header: {@ReadHeader}", exeFile);
         }
+
+        // Each process gets its own copy of the system environment strings,
+        // so these need to be allocated in a separate block first.
+        byte[]  environmentBlock = new EnvironmentBlockGenerator(_machine).BuildEnvironmentBlock();
+        
+        var fullImagePath = file;
+
+        ushort requestedSize = (ushort)((environmentBlock.Length >> 4) + 1 + fullImagePath.Length + 1);
+        InterruptHandlers.Dos.DosMemoryControlBlock? environmentSegment = _machine.DosMemoryManager.AllocateMemoryBlock(requestedSize);
+        if (environmentSegment is null || environmentSegment.IsValid == false)
+            throw new InvalidVMOperationException(_machine, "Could not allocate an environnement block");
+
+
+        // Copy the environment block to emulated memory.
+        environmentSegment.SetZeroTerminatedString(0,_machine.EnvironmentVariables.GetEnvironmentString(), requestedSize);
+
         LoadExeFileInMemory(exeFile, _startSegment);
         ushort pspSegment = (ushort)(_startSegment - 0x10);
         SetupCpuForExe(exeFile, _startSegment, pspSegment);

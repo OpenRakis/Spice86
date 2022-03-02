@@ -18,7 +18,13 @@ public sealed class EnvironmentVariables : IDictionary<string, string> {
     /// Generates a null-separated block of environment strings.
     /// </summary>
     /// <returns>Null-separated block of environment strings.</returns>
-    internal byte[] GetEnvironmentBlock() {
+    public byte[] GetEnvironmentBlock() => Encoding.ASCII.GetBytes(GetEnvironmentString());
+
+    /// <summary>
+    /// Generates a null-separated block of environment strings.
+    /// </summary>
+    /// <returns>Null-separated block of environment strings.</returns>
+    public string GetEnvironmentString() {
         var sb = new StringBuilder();
         foreach (KeyValuePair<string, string> pair in variables) {
             sb.Append(pair.Key);
@@ -28,7 +34,7 @@ public sealed class EnvironmentVariables : IDictionary<string, string> {
         }
         sb.Append('\0');
 
-        return Encoding.ASCII.GetBytes(sb.ToString());
+        return sb.ToString();
     }
 
     public void Add(string key, string value) => variables.Add(key, value);

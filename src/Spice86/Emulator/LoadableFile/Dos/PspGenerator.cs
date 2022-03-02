@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Loadablefile.Dos;
+﻿namespace Spice86.Emulator.LoadableFile.Dos;
 
 using Spice86.Emulator.InterruptHandlers.Dos;
 using Spice86.Emulator.VM;
