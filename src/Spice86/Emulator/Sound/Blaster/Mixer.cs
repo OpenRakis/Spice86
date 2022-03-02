@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Emulator.Sound.Blaster;
 
+using Spice86.Emulator.Devices.Sound;
+
 internal sealed class Mixer
 {
     private readonly SoundBlaster blaster;

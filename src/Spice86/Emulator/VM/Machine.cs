@@ -64,6 +64,7 @@ public class Machine {
         Register(PcSpeaker);
         SoundBlaster = new SoundBlaster(this, failOnUnhandledPort);
         Register(SoundBlaster);
+        SoundBlaster.AddEnvironnmentVariable();
         GravisUltraSound = new GravisUltraSound(this, failOnUnhandledPort);
         Register(GravisUltraSound);
         Midi = new Midi(this, failOnUnhandledPort);
