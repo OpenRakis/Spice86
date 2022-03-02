@@ -16,9 +16,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         _biosKeyboardBuffer.Init();
     }
 
-    public BiosKeyboardBuffer GetBiosKeyboardBuffer() {
-        return _biosKeyboardBuffer;
-    }
+    public BiosKeyboardBuffer BiosKeyboardBuffer => _biosKeyboardBuffer;
 
     public override byte Index => 0x9;
 

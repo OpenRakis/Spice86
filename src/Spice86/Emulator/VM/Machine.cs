@@ -79,7 +79,7 @@ public class Machine {
         Register(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
         Register(SystemBiosInt15Handler);
-        KeyboardInt16Handler = new KeyboardInt16Handler(this, BiosKeyboardInt9Handler.GetBiosKeyboardBuffer());
+        KeyboardInt16Handler = new KeyboardInt16Handler(this, BiosKeyboardInt9Handler.BiosKeyboardBuffer);
         Register(KeyboardInt16Handler);
         SystemClockInt1AHandler = new SystemClockInt1AHandler(this, TimerInt8Handler);
         Register(SystemClockInt1AHandler);
