@@ -31,18 +31,17 @@ public class ExeLoader : ExecutableFileLoader {
 
         // Each process gets its own copy of the system environment strings,
         // so these need to be allocated in a separate block first.
-        byte[]  environmentBlock = new EnvironmentBlockGenerator(_machine).BuildEnvironmentBlock();
+        //byte[]  environmentBlock = new EnvironmentBlockGenerator(_machine).BuildEnvironmentBlock();
         
-        var fullImagePath = file;
+        //var fullImagePath = file;
 
-        ushort requestedSize = (ushort)((environmentBlock.Length >> 4) + 1 + fullImagePath.Length + 1);
-        InterruptHandlers.Dos.DosMemoryControlBlock? environmentSegment = _machine.DosMemoryManager.AllocateMemoryBlock(requestedSize);
-        if (environmentSegment is null || environmentSegment.IsValid == false)
-            throw new InvalidVMOperationException(_machine, "Could not allocate an environnement block");
-
+        //ushort requestedSize = (ushort)((environmentBlock.Length >> 4) + 1 + fullImagePath.Length + 1);
+        //InterruptHandlers.Dos.DosMemoryControlBlock? environmentSegment = _machine.DosMemoryManager.AllocateMemoryBlock(requestedSize);
+        //if (environmentSegment is null || environmentSegment.IsValid == false)
+        //    throw new InvalidVMOperationException(_machine, "Could not allocate an environnement block");
 
         // Copy the environment block to emulated memory.
-        environmentSegment.SetZeroTerminatedString(0,_machine.EnvironmentVariables.EnvironmentString, requestedSize);
+        //environmentSegment.SetZeroTerminatedString(0,_machine.EnvironmentVariables.EnvironmentString, requestedSize);
 
         LoadExeFileInMemory(exeFile, _startSegment);
         ushort pspSegment = (ushort)(_startSegment - 0x10);
