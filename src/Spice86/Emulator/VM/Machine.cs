@@ -29,7 +29,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Emulates an IBM PC
 /// </summary>
-public class Machine {
+public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
 
 
@@ -232,11 +232,27 @@ public class Machine {
     }
 
     private readonly List<DmaChannel> dmaDeviceChannels = new();
+    private bool disposedValue;
 
     internal void PerformDmaTransfers() {
         foreach (DmaChannel? channel in this.dmaDeviceChannels) {
             if (channel.IsActive && !channel.IsMasked)
                 channel.Transfer(this.Memory);
         }
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (!disposedValue) {
+            if (disposing) {
+                SoundBlaster.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

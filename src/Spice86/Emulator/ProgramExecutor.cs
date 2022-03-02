@@ -54,6 +54,7 @@ public class ProgramExecutor : IDisposable {
         if (!_disposedValue) {
             if (disposing) {
                 _gdbServer?.Dispose();
+                Machine.Dispose();
             }
             _disposedValue = true;
         }
