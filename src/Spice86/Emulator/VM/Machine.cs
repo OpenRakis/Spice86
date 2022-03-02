@@ -167,6 +167,10 @@ public class Machine {
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
 
+    public event EventHandler? Paused;
+
+    public event EventHandler? Resumed;
+
     public void InstallAllCallbacksInInterruptTable() {
         CallbackHandler.InstallAllCallbacksInInterruptTable();
     }
@@ -206,7 +210,9 @@ public class Machine {
     private void RunLoop() {
         while (Cpu.IsRunning) {
             if (Gui?.IsPaused == true) {
+                Paused?.Invoke(this, EventArgs.Empty);
                 Gui?.WaitOne();
+                Resumed?.Invoke(this, EventArgs.Empty);
             }
             if (DebugMode) {
                 MachineBreakpoints.CheckBreakPoint();

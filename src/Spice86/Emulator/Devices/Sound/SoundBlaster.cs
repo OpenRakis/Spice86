@@ -82,6 +82,8 @@ public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaD
     /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
     public SoundBlaster(Machine vm, bool failOnUnhandledPort, int irq = 7, int dma8 = 1, int dma16 = 5) : base(vm, failOnUnhandledPort) {
         this.vm = vm ?? throw new ArgumentNullException(nameof(vm));
+        this.vm.Paused += Vm_Paused;
+        this.vm.Resumed += Vm_Resumed;
         this.IRQ = irq;
         this.DMA = dma8;
         this.dma16 = dma16;
@@ -94,6 +96,14 @@ public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaD
             Priority = ThreadPriority.AboveNormal
         };
         this.playbackThread.Start();
+    }
+
+    private void Vm_Resumed(object? sender, EventArgs e) {
+        this.pausePlayback = false;
+    }
+
+    private void Vm_Paused(object? sender, EventArgs e) {
+        this.pausePlayback = true;
     }
 
     public override byte Inb(int port) {
