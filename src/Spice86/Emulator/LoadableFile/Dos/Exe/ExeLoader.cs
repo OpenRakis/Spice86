@@ -42,7 +42,7 @@ public class ExeLoader : ExecutableFileLoader {
 
 
         // Copy the environment block to emulated memory.
-        environmentSegment.SetZeroTerminatedString(0,_machine.EnvironmentVariables.GetEnvironmentString(), requestedSize);
+        environmentSegment.SetZeroTerminatedString(0,_machine.EnvironmentVariables.EnvironmentString, requestedSize);
 
         LoadExeFileInMemory(exeFile, _startSegment);
         ushort pspSegment = (ushort)(_startSegment - 0x10);
