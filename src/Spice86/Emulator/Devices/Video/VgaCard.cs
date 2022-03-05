@@ -29,7 +29,7 @@ public class VgaCard : DefaultIOPortHandler {
     private byte _crtStatusRegister;
     private bool _drawing = false;
 
-    public VgaCard(Machine machine, IGraphicalUserInterface? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public VgaCard(Machine machine, IGraphicalUserInterface? gui, Configuration configuration) : base(machine, configuration) {
         this._gui = gui;
         VgaDac = new VgaDac(machine);
     }
@@ -62,7 +62,7 @@ public class VgaCard : DefaultIOPortHandler {
         return VgaDac.State == Video.VgaDac.VgaDacWrite ? (byte)0x3 : (byte)0x0;
     }
 
-    public override byte Inb(int port) {
+    public override byte ReadByte(int port) {
         if (port == VGA_READ_INDEX_PORT) {
             return GetVgaReadIndex();
         } else if (port == VGA_STATUS_REGISTER_PORT) {
@@ -71,10 +71,10 @@ public class VgaCard : DefaultIOPortHandler {
             return RgbDataRead();
         }
 
-        return base.Inb(port);
+        return base.ReadByte(port);
     }
 
-    public override void Outb(int port, byte value) {
+    public override void WriteByte(int port, byte value) {
         if (port == VGA_READ_INDEX_PORT) {
             SetVgaReadIndex(value);
         } else if (port == VGA_WRITE_INDEX_PORT) {
@@ -87,7 +87,7 @@ public class VgaCard : DefaultIOPortHandler {
                 _logger.Information("Vsync value set to {@VSync} (this is not implemented)", vsync);
             }
         } else {
-            base.Outb(port, value);
+            base.WriteByte(port, value);
         }
     }
 

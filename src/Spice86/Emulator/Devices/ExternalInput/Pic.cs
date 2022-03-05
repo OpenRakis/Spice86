@@ -45,7 +45,7 @@ public class Pic : DefaultIOPortHandler {
         _vectorNumberToIrq.Add(9, 1);
     }
 
-    public Pic(Machine machine, bool initialized, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public Pic(Machine machine, bool initialized, Configuration configuration) : base(machine, configuration) {
         _initialized = initialized;
     }
 
@@ -70,7 +70,7 @@ public class Pic : DefaultIOPortHandler {
 
     public bool IsLastIrqAcknowledged { get; private set; } = true;
 
-    public override void Outb(int port, byte value) {
+    public override void WriteByte(int port, byte value) {
         if (port == MasterPortA) {
             ProcessPortACommand(value);
             return;
@@ -78,7 +78,7 @@ public class Pic : DefaultIOPortHandler {
             ProcessPortBCommand(value);
             return;
         }
-        base.Outb(port, value);
+        base.WriteByte(port, value);
     }
 
     public void ProcessInterrupt(byte vectorNumber) {

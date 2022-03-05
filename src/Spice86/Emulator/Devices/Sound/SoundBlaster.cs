@@ -80,7 +80,7 @@ public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaD
     /// <param name="irq">IRQ number for the Sound Blaster.</param>
     /// <param name="dma8">8-bit DMA channel for the Sound Blaster.</param>
     /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
-    public SoundBlaster(Machine vm, bool failOnUnhandledPort, int irq = 7, int dma8 = 1, int dma16 = 5) : base(vm, failOnUnhandledPort) {
+    public SoundBlaster(Machine vm, Configuration configuration, int irq = 7, int dma8 = 1, int dma16 = 5) : base(vm, configuration) {
         this.vm = vm ?? throw new ArgumentNullException(nameof(vm));
         this.vm.Paused += Vm_Paused;
         this.vm.Resumed += Vm_Resumed;
@@ -106,19 +106,19 @@ public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaD
         this.pausePlayback = true;
     }
 
-    public override byte Inb(int port) {
+    public override byte ReadByte(int port) {
         return ((IInputPort)this).ReadByte(port);
     }
 
-    public override void Outb(int port, byte value) {
+    public override void WriteByte(int port, byte value) {
         ((IOutputPort)this).WriteByte(port, value);
     }
 
-    public override ushort Inw(int port) {
+    public override ushort ReadWord(int port) {
         return ((IInputPort)this).ReadWord(port);
     }
 
-    public override void Outw(int port, ushort value) {
+    public override void WriteWord(int port, ushort value) {
         ((IOutputPort)this).WriteWord(port, value);
     }
 

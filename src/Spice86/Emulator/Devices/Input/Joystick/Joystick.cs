@@ -9,7 +9,7 @@ using Spice86.Emulator.VM;
 public class Joystick : DefaultIOPortHandler {
     private const int JoystickPositionAndStatus = 0x201;
 
-    public Joystick(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public Joystick(Machine machine, Configuration configuration) : base(machine, configuration) {
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {

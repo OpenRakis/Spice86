@@ -10,46 +10,46 @@ using System.Collections.Generic;
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
 
-    public IOPortDispatcher(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
-        this._failOnUnhandledPort = failOnUnhandledPort;
+    public IOPortDispatcher(Machine machine, Configuration configuration) : base(machine, configuration) {
+        this._failOnUnhandledPort = configuration.FailOnUnhandledPort;
     }
 
     public void AddIOPortHandler(int port, IIOPortHandler ioPortHandler) {
         _ioPortHandlers.Add(port, ioPortHandler);
     }
 
-    public override byte Inb(int port) {
+    public override byte ReadByte(int port) {
         if (_ioPortHandlers.ContainsKey(port)) {
-            return _ioPortHandlers[port].Inb(port);
+            return _ioPortHandlers[port].ReadByte(port);
         }
 
-        return base.Inb(port);
+        return base.ReadByte(port);
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
     }
 
-    public override ushort Inw(int port) {
+    public override ushort ReadWord(int port) {
         if (_ioPortHandlers.ContainsKey(port)) {
-            return _ioPortHandlers[port].Inw(port);
+            return _ioPortHandlers[port].ReadWord(port);
         }
 
-        return base.Inw(port);
+        return base.ReadWord(port);
     }
 
-    public override void Outb(int port, byte value) {
+    public override void WriteByte(int port, byte value) {
         if (_ioPortHandlers.ContainsKey(port)) {
-            _ioPortHandlers[port].Outb(port, value);
+            _ioPortHandlers[port].WriteByte(port, value);
         } else {
-            base.Outb(port, value);
+            base.WriteByte(port, value);
         }
     }
 
-    public override void Outw(int port, ushort value) {
+    public override void WriteWord(int port, ushort value) {
         if (_ioPortHandlers.ContainsKey(port)) {
-            _ioPortHandlers[port].Outw(port, value);
+            _ioPortHandlers[port].WriteWord(port, value);
         } else {
-            base.Outw(port, value);
+            base.WriteWord(port, value);
         }
     }
 }

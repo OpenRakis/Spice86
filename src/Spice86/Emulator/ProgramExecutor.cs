@@ -104,7 +104,7 @@ public class ProgramExecutor : IDisposable {
         bool debugMode = configuration.GdbPort != null;
         JumpHandler jumpHandler = new JumpDumper().ReadFromFileOrCreate(configuration.JumpFile);
         jumpHandler.DebugMode = debugMode;
-        Machine = new Machine(gui, counterConfigurator, jumpHandler, configuration.FailOnUnhandledPort, debugMode);
+        Machine = new Machine(gui, counterConfigurator, jumpHandler, configuration, debugMode);
         InitializeCpu();
         InitializeDos(configuration);
         if (configuration.InstallInterruptVector) {

@@ -35,7 +35,7 @@ public class Timer : DefaultIOPortHandler {
     // Cheat: display at 60fps
     private readonly Counter _vgaCounter;
 
-    public Timer(Machine machine, Pic pic, VgaCard vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public Timer(Machine machine, Pic pic, VgaCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
         this._pic = pic;
         this._vgaCard = vgaCard;
         this._cpu = machine.Cpu;
@@ -58,7 +58,7 @@ public class Timer : DefaultIOPortHandler {
 
     public long NumberOfTicks => _counters[0].Ticks;
 
-    public override byte Inb(int port) {
+    public override byte ReadByte(int port) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             byte value = counter.ValueUsingMode;
@@ -68,7 +68,7 @@ public class Timer : DefaultIOPortHandler {
             return value;
         }
 
-        return base.Inb(port);
+        return base.ReadByte(port);
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
@@ -78,7 +78,7 @@ public class Timer : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(CounterRegisterTwo, this);
     }
 
-    public override void Outb(int port, byte value) {
+    public override void WriteByte(int port, byte value) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             counter.SetValueUsingMode(value);
@@ -97,7 +97,7 @@ public class Timer : DefaultIOPortHandler {
             }
             return;
         }
-        base.Outb(port, value);
+        base.WriteByte(port, value);
     }
 
     public void Tick() {

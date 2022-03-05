@@ -31,9 +31,10 @@ using System.Collections.Generic;
 /// </summary>
 public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
+    private readonly Configuration _configuration;
 
-
-    public Machine(IGraphicalUserInterface? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, bool failOnUnhandledPort, bool debugMode) {
+    public Machine(IGraphicalUserInterface? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, Configuration configuration, bool debugMode) {
+        _configuration = configuration;
         Gui = gui;
         DebugMode = debugMode;
 
@@ -48,26 +49,26 @@ public class Machine : IDisposable {
 
 
         // IO devices
-        IoPortDispatcher = new IOPortDispatcher(this, failOnUnhandledPort);
+        IoPortDispatcher = new IOPortDispatcher(this, configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
-        Pic = new Pic(this, true, failOnUnhandledPort);
+        Pic = new Pic(this, true, configuration);
         Register(Pic);
-        VgaCard = new VgaCard(this, gui, failOnUnhandledPort);
+        VgaCard = new VgaCard(this, gui, configuration);
         Register(VgaCard);
-        Timer = new Timer(this, Pic, VgaCard, counterConfigurator, failOnUnhandledPort);
+        Timer = new Timer(this, Pic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
-        Keyboard = new Keyboard(this, gui, failOnUnhandledPort);
+        Keyboard = new Keyboard(this, gui, configuration);
         Register(Keyboard);
-        Joystick = new Joystick(this, failOnUnhandledPort);
+        Joystick = new Joystick(this, configuration);
         Register(Joystick);
-        PcSpeaker = new PcSpeaker(this, failOnUnhandledPort);
+        PcSpeaker = new PcSpeaker(this, configuration);
         Register(PcSpeaker);
-        SoundBlaster = new SoundBlaster(this, failOnUnhandledPort);
+        SoundBlaster = new SoundBlaster(this, configuration);
         Register(SoundBlaster);
         SoundBlaster.AddEnvironnmentVariable();
-        GravisUltraSound = new GravisUltraSound(this, failOnUnhandledPort);
+        GravisUltraSound = new GravisUltraSound(this, configuration);
         Register(GravisUltraSound);
-        Midi = new Midi(this, failOnUnhandledPort);
+        Midi = new Midi(this, configuration);
         Register(Midi);
 
         // Services

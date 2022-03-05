@@ -14,10 +14,10 @@ public class PcSpeaker : DefaultIOPortHandler {
     private const int PcSpeakerPortNumber = 0x61;
     private byte _value;
 
-    public PcSpeaker(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public PcSpeaker(Machine machine, Configuration configuration) : base(machine, configuration) {
     }
 
-    public override byte Inb(int port) {
+    public override byte ReadByte(int port) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PC Speaker get value {@PCSpeakerValue}", ConvertUtils.ToHex8(this._value));
         }
@@ -29,7 +29,7 @@ public class PcSpeaker : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
     }
 
-    public override void Outb(int port, byte value) {
+    public override void WriteByte(int port, byte value) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PC Speaker set value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }

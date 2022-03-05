@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Emulator.Sound.Midi;
 
 using Spice86.Emulator.Devices;
+using Spice86.Emulator.Sound.Midi.MT32;
 using Spice86.Emulator.VM;
 
 using System;

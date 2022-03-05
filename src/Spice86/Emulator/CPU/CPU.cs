@@ -1806,7 +1806,7 @@ public class Cpu {
 
     private byte In8(int port) {
         if (IoPortDispatcher != null) {
-            return IoPortDispatcher.Inb((ushort)port);
+            return IoPortDispatcher.ReadByte((ushort)port);
         }
         return 0;
     }
@@ -1844,7 +1844,7 @@ public class Cpu {
 
     private ushort In16(int port) {
         if (IoPortDispatcher != null) {
-            return IoPortDispatcher.Inw((ushort)port);
+            return IoPortDispatcher.ReadWord((ushort)port);
         }
         return 0;
     }
@@ -1930,13 +1930,13 @@ public class Cpu {
 
     public void Out8(int port, byte val) {
         if (IoPortDispatcher != null) {
-            IoPortDispatcher.Outb((ushort)port, val);
+            IoPortDispatcher.WriteByte((ushort)port, val);
         }
     }
 
     public void Out16(int port, ushort val) {
         if (IoPortDispatcher != null) {
-            IoPortDispatcher.Outw((ushort)port, val);
+            IoPortDispatcher.WriteWord((ushort)port, val);
         }
     }
 

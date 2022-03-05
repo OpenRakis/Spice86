@@ -16,7 +16,7 @@ public class Keyboard : DefaultIOPortHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<Keyboard>();
     private readonly IGraphicalUserInterface? _gui;
 
-    public Keyboard(Machine machine, IGraphicalUserInterface? gui, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public Keyboard(Machine machine, IGraphicalUserInterface? gui, Configuration configuration) : base(machine, configuration) {
         _gui = gui;
         if (gui != null) {
             gui.SetOnKeyPressedEvent(() => this.OnKeyEvent());
@@ -52,7 +52,7 @@ public class Keyboard : DefaultIOPortHandler {
 
     }
 
-    public override byte Inb(int port) {
+    public override byte ReadByte(int port) {
         byte? scancode = GetScancode();
         if (scancode == null) {
             return 0;
