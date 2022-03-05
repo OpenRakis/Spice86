@@ -3,16 +3,19 @@
 using Serilog;
 
 using Spice86.Emulator.IOPorts;
+using Spice86.Emulator.Sound.PCSpeaker;
 using Spice86.Emulator.VM;
 using Spice86.Utils;
 
 /// <summary>
-/// PC speaker implementation. Does not produce any sound, just handles the bare minimum to make programs run.
+/// PC speaker implementation.
 /// </summary>
 public class PcSpeaker : DefaultIOPortHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<PcSpeaker>();
     private const int PcSpeakerPortNumber = 0x61;
     private byte _value;
+
+    private InternalSpeaker _pcSpeaker = new();
 
     public PcSpeaker(Machine machine, Configuration configuration) : base(machine, configuration) {
     }
@@ -35,5 +38,7 @@ public class PcSpeaker : DefaultIOPortHandler {
         }
 
         _value = value;
+
+        ((IOutputPort)_pcSpeaker).WriteByte(port, value);
     }
 }
