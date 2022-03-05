@@ -1,28 +1,26 @@
-﻿namespace Spice86.Emulator.Memory;
+﻿namespace Spice86.Emulator.Devices.DirectMemoryAccess;
 
 using Spice86.Emulator.Devices;
+using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.VM;
 
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
 /// </summary>
-public sealed class DmaController : IInputPort, IOutputPort {
-    private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
-
-    private const int ModeRegister8 = 0x0B;
-    private const int ModeRegister16 = 0xD6;
-    private const int MaskRegister8 = 0x0A;
-    private const int MaskRegister16 = 0xD4;
+public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPort {
     private const int AutoInitFlag = 1 << 4;
-
+    private const int MaskRegister16 = 0xD4;
+    private const int MaskRegister8 = 0x0A;
+    private const int ModeRegister16 = 0xD6;
+    private const int ModeRegister8 = 0x0B;
+    private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
     private readonly List<DmaChannel> channels = new(8);
 
-    internal DmaController() {
+    internal DmaController(Machine machine, Configuration configuration) : base(machine, configuration) {
         for (int i = 0; i < 8; i++) {
             var channel = new DmaChannel();
             channels.Add(channel);
@@ -37,6 +35,7 @@ public sealed class DmaController : IInputPort, IOutputPort {
     public ReadOnlyCollection<DmaChannel> Channels { get; }
 
     IEnumerable<int> IInputPort.InputPorts => Array.AsReadOnly(AllPorts);
+
     IEnumerable<int> IOutputPort.OutputPorts {
         get {
             var ports = new List<int>(AllPorts)
@@ -51,8 +50,35 @@ public sealed class DmaController : IInputPort, IOutputPort {
         }
     }
 
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        foreach (var value in AllPorts) {
+            ioPortDispatcher.AddIOPortHandler(value, this);
+        }
+        foreach (var value in new int[] {
+            ModeRegister8,
+            ModeRegister16,
+            MaskRegister8,
+            MaskRegister16}) {
+            ioPortDispatcher.AddIOPortHandler(value, this);
+        }
+    }
+
+    public override byte ReadByte(int port) {
+        return ((IInputPort)this).ReadByte(port);
+    }
+
     byte IInputPort.ReadByte(int port) => GetPortValue(port);
+
+    public override ushort ReadWord(int port) {
+        return ((IInputPort)this).ReadWord(port);
+    }
+
     ushort IInputPort.ReadWord(int port) => GetPortValue(port);
+
+    public override void WriteByte(int port, byte value) {
+        ((IOutputPort)this).WriteByte(port, value);
+    }
+
     void IOutputPort.WriteByte(int port, byte value) {
         switch (port) {
             case ModeRegister8:
@@ -76,6 +102,11 @@ public sealed class DmaController : IInputPort, IOutputPort {
                 break;
         }
     }
+
+    public override void WriteWord(int port, ushort value) {
+        ((IOutputPort)this).WriteWord(port, value);
+    }
+
     void IOutputPort.WriteWord(int port, ushort value) {
         int index = Array.IndexOf(AllPorts, port);
         if (index < 0)
@@ -108,6 +139,7 @@ public sealed class DmaController : IInputPort, IOutputPort {
         else
             channel.TransferMode = DmaTransferMode.SingleCycle;
     }
+
     /// <summary>
     /// Returns the value from a DMA channel port.
     /// </summary>
@@ -125,6 +157,7 @@ public sealed class DmaController : IInputPort, IOutputPort {
             _ => 0
         };
     }
+
     /// <summary>
     /// Writes a value to a specified DMA channel port.
     /// </summary>

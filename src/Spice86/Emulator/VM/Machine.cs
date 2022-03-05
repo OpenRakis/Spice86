@@ -4,6 +4,7 @@ using Serilog;
 
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.CPU;
+using Spice86.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Emulator.Devices.ExternalInput;
 using Spice86.Emulator.Devices.Input.Joystick;
 using Spice86.Emulator.Devices.Input.Keyboard;
@@ -45,12 +46,13 @@ public class Machine : IDisposable {
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this);
 
-        this.DmaController = new DmaController();
-
-
         // IO devices
         IoPortDispatcher = new IOPortDispatcher(this, configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
+
+        this.DmaController = new DmaController(this, configuration);
+        Register(DmaController);
+
         Pic = new Pic(this, true, configuration);
         Register(Pic);
         VgaCard = new VgaCard(this, gui, configuration);

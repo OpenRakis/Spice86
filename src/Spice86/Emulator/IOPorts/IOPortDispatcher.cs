@@ -19,8 +19,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     }
 
     public override byte ReadByte(int port) {
-        if (_ioPortHandlers.ContainsKey(port)) {
-            return _ioPortHandlers[port].ReadByte(port);
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            return entry.ReadByte(port);
         }
 
         return base.ReadByte(port);
@@ -30,24 +30,24 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     }
 
     public override ushort ReadWord(int port) {
-        if (_ioPortHandlers.ContainsKey(port)) {
-            return _ioPortHandlers[port].ReadWord(port);
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            return entry.ReadWord(port);
         }
 
         return base.ReadWord(port);
     }
 
     public override void WriteByte(int port, byte value) {
-        if (_ioPortHandlers.ContainsKey(port)) {
-            _ioPortHandlers[port].WriteByte(port, value);
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            entry.WriteByte(port, value);
         } else {
             base.WriteByte(port, value);
         }
     }
 
     public override void WriteWord(int port, ushort value) {
-        if (_ioPortHandlers.ContainsKey(port)) {
-            _ioPortHandlers[port].WriteWord(port, value);
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            entry.WriteWord(port, value);
         } else {
             base.WriteWord(port, value);
         }

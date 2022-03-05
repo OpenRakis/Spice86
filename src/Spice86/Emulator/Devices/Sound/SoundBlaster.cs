@@ -153,20 +153,21 @@ public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaD
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_BUFFER_STATUS_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_DATA_AVAILABLE_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_READ_PORT_NUMBER, this);
+
         ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_STATUS_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_DATA_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_STATUS_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER_2, this);
         ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER_2, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_READ_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_BUFFER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_DATA_AVAILABLE_PORT_NUMBER, this);
     }
 
     void IVirtualDevice.Pause() {

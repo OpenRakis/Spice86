@@ -36,7 +36,7 @@ public class Pic : DefaultIOPortHandler {
 
     private bool _initialized = false;
 
-    private int _interruptMask = 0;
+    private byte _interruptMask = 0;
 
     static Pic() {
         // timer
@@ -69,6 +69,10 @@ public class Pic : DefaultIOPortHandler {
     }
 
     public bool IsLastIrqAcknowledged { get; private set; } = true;
+
+    public override byte ReadByte(int port) {
+        return _interruptMask;
+    }
 
     public override void WriteByte(int port, byte value) {
         if (port == MasterPortA) {

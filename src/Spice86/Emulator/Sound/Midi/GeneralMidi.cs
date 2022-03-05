@@ -87,10 +87,10 @@ public sealed class GeneralMidi : IInputPort, IOutputPort {
                         State = GeneralMidiState.NormalMode;
                         dataBytes.Clear();
                         dataBytes.Enqueue(CommandAcknowledge);
-                        if (midiMapper != null) {
-                            midiMapper.Dispose();
-                            midiMapper = null;
-                        }
+                        //if (midiMapper != null) {
+                        //    midiMapper.Dispose();
+                        //    midiMapper = null;
+                        //}
                         break;
 
                     case EnterUartModeCommand:

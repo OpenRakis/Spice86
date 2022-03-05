@@ -16,7 +16,6 @@ public class Midi : DefaultIOPortHandler {
     private GeneralMidi _generalMidi;
 
     public Midi(Machine machine, Configuration configuration) : base(machine, configuration) {
-        _machine = machine;
         _generalMidi = new GeneralMidi(configuration.Mt32RomsPath);
         _machine.Paused += Machine_Paused;
         _machine.Resumed += Machine_Resumed;
@@ -31,7 +30,8 @@ public class Midi : DefaultIOPortHandler {
     }
 
     public override byte ReadByte(int port) {
-        return ((IInputPort)_generalMidi).ReadByte(port);
+        byte v = ((IInputPort)_generalMidi).ReadByte(port);
+        return v;
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
