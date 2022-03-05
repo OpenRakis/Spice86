@@ -14,7 +14,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 /// <summary>
-/// Sound blaster implementation. Emulates an absent card :) http://www.fysnet.net/detectsb.htm
+/// Sound blaster implementation. <br/>
+/// http://www.fysnet.net/detectsb.htm
 /// </summary>
 public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaDevice8, IDmaDevice16, IDisposable {
 

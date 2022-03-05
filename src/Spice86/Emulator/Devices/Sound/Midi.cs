@@ -7,7 +7,7 @@ using Spice86.Emulator.VM;
 using System;
 
 /// <summary>
-/// MPU401 (Midi) implementation. Emulates an absent card :)
+/// MPU401 (Midi) implementation.
 /// </summary>
 public class Midi : DefaultIOPortHandler {
     private const int Command = 0x331;
