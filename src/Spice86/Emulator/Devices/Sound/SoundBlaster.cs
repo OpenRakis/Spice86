@@ -195,10 +195,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
 
     public IEnumerable<int> OutputPorts => new int[] { Ports.DspReset, Ports.DspWrite, Ports.MixerAddress };
 
-    public void RegisterBlasterEnvironmentVariable(Machine vm) {
-        vm.EnvironmentVariables["BLASTER"] = $"A220 I{this.IRQ} D{this.DMA} T4";
-    }
-
     public void Dispose() {
         if (this.playbackThread != null && this.playbackThread.IsAlive) {
             this.endPlayback = true;
