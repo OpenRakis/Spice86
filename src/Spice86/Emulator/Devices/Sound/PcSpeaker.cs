@@ -13,7 +13,6 @@ using Spice86.Utils;
 public class PcSpeaker : DefaultIOPortHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<PcSpeaker>();
     private const int PcSpeakerPortNumber = 0x61;
-    private const int PcSpeakerOutputOnlyPortPortNumber = 0x42;
 
     private InternalSpeaker _pcSpeaker = new();
 
@@ -30,7 +29,6 @@ public class PcSpeaker : DefaultIOPortHandler {
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
-        ioPortDispatcher.AddIOPortHandler(PcSpeakerOutputOnlyPortPortNumber, this);
     }
 
     public override void WriteByte(int port, byte value) {
