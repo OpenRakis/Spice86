@@ -4,11 +4,15 @@ using Spice86.Emulator.VM;
 
 using System.Collections.Generic;
 
+using Serilog;
+
 /// <summary>
 /// Handles calling the correct dispatcher depending on port number for I/O reads and writes.
 /// </summary>
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
+
+    private ILogger _logger = Program.Logger.ForContext<IOPortDispatcher>();
 
     public IOPortDispatcher(Machine machine, Configuration configuration) : base(machine, configuration) {
         this._failOnUnhandledPort = configuration.FailOnUnhandledPort;
@@ -20,6 +24,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
     public override byte ReadByte(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte), entry.GetType(), port);
             return entry.ReadByte(port);
         }
 
@@ -31,6 +36,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
     public override ushort ReadWord(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord), entry.GetType(), port);
             return entry.ReadWord(port);
         }
 
@@ -39,6 +45,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
     public override void WriteByte(int port, byte value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteByte), entry.GetType(), port, value);
             entry.WriteByte(port, value);
         } else {
             base.WriteByte(port, value);
@@ -47,6 +54,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
     public override void WriteWord(int port, ushort value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteWord), entry.GetType(), port, value);
             entry.WriteWord(port, value);
         } else {
             base.WriteWord(port, value);
