@@ -13,7 +13,7 @@ using Spice86.Utils;
 public class PcSpeaker : DefaultIOPortHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<PcSpeaker>();
     private const int PcSpeakerPortNumber = 0x61;
-    private byte _value;
+    private const int PcSpeakerOutputOnlyPortPortNumber = 0x42;
 
     private InternalSpeaker _pcSpeaker = new();
 
@@ -21,15 +21,16 @@ public class PcSpeaker : DefaultIOPortHandler {
     }
 
     public override byte ReadByte(int port) {
+        var value = _pcSpeaker.ReadByte(port);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("PC Speaker get value {@PCSpeakerValue}", ConvertUtils.ToHex8(this._value));
+            _logger.Information("PC Speaker get value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }
-
-        return _value;
+        return value;
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(PcSpeakerOutputOnlyPortPortNumber, this);
     }
 
     public override void WriteByte(int port, byte value) {
@@ -37,8 +38,6 @@ public class PcSpeaker : DefaultIOPortHandler {
             _logger.Information("PC Speaker set value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }
 
-        _value = value;
-
-        ((IOutputPort)_pcSpeaker).WriteByte(port, value);
+        _pcSpeaker.WriteByte(port, value);
     }
 }

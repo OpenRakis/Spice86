@@ -22,15 +22,15 @@ public class Midi : DefaultIOPortHandler {
     }
 
     private void Machine_Resumed(object? sender, EventArgs e) {
-        ((IInputPort)_generalMidi).Resume();
+        _generalMidi.Resume();
     }
 
     private void Machine_Paused(object? sender, System.EventArgs e) {
-        ((IInputPort)_generalMidi).Pause();
+        _generalMidi.Pause();
     }
 
     public override byte ReadByte(int port) {
-        byte v = ((IInputPort)_generalMidi).ReadByte(port);
+        byte v = _generalMidi.ReadByte(port);
         return v;
     }
 
@@ -40,6 +40,6 @@ public class Midi : DefaultIOPortHandler {
     }
 
     public override void WriteByte(int port, byte value) {
-        ((IOutputPort)_generalMidi).WriteByte(port, value);
+        _generalMidi.WriteByte(port, value);
     }
 }

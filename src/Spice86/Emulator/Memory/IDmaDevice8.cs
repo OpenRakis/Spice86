@@ -7,7 +7,7 @@ using System;
 /// <summary>
 /// Defines a device which supports 8-bit DMA transfers.
 /// </summary>
-public interface IDmaDevice8 : IVirtualDevice
+public interface IDmaDevice8
 {
     /// <summary>
     /// Gets the DMA channel of the device.

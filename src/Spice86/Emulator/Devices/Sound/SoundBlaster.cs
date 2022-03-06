@@ -17,7 +17,7 @@ using System.Threading;
 /// Sound blaster implementation. <br/>
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
-public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaDevice8, IDmaDevice16, IDisposable {
+public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDisposable {
 
     private ILogger _logger = Log.Logger.ForContext<SoundBlaster>();
 
@@ -108,73 +108,6 @@ public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaD
     }
 
     public override byte ReadByte(int port) {
-        return ((IInputPort)this).ReadByte(port);
-    }
-
-    public override void WriteByte(int port, byte value) {
-        ((IOutputPort)this).WriteByte(port, value);
-    }
-
-    public override ushort ReadWord(int port) {
-        return ((IInputPort)this).ReadWord(port);
-    }
-
-    public override void WriteWord(int port, ushort value) {
-        ((IOutputPort)this).WriteWord(port, value);
-    }
-
-    int IDmaDevice8.Channel => this.DMA;
-
-    int IDmaDevice16.Channel => this.dma16;
-
-    /// <summary>
-    /// Gets the DMA channel assigned to the device.
-    /// </summary>
-    public int DMA { get; }
-
-    IEnumerable<int> IInputPort.InputPorts => new int[] { Ports.DspReadData, Ports.DspWrite, Ports.DspReadBufferStatus, Ports.MixerAddress, Ports.MixerData };
-
-    /// <summary>
-    /// Gets the hardware IRQ assigned to the device.
-    /// </summary>
-    public int IRQ { get; }
-
-    IEnumerable<int> IOutputPort.OutputPorts => new int[] { Ports.DspReset, Ports.DspWrite, Ports.MixerAddress };
-
-    void IVirtualDevice.DeviceRegistered(Machine vm) {
-        vm.EnvironmentVariables["BLASTER"] = $"A220 I{this.IRQ} D{this.DMA} T4";
-    }
-
-    public void Dispose() {
-        if (this.playbackThread != null && this.playbackThread.IsAlive) {
-            this.endPlayback = true;
-            this.playbackThread.Join();
-        }
-    }
-
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_BUFFER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_DATA_AVAILABLE_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_READ_PORT_NUMBER, this);
-
-        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER_2, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER_2, this);
-    }
-
-    void IVirtualDevice.Pause() {
-        this.pausePlayback = true;
-    }
-
-    byte IInputPort.ReadByte(int port) {
         switch (port) {
             case Ports.DspReadData:
                 if (outputData.Count > 0)
@@ -201,24 +134,7 @@ public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaD
         return 0;
     }
 
-    ushort IInputPort.ReadWord(int port) {
-        uint value = ((IInputPort)this).ReadByte(port);
-        value |= (uint)(((IInputPort)this).ReadByte(port + 1) << 8);
-        return (ushort)value;
-    }
-
-    void IVirtualDevice.Resume() {
-        this.pausePlayback = false;
-    }
-
-    void IDmaDevice8.SingleCycleComplete() {
-        this.dsp.IsEnabled = false;
-        RaiseInterrupt();
-    }
-
-    void IDmaDevice16.SingleCycleComplete() => throw new NotImplementedException();
-
-    void IOutputPort.WriteByte(int port, byte value) {
+    public override void WriteByte(int port, byte value) {
         switch (port) {
             case Ports.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
@@ -251,9 +167,79 @@ public class SoundBlaster : DefaultIOPortHandler, IInputPort, IOutputPort, IDmaD
         }
     }
 
-    int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => this.dsp.DmaWrite(source);
+    public override ushort ReadWord(int port) {
+        uint value = ReadByte(port);
+        value |= (uint)(ReadByte(port + 1) << 8);
+        return (ushort)value;
+    }
 
-    void IOutputPort.WriteWord(int port, ushort value) => throw new NotImplementedException();
+    public override void WriteWord(int port, ushort value) {
+        WriteWord(port, value);
+    }
+
+    int IDmaDevice8.Channel => this.DMA;
+
+    int IDmaDevice16.Channel => this.dma16;
+
+    /// <summary>
+    /// Gets the DMA channel assigned to the device.
+    /// </summary>
+    public int DMA { get; }
+
+    public IEnumerable<int> InputPorts => new int[] { Ports.DspReadData, Ports.DspWrite, Ports.DspReadBufferStatus, Ports.MixerAddress, Ports.MixerData };
+
+    /// <summary>
+    /// Gets the hardware IRQ assigned to the device.
+    /// </summary>
+    public int IRQ { get; }
+
+    public IEnumerable<int> OutputPorts => new int[] { Ports.DspReset, Ports.DspWrite, Ports.MixerAddress };
+
+    public void RegisterBlasterEnvironmentVariable(Machine vm) {
+        vm.EnvironmentVariables["BLASTER"] = $"A220 I{this.IRQ} D{this.DMA} T4";
+    }
+
+    public void Dispose() {
+        if (this.playbackThread != null && this.playbackThread.IsAlive) {
+            this.endPlayback = true;
+            this.playbackThread.Join();
+        }
+    }
+
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_BUFFER_STATUS_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_DATA_AVAILABLE_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_READ_PORT_NUMBER, this);
+
+        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_STATUS_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_DATA_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_STATUS_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_DATA_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER_2, this);
+        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER_2, this);
+    }
+
+    public void Pause() {
+        this.pausePlayback = true;
+    }
+
+    public void Resume() {
+        this.pausePlayback = false;
+    }
+
+    void IDmaDevice8.SingleCycleComplete() {
+        this.dsp.IsEnabled = false;
+        RaiseInterrupt();
+    }
+
+    void IDmaDevice16.SingleCycleComplete() => throw new NotImplementedException();
+
+    int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => this.dsp.DmaWrite(source);
 
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
 

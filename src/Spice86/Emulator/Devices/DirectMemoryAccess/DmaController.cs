@@ -11,7 +11,7 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
 /// </summary>
-public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPort {
+public sealed class DmaController : DefaultIOPortHandler {
     private const int AutoInitFlag = 1 << 4;
     private const int MaskRegister16 = 0xD4;
     private const int MaskRegister8 = 0x0A;
@@ -26,7 +26,7 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
             MaskRegister16,
             ClearBytePointerFlipFlop};
 
-    private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
+    private static readonly int[] AllInputAndOutputPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
     private readonly List<DmaChannel> channels = new(8);
     private bool _flipflop;
 
@@ -44,11 +44,11 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
     /// </summary>
     public ReadOnlyCollection<DmaChannel> Channels { get; }
 
-    IEnumerable<int> IInputPort.InputPorts => Array.AsReadOnly(AllPorts);
+    public IEnumerable<int> InputPorts => Array.AsReadOnly(AllInputAndOutputPorts);
 
-    IEnumerable<int> IOutputPort.OutputPorts {
+    public IEnumerable<int> OutputPorts {
         get {
-            var ports = new List<int>(AllPorts);
+            var ports = new List<int>(AllInputAndOutputPorts);
             ports.AddRange(_otherOutputPorts);
 
             return ports.AsReadOnly();
@@ -56,28 +56,20 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        foreach (var value in ((IOutputPort)this).OutputPorts) {
+        foreach (var value in OutputPorts) {
             ioPortDispatcher.AddIOPortHandler(value, this);
         }
     }
 
     public override byte ReadByte(int port) {
-        return ((IInputPort)this).ReadByte(port);
+        return GetPortValue(port);
     }
-
-    byte IInputPort.ReadByte(int port) => GetPortValue(port);
 
     public override ushort ReadWord(int port) {
-        return ((IInputPort)this).ReadWord(port);
+        return GetPortValue(port);
     }
-
-    ushort IInputPort.ReadWord(int port) => GetPortValue(port);
 
     public override void WriteByte(int port, byte value) {
-        ((IOutputPort)this).WriteByte(port, value);
-    }
-
-    void IOutputPort.WriteByte(int port, byte value) {
         switch (port) {
             case ModeRegister8:
                 SetChannelMode(channels[value & 3], value);
@@ -106,11 +98,7 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
     }
 
     public override void WriteWord(int port, ushort value) {
-        ((IOutputPort)this).WriteWord(port, value);
-    }
-
-    void IOutputPort.WriteWord(int port, ushort value) {
-        int index = Array.IndexOf(AllPorts, port);
+        int index = Array.IndexOf(AllInputAndOutputPorts, port);
         if (index < 0)
             throw new ArgumentException("Invalid port.");
 
@@ -148,7 +136,7 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
     /// <param name="port">Port to return value for.</param>
     /// <returns>Value of specified port.</returns>
     private byte GetPortValue(int port) {
-        int index = Array.IndexOf(AllPorts, port);
+        int index = Array.IndexOf(AllInputAndOutputPorts, port);
         if (index < 0)
             throw new ArgumentException("Invalid port.");
 
@@ -166,7 +154,7 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
     /// <param name="port">Port to write value to.</param>
     /// <param name="value">Value to write.</param>
     private void SetPortValue(int port, byte value) {
-        int index = Array.IndexOf(AllPorts, port);
+        int index = Array.IndexOf(AllInputAndOutputPorts, port);
         if (index < 0)
             throw new ArgumentException("Invalid port.");
 

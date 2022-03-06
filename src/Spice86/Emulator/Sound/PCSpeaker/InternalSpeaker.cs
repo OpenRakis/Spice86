@@ -1,11 +1,7 @@
 ﻿namespace Spice86.Emulator.Sound.PCSpeaker;
 
-using Spice86.Emulator.Devices;
-using Spice86.Emulator.VM;
-
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +11,7 @@ using TinyAudio;
 /// <summary>
 /// Emulates a PC speaker.
 /// </summary>
-public sealed class InternalSpeaker : IInputPort, IOutputPort
+public sealed class InternalSpeaker
 {
     /// <summary>
     /// Value into which the input frequency is divided to get the frequency in Hz.
@@ -42,9 +38,6 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort
         this.ticksPerSample = (int)(Stopwatch.Frequency / (double)this.outputSampleRate);
     }
 
-    IEnumerable<int> IInputPort.InputPorts => new int[] { 0x61 };
-    IEnumerable<int> IOutputPort.OutputPorts => new int[] { 0x42, 0x61 };
-
     /// <summary>
     /// Gets the current frequency in Hz.
     /// </summary>
@@ -54,15 +47,14 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort
     /// </summary>
     private int PeriodInSamples => (int)(this.outputSampleRate / this.Frequency);
 
-    byte IInputPort.ReadByte(int port)
+    public byte ReadByte(int port)
     {
         if (port == 0x61)
             return (byte)this.controlRegister;
 
         throw new NotSupportedException();
     }
-    ushort IInputPort.ReadWord(int port) => throw new NotImplementedException();
-    void IOutputPort.WriteByte(int port, byte value)
+    public void WriteByte(int port, byte value)
     {
         if (port == 0x61)
         {
@@ -80,16 +72,7 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort
             throw new NotSupportedException();
         }
     }
-    void IOutputPort.WriteWord(int port, ushort value) => throw new NotImplementedException();
-    void IVirtualDevice.Pause()
-    {
-    }
-    void IVirtualDevice.Resume()
-    {
-    }
-    void IVirtualDevice.DeviceRegistered(Machine vm)
-    {
-    }
+
     public void Dispose()
     {
         this.frequencyRegister.ValueChanged -= this.FrequencyChanged;

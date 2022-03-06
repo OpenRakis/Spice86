@@ -14,7 +14,7 @@ using Ymf262Emu;
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.
 /// </summary>
-public sealed class FmSoundCard : IInputPort, IOutputPort
+public sealed class FmSoundCard
 {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
@@ -41,8 +41,8 @@ public sealed class FmSoundCard : IInputPort, IOutputPort
         };
     }
 
-    IEnumerable<int> IInputPort.InputPorts => new int[] { 0x388 };
-    byte IInputPort.ReadByte(int port)
+    IEnumerable<int> InputPorts => new int[] { 0x388 };
+   public  byte ReadByte(int port)
     {
         if ((this.timerControlByte & 0x01) != 0x00 && (this.statusByte & Timer1Mask) == 0)
         {
@@ -60,10 +60,10 @@ public sealed class FmSoundCard : IInputPort, IOutputPort
 
         return this.statusByte;
     }
-    ushort IInputPort.ReadWord(int port) => this.statusByte;
+    public ushort ReadWord(int port) => this.statusByte;
 
-    IEnumerable<int> IOutputPort.OutputPorts => new int[] { 0x388, 0x389 };
-    void IOutputPort.WriteByte(int port, byte value)
+    public IEnumerable<int> OutputPorts => new int[] { 0x388, 0x389 };
+    public void WriteByte(int port, byte value)
     {
         if (port == 0x388)
         {
@@ -94,16 +94,16 @@ public sealed class FmSoundCard : IInputPort, IOutputPort
             }
         }
     }
-    void IOutputPort.WriteWord(int port, ushort value)
+    public void WriteWord(int port, ushort value)
     {
         if (port == 0x388)
         {
-            ((IOutputPort)this).WriteByte(0x388, (byte)value);
-            ((IOutputPort)this).WriteByte(0x389, (byte)(value >> 8));
+            WriteByte(0x388, (byte)value);
+            this.WriteByte(0x389, (byte)(value >> 8));
         }
     }
 
-    void IVirtualDevice.Pause()
+    public void Pause()
     {
         if (this.initialized && !this.paused)
         {
@@ -112,7 +112,7 @@ public sealed class FmSoundCard : IInputPort, IOutputPort
             this.paused = true;
         }
     }
-    void IVirtualDevice.Resume()
+    public void Resume()
     {
         if (paused)
         {
@@ -121,9 +121,6 @@ public sealed class FmSoundCard : IInputPort, IOutputPort
             this.generateThread.Start();
             this.paused = false;
         }
-    }
-    void IVirtualDevice.DeviceRegistered(Machine vm)
-    {
     }
 
     public void Dispose()

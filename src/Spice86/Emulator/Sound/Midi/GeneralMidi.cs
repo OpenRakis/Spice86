@@ -10,7 +10,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Virtual device which emulates general midi playback.
 /// </summary>
-public sealed class GeneralMidi : IInputPort, IOutputPort {
+public sealed class GeneralMidi {
     private MidiDevice? midiMapper;
     private readonly Queue<byte> dataBytes = new Queue<byte>();
 
@@ -54,8 +54,8 @@ public sealed class GeneralMidi : IInputPort, IOutputPort {
         }
     }
 
-    IEnumerable<int> IInputPort.InputPorts => new int[] { DataPort, StatusPort };
-    byte IInputPort.ReadByte(int port) {
+    public IEnumerable<int> InputPorts => new int[] { DataPort, StatusPort };
+    public byte ReadByte(int port) {
         switch (port) {
             case DataPort:
                 if (dataBytes.Count > 0)
@@ -70,10 +70,10 @@ public sealed class GeneralMidi : IInputPort, IOutputPort {
                 throw new ArgumentException("Invalid MIDI port.");
         }
     }
-    ushort IInputPort.ReadWord(int port) => ((IInputPort)this).ReadByte(port);
+    public ushort ReadWord(int port) => this.ReadByte(port);
 
-    IEnumerable<int> IOutputPort.OutputPorts => new int[] { 0x330, 0x331 };
-    void IOutputPort.WriteByte(int port, byte value) {
+    public IEnumerable<int> OutputPorts => new int[] { 0x330, 0x331 };
+    public void WriteByte(int port, byte value) {
         switch (port) {
             case DataPort:
                 if (midiMapper == null)
@@ -101,17 +101,14 @@ public sealed class GeneralMidi : IInputPort, IOutputPort {
                 break;
         }
     }
-    void IOutputPort.WriteWord(int port, ushort value) => ((IOutputPort)this).WriteByte(port, (byte)value);
+    public void WriteWord(int port, ushort value) => this.WriteByte(port, (byte)value);
 
-    void IVirtualDevice.Pause() {
+    public void Pause() {
         midiMapper?.Pause();
     }
-    void IVirtualDevice.Resume() {
+    public void Resume() {
         midiMapper?.Resume();
     }
-    void IVirtualDevice.DeviceRegistered(Machine vm) {
-    }
-
     public void Dispose() {
         midiMapper?.Dispose();
         midiMapper = null;
