@@ -65,6 +65,8 @@ public class Machine : IDisposable {
         Register(Joystick);
         PcSpeaker = new PcSpeaker(this, configuration);
         Register(PcSpeaker);
+        OPL3FM = new OPL3FM(this, configuration);
+        Register(OPL3FM);
         SoundBlaster = new SoundBlaster(this, configuration);
         Register(SoundBlaster);
         SoundBlaster.AddEnvironnmentVariable();
@@ -169,6 +171,7 @@ public class Machine : IDisposable {
     /// TODO: Make use of it by allocating the block of memory corresponding to it in virtual memory.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
+    public OPL3FM OPL3FM { get; private set; }
 
     public event EventHandler? Paused;
 
