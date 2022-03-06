@@ -53,7 +53,7 @@ public class Machine : IDisposable {
         this.DmaController = new DmaController(this, configuration);
         Register(DmaController);
 
-        Pic = new Pic(this, true, configuration);
+        Pic = new Pic(this, configuration);
         Register(Pic);
         VgaCard = new VgaCard(this, gui, configuration);
         Register(VgaCard);
