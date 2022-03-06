@@ -17,8 +17,18 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
     private const int MaskRegister8 = 0x0A;
     private const int ModeRegister16 = 0xD6;
     private const int ModeRegister8 = 0x0B;
+    private const int ClearBytePointerFlipFlop = 0xC;
+
+    private static readonly int[] _otherOutputPorts = new int[] {
+            ModeRegister8,
+            ModeRegister16,
+            MaskRegister8,
+            MaskRegister16,
+            ClearBytePointerFlipFlop};
+
     private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
     private readonly List<DmaChannel> channels = new(8);
+    private bool _flipflop;
 
     internal DmaController(Machine machine, Configuration configuration) : base(machine, configuration) {
         for (int i = 0; i < 8; i++) {
@@ -38,27 +48,15 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
 
     IEnumerable<int> IOutputPort.OutputPorts {
         get {
-            var ports = new List<int>(AllPorts)
-            {
-                ModeRegister8,
-                ModeRegister16,
-                MaskRegister8,
-                MaskRegister16
-            };
+            var ports = new List<int>(AllPorts);
+            ports.AddRange(_otherOutputPorts);
 
             return ports.AsReadOnly();
         }
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        foreach (var value in AllPorts) {
-            ioPortDispatcher.AddIOPortHandler(value, this);
-        }
-        foreach (var value in new int[] {
-            ModeRegister8,
-            ModeRegister16,
-            MaskRegister8,
-            MaskRegister16}) {
+        foreach (var value in ((IOutputPort)this).OutputPorts) {
             ioPortDispatcher.AddIOPortHandler(value, this);
         }
     }
@@ -95,6 +93,10 @@ public sealed class DmaController : DefaultIOPortHandler, IInputPort, IOutputPor
 
             case MaskRegister16:
                 channels[(value & 3) + 4].IsMasked = (value & 4) != 0;
+                break;
+
+            case ClearBytePointerFlipFlop:
+                _flipflop = false;
                 break;
 
             default:
