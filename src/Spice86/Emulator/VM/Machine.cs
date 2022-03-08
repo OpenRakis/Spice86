@@ -191,6 +191,14 @@ public class Machine : IDisposable {
 
     public void Register(IIOPortHandler ioPortHandler) {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
+
+        if (ioPortHandler is IDmaDevice8 dmaDevice) {
+            if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count)
+                throw new ArgumentException("Invalid DMA channel on DMA device.");
+
+            DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
+            dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+        }
     }
 
     public void Register(ICallback callback) {

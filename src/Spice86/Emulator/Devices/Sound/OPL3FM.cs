@@ -83,7 +83,9 @@ public sealed class OPL3FM : DefaultIOPortHandler {
         return this.statusByte;
     }
 
-    public override ushort ReadWord(int port) => this.statusByte;
+    public override ushort ReadWord(int port) {
+        return this.statusByte;
+    }
 
     public void Resume() {
         if (paused) {
