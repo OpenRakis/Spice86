@@ -19,7 +19,7 @@ using System.Threading;
 /// <li>https://k.lse.epita.fr/internals/8259a_controller.html</li>
 /// </ul>
 /// </summary>
-public class Pic : DefaultIOPortHandler, IDisposable {
+public class Pic : DefaultIOPortHandler {
     private const int InitializeICW1 = 0x10;
     private const int InitializeICW4 = 0x11;
     private const int MasterPortA = 0x20;
@@ -28,10 +28,8 @@ public class Pic : DefaultIOPortHandler, IDisposable {
     private const int SlavePortB = 0xA1;
     private static readonly ILogger _logger = Program.Logger.ForContext<Pic>();
     private static readonly Dictionary<int, int> _vectorNumberToIrq = new();
-    private readonly ReaderWriterLockSlim readerWriter = new();
     private Command currentCommand1;
     private Command currentCommand2;
-    private bool disposedValue;
     private uint inServiceRegister1;
     private uint inServiceRegister2;
     private uint maskRegister;
@@ -77,11 +75,8 @@ public class Pic : DefaultIOPortHandler, IDisposable {
 
     public bool IsLastIrqAcknowledged { get; private set; } = true;
 
-    public int AcknwowledgeInterrupt() {
+    public int AcknwowledgeInterruptRequest() {
         IsLastIrqAcknowledged = true;
-        this.readerWriter.EnterWriteLock();
-
-        try {
             for (int i = 0; i <= 7; i++) {
                 uint bit = 1u << i;
                 if ((this.requestRegister & bit) == bit && ((~this.maskRegister) & bit) == bit) {
@@ -101,15 +96,6 @@ public class Pic : DefaultIOPortHandler, IDisposable {
             }
 
             return -1;
-        } finally {
-            this.readerWriter.ExitWriteLock();
-        }
-    }
-
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
@@ -127,26 +113,9 @@ public class Pic : DefaultIOPortHandler, IDisposable {
         return (maskForVectorNumber & maskRegister) != 0;
     }
 
-    public void ProcessInterrupt(byte irq) {
-        if (IrqMasked(irq)) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Cannot process interrupt {@ProcessInterrupt}, IRQ is masked.", ConvertUtils.ToHex8(irq));
-            }
-            return;
-        }
-
-        if (!IsLastIrqAcknowledged) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Cannot process interrupt {@ProcessInterrupt}, Last IRQ was not acknowledged.", ConvertUtils.ToHex8(irq));
-            }
-
-            return;
-        }
-
+    public void RaiseHardwareInterrupt(int irq) {
         if (this.state1 != State.Ready && this.state2 != State.Ready)
             return;
-
-        this.readerWriter.EnterWriteLock();
 
         // Only allow the request if not already being serviced.
         if (irq < 8) {
@@ -158,11 +127,40 @@ public class Pic : DefaultIOPortHandler, IDisposable {
             if ((this.inServiceRegister2 & bit) == 0)
                 this.requestRegister |= bit;
         }
+    }
 
-        this.readerWriter.ExitWriteLock();
+    public void ProcessInterrupt(byte vector) {
+        if (IrqMasked(vector)) {
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Cannot process interrupt {@ProcessInterrupt}, IRQ is masked.", ConvertUtils.ToHex8(vector));
+            }
+            return;
+        }
+
+        if (!IsLastIrqAcknowledged) {
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Cannot process interrupt {@ProcessInterrupt}, Last IRQ was not acknowledged.", ConvertUtils.ToHex8(vector));
+            }
+
+            return;
+        }
+
+        if (this.state1 != State.Ready && this.state2 != State.Ready)
+            return;
+
+        // Only allow the request if not already being serviced.
+        if (vector < 8) {
+            uint bit = 1u << vector;
+            if ((this.inServiceRegister1 & bit) == 0)
+                this.requestRegister |= bit;
+        } else {
+            uint bit = 1u << (vector - 8);
+            if ((this.inServiceRegister2 & bit) == 0)
+                this.requestRegister |= bit;
+        }
 
         IsLastIrqAcknowledged = false;
-        _cpu.ExternalInterrupt(irq);
+        _cpu.ExternalInterrupt(vector);
         IsLastIrqAcknowledged = true;
     }
 
@@ -171,8 +169,6 @@ public class Pic : DefaultIOPortHandler, IDisposable {
     }
 
     public override byte ReadByte(int port) {
-        this.readerWriter.EnterReadLock();
-        try {
             switch (port) {
                 case MasterPortA:
                     switch (this.currentCommand1) {
@@ -202,14 +198,9 @@ public class Pic : DefaultIOPortHandler, IDisposable {
             }
 
             return 0;
-        } finally {
-            this.readerWriter.ExitReadLock();
-        }
     }
 
     public override void WriteByte(int port, byte value) {
-        this.readerWriter.EnterWriteLock();
-        try {
             uint registerValue = this.maskRegister;
 
             switch (port) {
@@ -306,9 +297,6 @@ public class Pic : DefaultIOPortHandler, IDisposable {
                     }
                     break;
             }
-        } finally {
-            this.readerWriter.ExitWriteLock();
-        }
     }
 
     public override void WriteWord(int port, ushort value) {
@@ -318,15 +306,6 @@ public class Pic : DefaultIOPortHandler, IDisposable {
         } else if (port == 0xA0) {
             this.WriteByte(SlavePortA, (byte)value);
             this.WriteByte(SlavePortB, (byte)(value >> 8));
-        }
-    }
-
-    protected virtual void Dispose(bool disposing) {
-        if (!disposedValue) {
-            if (disposing) {
-                this.readerWriter.Dispose();
-            }
-            disposedValue = true;
         }
     }
 

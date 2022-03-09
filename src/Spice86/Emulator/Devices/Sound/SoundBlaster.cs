@@ -108,6 +108,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     }
 
     public override byte ReadByte(int port) {
+        if(port == 548) { System.Diagnostics.Debugger.Break(); }
         switch (port) {
             case Ports.DspReadData:
                 if (outputData.Count > 0)
@@ -135,6 +136,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     }
 
     public override void WriteByte(int port, byte value) {
+        if(port == 548) { System.Diagnostics.Debugger.Break(); }
         switch (port) {
             case Ports.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
@@ -189,7 +191,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     public IEnumerable<int> InputPorts => new int[] { Ports.DspReadData, Ports.DspWrite, Ports.DspReadBufferStatus, Ports.MixerAddress, Ports.MixerData };
 
     /// <summary>
-    /// Gets the hardware IRQ assigned to the device.
+    /// Gets the hardware IRQ assigned to the device. IRQ = 7, see what is the interrupt number corresponding to it.
     /// </summary>
     public int IRQ { get; }
 

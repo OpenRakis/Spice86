@@ -234,6 +234,16 @@ public class Machine : IDisposable {
 
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
+            CheckHardwareInterrupts();
+        }
+    }
+
+    private void CheckHardwareInterrupts() {
+        this.Pic.RaiseHardwareInterrupt(1);
+
+        int irq = this.Pic.AcknwowledgeInterruptRequest();
+        if (irq >= 0) {
+            Pic.RaiseHardwareInterrupt((byte)irq);
         }
     }
 
