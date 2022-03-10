@@ -44,7 +44,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Avalonia" Version="0.10.12" />
+		<PackageReference Include="Avalonia" Version="0.10.13" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
 		<PackageReference Include="Serilog" Version="2.10.0" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="4.0.1" />
@@ -60,11 +60,11 @@
 		<PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 		<PackageReference Include="CommandLineParser" Version="2.8.0" />
-		<PackageReference Include="Avalonia" Version="0.10.12" />
-		<PackageReference Include="Avalonia.Desktop" Version="0.10.12" />
-		<PackageReference Include="Avalonia.ReactiveUI" Version="0.10.12" />
+		<PackageReference Include="Avalonia" Version="0.10.13" />
+		<PackageReference Include="Avalonia.Desktop" Version="0.10.13" />
+		<PackageReference Include="Avalonia.ReactiveUI" Version="0.10.13" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.12" />
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.13" />
 	</ItemGroup>
 	<ItemGroup>
 		<AvaloniaResource Include="Ui\Views\Spice86.ico" />
