@@ -287,7 +287,7 @@ public class MyOverrides : CSharpOverrideHelper {
     DefineFunction(segment, 0x0100, "addOneToAX", AddOneToAX_0x1ED_0x100_0x1FD0);
   }
 
-  public Action incDialogueCount47A8_0x1ED_0xA1E8_0xC0B8() {
+  public Action IncDialogueCount47A8_0x1ED_0xA1E8_0xC0B8() {
     // Accessing the memory via accessors
     globalsOnDs.SetDialogueCount47A8(globalsOnDs.GetDialogueCount47A8() + 1);
     // Depends on the actual return instruction performed by the function, needed to be called from the emulated code as
