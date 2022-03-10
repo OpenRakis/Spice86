@@ -67,16 +67,13 @@ public class Cpu {
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
         _staticAddressesRecorder.Reset();
-        String stateString = "";
-        if (IsLoggingEnabled()) {
-            stateString = State.ToString();
-            State.ResetCurrentInstructionPrefix();
-            State.CurrentInstructionName = "";
-        }
         byte opcode = ProcessPrefixes();
         if (IsLoggingEnabled()) {
+            string stateString = State.ToString();
+            State.ResetCurrentInstructionPrefix();
+            State.CurrentInstructionName = "";
             _logger.Debug("Before execution: {@OpCode} {@StateString} ", ConvertUtils.ToHex8(opcode),
-                stateString);
+    stateString);
         }
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
@@ -85,7 +82,7 @@ public class Cpu {
             ExecOpcode(opcode);
         }
         if (IsLoggingEnabled()) {
-            String instructionName = State.CurrentInstructionNameWithPrefix;
+            string instructionName = State.CurrentInstructionNameWithPrefix;
             _logger.Debug("After execution of {@InstructionName} {@State}", instructionName, State);
         }
         State.ClearPrefixes();
