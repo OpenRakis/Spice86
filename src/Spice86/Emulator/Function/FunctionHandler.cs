@@ -30,9 +30,9 @@ public class FunctionHandler {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, null, true);
     }
 
-    public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort? expectedReturnSegment, ushort? expectedReturnOffset, Func<String>? nameGenerator, bool recordReturn) {
+    public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort? expectedReturnSegment, ushort? expectedReturnOffset, string? name, bool recordReturn) {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
-        FunctionInformation currentFunction = GetOrCreateFunctionInformation(entryAddress, nameGenerator);
+        FunctionInformation currentFunction = GetOrCreateFunctionInformation(entryAddress, name);
         if (_debugMode) {
             FunctionInformation? caller = GetFunctionInformation(CurrentFunctionCall);
             SegmentedAddress? expectedReturnAddress = null;
@@ -54,9 +54,9 @@ public class FunctionHandler {
         }
     }
 
-    private FunctionInformation GetOrCreateFunctionInformation(SegmentedAddress entryAddress, Func<String>? nameGenerator) {
+    private FunctionInformation GetOrCreateFunctionInformation(SegmentedAddress entryAddress, string? name) {
         if (!FunctionInformations.TryGetValue(entryAddress, out FunctionInformation? res)) {
-            res = new FunctionInformation(entryAddress, nameGenerator == null ? "unknown" : nameGenerator.Invoke());
+            res = new FunctionInformation(entryAddress, string.IsNullOrWhiteSpace(name) ? "unknown" : name);
             FunctionInformations.Add(entryAddress, res);
         }
         return res;
@@ -80,7 +80,7 @@ public class FunctionHandler {
     public IDictionary<SegmentedAddress, FunctionInformation> FunctionInformations { get; set; } = new Dictionary<SegmentedAddress, FunctionInformation>();
 
     public void Icall(CallType callType, ushort entrySegment, ushort entryOffset, ushort expectedReturnSegment, ushort expectedReturnOffset, byte vectorNumber, bool recordReturn) {
-        Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, () => $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
+        Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
     }
 
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType) {
