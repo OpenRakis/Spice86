@@ -25,7 +25,7 @@ public class Configuration {
     public string? ExeArgs { get; init; }
 
 
-    [Option('x', nameof(ExpectedChecksum), Default = null, Required = false, HelpText = "Hexadecimal string representing the expected checksum of the input program file")]
+    [Option('x', nameof(ExpectedChecksum), Default = null, Required = false, HelpText = "Hexadecimal string representing the expected checksum of the emulated program")]
     public string? ExpectedChecksum { get; init; }
     public byte[] ExpectedChecksumValue {get; set;} = Array.Empty<byte>();
 

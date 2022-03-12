@@ -108,7 +108,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     }
 
     public override byte ReadByte(int port) {
-        if(port == 548) { System.Diagnostics.Debugger.Break(); }
         switch (port) {
             case Ports.DspReadData:
                 if (outputData.Count > 0)
@@ -121,7 +120,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
 
             case Ports.DspReadBufferStatus:
                 if (this.mixer.InterruptStatusRegister == InterruptStatus.Dma8)
-                    _logger.Information("Sound Blaster 8-bit DMA acknowledged");
+                    System.Diagnostics.Debug.WriteLine("Sound Blaster 8-bit DMA acknowledged");
                 this.mixer.InterruptStatusRegister = InterruptStatus.None;
                 return this.outputData.Count > 0 ? (byte)0x80 : (byte)0u;
 
@@ -136,7 +135,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     }
 
     public override void WriteByte(int port, byte value) {
-        if(port == 548) { System.Diagnostics.Debugger.Break(); }
+        //if(port == 556) { System.Diagnostics.Debugger.Break(); }
         switch (port) {
             case Ports.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
@@ -247,10 +246,16 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     }
 
     private void AudioPlayback() {
-        Span<byte> buffer = stackalloc byte[512];
-        short[] writeBuffer = new short[65536 * 2];
+        if (!OperatingSystem.IsWindows()) {
+            return;
+        }
 
         using TinyAudio.AudioPlayer? player = Audio.CreatePlayer();
+        if(player is null) {
+            return;
+        }
+        Span<byte> buffer = stackalloc byte[512];
+        short[] writeBuffer = new short[65536 * 2];
         int sampleRate = (int)player.Format.SampleRate;
         player.BeginPlayback();
 
@@ -327,43 +332,43 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
                 dsp.Begin(false, false, false);
                 //else
                 //    this.vm.InterruptController.RaiseHardwareInterrupt(this.irq);
-                _logger.Information("Single-cycle DMA");
+                System.Diagnostics.Debug.WriteLine("Single-cycle DMA");
                 vm.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
                 dsp.Begin(false, false, false, CompressionLevel.ADPCM4, true);
-                _logger.Information("Single-cycle DMA ADPCM4 with reference byte");
+                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM4 with reference byte");
                 vm.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4:
                 dsp.Begin(false, false, false, CompressionLevel.ADPCM4, false);
-                _logger.Information("Single-cycle DMA ADPCM4");
+                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM4");
                 vm.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2Ref:
                 dsp.Begin(false, false, false, CompressionLevel.ADPCM2, true);
-                _logger.Information("Single-cycle DMA ADPCM2 with reference byte");
+                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM2 with reference byte");
                 vm.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2:
                 dsp.Begin(false, false, false, CompressionLevel.ADPCM2, false);
-                _logger.Information("Single-cycle DMA ADPCM2");
+                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM2");
                 vm.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3Ref:
                 dsp.Begin(false, false, false, CompressionLevel.ADPCM3, true);
-                _logger.Information("Single-cycle DMA ADPCM3 with reference byte");
+                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM3 with reference byte");
                 vm.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3:
                 dsp.Begin(false, false, false, CompressionLevel.ADPCM3, false);
-                _logger.Information("Single-cycle DMA ADPCM3");
+                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM3");
                 vm.PerformDmaTransfers();
                 break;
 
@@ -372,7 +377,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
                 if (!this.blockTransferSizeSet)
                     dsp.BlockTransferSize = ((commandData[1] | (commandData[2] << 8)) + 1);
                 this.dsp.Begin(false, false, true);
-                _logger.Information("Auto-init DMA");
+                System.Diagnostics.Debug.WriteLine("Auto-init DMA");
                 break;
 
             case Commands.AutoInitDmaOutput8_Alt:
@@ -380,7 +385,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
                 if (!this.blockTransferSizeSet)
                     dsp.BlockTransferSize = ((commandData[1] | (commandData[2] << 8)) + 1);
                 this.dsp.Begin(false, (commandData[0] & (1 << 5)) != 0, true);
-                _logger.Information("Auto-init DMA");
+                System.Diagnostics.Debug.WriteLine("Auto-init DMA");
                 break;
 
             case Commands.ExitAutoInit8:
@@ -390,12 +395,12 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             case Commands.SingleCycleDmaOutput16:
             case Commands.SingleCycleDmaOutput16Fifo:
                 this.dsp.Begin(true, (commandData[0] & (1 << 5)) != 0, false);
-                _logger.Information("Single-cycle DMA");
+                System.Diagnostics.Debug.WriteLine("Single-cycle DMA");
                 break;
 
             case Commands.AutoInitDmaOutput16:
             case Commands.AutoInitDmaOutput16Fifo:
-                _logger.Information("Auto-init DMA");
+                System.Diagnostics.Debug.WriteLine("Auto-init DMA");
                 this.dsp.Begin(true, (commandData[0] & (1 << 5)) != 0, true);
                 break;
 
@@ -410,14 +415,14 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             case Commands.ExitDmaMode16:
                 this.dmaChannel.IsActive = false;
                 this.dsp.IsEnabled = false;
-                _logger.Information("Pause Sound Blaster DMA");
+                System.Diagnostics.Debug.WriteLine("Pause Sound Blaster DMA");
                 break;
 
             case Commands.ContinueDmaMode:
             case Commands.ContinueDmaMode16:
                 this.dmaChannel.IsActive = true;
                 this.dsp.IsEnabled = true;
-                _logger.Information("Continue Sound Blaster DMA");
+                System.Diagnostics.Debug.WriteLine("Continue Sound Blaster DMA");
                 break;
 
             case Commands.RaiseIrq8:
@@ -444,8 +449,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     /// </summary>
     private void RaiseInterrupt() {
         this.mixer.InterruptStatusRegister = InterruptStatus.Dma8;
-        this.vm.Pic.ProcessInterrupt((byte)this.IRQ);
-        _logger.Information("Sound Blaster IRQ");
+        this.vm.Pic.RaiseHardwareInterrupt((byte)this.IRQ);
+        System.Diagnostics.Debug.WriteLine("Sound Blaster IRQ");
     }
 
     /// <summary>

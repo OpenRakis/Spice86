@@ -19,8 +19,8 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
-    private readonly AudioPlayer audioPlayer = Audio.CreatePlayer();
-    private readonly FmSynthesizer synth;
+    private readonly AudioPlayer? audioPlayer = Audio.CreatePlayer();
+    private readonly FmSynthesizer? synth;
     private int currentAddress;
     private volatile bool endThread;
     private System.Threading.Thread generateThread;
@@ -32,7 +32,9 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private byte timerControlByte;
 
     public OPL3FM(Machine machine, Configuration configuration) : base(machine, configuration) {
-        this.synth = new FmSynthesizer((int)this.audioPlayer.Format.SampleRate);
+        if (audioPlayer is not null && OperatingSystem.IsWindows()) {
+            this.synth = new FmSynthesizer(this.audioPlayer.Format.SampleRate);
+        }
         this.generateThread = new System.Threading.Thread(this.GenerateWaveforms) {
             IsBackground = true,
             Priority = System.Threading.ThreadPriority.AboveNormal
@@ -53,8 +55,9 @@ public sealed class OPL3FM : DefaultIOPortHandler {
                 this.endThread = true;
                 this.generateThread.Join();
             }
-
-            this.audioPlayer.Dispose();
+            if (OperatingSystem.IsWindows()) {
+                this.audioPlayer?.Dispose();
+            }
             this.initialized = false;
         }
     }
@@ -112,7 +115,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
                 if (!this.initialized)
                     this.Initialize();
 
-                this.synth.SetRegisterValue(0, currentAddress, value);
+                this.synth?.SetRegisterValue(0, currentAddress, value);
             }
         }
     }
@@ -131,26 +134,27 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private void GenerateWaveforms() {
         var buffer = new float[1024];
         float[] playBuffer;
-
-        bool expandToStereo = this.audioPlayer.Format.Channels == 2;
-        if (expandToStereo)
-            playBuffer = new float[buffer.Length * 2];
-        else
-            playBuffer = buffer;
-
-        this.audioPlayer.BeginPlayback();
-        fillBuffer();
-        while (!endThread) {
-            Audio.WriteFullBuffer(this.audioPlayer, playBuffer);
-            fillBuffer();
-        }
-
-        this.audioPlayer.StopPlayback();
-
-        void fillBuffer() {
-            this.synth.GetData(buffer);
+        if(audioPlayer is not null && OperatingSystem.IsWindows()) {
+            bool expandToStereo = this.audioPlayer.Format.Channels == 2;
             if (expandToStereo)
-                ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
+                playBuffer = new float[buffer.Length * 2];
+            else
+                playBuffer = buffer;
+
+            this.audioPlayer.BeginPlayback();
+            fillBuffer();
+            while (!endThread) {
+                Audio.WriteFullBuffer(this.audioPlayer, playBuffer);
+                fillBuffer();
+            }
+
+            this.audioPlayer.StopPlayback();
+
+            void fillBuffer() {
+                this.synth?.GetData(buffer);
+                if (expandToStereo)
+                    ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
+            }
         }
     }
 

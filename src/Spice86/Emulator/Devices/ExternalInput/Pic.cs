@@ -113,9 +113,9 @@ public class Pic : DefaultIOPortHandler {
         return (maskForVectorNumber & maskRegister) != 0;
     }
 
-    public void RaiseHardwareInterrupt(int irq) {
+    public uint? RaiseHardwareInterrupt(int irq) {
         if (this.state1 != State.Ready && this.state2 != State.Ready)
-            return;
+            return null;
 
         // Only allow the request if not already being serviced.
         if (irq < 8) {
@@ -127,9 +127,13 @@ public class Pic : DefaultIOPortHandler {
             if ((this.inServiceRegister2 & bit) == 0)
                 this.requestRegister |= bit;
         }
+            return this.requestRegister;
     }
 
-    public void ProcessInterrupt(byte vector) {
+    public void ProcessInterruptVector(byte vector) {
+        if (this.state1 != State.Ready && this.state2 != State.Ready)
+            return;
+
         if (IrqMasked(vector)) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Cannot process interrupt {@ProcessInterrupt}, IRQ is masked.", ConvertUtils.ToHex8(vector));
@@ -141,23 +145,11 @@ public class Pic : DefaultIOPortHandler {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Cannot process interrupt {@ProcessInterrupt}, Last IRQ was not acknowledged.", ConvertUtils.ToHex8(vector));
             }
-
             return;
         }
 
         if (this.state1 != State.Ready && this.state2 != State.Ready)
             return;
-
-        // Only allow the request if not already being serviced.
-        if (vector < 8) {
-            uint bit = 1u << vector;
-            if ((this.inServiceRegister1 & bit) == 0)
-                this.requestRegister |= bit;
-        } else {
-            uint bit = 1u << (vector - 8);
-            if ((this.inServiceRegister2 & bit) == 0)
-                this.requestRegister |= bit;
-        }
 
         IsLastIrqAcknowledged = false;
         _cpu.ExternalInterrupt(vector);

@@ -23,6 +23,7 @@ using Spice86.Emulator.InterruptHandlers.Vga;
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Memory;
 using Spice86.UI;
+using Spice86.UI.ViewModels;
 
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,7 @@ public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
     private readonly Configuration _configuration;
 
-    public Machine(IGraphicalUserInterface? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, Configuration configuration, bool debugMode) {
+    public Machine(MainWindowViewModel? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, Configuration configuration, bool debugMode) {
         _configuration = configuration;
         Gui = gui;
         DebugMode = debugMode;
@@ -130,7 +131,7 @@ public class Machine : IDisposable {
 
     public GravisUltraSound GravisUltraSound { get; private set; }
 
-    public IGraphicalUserInterface? Gui { get; private set; }
+    public MainWindowViewModel? Gui { get; private set; }
 
     public IOPortDispatcher IoPortDispatcher { get; private set; }
 
@@ -239,11 +240,17 @@ public class Machine : IDisposable {
     }
 
     private void CheckHardwareInterrupts() {
-        this.Pic.RaiseHardwareInterrupt(1);
+        if (!Keyboard.IsHardwareQueueEmpty) {
+            Pic.RaiseHardwareInterrupt(1);
+            Pic.ProcessInterruptVector(9);
+        }
 
         int irq = this.Pic.AcknwowledgeInterruptRequest();
         if (irq >= 0) {
-            Pic.RaiseHardwareInterrupt((byte)irq);
+            uint? vector = Pic.RaiseHardwareInterrupt((byte)irq);
+            if(vector is not null) {
+                Pic.ProcessInterruptVector((byte)vector);
+            }
         }
     }
 

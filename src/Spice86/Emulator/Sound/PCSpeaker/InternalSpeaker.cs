@@ -154,8 +154,13 @@ public sealed class InternalSpeaker
     /// </summary>
     private async Task GenerateWaveformAsync()
     {
+        if (!OperatingSystem.IsWindows()) {
+            return;
+        }
         using AudioPlayer? player = Audio.CreatePlayer();
-
+        if(player is null) {
+            return;
+        }
         FillWithSilence(player);
 
         var buffer = new byte[4096];
@@ -217,6 +222,9 @@ public sealed class InternalSpeaker
 
     private static void FillWithSilence(AudioPlayer player)
     {
+        if (!OperatingSystem.IsWindows()) {
+            return;
+        }
         var buffer = new float[4096];
         Span<float> span = buffer.AsSpan();
 

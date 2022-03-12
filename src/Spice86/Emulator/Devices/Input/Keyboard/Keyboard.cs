@@ -6,7 +6,7 @@ using Serilog;
 
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.VM;
-using Spice86.UI;
+using Spice86.UI.ViewModels;
 
 /// <summary>
 /// Basic implementation of a keyboard
@@ -14,31 +14,29 @@ using Spice86.UI;
 public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
     private static readonly ILogger _logger = Program.Logger.ForContext<Keyboard>();
-    private readonly IGraphicalUserInterface? _gui;
+    private readonly MainWindowViewModel? _gui;
 
-    public Keyboard(Machine machine, IGraphicalUserInterface? gui, Configuration configuration) : base(machine, configuration) {
+    public bool IsHardwareQueueEmpty => _gui?.IsKeyboardQueueEmpty == true;
+
+    public Keyboard(Machine machine, MainWindowViewModel? gui, Configuration configuration) : base(machine, configuration) {
         _gui = gui;
-        if (gui != null) {
-            gui.SetOnKeyPressedEvent(() => this.OnKeyEvent());
-            gui.SetOnKeyReleasedEvent(() => this.OnKeyEvent());
-        }
     }
 
-    public byte? GetScancode() {
+    public byte? GetScanCode() {
         if (_gui == null) {
             return null;
         }
-        Key? keyCode = _gui.LastKeyCode;
+        (Key, bool)? keyCode = _gui.DequeueLastKeyCode();
         byte? scancode = null;
         if (keyCode != null) {
-            if (_gui.IsKeyPressed(keyCode.Value)) {
-                scancode = KeyScancodeConverter.GetKeyPressedScancode(keyCode.Value);
+            if (keyCode.Value.Item2) {
+                scancode = KeyScancodeConverter.GetKeyPressedScancode(keyCode.Value.Item1);
                 if(_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                     _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
 
                 }
             } else {
-                scancode = KeyScancodeConverter.GetKeyReleasedScancode(keyCode.Value);
+                scancode = KeyScancodeConverter.GetKeyReleasedScancode(keyCode.Value.Item1);
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                     _logger.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", keyCode, scancode);
                 }
@@ -53,19 +51,14 @@ public class Keyboard : DefaultIOPortHandler {
     }
 
     public override byte ReadByte(int port) {
-        byte? scancode = GetScancode();
+        byte? scancode = GetScanCode();
         if (scancode == null) {
             return 0;
         }
-
         return scancode.Value;
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(KeyboardIoPort, this);
-    }
-
-    public void OnKeyEvent() {
-        _cpu.ExternalInterrupt(9);
     }
 }

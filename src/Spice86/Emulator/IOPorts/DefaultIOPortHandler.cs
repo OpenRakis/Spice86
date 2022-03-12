@@ -32,7 +32,10 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     }
 
     public virtual ushort ReadWord(int port) {
-        return OnUnandledIn(port);
+        if(_failOnUnhandledPort) {
+            throw new UnhandledIOPortException(_machine, port);
+        }
+        return ushort.MaxValue;
     }
 
     public virtual void WriteByte(int port, byte value) {
@@ -45,7 +48,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
 
     protected virtual byte OnUnandledIn(int port) {
         OnUnhandledPort(port);
-        return 0;
+        return byte.MaxValue;
     }
 
     protected virtual void OnUnhandledPort(int port) {

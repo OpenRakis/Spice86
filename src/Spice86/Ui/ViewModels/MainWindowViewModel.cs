@@ -26,15 +26,13 @@ using System.Threading;
 /// <li>Communicates keyboard and mouse events to the emulator</li>
 /// </ul>
 /// </summary>
-public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisposable {
+public class MainWindowViewModel : ViewModelBase, IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposedValue;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
-    private readonly List<Key> _keysPressed = new();
-    private Action? _onKeyPressedEvent;
-    private Action? _onKeyReleasedEvent;
+    private Queue<(Key, bool)> _keysPressed = new();
     private ProgramExecutor? _programExecutor;
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
 
@@ -56,7 +54,7 @@ public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisp
     }
 
     private void PauseCommandMethod() {
-        if(_emulatorThread is not null) {
+        if (_emulatorThread is not null) {
             _okayToContinueEvent.Reset();
             IsPaused = true;
         }
@@ -90,7 +88,7 @@ public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisp
         Dispatcher.UIThread.Post(() => {
             VideoBuffers.Add(videoBuffer);
         }, DispatcherPriority.MaxValue);
-        
+
     }
 
     public void Dispose() {
@@ -118,9 +116,14 @@ public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisp
         Environment.Exit(0);
     }
 
-    public int Height {get; private set;}
+    public int Height { get; private set; }
 
-    public Key? LastKeyCode { get; private set; }
+    public (Key, bool)? DequeueLastKeyCode() {
+        if(_keysPressed.TryDequeue(out (Key, bool) lastKeyCode)) {
+            return lastKeyCode;
+        }
+        return null;
+    }
 
     public int MouseX { get; set; }
 
@@ -130,10 +133,6 @@ public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisp
 
     public int Width { get; private set; }
 
-    public bool IsKeyPressed(Key keyCode) {
-        return _keysPressed.Contains(keyCode);
-    }
-
     public bool IsLeftButtonClicked { get; private set; }
 
 
@@ -141,23 +140,19 @@ public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisp
 
     public void OnKeyPressed(KeyEventArgs @event) {
         Key keyCode = @event.Key;
-        if (!_keysPressed.Contains(keyCode)) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Key pressed {@KeyPressed}", keyCode);
-            }
-            _keysPressed.Add(keyCode);
-            LastKeyCode = keyCode;
-            RunOnKeyEvent(this._onKeyPressedEvent);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("Key pressed {@KeyPressed}", keyCode);
         }
+        _keysPressed.Enqueue((keyCode, true));
     }
 
     public void OnKeyReleased(KeyEventArgs @event) {
-        LastKeyCode = @event.Key;
+        Key keyCode = @event.Key;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Key released {@LastKeyCode}", LastKeyCode);
+            _logger.Information("Key released {@KeyReleased}", keyCode);
         }
-        _keysPressed.Remove(LastKeyCode.Value);
-        RunOnKeyEvent(this._onKeyReleasedEvent);
+        _keysPressed.Enqueue((keyCode, false));
+
     }
 
     public void OnMainWindowOpened(object? sender, EventArgs e) {
@@ -186,14 +181,6 @@ public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisp
 
     public void RemoveBuffer(uint address) {
         VideoBuffers.Remove(VideoBuffers.First(x => x.Address == address));
-    }
-
-    public void SetOnKeyPressedEvent(Action onKeyPressedEvent) {
-        this._onKeyPressedEvent = onKeyPressedEvent;
-    }
-
-    public void SetOnKeyReleasedEvent(Action onKeyReleasedEvent) {
-        this._onKeyReleasedEvent = onKeyReleasedEvent;
     }
 
     public void SetResolution(int width, int height, uint address) {
@@ -255,4 +242,6 @@ public class MainWindowViewModel : ViewModelBase, IGraphicalUserInterface, IDisp
     public void WaitOne() {
         _okayToContinueEvent.WaitOne();
     }
+
+    internal bool IsKeyboardQueueEmpty => _keysPressed.Any() == false;
 }

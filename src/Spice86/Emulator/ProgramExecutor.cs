@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
+using Spice86.UI.ViewModels;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -32,7 +33,7 @@ public class ProgramExecutor : IDisposable {
     private bool _disposedValue;
     private readonly GdbServer? _gdbServer;
 
-    public ProgramExecutor(IGraphicalUserInterface? gui, Configuration? configuration) {
+    public ProgramExecutor(MainWindowViewModel? gui, Configuration? configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
@@ -96,7 +97,7 @@ public class ProgramExecutor : IDisposable {
         return new BiosLoader(Machine);
     }
 
-    private Machine CreateMachine(IGraphicalUserInterface? gui, Configuration? configuration) {
+    private Machine CreateMachine(MainWindowViewModel? gui, Configuration? configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }

@@ -7,7 +7,12 @@ using TinyAudio;
 
 internal static class Audio
 {
-    public static AudioPlayer CreatePlayer(bool useCallback = false) => WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+    public static AudioPlayer? CreatePlayer(bool useCallback = false) {
+        if (OperatingSystem.IsWindows()) {
+            return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+        }
+        return null;
+    }
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer)
     {
@@ -15,11 +20,12 @@ internal static class Audio
 
         while (true)
         {
-            int count = (int)player.WriteData(writeBuffer);
-            writeBuffer = writeBuffer[count..];
-            if (writeBuffer.IsEmpty)
-                return;
-
+            if (OperatingSystem.IsWindows()) {
+                int count = (int)player.WriteData(writeBuffer);
+                writeBuffer = writeBuffer[count..];
+                if (writeBuffer.IsEmpty)
+                    return;
+            }
             Thread.Sleep(1);
         }
     }
@@ -29,6 +35,9 @@ internal static class Audio
 
         while (true)
         {
+            if (!OperatingSystem.IsWindows()) {
+                return;
+            }
             int count = (int)player.WriteData(writeBuffer);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty)
@@ -52,6 +61,9 @@ internal static class Audio
 
         while (true)
         {
+            if (!OperatingSystem.IsWindows()) {
+                return;
+            }
             int count = (int)player.WriteData(span);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty)

@@ -6,6 +6,7 @@ using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 using Spice86.UI;
+using Spice86.UI.ViewModels;
 
 /// <summary>
 /// Implementation of VGA card, currently only supports mode 0x13.<br/>
@@ -25,11 +26,11 @@ public class VgaCard : DefaultIOPortHandler {
 
     public const byte MODE_320_200_256 = 0x13;
 
-    private readonly IGraphicalUserInterface? _gui;
+    private readonly MainWindowViewModel? _gui;
     private byte _crtStatusRegister;
     private bool _drawing = false;
 
-    public VgaCard(Machine machine, IGraphicalUserInterface? gui, Configuration configuration) : base(machine, configuration) {
+    public VgaCard(Machine machine, MainWindowViewModel? gui, Configuration configuration) : base(machine, configuration) {
         this._gui = gui;
         VgaDac = new VgaDac(machine);
     }
