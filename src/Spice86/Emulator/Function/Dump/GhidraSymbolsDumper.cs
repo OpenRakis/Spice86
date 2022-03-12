@@ -21,13 +21,13 @@ public class GhidraSymbolsDumper {
         List<string> lines = new();
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
         ISet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
-        dumpFunctionInformations(lines, dumpedAddresses, functionInformations);
-        dumpLabels(lines, dumpedAddresses, machine.Cpu.JumpHandler);
+        DumpFunctionInformations(lines, dumpedAddresses, functionInformations);
+        DumpLabels(lines, dumpedAddresses, machine.Cpu.JumpHandler);
         using var printWriter = new StreamWriter(destinationFilePath);
         lines.ForEach(line => printWriter.WriteLine(line));
     }
 
-    private void dumpLabels(List<string> lines, ISet<SegmentedAddress> dumpedAddresses, JumpHandler jumpHandler) {
+    private void DumpLabels(List<string> lines, ISet<SegmentedAddress> dumpedAddresses, JumpHandler jumpHandler) {
         jumpHandler.JumpsFromTo
             .SelectMany(x => x.Value)
             .OrderBy(x => x)
@@ -35,22 +35,22 @@ public class GhidraSymbolsDumper {
             .Distinct()
             .OrderBy(x => x)
             .ToList()
-            .ForEach(address => lines.Add(dumpLabel(address)));
+            .ForEach(address => lines.Add(DumpLabel(address)));
     }
 
-    private string dumpLabel(SegmentedAddress address) {
+    private string DumpLabel(SegmentedAddress address) {
         return ToGhidraSymbol($"spice86_label", address, "l");
     }
 
-    private void dumpFunctionInformations(ICollection<string> lines, ISet<SegmentedAddress> dumpedAddresses, ICollection<FunctionInformation> functionInformations) {
+    private void DumpFunctionInformations(ICollection<string> lines, ISet<SegmentedAddress> dumpedAddresses, ICollection<FunctionInformation> functionInformations) {
         functionInformations
             .OrderBy(functionInformation => functionInformation.Address)
-            .Select(functionInformation => dumpFunctionInformation(dumpedAddresses, functionInformation))
+            .Select(functionInformation => DumpFunctionInformation(dumpedAddresses, functionInformation))
             .ToList()
             .ForEach(line => lines.Add(line));
     }
 
-    private string dumpFunctionInformation(ISet<SegmentedAddress> dumpedAddresses, FunctionInformation functionInformation) {
+    private string DumpFunctionInformation(ISet<SegmentedAddress> dumpedAddresses, FunctionInformation functionInformation) {
         dumpedAddresses.Add(functionInformation.Address);
         return ToGhidraSymbol(functionInformation.Name, functionInformation.Address, "f");
     }
@@ -73,14 +73,14 @@ public class GhidraSymbolsDumper {
             return new Dictionary<SegmentedAddress, FunctionInformation>();
         }
         return System.IO.File.ReadLines(filePath)
-            .Select(line => toFunctionInformation(line))
+            .Select(line => ToFunctionInformation(line))
             .OfType<FunctionInformation>()
             .Distinct()
             .ToDictionary(functionInformation => functionInformation.Address, functionInformation => functionInformation);
 
     }
 
-    private FunctionInformation? toFunctionInformation(string line) {
+    private FunctionInformation? ToFunctionInformation(string line) {
         string[] split = line.Split(" ");
         if (split.Length != 3) {
             _logger.Debug("Cannot parse line {Line} into a function, only lines with 3 arguments can represent functions", line);
