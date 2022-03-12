@@ -53,7 +53,7 @@ public class Configuration {
     /// <summary>
     /// Only for <see cref="Devices.Timer.Timer"/>
     /// </summary>
-    [Option('i', nameof(InstructionsPerSecond), Required = false, HelpText = "<number of instructions that have to be executed executed by the emulator to consider a second passed> if blank will use time based timer.")]
+    [Option('i', nameof(InstructionsPerSecond), Required = false, HelpText = "<number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.")]
     public long? InstructionsPerSecond { get; set; }
 
     [Option('t', nameof(TimeMultiplier), Default = 1, Required = false, HelpText = "<time multiplier> if >1 will go faster, if <1 will go slower.")]
