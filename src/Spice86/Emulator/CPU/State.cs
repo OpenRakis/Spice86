@@ -39,7 +39,7 @@ public class State {
             res.Append($" flags={ConvertUtils.ToHex16(Flags.FlagRegister)}");
             res.Append(" (");
             res.Append(Flags);
-            res.Append(")");
+            res.Append(')');
             return res.ToString();
         }
     }
