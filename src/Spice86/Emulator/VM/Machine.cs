@@ -235,7 +235,7 @@ public class Machine : IDisposable {
 
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
-            CheckHardwareInterrupts();
+            //CheckHardwareInterrupts();
         }
     }
 
