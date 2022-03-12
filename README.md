@@ -1,6 +1,9 @@
 # Spice86 - A PC emulator for real mode reverse engineering
 
 [![.NET Build](https://github.com/OpenRakis/Spice86/actions/workflows/dotnet.yml/badge.svg)](https://github.com/OpenRakis/Spice86/actions/workflows/dotnet.yml)
+[![NuGet](https://img.shields.io/nuget/v/Spice86.svg)](https://www.nuget.org/packages/Spice86)
+![Licence](https://img.shields.io/badge/License-Apache_2.0-44cc11.svg)
+[![downloads](https://img.shields.io/nuget/dt/Spice86)](https://www.nuget.org/packages/Spice86)
 
 Spice86 is a tool to execute, reverse engineer and rewrite real mode dos programs for which source code is not available.
 
