@@ -240,13 +240,14 @@ public class Machine : IDisposable {
     }
 
     private void CheckHardwareInterrupts() {
-        //int irq = this.Pic.AcknwowledgeInterruptRequest();
-        //if (irq >= 0) {
-        //    uint? vector = Pic.RaiseHardwareInterrupt((byte)irq);
-        //    if(vector is not null) {
-        //        Pic.ProcessInterruptVector((byte)vector);
-        //    }
-        //}
+        int irq = this.Pic.AcknwowledgeInterruptRequest();
+        // Avoid Timer and Keyboard, which RaiseIRQ and Process the interrupt vector themselves. 
+        if (irq >= 0 && irq != 8 && irq != 9) {
+            uint? vector = Pic.RaiseHardwareInterruptRequest((byte)irq);
+            if (vector is not null) {
+                Pic.ProcessInterruptVector((byte)vector);
+            }
+        }
     }
 
     private static string ToString(SegmentedAddress? segmentedAddress) {
