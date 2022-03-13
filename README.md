@@ -1,5 +1,8 @@
 # Spice86 - A PC emulator for real mode reverse engineering
 
+![Linux](https://img.shields.io/badge/-Linux-grey?logo=linux)
+![OSX](https://img.shields.io/badge/-OSX-black?logo=apple)
+![FreeBSD](https://img.shields.io/badge/-FreeBSD-red?logo=freebsd)
 [![.NET Build](https://github.com/OpenRakis/Spice86/actions/workflows/dotnet.yml/badge.svg)](https://github.com/OpenRakis/Spice86/actions/workflows/dotnet.yml)
 [![NuGet](https://img.shields.io/nuget/v/Spice86.svg)](https://www.nuget.org/packages/Spice86)
 ![Licence](https://img.shields.io/badge/License-Apache_2.0-44cc11.svg)
