@@ -235,23 +235,18 @@ public class Machine : IDisposable {
 
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
-            //CheckHardwareInterrupts();
+            CheckHardwareInterrupts();
         }
     }
 
     private void CheckHardwareInterrupts() {
-        if (!Keyboard.IsHardwareQueueEmpty) {
-            Pic.RaiseHardwareInterrupt(1);
-            Pic.ProcessInterruptVector(9);
-        }
-
-        int irq = this.Pic.AcknwowledgeInterruptRequest();
-        if (irq >= 0) {
-            uint? vector = Pic.RaiseHardwareInterrupt((byte)irq);
-            if(vector is not null) {
-                Pic.ProcessInterruptVector((byte)vector);
-            }
-        }
+        //int irq = this.Pic.AcknwowledgeInterruptRequest();
+        //if (irq >= 0) {
+        //    uint? vector = Pic.RaiseHardwareInterrupt((byte)irq);
+        //    if(vector is not null) {
+        //        Pic.ProcessInterruptVector((byte)vector);
+        //    }
+        //}
     }
 
     private static string ToString(SegmentedAddress? segmentedAddress) {

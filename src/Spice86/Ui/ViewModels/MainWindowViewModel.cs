@@ -32,13 +32,20 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
     private bool _disposedValue;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
-    private Queue<(Key, bool)> _keysPressed = new();
+
+    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
+
     private ProgramExecutor? _programExecutor;
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
 
     ManualResetEvent _okayToContinueEvent = new ManualResetEvent(true);
 
+    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
+
     private bool _isPaused = false;
+
+    public event EventHandler<KeyEventArgs>? KeyUp;
+    public event EventHandler<KeyEventArgs>? KeyDown;
 
     public bool IsPaused { get => _isPaused; set => this.RaiseAndSetIfChanged(ref _isPaused, value); }
 
@@ -118,13 +125,6 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
 
     public int Height { get; private set; }
 
-    public (Key, bool)? DequeueLastKeyCode() {
-        if(_keysPressed.TryDequeue(out (Key, bool) lastKeyCode)) {
-            return lastKeyCode;
-        }
-        return null;
-    }
-
     public int MouseX { get; set; }
 
     public int MouseY { get; set; }
@@ -135,25 +135,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
 
     public bool IsLeftButtonClicked { get; private set; }
 
-
     public bool IsRightButtonClicked { get; private set; }
-
-    public void OnKeyPressed(KeyEventArgs @event) {
-        Key keyCode = @event.Key;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Key pressed {@KeyPressed}", keyCode);
-        }
-        _keysPressed.Enqueue((keyCode, true));
-    }
-
-    public void OnKeyReleased(KeyEventArgs @event) {
-        Key keyCode = @event.Key;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Key released {@KeyReleased}", keyCode);
-        }
-        _keysPressed.Enqueue((keyCode, false));
-
-    }
 
     public void OnMainWindowOpened(object? sender, EventArgs e) {
         if (sender is Window) {
@@ -195,9 +177,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
 
     private void DisposeBuffers() {
         foreach (VideoBufferViewModel buffer in VideoBuffers) {
-        Dispatcher.UIThread.Post(() => {
-            buffer.Dispose();
-        }, DispatcherPriority.MaxValue);
+            Dispatcher.UIThread.Post(() => {
+                buffer.Dispose();
+            }, DispatcherPriority.MaxValue);
         }
         _videoBuffers.Clear();
     }
@@ -214,12 +196,6 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
 
     private static Configuration? GenerateConfiguration(string[] args) {
         return CommandLineParser.ParseCommandLine(args);
-    }
-
-    private static void RunOnKeyEvent(Action? runnable) {
-        if (runnable != null) {
-            runnable.Invoke();
-        }
     }
 
     private IEnumerable<VideoBufferViewModel> SortedBuffers() {
@@ -242,6 +218,4 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
     public void WaitOne() {
         _okayToContinueEvent.WaitOne();
     }
-
-    internal bool IsKeyboardQueueEmpty => _keysPressed.Any() == false;
 }

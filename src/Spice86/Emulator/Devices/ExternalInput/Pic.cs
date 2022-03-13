@@ -113,7 +113,7 @@ public class Pic : DefaultIOPortHandler {
         return (maskForVectorNumber & maskRegister) != 0;
     }
 
-    public uint? RaiseHardwareInterrupt(int irq) {
+    public uint? RaiseHardwareInterruptRequest(int irq) {
         if (this.state1 != State.Ready && this.state2 != State.Ready)
             return null;
 
