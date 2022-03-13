@@ -235,18 +235,6 @@ public class Machine : IDisposable {
 
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
-            CheckHardwareInterrupts();
-        }
-    }
-
-    private void CheckHardwareInterrupts() {
-        int irq = this.Pic.AcknwowledgeInterruptRequest();
-        // Avoid Timer and Keyboard, which RaiseIRQ and Process the interrupt vector themselves. 
-        if (irq >= 0 && irq != 8 && irq != 9) {
-            uint? vector = Pic.RaiseHardwareInterruptRequest((byte)irq);
-            if (vector is not null) {
-                Pic.ProcessInterruptVector((byte)vector);
-            }
         }
     }
 
