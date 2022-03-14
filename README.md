@@ -407,13 +407,11 @@ Sound:
 
 Compatibility list available [here](COMPATIBILITY.md).
 
-### How to build locally
+### How to build on your machine
 
-Locally you will need:
-
-- .NET 6 SDK
+- Install the .NET 6 SDK (once)
 - clone the repo
-- run:
+- run this where Spice86.csproj is located:
 
 ```bash
    dotnet build
@@ -425,7 +423,7 @@ Locally you will need:
    Spice86
 ```
 
-or use
+or use this where Spice86.csproj is located:
 
 ```bash
    dotnet run
