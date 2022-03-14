@@ -407,14 +407,28 @@ Sound:
 
 Compatibility list available [here](COMPATIBILITY.md).
 
-### How to build
+### How to build locally
+
 Locally you will need:
-- .NET 6
+
+- .NET 6 SDK
+- clone the repo
+- run:
+
+```bash
+   dotnet build
+```
 
 ### How to run
 
 ```bash
    Spice86
+```
+
+or use
+
+```bash
+   dotnet run
 ```
 
 ### Some screenshots
