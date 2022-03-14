@@ -420,13 +420,13 @@ Compatibility list available [here](COMPATIBILITY.md).
 ### How to run
 
 ```bash
-   Spice86
+   Spice86 -e <path to executable>
 ```
 
 or use this where Spice86.csproj is located:
 
 ```bash
-   dotnet run
+   dotnet run -e <path to executable>
 ```
 
 ### Some screenshots
