@@ -14,9 +14,10 @@ public class PcSpeaker : DefaultIOPortHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<PcSpeaker>();
     private const int PcSpeakerPortNumber = 0x61;
 
-    private InternalSpeaker _pcSpeaker = new();
+    private InternalSpeaker _pcSpeaker;
 
     public PcSpeaker(Machine machine, Configuration configuration) : base(machine, configuration) {
+        _pcSpeaker = new(configuration);
     }
 
     public override byte ReadByte(int port) {

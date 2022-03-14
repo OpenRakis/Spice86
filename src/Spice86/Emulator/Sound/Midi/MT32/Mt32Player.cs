@@ -11,16 +11,20 @@ using TinyAudio;
 
 internal sealed class Mt32Player : IDisposable {
     private readonly Mt32Context context = new Mt32Context();
-    private readonly AudioPlayer? audioPlayer = Audio.CreatePlayer(true);
+    private readonly AudioPlayer? audioPlayer;
     private bool disposed;
 
-    public Mt32Player(string romsPath) {
+    public Mt32Player(string romsPath, Configuration configuration) {
         if (string.IsNullOrWhiteSpace(romsPath))
             throw new ArgumentNullException(nameof(romsPath));
-        if(audioPlayer is null) {
+        if (configuration.CreateAudioBackend == false) {
             return;
         }
-        if(!OperatingSystem.IsWindows()) {
+        audioPlayer = Audio.CreatePlayer(true);
+        if (audioPlayer is null) {
+            return;
+        }
+        if (!OperatingSystem.IsWindows()) {
             return;
         }
         LoadRoms(romsPath);
@@ -57,7 +61,7 @@ internal sealed class Mt32Player : IDisposable {
     public void Dispose() {
         if (!disposed) {
             context.Dispose();
-            if(OperatingSystem.IsWindows()) {
+            if (OperatingSystem.IsWindows()) {
                 audioPlayer?.Dispose();
             }
             disposed = true;

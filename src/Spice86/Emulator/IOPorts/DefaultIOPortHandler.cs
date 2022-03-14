@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.IOPorts; 
+﻿namespace Spice86.Emulator.IOPorts;
 
 using Spice86.Emulator.CPU;
 using Spice86.Emulator.VM;
@@ -13,14 +13,14 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
 
     protected Memory _memory;
 
-    private Configuration _configuration;
+    protected Configuration Configuration { get; init; }
 
     protected DefaultIOPortHandler(Machine machine, Configuration configuration) {
-        this._configuration = configuration;
+        this.Configuration = configuration;
         this._machine = machine;
         this._memory = machine.Memory;
         this._cpu = machine.Cpu;
-        this._failOnUnhandledPort = _configuration.FailOnUnhandledPort;
+        this._failOnUnhandledPort = Configuration.FailOnUnhandledPort;
     }
 
     public virtual byte ReadByte(int port) {
@@ -32,7 +32,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     }
 
     public virtual ushort ReadWord(int port) {
-        if(_failOnUnhandledPort) {
+        if (_failOnUnhandledPort) {
             throw new UnhandledIOPortException(_machine, port);
         }
         return ushort.MaxValue;

@@ -11,8 +11,7 @@ using TinyAudio;
 /// <summary>
 /// Emulates a PC speaker.
 /// </summary>
-public sealed class InternalSpeaker
-{
+public sealed class InternalSpeaker {
     /// <summary>
     /// Value into which the input frequency is divided to get the frequency in Hz.
     /// </summary>
@@ -28,12 +27,12 @@ public sealed class InternalSpeaker
     private Task? generateWaveformTask;
     private readonly CancellationTokenSource cancelGenerateWaveform = new CancellationTokenSource();
     private int currentPeriod;
-
+    private Configuration Configuration { get; init; }
     /// <summary>
     /// Initializes a new instance of the InternalSpeaker class.
     /// </summary>
-    public InternalSpeaker()
-    {
+    public InternalSpeaker(Configuration configuration) {
+        Configuration = configuration;
         this.frequencyRegister.ValueChanged += this.FrequencyChanged;
         this.ticksPerSample = (int)(Stopwatch.Frequency / (double)this.outputSampleRate);
     }
@@ -47,37 +46,28 @@ public sealed class InternalSpeaker
     /// </summary>
     private int PeriodInSamples => (int)(this.outputSampleRate / this.Frequency);
 
-    public byte ReadByte(int port)
-    {
+    public byte ReadByte(int port) {
         if (port == 0x61)
             return (byte)this.controlRegister;
 
         throw new NotSupportedException();
     }
-    public void WriteByte(int port, byte value)
-    {
-        if (port == 0x61)
-        {
+    public void WriteByte(int port, byte value) {
+        if (port == 0x61) {
             SpeakerControl oldValue = this.controlRegister;
             this.controlRegister = (SpeakerControl)value;
             if ((oldValue & SpeakerControl.SpeakerOn) != 0 && (this.controlRegister & SpeakerControl.SpeakerOn) == 0)
                 this.SpeakerDisabled();
-        }
-        else if (port == 0x42)
-        {
+        } else if (port == 0x42) {
             this.frequencyRegister.WriteByte(value);
-        }
-        else
-        {
+        } else {
             throw new NotSupportedException();
         }
     }
 
-    public void Dispose()
-    {
+    public void Dispose() {
         this.frequencyRegister.ValueChanged -= this.FrequencyChanged;
-        lock (this.threadStateLock)
-        {
+        lock (this.threadStateLock) {
             this.cancelGenerateWaveform.Cancel();
         }
     }
@@ -91,8 +81,7 @@ public sealed class InternalSpeaker
     /// <summary>
     /// Invoked when the speaker has been turned off.
     /// </summary>
-    private void SpeakerDisabled()
-    {
+    private void SpeakerDisabled() {
         this.EnqueueCurrentNote();
         this.currentPeriod = 0;
     }
@@ -101,8 +90,7 @@ public sealed class InternalSpeaker
     /// </summary>
     /// <param name="source">Source of the event.</param>
     /// <param name="e">Unused EventArgs instance.</param>
-    private void FrequencyChanged(object? source, EventArgs e)
-    {
+    private void FrequencyChanged(object? source, EventArgs e) {
         this.EnqueueCurrentNote();
 
         this.durationTimer.Reset();
@@ -112,18 +100,15 @@ public sealed class InternalSpeaker
     /// <summary>
     /// Enqueues the current note.
     /// </summary>
-    private void EnqueueCurrentNote()
-    {
-        if (this.durationTimer.IsRunning && this.currentPeriod != 0)
-        {
+    private void EnqueueCurrentNote() {
+        if (this.durationTimer.IsRunning && this.currentPeriod != 0) {
             this.durationTimer.Stop();
 
             int periodDuration = this.ticksPerSample * this.currentPeriod;
             int repetitions = (int)(this.durationTimer.ElapsedTicks / periodDuration);
             this.queuedNotes.Enqueue(new QueuedNote(this.currentPeriod, repetitions));
 
-            lock (this.threadStateLock)
-            {
+            lock (this.threadStateLock) {
                 if (this.generateWaveformTask == null || this.generateWaveformTask.IsCompleted)
                     this.generateWaveformTask = Task.Run(this.GenerateWaveformAsync);
             }
@@ -135,10 +120,8 @@ public sealed class InternalSpeaker
     /// <param name="buffer">Buffer to fill.</param>
     /// <param name="period">The number of samples in the period.</param>
     /// <returns>Number of bytes written to the buffer.</returns>
-    private int GenerateSquareWave(Span<byte> buffer, int period)
-    {
-        if (period < 2)
-        {
+    private int GenerateSquareWave(Span<byte> buffer, int period) {
+        if (period < 2) {
             buffer[0] = 127;
             return 1;
         }
@@ -152,13 +135,15 @@ public sealed class InternalSpeaker
     /// <summary>
     /// Generates the PC speaker waveform.
     /// </summary>
-    private async Task GenerateWaveformAsync()
-    {
+    private async Task GenerateWaveformAsync() {
         if (!OperatingSystem.IsWindows()) {
             return;
         }
+        if (!Configuration.CreateAudioBackend) {
+            return;
+        }
         using AudioPlayer? player = Audio.CreatePlayer();
-        if(player is null) {
+        if (player is null) {
             return;
         }
         FillWithSilence(player);
@@ -166,8 +151,7 @@ public sealed class InternalSpeaker
         var buffer = new byte[4096];
         var writeBuffer = buffer;
         bool expandToStereo = false;
-        if (player.Format.Channels == 2)
-        {
+        if (player.Format.Channels == 2) {
             writeBuffer = new byte[buffer.Length * 2];
             expandToStereo = true;
         }
@@ -176,40 +160,32 @@ public sealed class InternalSpeaker
 
         int idleCount = 0;
 
-        while (idleCount < 10000)
-        {
-            if (this.queuedNotes.TryDequeue(out QueuedNote note))
-            {
+        while (idleCount < 10000) {
+            if (this.queuedNotes.TryDequeue(out QueuedNote note)) {
                 int samples = GenerateSquareWave(buffer, note.Period);
                 int periods = note.PeriodCount;
 
-                if (expandToStereo)
-                {
+                if (expandToStereo) {
                     ChannelAdapter.MonoToStereo(buffer.AsSpan(0, samples), writeBuffer.AsSpan(0, samples * 2));
                     samples *= 2;
                 }
 
-                while (periods > 0)
-                {
+                while (periods > 0) {
                     Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, samples));
                     periods--;
                 }
 
                 GenerateSilence(buffer);
                 idleCount = 0;
-            }
-            else
-            {
+            } else {
                 var floatArray = new float[buffer.Length];
 
-                for (int i = 0; i < buffer.Length; i++)
-                {
+                for (int i = 0; i < buffer.Length; i++) {
                     floatArray[i] = buffer[i];
                 }
 
 
-                while (player.WriteData(floatArray.AsSpan()) > 0)
-                {
+                while (player.WriteData(floatArray.AsSpan()) > 0) {
                 }
 
                 await Task.Delay(5, this.cancelGenerateWaveform.Token);
@@ -220,16 +196,14 @@ public sealed class InternalSpeaker
         }
     }
 
-    private static void FillWithSilence(AudioPlayer player)
-    {
+    private static void FillWithSilence(AudioPlayer player) {
         if (!OperatingSystem.IsWindows()) {
             return;
         }
         var buffer = new float[4096];
         Span<float> span = buffer.AsSpan();
 
-        while (player.WriteData(span) > 0)
-        {
+        while (player.WriteData(span) > 0) {
         }
     }
 }

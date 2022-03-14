@@ -6,11 +6,11 @@ internal sealed class Mt32MidiDevice : MidiDevice {
     private readonly Lazy<Mt32Player> player;
     private bool disposed;
 
-    public Mt32MidiDevice(string romsPath) {
+    public Mt32MidiDevice(string romsPath, Configuration configuration) {
         if (string.IsNullOrWhiteSpace(romsPath))
             throw new ArgumentNullException(nameof(romsPath));
 
-        player = new Lazy<Mt32Player>(() => new(romsPath));
+        player = new Lazy<Mt32Player>(() => new(romsPath, configuration));
     }
 
     public override void Pause() {

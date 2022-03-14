@@ -16,7 +16,7 @@ public class Midi : DefaultIOPortHandler {
     private GeneralMidi _generalMidi;
 
     public Midi(Machine machine, Configuration configuration) : base(machine, configuration) {
-        _generalMidi = new GeneralMidi(configuration.Mt32RomsPath);
+        _generalMidi = new GeneralMidi(configuration, configuration.Mt32RomsPath);
         _machine.Paused += Machine_Paused;
         _machine.Resumed += Machine_Resumed;
     }

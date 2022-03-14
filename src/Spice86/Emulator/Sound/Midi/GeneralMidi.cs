@@ -20,11 +20,14 @@ public sealed class GeneralMidi {
     private const byte EnterUartModeCommand = 0x3F;
     private const byte CommandAcknowledge = 0xFE;
 
+    private Configuration Configuration { get; init; }
+
     /// <summary>
     /// Initializes a new instance of the GeneralMidi class.
     /// </summary>
-    public GeneralMidi(string? mt32RomsPath = null) {
+    public GeneralMidi(Configuration configuration, string? mt32RomsPath = null) {
         Mt32RomsPath = mt32RomsPath;
+        Configuration = configuration;
     }
 
     /// <summary>
@@ -77,7 +80,7 @@ public sealed class GeneralMidi {
         switch (port) {
             case DataPort:
                 if (midiMapper == null)
-                    midiMapper = UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath) : new WindowsMidiMapper();
+                    midiMapper = UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath, Configuration) : new WindowsMidiMapper();
                 midiMapper.SendByte(value);
                 break;
 

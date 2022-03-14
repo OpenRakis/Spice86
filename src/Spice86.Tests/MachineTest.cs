@@ -150,7 +150,9 @@ public class MachineTest {
     }
 
     private Machine Execute(string binName) {
-        Configuration configuration = new Configuration();
+        Configuration configuration = new Configuration() {
+            CreateAudioBackend = false
+        };
         // making sure int8 is not going to be triggered during the tests
         configuration.InstructionsPerSecond = 10000000;
         configuration.Exe = GetBinPath(binName);

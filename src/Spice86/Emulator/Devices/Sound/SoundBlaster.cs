@@ -249,9 +249,11 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         if (!OperatingSystem.IsWindows()) {
             return;
         }
-
+        if (!Configuration.CreateAudioBackend) {
+            return;
+        }
         using TinyAudio.AudioPlayer? player = Audio.CreatePlayer();
-        if(player is null) {
+        if (player is null) {
             return;
         }
         Span<byte> buffer = stackalloc byte[512];

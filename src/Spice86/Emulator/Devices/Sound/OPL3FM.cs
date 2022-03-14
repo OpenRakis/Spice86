@@ -19,7 +19,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
-    private readonly AudioPlayer? audioPlayer = Audio.CreatePlayer();
+    private readonly AudioPlayer? audioPlayer;
     private readonly FmSynthesizer? synth;
     private int currentAddress;
     private volatile bool endThread;
@@ -134,7 +134,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private void GenerateWaveforms() {
         var buffer = new float[1024];
         float[] playBuffer;
-        if(audioPlayer is not null && OperatingSystem.IsWindows()) {
+        if (audioPlayer is not null && OperatingSystem.IsWindows()) {
             bool expandToStereo = this.audioPlayer.Format.Channels == 2;
             if (expandToStereo)
                 playBuffer = new float[buffer.Length * 2];
