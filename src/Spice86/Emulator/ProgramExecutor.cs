@@ -9,9 +9,9 @@ using Spice86.Emulator.Devices.Timer;
 using Spice86.Emulator.Errors;
 using Spice86.Emulator.Function;
 using Spice86.Emulator.Gdb;
-using Spice86.Emulator.Loadablefile.Bios;
-using Spice86.Emulator.Loadablefile.Dos.Com;
-using Spice86.Emulator.Loadablefile.Dos.Exe;
+using Spice86.Emulator.LoadableFile.Bios;
+using Spice86.Emulator.LoadableFile.Dos.Com;
+using Spice86.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Emulator.LoadableFile;
 using Spice86.Emulator.Memory;
 using Spice86.Emulator.VM;
@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
+using Spice86.UI.ViewModels;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -32,7 +33,7 @@ public class ProgramExecutor : IDisposable {
     private bool _disposedValue;
     private readonly GdbServer? _gdbServer;
 
-    public ProgramExecutor(IVideoKeyboardMouseIO? gui, Configuration? configuration) {
+    public ProgramExecutor(MainWindowViewModel? gui, Configuration? configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
@@ -54,6 +55,7 @@ public class ProgramExecutor : IDisposable {
         if (!_disposedValue) {
             if (disposing) {
                 _gdbServer?.Dispose();
+                Machine.Dispose();
             }
             _disposedValue = true;
         }
@@ -95,7 +97,7 @@ public class ProgramExecutor : IDisposable {
         return new BiosLoader(Machine);
     }
 
-    private Machine CreateMachine(IVideoKeyboardMouseIO? gui, Configuration? configuration) {
+    private Machine CreateMachine(MainWindowViewModel? gui, Configuration? configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
@@ -103,7 +105,7 @@ public class ProgramExecutor : IDisposable {
         bool debugMode = configuration.GdbPort != null;
         JumpHandler jumpHandler = new JumpDumper().ReadFromFileOrCreate(configuration.JumpFile);
         jumpHandler.DebugMode = debugMode;
-        Machine = new Machine(gui, counterConfigurator, jumpHandler, configuration.FailOnUnhandledPort, debugMode);
+        Machine = new Machine(gui, counterConfigurator, jumpHandler, configuration, debugMode);
         InitializeCpu();
         InitializeDos(configuration);
         if (configuration.InstallInterruptVector) {

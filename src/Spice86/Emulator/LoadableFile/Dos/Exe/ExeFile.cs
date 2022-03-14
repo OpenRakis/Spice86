@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Loadablefile.Dos.Exe;
+﻿namespace Spice86.Emulator.LoadableFile.Dos.Exe;
 
 using Spice86.Emulator.Memory;
 

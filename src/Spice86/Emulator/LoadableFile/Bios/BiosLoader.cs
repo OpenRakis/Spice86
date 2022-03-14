@@ -1,6 +1,5 @@
-﻿namespace Spice86.Emulator.Loadablefile.Bios;
+﻿namespace Spice86.Emulator.LoadableFile.Bios;
 
-using Spice86.Emulator.LoadableFile;
 using Spice86.Emulator.Memory;
 using Spice86.Emulator.VM;
 /// <summary>

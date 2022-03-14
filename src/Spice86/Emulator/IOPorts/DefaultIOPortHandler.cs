@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.IOPorts; 
+﻿namespace Spice86.Emulator.IOPorts;
 
 using Spice86.Emulator.CPU;
 using Spice86.Emulator.VM;
@@ -13,14 +13,17 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
 
     protected Memory _memory;
 
-    protected DefaultIOPortHandler(Machine machine, bool failOnUnhandledPort) {
+    protected Configuration Configuration { get; init; }
+
+    protected DefaultIOPortHandler(Machine machine, Configuration configuration) {
+        this.Configuration = configuration;
         this._machine = machine;
         this._memory = machine.Memory;
         this._cpu = machine.Cpu;
-        this._failOnUnhandledPort = failOnUnhandledPort;
+        this._failOnUnhandledPort = Configuration.FailOnUnhandledPort;
     }
 
-    public virtual byte Inb(int port) {
+    public virtual byte ReadByte(int port) {
         return OnUnandledIn(port);
     }
 
@@ -28,21 +31,24 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     public virtual void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
     }
 
-    public virtual ushort Inw(int port) {
-        return OnUnandledIn(port);
+    public virtual ushort ReadWord(int port) {
+        if (_failOnUnhandledPort) {
+            throw new UnhandledIOPortException(_machine, port);
+        }
+        return ushort.MaxValue;
     }
 
-    public virtual void Outb(int port, byte value) {
+    public virtual void WriteByte(int port, byte value) {
         OnUnhandledPort(port);
     }
 
-    public virtual void Outw(int port, ushort value) {
+    public virtual void WriteWord(int port, ushort value) {
         OnUnhandledPort(port);
     }
 
     protected virtual byte OnUnandledIn(int port) {
         OnUnhandledPort(port);
-        return 0;
+        return byte.MaxValue;
     }
 
     protected virtual void OnUnhandledPort(int port) {

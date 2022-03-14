@@ -4,6 +4,7 @@ using Serilog;
 
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.CPU;
+using Spice86.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Emulator.Devices.ExternalInput;
 using Spice86.Emulator.Devices.Input.Joystick;
 using Spice86.Emulator.Devices.Input.Keyboard;
@@ -22,17 +23,20 @@ using Spice86.Emulator.InterruptHandlers.Vga;
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Memory;
 using Spice86.UI;
+using Spice86.UI.ViewModels;
 
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// Emulates an IBM PC
 /// </summary>
-public class Machine {
+public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
+    private readonly Configuration _configuration;
 
-
-    public Machine(IVideoKeyboardMouseIO? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, bool failOnUnhandledPort, bool debugMode) {
+    public Machine(MainWindowViewModel? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, Configuration configuration, bool debugMode) {
+        _configuration = configuration;
         Gui = gui;
         DebugMode = debugMode;
 
@@ -44,25 +48,32 @@ public class Machine {
         MachineBreakpoints = new MachineBreakpoints(this);
 
         // IO devices
-        IoPortDispatcher = new IOPortDispatcher(this, failOnUnhandledPort);
+        IoPortDispatcher = new IOPortDispatcher(this, configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
-        Pic = new Pic(this, true, failOnUnhandledPort);
+
+        this.DmaController = new DmaController(this, configuration);
+        Register(DmaController);
+
+        Pic = new Pic(this, configuration);
         Register(Pic);
-        VgaCard = new VgaCard(this, gui, failOnUnhandledPort);
+        VgaCard = new VgaCard(this, gui, configuration);
         Register(VgaCard);
-        Timer = new Timer(this, Pic, VgaCard, counterConfigurator, failOnUnhandledPort);
+        Timer = new Timer(this, Pic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
-        Keyboard = new Keyboard(this, gui, failOnUnhandledPort);
+        Keyboard = new Keyboard(this, gui, configuration);
         Register(Keyboard);
-        Joystick = new Joystick(this, failOnUnhandledPort);
+        Joystick = new Joystick(this, configuration);
         Register(Joystick);
-        PcSpeaker = new PcSpeaker(this, failOnUnhandledPort);
+        PcSpeaker = new PcSpeaker(this, configuration);
         Register(PcSpeaker);
-        SoundBlaster = new SoundBlaster(this, failOnUnhandledPort);
+        OPL3FM = new OPL3FM(this, configuration);
+        Register(OPL3FM);
+        SoundBlaster = new SoundBlaster(this, configuration);
         Register(SoundBlaster);
-        GravisUltraSound = new GravisUltraSound(this, failOnUnhandledPort);
+        SoundBlaster.AddEnvironnmentVariable();
+        GravisUltraSound = new GravisUltraSound(this, configuration);
         Register(GravisUltraSound);
-        Midi = new Midi(this, failOnUnhandledPort);
+        Midi = new Midi(this, configuration);
         Register(Midi);
 
         // Services
@@ -120,7 +131,7 @@ public class Machine {
 
     public GravisUltraSound GravisUltraSound { get; private set; }
 
-    public IVideoKeyboardMouseIO? Gui { get; private set; }
+    public MainWindowViewModel? Gui { get; private set; }
 
     public IOPortDispatcher IoPortDispatcher { get; private set; }
 
@@ -155,6 +166,17 @@ public class Machine {
     public VgaCard VgaCard { get; private set; }
 
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; private set; }
+    public DmaController DmaController { get; private set; }
+    /// <summary>
+    /// Gets the current DOS environment variables.
+    /// TODO: Make use of it by allocating the block of memory corresponding to it in virtual memory.
+    /// </summary>
+    public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
+    public OPL3FM OPL3FM { get; private set; }
+
+    public event EventHandler? Paused;
+
+    public event EventHandler? Resumed;
 
     public void InstallAllCallbacksInInterruptTable() {
         CallbackHandler.InstallAllCallbacksInInterruptTable();
@@ -170,6 +192,14 @@ public class Machine {
 
     public void Register(IIOPortHandler ioPortHandler) {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
+
+        if (ioPortHandler is IDmaDevice8 dmaDevice) {
+            if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count)
+                throw new ArgumentException("Invalid DMA channel on DMA device.");
+
+            DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
+            dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+        }
     }
 
     public void Register(ICallback callback) {
@@ -195,7 +225,9 @@ public class Machine {
     private void RunLoop() {
         while (Cpu.IsRunning) {
             if (Gui?.IsPaused == true) {
+                Paused?.Invoke(this, EventArgs.Empty);
                 Gui?.WaitOne();
+                Resumed?.Invoke(this, EventArgs.Empty);
             }
             if (DebugMode) {
                 MachineBreakpoints.CheckBreakPoint();
@@ -212,5 +244,30 @@ public class Machine {
         }
 
         return "null";
+    }
+
+    private readonly List<DmaChannel> dmaDeviceChannels = new();
+    private bool disposedValue;
+
+    internal void PerformDmaTransfers() {
+        foreach (DmaChannel? channel in this.dmaDeviceChannels) {
+            if (channel.IsActive && !channel.IsMasked)
+                channel.Transfer(this.Memory);
+        }
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (!disposedValue) {
+            if (disposing) {
+                SoundBlaster.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

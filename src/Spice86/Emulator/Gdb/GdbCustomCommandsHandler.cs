@@ -315,7 +315,7 @@ public class GdbCustomCommandsHandler {
     private string Vbuffer(string[] args) {
         try {
             string action = ExtractAction(args);
-            IVideoKeyboardMouseIO? gui = _machine.Gui;
+            MainWindowViewModel? gui = _machine.Gui;
             VgaCard vgaCard = _machine.VgaCard;
 
             // Actions for 1 parameter

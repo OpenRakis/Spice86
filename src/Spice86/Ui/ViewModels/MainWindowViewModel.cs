@@ -26,21 +26,26 @@ using System.Threading;
 /// <li>Communicates keyboard and mouse events to the emulator</li>
 /// </ul>
 /// </summary>
-public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDisposable {
+public class MainWindowViewModel : ViewModelBase, IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposedValue;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
-    private readonly List<Key> _keysPressed = new();
-    private Action? _onKeyPressedEvent;
-    private Action? _onKeyReleasedEvent;
+
+    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
+
     private ProgramExecutor? _programExecutor;
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
 
     ManualResetEvent _okayToContinueEvent = new ManualResetEvent(true);
 
+    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
+
     private bool _isPaused = false;
+
+    public event EventHandler<KeyEventArgs>? KeyUp;
+    public event EventHandler<KeyEventArgs>? KeyDown;
 
     public bool IsPaused { get => _isPaused; set => this.RaiseAndSetIfChanged(ref _isPaused, value); }
 
@@ -56,7 +61,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
     }
 
     private void PauseCommandMethod() {
-        if(_emulatorThread is not null) {
+        if (_emulatorThread is not null) {
             _okayToContinueEvent.Reset();
             IsPaused = true;
         }
@@ -90,7 +95,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         Dispatcher.UIThread.Post(() => {
             VideoBuffers.Add(videoBuffer);
         }, DispatcherPriority.MaxValue);
-        
+
     }
 
     public void Dispose() {
@@ -118,9 +123,7 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         Environment.Exit(0);
     }
 
-    public int Height {get; private set;}
-
-    public Key? LastKeyCode { get; private set; }
+    public int Height { get; private set; }
 
     public int MouseX { get; set; }
 
@@ -130,35 +133,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     public int Width { get; private set; }
 
-    public bool IsKeyPressed(Key keyCode) {
-        return _keysPressed.Contains(keyCode);
-    }
-
     public bool IsLeftButtonClicked { get; private set; }
 
-
     public bool IsRightButtonClicked { get; private set; }
-
-    public void OnKeyPressed(KeyEventArgs @event) {
-        Key keyCode = @event.Key;
-        if (!_keysPressed.Contains(keyCode)) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Key pressed {@KeyPressed}", keyCode);
-            }
-            _keysPressed.Add(keyCode);
-            LastKeyCode = keyCode;
-            RunOnKeyEvent(this._onKeyPressedEvent);
-        }
-    }
-
-    public void OnKeyReleased(KeyEventArgs @event) {
-        LastKeyCode = @event.Key;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Key released {@LastKeyCode}", LastKeyCode);
-        }
-        _keysPressed.Remove(LastKeyCode.Value);
-        RunOnKeyEvent(this._onKeyReleasedEvent);
-    }
 
     public void OnMainWindowOpened(object? sender, EventArgs e) {
         if (sender is Window) {
@@ -188,14 +165,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
         VideoBuffers.Remove(VideoBuffers.First(x => x.Address == address));
     }
 
-    public void SetOnKeyPressedEvent(Action onKeyPressedEvent) {
-        this._onKeyPressedEvent = onKeyPressedEvent;
-    }
-
-    public void SetOnKeyReleasedEvent(Action onKeyReleasedEvent) {
-        this._onKeyReleasedEvent = onKeyReleasedEvent;
-    }
-
     public void SetResolution(int width, int height, uint address) {
         _isSettingResolution = true;
         DisposeBuffers();
@@ -208,9 +177,9 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     private void DisposeBuffers() {
         foreach (VideoBufferViewModel buffer in VideoBuffers) {
-        Dispatcher.UIThread.Post(() => {
-            buffer.Dispose();
-        }, DispatcherPriority.MaxValue);
+            Dispatcher.UIThread.Post(() => {
+                buffer.Dispose();
+            }, DispatcherPriority.MaxValue);
         }
         _videoBuffers.Clear();
     }
@@ -227,12 +196,6 @@ public class MainWindowViewModel : ViewModelBase, IVideoKeyboardMouseIO, IDispos
 
     private static Configuration? GenerateConfiguration(string[] args) {
         return CommandLineParser.ParseCommandLine(args);
-    }
-
-    private static void RunOnKeyEvent(Action? runnable) {
-        if (runnable != null) {
-            runnable.Invoke();
-        }
     }
 
     private IEnumerable<VideoBufferViewModel> SortedBuffers() {

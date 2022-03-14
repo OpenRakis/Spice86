@@ -15,7 +15,7 @@ public class GravisUltraSound : DefaultIOPortHandler {
     private const int RegisterControls = 0x24F;
     private const int TimerControlRegister = 0x248;
 
-    public GravisUltraSound(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
+    public GravisUltraSound(Machine machine, Configuration configuration) : base(machine, configuration) {
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {

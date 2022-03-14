@@ -4,8 +4,10 @@ using Spice86.Emulator.Errors;
 using Spice86.Emulator.VM.Breakpoint;
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 /// <summary> Addressable memory of the machine. </summary>
 public class Memory {
@@ -18,6 +20,34 @@ public class Memory {
     public Memory(uint size) {
         this._physicalMemory = new byte[size];
     }
+
+    /// <summary>
+    /// Writes a string to memory as a null-terminated ANSI byte array.
+    /// </summary>
+    /// <param name="segment">Segment to write string.</param>
+    /// <param name="offset">Offset to write string.</param>
+    /// <param name="value">String to write to the specified address.</param>
+    /// <param name="writeNull">Value indicating whether a null should be written after the string.</param>
+    public void SetString(uint segment, uint offset, string value, bool writeNull) {
+        var buffer = ArrayPool<byte>.Shared.Rent(value.Length);
+        try {
+            uint length = (uint)Encoding.Latin1.GetBytes(value, buffer);
+            for (uint i = 0; i < length; i++)
+                this.SetUint8(offset + i, buffer[(int)i]);
+
+            if (writeNull)
+                this.SetUint8( offset + length, 0);
+        } finally {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+    /// <summary>
+    /// Writes a string to memory as a null-terminated ANSI byte array.
+    /// </summary>
+    /// <param name="segment">Segment to write string.</param>
+    /// <param name="offset">Offset to write string.</param>
+    /// <param name="value">String to write to the specified address.</param>
+    public void SetString(uint segment, uint offset, string value) => SetString(segment, offset, value, true);
 
     public void DumpToFile(string path) {
         File.WriteAllBytes(path, _physicalMemory);

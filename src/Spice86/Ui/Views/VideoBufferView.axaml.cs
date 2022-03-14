@@ -12,30 +12,10 @@ using System.Linq;
 public partial class VideoBufferView : UserControl {
     public VideoBufferView() {
         InitializeComponent();
-        this.AttachedToVisualTree += VideoBufferView_AttachedToVisualTree;
 
     }
 
     private MainWindow? ApplicationWindow => this.GetSelfAndLogicalAncestors().OfType<MainWindow>().FirstOrDefault();
-
-    private void VideoBufferView_AttachedToVisualTree(object? sender, EventArgs e) {
-        if (ApplicationWindow is not null) {
-            ApplicationWindow.KeyUp += MainWindow_KeyUp;
-            ApplicationWindow.KeyDown += MainWindow_KeyDown;
-        }
-    }
-
-    private void MainWindow_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e) {
-        if (ApplicationWindow?.DataContext is MainWindowViewModel vm) {
-            vm.OnKeyPressed(e);
-        }
-    }
-
-    private void MainWindow_KeyUp(object? sender, Avalonia.Input.KeyEventArgs e) {
-        if (ApplicationWindow?.DataContext is MainWindowViewModel vm) {
-            vm.OnKeyReleased(e);
-        }
-    }
 
     private void InitializeComponent() {
         AvaloniaXamlLoader.Load(this);

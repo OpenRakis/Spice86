@@ -4,52 +4,60 @@ using Spice86.Emulator.VM;
 
 using System.Collections.Generic;
 
+using Serilog;
+
 /// <summary>
 /// Handles calling the correct dispatcher depending on port number for I/O reads and writes.
 /// </summary>
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
 
-    public IOPortDispatcher(Machine machine, bool failOnUnhandledPort) : base(machine, failOnUnhandledPort) {
-        this._failOnUnhandledPort = failOnUnhandledPort;
+    private ILogger _logger = Program.Logger.ForContext<IOPortDispatcher>();
+
+    public IOPortDispatcher(Machine machine, Configuration configuration) : base(machine, configuration) {
+        this._failOnUnhandledPort = configuration.FailOnUnhandledPort;
     }
 
     public void AddIOPortHandler(int port, IIOPortHandler ioPortHandler) {
         _ioPortHandlers.Add(port, ioPortHandler);
     }
 
-    public override byte Inb(int port) {
-        if (_ioPortHandlers.ContainsKey(port)) {
-            return _ioPortHandlers[port].Inb(port);
+    public override byte ReadByte(int port) {
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte), entry.GetType(), port);
+            return entry.ReadByte(port);
         }
 
-        return base.Inb(port);
+        return base.ReadByte(port);
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
     }
 
-    public override ushort Inw(int port) {
-        if (_ioPortHandlers.ContainsKey(port)) {
-            return _ioPortHandlers[port].Inw(port);
+    public override ushort ReadWord(int port) {
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord), entry.GetType(), port);
+            return entry.ReadWord(port);
         }
 
-        return base.Inw(port);
+        return base.ReadWord(port);
     }
 
-    public override void Outb(int port, byte value) {
-        if (_ioPortHandlers.ContainsKey(port)) {
-            _ioPortHandlers[port].Outb(port, value);
+    public override void WriteByte(int port, byte value) {
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteByte), entry.GetType(), port, value);
+            entry.WriteByte(port, value);
         } else {
-            base.Outb(port, value);
+            base.WriteByte(port, value);
         }
     }
 
-    public override void Outw(int port, ushort value) {
-        if (_ioPortHandlers.ContainsKey(port)) {
-            _ioPortHandlers[port].Outw(port, value);
+    public override void WriteWord(int port, ushort value) {
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteWord), entry.GetType(), port, value);
+            entry.WriteWord(port, value);
         } else {
-            base.Outw(port, value);
+            base.WriteWord(port, value);
         }
     }
 }

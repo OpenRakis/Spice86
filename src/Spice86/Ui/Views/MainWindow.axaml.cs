@@ -2,6 +2,7 @@ namespace Spice86.UI.Views;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 
@@ -22,8 +23,22 @@ public partial class MainWindow : Window {
     }
 
     private async void MainWindow_DataContextChanged(object? sender, EventArgs e) {
-        if(sender is MainWindowViewModel vm) {
+        if (sender is MainWindowViewModel vm) {
             await Dispatcher.UIThread.InvokeAsync(() => vm.SetResolution(320, 200, 1), DispatcherPriority.MaxValue);
+        }
+    }
+
+    protected override void OnKeyUp(KeyEventArgs e) {
+        base.OnKeyUp(e);
+        if (this.DataContext is MainWindowViewModel vm) {
+            vm.OnKeyUp(e);
+        }
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e) {
+        base.OnKeyDown(e);
+        if (this.DataContext is MainWindowViewModel vm) {
+            vm.OnKeyDown(e);
         }
     }
 
