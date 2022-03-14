@@ -32,6 +32,9 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private byte timerControlByte;
 
     public OPL3FM(Machine machine, Configuration configuration) : base(machine, configuration) {
+        if (configuration.CreateAudioBackend && OperatingSystem.IsWindows()) {
+            audioPlayer = Audio.CreatePlayer();
+        }
         if (audioPlayer is not null && OperatingSystem.IsWindows()) {
             this.synth = new FmSynthesizer(this.audioPlayer.Format.SampleRate);
         }

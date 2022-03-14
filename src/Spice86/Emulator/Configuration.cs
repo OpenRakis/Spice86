@@ -68,6 +68,6 @@ public class Configuration {
 
     /// <summary>
     /// Only supported on Windows right now. Disabled by unit tests.
-    /// </summary>
+    /// </summary>²
     public bool CreateAudioBackend { get; init; } = true;
 }
