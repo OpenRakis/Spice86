@@ -32,7 +32,7 @@ General process:
 ## Running your exe
 This is a .NET program, you run it with the regular command line or dotnet run. Example with running a program called file.exe:
 ```
-Spice86 file.exe
+Spice86 -e file.exe
 ```
 
 com files and bios files are also supported.
