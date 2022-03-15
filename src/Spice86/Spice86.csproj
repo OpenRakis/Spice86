@@ -9,12 +9,12 @@
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
 	</PropertyGroup>
-	
+
 	<!-- Properties geared towards NuGet -->
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.1.7</Version>
+		<Version>2.1.8</Version>
 		<PackageReleaseNotes>Larger image for primary video buffer</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -24,7 +24,7 @@
 		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
-	
+
 	<!-- Source Link configuration -->
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -38,7 +38,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
 			<PrivateAssets>all</PrivateAssets>
