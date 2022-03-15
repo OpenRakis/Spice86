@@ -16,9 +16,13 @@ public class Memory {
     private readonly BreakPointHolder _readBreakPoints = new();
 
     private readonly BreakPointHolder _writeBreakPoints = new();
+    private UShortIndexerWithUint _uint16Indexer;
+    private UInt8IndexerWithUint _uint8Indexer;
 
     public Memory(uint size) {
-        this._physicalMemory = new byte[size];
+        _physicalMemory = new byte[size];
+        _uint16Indexer = new(this);
+        _uint8Indexer = new(this);
     }
 
     /// <summary>
@@ -36,7 +40,7 @@ public class Memory {
                 this.SetUint8(offset + i, buffer[(int)i]);
 
             if (writeNull)
-                this.SetUint8( offset + length, 0);
+                this.SetUint8(offset + length, 0);
         } finally {
             ArrayPool<byte>.Shared.Return(buffer);
         }
@@ -63,21 +67,9 @@ public class Memory {
 
     public int Size => _physicalMemory.Length;
 
-    public byte this[uint i] {
-        get { return GetUint8(i); }
-        set { SetUint8(i, value); }
-    }
+    public UShortIndexerWithUint Uint16 => _uint16Indexer;
 
-    public ushort this[ushort i] {
-        get { return GetUint16(i); }
-        set { SetUint16(i, value); }
-    }
-
-    public uint this[int i] {
-        get { return GetUint32((uint)i); }
-        set { SetUint32((uint)i, value); }
-    }
-
+    public UInt8IndexerWithUint UInt8 => _uint8Indexer;
 
     public ushort GetUint16(uint address) {
         ushort res = MemoryUtils.GetUint16(_physicalMemory, address);
