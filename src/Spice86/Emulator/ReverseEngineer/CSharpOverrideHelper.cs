@@ -29,6 +29,8 @@ public class CSharpOverrideHelper {
 
     private readonly string _prefix;
 
+    public Alu Alu => _cpu.Alu;
+
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, string prefix, Machine machine) {
