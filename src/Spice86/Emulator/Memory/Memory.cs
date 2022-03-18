@@ -71,6 +71,21 @@ public class Memory {
 
     public UInt8IndexerWithUint UInt8 => _uint8Indexer;
 
+    public byte this[uint i] {
+        get { return GetUint8(i); }
+        set { SetUint8(i, value); }
+    }
+
+    public ushort this[ushort i] {
+        get { return GetUint16(i); }
+        set { SetUint16(i, value); }
+    }
+
+    public uint this[int i] {
+        get { return GetUint32((uint)i); }
+        set { SetUint32((uint)i, value); }
+    }
+
     public ushort GetUint16(uint address) {
         ushort res = MemoryUtils.GetUint16(_physicalMemory, address);
         MonitorReadAccess(address);
