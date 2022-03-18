@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Emulator.VM;
 
-using Serilog;
-
 using Spice86.Emulator.Callback;
 using Spice86.Emulator.CPU;
 using Spice86.Emulator.Devices.DirectMemoryAccess;
@@ -22,7 +20,6 @@ using Spice86.Emulator.InterruptHandlers.Timer;
 using Spice86.Emulator.InterruptHandlers.Vga;
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Memory;
-using Spice86.UI;
 using Spice86.UI.ViewModels;
 
 using System;
@@ -33,10 +30,10 @@ using System.Collections.Generic;
 /// </summary>
 public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
-    private readonly Configuration _configuration;
+    private ProgramExecutor _programExecutor;
 
-    public Machine(MainWindowViewModel? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, Configuration configuration, bool debugMode) {
-        _configuration = configuration;
+    public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, Configuration configuration, bool debugMode) {
+        _programExecutor = programExecutor;
         Gui = gui;
         DebugMode = debugMode;
 
@@ -104,7 +101,7 @@ public class Machine : IDisposable {
 
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
-    public bool DebugMode { get; private set; }
+    public bool DebugMode { get; }
 
     public string DumpCallStack() {
         FunctionHandler inUse = Cpu.FunctionHandlerInUse;
@@ -117,62 +114,62 @@ public class Machine : IDisposable {
         return callStack;
     }
 
-    public BiosEquipmentDeterminationInt11Handler BiosEquipmentDeterminationInt11Handler { get; private set; }
+    public BiosEquipmentDeterminationInt11Handler BiosEquipmentDeterminationInt11Handler { get; }
 
-    public BiosKeyboardInt9Handler BiosKeyboardInt9Handler { get; private set; }
+    public BiosKeyboardInt9Handler BiosKeyboardInt9Handler { get; }
 
-    public CallbackHandler CallbackHandler { get; private set; }
+    public CallbackHandler CallbackHandler { get; }
 
-    public Cpu Cpu { get; private set; }
+    public Cpu Cpu { get; }
 
-    public DosInt20Handler DosInt20Handler { get; private set; }
+    public DosInt20Handler DosInt20Handler { get; }
 
-    public DosInt21Handler DosInt21Handler { get; private set; }
+    public DosInt21Handler DosInt21Handler { get; }
 
-    public GravisUltraSound GravisUltraSound { get; private set; }
+    public GravisUltraSound GravisUltraSound { get; }
 
-    public MainWindowViewModel? Gui { get; private set; }
+    public MainWindowViewModel? Gui { get; }
 
-    public IOPortDispatcher IoPortDispatcher { get; private set; }
+    public IOPortDispatcher IoPortDispatcher { get; }
 
-    public Joystick Joystick { get; private set; }
+    public Joystick Joystick { get; }
 
-    public Keyboard Keyboard { get; private set; }
+    public Keyboard Keyboard { get; }
 
-    public KeyboardInt16Handler KeyboardInt16Handler { get; private set; }
+    public KeyboardInt16Handler KeyboardInt16Handler { get; }
 
-    public MachineBreakpoints MachineBreakpoints { get; private set; }
+    public MachineBreakpoints MachineBreakpoints { get; }
 
-    public Memory Memory { get; private set; }
+    public Memory Memory { get; }
 
-    public Midi Midi { get; private set; }
+    public Midi Midi { get; }
 
-    public MouseInt33Handler MouseInt33Handler { get; private set; }
+    public MouseInt33Handler MouseInt33Handler { get; }
 
-    public PcSpeaker PcSpeaker { get; private set; }
+    public PcSpeaker PcSpeaker { get; }
 
-    public Pic Pic { get; private set; }
+    public Pic Pic { get; }
 
-    public SoundBlaster SoundBlaster { get; private set; }
+    public SoundBlaster SoundBlaster { get; }
 
-    public SystemBiosInt15Handler SystemBiosInt15Handler { get; private set; }
+    public SystemBiosInt15Handler SystemBiosInt15Handler { get; }
 
-    public SystemClockInt1AHandler SystemClockInt1AHandler { get; private set; }
+    public SystemClockInt1AHandler SystemClockInt1AHandler { get; }
 
-    public Timer Timer { get; private set; }
+    public Timer Timer { get; }
 
-    public TimerInt8Handler TimerInt8Handler { get; private set; }
+    public TimerInt8Handler TimerInt8Handler { get; }
 
-    public VgaCard VgaCard { get; private set; }
+    public VgaCard VgaCard { get; }
 
-    public VideoBiosInt10Handler VideoBiosInt10Handler { get; private set; }
-    public DmaController DmaController { get; private set; }
+    public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
+    public DmaController DmaController { get; }
     /// <summary>
     /// Gets the current DOS environment variables.
     /// TODO: Make use of it by allocating the block of memory corresponding to it in virtual memory.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
-    public OPL3FM OPL3FM { get; private set; }
+    public OPL3FM OPL3FM { get; }
 
     public event EventHandler? Paused;
 
@@ -226,7 +223,9 @@ public class Machine : IDisposable {
         while (Cpu.IsRunning) {
             if (Gui?.IsPaused == true) {
                 Paused?.Invoke(this, EventArgs.Empty);
-                Gui?.WaitOne();
+                if (_programExecutor.Step() == false) {
+                    Gui?.WaitOne();
+                }
                 Resumed?.Invoke(this, EventArgs.Empty);
             }
             if (DebugMode) {

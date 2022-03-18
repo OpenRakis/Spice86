@@ -9,20 +9,19 @@ using Spice86.Emulator.Devices.Timer;
 using Spice86.Emulator.Errors;
 using Spice86.Emulator.Function;
 using Spice86.Emulator.Gdb;
+using Spice86.Emulator.LoadableFile;
 using Spice86.Emulator.LoadableFile.Bios;
 using Spice86.Emulator.LoadableFile.Dos.Com;
 using Spice86.Emulator.LoadableFile.Dos.Exe;
-using Spice86.Emulator.LoadableFile;
 using Spice86.Emulator.Memory;
 using Spice86.Emulator.VM;
-using Spice86.UI;
+using Spice86.UI.ViewModels;
 using Spice86.Utils;
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
-using Spice86.UI.ViewModels;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -49,7 +48,9 @@ public class ProgramExecutor : IDisposable {
 
     public Machine Machine { get; private set; }
 
-    public void Run() => Machine.Run();
+    public void Run() {
+        Machine.Run();
+    }
 
     protected void Dispose(bool disposing) {
         if (!_disposedValue) {
@@ -105,7 +106,7 @@ public class ProgramExecutor : IDisposable {
         bool debugMode = configuration.GdbPort != null;
         JumpHandler jumpHandler = new JumpDumper().ReadFromFileOrCreate(configuration.JumpFile);
         jumpHandler.DebugMode = debugMode;
-        Machine = new Machine(gui, counterConfigurator, jumpHandler, configuration, debugMode);
+        Machine = new Machine(this, gui, counterConfigurator, jumpHandler, configuration, debugMode);
         InitializeCpu();
         InitializeDos(configuration);
         if (configuration.InstallInterruptVector) {
@@ -217,6 +218,14 @@ public class ProgramExecutor : IDisposable {
         } catch (IOException e) {
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
+    }
+
+    internal bool Step() {
+        if (_gdbServer?.GdbCommandHandler is null) {
+            return false;
+        }
+        _gdbServer.GdbCommandHandler.Step();
+        return true;
     }
 
     private static void SetupFunctionHandler(FunctionHandler functionHandler, IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {

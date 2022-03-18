@@ -5,7 +5,6 @@ using Serilog;
 using Spice86.Emulator.VM;
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 public class GdbCommandHandler {
@@ -27,12 +26,14 @@ public class GdbCommandHandler {
         this._gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.DefaultDumpDirectory, configuration.JumpFile, configuration.SymbolsFile);
     }
 
-    public bool IsConnected =>_isConnected;
+    public bool IsConnected => _isConnected;
 
     public void PauseEmulator() {
         _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = false;
         _machine.MachineBreakpoints.PauseHandler.RequestPause();
     }
+
+    public void Step() => _gdbCommandBreakpointHandler.Step();
 
     public void RunCommand(string command) {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {

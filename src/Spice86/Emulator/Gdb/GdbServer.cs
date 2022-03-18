@@ -7,7 +7,6 @@ using Spice86.Emulator.VM;
 using System;
 using System.ComponentModel;
 using System.IO;
-using System.Linq.Expressions;
 
 public class GdbServer : IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<GdbServer>();
@@ -40,10 +39,13 @@ public class GdbServer : IDisposable {
         }
     }
 
+    public GdbCommandHandler? GdbCommandHandler { get; private set; }
+
     private void AcceptOneConnection(GdbIo gdbIo) {
         var gdbCommandHandler = new GdbCommandHandler(gdbIo, _machine, _configuration);
         gdbCommandHandler.PauseEmulator();
         this._started = true;
+        GdbCommandHandler = gdbCommandHandler;
         while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
             string command = gdbIo.ReadCommand();
             if (string.IsNullOrWhiteSpace(command) == false) {
