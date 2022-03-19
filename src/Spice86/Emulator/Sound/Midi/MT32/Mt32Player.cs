@@ -29,17 +29,12 @@ internal sealed class Mt32Player : IDisposable {
         }
         LoadRoms(romsPath);
 
-        AnalogOutputMode analogMode = Mt32GlobalState.GetBestAnalogOutputMode(audioPlayer.Format.SampleRate);
+        var analogMode = Mt32GlobalState.GetBestAnalogOutputMode(audioPlayer.Format.SampleRate);
         context.AnalogOutputMode = analogMode;
         context.SetSampleRate(audioPlayer.Format.SampleRate);
 
         context.OpenSynth();
-        audioPlayer.BeginPlayback(this.FillBufferDelegate);
-    }
-
-    private void FillBufferDelegate(Span<short> buffer, out int samplesWritten) {
-        this.FillBuffer(buffer.ToArray().Select(x => (float)x).ToArray().AsSpan(), out var samples);
-        samplesWritten = (int)samples;
+        audioPlayer.BeginPlayback(this.FillBuffer);
     }
 
     public void PlayShortMessage(uint message) => context.PlayMessage(message);
@@ -55,7 +50,7 @@ internal sealed class Mt32Player : IDisposable {
         if (!OperatingSystem.IsWindows()) {
             return;
         }
-        audioPlayer?.BeginPlayback(this.FillBufferDelegate);
+        audioPlayer?.BeginPlayback(this.FillBuffer);
     }
 
     public void Dispose() {
@@ -68,13 +63,13 @@ internal sealed class Mt32Player : IDisposable {
         }
     }
 
-    private void FillBuffer(Span<float> buffer, out uint samplesWritten) {
+    private void FillBuffer(Span<float> buffer, out int samplesWritten) {
         try {
             context.Render(buffer);
-            samplesWritten = (uint)buffer.Length;
+            samplesWritten = buffer.Length;
         } catch (ObjectDisposedException) {
             buffer.Clear();
-            samplesWritten = (uint)buffer.Length;
+            samplesWritten = buffer.Length;
         }
     }
     private void LoadRoms(string path) {
