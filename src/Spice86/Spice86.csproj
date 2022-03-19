@@ -14,7 +14,7 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.2.0</Version>
+		<Version>2.2.1</Version>
 		<PackageReleaseNotes>MT-32 support, Pause button generates a breakpoint in Gdb mode</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
