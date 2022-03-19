@@ -14,8 +14,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.1.9</Version>
-		<PackageReleaseNotes>Larger image for primary video buffer</PackageReleaseNotes>
+		<Version>2.2.0</Version>
+		<PackageReleaseNotes>MT-32 support, Pause button generates a breakpoint in Gdb mode</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
