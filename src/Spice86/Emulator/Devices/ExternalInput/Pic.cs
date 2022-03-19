@@ -114,25 +114,29 @@ public class Pic : DefaultIOPortHandler {
     }
 
     public uint? RaiseHardwareInterruptRequest(int irq) {
-        if (this.state1 != State.Ready && this.state2 != State.Ready)
+        if (this.state1 != State.Ready && this.state2 != State.Ready) {
             return null;
+        }
 
         // Only allow the request if not already being serviced.
         if (irq < 8) {
             uint bit = 1u << irq;
-            if ((this.inServiceRegister1 & bit) == 0)
+            if ((this.inServiceRegister1 & bit) == 0) {
                 this.requestRegister |= bit;
+            }
         } else {
             uint bit = 1u << (irq - 8);
-            if ((this.inServiceRegister2 & bit) == 0)
+            if ((this.inServiceRegister2 & bit) == 0) {
                 this.requestRegister |= bit;
+            }
         }
             return this.requestRegister;
     }
 
     public void ProcessInterruptVector(byte vector) {
-        if (this.state1 != State.Ready && this.state2 != State.Ready)
+        if (this.state1 != State.Ready && this.state2 != State.Ready) {
             return;
+        }
 
         if (IrqMasked(vector)) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
@@ -148,8 +152,9 @@ public class Pic : DefaultIOPortHandler {
             return;
         }
 
-        if (this.state1 != State.Ready && this.state2 != State.Ready)
+        if (this.state1 != State.Ready && this.state2 != State.Ready) {
             return;
+        }
 
         IsLastIrqAcknowledged = false;
         _cpu.ExternalInterrupt(vector);
@@ -215,10 +220,12 @@ public class Pic : DefaultIOPortHandler {
                     } else if ((value & 0x18) == 0) // OCW2
                       {
                         if ((value & 0xE0) == 0x60) // Specific EOI
-                            this.inServiceRegister1 &= ~(1u << (value & 0x07));
-                        else
-                            throw new NotImplementedException();
+{
+                        this.inServiceRegister1 &= ~(1u << (value & 0x07));
                     } else {
+                        throw new NotImplementedException();
+                    }
+                } else {
                         throw new NotImplementedException();
                     }
                     break;

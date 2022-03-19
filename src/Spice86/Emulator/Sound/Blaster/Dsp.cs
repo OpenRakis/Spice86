@@ -84,14 +84,18 @@ internal sealed class Dsp
         this.currentChannel = this.dmaChannel8;
 
         int transferRate = this.SampleRate;
-        if (this.Is16Bit)
+        if (this.Is16Bit) {
             transferRate *= 2;
-        if (this.IsStereo)
+        }
+
+        if (this.IsStereo) {
             transferRate *= 2;
+        }
 
         double factor = 1.0;
-        if (autoInitialize)
+        if (autoInitialize) {
             factor = 1.5;
+        }
 
         this.currentChannel.TransferRate = (int)(transferRate * factor);
         this.currentChannel.IsActive = true;
@@ -115,8 +119,9 @@ internal sealed class Dsp
             return;
         }
 
-        if (this.decodeBuffer == null || this.decodeBuffer.Length < buffer.Length * 4)
+        if (this.decodeBuffer == null || this.decodeBuffer.Length < buffer.Length * 4) {
             this.decodeBuffer = new byte[buffer.Length * 4];
+        }
 
         int offset = 0;
         int length = buffer.Length;
@@ -129,8 +134,9 @@ internal sealed class Dsp
             this.decodeRemainderOffset--;
         }
 
-        if (length <= 0)
+        if (length <= 0) {
             return;
+        }
 
         if (this.referenceByteExpected)
         {
@@ -143,8 +149,9 @@ internal sealed class Dsp
             length--;
         }
 
-        if (length <= 0)
+        if (length <= 0) {
             return;
+        }
 
         int? blocks = length / this.decoder?.CompressionFactor;
 

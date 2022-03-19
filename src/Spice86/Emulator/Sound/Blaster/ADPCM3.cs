@@ -57,22 +57,25 @@ internal sealed class ADPCM3 : ADPCM2
     /// <returns>Decoded 8-bit sample.</returns>
     private new byte DecodeSample(byte current, int sample)
     {
-        if ((sample & 0x04) == 0)
+        if ((sample & 0x04) == 0) {
             current += (byte)(sample << this.step);
-        else
+        } else {
             current -= (byte)((sample & 0x03) << this.step);
+        }
 
         if (current >= Limit)
         {
             this.step++;
-            if (this.step > 3)
+            if (this.step > 3) {
                 this.step = 3;
+            }
         }
         else if (current == 0)
         {
             this.step--;
-            if (this.step < 0)
+            if (this.step < 0) {
                 this.step = 0;
+            }
         }
 
         return current;

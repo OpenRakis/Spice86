@@ -99,28 +99,31 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         this.playbackThread.Start();
     }
 
-    private void Vm_Resumed(object? sender, EventArgs e) {
+    private void Vm_Resumed() {
         this.pausePlayback = false;
     }
 
-    private void Vm_Paused(object? sender, EventArgs e) {
+    private void Vm_Paused() {
         this.pausePlayback = true;
     }
 
     public override byte ReadByte(int port) {
         switch (port) {
             case Ports.DspReadData:
-                if (outputData.Count > 0)
+                if (outputData.Count > 0) {
                     return this.outputData.Dequeue();
-                else
+                } else {
                     return 0;
+                }
 
             case Ports.DspWrite:
                 return 0x00;
 
             case Ports.DspReadBufferStatus:
-                if (this.mixer.InterruptStatusRegister == InterruptStatus.Dma8)
+                if (this.mixer.InterruptStatusRegister == InterruptStatus.Dma8) {
                     System.Diagnostics.Debug.WriteLine("Sound Blaster 8-bit DMA acknowledged");
+                }
+
                 this.mixer.InterruptStatusRegister = InterruptStatus.None;
                 return this.outputData.Count > 0 ? (byte)0x80 : (byte)0u;
 
@@ -139,9 +142,9 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         switch (port) {
             case Ports.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
-                if (value == 1)
+                if (value == 1) {
                     this.state = BlasterState.ResetRequest;
-                else if (value == 0 && this.state == BlasterState.ResetRequest) {
+                } else if (value == 0 && this.state == BlasterState.ResetRequest) {
                     this.state = BlasterState.Resetting;
                     Reset();
                 }
@@ -153,12 +156,14 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
                     this.state = BlasterState.ReadingCommand;
                     this.commandData.Clear();
                     commandLengths.TryGetValue(value, out this.commandDataLength);
-                    if (this.commandDataLength == 0)
+                    if (this.commandDataLength == 0) {
                         ProcessCommand();
+                    }
                 } else if (this.state == BlasterState.ReadingCommand) {
                     this.commandData.Add(value);
-                    if (this.commandData.Count >= this.commandDataLength)
+                    if (this.commandData.Count >= this.commandDataLength) {
                         ProcessCommand();
+                    }
                 }
                 break;
 
@@ -264,14 +269,15 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         while (!this.endPlayback) {
             this.dsp.Read(buffer);
             int length;
-            if (this.dsp.Is16Bit && this.dsp.IsStereo)
+            if (this.dsp.Is16Bit && this.dsp.IsStereo) {
                 length = LinearUpsampler.Resample16Stereo(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
-            else if (this.dsp.Is16Bit)
+            } else if (this.dsp.Is16Bit) {
                 length = LinearUpsampler.Resample16Mono(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
-            else if (this.dsp.IsStereo)
+            } else if (this.dsp.IsStereo) {
                 length = LinearUpsampler.Resample8Stereo(dsp.SampleRate, sampleRate, buffer, writeBuffer);
-            else
+            } else {
                 length = LinearUpsampler.Resample8Mono(dsp.SampleRate, sampleRate, buffer, writeBuffer);
+            }
 
             Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
 
@@ -279,8 +285,9 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
                 player.StopPlayback();
                 while (this.pausePlayback) {
                     Thread.Sleep(1);
-                    if (this.endPlayback)
+                    if (this.endPlayback) {
                         return;
+                    }
                 }
 
                 player.BeginPlayback();
@@ -289,8 +296,9 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             if (this.pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = this.pauseDuration / (1024 / 2) + 1;
-                for (int i = 0; i < count; i++)
+                for (int i = 0; i < count; i++) {
                     Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, 1024));
+                }
 
                 this.pauseDuration = 0;
                 RaiseInterrupt();
@@ -376,16 +384,20 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
 
             case Commands.AutoInitDmaOutput8:
             case Commands.HighSpeedAutoInitDmaOutput8:
-                if (!this.blockTransferSizeSet)
+                if (!this.blockTransferSizeSet) {
                     dsp.BlockTransferSize = ((commandData[1] | (commandData[2] << 8)) + 1);
+                }
+
                 this.dsp.Begin(false, false, true);
                 System.Diagnostics.Debug.WriteLine("Auto-init DMA");
                 break;
 
             case Commands.AutoInitDmaOutput8_Alt:
             case Commands.AutoInitDmaOutput8Fifo_Alt:
-                if (!this.blockTransferSizeSet)
+                if (!this.blockTransferSizeSet) {
                     dsp.BlockTransferSize = ((commandData[1] | (commandData[2] << 8)) + 1);
+                }
+
                 this.dsp.Begin(false, (commandData[0] & (1 << 5)) != 0, true);
                 System.Diagnostics.Debug.WriteLine("Auto-init DMA");
                 break;

@@ -23,7 +23,10 @@ public class PauseHandler {
     public void RequestPauseAndWait() {
         LogStatus($"{nameof(RequestPauseAndWait)} started");
         _pauseRequested = true;
-        while (!_paused) ;
+        while (!_paused) {
+            ;
+        }
+
         LogStatus($"{nameof(RequestPauseAndWait)} finished");
     }
 

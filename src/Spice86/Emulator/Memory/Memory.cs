@@ -36,11 +36,13 @@ public class Memory {
         var buffer = ArrayPool<byte>.Shared.Rent(value.Length);
         try {
             uint length = (uint)Encoding.Latin1.GetBytes(value, buffer);
-            for (uint i = 0; i < length; i++)
+            for (uint i = 0; i < length; i++) {
                 this.SetUint8(offset + i, buffer[(int)i]);
+            }
 
-            if (writeNull)
+            if (writeNull) {
                 this.SetUint8(offset + length, 0);
+            }
         } finally {
             ArrayPool<byte>.Shared.Return(buffer);
         }

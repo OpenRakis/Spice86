@@ -65,22 +65,25 @@ internal class ADPCM2 : ADPCMDecoder
     /// <returns>Decoded 8-bit sample.</returns>
     protected byte DecodeSample(byte current, int sample)
     {
-        if ((sample & 0x02) == 0)
+        if ((sample & 0x02) == 0) {
             current += (byte)(sample << (this.step + Shift));
-        else
+        } else {
             current -= (byte)((sample & 0x01) << (this.step + Shift));
+        }
 
         if (current >= Limit)
         {
             this.step++;
-            if (this.step > 3)
+            if (this.step > 3) {
                 this.step = 3;
+            }
         }
         else if (current == 0)
         {
             this.step--;
-            if (this.step < 0)
+            if (this.step < 0) {
                 this.step = 0;
+            }
         }
 
         return current;

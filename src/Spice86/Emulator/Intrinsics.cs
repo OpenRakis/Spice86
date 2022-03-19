@@ -7,10 +7,11 @@ public static class Intrinsics
 {
     public static uint ExtractBits(uint value, byte start, byte length, uint mask)
     {
-        if (Bmi1.IsSupported)
+        if (Bmi1.IsSupported) {
             return Bmi1.BitFieldExtract(value, start, length);
-        else
+        } else {
             return (value & mask) >> start;
+        }
     }
     /// <summary>
     /// Returns <paramref name="a"/> &amp; ~<paramref name="b"/>.
@@ -20,10 +21,11 @@ public static class Intrinsics
     /// <returns>The result of <paramref name="a"/> &amp; ~<paramref name="b"/>.</returns>
     public static uint AndNot(uint a, uint b)
     {
-        if (Bmi1.IsSupported)
+        if (Bmi1.IsSupported) {
             return Bmi1.AndNot(b, a);
-        else
+        } else {
             return a & ~b;
+        }
     }
     public static uint ResetLowestSetBit(uint value)
     {
@@ -34,10 +36,11 @@ public static class Intrinsics
         else
         {
             int trailingZeroCount = BitOperations.TrailingZeroCount(value);
-            if (trailingZeroCount < 32)
+            if (trailingZeroCount < 32) {
                 return value & ~(1u << trailingZeroCount);
-            else
+            } else {
                 return 0;
+            }
         }
     }
 

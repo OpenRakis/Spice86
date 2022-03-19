@@ -1,4 +1,4 @@
-﻿namespace Spice86.Emulator.Sound.Midi;     
+﻿namespace Spice86.Emulator.Sound.Midi;
 using System;
 
 internal abstract class MidiDevice : IDisposable {
@@ -35,8 +35,9 @@ internal abstract class MidiDevice : IDisposable {
                 bytesExpected = 0;
             }
         } else {
-            if (sysexIndex >= currentSysex.Length)
+            if (sysexIndex >= currentSysex.Length) {
                 Array.Resize(ref currentSysex, currentSysex.Length * 2);
+            }
 
             currentSysex[sysexIndex++] = value;
 

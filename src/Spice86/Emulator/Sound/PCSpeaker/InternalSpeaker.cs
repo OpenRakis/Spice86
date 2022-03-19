@@ -47,8 +47,9 @@ public sealed class InternalSpeaker {
     private int PeriodInSamples => (int)(this.outputSampleRate / this.Frequency);
 
     public byte ReadByte(int port) {
-        if (port == 0x61)
+        if (port == 0x61) {
             return (byte)this.controlRegister;
+        }
 
         throw new NotSupportedException();
     }
@@ -56,8 +57,9 @@ public sealed class InternalSpeaker {
         if (port == 0x61) {
             SpeakerControl oldValue = this.controlRegister;
             this.controlRegister = (SpeakerControl)value;
-            if ((oldValue & SpeakerControl.SpeakerOn) != 0 && (this.controlRegister & SpeakerControl.SpeakerOn) == 0)
+            if ((oldValue & SpeakerControl.SpeakerOn) != 0 && (this.controlRegister & SpeakerControl.SpeakerOn) == 0) {
                 this.SpeakerDisabled();
+            }
         } else if (port == 0x42) {
             this.frequencyRegister.WriteByte(value);
         } else {
@@ -109,8 +111,9 @@ public sealed class InternalSpeaker {
             this.queuedNotes.Enqueue(new QueuedNote(this.currentPeriod, repetitions));
 
             lock (this.threadStateLock) {
-                if (this.generateWaveformTask == null || this.generateWaveformTask.IsCompleted)
+                if (this.generateWaveformTask == null || this.generateWaveformTask.IsCompleted) {
                     this.generateWaveformTask = Task.Run(this.GenerateWaveformAsync);
+                }
             }
         }
     }

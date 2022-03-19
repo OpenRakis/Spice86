@@ -171,9 +171,9 @@ public class Machine : IDisposable {
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
     public OPL3FM OPL3FM { get; }
 
-    public event EventHandler? Paused;
+    public event Action? Paused;
 
-    public event EventHandler? Resumed;
+    public event Action? Resumed;
 
     public void InstallAllCallbacksInInterruptTable() {
         CallbackHandler.InstallAllCallbacksInInterruptTable();
@@ -191,8 +191,9 @@ public class Machine : IDisposable {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
 
         if (ioPortHandler is IDmaDevice8 dmaDevice) {
-            if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count)
+            if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
                 throw new ArgumentException("Invalid DMA channel on DMA device.");
+            }
 
             DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
             dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
@@ -222,11 +223,11 @@ public class Machine : IDisposable {
     private void RunLoop() {
         while (Cpu.IsRunning) {
             if (Gui?.IsPaused == true) {
-                Paused?.Invoke(this, EventArgs.Empty);
+                Paused?.Invoke();
                 if (_programExecutor.Step() == false) {
                     Gui?.WaitOne();
                 }
-                Resumed?.Invoke(this, EventArgs.Empty);
+                Resumed?.Invoke();
             }
             if (DebugMode) {
                 MachineBreakpoints.CheckBreakPoint();
@@ -250,8 +251,9 @@ public class Machine : IDisposable {
 
     internal void PerformDmaTransfers() {
         foreach (DmaChannel? channel in this.dmaDeviceChannels) {
-            if (channel.IsActive && !channel.IsMasked)
+            if (channel.IsActive && !channel.IsMasked) {
                 channel.Transfer(this.Memory);
+            }
         }
     }
 

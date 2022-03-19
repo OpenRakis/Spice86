@@ -23,8 +23,9 @@ internal static class Audio
             if (OperatingSystem.IsWindows()) {
                 int count = (int)player.WriteData(writeBuffer);
                 writeBuffer = writeBuffer[count..];
-                if (writeBuffer.IsEmpty)
+                if (writeBuffer.IsEmpty) {
                     return;
+                }
             }
             Thread.Sleep(1);
         }
@@ -40,8 +41,9 @@ internal static class Audio
             }
             int count = (int)player.WriteData(writeBuffer);
             writeBuffer = writeBuffer[count..];
-            if (writeBuffer.IsEmpty)
+            if (writeBuffer.IsEmpty) {
                 return;
+            }
 
             Thread.Sleep(1);
         }
@@ -66,8 +68,9 @@ internal static class Audio
             }
             int count = (int)player.WriteData(span);
             writeBuffer = writeBuffer[count..];
-            if (writeBuffer.IsEmpty)
+            if (writeBuffer.IsEmpty) {
                 return;
+            }
 
             Thread.Sleep(1);
         }

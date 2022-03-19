@@ -76,14 +76,16 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     public override byte ReadByte(int port) {
         if ((this.timerControlByte & 0x01) != 0x00 && (this.statusByte & Timer1Mask) == 0) {
             this.timer1Data++;
-            if (this.timer1Data == 0)
+            if (this.timer1Data == 0) {
                 this.statusByte |= Timer1Mask;
+            }
         }
 
         if ((this.timerControlByte & 0x02) != 0x00 && (this.statusByte & Timer2Mask) == 0) {
             this.timer2Data++;
-            if (this.timer2Data == 0)
+            if (this.timer2Data == 0) {
                 this.statusByte |= Timer2Mask;
+            }
         }
 
         return this.statusByte;
@@ -112,11 +114,13 @@ public sealed class OPL3FM : DefaultIOPortHandler {
                 this.timer2Data = value;
             } else if (currentAddress == 0x04) {
                 this.timerControlByte = value;
-                if ((value & 0x80) == 0x80)
+                if ((value & 0x80) == 0x80) {
                     this.statusByte = 0;
+                }
             } else {
-                if (!this.initialized)
+                if (!this.initialized) {
                     this.Initialize();
+                }
 
                 this.synth?.SetRegisterValue(0, currentAddress, value);
             }
@@ -139,10 +143,11 @@ public sealed class OPL3FM : DefaultIOPortHandler {
         float[] playBuffer;
         if (audioPlayer is not null && OperatingSystem.IsWindows()) {
             bool expandToStereo = this.audioPlayer.Format.Channels == 2;
-            if (expandToStereo)
+            if (expandToStereo) {
                 playBuffer = new float[buffer.Length * 2];
-            else
+            } else {
                 playBuffer = buffer;
+            }
 
             this.audioPlayer.BeginPlayback();
             fillBuffer();
@@ -155,8 +160,9 @@ public sealed class OPL3FM : DefaultIOPortHandler {
 
             void fillBuffer() {
                 this.synth?.GetData(buffer);
-                if (expandToStereo)
+                if (expandToStereo) {
                     ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
+                }
             }
         }
     }

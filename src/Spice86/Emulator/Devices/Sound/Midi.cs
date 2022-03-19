@@ -21,11 +21,11 @@ public class Midi : DefaultIOPortHandler {
         _machine.Resumed += Machine_Resumed;
     }
 
-    private void Machine_Resumed(object? sender, EventArgs e) {
+    private void Machine_Resumed() {
         _generalMidi.Resume();
     }
 
-    private void Machine_Paused(object? sender, System.EventArgs e) {
+    private void Machine_Paused() {
         _generalMidi.Pause();
     }
 

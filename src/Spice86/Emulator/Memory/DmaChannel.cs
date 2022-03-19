@@ -43,10 +43,11 @@ public sealed class DmaChannel
         {
             if (this.isActive != value)
             {
-                if (value)
+                if (value) {
                     this.transferTimer.Start();
-                else
+                } else {
                     this.transferTimer.Reset();
+                }
 
                 this.isActive = value;
                 OnIsActiveChanged(EventArgs.Empty);
@@ -153,10 +154,11 @@ public sealed class DmaChannel
     {
         try
         {
-            if (!this.addressByteWritten)
+            if (!this.addressByteWritten) {
                 this.Address = value;
-            else
+            } else {
                 this.Address |= (ushort)(value << 8);
+            }
         }
         finally
         {
@@ -239,8 +241,9 @@ public sealed class DmaChannel
                     this.IsActive = false;
                     device.SingleCycleComplete();
                 }
-                else
+                else {
                     this.TransferBytesRemaining = this.Count + 1;
+                }
             }
 
             this.transferTimer.Reset();

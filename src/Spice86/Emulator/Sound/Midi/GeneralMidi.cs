@@ -50,8 +50,9 @@ public sealed class GeneralMidi {
         get {
             GeneralMidiStatus status = GeneralMidiStatus.OutputReady;
 
-            if (dataBytes.Count > 0)
+            if (dataBytes.Count > 0) {
                 status |= GeneralMidiStatus.InputReady;
+            }
 
             return status;
         }
@@ -61,10 +62,11 @@ public sealed class GeneralMidi {
     public byte ReadByte(int port) {
         switch (port) {
             case DataPort:
-                if (dataBytes.Count > 0)
+                if (dataBytes.Count > 0) {
                     return dataBytes.Dequeue();
-                else
+                } else {
                     return 0;
+                }
 
             case StatusPort:
                 return (byte)(~(byte)Status & 0xC0);
@@ -79,8 +81,10 @@ public sealed class GeneralMidi {
     public void WriteByte(int port, byte value) {
         switch (port) {
             case DataPort:
-                if (midiMapper == null)
+                if (midiMapper == null) {
                     midiMapper = UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath, Configuration) : new WindowsMidiMapper();
+                }
+
                 midiMapper.SendByte(value);
                 break;
 

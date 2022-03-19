@@ -87,6 +87,8 @@ public class GdbServer : IDisposable {
         };
         backgroundWorker.RunWorkerAsync();
         // wait for thread to start
-        while (!_started) ;
+        while (!_started) {
+            ;
+        }
     }
 }

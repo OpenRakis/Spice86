@@ -58,9 +58,10 @@ internal readonly struct QueuedNote : IEquatable<QueuedNote>
     /// <returns>String representation of the QueuedNote.</returns>
     public override string ToString()
     {
-        if (this == Rest)
+        if (this == Rest) {
             return "Rest";
-        else
+        } else {
             return $"{this.Period}, {this.PeriodCount}";
+        }
     }
 }

@@ -99,8 +99,9 @@ public sealed class DmaController : DefaultIOPortHandler {
 
     public override void WriteWord(int port, ushort value) {
         int index = Array.IndexOf(AllInputAndOutputPorts, port);
-        if (index < 0)
+        if (index < 0) {
             throw new ArgumentException("Invalid port.");
+        }
 
         switch (index % 3) {
             case 0:
@@ -124,10 +125,11 @@ public sealed class DmaController : DefaultIOPortHandler {
     /// <param name="channel">Channel whose mode is to be set.</param>
     /// <param name="value">Flags specifying channel's new mode information.</param>
     private static void SetChannelMode(DmaChannel channel, int value) {
-        if ((value & AutoInitFlag) != 0)
+        if ((value & AutoInitFlag) != 0) {
             channel.TransferMode = DmaTransferMode.AutoInitialize;
-        else
+        } else {
             channel.TransferMode = DmaTransferMode.SingleCycle;
+        }
     }
 
     /// <summary>
@@ -137,8 +139,9 @@ public sealed class DmaController : DefaultIOPortHandler {
     /// <returns>Value of specified port.</returns>
     private byte GetPortValue(int port) {
         int index = Array.IndexOf(AllInputAndOutputPorts, port);
-        if (index < 0)
+        if (index < 0) {
             throw new ArgumentException("Invalid port.");
+        }
 
         return (index % 3) switch {
             0 => channels[index / 3].Page,
@@ -155,8 +158,9 @@ public sealed class DmaController : DefaultIOPortHandler {
     /// <param name="value">Value to write.</param>
     private void SetPortValue(int port, byte value) {
         int index = Array.IndexOf(AllInputAndOutputPorts, port);
-        if (index < 0)
+        if (index < 0) {
             throw new ArgumentException("Invalid port.");
+        }
 
         switch (index % 3) {
             case 0:

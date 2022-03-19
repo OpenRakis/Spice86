@@ -14,8 +14,10 @@ internal sealed class Mt32Player : IDisposable {
     private bool disposed;
 
     public Mt32Player(string romsPath, Configuration configuration) {
-        if (string.IsNullOrWhiteSpace(romsPath))
+        if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
+        }
+
         if (configuration.CreateAudioBackend == false) {
             return;
         }
@@ -81,8 +83,9 @@ internal sealed class Mt32Player : IDisposable {
                 }
             }
         } else if (Directory.Exists(path)) {
-            foreach (var fileName in Directory.EnumerateFiles(path, "*.ROM"))
+            foreach (var fileName in Directory.EnumerateFiles(path, "*.ROM")) {
                 context.AddRom(fileName);
+            }
         }
     }
 }
