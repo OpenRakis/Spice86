@@ -1,10 +1,12 @@
 ﻿namespace Spice86.Emulator.Sound.Midi;
 
 using System;
+using System.Runtime.Versioning;
 
 /// <summary>
 /// Provides access to the Windows MIDI mapper.
 /// </summary>
+[SupportedOSPlatform("windows")]
 internal sealed class WindowsMidiMapper : MidiDevice {
     private IntPtr midiOutHandle;
 

@@ -81,11 +81,11 @@ public sealed class GeneralMidi {
     public void WriteByte(int port, byte value) {
         switch (port) {
             case DataPort:
-                if (midiMapper == null) {
+                if (midiMapper == null && OperatingSystem.IsWindows()) {
                     midiMapper = UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath, Configuration) : new WindowsMidiMapper();
                 }
 
-                midiMapper.SendByte(value);
+                midiMapper?.SendByte(value);
                 break;
 
             case StatusPort:
@@ -94,10 +94,6 @@ public sealed class GeneralMidi {
                         State = GeneralMidiState.NormalMode;
                         dataBytes.Clear();
                         dataBytes.Enqueue(CommandAcknowledge);
-                        //if (midiMapper != null) {
-                        //    midiMapper.Dispose();
-                        //    midiMapper = null;
-                        //}
                         break;
 
                     case EnterUartModeCommand:
