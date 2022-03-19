@@ -20,9 +20,14 @@ public partial class VideoBufferView : UserControl {
     private void InitializeComponent() {
         AvaloniaXamlLoader.Load(this);
         Initialized += VideoBufferView_Initialized;
+        MainWindow.AppClosing += MainWindow_AppClosing;
     }
 
+    private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
+        _appClosing = true;
+    }
     private Image? _image;
+    private bool _appClosing;
 
     private void VideoBufferView_Initialized(object? sender, EventArgs e) {
         if (this.DataContext is VideoBufferViewModel vm) {
@@ -38,7 +43,7 @@ public partial class VideoBufferView : UserControl {
 
     private async void VideoBufferViewModel_IsDirty(object? sender, EventArgs e) {
         await Dispatcher.UIThread.InvokeAsync(() => {
-            if (this.DataContext is VideoBufferViewModel vm) {
+            if (this.DataContext is VideoBufferViewModel vm && _appClosing == false) {
                 if (_image is null) {
                     return;
                 }
