@@ -28,7 +28,7 @@ internal sealed class Mt32Player : IDisposable {
         }
         LoadRoms(romsPath);
 
-        AnalogOutputMode analogMode = Mt32GlobalState.GetBestAnalogOutputMode(audioPlayer.Format.SampleRate);
+        var analogMode = Mt32GlobalState.GetBestAnalogOutputMode(audioPlayer.Format.SampleRate);
         context.AnalogOutputMode = analogMode;
         context.SetSampleRate(audioPlayer.Format.SampleRate);
 
