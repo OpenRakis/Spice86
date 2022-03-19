@@ -44,14 +44,16 @@ internal sealed class Mt32Player : IDisposable {
         if (!OperatingSystem.IsWindows()) {
             return;
         }
-        audioPlayer?.StopPlayback();
+        //... Do not pause ...
+        //audioPlayer?.StopPlayback();
     }
 
     public void Resume() {
         if (!OperatingSystem.IsWindows()) {
             return;
         }
-        audioPlayer?.BeginPlayback(this.FillBuffer);
+        // ... and restart, this produces an InvalidOperationException
+        //audioPlayer?.BeginPlayback(this.FillBuffer);
     }
 
     public void Dispose() {
