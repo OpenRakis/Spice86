@@ -2,9 +2,10 @@
 
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
-internal static class NativeMethods
-{
+[SupportedOSPlatform("windows")]
+internal static class NativeMethods {
     [DllImport("winmm.dll", CallingConvention = CallingConvention.Winapi, SetLastError = false)]
     public static extern uint midiOutOpen(out IntPtr lphmo, uint uDeviceID, IntPtr dwCallback, IntPtr dwCallbackInstance, uint dwFlags);
     [DllImport("winmm.dll", CallingConvention = CallingConvention.Winapi, SetLastError = false)]
