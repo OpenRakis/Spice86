@@ -100,6 +100,38 @@ public class CSharpOverrideHelper {
         return () => Cpu.NearRet(0);
     }
 
+    public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<Action> function) {
+        ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
+            Stack.Push(expectedReturnIp);
+            Action returnAction = function.Invoke();
+            returnAction.Invoke();
+        });
+    }
+
+    public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<Action> function) {
+        ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
+            Stack.Push(expectedReturnCs);
+            Stack.Push(expectedReturnIp);
+            Action returnAction = function.Invoke();
+            returnAction.Invoke();
+        });
+    }
+
+    private void ExecuteEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp, Action action) {
+        uint stackAddressBefore = State.StackPhysicalAddress;
+        State.CS = expectedReturnCs;
+        State.IP = expectedReturnIp;
+        action.Invoke();
+        ushort actualReturnCs = State.CS;
+        ushort actualReturnIp = State.IP;
+        uint stackAddressAfter = State.StackPhysicalAddress;
+        if (actualReturnCs != expectedReturnCs || actualReturnIp != expectedReturnIp) {
+            SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
+            SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
+            this.FailAsUntested("The original code is trying to jump via call stack modification. Expected to return at: " + expectedReturn + " but actually returning at: " + actualReturn + " Stack address before: " + stackAddressBefore + " Stack address after: " + stackAddressAfter);
+        }
+    }
+
     public void OverrideInstruction(ushort segment, ushort offset, Func<Action> renamedOverride) {
         BreakPoint breakPoint = new(
             BreakPointType.EXECUTION,

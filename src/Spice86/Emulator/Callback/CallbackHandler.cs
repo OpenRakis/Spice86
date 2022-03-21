@@ -7,7 +7,7 @@ using Spice86.Emulator.Memory;
 using System.Collections.Generic;
 using System.Linq;
 
-public class CallbackHandler : IndexBasedDispatcher<ICallback> {
+public class CallbackHandler : IndexBasedDispatcher {
 
     // Map of all the callback addresses
     private readonly Dictionary<byte, SegmentedAddress> _callbackAddresses = new();

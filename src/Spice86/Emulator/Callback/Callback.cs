@@ -15,4 +15,8 @@ public class Callback : ICallback {
     public void Run() {
         _runnable.Invoke();
     }
+
+    public void RunFromOverriden() {
+        Run();
+    }
 }

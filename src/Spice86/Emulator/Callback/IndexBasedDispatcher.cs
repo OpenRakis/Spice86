@@ -7,7 +7,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Base class for most classes having to dispatch operations depending on a numeric value, like interrupts.
 /// </summary>
-public abstract class IndexBasedDispatcher<T> where T : IRunnable {
+public abstract class IndexBasedDispatcher {
     protected Dictionary<int, ICallback> _dispatchTable = new();
 
     public void AddService(int index, ICallback runnable) {
@@ -15,11 +15,18 @@ public abstract class IndexBasedDispatcher<T> where T : IRunnable {
     }
 
     public void Run(int index) {
+        GetCallback(index).Run();
+    }
+
+    public void RunFromOverriden(int index) {
+        GetCallback(index).RunFromOverriden();
+    }
+
+    private ICallback GetCallback(int index) {
         if (_dispatchTable.TryGetValue(index, out ICallback? handler) == false) {
             throw GenerateUnhandledOperationException(index);
         }
-
-        handler?.Run();
+        return handler;
     }
 
     protected abstract UnhandledOperationException GenerateUnhandledOperationException(int index);

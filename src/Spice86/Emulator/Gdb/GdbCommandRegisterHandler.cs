@@ -114,7 +114,7 @@ public class GdbCommandRegisterHandler {
         } else if (regIndex == 8) {
             state.IP = value;
         } else if (regIndex == 9) {
-            state.Flags.SetFlagRegister(value);
+            state.Flags.FlagRegister = value;
         } else if (regIndex < 16) {
             state.SegmentRegisters.SetRegister(GetSegmentRegisterIndex(regIndex), value);
         }

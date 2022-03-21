@@ -26,9 +26,9 @@ public class Flags {
 
     // rflag mask to OR with flags, useful to compare values with dosbox which emulates
     private ushort _additionalFlagMask;
-
+    private ushort _flagRegister;
     public Flags() {
-        this.SetFlagRegister(0);
+        this.FlagRegister = 0;
     }
 
     public static string DumpFlags(int flags) {
@@ -59,7 +59,17 @@ public class Flags {
         return (FlagRegister & mask) == mask;
     }
 
-    public ushort FlagRegister { get; private set; }
+    public ushort FlagRegister {
+        get => _flagRegister;
+        set {
+            // Some flags are always 1 or 0 no matter what (8086)
+            ushort modifedValue = (ushort)((value | 0b10) & 0b0111111111010111);
+
+            // dosbox
+            modifedValue |= _additionalFlagMask;
+            _flagRegister = ConvertUtils.Uint16(modifedValue);
+        }
+    }
 
     public override int GetHashCode() {
         return FlagRegister;
@@ -73,15 +83,6 @@ public class Flags {
         } else {
             FlagRegister &= (ushort)~mask;
         }
-    }
-
-    public void SetFlagRegister(ushort value) {
-        // Some flags are always 1 or 0 no matter what (8086)
-        ushort modifedValue = (ushort)((value | 0b10) & 0b0111111111010111);
-
-        // dosbox
-        modifedValue |= _additionalFlagMask;
-        FlagRegister = ConvertUtils.Uint16(modifedValue);
     }
 
     public override string ToString() {

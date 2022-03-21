@@ -128,7 +128,7 @@ public class Cpu {
         FunctionHandlerInUse.Ret(CallType.INTERRUPT);
         _internalIp = Stack.Pop();
         State.CS = Stack.Pop();
-        State.Flags.SetFlagRegister(Stack.Pop());
+        State.Flags.FlagRegister = Stack.Pop();
         FunctionHandlerInUse = FunctionHandler;
     }
 
@@ -885,12 +885,12 @@ public class Cpu {
 
             case 0x9D:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("POPF"); }
-                State.Flags.SetFlagRegister(Stack.Pop());
+                State.Flags.FlagRegister = Stack.Pop();
                 break;
 
             case 0x9E:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("SAHF"); }
-                State.Flags.SetFlagRegister(State.AH);
+                State.Flags.FlagRegister = State.AH;
                 break;
 
             case 0x9F:
@@ -1091,7 +1091,7 @@ public class Cpu {
                 byte result = (byte)(State.AL + (State.AH * NextUint8()));
                 State.AL = result;
                 State.AH = 0;
-                State.Flags.SetFlagRegister(0);
+                State.Flags.FlagRegister = 0;
                 Alu.UpdateFlags8(result);
                 break;
             }
@@ -1357,8 +1357,6 @@ public class Cpu {
     private void FarCall(ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
         Stack.Push(returnCS);
         Stack.Push(returnIP);
-        State.CS = targetCS;
-        _internalIp = targetIP;
         HandleCall(CallType.FAR, returnCS, returnIP, targetCS, targetIP);
     }
 
@@ -1774,6 +1772,8 @@ public class Cpu {
                 ConvertUtils.ToSegmentedAddressRepresentation(returnCS, returnIP));
         }
         JumpHandler.RegisterCall(State.CS, State.IP, targetCS, targetIP);
+        State.CS = targetCS;
+        _internalIp = targetIP;
         FunctionHandlerInUse.Call(callType, targetCS, targetIP, returnCS, returnIP);
     }
 
@@ -1804,7 +1804,7 @@ public class Cpu {
         State.CS = cs;
     }
 
-    private byte In8(int port) {
+    public byte In8(int port) {
         if (IoPortDispatcher != null) {
             return IoPortDispatcher.ReadByte((ushort)port);
         }
@@ -1842,7 +1842,7 @@ public class Cpu {
             recordReturn);
     }
 
-    private ushort In16(int port) {
+    public ushort In16(int port) {
         if (IoPortDispatcher != null) {
             return IoPortDispatcher.ReadWord((ushort)port);
         }
@@ -1924,7 +1924,6 @@ public class Cpu {
 
     private void NearCall(ushort returnIP, ushort callIP) {
         Stack.Push(returnIP);
-        _internalIp = callIP;
         HandleCall(CallType.NEAR, State.CS, returnIP, State.CS, callIP);
     }
 

@@ -49,7 +49,7 @@ public class Configuration {
     [Option('p', nameof(ProgramEntryPointSegment), Default = 0x01ED, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
     public int ProgramEntryPointSegment { get; init; }
 
-    [Option('u', nameof(UseCodeOverride), Default = false, Required = false, HelpText = "<true or false> if false it will use the names provided by overrideSupplierClassName but not the code")]
+    [Option('u', nameof(UseCodeOverride), Default = true, Required = false, HelpText = "<true or false> if false it will use the names provided by overrideSupplierClassName but not the code")]
     public bool UseCodeOverride { get; init; }
 
     /// <summary>

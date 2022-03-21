@@ -6,7 +6,7 @@ using Spice86.Emulator.Errors;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 
-public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallback {
+public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
     protected State _state;
 
     protected Cpu _cpu;
@@ -15,6 +15,8 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
     protected Machine _machine;
 
     protected Memory _memory;
+
+    private bool _interruptStackPresent = true;
 
     protected InterruptHandler(Machine machine) {
         this._machine = machine;
@@ -33,15 +35,22 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, ICallb
 
     protected void SetCarryFlag(bool value, bool setOnStack) {
         _state.CarryFlag = value;
-        if (setOnStack) {
+        if (_interruptStackPresent && setOnStack) {
             _cpu.SetFlagOnInterruptStack(Flags.Carry, value);
         }
     }
 
     protected void SetZeroFlag(bool value, bool setOnStack) {
         _state.ZeroFlag = value;
-        if (setOnStack) {
+        if (_interruptStackPresent && setOnStack) {
             _cpu.SetFlagOnInterruptStack(Flags.Zero, value);
         }
+    }
+    
+    public void RunFromOverriden() {
+        // When running from overriden code, this is a direct C# code so there is no stack to edit.
+        _interruptStackPresent = false;
+        Run();
+        _interruptStackPresent = true;
     }
 }
