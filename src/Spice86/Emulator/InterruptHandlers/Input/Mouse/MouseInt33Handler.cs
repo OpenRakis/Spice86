@@ -41,7 +41,7 @@ public class MouseInt33Handler : InterruptHandler {
     public override byte Index => 0x33;
 
     public void GetMousePositionAndStatus() {
-        if(_gui is null) {
+        if (_gui is null) {
             return;
         }
         ushort x = RestrictValue((ushort)_gui.MouseX, (ushort)_gui.Width, _mouseMinX, _mouseMaxX);
@@ -72,16 +72,30 @@ public class MouseInt33Handler : InterruptHandler {
         this.Run(operation);
     }
 
+    private int _oldX = -1;
+    private int _oldY = -1;
+
     public void SetMouseCursorPosition() {
+        if (_gui is null) {
+            return;
+        }
+
         ushort x = _state.CX;
         ushort y = _state.DX;
+
+        if (_oldX == _gui.MouseX && _oldY == _gui.MouseY) {
+            return;
+        }
+
+
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE CURSOR POSITION {@MouseX}, {@MouseY}", x, y);
         }
-        if(_gui is not null) {
-            _gui.MouseX = x;
-            _gui.MouseY = y;
-        }
+
+        _oldX = _gui.MouseX;
+        _oldY = _gui.MouseY;
+        _gui.MouseX = x;
+        _gui.MouseY = y;
     }
 
     public void SetMouseDoubleSpeedThreshold() {
@@ -151,8 +165,8 @@ public class MouseInt33Handler : InterruptHandler {
     /// <summary>
     /// </summary>
     /// <param name="value">Raw value from the GUI</param>
-    /// <param name="maxValue">Max that value can be</param>
-    /// <param name="min">mix expected by program</param>
+    /// <param name="maxValue">Max of what that value can be</param>
+    /// <param name="min">min expected by program</param>
     /// <param name="max">max expected by program</param>
     /// <returns></returns>
     private static ushort RestrictValue(ushort value, ushort maxValue, ushort min, ushort max) {
