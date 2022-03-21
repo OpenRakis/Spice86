@@ -17,30 +17,29 @@ using System.Collections.Generic;
 public class CSharpOverrideHelper {
     private static readonly ILogger _logger = Program.Logger.ForContext<CSharpOverrideHelper>();
 
-    protected readonly Cpu _cpu;
+    protected Cpu Cpu => Machine.Cpu;
 
-    protected readonly Machine _machine;
+    protected Machine Machine { get; }
 
-    protected readonly Memory _memory;
+    protected Memory Memory => Machine.Memory;
 
-    protected readonly Stack _stack;
+    protected UInt16IndexerWithUint UInt16 => Memory.UInt16;
 
-    protected readonly State _state;
+    protected UInt8IndexerWithUint UInt8 => Memory.UInt8;
+    protected Stack Stack => Cpu.Stack;
+
+    protected State State => Cpu.State;
 
     private readonly string _prefix;
 
-    public Alu Alu => _cpu.Alu;
+    public Alu Alu => Cpu.Alu;
 
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, string prefix, Machine machine) {
         this._functionInformations = functionInformations;
         this._prefix = prefix;
-        this._machine = machine;
-        this._cpu = machine.Cpu;
-        this._memory = machine.Memory;
-        this._state = _cpu.State;
-        this._stack = _cpu.Stack;
+        this.Machine = machine;
     }
 
     public void DefineFunction(ushort segment, ushort offset, string name, Func<Action>? @override = null) {
@@ -63,7 +62,7 @@ public class CSharpOverrideHelper {
     public void DefineStaticAddress(ushort segment, ushort offset, string name, bool whiteListOnlyThisSegment) {
         SegmentedAddress address = new(segment, offset);
         uint physicalAddress = address.ToPhysical();
-        StaticAddressesRecorder recorder = _cpu.StaticAddressesRecorder;
+        StaticAddressesRecorder recorder = Cpu.StaticAddressesRecorder;
         if (recorder.Names.TryGetValue(physicalAddress, out var existing)) {
             string error = $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
@@ -80,25 +79,25 @@ public class CSharpOverrideHelper {
 
     public Action FarJump(ushort cs, ushort ip) {
         return () => {
-            _state.CS = cs;
-            _state.IP = ip;
+            State.CS = cs;
+            State.IP = ip;
         };
     }
 
     public Action FarRet() {
-        return () => _cpu.FarRet(0);
+        return () => Cpu.FarRet(0);
     }
 
     public Action InterruptRet() {
-        return () => _cpu.InterruptRet();
+        return () => Cpu.InterruptRet();
     }
 
     public Action NearJump(ushort ip) {
-        return () => _state.IP = ip;
+        return () => State.IP = ip;
     }
 
     public Action NearRet() {
-        return () => _cpu.NearRet(0);
+        return () => Cpu.NearRet(0);
     }
 
     public void OverrideInstruction(ushort segment, ushort offset, Func<Action> renamedOverride) {
@@ -109,11 +108,11 @@ public class CSharpOverrideHelper {
                 offset),
             (b) => renamedOverride.Invoke()
             , false);
-        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
     public void SetProvidedInterruptHandlersAsOverridden() {
-        CallbackHandler callbackHandler = _machine.CallbackHandler;
+        CallbackHandler callbackHandler = Machine.CallbackHandler;
         Dictionary<byte, SegmentedAddress> callbackAddresses = callbackHandler.GetCallbackAddresses();
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackAddresses) {
             byte callbackNumber = callbackAddressEntry.Key;
@@ -127,9 +126,9 @@ public class CSharpOverrideHelper {
     }
 
     protected void CheckVtableContainsExpected(int segmentRegisterIndex, ushort offset, ushort expectedSegment, ushort expectedOffset) {
-        uint address = MemoryUtils.ToPhysicalAddress(_state.SegmentRegisters.GetRegister(segmentRegisterIndex), offset);
-        ushort foundOffset = _memory.GetUint16(address);
-        ushort foundSegment = _memory.GetUint16(address + 2);
+        uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.GetRegister(segmentRegisterIndex), offset);
+        ushort foundOffset = Memory.GetUint16(address);
+        ushort foundSegment = Memory.GetUint16(address + 2);
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
             this.FailAsUntested($"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");
         }
@@ -140,10 +139,10 @@ public class CSharpOverrideHelper {
     /// reached.
     /// </summary>
     protected void FailAsUntested(string message) {
-        string dumpedCallStack = _machine.DumpCallStack();
+        string dumpedCallStack = Machine.DumpCallStack();
         string error = $"Untested code reached, please tell us how to reach this state.Here is the message: {message} Here is the call stack: {dumpedCallStack}";
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-            _logger.Error("Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}", message, _machine.DumpCallStack());
+            _logger.Error("Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}", message, Machine.DumpCallStack());
         }
         throw new UnrecoverableException(error);
     }

@@ -4,8 +4,13 @@ public class UInt8IndexerWithUint {
 
     public UInt8IndexerWithUint(Memory memory) => _memory = memory;
 
-    public ushort this[uint i] {
+    public byte this[uint i] {
         get { return _memory.GetUint8(i); }
-        set { _memory.SetUint8(i, (byte)value); }
+        set { _memory.SetUint8(i, value); }
+    }
+
+    public byte this[ushort segment, ushort offset] {
+        get { return this[MemoryUtils.ToPhysicalAddress(segment, offset)]; }
+        set { this[MemoryUtils.ToPhysicalAddress(segment, offset)] = value; }
     }
 }
