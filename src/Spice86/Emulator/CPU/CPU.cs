@@ -12,6 +12,7 @@ using Spice86.Utils;
 
 using System;
 using System.Collections.Generic;
+using System.Xml.Serialization;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
@@ -463,24 +464,7 @@ public class Cpu {
 
             case 0x2F: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("DAS"); }
-                byte initialAL = State.AL;
-                bool initialCF = State.CarryFlag;
-                bool finalAuxillaryFlag = false;
-                bool finalCarryFlag = false;
-                State.CarryFlag = false;
-                if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
-                    State.AL = (byte)(State.AL - 6);
-                    finalCarryFlag = State.CarryFlag || initialCF;
-                    finalAuxillaryFlag = true;
-                }
-                if (initialAL > 0x99 || initialCF) {
-                    State.AL = (byte)(State.AL - 0x60);
-                    finalCarryFlag = true;
-                }
-                // Undocumented behaviour
-                Alu.UpdateFlags8(State.AL);
-                State.AuxiliaryFlag = finalAuxillaryFlag;
-                State.CarryFlag = finalCarryFlag;
+                Das();
                 break;
             }
             case 0x30:
@@ -523,18 +507,7 @@ public class Cpu {
 
             case 0x37: {
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("AAA"); }
-                bool finalAuxillaryFlag = false;
-                bool finalCarryFlag = false;
-                if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
-                    State.AX = (ushort)(State.AX + 0x106);
-                    finalAuxillaryFlag = true;
-                    finalCarryFlag = true;
-                }
-                State.AL = (byte)(State.AL & 0x0F);
-                // Undocumented behaviour
-                Alu.UpdateFlags8(State.AL);
-                State.AuxiliaryFlag = finalAuxillaryFlag;
-                State.CarryFlag = finalCarryFlag;
+                Aaa();
                 break;
             }
             case 0x38:
@@ -1354,6 +1327,41 @@ public class Cpu {
         Alu.UpdateFlags8(result);
     }
 
+    public void Das() {
+        byte initialAL = State.AL;
+        bool initialCF = State.CarryFlag;
+        bool finalAuxillaryFlag = false;
+        bool finalCarryFlag = false;
+        State.CarryFlag = false;
+        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
+            State.AL = (byte)(State.AL - 6);
+            finalCarryFlag = State.CarryFlag || initialCF;
+            finalAuxillaryFlag = true;
+        }
+        if (initialAL > 0x99 || initialCF) {
+            State.AL = (byte)(State.AL - 0x60);
+            finalCarryFlag = true;
+        }
+        // Undocumented behaviour
+        Alu.UpdateFlags8(State.AL);
+        State.AuxiliaryFlag = finalAuxillaryFlag;
+        State.CarryFlag = finalCarryFlag;
+    }
+
+    public void Aaa() {
+        bool finalAuxillaryFlag = false;
+        bool finalCarryFlag = false;
+        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
+            State.AX = (ushort)(State.AX + 0x106);
+            finalAuxillaryFlag = true;
+            finalCarryFlag = true;
+        }
+        State.AL = (byte)(State.AL & 0x0F);
+        // Undocumented behaviour
+        Alu.UpdateFlags8(State.AL);
+        State.AuxiliaryFlag = finalAuxillaryFlag;
+        State.CarryFlag = finalCarryFlag;
+    }
     private void FarCall(ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
         Stack.Push(returnCS);
         Stack.Push(returnIP);

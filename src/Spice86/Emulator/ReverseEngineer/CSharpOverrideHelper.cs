@@ -34,6 +34,50 @@ public class CSharpOverrideHelper {
 
     public Alu Alu => Cpu.Alu;
 
+
+    public ushort AX { get => State.AX; set => State.AX = value; }
+    public byte AH { get => State.AH; set => State.AH = value; }
+    public byte AL { get => State.AL; set => State.AL = value; }
+
+    public ushort BX { get => State.BX; set => State.BX = value; }
+    public byte BH { get => State.BH; set => State.BH = value; }
+    public byte BL { get => State.BL; set => State.BL = value; }
+
+    public ushort CX { get => State.CX; set => State.CX = value; }
+    public byte CH { get => State.CH; set => State.CH = value; }
+    public byte CL { get => State.CL; set => State.CL = value; }
+
+    public ushort DX { get => State.DX; set => State.DX = value; }
+    public byte DH { get => State.DH; set => State.DH = value; }
+    public byte DL { get => State.DL; set => State.DL = value; }
+
+    public ushort SP { get => State.SP; set => State.SP = value; }
+    public ushort BP { get => State.BP; set => State.BP = value; }
+
+    public ushort SI { get => State.SI; set => State.SI = value; }
+    public ushort DI { get => State.DI; set => State.DI = value; }
+
+    public ushort CS { get => State.CS; set => State.CS = value; }
+    public ushort DS { get => State.DS; set => State.DS = value; }
+    public ushort ES { get => State.ES; set => State.ES = value; }
+    public ushort FS { get => State.FS; set => State.FS = value; }
+    public ushort GS { get => State.GS; set => State.GS = value; }
+    public ushort SS { get => State.SS; set => State.SS = value; }
+
+    public ushort IP { get => State.IP; set => State.IP = value; }
+
+
+    public bool AuxiliaryFlag { get => State.AuxiliaryFlag; set => State.AuxiliaryFlag = value; }
+    public bool CarryFlag { get => State.CarryFlag; set => State.CarryFlag = value; }
+    public bool DirectionFlag { get => State.DirectionFlag; set => State.DirectionFlag = value; }
+    public bool InterruptFlag { get => State.InterruptFlag; set => State.InterruptFlag = value; }
+    public bool OverflowFlag { get => State.OverflowFlag; set => State.OverflowFlag = value; }
+    public bool ParityFlag { get => State.ParityFlag; set => State.ParityFlag = value; }
+    public bool SignFlag { get => State.SignFlag; set => State.SignFlag = value; }
+    public bool TrapFlag { get => State.TrapFlag; set => State.TrapFlag = value; }
+    public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
+
+
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, string prefix, Machine machine) {
@@ -177,5 +221,14 @@ public class CSharpOverrideHelper {
             _logger.Error("Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}", message, Machine.DumpCallStack());
         }
         throw new UnrecoverableException(error);
+    }
+
+    protected void Interrupt(int vectorNumber) {
+        Machine.CallbackHandler.RunFromOverriden(vectorNumber);
+    }
+
+    protected void Hlt() {
+        _logger.Information("Program requested exit. Terminating now.");
+        Environment.Exit(0);
     }
 }
