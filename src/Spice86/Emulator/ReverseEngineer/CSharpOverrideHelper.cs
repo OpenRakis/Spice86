@@ -14,7 +14,7 @@ using Spice86.Utils;
 using System;
 using System.Collections.Generic;
 
-public class CSharpOverrideHelper {
+public partial class CSharpOverrideHelper {
     private static readonly ILogger _logger = Program.Logger.ForContext<CSharpOverrideHelper>();
 
     protected Cpu Cpu => Machine.Cpu;
