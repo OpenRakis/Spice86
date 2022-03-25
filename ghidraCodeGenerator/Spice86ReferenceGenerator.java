@@ -28,7 +28,8 @@ public class Spice86ReferenceGenerator extends GhidraScript {
   //private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
   private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
 
-  @Override protected void run() throws Exception {
+  @Override
+  protected void run() throws Exception {
     JumpsAndCalls jumpsAndCalls =
         readJumpMapFromFile(baseFolder + "spice86dumpjumps.json");
 
