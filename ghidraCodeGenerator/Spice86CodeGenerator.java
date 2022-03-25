@@ -44,7 +44,8 @@ import java.util.stream.StreamSupport;
 public class Spice86CodeGenerator extends GhidraScript {
   // https://class.malware.re/2021/03/21/ghidra-scripting-feature-extraction.html
   //private final String baseFolder = "C:/tmp/Spice86C/src/Spice86/bin/Release/net6.0/";
-  private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
+  //private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
+  private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
 
   public void run() throws Exception {
     JumpsAndCalls jumpsAndCalls =
@@ -517,10 +518,11 @@ class InstructionGenerator {
       Integer bits) {
     String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
     String operand = parameterTranslator.toSpice86Value(parameters[1], bits);
-    String res = dest + " = " + operation + bits + "(" + dest + ", " + operand + ");";
+    String res = "";
     if (nativeOperation != null) {
-      res += "// " + dest + " " + nativeOperation + "= " + operand + ";";
+      res += "// " + dest + " " + nativeOperation + "= " + operand + ";\n";
     }
+    res += dest + " = " + operation + bits + "(" + dest + ", " + operand + ");";
     return res;
   }
 
@@ -1022,7 +1024,7 @@ class JumpCallTranslator {
 
   public String functionToString(ParsedFunction parsedFunction, boolean far, boolean withReturn) {
     String name = parsedFunction.getName();
-    if (withReturn || isLast) {
+    if (withReturn) {
       // Direct C# call, do not go through the Near/Far checks
       return functionToDirectCSharpCallWithReturn(parsedFunction);
     }
