@@ -25,7 +25,8 @@ import java.util.stream.Collectors;
 //@menupath
 //@toolbar
 public class Spice86ReferenceGenerator extends GhidraScript {
-  private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
+  //private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
+  private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
 
   @Override protected void run() throws Exception {
     JumpsAndCalls jumpsAndCalls =
@@ -40,8 +41,7 @@ public class Spice86ReferenceGenerator extends GhidraScript {
     fromTo.entrySet().stream().forEach(e -> {
           Address from = this.toAddr(e.getKey());
           if (referenceManager.hasReferencesFrom(from)) {
-            // Do not overwrite
-            return;
+            referenceManager.removeAllReferencesFrom(from);
           }
           List<SegmentedAddress> toSegmentedAddresses = e.getValue();
           int index = 0;
