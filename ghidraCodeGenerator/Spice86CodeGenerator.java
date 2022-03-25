@@ -14,6 +14,7 @@ import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.MemoryAccessException;
 import ghidra.program.model.symbol.Symbol;
 import ghidra.program.model.symbol.SymbolType;
+import org.apache.commons.collections4.CollectionUtils;
 
 import java.io.Closeable;
 import java.io.FileReader;
@@ -43,7 +44,6 @@ import java.util.stream.StreamSupport;
 //@toolbar
 public class Spice86CodeGenerator extends GhidraScript {
   // https://class.malware.re/2021/03/21/ghidra-scripting-feature-extraction.html
-  //private final String baseFolder = "C:/tmp/Spice86C/src/Spice86/bin/Release/net6.0/";
   //private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
   private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
 
@@ -96,7 +96,8 @@ class ProgramGenerator {
         using Spice86.Emulator.Function;
         using Spice86.Emulator.Memory;
         using Spice86.Emulator.ReverseEngineer;
-                
+        using Spice86.Emulator.VM;
+
         using System;
         using System.Collections.Generic;
                 
@@ -152,27 +153,62 @@ class FunctionGenerator {
     StringBuilder res = new StringBuilder();
     String name = parsedFunction.getName();
     log.info("Generating C# code for function " + name);
-    res.append("public Action " + name + "() {\n");
+    res.append("public Action " + name + "(int gotoTarget) {\n");
     List<ParsedInstruction> instructionsBeforeEntry = parsedFunction.getInstructionsBeforeEntry();
     List<ParsedInstruction> instructionsAfterEntry = parsedFunction.getInstructionsAfterEntry();
+    Set<String> generatedTempVars = new HashSet<>();
+    res.append(Utils.indent(generateGotoFromOutside(), 2) + "\n");
     if (!instructionsBeforeEntry.isEmpty()) {
-      res.append("  if(false) {\n");
-      writeInstructions(res, instructionsBeforeEntry, 4, false);
+      SegmentedAddress firstInstruction = instructionsBeforeEntry.get(0).getInstructionSegmentedAddress();
+      res.append("  if(gotoTarget == " + Utils.toHexWith0X(firstInstruction.toPhysical()) + ") {\n");
+      writeInstructions(res, instructionsBeforeEntry, 4, generatedTempVars, false);
       res.append("  }\n");
     }
-    writeInstructions(res, instructionsAfterEntry, 2, true);
+    writeInstructions(res, instructionsAfterEntry, 2, generatedTempVars, true);
     res.append("}\n");
     return res.toString();
   }
 
+  private String generateGotoFromOutside() {
+    Set<SegmentedAddress> jumpTargets =
+        parsedProgram.getJumpsFromOutsideForFunction(parsedFunction.getEntrySegmentedAddress());
+    if (CollectionUtils.isEmpty(jumpTargets)) {
+      return "";
+    }
+    SegmentedAddress firstInstruction = null;
+    List<ParsedInstruction> instructionsBeforeEntry = parsedFunction.getInstructionsBeforeEntry();
+    if (!instructionsBeforeEntry.isEmpty()) {
+      firstInstruction = instructionsBeforeEntry.get(0).getInstructionSegmentedAddress();
+    }
+    StringBuilder res = new StringBuilder("switch(gotoTarget) {\n");
+    for (SegmentedAddress target : jumpTargets) {
+      if (target.equals(firstInstruction)) {
+        continue;
+      }
+      res.append(
+          "  case " + Utils.toHexWith0X(target.toPhysical()) + ": goto " + JumpCallTranslator.getLabelToAddress(target,
+              false) + ";break;\n");
+    }
+    if (firstInstruction != null) {
+      res.append("  case " + Utils.toHexWith0X(firstInstruction.toPhysical()) + ": break;\n");
+    }
+    res.append("  case 0: break;\n");
+
+    res.append("  default: " + InstructionGenerator.generateFailAsUntested(
+        "\"Could not find any label from outside with address \" + gotoTarget", false) + "\n");
+    res.append("}");
+    return res.toString();
+  }
+
   private void writeInstructions(StringBuilder stringBuilder, List<ParsedInstruction> instructions, int indent,
-      boolean returnExpected) {
+      Set<String> generatedTempVars, boolean returnExpected) {
     Iterator<ParsedInstruction> instructionIterator = instructions.iterator();
     while (instructionIterator.hasNext()) {
       ParsedInstruction parsedInstruction = instructionIterator.next();
       boolean isLast = !instructionIterator.hasNext();
       InstructionGenerator instructionGenerator =
-          new InstructionGenerator(log, ghidraScript, parsedProgram, parsedFunction, parsedInstruction, isLast);
+          new InstructionGenerator(log, ghidraScript, parsedProgram, parsedFunction, parsedInstruction,
+              generatedTempVars, isLast);
       stringBuilder.append(Utils.indent(instructionGenerator.convertInstructionToSpice86(true), indent) + "\n");
       if (isLast && returnExpected && !instructionGenerator.isFunctionReturn()) {
         // Last instruction should have been a return, but it is not.
@@ -186,16 +222,25 @@ class FunctionGenerator {
 
   private String generateMissingReturn(Instruction next, JumpCallTranslator jumpCallTranslator) {
     if (next == null) {
-      return "// Function does not end with return and no instruction after the body ...\nTHIS_CANNOT_WORK";
+      return InstructionGenerator.generateFailAsUntested(
+          "Function does not end with return and no instruction after the body ...", true);
     }
     Address address = next.getAddress();
     ParsedFunction function = parsedProgram.getFunctionAtGhidraAddressEntryPoint(address);
-    if (function == null) {
-      return "// Function does not end with return and no other function found after the body at address "
-          + address.getUnsignedOffset() + " ...\nTHIS_CANNOT_WORK";
+    if (function != null) {
+      return "// Function call generated as ASM continues to next function entry point without return\n"
+          + jumpCallTranslator.functionToDirectCSharpCallWithReturn(function, null);
+    } else {
+      function = parsedProgram.getFunctionAtGhidraAddressAny(address);
+      if (function != null) {
+        return "// Function call generated as ASM continues to next function body without return\n"
+            + jumpCallTranslator.functionToDirectCSharpCallWithReturn(function, (int)address.getUnsignedOffset());
+      }
     }
-    return "// Function call generated as ASM continues to next function without return\n"
-        + jumpCallTranslator.functionToDirectCSharpCallWithReturn(function);
+    return InstructionGenerator.generateFailAsUntested(
+        "Function does not end with return and no other function found after the body at address "
+            + Utils.toHexWith0X(address.getUnsignedOffset()), true);
+
   }
 }
 
@@ -204,11 +249,19 @@ class ParameterTranslator {
   private final ParsedInstruction parsedInstruction;
   private final RegisterHandler registerHandler;
   private Set<String> missingRegisters;
+  // variables must be unique accross a function
+  private Set<String> generatedTempVars;
 
-  public ParameterTranslator(Log log, ParsedInstruction parsedInstruction, RegisterHandler registerHandler) {
+  public ParameterTranslator(Log log, ParsedInstruction parsedInstruction, RegisterHandler registerHandler,
+      Set<String> generatedTempVars) {
     this.log = log;
     this.parsedInstruction = parsedInstruction;
     this.registerHandler = registerHandler;
+    this.generatedTempVars = generatedTempVars;
+  }
+
+  public Set<String> getGeneratedTempVars() {
+    return generatedTempVars;
   }
 
   public void setMissingRegisters(Set<String> missingRegisters) {
@@ -308,16 +361,45 @@ class ParameterTranslator {
   public String toOffsetExpression(String offsetString, int offset) {
     String offsetExpression = pointerExpressionToOffset(offsetString);
     if (offset != 0) {
-      offsetExpression += " + " + offset;
+      if (isDirectValue(offsetExpression)) {
+        // Do the addition directly at generation time
+        int value = Utils.parseHex(offsetExpression) + offset;
+        offsetExpression = Utils.toHexWith0X(value);
+      } else {
+        offsetExpression += " + " + offset;
+      }
     }
-    return castIfNeeded("ushort", offsetExpression);
+    return castToUInt16(offsetExpression);
   }
 
-  private String castIfNeeded(String type, String expression) {
-    if (expression.contains("+")) {
-      return "(" + type + ")(" + expression + ")";
+  public String signExtendToUInt16(String expression) {
+    if (isDirectValue(expression)) {
+      // Do the sign extension directly here to avoid confusing C#
+      int value = Utils.uint16(Utils.int16(Utils.parseHex(expression)));
+      return Utils.toHexWith0X(value);
+    }
+    return castToUInt16("(short)((sbyte)" + expression + ")");
+  }
+
+  public String castToUInt16(String expression) {
+    if (expression.contains("+") || expression.contains("-") || expression.contains("(") || expression.contains("?")
+        || expression.contains(":")) {
+      // Complex expression, cast...
+      return "(ushort)(" + expression + ")";
     }
     return expression;
+  }
+
+  public boolean isDirectValue(String expression) {
+    if (expression.startsWith("0x") || expression.startsWith("-0x")) {
+      try {
+        Utils.parseHex(expression);
+        return true;
+      } catch (NumberFormatException nfe) {
+        return false;
+      }
+    }
+    return false;
   }
 
   public String toSpice86Pointer(String segment, String offset, int bits) {
@@ -328,8 +410,28 @@ class ParameterTranslator {
     String res = Utils.litteralToUpperHex(pointerString
         .replaceAll("\\[", "")
         .replaceAll("]", "")
-        .replaceAll(" \\+ 0x0", ""));
+        .replaceAll(" \\+ 0x0", "")
+        .replaceAll(" \\+ -", " - "));
     return registerHandler.substituteRegistersWithSpice86Expression(res);
+  }
+
+  private String generateNonUniqueTempVar(String prefix) {
+    return prefix + Utils.toHexSegmentOffset(this.parsedInstruction.getInstructionSegmentedAddress());
+  }
+
+  public String generateTempVar(String prefix) {
+    String res = generateNonUniqueTempVar(prefix);
+    int index = 1;
+    while (generatedTempVars.contains(res)) {
+      log.info("Variable already in scope of function, adding index " + res);
+      res = generateNonUniqueTempVar(prefix + index + "_");
+    }
+    generatedTempVars.add(res);
+    return res;
+  }
+
+  public String generateTempVar() {
+    return generateTempVar("tmp_");
   }
 }
 
@@ -446,11 +548,12 @@ class InstructionGenerator {
   }
 
   public InstructionGenerator(Log log, GhidraScript ghidraScript, ParsedProgram parsedProgram,
-      ParsedFunction currentFunction, ParsedInstruction parsedInstruction, boolean isLast) {
+      ParsedFunction currentFunction, ParsedInstruction parsedInstruction, Set<String> generatedTempVars,
+      boolean isLast) {
     SegmentedAddress instructionSegmentedAddress = parsedInstruction.getInstructionSegmentedAddress();
     this.log = log;
     this.registerHandler = new RegisterHandler(log, instructionSegmentedAddress.getSegment());
-    this.parameterTranslator = new ParameterTranslator(log, parsedInstruction, registerHandler);
+    this.parameterTranslator = new ParameterTranslator(log, parsedInstruction, registerHandler, generatedTempVars);
     this.parsedInstruction = parsedInstruction;
     this.instruction = parsedInstruction.getInstruction();
     this.jumpCallTranslator =
@@ -466,24 +569,23 @@ class InstructionGenerator {
         registerHandler.computeMissingRegisters(parsedInstruction.getMnemonic(), parsedInstruction.getParameters(),
             inputObjects);
     parameterTranslator.setMissingRegisters(missingRegisters);
-    Integer bits = parsedInstruction.getBitLength();
     String label = jumpCallTranslator.getLabel();
     String instructionString =
         convertInstructionWithPrefix(parsedInstruction.getMnemonic(), parsedInstruction.getPrefix(),
-            parsedInstruction.getParameters(), bits);
-    isFunctionReturn = instructionString.contains("return ");
+            parsedInstruction.getParameters());
+    isFunctionReturn = instructionString.contains("return ") && !(instructionString.contains("if") || instructionString.contains("switch"));
     if (generateLabel) {
       return label + instructionString;
     }
     return instructionString;
   }
 
-  private String convertInstructionWithPrefix(String mnemonic, String prefix, String[] params, Integer bits) {
+  private String convertInstructionWithPrefix(String mnemonic, String prefix, String[] params) {
     if (prefix.isEmpty()) {
-      return convertInstructionWithoutPrefix(mnemonic, params, bits);
+      return convertInstructionWithoutPrefix(mnemonic, params);
     }
     String ret = "while (CX-- != 0) {\n";
-    ret += Utils.indent(convertInstructionWithoutPrefix(mnemonic, params, bits), 2) + "\n";
+    ret += Utils.indent(convertInstructionWithoutPrefix(mnemonic, params), 2) + "\n";
     if (parsedInstruction.isStringCheckingZeroFlag()) {
       boolean continueZeroFlagValue = prefix.equals("REPE") || prefix.equals("REP");
       ret += "  if(ZeroFlag == " + continueZeroFlagValue + ") {\n";
@@ -505,42 +607,59 @@ class InstructionGenerator {
     return dest + " = " + operation + bits + "(" + operand + ");";
   }
 
-  private String generateXor(String[] parameters, Integer bits) {
+  private String generateXor(String[] parameters) {
     if (parameters[0].equals(parameters[1])) {
+      Integer bits = parsedInstruction.getParameter1BitLength();
       // this is a set to 0
       String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
       return dest + " = 0;";
     }
-    return generateAssignmentWith2Parameters("Alu.Xor", "^", parameters, bits);
+    return generateAssignmentWith2Parameters("Alu.Xor", "^", parameters);
   }
 
-  private String generateAssignmentWith2Parameters(String operation, String nativeOperation, String[] parameters,
-      Integer bits) {
-    String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
-    String operand = parameterTranslator.toSpice86Value(parameters[1], bits);
+  private String generateAssignmentWith2Parameters(String operation, String nativeOperation, String[] parameters) {
+    Integer bitsParameter1 = parsedInstruction.getParameter1BitLength();
+    String dest = parameterTranslator.toSpice86Value(parameters[0], bitsParameter1);
+    String operand = signExtendParameter2IfNeeded(parameters);
     String res = "";
     if (nativeOperation != null) {
       res += "// " + dest + " " + nativeOperation + "= " + operand + ";\n";
     }
-    res += dest + " = " + operation + bits + "(" + dest + ", " + operand + ");";
+    res += dest + " = " + operation + bitsParameter1 + "(" + dest + ", " + operand + ");";
     return res;
   }
 
-  private String generateNoAssignmentWith2Parameters(String operation, String[] parameters, Integer bits) {
-    String dest = parameterTranslator.toSpice86Value(parameters[0], bits);
-    String operand = parameterTranslator.toSpice86Value(parameters[1], bits);
-    return operation + bits + "(" + dest + ", " + operand + ");";
+  private String generateNoAssignmentWith2Parameters(String operation, String[] parameters) {
+    Integer bitsParameter1 = parsedInstruction.getParameter1BitLength();
+    String dest = parameterTranslator.toSpice86Value(parameters[0], bitsParameter1);
+    String operand = signExtendParameter2IfNeeded(parameters);
+    return operation + bitsParameter1 + "(" + dest + ", " + operand + ");";
+  }
+
+  private String signExtendParameter2IfNeeded(String[] parameters) {
+    Integer bitsParameter1 = parsedInstruction.getParameter1BitLength();
+    Integer bitsParameter2 = parsedInstruction.getParameter2BitLength();
+    String operand = parameterTranslator.toSpice86Value(parameters[1], bitsParameter2);
+    if (bitsParameter1 != bitsParameter2) {
+      log.info("Sign extending parameter 2");
+      if (bitsParameter2 != 8) {
+        log.warning("Parameter 1 length is " + bitsParameter1 + " and parameter 2 is " + bitsParameter2
+            + " this is unsupported.");
+      }
+      return parameterTranslator.signExtendToUInt16(operand);
+    }
+    return operand;
   }
 
   private String generateIns(String[] parameters, int bits) {
     String destination = getDestination(parameters, bits);
-    String operation = destination + " = Cpu.in" + bits + "(DX);";
+    String operation = destination + " = Cpu.In" + bits + "(DX);";
     return generateStringOperation(operation, false, true, bits);
   }
 
   private String generateOuts(String[] parameters, int bits) {
     String source = getSource(parameters, bits);
-    String operation = "Cpu.out" + bits + "(DX, " + source + ");";
+    String operation = "Cpu.Out" + bits + "(DX, " + source + ");";
     return generateStringOperation(operation, false, true, bits);
   }
 
@@ -611,7 +730,8 @@ class InstructionGenerator {
 
   private String advanceRegister(String register, int bits) {
     String advance = bits == 8 ? "1" : "2";
-    return register + " += (short)(DirectionFlag?-" + advance + ":" + advance + ");";
+    String expression = parameterTranslator.castToUInt16("SI + (DirectionFlag ? -" + advance + " : " + advance + ")");
+    return register + " = " + expression + ";";
   }
 
   private String generateNot(String[] parameters, Integer bits) {
@@ -656,8 +776,9 @@ class InstructionGenerator {
     return (bits == 8 ? "AL" : "AX");
   }
 
-  private String generateXlat(String[] parameters, Integer bits) {
-    return "AL = " + parameterTranslator.toSpice86Value(parameters[0], bits) + " + AL";
+  private String generateXlat(String[] parameters) {
+    String pointer = parameterTranslator.toSpice86Pointer("BX + AL", 8, 0);
+    return "AL = " + pointer + ";";
   }
 
   private String generateMul(String[] parameters, Integer bits) {
@@ -677,24 +798,20 @@ class InstructionGenerator {
   }
 
   private String generateLea(String[] parameters) {
-    String offset = parameterTranslator.pointerExpressionToOffset(parameters[1]);
+    String offset = parameterTranslator.castToUInt16(parameterTranslator.pointerExpressionToOffset(parameters[1]));
     String destination = parameterTranslator.toSpice86Value(parameters[0], 16);
     return destination + " = " + offset + ";";
   }
 
-  private String generateTempVar(String prefix) {
-    return prefix + Utils.toHexSegmentOffset(this.parsedInstruction.getInstructionSegmentedAddress());
+  private String generateCwd() {
+    String expression = parameterTranslator.castToUInt16("AX>=0x8000?0xFFFF:0");
+    return "DX = " + expression + ";";
   }
 
-  private String generateTempVar() {
-    return generateTempVar("tmp");
-  }
-
-  private String convertInstructionWithoutPrefix(String mnemonic, String[] params, Integer bits) {
-    String instruction = convertInstructionWithoutPrefixAndComment(mnemonic, params, bits);
+  private String convertInstructionWithoutPrefix(String mnemonic, String[] params) {
+    String instruction = convertInstructionWithoutPrefixAndComment(mnemonic, params);
     if (instruction == null) {
-      instruction = "UNIMPLEMENTED INSTRUCTION";
-      showInstructionComment = true;
+      instruction = InstructionGenerator.generateFailAsUntested("Unimplemented Instruction!", true);
     }
     if (this.showInstructionComment) {
       String instuctionAsm = mnemonic + " " + String.join(",", params);
@@ -711,7 +828,7 @@ class InstructionGenerator {
   }
 
   private String generatePushA() {
-    String spTempVar = generateTempVar("sp");
+    String spTempVar = parameterTranslator.generateTempVar("sp");
     return "int " + spTempVar + " = SP;\n"
         + "Stack.Push(AX);\n"
         + "Stack.Push(CX);\n"
@@ -724,7 +841,7 @@ class InstructionGenerator {
   }
 
   private String generateXchg(String[] params, Integer bits) {
-    String tempVarName = generateTempVar();
+    String tempVarName = parameterTranslator.generateTempVar();
     String var1 = parameterTranslator.toSpice86Value(params[0], bits);
     String var2 = parameterTranslator.toSpice86Value(params[1], bits);
     String res =
@@ -734,34 +851,47 @@ class InstructionGenerator {
     return res;
   }
 
-  private String convertInstructionWithoutPrefixAndComment(String mnemonic, String[] params, Integer bits) {
+  private String generatePush(String[] params, Integer bits) {
+    String value = parameterTranslator.toSpice86Value(params[0], bits);
+    if (bits != 16) {
+      value = parameterTranslator.signExtendToUInt16(value);
+    }
+    return "Stack.Push(" + value + ");";
+  }
+
+  private String generatePop(String[] params, Integer bits) {
+    return parameterTranslator.toSpice86Value(params[0], bits) + " = Stack.Pop();";
+  }
+
+  private String convertInstructionWithoutPrefixAndComment(String mnemonic, String[] params) {
     log.info("Params are " + String.join(",", params));
+    Integer parameter1Bits = parsedInstruction.getParameter1BitLength();
     return switch (mnemonic) {
       case "AAA" -> "Cpu.Aaa();";
-      case "AAM" -> "Cpu.Aam(" + parameterTranslator.toSpice86Value(params[0], bits) + ");";
-      case "ADC" -> generateAssignmentWith2Parameters("Alu.Adc", null, params, bits);
-      case "ADD" -> generateAssignmentWith2Parameters("Alu.Add", "+", params, bits);
-      case "AND" -> generateAssignmentWith2Parameters("Alu.And", "&", params, bits);
+      case "AAM" -> "Cpu.Aam(" + parameterTranslator.toSpice86Value(params[0], parameter1Bits) + ");";
+      case "ADC" -> generateAssignmentWith2Parameters("Alu.Adc", null, params);
+      case "ADD" -> generateAssignmentWith2Parameters("Alu.Add", "+", params);
+      case "AND" -> generateAssignmentWith2Parameters("Alu.And", "&", params);
       case "CALL" -> jumpCallTranslator.generateCall(params[0], false);
       case "CALLF" -> jumpCallTranslator.generateCall(params[0], true);
-      case "CBW" -> "AX = (ushort)((short)((sbyte)AL));";
+      case "CBW" -> "AX = " + parameterTranslator.signExtendToUInt16("AL") + ";";
       case "CLC" -> "CarryFlag = false;";
       case "CLD" -> "DirectionFlag = false;";
       case "CLI" -> "InterruptFlag = false;";
       case "CMC" -> "CarryFlag = !CarryFlag;";
-      case "CMP" -> generateNoAssignmentWith2Parameters("Alu.Sub", params, bits);
+      case "CMP" -> generateNoAssignmentWith2Parameters("Alu.Sub", params);
       case "CMPSB" -> generateCmps(params, 8);
       case "CMPSW" -> generateCmps(params, 16);
-      case "CWD" -> "DX = AX>=0x8000?0xFFFF:0;";
+      case "CWD" -> generateCwd();
       case "DAS" -> "Cpu.Das();";
-      case "DEC" -> generateAssignmentWith1Parameter("Alu.Dec", params, bits);
-      case "DIV" -> generateDiv(params, bits);
+      case "DEC" -> generateAssignmentWith1Parameter("Alu.Dec", params, parameter1Bits);
+      case "DIV" -> generateDiv(params, parameter1Bits);
       case "HLT" -> "Hlt()";
-      case "IDIV" -> generateIDiv(params, bits);
-      case "IMUL" -> generateIMul(params, bits);
-      case "IN" -> generateAssignmentWith2ParametersOnlyOneOperand("Cpu.In", params, bits);
-      case "INC" -> generateAssignmentWith1Parameter("Alu.Inc", params, bits);
-      case "INSB", "INSW" -> generateIns(params, bits);
+      case "IDIV" -> generateIDiv(params, parameter1Bits);
+      case "IMUL" -> generateIMul(params, parameter1Bits);
+      case "IN" -> generateAssignmentWith2ParametersOnlyOneOperand("Cpu.In", params, parameter1Bits);
+      case "INC" -> generateAssignmentWith1Parameter("Alu.Inc", params, parameter1Bits);
+      case "INSB", "INSW" -> generateIns(params, parameter1Bits);
       case "INT" -> generateInterrupt(params[0]);
       case "INT3" -> generateInterrupt("3");
       case "IRET" -> "return InterruptRet();";
@@ -784,7 +914,7 @@ class InstructionGenerator {
       case "JS" -> jumpCallTranslator.generateJump("S", params[0], false);
       case "JP" -> jumpCallTranslator.generateJump("P", params[0], false);
       case "JZ" -> jumpCallTranslator.generateJump("Z", params[0], false);
-      case "LAHF" -> "AH = (byte)FlagRegister";
+      case "LAHF" -> "AH = (byte)FlagRegister;";
       case "LDS" -> generateLXS("DS", params);
       case "LEA" -> generateLea(params);
       case "LES" -> generateLXS("ES", params);
@@ -794,16 +924,16 @@ class InstructionGenerator {
       case "LOOP" -> generateLoop("", params[0]);
       case "LOOPNZ" -> generateLoop("NZ", params[0]);
       case "LOOPZ" -> generateLoop("Z", params[0]);
-      case "MOV" -> generateMov(params, bits);
+      case "MOV" -> generateMov(params, parameter1Bits);
       case "MOVSB" -> generateMovs(params, 8);
       case "MOVSW" -> generateMovs(params, 16);
-      case "MUL" -> generateMul(params, bits);
-      case "NEG" -> generateNeg(params, bits);
-      case "NOT" -> generateNot(params, bits);
-      case "OR" -> generateAssignmentWith2Parameters("Alu.Or", "|", params, bits);
-      case "OUT" -> generateNoAssignmentWith2Parameters("Cpu.Out", params, bits);
-      case "OUTSB", "OUTSW" -> generateOuts(params, bits);
-      case "POP" -> params[0] + " = Stack.Pop();";
+      case "MUL" -> generateMul(params, parameter1Bits);
+      case "NEG" -> generateNeg(params, parameter1Bits);
+      case "NOT" -> generateNot(params, parameter1Bits);
+      case "OR" -> generateAssignmentWith2Parameters("Alu.Or", "|", params);
+      case "OUT" -> generateNoAssignmentWith2Parameters("Cpu.Out", params);
+      case "OUTSB", "OUTSW" -> generateOuts(params, parameter1Bits);
+      case "POP" -> generatePop(params, parameter1Bits);
       case "POPA" -> """
           DI = Stack.Pop();
           SI = Stack.Pop();
@@ -815,33 +945,38 @@ class InstructionGenerator {
           CX = Stack.Pop();
           AX = Stack.Pop();""";
       case "POPF" -> "FlagRegister = Stack.Pop();";
-      case "PUSH" -> "Stack.Push(" + registerHandler.substituteRegister(params[0]) + ");";
+      case "PUSH" -> generatePush(params, parameter1Bits);
       case "PUSHA" -> generatePushA();
       case "PUSHF" -> "Stack.Push(FlagRegister);";
-      case "RCL" -> generateAssignmentWith2Parameters("Alu.Rcl", null, params, bits);
-      case "RCR" -> generateAssignmentWith2Parameters("Alu.Rcr", null, params, bits);
+      case "RCL" -> generateAssignmentWith2Parameters("Alu.Rcl", null, params);
+      case "RCR" -> generateAssignmentWith2Parameters("Alu.Rcr", null, params);
       case "RET" -> "return NearRet();";
       case "RETF" -> "return FarRet();";
-      case "ROL" -> generateAssignmentWith2Parameters("Alu.Rol", null, params, bits);
-      case "ROR" -> generateAssignmentWith2Parameters("Alu.Ror", null, params, bits);
-      case "SAR" -> generateAssignmentWith2Parameters("Alu.Sar", null, params, bits);
-      case "SBB" -> generateAssignmentWith2Parameters("Alu.Sbb", null, params, bits);
+      case "ROL" -> generateAssignmentWith2Parameters("Alu.Rol", null, params);
+      case "ROR" -> generateAssignmentWith2Parameters("Alu.Ror", null, params);
+      case "SAR" -> generateAssignmentWith2Parameters("Alu.Sar", null, params);
+      case "SBB" -> generateAssignmentWith2Parameters("Alu.Sbb", null, params);
       case "SCASB" -> generateScas(params, 8);
       case "SCASW" -> generateScas(params, 16);
-      case "SHL" -> generateAssignmentWith2Parameters("Alu.Shl", "<<", params, bits);
-      case "SHR" -> generateAssignmentWith2Parameters("Alu.Shr", ">>", params, bits);
+      case "SHL" -> generateAssignmentWith2Parameters("Alu.Shl", "<<", params);
+      case "SHR" -> generateAssignmentWith2Parameters("Alu.Shr", ">>", params);
       case "STC" -> "CarryFlag = true;";
-      case "STD" -> "DirectiontFlag = true;";
+      case "STD" -> "DirectionFlag = true;";
       case "STI" -> "InterruptFlag = true;";
       case "STOSB" -> generateStos(params, 8);
       case "STOSW" -> generateStos(params, 16);
-      case "SUB" -> generateAssignmentWith2Parameters("Alu.Sub", "-", params, bits);
-      case "TEST" -> generateNoAssignmentWith2Parameters("Alu.Test", params, bits);
-      case "XCHG" -> generateXchg(params, bits);
-      case "XLAT" -> generateXlat(params, bits);
-      case "XOR" -> generateXor(params, bits);
+      case "SUB" -> generateAssignmentWith2Parameters("Alu.Sub", "-", params);
+      case "TEST" -> generateNoAssignmentWith2Parameters("Alu.And", params);
+      case "XCHG" -> generateXchg(params, parameter1Bits);
+      case "XLAT" -> generateXlat(params);
+      case "XOR" -> generateXor(params);
       default -> null;
     };
+  }
+
+  public static String generateFailAsUntested(String message, boolean quotes) {
+    String quote = quotes ? "\"" : "";
+    return "throw FailAsUntested(" + quote + message + quote + ");";
   }
 }
 
@@ -882,7 +1017,7 @@ class JumpCallTranslator {
     return label != null && label.getSymbolType() == SymbolType.LABEL;
   }
 
-  private String getLabelToAddress(SegmentedAddress address, boolean colon) {
+  public static String getLabelToAddress(SegmentedAddress address, boolean colon) {
     String colonString = colon ? ":" : "";
     return "label_" + Utils.toHexSegmentOffsetPhysical(address) + colonString;
   }
@@ -962,20 +1097,28 @@ class JumpCallTranslator {
   private String jumpToCaseBody(SegmentedAddress address) {
     ParsedFunction parsedFunction = parsedProgram.getFunctionAtSegmentedAddressEntryPoint(address);
     if (parsedFunction != null) {
-      return this.functionToDirectCSharpCallWithReturn(parsedFunction);
+      return this.functionToDirectCSharpCallWithReturn(parsedFunction, null);
+    } else {
+      parsedFunction = parsedProgram.getFunctionAtSegmentedAddressAny(address);
+      if (parsedFunction != null && !parsedFunction.equals(this.currentFunction)) {
+        return "// Extra function jump converted to function call\n"
+            + this.functionToDirectCSharpCallWithReturn(parsedFunction, address.toPhysical());
+      }
     }
-    return generateGoto(address);
+    String res = generateGoto(address);
+    if (res.startsWith("goto label_")) {
+      res += "\nbreak;";
+    }
+    return res;
   }
 
   private String generateGoto(SegmentedAddress target) {
     ParsedFunction function = parsedProgram.getFunctionAtSegmentedAddressEntryPoint(target);
-    if (function != null && !function.getEntrySegmentedAddress()
-        .equals(this.currentFunction.getEntrySegmentedAddress())) {
+    if (function != null && !function.equals(this.currentFunction)) {
       log.info("Converted jump to call");
       // If a function is found and it is not the entry point of the function we are in, change the jump to a function call
-      return "// Jump converted to function call\n" + functionToDirectCSharpCallWithReturn(function);
+      return "// Jump converted to function call\n" + functionToDirectCSharpCallWithReturn(function, null);
     }
-    String gotoComment = "";
     // check if target is a ret and inline it if it is the case
     ParsedInstruction instruction = parsedProgram.getInstructionAtSegmentedAddress(target);
     if (instruction != null) {
@@ -985,14 +1128,20 @@ class JumpCallTranslator {
         // Giving current fuction because the generated instruction is going to be generated in the function we currently are at
         InstructionGenerator generator =
             new InstructionGenerator(this.log, this.ghidraScript, this.parsedProgram, currentFunction, instruction,
-                false);
+                parameterTranslator.getGeneratedTempVars(), false);
         return comment + generator.convertInstructionToSpice86(false);
       }
     } else {
-      gotoComment =
-          "// Oops seems like this goto is going nowhere ... maybe it is in a function that could not be generated\n";
+      String label = getLabelToAddress(target, false);
+      return InstructionGenerator.generateFailAsUntested(
+          "Would have been a goto but label " + label + " does not exist", true);
     }
-    return gotoComment + "goto " + getLabelToAddress(target, false) + ";";
+    function = parsedProgram.getFunctionAtSegmentedAddressAny(target);
+    if (function != null && !function.equals(this.currentFunction)) {
+      return "// Extra function jump converted to function call\n"
+          + this.functionToDirectCSharpCallWithReturn(function, target.toPhysical());
+    }
+    return "goto " + getLabelToAddress(target, false) + ";";
   }
 
   public String generateCall(String param, boolean far) {
@@ -1026,7 +1175,7 @@ class JumpCallTranslator {
     String name = parsedFunction.getName();
     if (withReturn) {
       // Direct C# call, do not go through the Near/Far checks
-      return functionToDirectCSharpCallWithReturn(parsedFunction);
+      return functionToDirectCSharpCallWithReturn(parsedFunction, null);
     }
     String callType = far ? "Far" : "Near";
     int segment = this.parsedInstruction.getInstructionSegmentedAddress().getSegment();
@@ -1035,12 +1184,16 @@ class JumpCallTranslator {
     return callType + "Call(" + Utils.toHexWith0X(segment) + ", " + Utils.toHexWith0X(offset) + ", " + name + ");";
   }
 
-  public String functionToDirectCSharpCallWithReturn(ParsedFunction parsedFunction) {
-    return "return " + parsedFunction.getName() + "();";
+  public String functionToDirectCSharpCallWithReturn(ParsedFunction parsedFunction, Integer internalJumpAddress) {
+    String internalJumpAddressString = "0";
+    if (internalJumpAddress != null) {
+      internalJumpAddressString = Utils.toHexWith0X(internalJumpAddress);
+    }
+    return "return " + parsedFunction.getName() + "(" + internalJumpAddressString + ");";
   }
 
   private String noFunctionAtAddress(SegmentedAddress address) {
-    return "FailAsUntested(\"Could not find a valid function at address " + address + "\");";
+    return InstructionGenerator.generateFailAsUntested("Could not find a valid function at address " + address, true);
   }
 
   private String generateSwitchToIndirectTarget(String expression, boolean far, List<SegmentedAddress> targets,
@@ -1048,8 +1201,7 @@ class JumpCallTranslator {
     String target = far ?
         parameterTranslator.toCsIpPointerValueInMemory(expression) :
         parameterTranslator.toIpPointerValueInMemory(expression);
-    String tempVarName =
-        "targetAddress_" + Utils.toHexSegmentOffset(this.parsedInstruction.getInstructionSegmentedAddress());
+    String tempVarName = parameterTranslator.generateTempVar("targetAddress_");
 
     StringBuilder res = new StringBuilder("uint " + tempVarName + " = (uint)(" + target + ");\n");
     res.append("switch(" + tempVarName + ") {\n");
@@ -1060,8 +1212,9 @@ class JumpCallTranslator {
                 + "\n");
       }
     }
-    res.append(
-        "  default: FailAsUntested(\"" + errorInCaseNotFound + "\" + " + tempVarName + ");\n" + "    break;\n" + "}");
+    String failAsUntested =
+        InstructionGenerator.generateFailAsUntested("\"" + errorInCaseNotFound + "\" + " + tempVarName, false);
+    res.append("  default: " + failAsUntested + "\n" + "    break;\n" + "}");
     return res.toString();
   }
 }
@@ -1073,6 +1226,7 @@ class ParsedProgram {
   private final JumpsAndCalls jumpsAndCalls;
   private final Map<Integer, ParsedFunction> instructionAddressToFunction = new HashMap<>();
   private final Map<Integer, ParsedInstruction> instructionAddressToInstruction = new HashMap<>();
+  private final Map<SegmentedAddress, Set<SegmentedAddress>> jumpsFromOutsidePerFunction = new HashMap<>();
   // Sorted by entry address
   private final Map<Integer, ParsedFunction> entryPoints = new TreeMap<>();
 
@@ -1085,6 +1239,10 @@ class ParsedProgram {
     return jumpsAndCalls;
   }
 
+  public Set<SegmentedAddress> getJumpsFromOutsideForFunction(SegmentedAddress address) {
+    return jumpsFromOutsidePerFunction.get(address);
+  }
+
   public Map<Integer, ParsedFunction> getEntryPoints() {
     return entryPoints;
   }
@@ -1093,19 +1251,27 @@ class ParsedProgram {
     return instructionAddressToInstruction.get(address.toPhysical());
   }
 
-  public ParsedFunction getFunctionAtSegmentedAddress(SegmentedAddress address) {
-    return instructionAddressToFunction.get(address.toPhysical());
+  public ParsedFunction getFunctionAtSegmentedAddressAny(SegmentedAddress address) {
+    return getFunctionAtAddressAny(address.toPhysical());
+  }
+
+  public ParsedFunction getFunctionAtGhidraAddressAny(Address address) {
+    return getFunctionAtAddressAny((int)address.getUnsignedOffset());
+  }
+
+  public ParsedFunction getFunctionAtAddressAny(int address) {
+    return instructionAddressToFunction.get(address);
   }
 
   public ParsedFunction getFunctionAtSegmentedAddressEntryPoint(SegmentedAddress address) {
-    return getFunctionAtAddress(address.toPhysical());
+    return getFunctionAtAddressEntryPoint(address.toPhysical());
   }
 
   public ParsedFunction getFunctionAtGhidraAddressEntryPoint(Address address) {
-    return getFunctionAtAddress((int)address.getUnsignedOffset());
+    return getFunctionAtAddressEntryPoint((int)address.getUnsignedOffset());
   }
 
-  private ParsedFunction getFunctionAtAddress(int address) {
+  private ParsedFunction getFunctionAtAddressEntryPoint(int address) {
     return entryPoints.get(address);
   }
 
@@ -1121,6 +1287,22 @@ class ParsedProgram {
           mapInstructionByInstructionAddress(parsedFunction.getInstructionsBeforeEntry()));
       instructionAddressToInstruction.putAll(
           mapInstructionByInstructionAddress(parsedFunction.getInstructionsAfterEntry()));
+    }
+    for (Map.Entry<Integer, List<SegmentedAddress>> jumpFromTo : jumpsAndCalls.getJumpsFromTo().entrySet()) {
+      ParsedFunction fromFunction = getFunctionAtAddressAny(jumpFromTo.getKey());
+      if (fromFunction == null) {
+        continue;
+      }
+      for (SegmentedAddress toAddress : jumpFromTo.getValue()) {
+        ParsedFunction toFunction = getFunctionAtSegmentedAddressAny(toAddress);
+        if (toFunction == null || toFunction.equals(fromFunction)) {
+          continue;
+        }
+        // target function -> list of target addresses inside it for jumps
+        Set<SegmentedAddress> jumpsFromOutsideForFunction =
+            jumpsFromOutsidePerFunction.computeIfAbsent(fromFunction.getEntrySegmentedAddress(), a -> new HashSet<>());
+        jumpsFromOutsideForFunction.add(toAddress);
+      }
     }
   }
 
@@ -1151,6 +1333,10 @@ class JumpsAndCalls {
     callsJumpsFromTo.putAll(callsFromTo);
     callsJumpsFromTo.putAll(jumpsFromTo);
     jumpTargets = jumpsFromTo.values().stream().flatMap(Collection::stream).collect(Collectors.toSet());
+  }
+
+  public Map<Integer, List<SegmentedAddress>> getJumpsFromTo() {
+    return jumpsFromTo;
   }
 
   public Map<Integer, List<SegmentedAddress>> getCallsJumpsFromTo() {
@@ -1228,15 +1414,16 @@ class ParsedInstruction {
   private static final Set<Integer> STRING_OPCODES_CHECKING_ZERO_FLAG = new HashSet<>(
       Arrays.asList(0xA6, 0xA7, 0xAE, 0xAF));
   private static final Set<Integer> OPCODES_ON_8_BITS = new HashSet<>(Arrays.asList(
-      0x00, 0x02, 0x04, 0x08, 0x0A, 0x0C, 0x10, 0x12, 0x14, 0x18, 0x1A, 0x1C, 0x20, 0x22, 0x24, 0x27,
-      0x28, 0x2A, 0x2C, 0x2F, 0x30, 0x32, 0x34, 0x37, 0x38, 0x3A, 0x3C, 0x3F, 0x6B, 0x6C, 0x6E, 0x80, 0x82, 0x83,
-      0x84, 0x86, 0x88, 0x8A, 0xA0, 0xA2, 0xA4, 0xA6, 0xA8, 0xAA, 0xAC, 0xAE, 0x6C, 0x6E, 0xB0, 0xB1, 0xB2, 0xB3,
+      0x00, 0x02, 0x04, 0x08, 0x0A, 0x0C, 0x10, 0x12, 0x14, 0x18, 0x1A, 0x1C, 0x20, 0x22, 0x24, 0x27, 0x28, 0x2A, 0x2C,
+      0x2F, 0x30, 0x32, 0x34, 0x37, 0x38, 0x3A, 0x3C, 0x3F, 0x6A, 0x6B, 0x6C, 0x6E, 0x80, 0x82, 0x84, 0x86, 0x88, 0x8A,
+      0xA0,
+      0xA2, 0xA4, 0xA6, 0xA8, 0xAA, 0xAC, 0xAE, 0x6C, 0x6E, 0xB0, 0xB1, 0xB2, 0xB3,
       0xB4, 0xB5, 0xB6, 0xB7, 0xC0, 0xC6, 0xD0, 0xD2, 0xD4, 0xD5, 0xD7, 0xE4, 0xE6, 0xEC, 0xEE, 0xF6, 0xFE));
   private static final Set<Integer> OPCODES_ON_16_BITS = new HashSet<>(Arrays.asList(
       0x01, 0x03, 0x05, 0x06, 0x07, 0x09, 0x0B, 0x0D, 0x0E, 0x11, 0x13, 0x15, 0x16, 0x17, 0x19, 0x1B, 0x1D, 0x1E, 0x1F,
       0x21, 0x23, 0x25, 0x29, 0x2B, 0x2D, 0x31, 0x33, 0x35, 0x39, 0x3B, 0x3D, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46,
       0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
-      0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x68, 0x69, 0x6D, 0x6F, 0x81, 0x85, 0x87, 0x89, 0x8B, 0x8C,
+      0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x68, 0x69, 0x6D, 0x6F, 0x81, 0x83, 0x85, 0x87, 0x89, 0x8B, 0x8C,
       0x8D, 0x8E, 0x8F, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x9C, 0x9D, 0xA1, 0xA3, 0xA9, 0xB8, 0xB9, 0xBA, 0xBB,
       0xBC, 0xBD, 0xBE, 0xBF, 0xC1, 0xC7, 0xD1, 0xD3, 0xE5, 0xE7, 0xED, 0xEF, 0xF7, 0xFF));
   private static final Set<Integer> PREFIXES_OPCODES = new HashSet<>(
@@ -1265,7 +1452,8 @@ class ParsedInstruction {
 
   private transient Instruction instruction;
   private SegmentedAddress instructionSegmentedAddress;
-  private Integer bitLength;
+  private Integer parameter1BitLength;
+  private Integer parameter2BitLength;
   private List<Integer> prefixes = new ArrayList<>();
   private String segment;
   private int opCode;
@@ -1299,8 +1487,12 @@ class ParsedInstruction {
     return instructionSegmentedAddress;
   }
 
-  public Integer getBitLength() {
-    return bitLength;
+  public Integer getParameter1BitLength() {
+    return parameter1BitLength;
+  }
+
+  public Integer getParameter2BitLength() {
+    return parameter2BitLength;
   }
 
   public List<Integer> getPrefixes() {
@@ -1398,9 +1590,15 @@ class ParsedInstruction {
     }
     res.opCode = opCode;
     if (OPCODES_ON_8_BITS.contains(opCode)) {
-      res.bitLength = 8;
+      res.parameter1BitLength = 8;
     } else if (OPCODES_ON_16_BITS.contains(opCode)) {
-      res.bitLength = 16;
+      res.parameter1BitLength = 16;
+    }
+    if (opCode == 0x83) {
+      //GRP1 operations with this opcode have param2 sign extended to match param1 which is 16 bits
+      res.parameter2BitLength = 8;
+    } else {
+      res.parameter2BitLength = res.parameter1BitLength;
     }
     if (OPCODES_WITH_MODRM.contains(opCode)) {
       res.modRmByte = bytesReader.nextUint8();
@@ -1498,7 +1696,8 @@ class Log implements Closeable {
     }
   }
 
-  @Override public void close() {
+  @Override
+  public void close() {
     printWriterLogs.close();
   }
 }
@@ -1641,6 +1840,21 @@ class ParsedFunction {
   }
 
   @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+
+    return (obj instanceof ParsedFunction other)
+        && other.entrySegmentedAddress.equals(this.entrySegmentedAddress);
+  }
+
+  @Override
+  public int hashCode() {
+    return entrySegmentedAddress.hashCode();
+  }
+
+  @Override
   public String toString() {
     return new Gson().toJson(this);
   }
@@ -1696,11 +1910,16 @@ class SegmentedAddress implements Comparable<SegmentedAddress> {
 }
 
 class Utils {
+  private static final int SEGMENT_SIZE = 0x10000;
+
   public static String joinLines(List<String> res) {
     return String.join("\n", res);
   }
 
   public static String indent(String input, int indent) {
+    if (input.isEmpty()) {
+      return "";
+    }
     String indentString = " ".repeat(indent);
     return indentString + input.replaceAll("\n", "\n" + indentString);
   }
@@ -1782,5 +2001,13 @@ class Utils {
 
   public static int getUint16(byte[] memory, int address) {
     return uint16(uint8(memory[address]) | (uint8(memory[address + 1]) << 8));
+  }
+
+  public static int toAbsoluteSegment(int physicalAddress) {
+    return ((physicalAddress / SEGMENT_SIZE) * SEGMENT_SIZE) >>> 4;
+  }
+
+  public static int toAbsoluteOffset(int physicalAddress) {
+    return physicalAddress - (physicalAddress / SEGMENT_SIZE) * SEGMENT_SIZE;
   }
 }

@@ -76,7 +76,7 @@ public partial class CSharpOverrideHelper {
     public bool SignFlag { get => State.SignFlag; set => State.SignFlag = value; }
     public bool TrapFlag { get => State.TrapFlag; set => State.TrapFlag = value; }
     public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
-
+    public ushort FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
 
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
@@ -86,7 +86,7 @@ public partial class CSharpOverrideHelper {
         this.Machine = machine;
     }
 
-    public void DefineFunction(ushort segment, ushort offset, string name, Func<Action>? @override = null) {
+    public void DefineFunction(ushort segment, ushort offset, string name, Func<Action>? overrideFunc = null) {
         SegmentedAddress address = new(segment, offset);
         if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation) && existingFunctionInformation.HasOverride) {
             string error = $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
@@ -95,7 +95,8 @@ public partial class CSharpOverrideHelper {
             }
             throw new UnrecoverableException(error);
         }
-        FunctionInformation functionInformation = new(address, name, @override);
+        String a = nameof(overrideFunc);
+        FunctionInformation functionInformation = new(address, name, overrideFunc);
         _functionInformations.Add(address, functionInformation);
     }
 
@@ -172,7 +173,7 @@ public partial class CSharpOverrideHelper {
         if (actualReturnCs != expectedReturnCs || actualReturnIp != expectedReturnIp) {
             SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
             SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
-            this.FailAsUntested("The original code is trying to jump via call stack modification. Expected to return at: " + expectedReturn + " but actually returning at: " + actualReturn + " Stack address before: " + stackAddressBefore + " Stack address after: " + stackAddressAfter);
+            throw this.FailAsUntested("The original code is trying to jump via call stack modification. Expected to return at: " + expectedReturn + " but actually returning at: " + actualReturn + " Stack address before: " + stackAddressBefore + " Stack address after: " + stackAddressAfter);
         }
     }
 
@@ -206,7 +207,7 @@ public partial class CSharpOverrideHelper {
         ushort foundOffset = Memory.GetUint16(address);
         ushort foundSegment = Memory.GetUint16(address + 2);
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
-            this.FailAsUntested($"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");
+            throw this.FailAsUntested($"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");
         }
     }
 
@@ -214,13 +215,13 @@ public partial class CSharpOverrideHelper {
     /// Call this in your override when you re-implement a function with a branch that seems never
     /// reached.
     /// </summary>
-    protected void FailAsUntested(string message) {
+    protected UnrecoverableException FailAsUntested(string message) {
         string dumpedCallStack = Machine.DumpCallStack();
         string error = $"Untested code reached, please tell us how to reach this state.Here is the message: {message} Here is the call stack: {dumpedCallStack}";
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
             _logger.Error("Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}", message, Machine.DumpCallStack());
         }
-        throw new UnrecoverableException(error);
+        return new UnrecoverableException(error);
     }
 
     protected void Interrupt(int vectorNumber) {
