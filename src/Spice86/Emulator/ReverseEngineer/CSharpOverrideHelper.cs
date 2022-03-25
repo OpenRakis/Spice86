@@ -32,7 +32,7 @@ public partial class CSharpOverrideHelper {
 
     private readonly string _prefix;
 
-    public Alu Alu => Cpu.Alu;
+    protected Alu Alu => Cpu.Alu;
 
 
     public ushort AX { get => State.AX; set => State.AX = value; }
