@@ -119,7 +119,7 @@ class ProgramGenerator {
       SegmentedAddress address = parsedFunction.getEntrySegmentedAddress();
       res.append(
           "  DefineFunction(" + Utils.toHexWith0X(address.getSegment()) + ", " + Utils.toHexWith0X(address.getOffset())
-              + ", \"" + name + "\", " + name + ");");
+              + ", " + name + ");");
       res.append('\n');
     }
     res.append("}\n");

@@ -93,11 +93,14 @@ public class GhidraSymbolsDumper {
             // Not a function line
             return null;
         }
-        string nameWithAddress = split[0];
+        return NameToFunctionInformation(split[0]);
+    }
+
+    public static FunctionInformation? NameToFunctionInformation(string nameWithAddress) {
         string[] nameSplit = nameWithAddress.Split("_");
         if (nameSplit.Length < 4) {
             // Format is not correct, we can't use this line
-            _logger.Information("Cannot parse line {Line} into a function, segmented address missing", line);
+            _logger.Information("Cannot parse function name {nameWithAddress} into a function, segmented address missing", nameWithAddress);
             return null;
         }
         SegmentedAddress address;
@@ -106,7 +109,7 @@ public class GhidraSymbolsDumper {
             ushort offset = ConvertUtils.ParseHex16(nameSplit[nameSplit.Length - 2]);
             address = new SegmentedAddress(segment, offset);
         } catch (FormatException exception) {
-            _logger.Information("Cannot parse line {Line} into a function, the last 3 underscore segments of the name are not hexadecimal values", line);
+            _logger.Information("Cannot parse function name {nameWithAddress} into a function, the last 3 underscore segments of the name are not hexadecimal values", nameWithAddress);
             return null;
         }
         string nameWithoutAddress = string.Join("_", nameSplit.Take(nameSplit.Length - 3));

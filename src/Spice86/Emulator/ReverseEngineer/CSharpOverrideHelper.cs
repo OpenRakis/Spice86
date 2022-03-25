@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Emulator.ReverseEngineer;
 
+using Function.Dump;
+
 using Serilog;
 
 using Spice86.Emulator.Callback;
@@ -86,18 +88,39 @@ public partial class CSharpOverrideHelper {
         this.Machine = machine;
     }
 
-    public void DefineFunction(ushort segment, ushort offset, string name, Func<Action>? overrideFunc = null) {
+    public void DefineFunction(ushort segment, ushort offset, string name) {
+        SegmentedAddress address = CreateNewFunctionAddress(segment, offset);
+        FunctionInformation functionInformation = new(address, name, null);
+        _functionInformations.Add(address, functionInformation);
+    }
+
+    public void DefineFunction(ushort segment, ushort offset, Func<Action> overrideFunc, string? name = null) {
+        SegmentedAddress address = CreateNewFunctionAddress(segment, offset);
+        String functionName;
+        if (name != null) {
+            functionName = name;
+        } else {
+            String methodName = overrideFunc.Method.Name;
+            FunctionInformation? parsedFunctionInformation = GhidraSymbolsDumper.NameToFunctionInformation(methodName);
+            if (parsedFunctionInformation == null) {
+                throw new UnrecoverableException("Cannot parse " + methodName + " into a spice86 function name as format is not correct.");
+            }
+            functionName = parsedFunctionInformation.Name;
+        }
+        FunctionInformation functionInformation = new(address, functionName, overrideFunc);
+        _functionInformations.Add(address, functionInformation);
+    }
+
+    private SegmentedAddress CreateNewFunctionAddress(ushort segment, ushort offset) {
         SegmentedAddress address = new(segment, offset);
         if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation) && existingFunctionInformation.HasOverride) {
             string error = $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existingFunctionInformation.Name, name);
+                _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.", address, existingFunctionInformation.Name);
             }
             throw new UnrecoverableException(error);
         }
-        String a = nameof(overrideFunc);
-        FunctionInformation functionInformation = new(address, name, overrideFunc);
-        _functionInformations.Add(address, functionInformation);
+        return address;
     }
 
     public void DefineStaticAddress(ushort segment, ushort offset, string name) {
@@ -111,7 +134,7 @@ public partial class CSharpOverrideHelper {
         if (recorder.Names.TryGetValue(physicalAddress, out var existing)) {
             string error = $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error("There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it as {@Name}. Please check your mappings for duplicates.", address, existing, name);
+                _logger.Error("There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it. Please check your mappings for duplicates.", address, existing);
             }
             throw new UnrecoverableException(error);
         }
@@ -198,7 +221,7 @@ public partial class CSharpOverrideHelper {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
             });
-            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}", runnable);
+            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, runnable, $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}");
         }
     }
 
