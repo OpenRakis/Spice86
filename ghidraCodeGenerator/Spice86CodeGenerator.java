@@ -56,7 +56,7 @@ public class Spice86CodeGenerator extends GhidraScript {
       FunctionIterator functionIterator = listing.getFunctions(true);
       List<ParsedFunction> parsedFunctions = StreamSupport.stream(functionIterator.spliterator(), false)
           .map(f -> ParsedFunction.createParsedFunction(log, this, f)).filter(Objects::nonNull).toList();
-      ParsedProgram parsedProgram = new ParsedProgram(parsedFunctions, jumpsAndCalls);
+      ParsedProgram parsedProgram = ParsedProgram.createParsedProgram(log, parsedFunctions, jumpsAndCalls);
       log.info("Finished parsing.");
       generateProgram(log, parsedProgram);
     }
@@ -91,7 +91,7 @@ class ProgramGenerator {
   }
 
   public String outputCSharp() {
-    StringBuilder res = new StringBuilder("namespace generated;\n\n");
+    StringBuilder res = new StringBuilder("namespace Cryogenic.Generated;\n\n");
     res.append("""
         using Spice86.Emulator.Function;
         using Spice86.Emulator.Memory;
@@ -157,45 +157,59 @@ class FunctionGenerator {
     List<ParsedInstruction> instructionsBeforeEntry = parsedFunction.getInstructionsBeforeEntry();
     List<ParsedInstruction> instructionsAfterEntry = parsedFunction.getInstructionsAfterEntry();
     Set<String> generatedTempVars = new HashSet<>();
-    res.append(Utils.indent(generateGotoFromOutside(), 2) + "\n");
+    SegmentedAddress firstInstructionOfBeforeSectionAddress = null;
     if (!instructionsBeforeEntry.isEmpty()) {
-      SegmentedAddress firstInstruction = instructionsBeforeEntry.get(0).getInstructionSegmentedAddress();
-      res.append("  if(gotoTarget == " + Utils.toHexWith0X(firstInstruction.toPhysical()) + ") {\n");
-      writeInstructions(res, instructionsBeforeEntry, 4, generatedTempVars, false);
-      res.append("  }\n");
+      firstInstructionOfBeforeSectionAddress = instructionsBeforeEntry.get(0).getInstructionSegmentedAddress();
+    }
+    String gotosFromOutsideHandlingSection =
+        generateGotoFromOutsideAndInstructionSkip(firstInstructionOfBeforeSectionAddress);
+    if (!gotosFromOutsideHandlingSection.isEmpty()) {
+      res.append(Utils.indent(gotosFromOutsideHandlingSection, 2) + "\n");
+    }
+    if (!instructionsBeforeEntry.isEmpty()) {
+      /*SegmentedAddress firstInstruction = instructionsBeforeEntry.get(0).getInstructionSegmentedAddress();
+      res.append("  if(gotoTarget != " + Utils.toHexWith0X(firstInstruction.toPhysical()) + ") {\n");
+      res.append("    // Skipping code before entry point\n");
+      res.append("    goto entry;\n");
+      res.append("  }\n");*/
+      writeInstructions(res, instructionsBeforeEntry, 2, generatedTempVars, false);
+      res.append("  entry:\n");
     }
     writeInstructions(res, instructionsAfterEntry, 2, generatedTempVars, true);
     res.append("}\n");
     return res.toString();
   }
 
-  private String generateGotoFromOutside() {
-    Set<SegmentedAddress> jumpTargets =
-        parsedProgram.getJumpsFromOutsideForFunction(parsedFunction.getEntrySegmentedAddress());
-    if (CollectionUtils.isEmpty(jumpTargets)) {
+  private String generateGotoFromOutsideAndInstructionSkip(SegmentedAddress firstInstructionOfBeforeSectionAddress) {
+    Collection<SegmentedAddress> jumpTargets = CollectionUtils.emptyIfNull(
+        parsedProgram.getJumpsFromOutsideForFunction(parsedFunction.getEntrySegmentedAddress()));
+    if (firstInstructionOfBeforeSectionAddress == null && jumpTargets.isEmpty()) {
       return "";
-    }
-    SegmentedAddress firstInstruction = null;
-    List<ParsedInstruction> instructionsBeforeEntry = parsedFunction.getInstructionsBeforeEntry();
-    if (!instructionsBeforeEntry.isEmpty()) {
-      firstInstruction = instructionsBeforeEntry.get(0).getInstructionSegmentedAddress();
     }
     StringBuilder res = new StringBuilder("switch(gotoTarget) {\n");
     for (SegmentedAddress target : jumpTargets) {
-      if (target.equals(firstInstruction)) {
+      if (target.equals(firstInstructionOfBeforeSectionAddress)) {
+        // Handled separately, do not do double case
         continue;
       }
       res.append(
           "  case " + Utils.toHexWith0X(target.toPhysical()) + ": goto " + JumpCallTranslator.getLabelToAddress(target,
               false) + ";break;\n");
     }
-    if (firstInstruction != null) {
-      res.append("  case " + Utils.toHexWith0X(firstInstruction.toPhysical()) + ": break;\n");
+    if (firstInstructionOfBeforeSectionAddress != null) {
+      // instructions before entry point are just after this switch
+      res.append("  case " + Utils.toHexWith0X(firstInstructionOfBeforeSectionAddress.toPhysical()) + ": break;\n");
+      // default address 0 is for entry point, goto there as there are instructions between
+      res.append("  case 0: goto entry; break; //\n");
+    } else {
+      // default address 0 is for entry point, instructions are just after the switch
+      res.append("  case 0: break;\n");
     }
-    res.append("  case 0: break;\n");
-
-    res.append("  default: " + InstructionGenerator.generateFailAsUntested(
-        "\"Could not find any label from outside with address \" + gotoTarget", false) + "\n");
+    if (!jumpTargets.isEmpty()) {
+      // Only makes sense to generate this when there are labels accessible from outside
+      res.append("  default: " + InstructionGenerator.generateFailAsUntested(
+          "\"Could not find any label from outside with address \" + gotoTarget", false) + "\n");
+    }
     res.append("}");
     return res.toString();
   }
@@ -205,11 +219,11 @@ class FunctionGenerator {
     Iterator<ParsedInstruction> instructionIterator = instructions.iterator();
     while (instructionIterator.hasNext()) {
       ParsedInstruction parsedInstruction = instructionIterator.next();
-      boolean isLast = !instructionIterator.hasNext();
       InstructionGenerator instructionGenerator =
           new InstructionGenerator(log, ghidraScript, parsedProgram, parsedFunction, parsedInstruction,
-              generatedTempVars, isLast);
+              generatedTempVars);
       stringBuilder.append(Utils.indent(instructionGenerator.convertInstructionToSpice86(true), indent) + "\n");
+      boolean isLast = !instructionIterator.hasNext();
       if (isLast && returnExpected && !instructionGenerator.isFunctionReturn()) {
         // Last instruction should have been a return, but it is not.
         // It means the ASM code will continue to the next function. Generate a function call if possible.
@@ -240,7 +254,6 @@ class FunctionGenerator {
     return InstructionGenerator.generateFailAsUntested(
         "Function does not end with return and no other function found after the body at address "
             + Utils.toHexWith0X(address.getUnsignedOffset()), true);
-
   }
 }
 
@@ -548,8 +561,7 @@ class InstructionGenerator {
   }
 
   public InstructionGenerator(Log log, GhidraScript ghidraScript, ParsedProgram parsedProgram,
-      ParsedFunction currentFunction, ParsedInstruction parsedInstruction, Set<String> generatedTempVars,
-      boolean isLast) {
+      ParsedFunction currentFunction, ParsedInstruction parsedInstruction, Set<String> generatedTempVars) {
     SegmentedAddress instructionSegmentedAddress = parsedInstruction.getInstructionSegmentedAddress();
     this.log = log;
     this.registerHandler = new RegisterHandler(log, instructionSegmentedAddress.getSegment());
@@ -558,7 +570,7 @@ class InstructionGenerator {
     this.instruction = parsedInstruction.getInstruction();
     this.jumpCallTranslator =
         new JumpCallTranslator(log, ghidraScript, parameterTranslator, parsedProgram, currentFunction,
-            parsedInstruction, isLast);
+            parsedInstruction);
   }
 
   public String convertInstructionToSpice86(boolean generateLabel) {
@@ -573,7 +585,9 @@ class InstructionGenerator {
     String instructionString =
         convertInstructionWithPrefix(parsedInstruction.getMnemonic(), parsedInstruction.getPrefix(),
             parsedInstruction.getParameters());
-    isFunctionReturn = instructionString.contains("return ") && !(instructionString.contains("if") || instructionString.contains("switch"));
+    isFunctionReturn =
+        instructionString.contains("return ") && !(instructionString.contains("if") || instructionString.contains(
+            "switch"));
     if (generateLabel) {
       return label + instructionString;
     }
@@ -988,11 +1002,9 @@ class JumpCallTranslator {
   private final ParsedInstruction parsedInstruction;
   private final SegmentedAddress instructionSegmentedAddress;
   private final ParsedFunction currentFunction;
-  private final boolean isLast;
 
   public JumpCallTranslator(Log log, GhidraScript ghidraScript, ParameterTranslator parameterTranslator,
-      ParsedProgram parsedProgram, ParsedFunction currentFunction, ParsedInstruction parsedInstruction,
-      boolean isLast) {
+      ParsedProgram parsedProgram, ParsedFunction currentFunction, ParsedInstruction parsedInstruction) {
     this.log = log;
     this.ghidraScript = ghidraScript;
     this.parsedProgram = parsedProgram;
@@ -1000,7 +1012,6 @@ class JumpCallTranslator {
     this.parameterTranslator = parameterTranslator;
     this.parsedInstruction = parsedInstruction;
     this.instructionSegmentedAddress = parsedInstruction.getInstructionSegmentedAddress();
-    this.isLast = isLast;
   }
 
   public String getLabel() {
@@ -1014,7 +1025,7 @@ class JumpCallTranslator {
 
   private boolean hasGhidraLabel() {
     Symbol label = ghidraScript.getSymbolAt(ghidraScript.toAddr(this.instructionSegmentedAddress.toPhysical()));
-    return label != null && label.getSymbolType() == SymbolType.LABEL;
+    return label != null && (label.getSymbolType() == SymbolType.LABEL || label.getSymbolType() == SymbolType.FUNCTION);
   }
 
   public static String getLabelToAddress(SegmentedAddress address, boolean colon) {
@@ -1112,35 +1123,60 @@ class JumpCallTranslator {
     return res;
   }
 
-  private String generateGoto(SegmentedAddress target) {
-    ParsedFunction function = parsedProgram.getFunctionAtSegmentedAddressEntryPoint(target);
-    if (function != null && !function.equals(this.currentFunction)) {
+  private String attemptConvertJumpToFunctionCall(ParsedFunction function, Integer internalJumpAddress) {
+    String extra = internalJumpAddress == null ? "" : "extra ";
+    if (function == null) {
+      log.info("Could not convert jump to " + extra + "call because function at target is null");
+    } else if (function.equals(this.currentFunction)) {
+      log.info(
+          "Could not convert jump to " + extra + "call because function at target is the current function "
+              + function.getName());
+    } else {
       log.info("Converted jump to call");
-      // If a function is found and it is not the entry point of the function we are in, change the jump to a function call
-      return "// Jump converted to function call\n" + functionToDirectCSharpCallWithReturn(function, null);
+      // If a function is found, change the jump to a function call
+      return "// Jump converted to " + extra + "function call\n" + functionToDirectCSharpCallWithReturn(function,
+          internalJumpAddress);
     }
-    // check if target is a ret and inline it if it is the case
+    return null;
+  }
+
+  private String inlineJumpOrRet(ParsedInstruction instruction) {
+    String mnemonic = instruction.getMnemonic();
+    if (instruction.isUnconditionalJump() || instruction.isRet()) {
+      String comment = "// " + this.parsedInstruction.getMnemonic() + " target is " + mnemonic + ", inlining.\n";
+      // Giving current function because the generated instruction is going to be generated in the function we currently are at
+      InstructionGenerator generator =
+          new InstructionGenerator(this.log, this.ghidraScript, this.parsedProgram, currentFunction, instruction,
+              parameterTranslator.getGeneratedTempVars());
+      return comment + generator.convertInstructionToSpice86(false);
+    }
+    return null;
+  }
+
+  private String generateGoto(SegmentedAddress target) {
+    // check if target is a ret or another jump, and inline it if it is the case
     ParsedInstruction instruction = parsedProgram.getInstructionAtSegmentedAddress(target);
     if (instruction != null) {
-      String mnemonic = instruction.getMnemonic();
-      if (instruction.isUnconditionalJump() || instruction.isRet()) {
-        String comment = "// " + this.parsedInstruction.getMnemonic() + " target is " + mnemonic + ", inlining.\n";
-        // Giving current fuction because the generated instruction is going to be generated in the function we currently are at
-        InstructionGenerator generator =
-            new InstructionGenerator(this.log, this.ghidraScript, this.parsedProgram, currentFunction, instruction,
-                parameterTranslator.getGeneratedTempVars(), false);
-        return comment + generator.convertInstructionToSpice86(false);
+      String inline = inlineJumpOrRet(instruction);
+      if (inline != null) {
+        return inline;
       }
     } else {
       String label = getLabelToAddress(target, false);
       return InstructionGenerator.generateFailAsUntested(
-          "Would have been a goto but label " + label + " does not exist", true);
+          "Would have been a goto but label " + label + " does not exist because no instruction was found there", true);
     }
-    function = parsedProgram.getFunctionAtSegmentedAddressAny(target);
-    if (function != null && !function.equals(this.currentFunction)) {
-      return "// Extra function jump converted to function call\n"
-          + this.functionToDirectCSharpCallWithReturn(function, target.toPhysical());
+    String convertedCall =
+        attemptConvertJumpToFunctionCall(parsedProgram.getFunctionAtSegmentedAddressEntryPoint(target), null);
+    if (convertedCall != null) {
+      return convertedCall;
     }
+    String convertedExtraCall =
+        attemptConvertJumpToFunctionCall(parsedProgram.getFunctionAtSegmentedAddressAny(target), target.toPhysical());
+    if (convertedExtraCall != null) {
+      return convertedExtraCall;
+    }
+    log.info("Converting jump to regular goto");
     return "goto " + getLabelToAddress(target, false) + ";";
   }
 
@@ -1223,16 +1259,71 @@ class JumpCallTranslator {
  * Classes below represent an interpretation of what ghidra saw. They are used by the generator as a basis for code generation.
  */
 class ParsedProgram {
-  private final JumpsAndCalls jumpsAndCalls;
-  private final Map<Integer, ParsedFunction> instructionAddressToFunction = new HashMap<>();
-  private final Map<Integer, ParsedInstruction> instructionAddressToInstruction = new HashMap<>();
-  private final Map<SegmentedAddress, Set<SegmentedAddress>> jumpsFromOutsidePerFunction = new HashMap<>();
+  private JumpsAndCalls jumpsAndCalls;
+  private Map<Integer, ParsedFunction> instructionAddressToFunction = new HashMap<>();
+  private Map<Integer, ParsedInstruction> instructionAddressToInstruction = new HashMap<>();
+  private Map<SegmentedAddress, Set<SegmentedAddress>> jumpsFromOutsidePerFunction = new HashMap<>();
   // Sorted by entry address
-  private final Map<Integer, ParsedFunction> entryPoints = new TreeMap<>();
+  private Map<Integer, ParsedFunction> entryPoints = new TreeMap<>();
 
-  public ParsedProgram(List<ParsedFunction> functions, JumpsAndCalls jumpsAndCalls) {
-    this.jumpsAndCalls = jumpsAndCalls;
-    this.addFunctions(functions);
+  public static ParsedProgram createParsedProgram(Log log, List<ParsedFunction> functions,
+      JumpsAndCalls jumpsAndCalls) {
+    ParsedProgram res = new ParsedProgram();
+    res.jumpsAndCalls = jumpsAndCalls;
+    res.entryPoints.putAll(
+        functions.stream().collect(Collectors.toMap(f -> f.getEntrySegmentedAddress().toPhysical(), f -> f)));
+    for (ParsedFunction parsedFunction : functions) {
+      // Map address of instruction -> function
+      res.instructionAddressToFunction.putAll(
+          mapFunctionByInstructionAddress(parsedFunction, parsedFunction.getInstructionsBeforeEntry()));
+      res.instructionAddressToFunction.putAll(
+          mapFunctionByInstructionAddress(parsedFunction, parsedFunction.getInstructionsAfterEntry()));
+      // Map address of instruction -> instruction
+      res.instructionAddressToInstruction.putAll(
+          mapInstructionByInstructionAddress(parsedFunction.getInstructionsBeforeEntry()));
+      res.instructionAddressToInstruction.putAll(
+          mapInstructionByInstructionAddress(parsedFunction.getInstructionsAfterEntry()));
+    }
+    // Map address of function -> Set of externally reachable labels
+    for (Map.Entry<Integer, List<SegmentedAddress>> jumpFromTo : jumpsAndCalls.getJumpsFromTo().entrySet()) {
+      Integer fromAddress = jumpFromTo.getKey();
+      ParsedFunction fromFunction = res.getFunctionAtAddressAny(fromAddress);
+      if (fromFunction == null) {
+        log.warning("No function found at address " + fromAddress);
+        continue;
+      }
+      for (SegmentedAddress toAddress : jumpFromTo.getValue()) {
+        ParsedFunction toFunction = res.getFunctionAtSegmentedAddressAny(toAddress);
+        if (toFunction == null) {
+          log.warning("No target function found at address " + toAddress);
+          continue;
+        }
+        if (toFunction.equals(fromFunction)) {
+          // filter out self
+          continue;
+        }
+        // At this point toAddress belongs to toFunction which is different from fromFunction
+        log.info("Found an externally accessible label at address " + toAddress + ". This address belongs to function "
+            + toFunction.getName());
+        // Let's register it as externally targeted label
+        Set<SegmentedAddress> jumpsFromOutsideForFunction =
+            res.jumpsFromOutsidePerFunction.computeIfAbsent(toFunction.getEntrySegmentedAddress(),
+                a -> new HashSet<>());
+        jumpsFromOutsideForFunction.add(toAddress);
+      }
+    }
+    return res;
+  }
+
+  private static Map<Integer, ParsedInstruction> mapInstructionByInstructionAddress(List<ParsedInstruction> list) {
+    return list.stream()
+        .collect(Collectors.toMap(i -> i.getInstructionSegmentedAddress().toPhysical(), i -> i));
+  }
+
+  private static Map<Integer, ParsedFunction> mapFunctionByInstructionAddress(ParsedFunction parsedFunction,
+      List<ParsedInstruction> list) {
+    return list.stream()
+        .collect(Collectors.toMap(i -> i.getInstructionSegmentedAddress().toPhysical(), i -> parsedFunction));
   }
 
   public JumpsAndCalls getJumpsAndCalls() {
@@ -1273,48 +1364,6 @@ class ParsedProgram {
 
   private ParsedFunction getFunctionAtAddressEntryPoint(int address) {
     return entryPoints.get(address);
-  }
-
-  private void addFunctions(List<ParsedFunction> functions) {
-    this.entryPoints.putAll(
-        functions.stream().collect(Collectors.toMap(f -> f.getEntrySegmentedAddress().toPhysical(), f -> f)));
-    for (ParsedFunction parsedFunction : functions) {
-      instructionAddressToFunction.putAll(
-          mapFunctionByInstructionAddress(parsedFunction, parsedFunction.getInstructionsBeforeEntry()));
-      instructionAddressToFunction.putAll(
-          mapFunctionByInstructionAddress(parsedFunction, parsedFunction.getInstructionsAfterEntry()));
-      instructionAddressToInstruction.putAll(
-          mapInstructionByInstructionAddress(parsedFunction.getInstructionsBeforeEntry()));
-      instructionAddressToInstruction.putAll(
-          mapInstructionByInstructionAddress(parsedFunction.getInstructionsAfterEntry()));
-    }
-    for (Map.Entry<Integer, List<SegmentedAddress>> jumpFromTo : jumpsAndCalls.getJumpsFromTo().entrySet()) {
-      ParsedFunction fromFunction = getFunctionAtAddressAny(jumpFromTo.getKey());
-      if (fromFunction == null) {
-        continue;
-      }
-      for (SegmentedAddress toAddress : jumpFromTo.getValue()) {
-        ParsedFunction toFunction = getFunctionAtSegmentedAddressAny(toAddress);
-        if (toFunction == null || toFunction.equals(fromFunction)) {
-          continue;
-        }
-        // target function -> list of target addresses inside it for jumps
-        Set<SegmentedAddress> jumpsFromOutsideForFunction =
-            jumpsFromOutsidePerFunction.computeIfAbsent(fromFunction.getEntrySegmentedAddress(), a -> new HashSet<>());
-        jumpsFromOutsideForFunction.add(toAddress);
-      }
-    }
-  }
-
-  private Map<Integer, ParsedInstruction> mapInstructionByInstructionAddress(List<ParsedInstruction> list) {
-    return list.stream()
-        .collect(Collectors.toMap(i -> i.getInstructionSegmentedAddress().toPhysical(), i -> i));
-  }
-
-  private Map<Integer, ParsedFunction> mapFunctionByInstructionAddress(ParsedFunction parsedFunction,
-      List<ParsedInstruction> list) {
-    return list.stream()
-        .collect(Collectors.toMap(i -> i.getInstructionSegmentedAddress().toPhysical(), i -> parsedFunction));
   }
 }
 

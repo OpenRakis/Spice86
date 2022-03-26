@@ -13,7 +13,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     private readonly string _name;
 
-    public Func<Action>? FuntionOverride { private get; set; }
+    public Func<int,Action>? FuntionOverride { private get; set; }
 
     private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _returns;
 
@@ -24,7 +24,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
     public FunctionInformation(SegmentedAddress address, string name) : this(address, name, null) {
     }
 
-    public FunctionInformation(SegmentedAddress address, string name, Func<Action>? funtionOverride) {
+    public FunctionInformation(SegmentedAddress address, string name, Func<int,Action>? funtionOverride) {
         this._address = address;
         this._name = name;
         this.FuntionOverride = funtionOverride;
@@ -40,7 +40,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     public void CallOverride() {
         if (HasOverride) {
-            Action? retHandler =  FuntionOverride?.Invoke();
+            Action? retHandler =  FuntionOverride?.Invoke(0);
             // The override returns what to do when going back to emu mode, so let's do it!
             retHandler?.Invoke();
         }

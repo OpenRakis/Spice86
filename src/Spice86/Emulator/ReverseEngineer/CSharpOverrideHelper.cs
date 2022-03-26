@@ -94,7 +94,7 @@ public partial class CSharpOverrideHelper {
         _functionInformations.Add(address, functionInformation);
     }
 
-    public void DefineFunction(ushort segment, ushort offset, Func<Action> overrideFunc, string? name = null) {
+    public void DefineFunction(ushort segment, ushort offset, Func<int, Action> overrideFunc, string? name = null) {
         SegmentedAddress address = CreateNewFunctionAddress(segment, offset);
         String functionName;
         if (name != null) {
@@ -168,19 +168,19 @@ public partial class CSharpOverrideHelper {
         return () => Cpu.NearRet(0);
     }
 
-    public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<Action> function) {
+    public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
             Stack.Push(expectedReturnIp);
-            Action returnAction = function.Invoke();
+            Action returnAction = function.Invoke(0);
             returnAction.Invoke();
         });
     }
 
-    public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<Action> function) {
+    public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
             Stack.Push(expectedReturnCs);
             Stack.Push(expectedReturnIp);
-            Action returnAction = function.Invoke();
+            Action returnAction = function.Invoke(0);
             returnAction.Invoke();
         });
     }
@@ -217,7 +217,7 @@ public partial class CSharpOverrideHelper {
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackAddresses) {
             byte callbackNumber = callbackAddressEntry.Key;
             SegmentedAddress callbackAddress = callbackAddressEntry.Value;
-            var runnable = new Func<Action>(() => {
+            var runnable = new Func<int, Action>((int gotoAddress) => {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
             });
