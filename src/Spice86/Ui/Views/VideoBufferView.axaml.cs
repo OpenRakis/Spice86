@@ -8,6 +8,7 @@ using Spice86.UI.ViewModels;
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 public partial class VideoBufferView : UserControl {
     public VideoBufferView() {
@@ -37,22 +38,19 @@ public partial class VideoBufferView : UserControl {
                 _image.PointerPressed += (s, e) => mainVm.OnMouseClick(e, true);
                 _image.PointerReleased += (s, e) => mainVm.OnMouseClick(e, false);
             }
-            vm.Dirty += VideoBufferViewModel_IsDirty;
+            vm.SetUIUpdateMethod(InvalidateImageAsync);
         }
     }
 
-    private async void VideoBufferViewModel_IsDirty(object? sender, EventArgs e) {
-        await Dispatcher.UIThread.InvokeAsync(() => {
-            if (this.DataContext is VideoBufferViewModel vm && _appClosing == false) {
-                if (_image is null) {
-                    return;
-                }
-                if (_image.Source is null) {
-                    _image.Source = vm.Bitmap;
-                }
-                _image.InvalidateVisual();
+    private void InvalidateImageAsync() {
+        if (this.DataContext is VideoBufferViewModel vm && _appClosing == false) {
+            if (_image is null) {
+                return;
             }
-
-        }, DispatcherPriority.MaxValue);
+            if (_image.Source is null) {
+                _image.Source = vm.Bitmap;
+            }
+            _image.InvalidateVisual();
+        }
     }
 }

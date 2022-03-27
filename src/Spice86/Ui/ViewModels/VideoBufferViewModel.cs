@@ -50,6 +50,12 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         SaveBitmap = ReactiveCommand.Create(SaveBitmapCommand);
     }
 
+    private Action? UIUpdateMethod { get; set; }
+
+    internal void SetUIUpdateMethod(Action invalidateImageTask) {
+        UIUpdateMethod = invalidateImageTask;
+    }
+
     private async Task<Unit> SaveBitmapCommand() {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
             return Unit.Default;
@@ -70,8 +76,6 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
     }
-
-    public event EventHandler? Dirty;
 
     public uint Address { get; private set; }
 
@@ -162,7 +166,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
-        if (_disposedValue || Dirty is null || Bitmap is null) {
+        if (_disposedValue || UIUpdateMethod is null || Bitmap is null) {
             return;
         }
         int size = Width * Height;
@@ -191,7 +195,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
                 default:
                     throw new NotImplementedException($"{buf.Format}");
             }
-            Dirty.Invoke(this, EventArgs.Empty);
+            Dispatcher.UIThread.Post(() => UIUpdateMethod?.Invoke(), DispatcherPriority.MaxValue);
         }
     }
 
