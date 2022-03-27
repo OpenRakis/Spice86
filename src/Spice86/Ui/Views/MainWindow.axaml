@@ -42,6 +42,11 @@
 										<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 									</MenuItem.Header>
 								</MenuItem>
+								<MenuItem Command="{Binding SaveBitmap}">
+									<MenuItem.Header>
+										<Label Content="Save Bitmap" />
+									</MenuItem.Header>
+								</MenuItem>
 							</MenuItem>
 						</Menu>
 						<local:VideoBufferView />

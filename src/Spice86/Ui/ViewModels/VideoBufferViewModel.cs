@@ -2,6 +2,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -13,7 +14,10 @@ using Spice86.Emulator.Devices.Video;
 using Spice86.UI.Views;
 
 using System;
+using System.IO;
+using System.Linq;
 using System.Reactive;
+using System.Threading.Tasks;
 
 public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
@@ -32,6 +36,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         Address = 1;
         _index = 1;
         Scale = 1;
+        SaveBitmap = ReactiveCommand.Create(SaveBitmapCommand);
     }
 
     public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
@@ -42,7 +47,25 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         _index = index;
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
+        SaveBitmap = ReactiveCommand.Create(SaveBitmapCommand);
     }
+
+    private async Task<Unit> SaveBitmapCommand() {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
+            return Unit.Default;
+        }
+        var picker = new SaveFileDialog();
+        picker.DefaultExtension = "bmp";
+        picker.InitialFileName = "screenshot.bmp";
+        picker.Title = "Save Bitmap";
+        var file = await picker.ShowAsync(desktop.MainWindow);
+        if (string.IsNullOrWhiteSpace(file) == false) {
+            _bitmap.Save(file);
+        }
+        return Unit.Default;
+    }
+
+    public ReactiveCommand<Unit, Task<Unit>> SaveBitmap { get; init; }
 
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
@@ -68,7 +91,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     public WriteableBitmap Bitmap {
         get => _bitmap;
         set {
-            if(value is not null) {
+            if (value is not null) {
                 this.RaiseAndSetIfChanged(ref _bitmap, value);
             }
         }
@@ -83,8 +106,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             if (_showCursor) {
                 Cursor?.Dispose();
                 Cursor = Cursor.Default;
-            }
-            else {
+            } else {
                 Cursor?.Dispose();
                 Cursor = new Cursor(StandardCursorType.None);
             }
@@ -145,18 +167,17 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         }
         int size = Width * Height;
         long endAddress = Address + size;
-        
-        if(_appClosing == false) {
+
+        if (_appClosing == false) {
             using ILockedFramebuffer buf = Bitmap.Lock();
             uint* dst = (uint*)buf.Address;
             switch (buf.Format) {
                 case PixelFormat.Rgba8888:
-                    for (long i = Address; i < endAddress; ++i)
-                    {
+                    for (long i = Address; i < endAddress; ++i) {
                         byte colorIndex = memory[i];
                         Rgb pixel = palette[colorIndex];
                         uint rgba = pixel.ToRgba();
-                        dst[i-Address] = rgba;
+                        dst[i - Address] = rgba;
                     }
                     break;
                 case PixelFormat.Bgra8888:
@@ -164,7 +185,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
                         byte colorIndex = memory[i];
                         Rgb pixel = palette[colorIndex];
                         uint argb = pixel.ToArgb();
-                        dst[i-Address] = argb;
+                        dst[i - Address] = argb;
                     }
                     break;
                 default:
