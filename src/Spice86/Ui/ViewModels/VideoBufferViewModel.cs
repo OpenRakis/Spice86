@@ -173,7 +173,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
             uint* dst = (uint*)buf.Address;
             switch (buf.Format) {
                 case PixelFormat.Rgba8888:
-                    for (long i = Address; i < endAddress; ++i) {
+                    for (long i = Address; i < endAddress; i++) {
                         byte colorIndex = memory[i];
                         Rgb pixel = palette[colorIndex];
                         uint rgba = pixel.ToRgba();
