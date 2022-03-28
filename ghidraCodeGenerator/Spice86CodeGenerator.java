@@ -45,7 +45,7 @@ import java.util.stream.StreamSupport;
 public class Spice86CodeGenerator extends GhidraScript {
   // https://class.malware.re/2021/03/21/ghidra-scripting-feature-extraction.html
   //private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
-  private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
+  private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Release/net6.0/";
 
   public void run() throws Exception {
     JumpsAndCalls jumpsAndCalls =
@@ -103,6 +103,8 @@ class ProgramGenerator {
                 
         """);
     res.append("public class GeneratedCode : CSharpOverrideHelper {\n");
+    res.append(Utils.indent(generateSegmentStorage(), 2));
+    res.append('\n');
     Collection<ParsedFunction> parsedFunctions = parsedProgram.getEntryPoints().values();
     res.append(Utils.indent(generateConstructor(parsedFunctions), 2));
     res.append('\n');
@@ -113,17 +115,44 @@ class ProgramGenerator {
 
   private String generateConstructor(Collection<ParsedFunction> functions) {
     StringBuilder res = new StringBuilder(
-        "public GeneratedCode(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, ushort programStartSegment, Machine machine) : base(functionInformations, \"generatedCode\", machine) {\n");
+        "public GeneratedCode(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, ushort entrySegment, Machine machine) : base(functionInformations, \"generatedCode\", machine) {\n");
+    res.append(Utils.indent(generateSegmentConstructorAssignment(), 2));
+    res.append('\n');
+    int lastSegment = 0;
     for (ParsedFunction parsedFunction : functions) {
       String name = parsedFunction.getName();
       SegmentedAddress address = parsedFunction.getEntrySegmentedAddress();
+      int currentSegment = address.getSegment();
+      if (currentSegment != lastSegment) {
+        lastSegment = currentSegment;
+        res.append("  // " + Utils.toHexWith0X(currentSegment) + "\n");
+      }
       res.append(
-          "  DefineFunction(" + Utils.toHexWith0X(address.getSegment()) + ", " + Utils.toHexWith0X(address.getOffset())
+          "  DefineFunction(" + parsedProgram.getCodeSegmentVariables().get(currentSegment) + ", " + Utils.toHexWith0X(
+              address.getOffset())
               + ", " + name + ");");
       res.append('\n');
     }
     res.append("}\n");
     return res.toString();
+  }
+
+  private String generateSegmentConstructorAssignment() {
+    return generateSegmentVars(e -> "this." + e.getValue() + " = (ushort)(entrySegment + " + Utils.toHexWith0X(
+        e.getKey() - parsedProgram.getEntryAddress() / 0x10)
+        + ");\n");
+  }
+
+  private String generateSegmentStorage() {
+    return generateSegmentVars(v -> "private ushort " + v.getValue() + "; // " + Utils.toHexWith0X(v.getKey()) + "\n");
+  }
+
+  private String generateSegmentVars(java.util.function.Function<Map.Entry<Integer, String>, String> mapper) {
+    return parsedProgram.getCodeSegmentVariables()
+        .entrySet()
+        .stream()
+        .map(mapper)
+        .collect(Collectors.joining(""));
   }
 
   private void generateFunctions(Collection<ParsedFunction> functions, StringBuilder res) {
@@ -167,11 +196,6 @@ class FunctionGenerator {
       res.append(Utils.indent(gotosFromOutsideHandlingSection, 2) + "\n");
     }
     if (!instructionsBeforeEntry.isEmpty()) {
-      /*SegmentedAddress firstInstruction = instructionsBeforeEntry.get(0).getInstructionSegmentedAddress();
-      res.append("  if(gotoTarget != " + Utils.toHexWith0X(firstInstruction.toPhysical()) + ") {\n");
-      res.append("    // Skipping code before entry point\n");
-      res.append("    goto entry;\n");
-      res.append("  }\n");*/
       writeInstructions(res, instructionsBeforeEntry, 2, generatedTempVars, false);
       res.append("  entry:\n");
     }
@@ -193,12 +217,14 @@ class FunctionGenerator {
         continue;
       }
       res.append(
-          "  case " + Utils.toHexWith0X(target.toPhysical()) + ": goto " + JumpCallTranslator.getLabelToAddress(target,
+          "  case " + Utils.toHexWith0X(target.toPhysical() - parsedProgram.getEntryAddress()) + ": goto "
+              + JumpCallTranslator.getLabelToAddress(target,
               false) + ";break;\n");
     }
     if (firstInstructionOfBeforeSectionAddress != null) {
       // instructions before entry point are just after this switch
-      res.append("  case " + Utils.toHexWith0X(firstInstructionOfBeforeSectionAddress.toPhysical()) + ": break;\n");
+      res.append("  case " + Utils.toHexWith0X(
+          firstInstructionOfBeforeSectionAddress.toPhysical() - parsedProgram.getEntryAddress()) + ": break;\n");
       // default address 0 is for entry point, goto there as there are instructions between
       res.append("  case 0: goto entry; break; //\n");
     } else {
@@ -264,12 +290,14 @@ class ParameterTranslator {
   private Set<String> missingRegisters;
   // variables must be unique accross a function
   private Set<String> generatedTempVars;
+  private Map<Integer, String> codeSegmentVariables;
 
   public ParameterTranslator(Log log, ParsedInstruction parsedInstruction, RegisterHandler registerHandler,
-      Set<String> generatedTempVars) {
+      Map<Integer, String> codeSegmentVariables, Set<String> generatedTempVars) {
     this.log = log;
     this.parsedInstruction = parsedInstruction;
     this.registerHandler = registerHandler;
+    this.codeSegmentVariables = codeSegmentVariables;
     this.generatedTempVars = generatedTempVars;
   }
 
@@ -362,13 +390,11 @@ class ParameterTranslator {
   }
 
   private String toPhysicalAddress(String segmentExpression, String offsetExpression) {
-    String segment;
+    String segmentVariable = segmentExpression;
     if ("CS".equals(segmentExpression)) {
-      segment = Utils.toHexWith0X(parsedInstruction.getInstructionSegmentedAddress().getSegment() * 0x10);
-    } else {
-      segment = segmentExpression + " * 0x10";
+      segmentVariable = codeSegmentVariables.get(parsedInstruction.getInstructionSegmentedAddress().getSegment());
     }
-    return segment + " + " + offsetExpression;
+    return segmentVariable + " * 0x10 + " + offsetExpression;
   }
 
   public String toOffsetExpression(String offsetString, int offset) {
@@ -466,17 +492,17 @@ class RegisterHandler {
   }
 
   private final Log log;
-  private final Integer cs;
+  private final String csVariable;
 
-  public RegisterHandler(Log log, Integer cs) {
+  public RegisterHandler(Log log, String csVariable) {
     this.log = log;
-    this.cs = cs;
+    this.csVariable = csVariable;
   }
 
   public String substituteRegister(String registerName) {
     if ("CS".equals(registerName)) {
-      if (cs != null) {
-        return Utils.toHexWith0X(cs);
+      if (csVariable != null) {
+        return csVariable;
       }
       return "/* WARNING, CS value could not be evaluated, CS will not have a correct value */ CS";
     }
@@ -563,9 +589,12 @@ class InstructionGenerator {
   public InstructionGenerator(Log log, GhidraScript ghidraScript, ParsedProgram parsedProgram,
       ParsedFunction currentFunction, ParsedInstruction parsedInstruction, Set<String> generatedTempVars) {
     SegmentedAddress instructionSegmentedAddress = parsedInstruction.getInstructionSegmentedAddress();
+    Map<Integer, String> codeSegmentVariables = parsedProgram.getCodeSegmentVariables();
     this.log = log;
-    this.registerHandler = new RegisterHandler(log, instructionSegmentedAddress.getSegment());
-    this.parameterTranslator = new ParameterTranslator(log, parsedInstruction, registerHandler, generatedTempVars);
+    this.registerHandler = new RegisterHandler(log, codeSegmentVariables.get(instructionSegmentedAddress.getSegment()));
+    this.parameterTranslator =
+        new ParameterTranslator(log, parsedInstruction, registerHandler, codeSegmentVariables,
+            generatedTempVars);
     this.parsedInstruction = parsedInstruction;
     this.instruction = parsedInstruction.getInstruction();
     this.jumpCallTranslator =
@@ -843,7 +872,7 @@ class InstructionGenerator {
 
   private String generatePushA() {
     String spTempVar = parameterTranslator.generateTempVar("sp");
-    return "int " + spTempVar + " = SP;\n"
+    return "ushort " + spTempVar + " = SP;\n"
         + "Stack.Push(AX);\n"
         + "Stack.Push(CX);\n"
         + "Stack.Push(DX);\n"
@@ -1106,16 +1135,6 @@ class JumpCallTranslator {
   }
 
   private String jumpToCaseBody(SegmentedAddress address) {
-    ParsedFunction parsedFunction = parsedProgram.getFunctionAtSegmentedAddressEntryPoint(address);
-    if (parsedFunction != null) {
-      return this.functionToDirectCSharpCallWithReturn(parsedFunction, null);
-    } else {
-      parsedFunction = parsedProgram.getFunctionAtSegmentedAddressAny(address);
-      if (parsedFunction != null && !parsedFunction.equals(this.currentFunction)) {
-        return "// Extra function jump converted to function call\n"
-            + this.functionToDirectCSharpCallWithReturn(parsedFunction, address.toPhysical());
-      }
-    }
     String res = generateGoto(address);
     if (res.startsWith("goto label_")) {
       res += "\nbreak;";
@@ -1124,17 +1143,17 @@ class JumpCallTranslator {
   }
 
   private String attemptConvertJumpToFunctionCall(ParsedFunction function, Integer internalJumpAddress) {
-    String extra = internalJumpAddress == null ? "" : "extra ";
+    String nonEntry = internalJumpAddress == null ? "entry " : "non entry ";
     if (function == null) {
-      log.info("Could not convert jump to " + extra + "call because function at target is null");
+      log.info("Could not convert jump to " + nonEntry + "call because function at target is null");
     } else if (function.equals(this.currentFunction)) {
       log.info(
-          "Could not convert jump to " + extra + "call because function at target is the current function "
+          "Could not convert jump to " + nonEntry + "call because function at target is the current function "
               + function.getName());
     } else {
       log.info("Converted jump to call");
       // If a function is found, change the jump to a function call
-      return "// Jump converted to " + extra + "function call\n" + functionToDirectCSharpCallWithReturn(function,
+      return "// Jump converted to " + nonEntry + "function call\n" + functionToDirectCSharpCallWithReturn(function,
           internalJumpAddress);
     }
     return null;
@@ -1164,7 +1183,8 @@ class JumpCallTranslator {
     } else {
       String label = getLabelToAddress(target, false);
       return InstructionGenerator.generateFailAsUntested(
-          "Would have been a goto but label " + label + " does not exist because no instruction was found there", true);
+          "Would have been a goto but label " + label
+              + " does not exist because no instruction was found there that belongs to a function.", true);
     }
     String convertedCall =
         attemptConvertJumpToFunctionCall(parsedProgram.getFunctionAtSegmentedAddressEntryPoint(target), null);
@@ -1217,13 +1237,15 @@ class JumpCallTranslator {
     int segment = this.parsedInstruction.getInstructionSegmentedAddress().getSegment();
     int offset = this.parsedInstruction.getInstructionSegmentedAddress().getOffset()
         + this.parsedInstruction.getInstructionLength();
-    return callType + "Call(" + Utils.toHexWith0X(segment) + ", " + Utils.toHexWith0X(offset) + ", " + name + ");";
+
+    return callType + "Call(" + parsedProgram.getCodeSegmentVariables().get(segment) + ", " + Utils.toHexWith0X(offset)
+        + ", " + name + ");";
   }
 
   public String functionToDirectCSharpCallWithReturn(ParsedFunction parsedFunction, Integer internalJumpAddress) {
     String internalJumpAddressString = "0";
     if (internalJumpAddress != null) {
-      internalJumpAddressString = Utils.toHexWith0X(internalJumpAddress);
+      internalJumpAddressString = Utils.toHexWith0X(internalJumpAddress) + " - cs1 * 0x10";
     }
     return "return " + parsedFunction.getName() + "(" + internalJumpAddressString + ");";
   }
@@ -1238,13 +1260,18 @@ class JumpCallTranslator {
         parameterTranslator.toCsIpPointerValueInMemory(expression) :
         parameterTranslator.toIpPointerValueInMemory(expression);
     String tempVarName = parameterTranslator.generateTempVar("targetAddress_");
-
+    if (target.contains("cs1")) {
+      target = target.replaceAll("cs1 \\* 0x10 \\+ ", "");
+    } else {
+      target += " - cs1 * 0x10";
+    }
     StringBuilder res = new StringBuilder("uint " + tempVarName + " = (uint)(" + target + ");\n");
     res.append("switch(" + tempVarName + ") {\n");
     if (targets != null) {
       for (SegmentedAddress targetFromRecord : targets) {
         res.append(
-            "  case " + Utils.toHexWith0X(targetFromRecord.toPhysical()) + " : " + toCSharp.apply(targetFromRecord)
+            "  case " + Utils.toHexWith0X(targetFromRecord.toPhysical() - parsedProgram.getEntryAddress()) + " : "
+                + toCSharp.apply(targetFromRecord)
                 + "\n");
       }
     }
@@ -1265,6 +1292,8 @@ class ParsedProgram {
   private Map<SegmentedAddress, Set<SegmentedAddress>> jumpsFromOutsidePerFunction = new HashMap<>();
   // Sorted by entry address
   private Map<Integer, ParsedFunction> entryPoints = new TreeMap<>();
+  private Map<Integer, String> codeSegmentVariables = new TreeMap<>();
+  private int entryAddress;
 
   public static ParsedProgram createParsedProgram(Log log, List<ParsedFunction> functions,
       JumpsAndCalls jumpsAndCalls) {
@@ -1283,6 +1312,13 @@ class ParsedProgram {
           mapInstructionByInstructionAddress(parsedFunction.getInstructionsBeforeEntry()));
       res.instructionAddressToInstruction.putAll(
           mapInstructionByInstructionAddress(parsedFunction.getInstructionsAfterEntry()));
+      int cs = parsedFunction.getEntrySegmentedAddress().getSegment();
+      if (!res.codeSegmentVariables.containsKey(cs)) {
+        String varName = "cs" + (res.codeSegmentVariables.size() + 1);
+        res.codeSegmentVariables.put(cs, varName);
+      }
+      res.entryAddress = res.codeSegmentVariables.keySet().iterator().next() * 0x10;
+      log.info("Entry point address is " + res.entryAddress);
     }
     // Map address of function -> Set of externally reachable labels
     for (Map.Entry<Integer, List<SegmentedAddress>> jumpFromTo : jumpsAndCalls.getJumpsFromTo().entrySet()) {
@@ -1364,6 +1400,14 @@ class ParsedProgram {
 
   private ParsedFunction getFunctionAtAddressEntryPoint(int address) {
     return entryPoints.get(address);
+  }
+
+  public Map<Integer, String> getCodeSegmentVariables() {
+    return codeSegmentVariables;
+  }
+
+  public int getEntryAddress() {
+    return entryAddress;
   }
 }
 
