@@ -14,8 +14,6 @@ using Spice86.Emulator.Devices.Video;
 using Spice86.UI.Views;
 
 using System;
-using System.IO;
-using System.Linq;
 using System.Reactive;
 using System.Threading.Tasks;
 
@@ -165,6 +163,13 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         GC.SuppressFinalize(this);
     }
 
+    private bool _isDrawing;
+
+    public bool IsDrawing {
+        get => _isDrawing;
+        set => this.RaiseAndSetIfChanged(ref _isDrawing, value);
+    }
+
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
         if (_disposedValue || UIUpdateMethod is null || Bitmap is null) {
             return;
@@ -194,6 +199,9 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
                     break;
                 default:
                     throw new NotImplementedException($"{buf.Format}");
+            }
+            if(!IsDrawing) {
+                IsDrawing = true;
             }
             Dispatcher.UIThread.Post(() => UIUpdateMethod?.Invoke(), DispatcherPriority.MaxValue);
         }

@@ -2,7 +2,6 @@ namespace Spice86.UI.Views;
 using Avalonia.Controls;
 using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
-using Avalonia.Threading;
 
 using Spice86.UI.ViewModels;
 
@@ -13,7 +12,6 @@ using System.Threading.Tasks;
 public partial class VideoBufferView : UserControl {
     public VideoBufferView() {
         InitializeComponent();
-
     }
 
     private MainWindow? ApplicationWindow => this.GetSelfAndLogicalAncestors().OfType<MainWindow>().FirstOrDefault();
@@ -38,11 +36,11 @@ public partial class VideoBufferView : UserControl {
                 _image.PointerPressed += (s, e) => mainVm.OnMouseClick(e, true);
                 _image.PointerReleased += (s, e) => mainVm.OnMouseClick(e, false);
             }
-            vm.SetUIUpdateMethod(InvalidateImageAsync);
+            vm.SetUIUpdateMethod(InvalidateImage);
         }
     }
 
-    private void InvalidateImageAsync() {
+    private void InvalidateImage() {
         if (this.DataContext is VideoBufferViewModel vm && _appClosing == false) {
             if (_image is null) {
                 return;

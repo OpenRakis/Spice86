@@ -9,7 +9,7 @@
 	<Design.DataContext>
 		<vm:VideoBufferViewModel />
 	</Design.DataContext>
-	<LayoutTransformControl>
+	<LayoutTransformControl IsVisible="{Binding IsDrawing}">
 		<LayoutTransformControl.RenderTransform>
 			<ScaleTransform
 				ScaleX="{Binding Scale}"
