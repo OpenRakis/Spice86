@@ -4,19 +4,22 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import ghidra.app.script.GhidraScript;
 import ghidra.program.model.address.Address;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionIterator;
+import ghidra.program.model.listing.Listing;
+import ghidra.program.model.listing.Program;
 import ghidra.program.model.symbol.RefType;
 import ghidra.program.model.symbol.ReferenceManager;
 import ghidra.program.model.symbol.SourceType;
+import ghidra.util.exception.DuplicateNameException;
+import ghidra.util.exception.InvalidInputException;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 //Imports indirect jumps and calls destinations from spice86 dump file (https://github.com/OpenRakis/Spice86/)
 //@author Kevin Ferrare kevinferrare@gmail.com
@@ -24,89 +27,50 @@ import java.util.stream.Collectors;
 //@keybinding
 //@menupath
 //@toolbar
-public class Spice86ReferenceGenerator extends GhidraScript {
+public class Spice86TentativeFunctionRenamer extends GhidraScript {
   //private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
   private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Release/net6.0/";
+  private final List<Integer> segments = Arrays.asList(0x1000, 0x334B, 0x5635, 0x563E);
 
   @Override
   protected void run() throws Exception {
-    JumpsAndCalls jumpsAndCalls =
-        readJumpMapFromFile(baseFolder + "spice86dumpjumps.json");
-
-    importReferences(jumpsAndCalls.getJumpsFromTo(), RefType.COMPUTED_JUMP);
-    importReferences(jumpsAndCalls.getCallsFromTo(), RefType.COMPUTED_CALL);
-  }
-
-  private void importReferences(Map<Integer, List<SegmentedAddress>> fromTo, RefType refType) {
-    ReferenceManager referenceManager = getCurrentProgram().getReferenceManager();
-    fromTo.entrySet().stream().forEach(e -> {
-          Address from = this.toAddr(e.getKey());
-          if (referenceManager.hasReferencesFrom(from)) {
-            referenceManager.removeAllReferencesFrom(from);
-          }
-          List<SegmentedAddress> toSegmentedAddresses = e.getValue();
-          int index = 0;
-          for (SegmentedAddress toSegmentedAddress : toSegmentedAddresses) {
-            Address to = this.toAddr(toSegmentedAddress.toPhysical());
-            referenceManager.addMemoryReference(from, to, refType, SourceType.IMPORTED, index);
-            index++;
-          }
-        }
-    );
-  }
-
-  private JumpsAndCalls readJumpMapFromFile(String filePath) throws IOException {
-    try (FileReader fileReader = new FileReader(filePath); JsonReader reader = new JsonReader(fileReader)) {
-      Type type = new TypeToken<JumpsAndCalls>() {
-      }.getType();
-      JumpsAndCalls res = new Gson().fromJson(reader, type);
-      res.init();
-      return res;
+    Program program = getCurrentProgram();
+    Listing listing = program.getListing();
+    FunctionIterator functionIterator = listing.getFunctions(true);
+    while (functionIterator.hasNext()) {
+      renameFunction(functionIterator.next());
     }
   }
 
-  class JumpsAndCalls {
-    @SerializedName("CallsFromTo")
-    private Map<Integer, List<SegmentedAddress>> callsFromTo;
-    @SerializedName("JumpsFromTo")
-    private Map<Integer, List<SegmentedAddress>> jumpsFromTo;
-    @SerializedName("RetsFromTo")
-    private Map<Integer, List<SegmentedAddress>> retsFromTo;
-
-    private Map<Integer, List<SegmentedAddress>> callsJumpsFromTo;
-    private Set<SegmentedAddress> jumpTargets;
-
-    public void init() {
-      callsJumpsFromTo = new HashMap<>();
-      callsJumpsFromTo.putAll(callsFromTo);
-      callsJumpsFromTo.putAll(jumpsFromTo);
-      jumpTargets = jumpsFromTo.values().stream().flatMap(Collection::stream).collect(Collectors.toSet());
+  private void renameFunction(Function function) throws InvalidInputException, DuplicateNameException {
+    String functionName = function.getName();
+    if (!functionName.startsWith("FUN_")) {
+      return;
     }
+    println("processing " + functionName + " at address " + Utils.toHexWith0X(
+        (int)function.getEntryPoint().getUnsignedOffset()));
+    SegmentedAddress address = getAddress(function);
+    String name = "not_observed_" + Utils.toHexSegmentOffsetPhysical(address);
+    function.setName(name, SourceType.USER_DEFINED);
+  }
 
-    public Map<Integer, List<SegmentedAddress>> getCallsJumpsFromTo() {
-      return callsJumpsFromTo;
-    }
+  private SegmentedAddress getAddress(Function function) {
+    int entryPointAddress = (int)function.getEntryPoint().getUnsignedOffset();
+    int segment = guessSegment(entryPointAddress);
+    int offset = entryPointAddress - segment * 0x10;
+    return new SegmentedAddress(segment, offset);
+  }
 
-    public Set<SegmentedAddress> getJumpTargets() {
-      return jumpTargets;
+  private int guessSegment(int entryPointAddress) {
+    int foundSegment = 0;
+    for (int segment : segments) {
+      if (entryPointAddress >= segment * 0x10) {
+        println("OK for segment " + Utils.toHexWith0X(segment));
+        foundSegment = segment;
+      }
     }
-
-    public Map<Integer, List<SegmentedAddress>> getCallsFromTo() {
-      return callsFromTo;
-    }
-
-    public Map<Integer, List<SegmentedAddress>> getJumpsFromTo() {
-      return jumpsFromTo;
-    }
-
-    public Map<Integer, List<SegmentedAddress>> getRetsFromTo() {
-      return retsFromTo;
-    }
-
-    @Override
-    public String toString() {
-      return new Gson().toJson(this);
-    }
+    println("Found segment " + Utils.toHexWith0X(foundSegment));
+    return foundSegment;
   }
 
   class SegmentedAddress implements Comparable<SegmentedAddress> {
