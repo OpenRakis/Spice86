@@ -1,6 +1,4 @@
-﻿using System.Transactions;
-
-namespace Spice86.Emulator.Devices.Timer;
+﻿namespace Spice86.Emulator.Devices.Timer;
 
 using Spice86.Emulator.CPU;
 
@@ -35,6 +33,6 @@ public class CyclesCounterActivator : CounterActivator {
     }
 
     public override void UpdateDesiredFrequency(long desiredFrequency) {
-        _cyclesBetweenActivations = (long) (this._instructionsPerSecond / (Multiplier * desiredFrequency));
+        _cyclesBetweenActivations = (long)(this._instructionsPerSecond / (Multiplier * desiredFrequency));
     }
 }

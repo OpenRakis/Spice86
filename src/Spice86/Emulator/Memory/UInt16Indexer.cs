@@ -1,8 +1,8 @@
 ﻿namespace Spice86.Emulator.Memory;
-public class UInt16IndexerWithUint {
+public class UInt16Indexer {
     private Memory _memory;
 
-    public UInt16IndexerWithUint(Memory memory) => _memory = memory;
+    public UInt16Indexer(Memory memory) => _memory = memory;
 
     public ushort this[uint address] {
         get { return _memory.GetUint16(address); }

@@ -16,8 +16,8 @@ public class Memory {
     private readonly BreakPointHolder _readBreakPoints = new();
 
     private readonly BreakPointHolder _writeBreakPoints = new();
-    private UInt16IndexerWithUint _uInt16Indexer;
-    private UInt8IndexerWithUint _uint8Indexer;
+    private UInt16Indexer _uInt16Indexer;
+    private UInt8Indexe _uint8Indexer;
 
     public Memory(uint size) {
         _physicalMemory = new byte[size];
@@ -69,9 +69,9 @@ public class Memory {
 
     public int Size => _physicalMemory.Length;
 
-    public UInt16IndexerWithUint UInt16 => _uInt16Indexer;
+    public UInt16Indexer UInt16 => _uInt16Indexer;
 
-    public UInt8IndexerWithUint UInt8 => _uint8Indexer;
+    public UInt8Indexe UInt8 => _uint8Indexer;
 
     public ushort GetUint16(uint address) {
         ushort res = MemoryUtils.GetUint16(_physicalMemory, address);

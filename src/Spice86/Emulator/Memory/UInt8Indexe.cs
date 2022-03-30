@@ -1,8 +1,8 @@
 ﻿namespace Spice86.Emulator.Memory;
-public class UInt8IndexerWithUint {
+public class UInt8Indexe {
     private Memory _memory;
 
-    public UInt8IndexerWithUint(Memory memory) => _memory = memory;
+    public UInt8Indexe(Memory memory) => _memory = memory;
 
     public byte this[uint i] {
         get { return _memory.GetUint8(i); }
