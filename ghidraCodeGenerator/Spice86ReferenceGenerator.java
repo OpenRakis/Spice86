@@ -25,13 +25,12 @@ import java.util.stream.Collectors;
 //@menupath
 //@toolbar
 public class Spice86ReferenceGenerator extends GhidraScript {
-  //private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
-  private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Release/net6.0/";
-
   @Override
   protected void run() throws Exception {
+    String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");
+
     JumpsAndCalls jumpsAndCalls =
-        readJumpMapFromFile(baseFolder + "spice86dumpjumps.json");
+        readJumpMapFromFile(baseFolder + "spice86dumpJumps.json");
 
     importReferences(jumpsAndCalls.getJumpsFromTo(), RefType.COMPUTED_JUMP);
     importReferences(jumpsAndCalls.getCallsFromTo(), RefType.COMPUTED_CALL);

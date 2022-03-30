@@ -27,7 +27,7 @@ public partial class CSharpOverrideHelper {
 
     protected UInt16Indexer UInt16 => Memory.UInt16;
 
-    protected UInt8Indexe UInt8 => Memory.UInt8;
+    protected UInt8Indexer UInt8 => Memory.UInt8;
     protected Stack Stack => Cpu.Stack;
 
     protected State State => Cpu.State;
@@ -89,13 +89,18 @@ public partial class CSharpOverrideHelper {
     }
 
     public void DefineFunction(ushort segment, ushort offset, string name) {
-        SegmentedAddress address = CreateNewFunctionAddress(segment, offset);
+        SegmentedAddress address = new(segment, offset);
+        GetFunctionAtAddress(true, address);
         FunctionInformation functionInformation = new(address, name, null);
         _functionInformations.Add(address, functionInformation);
     }
 
-    public void DefineFunction(ushort segment, ushort offset, Func<int, Action> overrideFunc, string? name = null) {
-        SegmentedAddress address = CreateNewFunctionAddress(segment, offset);
+    public void DefineFunction(ushort segment, ushort offset, Func<int, Action> overrideFunc, bool failOnExisting = true, string? name = null) {
+        SegmentedAddress address = new(segment, offset);
+        FunctionInformation? existing = GetFunctionAtAddress(failOnExisting, address);
+        if (existing != null) {
+            return;
+        }
         String functionName;
         if (name != null) {
             functionName = name;
@@ -111,16 +116,22 @@ public partial class CSharpOverrideHelper {
         _functionInformations.Add(address, functionInformation);
     }
 
-    private SegmentedAddress CreateNewFunctionAddress(ushort segment, ushort offset) {
-        SegmentedAddress address = new(segment, offset);
-        if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation) && existingFunctionInformation.HasOverride) {
-            string error = $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
+    private FunctionInformation? GetFunctionAtAddress(bool failOnExisting, SegmentedAddress address) {
+        if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation) &&
+            existingFunctionInformation.HasOverride) {
+            if (!failOnExisting) {
+                return existingFunctionInformation;
+            }
+            string error =
+                $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error("There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.", address, existingFunctionInformation.Name);
+                _logger.Error(
+                    "There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.",
+                    address, existingFunctionInformation.Name);
             }
             throw new UnrecoverableException(error);
         }
-        return address;
+        return null;
     }
 
     public void DefineStaticAddress(ushort segment, ushort offset, string name) {
@@ -221,7 +232,7 @@ public partial class CSharpOverrideHelper {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
             });
-            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, runnable, $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}");
+            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, runnable, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}");
         }
     }
 
