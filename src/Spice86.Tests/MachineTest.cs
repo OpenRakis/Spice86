@@ -4,6 +4,7 @@ using Emulator;
 using Emulator.CPU;
 using Emulator.VM;
 using Emulator.Memory;
+using Emulator.VM.Breakpoint;
 
 using Serilog;
 
@@ -21,6 +22,134 @@ public class MachineTest {
             .WriteTo.Console()
             .MinimumLevel.Debug()
             .CreateLogger();
+    }
+
+    [Fact]
+    public void TestExecutionBreakpoints() {
+        ProgramExecutor programExecutor = CreateProgramExecutor("add");
+        Machine machine = programExecutor.Machine;
+        machine.DebugMode = true;
+        State state = machine.Cpu.State;
+        MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
+        int triggers = 0;
+        machineBreakpoints.ToggleBreakPoint(new BreakPoint(BreakPointType.CYCLES, 10, breakpoint => {
+            Assert.Equal(10, state.Cycles);
+            triggers++;
+        }, true), true);
+        // Address of cycle 10 to test multiple breakpoints
+        machineBreakpoints.ToggleBreakPoint(new BreakPoint(BreakPointType.EXECUTION, 0xF001C, breakpoint => {
+            Assert.Equal(0xF001C, (int)state.IpPhysicalAddress);
+            triggers++;
+        }, true), true);
+        machineBreakpoints.ToggleBreakPoint(new BreakPoint(BreakPointType.MACHINE_STOP, 0, breakpoint => {
+            Assert.Equal(0xF01A9, (int)state.IpPhysicalAddress);
+            Assert.False(machine.Cpu.IsRunning);
+            triggers++;
+        }, true), true);
+        programExecutor.Run();
+        Assert.Equal(3, triggers);
+    }
+
+    [Fact]
+    public void TestMemoryBreakpoints() {
+        ProgramExecutor programExecutor = CreateProgramExecutor("add");
+        Machine machine = programExecutor.Machine;
+        MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
+        Memory memory = machine.Memory;
+
+        // simple read
+        // 2 reads, but breakpoint is removed after first
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
+            memory.GetUint8(0);
+            memory.GetUint8(0);
+        });
+
+        // simple write
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 0, 1, true, () => {
+            memory.SetUint8(0, 0);
+        });
+
+        // read / write with remove
+        int readWrite0Triggered = 0;
+        BreakPoint readWrite0 = new BreakPoint(BreakPointType.ACCESS, 0, breakpoint => { readWrite0Triggered++; }, false);
+        machineBreakpoints.ToggleBreakPoint(readWrite0, true);
+        memory.GetUint8(0);
+        memory.SetUint8(0, 0);
+        machineBreakpoints.ToggleBreakPoint(readWrite0, false);
+        // Should not trigger
+        memory.GetUint8(0);
+        Assert.Equal(2, readWrite0Triggered);
+
+        // Memset
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+            memory.Memset(0, 0, 6);
+            // Should not trigger for this
+            memory.Memset(0, 0, 5);
+            memory.Memset(6, 0, 5);
+        });
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+            memory.Memset(5, 0, 5);
+        });
+
+        // GetData
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
+            memory.GetData(5, 10);
+            // Should not trigger for this
+            memory.GetData(0, 5);
+            memory.GetData(6, 5);
+        });
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
+            memory.GetData(0, 6);
+        });
+
+        // LoadData
+        byte[] data = new byte[] { 1, 2, 3 };
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+            memory.LoadData(5, data);
+            // Should not trigger for this
+            memory.LoadData(2, data);
+            memory.LoadData(6, data);
+        });
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+            memory.LoadData(3, data);
+        });
+        // Bonus test for search
+        uint? address = memory.SearchValue(0, 10, data);
+        Assert.NotNull(address);
+        Assert.Equal(3, (int)address!);
+
+        //MemCopy
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 10, 1, true, () => {
+            memory.MemCopy(0, 10, 10);
+            // Should not trigger for this
+            memory.MemCopy(0, 20, 10);
+        });
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
+            memory.MemCopy(0, 10, 10);
+            // Should not trigger for this
+            memory.MemCopy(1, 10, 10);
+        });
+
+        // Long reads
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 1, 2, false, () => {
+            memory.GetUint16(0);
+            memory.GetUint32(0);
+        });
+
+        // Long writes
+        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 2, false, () => {
+            memory.SetUint16(0, 0);
+            memory.SetUint32(0, 0);
+        });
+    }
+
+    private void AssertMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
+        int count = 0;
+        BreakPoint breakPoint = new BreakPoint(breakPointType, address, breakpoint => { count++; }, isRemovedOnTrigger);
+        machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        action.Invoke();
+        machineBreakpoints.ToggleBreakPoint(breakPoint, false);
+        Assert.Equal(expectedTriggers, count);
     }
 
     [Fact]
@@ -149,7 +278,7 @@ public class MachineTest {
         return machine;
     }
 
-    private Machine Execute(string binName) {
+    private ProgramExecutor CreateProgramExecutor(string binName) {
         Configuration configuration = new Configuration() {
             CreateAudioBackend = false
         };
@@ -160,7 +289,7 @@ public class MachineTest {
         configuration.ExpectedChecksumValue = Array.Empty<byte>();
         configuration.InstallInterruptVector = false;
 
-        using ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
+        ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
         // Disabling custom IO handling
@@ -168,8 +297,13 @@ public class MachineTest {
         cpu.ErrorOnUninitializedInterruptHandler = false;
         State state = cpu.State;
         state.Flags.IsDOSBoxCompatible = false;
+        return programExecutor;
+    }
+
+    private Machine Execute(string binName) {
+        using ProgramExecutor programExecutor = CreateProgramExecutor(binName);
         programExecutor.Run();
-        return machine;
+        return programExecutor.Machine;
     }
 
     private byte[] GetExpected(string binName) {

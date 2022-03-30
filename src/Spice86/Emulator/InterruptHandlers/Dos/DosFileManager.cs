@@ -282,7 +282,9 @@ public class DosFileManager {
         }
 
         try {
-            file.RandomAccessFile.Write(_memory.Ram, (int)bufferAddress, writeLength);
+            // Do not access Ram property directly to trigger breakpoints if needed
+            byte[] data = _memory.GetData(bufferAddress, writeLength);
+            file.RandomAccessFile.Write(data);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }
