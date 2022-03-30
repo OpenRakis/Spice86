@@ -5,7 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 
-using ReactiveUI;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Serilog;
 
@@ -16,11 +17,7 @@ using Spice86.Emulator.Devices.Video;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive;
 using System.Threading;
-
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -50,26 +47,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     public event EventHandler<KeyEventArgs>? KeyUp;
     public event EventHandler<KeyEventArgs>? KeyDown;
 
-
-    public ReactiveCommand<Unit, Unit> PlayCommand { get; private set; }
-    public ReactiveCommand<Unit, Unit> PauseCommand { get; private set; }
-
-    public MainWindowViewModel() {
-        PlayCommand = ReactiveCommand.Create(PlayCommandMethod);
-        PauseCommand = ReactiveCommand.Create(PauseCommandMethod);
-        if (Design.IsDesignMode) {
-            return;
-        }
-    }
-
-    private void PauseCommandMethod() {
+    [ICommand]
+    private void Pause() {
         if (_emulatorThread is not null) {
             _okayToContinueEvent.Reset();
             IsPaused = true;
         }
     }
 
-    private void PlayCommandMethod() {
+    [ICommand]
+    private void Play() {
         if (_emulatorThread is not null) {
             _okayToContinueEvent.Set();
             IsPaused = false;

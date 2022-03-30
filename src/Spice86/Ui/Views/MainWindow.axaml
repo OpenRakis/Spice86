@@ -21,8 +21,12 @@
 		<Menu>
 			<MenuItem Header="⏸︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
 			<MenuItem Header="⏵︎" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
-			<NumericUpDown Text="{Binding TimeMultiplier}" Minimum="1" />
-			<Button Content="⏱" HotKey="F4" Command="{Binding SetTimeMultiplierCommand}" CommandParameter="{Binding TimeMultiplier}" />
+			<MenuItem>
+				<MenuItem.Header>
+					<NumericUpDown Text="{Binding TimeMultiplier}" Minimum="1" />
+				</MenuItem.Header>
+			</MenuItem>
+			<MenuItem Header="⏱" HotKey="F4" Command="{Binding SetTimeMultiplierCommand}" CommandParameter="{Binding TimeMultiplier}" />
 		</Menu>
 		<ItemsRepeater Items="{Binding VideoBuffers}">
 			<ItemsRepeater.ItemTemplate>
@@ -44,7 +48,7 @@
 										<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 									</MenuItem.Header>
 								</MenuItem>
-								<MenuItem Command="{Binding SaveBitmap}">
+								<MenuItem Command="{Binding SaveBitmapCommand}">
 									<MenuItem.Header>
 										<Label Content="Save Bitmap" />
 									</MenuItem.Header>

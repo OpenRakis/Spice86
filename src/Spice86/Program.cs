@@ -1,7 +1,6 @@
 ﻿namespace Spice86;
 
 using Avalonia;
-using Avalonia.ReactiveUI;
 
 using Serilog;
 using Serilog.Events;
@@ -72,6 +71,5 @@ public class Program {
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .LogToTrace()
-            .UseReactiveUI();
+            .LogToTrace();
 }

@@ -8,16 +8,16 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 
-using ReactiveUI;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Emulator.Devices.Video;
 using Spice86.UI.Views;
 
 using System;
-using System.Reactive;
 using System.Threading.Tasks;
 
-public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewModel>, IDisposable {
+public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
     private readonly int _initialHeight;
     private readonly int _initialWidth;
@@ -34,7 +34,6 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         Address = 1;
         _index = 1;
         Scale = 1;
-        SaveBitmap = ReactiveCommand.Create(SaveBitmapCommand);
     }
 
     public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
@@ -45,32 +44,28 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         _index = index;
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
-        SaveBitmap = ReactiveCommand.Create(SaveBitmapCommand);
     }
 
     private Action? UIUpdateMethod { get; set; }
 
-    internal void SetUIUpdateMethod(Action invalidateImageTask) {
-        UIUpdateMethod = invalidateImageTask;
+    internal void SetUIUpdateMethod(Action invalidateImagAction) {
+        UIUpdateMethod = invalidateImagAction;
     }
 
-    private async Task<Unit> SaveBitmapCommand() {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
-            return Unit.Default;
+    [ICommand]
+    public async Task SaveBitmap() {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+            var picker = new SaveFileDialog {
+                DefaultExtension = "bmp",
+                InitialFileName = "screenshot.bmp",
+                Title = "Save Bitmap"
+            };
+            string? file = await picker.ShowAsync(desktop.MainWindow);
+            if (string.IsNullOrWhiteSpace(file) == false) {
+                _bitmap.Save(file);
+            }
         }
-        var picker = new SaveFileDialog {
-            DefaultExtension = "bmp",
-            InitialFileName = "screenshot.bmp",
-            Title = "Save Bitmap"
-        };
-        string? file = await picker.ShowAsync(desktop.MainWindow);
-        if (string.IsNullOrWhiteSpace(file) == false) {
-            _bitmap.Save(file);
-        }
-        return Unit.Default;
     }
-
-    public ReactiveCommand<Unit, Task<Unit>> SaveBitmap { get; init; }
 
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
@@ -95,7 +90,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         get => _bitmap;
         set {
             if (value is not null) {
-                this.RaiseAndSetIfChanged(ref _bitmap, value);
+                this.SetProperty(ref _bitmap, value);
             }
         }
     }
@@ -105,7 +100,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
     public bool ShowCursor {
         get => _showCursor;
         set {
-            this.RaiseAndSetIfChanged(ref _showCursor, value);
+            this.SetProperty(ref _showCursor, value);
             if (_showCursor) {
                 Cursor?.Dispose();
                 Cursor = Cursor.Default;
@@ -120,21 +115,21 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
 
     public Cursor? Cursor {
         get => _cursor;
-        set => this.RaiseAndSetIfChanged(ref _cursor, value);
+        set => this.SetProperty(ref _cursor, value);
     }
 
     private double _scale = 1;
 
     public double Scale {
         get => _scale;
-        set => this.RaiseAndSetIfChanged(ref _scale, Math.Max(value, 1));
+        set => this.SetProperty(ref _scale, Math.Max(value, 1));
     }
 
     private int _height = 320;
 
     public int Height {
         get => _height;
-        private set => this.RaiseAndSetIfChanged(ref _height, value);
+        private set => this.SetProperty(ref _height, value);
     }
     public bool IsPrimaryDisplay { get; private set; }
 
@@ -143,7 +138,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
 
     public int Width {
         get => _width;
-        private set => this.RaiseAndSetIfChanged(ref _width, value);
+        private set => this.SetProperty(ref _width, value);
     }
 
     private readonly int _index;
@@ -168,7 +163,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
 
     public bool IsDrawing {
         get => _isDrawing;
-        set => this.RaiseAndSetIfChanged(ref _isDrawing, value);
+        set => this.SetProperty(ref _isDrawing, value);
     }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {

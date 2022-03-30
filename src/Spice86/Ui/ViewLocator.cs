@@ -3,7 +3,7 @@ namespace Spice86.UI;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 
-using Spice86.UI.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 using System;
 
@@ -21,6 +21,6 @@ public class ViewLocator : IDataTemplate {
     }
 
     public bool Match(object data) {
-        return data is ViewModelBase;
+        return data is ObservableObject;
     }
 }
