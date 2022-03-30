@@ -12,6 +12,7 @@ using Serilog;
 using Spice86.CLI;
 using Spice86.Emulator;
 using Spice86.Emulator.Devices.Video;
+using Spice86.Emulator.VM;
 
 using System;
 using System.Collections.Generic;
@@ -103,6 +104,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
         GC.SuppressFinalize(this);
     }
 
+    public ProgramExecutor? ProgramExecutor {
+        get => _programExecutor;
+        set => this.RaiseAndSetIfChanged(ref _programExecutor, value);
+    }
+
     public void Draw(byte[] memory, Rgb[] palette) {
         if (_disposedValue || _isSettingResolution) {
             return;
@@ -187,7 +193,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
         if (!_disposedValue) {
             if (disposing) {
                 DisposeBuffers();
-                _programExecutor?.Dispose();
+                ProgramExecutor?.Dispose();
             }
             _disposedValue = true;
         }
@@ -204,8 +210,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
     private void RunMachine() {
         try {
             _okayToContinueEvent.Set();
-            _programExecutor = new ProgramExecutor(this, _configuration);
-            _programExecutor.Run();
+            ProgramExecutor = new ProgramExecutor(this, _configuration);
+            ProgramExecutor.Run();
         } catch (Exception e) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "An error occurred during execution");

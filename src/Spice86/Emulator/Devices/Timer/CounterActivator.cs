@@ -6,7 +6,6 @@ public abstract class CounterActivator {
     }
 
     /// <summary> True when activation can occur. </summary>
-    /// <returns> </returns>
     public abstract bool IsActivated { get; }
 
     public abstract void UpdateDesiredFrequency(long desiredFrequency);
