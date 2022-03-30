@@ -13,7 +13,7 @@ public class Midi : DefaultIOPortHandler {
     private const int Command = 0x331;
     private const int Data = 0x330;
 
-    private GeneralMidi _generalMidi;
+    private readonly GeneralMidi _generalMidi;
 
     public Midi(Machine machine, Configuration configuration) : base(machine, configuration) {
         _generalMidi = new GeneralMidi(configuration, configuration.Mt32RomsPath);

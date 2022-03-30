@@ -48,7 +48,7 @@ internal static class Audio {
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<byte> buffer) {
         ReadOnlySpan<byte> writeBuffer = buffer;
 
-        var floatArray = new float[writeBuffer.Length];
+        float[]? floatArray = new float[writeBuffer.Length];
 
         for (int i = 0; i < writeBuffer.Length; i++) {
             floatArray[i] = writeBuffer[i];

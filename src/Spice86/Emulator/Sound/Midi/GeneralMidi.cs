@@ -12,7 +12,7 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class GeneralMidi {
     private MidiDevice? midiMapper;
-    private readonly Queue<byte> dataBytes = new Queue<byte>();
+    private readonly Queue<byte> dataBytes = new();
 
     private const int DataPort = 0x330;
     private const int StatusPort = 0x331;

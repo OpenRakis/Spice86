@@ -63,7 +63,7 @@ public class GdbIo : IDisposable {
         return "";
     }
 
-    public List<byte> RawCommand =>_rawCommand;
+    public List<byte> RawCommand => _rawCommand;
 
     public string ReadCommand() {
         _rawCommand.Clear();

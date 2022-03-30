@@ -77,25 +77,25 @@ public class Pic : DefaultIOPortHandler {
 
     public int AcknwowledgeInterruptRequest() {
         IsLastIrqAcknowledged = true;
-            for (int i = 0; i <= 7; i++) {
-                uint bit = 1u << i;
-                if ((this.requestRegister & bit) == bit && ((~this.maskRegister) & bit) == bit) {
-                    this.requestRegister &= ~bit;
-                    this.inServiceRegister1 |= bit;
-                    return this.BaseInterruptVector1 + i;
-                }
+        for (int i = 0; i <= 7; i++) {
+            uint bit = 1u << i;
+            if ((this.requestRegister & bit) == bit && ((~this.maskRegister) & bit) == bit) {
+                this.requestRegister &= ~bit;
+                this.inServiceRegister1 |= bit;
+                return this.BaseInterruptVector1 + i;
             }
+        }
 
-            for (int i = 8; i <= 15; i++) {
-                uint bit = 1u << i;
-                if ((this.requestRegister & bit) == bit && ((~this.maskRegister) & bit) == bit) {
-                    this.requestRegister &= ~bit;
-                    this.inServiceRegister2 |= 1u << (i - 8);
-                    return this.BaseInterruptVector2 + i;
-                }
+        for (int i = 8; i <= 15; i++) {
+            uint bit = 1u << i;
+            if ((this.requestRegister & bit) == bit && ((~this.maskRegister) & bit) == bit) {
+                this.requestRegister &= ~bit;
+                this.inServiceRegister2 |= 1u << (i - 8);
+                return this.BaseInterruptVector2 + i;
             }
+        }
 
-            return -1;
+        return -1;
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
@@ -106,7 +106,7 @@ public class Pic : DefaultIOPortHandler {
     }
 
     public bool IrqMasked(int vectorNumber) {
-        if (_vectorNumberToIrq.TryGetValue(vectorNumber, out var irqNumber) == false) {
+        if (_vectorNumberToIrq.TryGetValue(vectorNumber, out int irqNumber) == false) {
             return false;
         }
         int maskForVectorNumber = (1 << irqNumber);
@@ -130,7 +130,7 @@ public class Pic : DefaultIOPortHandler {
                 this.requestRegister |= bit;
             }
         }
-            return this.requestRegister;
+        return this.requestRegister;
     }
 
     public void ProcessInterruptVector(byte vector) {
@@ -166,136 +166,136 @@ public class Pic : DefaultIOPortHandler {
     }
 
     public override byte ReadByte(int port) {
-            switch (port) {
-                case MasterPortA:
-                    switch (this.currentCommand1) {
-                        case Command.ReadISR:
-                            return (byte)this.inServiceRegister1;
+        switch (port) {
+            case MasterPortA:
+                switch (this.currentCommand1) {
+                    case Command.ReadISR:
+                        return (byte)this.inServiceRegister1;
 
-                        case Command.ReadIRR:
-                            return (byte)this.requestRegister;
-                    }
-                    break;
+                    case Command.ReadIRR:
+                        return (byte)this.requestRegister;
+                }
+                break;
 
-                case MasterPortB:
-                    return (byte)this.maskRegister;
+            case MasterPortB:
+                return (byte)this.maskRegister;
 
-                case SlavePortA:
-                    switch (currentCommand2) {
-                        case Command.ReadISR:
-                            return (byte)this.inServiceRegister2;
+            case SlavePortA:
+                switch (currentCommand2) {
+                    case Command.ReadISR:
+                        return (byte)this.inServiceRegister2;
 
-                        case Command.ReadIRR:
-                            return (byte)(this.requestRegister >> 8);
-                    }
-                    break;
+                    case Command.ReadIRR:
+                        return (byte)(this.requestRegister >> 8);
+                }
+                break;
 
-                case SlavePortB:
-                    return (byte)(this.maskRegister >> 8);
-            }
+            case SlavePortB:
+                return (byte)(this.maskRegister >> 8);
+        }
 
-            return 0;
+        return 0;
     }
 
     public override void WriteByte(int port, byte value) {
-            uint registerValue = this.maskRegister;
+        uint registerValue = this.maskRegister;
 
-            switch (port) {
-                case MasterPortA:
-                    if (value == (int)Command.EndOfInterrupt) {
-                        this.EndCurrentInterrupt1();
-                    } else if (value == (int)Command.ReadIRR || value == (int)Command.ReadISR) {
-                        this.currentCommand1 = (Command)value;
-                    } else if ((value & 0x10) != 0) // ICW1
-                      {
-                        if (value == InitializeICW1 || value == InitializeICW4) {
-                            this.requestRegister = 0;
-                            this.inServiceRegister1 = 0;
-                            this.inServiceRegister2 = 0;
-                            this.maskRegister = 0;
-                            this.state1 = State.Initialization_NeedVector;
-                        } else {
-                            throw new NotImplementedException();
-                        }
-                    } else if ((value & 0x18) == 0) // OCW2
-                      {
-                        if ((value & 0xE0) == 0x60) // Specific EOI
+        switch (port) {
+            case MasterPortA:
+                if (value == (int)Command.EndOfInterrupt) {
+                    this.EndCurrentInterrupt1();
+                } else if (value is ((int)Command.ReadIRR) or ((int)Command.ReadISR)) {
+                    this.currentCommand1 = (Command)value;
+                } else if ((value & 0x10) != 0) // ICW1
+                  {
+                    if (value is InitializeICW1 or InitializeICW4) {
+                        this.requestRegister = 0;
+                        this.inServiceRegister1 = 0;
+                        this.inServiceRegister2 = 0;
+                        this.maskRegister = 0;
+                        this.state1 = State.Initialization_NeedVector;
+                    } else {
+                        throw new NotImplementedException();
+                    }
+                } else if ((value & 0x18) == 0) // OCW2
+                  {
+                    if ((value & 0xE0) == 0x60) // Specific EOI
 {
                         this.inServiceRegister1 &= ~(1u << (value & 0x07));
                     } else {
                         throw new NotImplementedException();
                     }
                 } else {
-                        throw new NotImplementedException();
-                    }
-                    break;
+                    throw new NotImplementedException();
+                }
+                break;
 
-                case MasterPortB:
-                    switch (this.state1) {
-                        case State.Initialization_NeedVector:
-                            this.BaseInterruptVector1 = value;
-                            this.state1 = State.Initialization_NeedInt;
-                            break;
+            case MasterPortB:
+                switch (this.state1) {
+                    case State.Initialization_NeedVector:
+                        this.BaseInterruptVector1 = value;
+                        this.state1 = State.Initialization_NeedInt;
+                        break;
 
-                        case State.Initialization_NeedInt:
-                            this.state1 = State.Initialization_Need1;
-                            break;
+                    case State.Initialization_NeedInt:
+                        this.state1 = State.Initialization_Need1;
+                        break;
 
-                        case State.Initialization_Need1:
-                            if (value != 1) {
-                                throw new UnhandledOperationException(_machine, $"Invalid initialization command index {value}, should never happen");
-                            }
-                            this.state1 = State.Ready;
-                            break;
+                    case State.Initialization_Need1:
+                        if (value != 1) {
+                            throw new UnhandledOperationException(_machine, $"Invalid initialization command index {value}, should never happen");
+                        }
+                        this.state1 = State.Ready;
+                        break;
 
-                        case State.Ready:
-                            registerValue &= 0xFF00;
-                            registerValue |= value;
-                            this.maskRegister = registerValue;
-                            break;
-                    }
-                    break;
+                    case State.Ready:
+                        registerValue &= 0xFF00;
+                        registerValue |= value;
+                        this.maskRegister = registerValue;
+                        break;
+                }
+                break;
 
-                case SlavePortA:
-                    this.currentCommand2 = (Command)value;
-                    switch (this.currentCommand2) {
-                        case Command.Initialize:
-                        case Command.InitializeICW4:
-                            this.state2 = State.Initialization_NeedVector;
-                            break;
+            case SlavePortA:
+                this.currentCommand2 = (Command)value;
+                switch (this.currentCommand2) {
+                    case Command.Initialize:
+                    case Command.InitializeICW4:
+                        this.state2 = State.Initialization_NeedVector;
+                        break;
 
-                        case Command.EndOfInterrupt:
-                            this.EndCurrentInterrupt2();
-                            break;
-                    }
-                    break;
+                    case Command.EndOfInterrupt:
+                        this.EndCurrentInterrupt2();
+                        break;
+                }
+                break;
 
-                case SlavePortB:
-                    switch (this.state2) {
-                        case State.Initialization_NeedVector:
-                            this.BaseInterruptVector2 = value;
-                            this.state2 = State.Initialization_NeedInt;
-                            break;
+            case SlavePortB:
+                switch (this.state2) {
+                    case State.Initialization_NeedVector:
+                        this.BaseInterruptVector2 = value;
+                        this.state2 = State.Initialization_NeedInt;
+                        break;
 
-                        case State.Initialization_NeedInt:
-                            this.state2 = State.Initialization_Need1;
-                            break;
+                    case State.Initialization_NeedInt:
+                        this.state2 = State.Initialization_Need1;
+                        break;
 
-                        case State.Initialization_Need1:
-                            if (value != 1) {
-                                throw new UnhandledOperationException(_machine, $"Invalid initialization command index {value}, should never happen");
-                            }
-                            this.state2 = State.Ready;
-                            break;
+                    case State.Initialization_Need1:
+                        if (value != 1) {
+                            throw new UnhandledOperationException(_machine, $"Invalid initialization command index {value}, should never happen");
+                        }
+                        this.state2 = State.Ready;
+                        break;
 
-                        case State.Ready:
-                            registerValue &= 0x00FF;
-                            registerValue |= (uint)value << 8;
-                            this.maskRegister = registerValue;
-                            break;
-                    }
-                    break;
-            }
+                    case State.Ready:
+                        registerValue &= 0x00FF;
+                        registerValue |= (uint)value << 8;
+                        this.maskRegister = registerValue;
+                        break;
+                }
+                break;
+        }
     }
 
     public override void WriteWord(int port, ushort value) {

@@ -63,7 +63,7 @@ public class CSharpStubToStringConverter : ClrFunctionToStringConverter {
     }
 
     protected override string GenerateFunctionStub(string callsAsComments, string? functionName, string functionNameInCSharp, string segment, string offset, string retType) {
-        return 
+        return
             $@"
             // defineFunction({segment}, {offset}, ""{functionName}"", this.{functionNameInCSharp});
             public Action {functionNameInCSharp}() {{

@@ -7,11 +7,11 @@ using System.Collections.Generic;
 public class JumpHandler {
     public bool DebugMode { set; private get; }
     public IDictionary<uint, ISet<SegmentedAddress>> CallsFromTo { get; }
-    private ISet<ulong> _callsEncountered = new HashSet<ulong>();
+    private readonly ISet<ulong> _callsEncountered = new HashSet<ulong>();
     public IDictionary<uint, ISet<SegmentedAddress>> JumpsFromTo { get; }
-    private ISet<ulong> _jumpsEncountered = new HashSet<ulong>();
+    private readonly ISet<ulong> _jumpsEncountered = new HashSet<ulong>();
     public IDictionary<uint, ISet<SegmentedAddress>> RetsFromTo { get; }
-    private ISet<ulong> _retsEncountered = new HashSet<ulong>();
+    private readonly ISet<ulong> _retsEncountered = new HashSet<ulong>();
 
     public JumpHandler() {
         DebugMode = false;

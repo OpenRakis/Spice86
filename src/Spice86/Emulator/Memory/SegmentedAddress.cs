@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Emulator.Memory;
 
 using Spice86.Utils;
+
 using System;
 
 /// <summary> An address that is represented with a real mode segment and an offset. </summary>

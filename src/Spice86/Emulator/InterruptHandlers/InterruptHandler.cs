@@ -46,7 +46,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
             _cpu.SetFlagOnInterruptStack(Flags.Zero, value);
         }
     }
-    
+
     public void RunFromOverriden() {
         // When running from overriden code, this is a direct C# code so there is no stack to edit.
         _interruptStackPresent = false;

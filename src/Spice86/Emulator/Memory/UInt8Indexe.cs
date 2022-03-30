@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Emulator.Memory;
 public class UInt8Indexe {
-    private Memory _memory;
+    private readonly Memory _memory;
 
     public UInt8Indexe(Memory memory) => _memory = memory;
 

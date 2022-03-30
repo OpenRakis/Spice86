@@ -56,7 +56,7 @@ public sealed class DmaController : DefaultIOPortHandler {
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        foreach (var value in OutputPorts) {
+        foreach (int value in OutputPorts) {
             ioPortDispatcher.AddIOPortHandler(value, this);
         }
     }

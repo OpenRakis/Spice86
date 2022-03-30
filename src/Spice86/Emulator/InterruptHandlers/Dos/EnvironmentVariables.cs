@@ -9,7 +9,7 @@ using System.Text;
 /// Provides access to DOS environment variables as a dictionary.
 /// </summary>
 public sealed class EnvironmentVariables : IDictionary<string, string> {
-    private readonly Dictionary<string, string> variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> variables = new(StringComparer.OrdinalIgnoreCase);
 
     internal EnvironmentVariables() {
     }
@@ -44,11 +44,10 @@ public sealed class EnvironmentVariables : IDictionary<string, string> {
     public ICollection<string> Keys => variables.Keys;
     public bool Remove(string key) => variables.Remove(key);
     public bool TryGetValue(string key, out string value) {
-        var returnValue = variables.TryGetValue(key, out var innerValue);
-        if(innerValue != null) {
+        bool returnValue = variables.TryGetValue(key, out string? innerValue);
+        if (innerValue != null) {
             value = innerValue;
-        }
-        else {
+        } else {
             value = "";
         }
         return returnValue;

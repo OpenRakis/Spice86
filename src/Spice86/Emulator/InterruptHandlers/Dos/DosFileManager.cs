@@ -117,7 +117,7 @@ public class DosFileManager {
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = ToHostFileName(fileSpec);
         _currentMatchingFileSearchFolder = hostSearchSpec[..(hostSearchSpec.LastIndexOf('/') + 1)];
-        if(string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder) == false) {
+        if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder) == false) {
             _currentMatchingFileSearchSpec = hostSearchSpec.Replace(_currentMatchingFileSearchFolder, "");
             try {
                 var matchingPaths = Directory.GetFiles(
@@ -151,7 +151,7 @@ public class DosFileManager {
             return FileNotFoundErrorWithLog($"No more files matching {_currentMatchingFileSearchSpec} in path {_currentMatchingFileSearchFolder}");
         }
 
-        var matching = _matchingFilesIterator.MoveNext();
+        bool matching = _matchingFilesIterator.MoveNext();
         if (matching) {
             try {
                 UpdateDTAFromFile(_matchingFilesIterator.Current);
@@ -179,7 +179,7 @@ public class DosFileManager {
 
     public ushort DiskTransferAreaAddressOffset => _diskTransferAreaAddressOffset;
 
-    public ushort DiskTransferAreaAddressSegment =>_diskTransferAreaAddressSegment;
+    public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
 
     public DosFileOperationResult MoveFilePointerUsingHandle(byte originOfMove, ushort fileHandle, uint offset) {
         OpenFile? file = GetOpenFile(fileHandle);
@@ -373,25 +373,25 @@ public class DosFileManager {
     private string? GetActualCaseForFileName(string caseInsensitivePath) {
         string? directory = Path.GetDirectoryName(caseInsensitivePath);
         string? directoryCaseSensitive = GetDirectoryCaseSensitive(directory);
-        if(string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false) {
+        if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false) {
             return null;
         }
         string realFileName = "";
-        foreach(var file in Directory.GetFiles(directoryCaseSensitive)) {
-            var fileToUpper = file.ToUpperInvariant();
-            var searchedFile = caseInsensitivePath.ToUpperInvariant();
-            if(fileToUpper == searchedFile) {
+        foreach (string? file in Directory.GetFiles(directoryCaseSensitive)) {
+            string? fileToUpper = file.ToUpperInvariant();
+            string? searchedFile = caseInsensitivePath.ToUpperInvariant();
+            if (fileToUpper == searchedFile) {
                 realFileName = file;
             }
         }
-        if(string.IsNullOrWhiteSpace(realFileName) || File.Exists(realFileName) == false) {
+        if (string.IsNullOrWhiteSpace(realFileName) || File.Exists(realFileName) == false) {
             return null;
         }
         return realFileName;
     }
 
     private string? GetDirectoryCaseSensitive(string? directory) {
-        if(string.IsNullOrWhiteSpace(directory)) {
+        if (string.IsNullOrWhiteSpace(directory)) {
             return null;
         }
         var directoryInfo = new DirectoryInfo(directory);
@@ -403,12 +403,12 @@ public class DosFileManager {
             return null;
         }
 
-        var parent = GetDirectoryCaseSensitive(directoryInfo.Parent.FullName);
+        string? parent = GetDirectoryCaseSensitive(directoryInfo.Parent.FullName);
         if (parent == null) {
             return null;
         }
 
-        return new DirectoryInfo(parent).GetDirectories(directoryInfo.Name, new EnumerationOptions {MatchCasing = MatchCasing.CaseInsensitive}).FirstOrDefault()?.FullName;
+        return new DirectoryInfo(parent).GetDirectories(directoryInfo.Name, new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).FirstOrDefault()?.FullName;
     }
 
     private DosFileOperationResult OpenFileInternal(string fileName, string? hostFileName, string openMode) {
@@ -426,19 +426,18 @@ public class DosFileManager {
         try {
             FileStream? randomAccessFile = null;
             if (openMode == "r") {
-                var realFileName = GetActualCaseForFileName(hostFileName);
+                string? realFileName = GetActualCaseForFileName(hostFileName);
                 if (File.Exists(hostFileName)) {
                     randomAccessFile = File.OpenRead(hostFileName);
                 } else if (File.Exists(realFileName)) {
                     randomAccessFile = File.OpenRead(realFileName);
-                }
-                else {
+                } else {
                     return FileNotFoundError(fileName);
                 }
             } else if (openMode == "w") {
                 randomAccessFile = File.OpenWrite(hostFileName);
-            } else  if (openMode == "rw") {
-                var realFileName = GetActualCaseForFileName(hostFileName);
+            } else if (openMode == "rw") {
+                string? realFileName = GetActualCaseForFileName(hostFileName);
                 if (File.Exists(hostFileName)) {
                     randomAccessFile = File.Open(hostFileName, FileMode.Open);
                 } else if (File.Exists(realFileName)) {
@@ -461,7 +460,7 @@ public class DosFileManager {
         // Absolute path
         char driveLetter = fileName.ToUpper()[0];
 
-        if (_driveMap.TryGetValue(driveLetter, out var pathForDrive) == false) {
+        if (_driveMap.TryGetValue(driveLetter, out string? pathForDrive) == false) {
             throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
         }
 
@@ -506,12 +505,11 @@ public class DosFileManager {
             // End of recursion, root reached
             return null;
         }
-        
+
         // Now that parent is for sure on the disk, let's find the current file
         try {
             string? fileNameOnFileSystem = GetActualCaseForFileName(caseInsensitivePath);
-            if(string.IsNullOrWhiteSpace(fileNameOnFileSystem) == false)
-            {
+            if (string.IsNullOrWhiteSpace(fileNameOnFileSystem) == false) {
                 return fileNameOnFileSystem;
             }
             Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(fileToProcess));
@@ -580,7 +578,7 @@ public class DosFileManager {
         string fileName = ConvertUtils.ToSlashPath(dosFileName);
         if (fileName.Length >= 2 && fileName[1] == ':') {
             fileName = ReplaceDriveWithHostPath(fileName);
-        } else if(string.IsNullOrWhiteSpace(_currentDir) == false) {
+        } else if (string.IsNullOrWhiteSpace(_currentDir) == false) {
             fileName = Path.Combine(_currentDir, fileName);
         }
 

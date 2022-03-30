@@ -32,7 +32,7 @@ public class ExeLoader : ExecutableFileLoader {
         // Each process gets its own copy of the system environment strings,
         // so these need to be allocated in a separate block first.
         //byte[]  environmentBlock = new EnvironmentBlockGenerator(_machine).BuildEnvironmentBlock();
-        
+
         //var fullImagePath = file;
 
         //ushort requestedSize = (ushort)((environmentBlock.Length >> 4) + 1 + fullImagePath.Length + 1);

@@ -69,7 +69,7 @@ public class DosMemoryManager {
         return JoinBlocks(block, true);
     }
 
-    public ushort PspSegment =>_pspSegment;
+    public ushort PspSegment => _pspSegment;
 
     public void Init(ushort pspSegment, ushort lastFreeSegment) {
         ushort startSegment = (ushort)(pspSegment - 1);

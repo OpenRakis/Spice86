@@ -131,7 +131,7 @@ public partial class CSharpOverrideHelper {
         SegmentedAddress address = new(segment, offset);
         uint physicalAddress = address.ToPhysical();
         StaticAddressesRecorder recorder = Cpu.StaticAddressesRecorder;
-        if (recorder.Names.TryGetValue(physicalAddress, out var existing)) {
+        if (recorder.Names.TryGetValue(physicalAddress, out string? existing)) {
             string error = $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it. Please check your mappings for duplicates.", address, existing);

@@ -30,7 +30,7 @@ public class VgaDac {
     }
 
     public static byte From8bitTo6bitColor(byte color8bit) => (byte)((uint)color8bit >> 2);
- 
+
     public static byte From6bitColorTo8bit(byte color6bit) => (byte)((color6bit & 0b111111) << 2);
 
     /// <summary>

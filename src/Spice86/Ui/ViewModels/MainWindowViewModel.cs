@@ -37,8 +37,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
 
     private ProgramExecutor? _programExecutor;
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
-
-    ManualResetEvent _okayToContinueEvent = new ManualResetEvent(true);
+    readonly ManualResetEvent _okayToContinueEvent = new(true);
 
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
 

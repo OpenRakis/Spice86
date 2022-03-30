@@ -5,8 +5,7 @@ using System;
 /// <summary>
 /// Allows a 16-bit value to be read or written one byte at a time.
 /// </summary>
-public sealed class LatchedUInt16
-{
+public sealed class LatchedUInt16 {
     private ushort value;
     private bool wroteLow;
     private bool readLow;
@@ -16,8 +15,7 @@ public sealed class LatchedUInt16
     /// <summary>
     /// Initializes a new instance of the LatchedUInt16 class.
     /// </summary>
-    public LatchedUInt16()
-    {
+    public LatchedUInt16() {
     }
     /// <summary>
     /// Initializes a new instance of the LatchedUInt16 class.
@@ -31,23 +29,19 @@ public sealed class LatchedUInt16
     public event EventHandler? ValueChanged;
 
     public static implicit operator ushort(LatchedUInt16 value) => value == null ? (ushort)0 : value.value;
-    public static implicit operator LatchedUInt16(ushort value) => new LatchedUInt16(value);
+    public static implicit operator LatchedUInt16(ushort value) => new(value);
 
     /// <summary>
     /// Returns the next byte of the value.
     /// </summary>
     /// <returns>The next byte of the value.</returns>
-    public byte ReadByte()
-    {
-        if (this.readLow)
-        {
+    public byte ReadByte() {
+        if (this.readLow) {
             this.readLow = false;
             return this.latchedHighByte;
-        }
-        else
-        {
+        } else {
             this.readLow = true;
-            var value = this.value;
+            ushort value = this.value;
             this.latchedHighByte = (byte)(value >> 8);
             return (byte)value;
         }
@@ -56,16 +50,12 @@ public sealed class LatchedUInt16
     /// Writes the next byte of the value.
     /// </summary>
     /// <param name="value">The next byte of the value.</param>
-    public void WriteByte(byte value)
-    {
-        if (this.wroteLow)
-        {
+    public void WriteByte(byte value) {
+        if (this.wroteLow) {
             this.wroteLow = false;
             this.value = (ushort)((value << 8) | this.latchedLowByte);
             OnValueChanged(EventArgs.Empty);
-        }
-        else
-        {
+        } else {
             this.wroteLow = true;
             this.latchedLowByte = value;
         }
@@ -74,8 +64,7 @@ public sealed class LatchedUInt16
     /// Sets the full 16-bit value.
     /// </summary>
     /// <param name="value">The full 16-bit value.</param>
-    public void SetValue(ushort value)
-    {
+    public void SetValue(ushort value) {
         this.value = value;
         this.OnValueChanged(EventArgs.Empty);
     }

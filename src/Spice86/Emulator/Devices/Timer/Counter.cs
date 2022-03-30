@@ -100,7 +100,7 @@ public class Counter {
         }
     }
 
-    private byte Lsb =>ConvertUtils.ReadLsb(Value);
+    private byte Lsb => ConvertUtils.ReadLsb(Value);
 
     private byte Msb => ConvertUtils.ReadMsb(Value);
 

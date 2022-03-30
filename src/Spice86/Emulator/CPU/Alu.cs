@@ -371,7 +371,7 @@ public class Alu {
         if (count == 0) {
             return value;
         }
-        
+
         short res = (short)value;
         SetCarryFlagForRightShifts(res, count);
         res >>= count;

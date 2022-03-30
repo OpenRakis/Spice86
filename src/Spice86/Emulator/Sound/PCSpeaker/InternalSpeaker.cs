@@ -19,13 +19,13 @@ public sealed class InternalSpeaker {
 
     private readonly int outputSampleRate = 48000;
     private readonly int ticksPerSample;
-    private readonly LatchedUInt16 frequencyRegister = new LatchedUInt16();
-    private readonly Stopwatch durationTimer = new Stopwatch();
-    private readonly ConcurrentQueue<QueuedNote> queuedNotes = new ConcurrentQueue<QueuedNote>();
-    private readonly object threadStateLock = new object();
+    private readonly LatchedUInt16 frequencyRegister = new();
+    private readonly Stopwatch durationTimer = new();
+    private readonly ConcurrentQueue<QueuedNote> queuedNotes = new();
+    private readonly object threadStateLock = new();
     private SpeakerControl controlRegister = SpeakerControl.UseTimer;
     private Task? generateWaveformTask;
-    private readonly CancellationTokenSource cancelGenerateWaveform = new CancellationTokenSource();
+    private readonly CancellationTokenSource cancelGenerateWaveform = new();
     private int currentPeriod;
     private Configuration Configuration { get; init; }
     /// <summary>
@@ -130,7 +130,7 @@ public sealed class InternalSpeaker {
         }
 
         int halfPeriod = period / 2;
-        buffer.Slice(0, halfPeriod).Fill(96);
+        buffer[..halfPeriod].Fill(96);
         buffer.Slice(halfPeriod, halfPeriod).Fill(120);
 
         return period;
@@ -151,8 +151,8 @@ public sealed class InternalSpeaker {
         }
         FillWithSilence(player);
 
-        var buffer = new byte[4096];
-        var writeBuffer = buffer;
+        byte[]? buffer = new byte[4096];
+        byte[]? writeBuffer = buffer;
         bool expandToStereo = false;
         if (player.Format.Channels == 2) {
             writeBuffer = new byte[buffer.Length * 2];
@@ -181,7 +181,7 @@ public sealed class InternalSpeaker {
                 GenerateSilence(buffer);
                 idleCount = 0;
             } else {
-                var floatArray = new float[buffer.Length];
+                float[]? floatArray = new float[buffer.Length];
 
                 for (int i = 0; i < buffer.Length; i++) {
                     floatArray[i] = buffer[i];
@@ -203,7 +203,7 @@ public sealed class InternalSpeaker {
         if (!OperatingSystem.IsWindows()) {
             return;
         }
-        var buffer = new float[4096];
+        float[]? buffer = new float[4096];
         Span<float> span = buffer.AsSpan();
 
         while (player.WriteData(span) > 0) {

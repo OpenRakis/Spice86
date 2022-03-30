@@ -30,7 +30,7 @@ using System.Collections.Generic;
 /// </summary>
 public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
-    private ProgramExecutor _programExecutor;
+    private readonly ProgramExecutor _programExecutor;
 
     public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, Configuration configuration, bool debugMode) {
         _programExecutor = programExecutor;

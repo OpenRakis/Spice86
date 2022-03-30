@@ -23,9 +23,9 @@ public class FunctionCall {
 
     public CallType CallType => _callType;
 
-    public SegmentedAddress EntryPointAddress =>_entryPointAddress;
+    public SegmentedAddress EntryPointAddress => _entryPointAddress;
 
-    public SegmentedAddress? ExpectedReturnAddress =>_expectedReturnAddress;
+    public SegmentedAddress? ExpectedReturnAddress => _expectedReturnAddress;
 
     public SegmentedAddress StackAddressAfterCall => _stackAddressAfterCall;
 

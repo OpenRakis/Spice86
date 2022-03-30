@@ -4,7 +4,7 @@ using Spice86.Emulator.VM;
 
 public class EnvironmentBlockGenerator {
     private readonly Machine _machine;
-    public EnvironmentBlockGenerator(Machine machine)  => _machine = machine;
+    public EnvironmentBlockGenerator(Machine machine) => _machine = machine;
 
 
     /// <summary>

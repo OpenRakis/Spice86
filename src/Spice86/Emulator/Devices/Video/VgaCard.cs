@@ -13,7 +13,7 @@ using Spice86.UI.ViewModels;
 /// </summary>
 public class VgaCard : DefaultIOPortHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<VgaCard>();
-   
+
     public const ushort CRT_IO_PORT = 0x03D4;
     // http://www.osdever.net/FreeVGA/vga/extreg.htm#3xAR
     public const ushort VGA_SEQUENCER_ADDRESS_REGISTER_PORT = 0x03C4;

@@ -60,7 +60,7 @@ public class GdbCustomCommandsHandler {
         }
 
         string scaleString = args[4];
-        if (!int.TryParse(scaleString, out var scale)) {
+        if (!int.TryParse(scaleString, out int scale)) {
             throw new ArgumentException($"Could not parse scale {scaleString}");
         }
 
@@ -292,7 +292,7 @@ public class GdbCustomCommandsHandler {
             return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn());
         } else {
             string returnType = args[1];
-            bool parsed = Enum.TryParse(typeof(CallType), returnType, out var callType);
+            bool parsed = Enum.TryParse(typeof(CallType), returnType, out object? callType);
             if (parsed == false) {
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand {returnType} as a return type. Valid values are: {GetValidRetValues()}");
             }

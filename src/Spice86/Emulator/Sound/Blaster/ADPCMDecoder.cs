@@ -5,8 +5,7 @@ using System;
 /// <summary>
 /// Base class for ADPCM decoders.
 /// </summary>
-internal abstract class ADPCMDecoder
-{
+internal abstract class ADPCMDecoder {
     /// <summary>
     /// The current step value.
     /// </summary>
@@ -16,8 +15,7 @@ internal abstract class ADPCMDecoder
     /// Initializes a new instance of the ADPCMDecoder class.
     /// </summary>
     /// <param name="factor">The compression factor.</param>
-    protected ADPCMDecoder(int factor)
-    {
+    protected ADPCMDecoder(int factor) {
         this.CompressionFactor = factor;
     }
 
@@ -33,8 +31,7 @@ internal abstract class ADPCMDecoder
     /// <summary>
     /// Resets the decoder to its initial state.
     /// </summary>
-    public void Reset()
-    {
+    public void Reset() {
         this.step = 0;
         this.Reference = 0;
     }

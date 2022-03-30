@@ -6,8 +6,7 @@ using System;
 /// Represents the contents of the Interrupt Status register.
 /// </summary>
 [Flags]
-internal enum InterruptStatus
-{
+internal enum InterruptStatus {
     /// <summary>
     /// The register is clear.
     /// </summary>

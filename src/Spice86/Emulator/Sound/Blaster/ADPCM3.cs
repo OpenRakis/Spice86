@@ -5,8 +5,7 @@ using System;
 /// <summary>
 /// 3-bit ADPCM decoder.
 /// </summary>
-internal sealed class ADPCM3 : ADPCM2
-{
+internal sealed class ADPCM3 : ADPCM2 {
     /// <summary>
     /// The limit value.
     /// </summary>
@@ -16,8 +15,7 @@ internal sealed class ADPCM3 : ADPCM2
     /// Initializes a new instance of the ADPCM3 class.
     /// </summary>
     public ADPCM3()
-        : base(3)
-    {
+        : base(3) {
     }
 
     /// <summary>
@@ -27,12 +25,10 @@ internal sealed class ADPCM3 : ADPCM2
     /// <param name="sourceOffset">Offset in source array to start decoding.</param>
     /// <param name="count">Number of bytes to decode.</param>
     /// <param name="destination">Destination buffer to write decoded PCM data.</param>
-    public override void Decode(byte[] source, int sourceOffset, int count, Span<byte> destination)
-    {
+    public override void Decode(byte[] source, int sourceOffset, int count, Span<byte> destination) {
         byte current = this.Reference;
 
-        for (int i = 0; i < count; i++)
-        {
+        for (int i = 0; i < count; i++) {
             int sample = source[sourceOffset + i] & 0x07;
             current = DecodeSample(current, sample);
             destination[(i * 3)] = current;
@@ -55,23 +51,19 @@ internal sealed class ADPCM3 : ADPCM2
     /// <param name="current">Current prediction value.</param>
     /// <param name="sample">3-bit sample to decode.</param>
     /// <returns>Decoded 8-bit sample.</returns>
-    private new byte DecodeSample(byte current, int sample)
-    {
+    private new byte DecodeSample(byte current, int sample) {
         if ((sample & 0x04) == 0) {
             current += (byte)(sample << this.step);
         } else {
             current -= (byte)((sample & 0x03) << this.step);
         }
 
-        if (current >= Limit)
-        {
+        if (current >= Limit) {
             this.step++;
             if (this.step > 3) {
                 this.step = 3;
             }
-        }
-        else if (current == 0)
-        {
+        } else if (current == 0) {
             this.step--;
             if (this.step < 0) {
                 this.step = 0;

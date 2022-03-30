@@ -28,10 +28,9 @@ public class JumpDumper {
             return new JumpHandler();
         }
         try {
-            if(string.IsNullOrWhiteSpace(filePath) == false && File.Exists(filePath)) {
+            if (string.IsNullOrWhiteSpace(filePath) == false && File.Exists(filePath)) {
                 return JsonConvert.DeserializeObject<JumpHandler>(File.ReadAllText(filePath)) ?? new();
-            }
-            else {
+            } else {
                 return new();
             }
         } catch (JsonException e) {

@@ -14,14 +14,14 @@ public class PcSpeaker : DefaultIOPortHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<PcSpeaker>();
     private const int PcSpeakerPortNumber = 0x61;
 
-    private InternalSpeaker _pcSpeaker;
+    private readonly InternalSpeaker _pcSpeaker;
 
     public PcSpeaker(Machine machine, Configuration configuration) : base(machine, configuration) {
         _pcSpeaker = new(configuration);
     }
 
     public override byte ReadByte(int port) {
-        var value = _pcSpeaker.ReadByte(port);
+        byte value = _pcSpeaker.ReadByte(port);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("PC Speaker get value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }

@@ -9,7 +9,7 @@ using System.IO.Compression;
 using TinyAudio;
 
 internal sealed class Mt32Player : IDisposable {
-    private readonly Mt32Context context = new Mt32Context();
+    private readonly Mt32Context context = new();
     private readonly AudioPlayer? audioPlayer;
     private bool disposed;
 
@@ -85,7 +85,7 @@ internal sealed class Mt32Player : IDisposable {
                 }
             }
         } else if (Directory.Exists(path)) {
-            foreach (var fileName in Directory.EnumerateFiles(path, "*.ROM")) {
+            foreach (string? fileName in Directory.EnumerateFiles(path, "*.ROM")) {
                 context.AddRom(fileName);
             }
         }

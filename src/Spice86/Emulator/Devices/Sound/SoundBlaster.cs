@@ -19,7 +19,7 @@ using System.Threading;
 /// </summary>
 public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDisposable {
 
-    private ILogger _logger = Log.Logger.ForContext<SoundBlaster>();
+    private readonly ILogger _logger = Log.Logger.ForContext<SoundBlaster>();
 
     private const int DSP_DATA_AVAILABLE_PORT_NUMBER = 0x22E;
     private const int DSP_READ_PORT_NUMBER = 0x22A;
@@ -36,7 +36,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     private const int RIGHT_SPEAKER_DATA_PORT_NUMBER = 0x223;
     private const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222;
 
-    private static readonly SortedList<byte, byte> commandLengths = new SortedList<byte, byte> {
+    private static readonly SortedList<byte, byte> commandLengths = new() {
         [Commands.SetTimeConstant] = 1,
         [Commands.SingleCycleDmaOutput8] = 2,
         [Commands.DspIdentification] = 1,

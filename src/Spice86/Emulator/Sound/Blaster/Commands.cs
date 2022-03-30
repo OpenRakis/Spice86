@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Emulator.Sound.Blaster;
 
-internal static class Commands
-{
+internal static class Commands {
     public const byte DirectModeOutput = 0x10;
     public const byte DirectModeInput = 0x20;
 

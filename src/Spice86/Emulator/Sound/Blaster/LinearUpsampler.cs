@@ -6,32 +6,26 @@ using System.Runtime.CompilerServices;
 /// <summary>
 /// An adequate but not great audio resampler.
 /// </summary>
-internal static class LinearUpsampler
-{
+internal static class LinearUpsampler {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Resample8Mono(int sourceRate, int destRate, ReadOnlySpan<byte> source, Span<short> dest)
-    {
+    public static int Resample8Mono(int sourceRate, int destRate, ReadOnlySpan<byte> source, Span<short> dest) {
         double src2Dest = (double)destRate / (double)sourceRate;
         double dest2Src = (double)sourceRate / (double)destRate;
 
         int length = (int)(src2Dest * source.Length);
 
-        for (int i = 0; i < length; i++)
-        {
+        for (int i = 0; i < length; i++) {
             int srcIndex = (int)(i * dest2Src);
-            var remainder = (i * dest2Src) % 1;
+            double remainder = (i * dest2Src) % 1;
 
-            var value1 = Convert8To16(source[srcIndex]);
-            if (srcIndex < source.Length - 1)
-            {
-                var value2 = Convert8To16(source[srcIndex + 1]);
+            short value1 = Convert8To16(source[srcIndex]);
+            if (srcIndex < source.Length - 1) {
+                short value2 = Convert8To16(source[srcIndex + 1]);
 
-                var newValue = Interpolate(value1, value2, remainder);
+                short newValue = Interpolate(value1, value2, remainder);
                 dest[i << 1] = newValue;
                 dest[(i << 1) + 1] = newValue;
-            }
-            else
-            {
+            } else {
                 dest[i << 1] = value1;
                 dest[(i << 1) + 1] = value1;
             }
@@ -40,30 +34,25 @@ internal static class LinearUpsampler
         return length * 2;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Resample8Stereo(int sourceRate, int destRate, ReadOnlySpan<byte> source, Span<short> dest)
-    {
+    public static int Resample8Stereo(int sourceRate, int destRate, ReadOnlySpan<byte> source, Span<short> dest) {
         double src2Dest = (double)destRate / (double)sourceRate;
         double dest2Src = (double)sourceRate / (double)destRate;
 
         int length = (int)(src2Dest * source.Length) / 2;
 
-        for (int i = 0; i < length; i++)
-        {
+        for (int i = 0; i < length; i++) {
             int srcIndex = (int)(i * dest2Src) << 1;
 
-            var value1Left = Convert8To16(source[srcIndex]);
-            var value1Right = Convert8To16(source[srcIndex + 1]);
-            if (srcIndex < source.Length - 3)
-            {
-                var remainder = (i * dest2Src) % 1;
-                var value2Left = Convert8To16(source[srcIndex + 2]);
-                var value2Right = Convert8To16(source[srcIndex + 3]);
+            short value1Left = Convert8To16(source[srcIndex]);
+            short value1Right = Convert8To16(source[srcIndex + 1]);
+            if (srcIndex < source.Length - 3) {
+                double remainder = (i * dest2Src) % 1;
+                short value2Left = Convert8To16(source[srcIndex + 2]);
+                short value2Right = Convert8To16(source[srcIndex + 3]);
 
                 dest[i << 1] = Interpolate(value1Left, value2Left, remainder);
                 dest[(i << 1) + 1] = Interpolate(value1Right, value2Right, remainder);
-            }
-            else
-            {
+            } else {
                 dest[i << 1] = value1Left;
                 dest[(i << 1) + 1] = value1Right;
             }
@@ -72,29 +61,24 @@ internal static class LinearUpsampler
         return length * 2;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Resample16Mono(int sourceRate, int destRate, ReadOnlySpan<short> source, Span<short> dest)
-    {
+    public static int Resample16Mono(int sourceRate, int destRate, ReadOnlySpan<short> source, Span<short> dest) {
         double src2Dest = (double)destRate / (double)sourceRate;
         double dest2Src = (double)sourceRate / (double)destRate;
 
         int length = (int)(src2Dest * source.Length);
 
-        for (int i = 0; i < length; i++)
-        {
+        for (int i = 0; i < length; i++) {
             int srcIndex = (int)(i * dest2Src);
-            var remainder = (i * dest2Src) % 1;
+            double remainder = (i * dest2Src) % 1;
 
-            var value1 = source[srcIndex];
-            if (srcIndex < source.Length - 1)
-            {
-                var value2 = source[srcIndex + 1];
+            short value1 = source[srcIndex];
+            if (srcIndex < source.Length - 1) {
+                short value2 = source[srcIndex + 1];
 
-                var newValue = Interpolate(value1, value2, remainder);
+                short newValue = Interpolate(value1, value2, remainder);
                 dest[i << 1] = newValue;
                 dest[(i << 1) + 1] = newValue;
-            }
-            else
-            {
+            } else {
                 dest[i << 1] = value1;
                 dest[(i << 1) + 1] = value1;
             }
@@ -103,30 +87,25 @@ internal static class LinearUpsampler
         return length * 2;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Resample16Stereo(int sourceRate, int destRate, ReadOnlySpan<short> source, Span<short> dest)
-    {
+    public static int Resample16Stereo(int sourceRate, int destRate, ReadOnlySpan<short> source, Span<short> dest) {
         double src2Dest = (double)destRate / (double)sourceRate;
         double dest2Src = (double)sourceRate / (double)destRate;
 
         int length = (int)(src2Dest * source.Length) / 2;
 
-        for (int i = 0; i < length; i++)
-        {
+        for (int i = 0; i < length; i++) {
             int srcIndex = (int)(i * dest2Src) << 1;
 
-            var value1Left = source[srcIndex];
-            var value1Right = source[srcIndex + 1];
-            if (srcIndex < source.Length - 3)
-            {
-                var remainder = (i * dest2Src) % 1;
-                var value2Left = source[srcIndex + 2];
-                var value2Right = source[srcIndex + 3];
+            short value1Left = source[srcIndex];
+            short value1Right = source[srcIndex + 1];
+            if (srcIndex < source.Length - 3) {
+                double remainder = (i * dest2Src) % 1;
+                short value2Left = source[srcIndex + 2];
+                short value2Right = source[srcIndex + 3];
 
                 dest[i << 1] = Interpolate(value1Left, value2Left, remainder);
                 dest[(i << 1) + 1] = Interpolate(value1Right, value2Right, remainder);
-            }
-            else
-            {
+            } else {
                 dest[i << 1] = value1Left;
                 dest[(i << 1) + 1] = value1Right;
             }

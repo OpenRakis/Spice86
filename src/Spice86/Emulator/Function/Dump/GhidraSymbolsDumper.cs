@@ -105,8 +105,8 @@ public class GhidraSymbolsDumper {
         }
         SegmentedAddress address;
         try {
-            ushort segment = ConvertUtils.ParseHex16(nameSplit[nameSplit.Length - 3]);
-            ushort offset = ConvertUtils.ParseHex16(nameSplit[nameSplit.Length - 2]);
+            ushort segment = ConvertUtils.ParseHex16(nameSplit[^3]);
+            ushort offset = ConvertUtils.ParseHex16(nameSplit[^2]);
             address = new SegmentedAddress(segment, offset);
         } catch (FormatException exception) {
             _logger.Information("Cannot parse function name {nameWithAddress} into a function, the last 3 underscore segments of the name are not hexadecimal values", nameWithAddress);

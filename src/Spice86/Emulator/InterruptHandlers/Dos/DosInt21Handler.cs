@@ -415,7 +415,7 @@ public class DosInt21Handler : InterruptHandler {
     internal DosMemoryManager DosMemoryManager => _dosMemoryManager;
 
     private string ConvertDosChar(byte characterByte) {
-        return _cp850CharSet.GetString(new [] { characterByte });
+        return _cp850CharSet.GetString(new[] { characterByte });
     }
 
     private void FillDispatchTable() {

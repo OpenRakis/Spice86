@@ -42,12 +42,12 @@ public partial class App : Application {
     [SupportedOSPlatform("windows")]
     private static bool GetIsWindowsInDarkMode() {
         RegistryKey? key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath);
-        var registryValueObject = key?.GetValue(RegistryValueName);
+        object? registryValueObject = key?.GetValue(RegistryValueName);
         if (registryValueObject == null) {
             return false;
         }
 
-        var registryValue = (int)registryValueObject;
+        int registryValue = (int)registryValueObject;
         return registryValue <= 0;
     }
 

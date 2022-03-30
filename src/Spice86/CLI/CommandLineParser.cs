@@ -22,7 +22,7 @@ public class CommandLineParser {
 
     public static Configuration? ParseCommandLine(string[] args) {
         ParserResult<Configuration>? result = Parser.Default.ParseArguments<Configuration>(args)
-            .WithNotParsed((e) => _logger.Error("{@Errors}",e));
+            .WithNotParsed((e) => _logger.Error("{@Errors}", e));
         if (result != null) {
             Configuration? parsedConfig = result.MapResult((initialConfig) => {
                 initialConfig.Exe = ParseExePath(initialConfig.Exe);
@@ -39,7 +39,7 @@ public class CommandLineParser {
 
     private static string? ParseExePath(string? exePath) {
         string? unixPathValue = exePath?.Replace('\\', '/');
-        if(File.Exists(exePath)) {
+        if (File.Exists(exePath)) {
             return new FileInfo(exePath).FullName;
         }
         return unixPathValue;

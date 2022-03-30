@@ -36,7 +36,7 @@ public class FunctionReturn : IComparable<FunctionReturn> {
         return HashCode.Combine(_instructionAddress, _returnCallType);
     }
 
-    public CallType ReturnCallType =>_returnCallType;
+    public CallType ReturnCallType => _returnCallType;
 
     public override string ToString() {
         return $"{_returnCallType} at {_instructionAddress}";

@@ -127,7 +127,7 @@ public class State {
 
     public ushort SS { get => SegmentRegisters.GetRegister(CPU.SegmentRegisters.SsIndex); set => SegmentRegisters.SetRegister(CPU.SegmentRegisters.SsIndex, value); }
 
-    public uint StackPhysicalAddress =>  MemoryUtils.ToPhysicalAddress(SS, SP);
+    public uint StackPhysicalAddress => MemoryUtils.ToPhysicalAddress(SS, SP);
 
     public bool TrapFlag { get => Flags.GetFlag(CPU.Flags.Trap); set => Flags.SetFlag(CPU.Flags.Trap, value); }
 

@@ -45,7 +45,7 @@ public class OpenFile {
         _loadedMemoryRanges.Add(memoryRange);
     }
 
-    public int Descriptor =>_descriptor;
+    public int Descriptor => _descriptor;
 
     public IList<MemoryRange> LoadedMemoryRanges => _loadedMemoryRanges;
 

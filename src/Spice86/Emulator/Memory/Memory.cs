@@ -16,8 +16,8 @@ public class Memory {
     private readonly BreakPointHolder _readBreakPoints = new();
 
     private readonly BreakPointHolder _writeBreakPoints = new();
-    private UInt16Indexer _uInt16Indexer;
-    private UInt8Indexe _uint8Indexer;
+    private readonly UInt16Indexer _uInt16Indexer;
+    private readonly UInt8Indexe _uint8Indexer;
 
     public Memory(uint size) {
         _physicalMemory = new byte[size];
@@ -33,7 +33,7 @@ public class Memory {
     /// <param name="value">String to write to the specified address.</param>
     /// <param name="writeNull">Value indicating whether a null should be written after the string.</param>
     public void SetString(uint segment, uint offset, string value, bool writeNull) {
-        var buffer = ArrayPool<byte>.Shared.Rent(value.Length);
+        byte[]? buffer = ArrayPool<byte>.Shared.Rent(value.Length);
         try {
             uint length = (uint)Encoding.Latin1.GetBytes(value, buffer);
             for (uint i = 0; i < length; i++) {
@@ -80,13 +80,13 @@ public class Memory {
     }
 
     public uint GetUint32(uint address) {
-        var res = MemoryUtils.GetUint32(_physicalMemory, address);
+        uint res = MemoryUtils.GetUint32(_physicalMemory, address);
         MonitorReadAccess(address);
         return res;
     }
 
     public byte GetUint8(uint addr) {
-        var res = MemoryUtils.GetUint8(_physicalMemory, addr);
+        byte res = MemoryUtils.GetUint8(_physicalMemory, addr);
         MonitorReadAccess(addr);
         return res;
     }

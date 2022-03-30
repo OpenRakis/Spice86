@@ -38,7 +38,7 @@ public class AddressOperation : IComparable<AddressOperation> {
         return HashCode.Combine(_operandSize.GetHashCode(), _valueOperation.GetHashCode());
     }
 
-    public OperandSize OperandSize =>_operandSize;
+    public OperandSize OperandSize => _operandSize;
 
     public ValueOperation ValueOperation => _valueOperation;
 

@@ -40,7 +40,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
 
     public bool IsNonLast => this.TypeField == McbNonLastEntry;
 
-    public bool IsValid =>  IsLast || IsNonLast;
+    public bool IsValid => IsLast || IsNonLast;
 
     public DosMemoryControlBlock Next() {
         return new DosMemoryControlBlock(Memory, BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(Size + 1), 0));

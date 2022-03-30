@@ -6,8 +6,7 @@ using System;
 /// Possible values of the PC speaker control register.
 /// </summary>
 [Flags]
-internal enum SpeakerControl
-{
+internal enum SpeakerControl {
     /// <summary>
     /// The register is clear.
     /// </summary>

@@ -5,8 +5,7 @@ using System;
 /// <summary>
 /// Stores pitch and duration of a queued PC speaker note.
 /// </summary>
-internal readonly struct QueuedNote : IEquatable<QueuedNote>
-{
+internal readonly struct QueuedNote : IEquatable<QueuedNote> {
     /// <summary>
     /// Indicates a rest note.
     /// </summary>
@@ -17,8 +16,7 @@ internal readonly struct QueuedNote : IEquatable<QueuedNote>
     /// </summary>
     /// <param name="halfPeriod">Length of a period in samples.</param>
     /// <param name="periodCount">Number of full periods in the note.</param>
-    public QueuedNote(int period, int periodCount)
-    {
+    public QueuedNote(int period, int periodCount) {
         this.Period = period;
         this.PeriodCount = periodCount;
     }
@@ -56,8 +54,7 @@ internal readonly struct QueuedNote : IEquatable<QueuedNote>
     /// Returns a string representation of the QueuedNote.
     /// </summary>
     /// <returns>String representation of the QueuedNote.</returns>
-    public override string ToString()
-    {
+    public override string ToString() {
         if (this == Rest) {
             return "Rest";
         } else {

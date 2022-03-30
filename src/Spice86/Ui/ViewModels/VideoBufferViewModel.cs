@@ -58,11 +58,12 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
             return Unit.Default;
         }
-        var picker = new SaveFileDialog();
-        picker.DefaultExtension = "bmp";
-        picker.InitialFileName = "screenshot.bmp";
-        picker.Title = "Save Bitmap";
-        var file = await picker.ShowAsync(desktop.MainWindow);
+        var picker = new SaveFileDialog {
+            DefaultExtension = "bmp",
+            InitialFileName = "screenshot.bmp",
+            Title = "Save Bitmap"
+        };
+        string? file = await picker.ShowAsync(desktop.MainWindow);
         if (string.IsNullOrWhiteSpace(file) == false) {
             _bitmap.Save(file);
         }
@@ -200,7 +201,7 @@ public class VideoBufferViewModel : ViewModelBase, IComparable<VideoBufferViewMo
                 default:
                     throw new NotImplementedException($"{buf.Format}");
             }
-            if(!IsDrawing) {
+            if (!IsDrawing) {
                 IsDrawing = true;
             }
             Dispatcher.UIThread.Post(() => UIUpdateMethod?.Invoke(), DispatcherPriority.MaxValue);

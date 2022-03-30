@@ -8,16 +8,14 @@ using Spice86.Emulator.VM;
 /// <summary>
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
-internal sealed class Dsp
-{
+internal sealed class Dsp {
     /// <summary>
     /// Initializes a new instance of the Dsp class.
     /// </summary>
     /// <param name="vm">Virtual machine instance associated with the DSP.</param>
     /// <param name="dma8">8-bit DMA channel for the DSP device.</param>
     /// <param name="dma16">16-bit DMA channel for the DSP device.</param>
-    public Dsp(Machine vm, int dma8, int dma16)
-    {
+    public Dsp(Machine vm, int dma8, int dma16) {
         this.dmaChannel8 = vm.DmaController.Channels[dma8];
         this.dmaChannel16 = vm.DmaController.Channels[dma16];
         this.SampleRate = 22050;
@@ -62,8 +60,7 @@ internal sealed class Dsp
     /// <param name="autoInitialize">Value indicating whether the DMA controller is in auto-initialize mode.</param>
     /// <param name="compression">Compression level of the expected data.</param>
     /// <param name="referenceByte">Value indicating whether a reference byte is expected.</param>
-    public void Begin(bool is16Bit, bool isStereo, bool autoInitialize, CompressionLevel compression = CompressionLevel.None, bool referenceByte = false)
-    {
+    public void Begin(bool is16Bit, bool isStereo, bool autoInitialize, CompressionLevel compression = CompressionLevel.None, bool referenceByte = false) {
         this.Is16Bit = is16Bit;
         this.IsStereo = isStereo;
         this.AutoInitialize = autoInitialize;
@@ -73,8 +70,7 @@ internal sealed class Dsp
 
         this.decodeRemainderOffset = -1;
 
-        this.decoder = compression switch
-        {
+        this.decoder = compression switch {
             CompressionLevel.ADPCM2 => new ADPCM2(),
             CompressionLevel.ADPCM3 => new ADPCM3(),
             CompressionLevel.ADPCM4 => new ADPCM4(),
@@ -103,18 +99,15 @@ internal sealed class Dsp
     /// <summary>
     /// Exits autoinitialize mode.
     /// </summary>
-    public void ExitAutoInit()
-    {
+    public void ExitAutoInit() {
         this.AutoInitialize = false;
     }
     /// <summary>
     /// Reads samples from the internal buffer.
     /// </summary>
     /// <param name="buffer">Buffer into which sample data is written.</param>
-    public void Read(Span<byte> buffer)
-    {
-        if (this.compression == CompressionLevel.None)
-        {
+    public void Read(Span<byte> buffer) {
+        if (this.compression == CompressionLevel.None) {
             this.InternalRead(buffer);
             return;
         }
@@ -126,8 +119,7 @@ internal sealed class Dsp
         int offset = 0;
         int length = buffer.Length;
 
-        while (buffer.Length > 0 && this.decodeRemainderOffset >= 0)
-        {
+        while (buffer.Length > 0 && this.decodeRemainderOffset >= 0) {
             buffer[offset] = this.decodeRemainder[this.decodeRemainderOffset];
             offset++;
             length--;
@@ -138,8 +130,7 @@ internal sealed class Dsp
             return;
         }
 
-        if (this.referenceByteExpected)
-        {
+        if (this.referenceByteExpected) {
             this.InternalRead(buffer.Slice(offset, 1));
             this.referenceByteExpected = false;
             if (this.decoder is not null) {
@@ -158,13 +149,12 @@ internal sealed class Dsp
         if (blocks > 0 && this.decodeBuffer is not null) {
             this.InternalRead(this.decodeBuffer.AsSpan(0, blocks.Value));
             if (this.decoder is not null) {
-                this.decoder.Decode(this.decodeBuffer, 0, blocks.Value, buffer.Slice(offset));
+                this.decoder.Decode(this.decodeBuffer, 0, blocks.Value, buffer[offset..]);
             }
         }
 
         int? remainder = length % this.decoder?.CompressionFactor;
-        if (remainder > 0)
-        {
+        if (remainder > 0) {
             this.InternalRead(this.decodeRemainder.AsSpan(0, remainder.Value));
             Array.Reverse(this.decodeRemainder, 0, remainder.Value);
             this.decodeRemainderOffset = remainder.Value - 1;
@@ -175,15 +165,12 @@ internal sealed class Dsp
     /// </summary>
     /// <param name="source">Pointer to data in memory.</param>
     /// <returns>Number of bytes actually written.</returns>
-    public int DmaWrite(ReadOnlySpan<byte> source)
-    {
+    public int DmaWrite(ReadOnlySpan<byte> source) {
         int actualCount = this.waveBuffer.Write(source);
 
-        if (this.AutoInitialize)
-        {
+        if (this.AutoInitialize) {
             this.autoInitTotal += actualCount;
-            if (this.autoInitTotal >= this.BlockTransferSize)
-            {
+            if (this.autoInitTotal >= this.BlockTransferSize) {
                 this.autoInitTotal -= this.BlockTransferSize;
                 OnAutoInitBufferComplete(EventArgs.Empty);
             }
@@ -194,8 +181,7 @@ internal sealed class Dsp
     /// <summary>
     /// Resets the DSP to its initial state.
     /// </summary>
-    public void Reset()
-    {
+    public void Reset() {
         this.SampleRate = 22050;
         this.BlockTransferSize = 65536;
         this.AutoInitialize = false;
@@ -209,18 +195,14 @@ internal sealed class Dsp
     /// Reads samples from the internal buffer.
     /// </summary>
     /// <param name="buffer">Buffer into which sample data is written.</param>
-    private void InternalRead(Span<byte> buffer)
-    {
+    private void InternalRead(Span<byte> buffer) {
         Span<byte> dest = buffer;
 
-        while (dest.Length > 0)
-        {
+        while (dest.Length > 0) {
             int amt = waveBuffer.Read(dest);
 
-            if (amt == 0)
-            {
-                if (!this.IsEnabled || this.readIdleCycles >= 100)
-                {
+            if (amt == 0) {
+                if (!this.IsEnabled || this.readIdleCycles >= 100) {
                     byte zeroValue = this.Is16Bit ? (byte)0 : (byte)128;
                     dest.Fill(zeroValue);
                     return;
@@ -228,13 +210,11 @@ internal sealed class Dsp
 
                 this.readIdleCycles++;
                 Thread.Sleep(1);
-            }
-            else
-            {
+            } else {
                 this.readIdleCycles = 0;
             }
 
-            dest = dest.Slice(amt);
+            dest = dest[amt..];
         }
     }
     /// <summary>
@@ -293,7 +273,7 @@ internal sealed class Dsp
     /// <summary>
     /// Contains generated waveform data waiting to be read.
     /// </summary>
-    private readonly CircularBuffer waveBuffer = new CircularBuffer(TargetBufferSize);
+    private readonly CircularBuffer waveBuffer = new(TargetBufferSize);
 
     /// <summary>
     /// Size of output buffer in samples.

@@ -28,7 +28,7 @@ public class TimerInt8Handler : InterruptHandler {
         TickCounterValue = (uint)numberOfTicks;
         int irq = _pic.AcknwowledgeInterruptRequest();
         // Avoid Timer and Keyboard, which RaiseIRQ and Process the interrupt vector themselves. 
-        if (irq >= 0 && irq != 8 && irq != 9) {
+        if (irq is >= 0 and not 8 and not 9) {
             uint? vector = _pic.RaiseHardwareInterruptRequest((byte)irq);
             if (vector is not null) {
                 _pic.ProcessInterruptVector((byte)vector);

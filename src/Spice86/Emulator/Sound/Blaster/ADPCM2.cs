@@ -5,8 +5,7 @@ using System;
 /// <summary>
 /// 2-bit ADPCM decoder.
 /// </summary>
-internal class ADPCM2 : ADPCMDecoder
-{
+internal class ADPCM2 : ADPCMDecoder {
     /// <summary>
     /// The limit value.
     /// </summary>
@@ -20,16 +19,14 @@ internal class ADPCM2 : ADPCMDecoder
     /// Initializes a new instance of the ADPCM2 class.
     /// </summary>
     public ADPCM2()
-        : base(4)
-    {
+        : base(4) {
     }
     /// <summary>
     /// Initializes a new instance of the ADPCM2 class.
     /// </summary>
     /// <param name="factor">The compression factor.</param>
     protected ADPCM2(int factor)
-        : base(factor)
-    {
+        : base(factor) {
     }
 
     /// <summary>
@@ -40,14 +37,11 @@ internal class ADPCM2 : ADPCMDecoder
     /// <param name="count">Number of bytes to decode.</param>
     /// <param name="destination">Destination array to write decoded PCM data.</param>
     /// <param name="destinationOffset">Offset in destination array to start writing.</param>
-    public override void Decode(byte[] source, int sourceOffset, int count, Span<byte> destination)
-    {
+    public override void Decode(byte[] source, int sourceOffset, int count, Span<byte> destination) {
         byte current = this.Reference;
 
-        for (int i = 0; i < count; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
+        for (int i = 0; i < count; i++) {
+            for (int j = 0; j < 4; j++) {
                 int sourceByte = (source[sourceOffset + i] >> j) & 0x03;
                 current = DecodeSample(current, sourceByte);
                 destination[(i * 4) + j] = current;
@@ -63,23 +57,19 @@ internal class ADPCM2 : ADPCMDecoder
     /// <param name="current">Current prediction value.</param>
     /// <param name="sample">2-bit sample to decode.</param>
     /// <returns>Decoded 8-bit sample.</returns>
-    protected byte DecodeSample(byte current, int sample)
-    {
+    protected byte DecodeSample(byte current, int sample) {
         if ((sample & 0x02) == 0) {
             current += (byte)(sample << (this.step + Shift));
         } else {
             current -= (byte)((sample & 0x01) << (this.step + Shift));
         }
 
-        if (current >= Limit)
-        {
+        if (current >= Limit) {
             this.step++;
             if (this.step > 3) {
                 this.step = 3;
             }
-        }
-        else if (current == 0)
-        {
+        } else if (current == 0) {
             this.step--;
             if (this.step < 0) {
                 this.step = 0;

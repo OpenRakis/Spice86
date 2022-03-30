@@ -139,7 +139,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private void GenerateWaveforms() {
-        var buffer = new float[1024];
+        float[]? buffer = new float[1024];
         float[] playBuffer;
         if (audioPlayer is not null && OperatingSystem.IsWindows()) {
             bool expandToStereo = this.audioPlayer.Format.Channels == 2;

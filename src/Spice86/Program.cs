@@ -59,7 +59,7 @@ public class Program {
     // yet and stuff might break.
     [STAThread]
     public static void Main(string[] args) {
-        var newArgs = args;
+        string[]? newArgs = args;
         //if (OperatingSystem.IsLinux()) {
         //    newArgs = new string[] { "-e", "/mnt/c/Jeux/ABWFR/DUNE_CD/C/DNCDPRG.EXE", "-f", "-m", "/mnt/c/mt32-rom-data", "-a", "MID330" };
         //}

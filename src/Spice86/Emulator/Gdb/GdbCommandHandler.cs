@@ -121,7 +121,7 @@ public class GdbCommandHandler {
             var supportedRequest = supportedRequestItems
                 .ToDictionary(x => ParseSupportedQuery(x))
                 .ToDictionary(data => data.Key.Item1, data => data.Key.Item2);
-            if (supportedRequest.TryGetValue("xmlRegisters", out var value) == false || value.Equals("i386") == false) {
+            if (supportedRequest.TryGetValue("xmlRegisters", out object? value) == false || value.Equals("i386") == false) {
                 return _gdbIo.GenerateUnsupportedResponse();
             }
 

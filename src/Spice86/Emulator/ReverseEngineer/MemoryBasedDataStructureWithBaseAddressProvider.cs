@@ -68,7 +68,7 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         int i = 0;
         for (; i < value.Length; i++) {
             char character = value[i];
-            var charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
+            byte charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
             base.SetUint8(physicalStart, i, charFirstByte);
         }
 

@@ -12,7 +12,7 @@ using Serilog;
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
 
-    private ILogger _logger = Program.Logger.ForContext<IOPortDispatcher>();
+    private readonly ILogger _logger = Program.Logger.ForContext<IOPortDispatcher>();
 
     public IOPortDispatcher(Machine machine, Configuration configuration) : base(machine, configuration) {
         this._failOnUnhandledPort = configuration.FailOnUnhandledPort;

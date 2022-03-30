@@ -7,8 +7,7 @@ using System;
 /// <summary>
 /// Defines a device which supports 16-bit DMA transfers.
 /// </summary>
-public interface IDmaDevice16
-{
+public interface IDmaDevice16 {
     /// <summary>
     /// Gets the DMA channel of the device.
     /// </summary>

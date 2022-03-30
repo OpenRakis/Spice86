@@ -6,8 +6,7 @@ using System.Threading;
 /// <summary>
 /// Stores bytes of data in a circular buffer.
 /// </summary>
-internal sealed class CircularBuffer
-{
+internal sealed class CircularBuffer {
     private readonly byte[] data;
     private readonly int sizeMask;
     private volatile int readPosition;
@@ -18,8 +17,7 @@ internal sealed class CircularBuffer
     /// Initializes a new instance of the CircularBuffer class.
     /// </summary>
     /// <param name="capacity">Size of the buffer in bytes; the value must be a power of two.</param>
-    public CircularBuffer(int capacity)
-    {
+    public CircularBuffer(int capacity) {
         this.sizeMask = capacity - 1;
         this.data = new byte[capacity];
     }
@@ -34,25 +32,20 @@ internal sealed class CircularBuffer
     /// </summary>
     /// <param name="buffer">Buffer into which bytes are written.</param>
     /// <returns>Number of bytes actually read.</returns>
-    public int Read(Span<byte> buffer)
-    {
+    public int Read(Span<byte> buffer) {
         int bufferBytes = this.bytesInBuffer;
         int count = Math.Min(buffer.Length, bufferBytes);
 
-        if (count > 0)
-        {
+        if (count > 0) {
             int readPos = this.readPosition;
-            if (count <= this.data.Length - readPos)
-            {
-                var source = this.data.AsSpan(readPos, count);
+            if (count <= this.data.Length - readPos) {
+                Span<byte> source = this.data.AsSpan(readPos, count);
                 source.CopyTo(buffer);
-            }
-            else
-            {
-                var src1 = this.data.AsSpan(readPos, this.data.Length - readPos);
-                var src2 = this.data.AsSpan(0, count - src1.Length);
+            } else {
+                Span<byte> src1 = this.data.AsSpan(readPos, this.data.Length - readPos);
+                Span<byte> src2 = this.data.AsSpan(0, count - src1.Length);
                 src1.CopyTo(buffer);
-                src2.CopyTo(buffer.Slice(src1.Length));
+                src2.CopyTo(buffer[src1.Length..]);
             }
 
             Interlocked.Add(ref this.bytesInBuffer, -count);
@@ -66,21 +59,18 @@ internal sealed class CircularBuffer
     /// </summary>
     /// <param name="source">Data to read.</param>
     /// <returns>Number of bytes actually written.</returns>
-    public int Write(ReadOnlySpan<byte> source)
-    {
+    public int Write(ReadOnlySpan<byte> source) {
         int bytesAvailable = this.bytesInBuffer;
         int bytesFree = this.Capacity - bytesAvailable;
 
-        var sourceSpan = source.Length <= bytesFree ? source : source.Slice(0, bytesFree);
+        ReadOnlySpan<byte> sourceSpan = source.Length <= bytesFree ? source : source[..bytesFree];
 
-        if (sourceSpan.Length > 0)
-        {
+        if (sourceSpan.Length > 0) {
             int writePos = this.writePosition;
-            var target = this.data.AsSpan(writePos);
-            if (!sourceSpan.TryCopyTo(target))
-            {
-                var src1 = sourceSpan.Slice(0, target.Length);
-                var src2 = sourceSpan.Slice(target.Length);
+            Span<byte> target = this.data.AsSpan(writePos);
+            if (!sourceSpan.TryCopyTo(target)) {
+                ReadOnlySpan<byte> src1 = sourceSpan[..target.Length];
+                ReadOnlySpan<byte> src2 = sourceSpan[target.Length..];
 
                 src1.CopyTo(target);
                 src2.CopyTo(this.data.AsSpan());

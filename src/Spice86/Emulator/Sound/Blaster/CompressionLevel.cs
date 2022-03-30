@@ -3,8 +3,7 @@
 /// <summary>
 /// Represents a Sound Blaster PCM compression level.
 /// </summary>
-internal enum CompressionLevel
-{
+internal enum CompressionLevel {
     /// <summary>
     /// The data is not compressed.
     /// </summary>
