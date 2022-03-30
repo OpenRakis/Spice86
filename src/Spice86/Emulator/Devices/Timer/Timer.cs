@@ -49,6 +49,13 @@ public class Timer : DefaultIOPortHandler {
         _vgaCounter.SetValue((int)(Counter.HardwareFrequency / 30));
     }
 
+    public void SetTimeMultiplier(double multiplier) {
+        foreach (Counter counter in _counters) {
+            counter.Activator.Multiplier = multiplier;
+        }
+        _vgaCounter.Activator.Multiplier = multiplier;
+    }
+
     public Counter GetCounter(int counterIndex) {
         if (counterIndex > _counters.Length || counterIndex < 0) {
             throw new InvalidCounterIndexException(_machine, counterIndex);

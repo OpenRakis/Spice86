@@ -9,17 +9,17 @@ using Spice86.Utils;
 public class Counter {
     public const long HardwareFrequency = 1193182;
     private static readonly ILogger _logger = Program.Logger.ForContext<Counter>();
-    private readonly ICounterActivator _activator;
+    public CounterActivator Activator { get; protected set; }
     private readonly Machine _machine;
 
     private bool _firstByteRead;
 
     private bool _firstByteWritten;
 
-    public Counter(Machine machine, int index, ICounterActivator activator) {
+    public Counter(Machine machine, int index, CounterActivator activator) {
         this._machine = machine;
         Index = index;
-        this._activator = activator;
+        this.Activator = activator;
 
         // Default is 18.2 times per second
         UpdateDesiredFreqency(18);
@@ -59,7 +59,7 @@ public class Counter {
     /// <param name="currentCycles"></param>
     /// <returns></returns>
     public bool ProcessActivation(long currentCycles) {
-        if (_activator.IsActivated) {
+        if (Activator.IsActivated) {
             Ticks++;
             return true;
         }
@@ -119,7 +119,7 @@ public class Counter {
     }
 
     private void UpdateDesiredFreqency(long desiredFrequency) {
-        _activator.UpdateDesiredFrequency(desiredFrequency);
+        Activator.UpdateDesiredFrequency(desiredFrequency);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", Index, desiredFrequency);
         }
