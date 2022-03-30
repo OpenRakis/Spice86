@@ -74,7 +74,7 @@ public class GdbCommandBreakpointHandler {
                 }
                 return null;
             }
-            return new BreakPoint(breakPointType, address, this.OnBreakPointReached, false);
+            return new AddressBreakPoint((BreakPointType)breakPointType, address, this.OnBreakPointReached, false);
         } catch (FormatException nfe) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(nfe, "Cannot parse breakpoint {@Command}", command);

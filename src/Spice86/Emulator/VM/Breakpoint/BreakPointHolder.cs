@@ -3,23 +3,27 @@
 using System.Collections.Generic;
 
 public class BreakPointHolder {
-    private readonly Dictionary<long, List<BreakPoint>> _breakPoints = new();
+    private readonly Dictionary<long, List<BreakPoint>> _addressBreakPoints = new();
 
     private readonly List<BreakPoint> _unconditionalBreakPoints = new();
+    private readonly List<BreakPoint> _rangeBreakPoints = new();
 
-    public bool IsEmpty => _breakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
+
+    public bool IsEmpty => _addressBreakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
 
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
         if (breakPoint is UnconditionalBreakPoint) {
-            ToggleUnconditionalBreakPointBreakPoint(breakPoint, on);
-        } else {
-            ToggleConditionalBreakPoint(breakPoint, on);
+            ToggleUnconditionalBreakPoint(breakPoint, on);
+        } else if (breakPoint is AddressBreakPoint addressBreakPoint) {
+            ToggleAddressBreakPoint(addressBreakPoint, on);
+        }else if (breakPoint is AddressRangeBreakPoint addressRangeBreakPoint) {
+            ToggleRangeBreakPoint(addressRangeBreakPoint, on);
         }
     }
 
     public void TriggerBreakPointsWithAddressRange(long startAddress, long endAddress) {
-        if (_breakPoints.Count > 0) {
-            foreach (List<BreakPoint> breakPointList in _breakPoints.Values) {
+        if (_addressBreakPoints.Count > 0) {
+            foreach (List<BreakPoint> breakPointList in _addressBreakPoints.Values) {
                 TriggerBreakPointsWithAddressRangeFromList(breakPointList, startAddress, endAddress);
             }
         }
@@ -27,20 +31,26 @@ public class BreakPointHolder {
         if (_unconditionalBreakPoints.Count > 0) {
             TriggerBreakPointsWithAddressRangeFromList(_unconditionalBreakPoints, startAddress, endAddress);
         }
+        if (_rangeBreakPoints.Count > 0) {
+            TriggerBreakPointsWithAddressRangeFromList(_rangeBreakPoints, startAddress, endAddress);
+        }
     }
 
     public void TriggerMatchingBreakPoints(long address) {
-        if (_breakPoints.Count > 0) {
-            if (_breakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
+        if (_addressBreakPoints.Count > 0) {
+            if (_addressBreakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
                 TriggerBreakPointsFromList(breakPointList, address);
                 if (breakPointList.Count == 0) {
-                    _breakPoints.Remove(address);
+                    _addressBreakPoints.Remove(address);
                 }
             }
         }
 
         if (_unconditionalBreakPoints.Count > 0) {
             TriggerBreakPointsFromList(_unconditionalBreakPoints, address);
+        }
+        if (_rangeBreakPoints.Count > 0) {
+            TriggerBreakPointsFromList(_rangeBreakPoints, address);
         }
     }
 
@@ -68,22 +78,30 @@ public class BreakPointHolder {
         }
     }
 
-    private void ToggleConditionalBreakPoint(BreakPoint breakPoint, bool on) {
+    private void ToggleAddressBreakPoint(AddressBreakPoint breakPoint, bool on) {
         long address = breakPoint.Address;
         if (on) {
-            List<BreakPoint> breakPointList = _breakPoints.ComputeIfAbsent(address, new());
+            List<BreakPoint> breakPointList = _addressBreakPoints.ComputeIfAbsent(address, new());
             breakPointList.Add(breakPoint);
         } else {
-            if (_breakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
+            if (_addressBreakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
                 breakPointList.Remove(breakPoint);
                 if (breakPointList.Count == 0) {
-                    _breakPoints.Remove(address);
+                    _addressBreakPoints.Remove(address);
                 }
             }
         }
     }
 
-    private void ToggleUnconditionalBreakPointBreakPoint(BreakPoint breakPoint, bool on) {
+    private void ToggleRangeBreakPoint(AddressRangeBreakPoint breakPoint, bool on) {
+        if (on) {
+            _rangeBreakPoints.Add(breakPoint);
+        } else {
+            _rangeBreakPoints.Remove(breakPoint);
+        }
+    }
+
+    private void ToggleUnconditionalBreakPoint(BreakPoint breakPoint, bool on) {
         if (on) {
             _unconditionalBreakPoints.Add(breakPoint);
         } else {

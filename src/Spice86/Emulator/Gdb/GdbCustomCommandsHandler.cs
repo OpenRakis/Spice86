@@ -84,7 +84,7 @@ public class GdbCustomCommandsHandler {
         long cyclesToWait = long.Parse(cyclesToWaitString);
         long currentCycles = _machine.Cpu.State.Cycles;
         long cyclesBreak = currentCycles + cyclesToWait;
-        var breakPoint = new BreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
+        var breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);

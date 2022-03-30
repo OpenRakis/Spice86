@@ -32,16 +32,16 @@ public class MachineTest {
         State state = machine.Cpu.State;
         MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
         int triggers = 0;
-        machineBreakpoints.ToggleBreakPoint(new BreakPoint(BreakPointType.CYCLES, 10, breakpoint => {
+        machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 10, breakpoint => {
             Assert.Equal(10, state.Cycles);
             triggers++;
         }, true), true);
         // Address of cycle 10 to test multiple breakpoints
-        machineBreakpoints.ToggleBreakPoint(new BreakPoint(BreakPointType.EXECUTION, 0xF001C, breakpoint => {
+        machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.EXECUTION, 0xF001C, breakpoint => {
             Assert.Equal(0xF001C, (int)state.IpPhysicalAddress);
             triggers++;
         }, true), true);
-        machineBreakpoints.ToggleBreakPoint(new BreakPoint(BreakPointType.MACHINE_STOP, 0, breakpoint => {
+        machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.MACHINE_STOP, 0, breakpoint => {
             Assert.Equal(0xF01A9, (int)state.IpPhysicalAddress);
             Assert.False(machine.Cpu.IsRunning);
             triggers++;
@@ -59,19 +59,19 @@ public class MachineTest {
 
         // simple read
         // 2 reads, but breakpoint is removed after first
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
             memory.GetUint8(0);
             memory.GetUint8(0);
         });
 
         // simple write
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 0, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 0, 1, true, () => {
             memory.SetUint8(0, 0);
         });
 
         // read / write with remove
         int readWrite0Triggered = 0;
-        BreakPoint readWrite0 = new BreakPoint(BreakPointType.ACCESS, 0, breakpoint => { readWrite0Triggered++; }, false);
+        AddressBreakPoint readWrite0 = new AddressBreakPoint(BreakPointType.ACCESS, 0, breakpoint => { readWrite0Triggered++; }, false);
         machineBreakpoints.ToggleBreakPoint(readWrite0, true);
         memory.GetUint8(0);
         memory.SetUint8(0, 0);
@@ -81,36 +81,36 @@ public class MachineTest {
         Assert.Equal(2, readWrite0Triggered);
 
         // Memset
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
             memory.Memset(0, 0, 6);
             // Should not trigger for this
             memory.Memset(0, 0, 5);
             memory.Memset(6, 0, 5);
         });
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
             memory.Memset(5, 0, 5);
         });
 
         // GetData
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
             memory.GetData(5, 10);
             // Should not trigger for this
             memory.GetData(0, 5);
             memory.GetData(6, 5);
         });
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
             memory.GetData(0, 6);
         });
 
         // LoadData
         byte[] data = new byte[] { 1, 2, 3 };
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
             memory.LoadData(5, data);
             // Should not trigger for this
             memory.LoadData(2, data);
             memory.LoadData(6, data);
         });
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
             memory.LoadData(3, data);
         });
         // Bonus test for search
@@ -119,33 +119,62 @@ public class MachineTest {
         Assert.Equal(3, (int)address!);
 
         //MemCopy
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 10, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 10, 1, true, () => {
             memory.MemCopy(0, 10, 10);
             // Should not trigger for this
             memory.MemCopy(0, 20, 10);
         });
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
             memory.MemCopy(0, 10, 10);
             // Should not trigger for this
             memory.MemCopy(1, 10, 10);
         });
 
         // Long reads
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 1, 2, false, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 1, 2, false, () => {
             memory.GetUint16(0);
             memory.GetUint32(0);
         });
 
         // Long writes
-        AssertMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 2, false, () => {
+        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 2, false, () => {
             memory.SetUint16(0, 0);
             memory.SetUint32(0, 0);
         });
+        
+        // Range
+        AssertAddressRangeMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 0, 2, 3, false, () => {
+            memory.SetUint8(0, 0);
+            memory.SetUint8(1, 0);
+            memory.SetUint8(2, 0);
+        });
+        AssertAddressRangeMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 3, 5, false, () => {
+            // Inclusion of breakpoint range
+            memory.Memset(0, 0, 5);
+            // Start is the same
+            memory.Memset(1, 0, 5);
+            // End is the same
+            memory.Memset(2, 0, 1);
+            // Start in range
+            memory.Memset(2, 0, 10);
+            // End in range
+            memory.Memset(0, 0, 3);
+            // Not triggered
+            memory.Memset(10, 0, 10);
+        });
     }
 
-    private void AssertMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
+    private void AssertAddressMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
         int count = 0;
-        BreakPoint breakPoint = new BreakPoint(breakPointType, address, breakpoint => { count++; }, isRemovedOnTrigger);
+        AddressBreakPoint breakPoint = new AddressBreakPoint(breakPointType, address, breakpoint => { count++; }, isRemovedOnTrigger);
+        machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        action.Invoke();
+        machineBreakpoints.ToggleBreakPoint(breakPoint, false);
+        Assert.Equal(expectedTriggers, count);
+    }
+    private void AssertAddressRangeMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint startAddress, uint endAddress, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
+        int count = 0;
+        AddressRangeBreakPoint breakPoint = new AddressRangeBreakPoint(breakPointType, startAddress, endAddress, breakpoint => { count++; }, isRemovedOnTrigger);
         machineBreakpoints.ToggleBreakPoint(breakPoint, true);
         action.Invoke();
         machineBreakpoints.ToggleBreakPoint(breakPoint, false);

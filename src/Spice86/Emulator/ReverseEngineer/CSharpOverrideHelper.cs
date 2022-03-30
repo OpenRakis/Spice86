@@ -212,7 +212,7 @@ public partial class CSharpOverrideHelper {
     }
 
     public void OverrideInstruction(ushort segment, ushort offset, Func<Action> renamedOverride) {
-        BreakPoint breakPoint = new(
+        AddressBreakPoint breakPoint = new(
             BreakPointType.EXECUTION,
             MemoryUtils.ToPhysicalAddress(
                 segment,
@@ -243,6 +243,13 @@ public partial class CSharpOverrideHelper {
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
             throw this.FailAsUntested($"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");
         }
+    }
+
+    protected void FailWhenWriteInRange(uint startAddress, uint endAddress) {
+        AddressRangeBreakPoint breakPoint = new AddressRangeBreakPoint(BreakPointType.WRITE, startAddress, endAddress, point => {
+            throw FailAsUntested($"Memory written between protected range {ConvertUtils.ToHex32WithoutX(startAddress)} and {ConvertUtils.ToHex32WithoutX(endAddress)}");
+        }, true);
+        Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
     /// <summary>
