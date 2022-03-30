@@ -19,8 +19,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.3.0</Version>
-		<PackageReleaseNotes>Improved override support, code generator, and reverse engineering APIs</PackageReleaseNotes>
+		<Version>2.4.0</Version>
+		<PackageReleaseNotes>Game speed modification ability added</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
