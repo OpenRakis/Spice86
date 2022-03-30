@@ -3,25 +3,26 @@
 /// <summary>
 /// Counter activator based on real system time
 /// </summary>
-public class TimeCounterActivator : ICounterActivator {
-    private readonly double _multiplier;
+public class TimeCounterActivator : CounterActivator {
     private long _lastActivationTime = System.Diagnostics.Stopwatch.GetTimestamp();
-    private long _hundredNanosBetweenTicks;
+    private long _timeBetweenTicks;
     private long _ticks = 0;
-    public TimeCounterActivator(double multiplier) {
-        this._multiplier = multiplier;
+    public TimeCounterActivator(double multiplier) : base(multiplier) {
     }
 
-    public bool IsActivated {
+    public override bool IsActivated {
         get {
             _ticks++;
             if (_ticks % 100 != 0) {
                 // System.Diagnostics.Stopwatch.GetTimestamp is quite slow, let's not call it every time.
                 return false;
             }
+            if (IsFrozen) {
+                return false;
+            }
             long currentTime = System.Diagnostics.Stopwatch.GetTimestamp();
             long elapsedTime = currentTime - _lastActivationTime;
-            if (elapsedTime <= _hundredNanosBetweenTicks) {
+            if (elapsedTime <= _timeBetweenTicks) {
                 return false;
             }
             _lastActivationTime = currentTime;
@@ -29,7 +30,11 @@ public class TimeCounterActivator : ICounterActivator {
         }
     }
 
-    public void UpdateDesiredFrequency(long desiredFrequency) {
-        _hundredNanosBetweenTicks = (long)(10000000 / (_multiplier * desiredFrequency));
+    public override void UpdateDesiredFrequency(long desiredFrequency) {
+        double frequency = ComputeActualFrequency(desiredFrequency);
+        if (frequency == 0) {
+            return;
+        }
+        _timeBetweenTicks = (long)(System.Diagnostics.Stopwatch.Frequency / frequency);
     }
 }

@@ -13,7 +13,7 @@ public class CounterConfigurator {
         _configuration = configuration;
     }
 
-    public ICounterActivator InstanciateCounterActivator(State state) {
+    public CounterActivator InstanciateCounterActivator(State state) {
         long? instructionsPerSecond = _configuration.InstructionsPerSecond;
         if (instructionsPerSecond == null && _configuration.GdbPort != null) {
             // With GDB, force to instructions per seconds as time based timers could perturbate steps
@@ -24,7 +24,7 @@ public class CounterConfigurator {
         }
 
         if (instructionsPerSecond != null) {
-            return new CyclesCounterActivator(state, instructionsPerSecond.Value);
+            return new CyclesCounterActivator(state, instructionsPerSecond.Value, _configuration.TimeMultiplier);
         }
 
         return new TimeCounterActivator(_configuration.TimeMultiplier);
