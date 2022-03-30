@@ -101,7 +101,7 @@ public class Machine : IDisposable {
 
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
-    public bool DebugMode { get; }
+    public bool DebugMode { get; set; }
 
     public string DumpCallStack() {
         FunctionHandler inUse = Cpu.FunctionHandlerInUse;

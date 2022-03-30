@@ -57,9 +57,13 @@ public class BreakPointHolder {
     }
 
     private static void TriggerBreakPointsWithAddressRangeFromList(List<BreakPoint> breakPointList, long startAddress, long endAddress) {
-        foreach (BreakPoint breakPoint in breakPointList) {
+        for (int i = 0; i < breakPointList.Count; i++) {
+            BreakPoint breakPoint = breakPointList[i];
             if (breakPoint.Matches(startAddress, endAddress)) {
                 breakPoint.Trigger();
+                if (breakPoint.IsRemovedOnTrigger) {
+                    breakPointList.Remove(breakPoint);
+                }
             }
         }
     }

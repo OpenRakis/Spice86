@@ -47,6 +47,7 @@ public class Memory {
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }
+
     /// <summary>
     /// Writes a string to memory as a null-terminated ANSI byte array.
     /// </summary>
@@ -59,7 +60,8 @@ public class Memory {
         File.WriteAllBytes(path, _physicalMemory);
     }
 
-    public byte[] GetData(uint address, int length) {
+    public byte[] GetData(uint address, uint length) {
+        MonitorRangeReadAccess(address, address + length);
         byte[] res = new byte[length];
         Array.Copy(_physicalMemory, address, res, 0, length);
         return res;
@@ -76,12 +78,16 @@ public class Memory {
     public ushort GetUint16(uint address) {
         ushort res = MemoryUtils.GetUint16(_physicalMemory, address);
         MonitorReadAccess(address);
+        MonitorReadAccess(address + 1);
         return res;
     }
 
     public uint GetUint32(uint address) {
         uint res = MemoryUtils.GetUint32(_physicalMemory, address);
         MonitorReadAccess(address);
+        MonitorReadAccess(address + 1);
+        MonitorReadAccess(address + 2);
+        MonitorReadAccess(address + 3);
         return res;
     }
 
@@ -100,11 +106,14 @@ public class Memory {
         Array.Copy(data, 0, _physicalMemory, address, length);
     }
 
-    public void MemCopy(uint sourceAddress, uint destinationAddress, int length) {
+    public void MemCopy(uint sourceAddress, uint destinationAddress, uint length) {
+        MonitorRangeReadAccess(sourceAddress, sourceAddress + length);
+        MonitorRangeWriteAccess(destinationAddress, destinationAddress + length);
         Array.Copy(_physicalMemory, sourceAddress, _physicalMemory, destinationAddress, length);
     }
 
     public void Memset(uint address, byte value, uint length) {
+        MonitorRangeWriteAccess(address, address + length);
         Array.Fill(_physicalMemory, value, (int)address, (int)length);
     }
 
@@ -135,13 +144,17 @@ public class Memory {
 
     public void SetUint16(uint address, ushort value) {
         MonitorWriteAccess(address);
+        MonitorWriteAccess(address + 1);
+
         MemoryUtils.SetUint16(_physicalMemory, address, value);
     }
 
     public void SetUint32(uint address, uint value) {
         MonitorWriteAccess(address);
+        MonitorWriteAccess(address + 1);
+        MonitorWriteAccess(address + 2);
+        MonitorWriteAccess(address + 3);
 
-        // For convenience, no get as 16 bit apps are not supposed call this directly
         MemoryUtils.SetUint32(_physicalMemory, address, value);
     }
 
@@ -166,6 +179,10 @@ public class Memory {
             default:
                 throw new UnrecoverableException($"Trying to add unsupported breakpoint of type {type}");
         }
+    }
+
+    private void MonitorRangeReadAccess(uint startAddress, uint endAddress) {
+        _readBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
     }
 
     private void MonitorRangeWriteAccess(uint startAddress, uint endAddress) {
