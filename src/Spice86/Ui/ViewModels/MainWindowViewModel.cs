@@ -12,13 +12,15 @@ using Serilog;
 using Spice86.CLI;
 using Spice86.Emulator;
 using Spice86.Emulator.Devices.Video;
-using Spice86.Emulator.VM;
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
 using System.Threading;
+
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -27,7 +29,7 @@ using System.Threading;
 /// <li>Communicates keyboard and mouse events to the emulator</li>
 /// </ul>
 /// </summary>
-public class MainWindowViewModel : ViewModelBase, IDisposable {
+public partial class MainWindowViewModel : ObservableObject, IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposedValue;
@@ -42,12 +44,12 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
 
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
 
+    [ObservableProperty]
     private bool _isPaused = false;
 
     public event EventHandler<KeyEventArgs>? KeyUp;
     public event EventHandler<KeyEventArgs>? KeyDown;
 
-    public bool IsPaused { get => _isPaused; set => this.RaiseAndSetIfChanged(ref _isPaused, value); }
 
     public ReactiveCommand<Unit, Unit> PlayCommand { get; private set; }
     public ReactiveCommand<Unit, Unit> PauseCommand { get; private set; }
@@ -87,7 +89,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
 
     public AvaloniaList<VideoBufferViewModel> VideoBuffers {
         get => _videoBuffers;
-        set => this.RaiseAndSetIfChanged(ref _videoBuffers, value);
+        set => this.SetProperty(ref _videoBuffers, value);
     }
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
@@ -104,10 +106,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
         GC.SuppressFinalize(this);
     }
 
-    public ProgramExecutor? ProgramExecutor {
-        get => _programExecutor;
-        set => this.RaiseAndSetIfChanged(ref _programExecutor, value);
-    }
+    [ObservableProperty]
+    private double _timeMultiplier = 1;
+
+    [ICommand]
+    public void SetTimeMultiplier(double timeMultiplier) => _programExecutor?.Machine.Timer.SetTimeMultiplier(timeMultiplier);
 
     public void Draw(byte[] memory, Rgb[] palette) {
         if (_disposedValue || _isSettingResolution) {
@@ -193,7 +196,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
         if (!_disposedValue) {
             if (disposing) {
                 DisposeBuffers();
-                ProgramExecutor?.Dispose();
+                _programExecutor?.Dispose();
             }
             _disposedValue = true;
         }
@@ -210,8 +213,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable {
     private void RunMachine() {
         try {
             _okayToContinueEvent.Set();
-            ProgramExecutor = new ProgramExecutor(this, _configuration);
-            ProgramExecutor.Run();
+            _programExecutor = new ProgramExecutor(this, _configuration);
+            _programExecutor.Run();
         } catch (Exception e) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "An error occurred during execution");

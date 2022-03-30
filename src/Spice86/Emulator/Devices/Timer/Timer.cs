@@ -1,8 +1,5 @@
 ﻿namespace Spice86.Emulator.Devices.Timer;
 
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-
 using Serilog;
 
 using Spice86.Emulator.Devices.ExternalInput;
@@ -18,8 +15,7 @@ using System.Diagnostics;
 /// Triggers interrupt 8 on the CPU via the PIC.<br/>
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
-[ObservableObject]
-public partial class Timer : DefaultIOPortHandler {
+public class Timer : DefaultIOPortHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<Timer>();
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
@@ -53,16 +49,10 @@ public partial class Timer : DefaultIOPortHandler {
         _vgaCounter.SetValue((int)(Counter.HardwareFrequency / 30));
     }
 
-    private double _timeMultiplier = 1;
-
-    public double TimeMultiplier {
-        get => _timeMultiplier;
-        set => SetProperty(ref _timeMultiplier, value);
-    }
-
-    [ICommand]
     public void SetTimeMultiplier(double multiplier) {
-        TimeMultiplier = multiplier;
+        if (multiplier <= 0) {
+            throw new DivideByZeroException(nameof(multiplier));
+        }
         foreach (Counter counter in _counters) {
             counter.Activator.Multiplier = multiplier;
         }

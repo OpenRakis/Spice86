@@ -11,6 +11,10 @@
 		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<Using Include="System.Buffers.Binary" />
+	</ItemGroup>
+
 	<!-- Properties geared towards NuGet -->
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
