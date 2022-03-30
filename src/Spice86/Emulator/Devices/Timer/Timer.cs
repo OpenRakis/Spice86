@@ -55,8 +55,10 @@ public class Timer : DefaultIOPortHandler {
         }
         foreach (Counter counter in _counters) {
             counter.Activator.Multiplier = multiplier;
+            counter.Activator.UpdateDesiredFrequency((long)multiplier);
         }
         _vgaCounter.Activator.Multiplier = multiplier;
+        _vgaCounter.Activator.UpdateDesiredFrequency((long)multiplier);
     }
 
     public Counter this[int counterIndex] {
