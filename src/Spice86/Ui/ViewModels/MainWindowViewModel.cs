@@ -93,10 +93,21 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         GC.SuppressFinalize(this);
     }
 
-    [ObservableProperty]
     private double _timeMultiplier = 1;
 
+    public double TimeMultiplier {
+        get => _timeMultiplier;
+        set {
+            this.SetProperty(ref _timeMultiplier, value);
+            SetTimeMultiplier(_timeMultiplier);
+        }
+    }
+
     [ICommand]
+    public void ResetTimeMultiplier() {
+        TimeMultiplier = 1;
+    }
+
     public void SetTimeMultiplier(double timeMultiplier) => _programExecutor?.Machine.Timer.SetTimeMultiplier(timeMultiplier);
 
     public void Draw(byte[] memory, Rgb[] palette) {

@@ -21,12 +21,8 @@
 		<Menu>
 			<MenuItem Header="⏸︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
 			<MenuItem Header="⏵︎" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
-			<MenuItem>
-				<MenuItem.Header>
-					<NumericUpDown Text="{Binding TimeMultiplier}" Minimum="1" />
-				</MenuItem.Header>
-			</MenuItem>
-			<MenuItem Header="⏱" HotKey="F4" Command="{Binding SetTimeMultiplierCommand}" CommandParameter="{Binding TimeMultiplier}" />
+			<Button Content="⟳" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
+			<NumericUpDown Text="{Binding TimeMultiplier}" Minimum="1" />
 		</Menu>
 		<ItemsRepeater Items="{Binding VideoBuffers}">
 			<ItemsRepeater.ItemTemplate>
