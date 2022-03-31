@@ -15,6 +15,7 @@ using Spice86.Emulator.Devices.Video;
 using Spice86.UI.Views;
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoBufferViewModel>, IDisposable {
@@ -167,40 +168,36 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
-        if (_disposedValue || UIUpdateMethod is null || Bitmap is null) {
+        if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
             return;
         }
         int size = Width * Height;
         long endAddress = Address + size;
 
-        if (_appClosing == false) {
-            using ILockedFramebuffer buf = Bitmap.Lock();
-            uint* dst = (uint*)buf.Address;
-            switch (buf.Format) {
-                case PixelFormat.Rgba8888:
-                    for (long i = Address; i < endAddress; i++) {
-                        byte colorIndex = memory[i];
-                        Rgb pixel = palette[colorIndex];
-                        uint rgba = pixel.ToRgba();
-                        dst[i - Address] = rgba;
-                    }
-                    break;
-                case PixelFormat.Bgra8888:
-                    for (long i = Address; i < endAddress; i++) {
-                        byte colorIndex = memory[i];
-                        Rgb pixel = palette[colorIndex];
-                        uint argb = pixel.ToArgb();
-                        dst[i - Address] = argb;
-                    }
-                    break;
-                default:
-                    throw new NotImplementedException($"{buf.Format}");
+        using ILockedFramebuffer pixels = Bitmap.Lock();
+        uint* firstPixelAddress = (uint*)pixels.Address;
+        int rowBytes = Width;
+        long memoryAddress = Address;
+        uint* currentRow = firstPixelAddress;
+        for(int row = 0; row < Height; row++) {
+            uint* startOfLine = currentRow;
+            uint* endOfLine = currentRow + Width;
+            for(uint* column = startOfLine; column < endOfLine; column++) {
+                byte colorIndex = memory[memoryAddress];
+                Rgb pixel = palette[colorIndex];
+                uint argb = pixel.ToArgb();
+                if(pixels.Format == PixelFormat.Rgba8888) {
+                    argb = pixel.ToRgba();
+                }
+                *column = argb;
+                memoryAddress++;
             }
-            if (!IsDrawing) {
-                IsDrawing = true;
-            }
-            Dispatcher.UIThread.Post(() => UIUpdateMethod?.Invoke(), DispatcherPriority.MaxValue);
+            currentRow += rowBytes;
         }
+        if (!IsDrawing) {
+            IsDrawing = true;
+        }
+        Dispatcher.UIThread.Post(() => UIUpdateMethod?.Invoke(), DispatcherPriority.MaxValue);
     }
 
     public override bool Equals(object? obj) {
