@@ -31,9 +31,7 @@ public partial class CSharpOverrideHelper {
     protected Stack Stack => Cpu.Stack;
 
     protected State State => Cpu.State;
-
-    private readonly string _prefix;
-
+    
     protected Alu Alu => Cpu.Alu;
 
 
@@ -82,9 +80,8 @@ public partial class CSharpOverrideHelper {
 
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
-    public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, string prefix, Machine machine) {
+    public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine) {
         this._functionInformations = functionInformations;
-        this._prefix = prefix;
         this.Machine = machine;
     }
 
@@ -245,11 +242,15 @@ public partial class CSharpOverrideHelper {
         }
     }
 
-    protected void FailWhenWriteInRange(uint startAddress, uint endAddress) {
-        AddressRangeBreakPoint breakPoint = new AddressRangeBreakPoint(BreakPointType.WRITE, startAddress, endAddress, point => {
-            throw FailAsUntested($"Memory written between protected range {ConvertUtils.ToHex32WithoutX(startAddress)} and {ConvertUtils.ToHex32WithoutX(endAddress)}");
-        }, true);
-        Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+    protected void DefineExecutableArea(uint startAddress, uint endAddress) {
+        for (uint address = startAddress; address <= endAddress; address++) {
+            // For closure
+            uint addressCopy = address;
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, address, point => {
+                Machine.Cpu.ExecutionFlowRecorder.RegisterExecutableCodeModification(new SegmentedAddress(State.CS, State.IP), addressCopy);
+            }, false);
+            Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        }
     }
 
     /// <summary>

@@ -32,14 +32,14 @@ public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
     private readonly ProgramExecutor _programExecutor;
 
-    public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, JumpHandler jumpHandler, Configuration configuration, bool debugMode) {
+    public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool debugMode) {
         _programExecutor = programExecutor;
         Gui = gui;
         DebugMode = debugMode;
 
         // A full 1MB of addressable memory :)
         Memory = new Memory(0x100000);
-        Cpu = new Cpu(this, jumpHandler, debugMode);
+        Cpu = new Cpu(this, executionFlowRecorder, debugMode);
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this);

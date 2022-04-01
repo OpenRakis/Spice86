@@ -49,15 +49,15 @@ public class Cpu {
 
     public IOPortDispatcher? IoPortDispatcher { get; set; }
 
-    public JumpHandler JumpHandler { get; }
+    public ExecutionFlowRecorder ExecutionFlowRecorder { get; }
 
-    public Cpu(Machine machine, JumpHandler jumpHandler, bool debugMode) {
+    public Cpu(Machine machine, ExecutionFlowRecorder executionFlowRecorder, bool debugMode) {
         _machine = machine;
         _memory = machine.Memory;
         State = new State();
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);
-        JumpHandler = jumpHandler;
+        ExecutionFlowRecorder = executionFlowRecorder;
         FunctionHandler = new FunctionHandler(machine, debugMode);
         FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, debugMode);
         FunctionHandlerInUse = FunctionHandler;
@@ -104,7 +104,7 @@ public class Cpu {
         FunctionHandlerInUse.Ret(CallType.FAR);
         _internalIp = Stack.Pop();
         ushort cs = Stack.Pop();
-        JumpHandler.RegisterReturn(State.CS, State.IP, cs, _internalIp);
+        ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, cs, _internalIp);
         State.CS = cs;
         State.SP = (ushort)(numberOfBytesToPop + State.SP);
     }
@@ -136,7 +136,7 @@ public class Cpu {
     public void NearRet(int numberOfBytesToPop) {
         FunctionHandlerInUse.Ret(CallType.NEAR);
         _internalIp = Stack.Pop();
-        JumpHandler.RegisterReturn(State.CS, State.IP, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, State.CS, _internalIp);
         State.SP = (ushort)(numberOfBytesToPop + State.SP);
     }
 
@@ -1147,7 +1147,7 @@ public class Cpu {
                     State.CX = cx;
                     if (cx != 0 && State.ZeroFlag == zeroFlag) {
                         ushort targetIp = (ushort)(_internalIp + address);
-                        JumpHandler.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
                         _internalIp = targetIp;
                     }
                     break;
@@ -1160,7 +1160,7 @@ public class Cpu {
                     State.CX = cx;
                     if (cx != 0) {
                         ushort targetIp = (ushort)(_internalIp + address);
-                        JumpHandler.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
                         _internalIp = targetIp;
                     }
                     break;
@@ -1779,8 +1779,10 @@ public class Cpu {
             _logger.Debug("CALL {@TargetCsTargetIp}, will return to {@ReturnCsReturnIp}", ConvertUtils.ToSegmentedAddressRepresentation(targetCS, targetIP),
                 ConvertUtils.ToSegmentedAddressRepresentation(returnCS, returnIP));
         }
-        JumpHandler.RegisterCall(State.CS, State.IP, targetCS, targetIP);
+        ExecutionFlowRecorder.RegisterCall(State.CS, State.IP, targetCS, targetIP);
         State.CS = targetCS;
+        // Setting it here as well for eventual overrides
+        State.IP = targetIP;
         _internalIp = targetIP;
         FunctionHandlerInUse.Call(callType, targetCS, targetIP, returnCS, returnIP);
     }
@@ -1807,7 +1809,7 @@ public class Cpu {
     private void HandleInvalidOpcodeBecausePrefix(byte opcode) => throw new InvalidOpCodeException(_machine, opcode, true);
 
     private void HandleJump(ushort cs, ushort ip) {
-        JumpHandler.RegisterJump(State.CS, State.IP, cs, ip);
+        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, cs, ip);
         _internalIp = ip;
         State.CS = cs;
     }
@@ -1840,6 +1842,8 @@ public class Cpu {
         Stack.Push(returnIP);
         State.InterruptFlag = false;
         _internalIp = targetIP;
+        // Setting it here as well for eventual overrides
+        State.IP = targetIP;
         State.CS = targetCS;
         bool recordReturn = true;
         if (external) {

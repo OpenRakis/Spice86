@@ -164,7 +164,7 @@ public class GdbCustomCommandsHandler {
     private string DumpJumps(string[] args) {
         string fileName = GetFirstArgumentOrDefaultFile(args, _jumpFile ?? GenerateDumpFileSuffix("jumps.json"));
         return DoFileAction(fileName, (f) => {
-            new JumpDumper().Dump(_machine.Cpu.JumpHandler, fileName);
+            new ExecutionFlowDumper().Dump(_machine.Cpu.ExecutionFlowRecorder, fileName);
         }, "Error while dumping jumps");
     }
     private string ExecuteCustomCommand(params string[] args) {

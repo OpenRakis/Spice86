@@ -29,11 +29,11 @@ public class Spice86ReferenceGenerator extends GhidraScript {
   protected void run() throws Exception {
     String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");
 
-    JumpsAndCalls jumpsAndCalls =
-        readJumpMapFromFile(baseFolder + "spice86dumpJumps.json");
+    ExecutionFlow executionFlow =
+        readJumpMapFromFile(baseFolder + "spice86dumpExecutionFlow.json");
 
-    importReferences(jumpsAndCalls.getJumpsFromTo(), RefType.COMPUTED_JUMP);
-    importReferences(jumpsAndCalls.getCallsFromTo(), RefType.COMPUTED_CALL);
+    importReferences(executionFlow.getJumpsFromTo(), RefType.COMPUTED_JUMP);
+    importReferences(executionFlow.getCallsFromTo(), RefType.COMPUTED_CALL);
   }
 
   private void importReferences(Map<Integer, List<SegmentedAddress>> fromTo, RefType refType) {
@@ -54,23 +54,25 @@ public class Spice86ReferenceGenerator extends GhidraScript {
     );
   }
 
-  private JumpsAndCalls readJumpMapFromFile(String filePath) throws IOException {
+  private ExecutionFlow readJumpMapFromFile(String filePath) throws IOException {
     try (FileReader fileReader = new FileReader(filePath); JsonReader reader = new JsonReader(fileReader)) {
-      Type type = new TypeToken<JumpsAndCalls>() {
+      Type type = new TypeToken<ExecutionFlow>() {
       }.getType();
-      JumpsAndCalls res = new Gson().fromJson(reader, type);
+      ExecutionFlow res = new Gson().fromJson(reader, type);
       res.init();
       return res;
     }
   }
 
-  class JumpsAndCalls {
+  class ExecutionFlow {
     @SerializedName("CallsFromTo")
     private Map<Integer, List<SegmentedAddress>> callsFromTo;
     @SerializedName("JumpsFromTo")
     private Map<Integer, List<SegmentedAddress>> jumpsFromTo;
     @SerializedName("RetsFromTo")
     private Map<Integer, List<SegmentedAddress>> retsFromTo;
+    @SerializedName("ExecutableCodeModification")
+    private Map<Integer, List<Integer>> executableCodeModification;
 
     private Map<Integer, List<SegmentedAddress>> callsJumpsFromTo;
     private Set<SegmentedAddress> jumpTargets;

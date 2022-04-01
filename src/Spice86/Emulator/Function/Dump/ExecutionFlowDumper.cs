@@ -9,27 +9,27 @@ using Serilog;
 using System;
 using System.IO;
 
-public class JumpDumper {
-    private static readonly ILogger _logger = Program.Logger.ForContext<JumpDumper>();
+public class ExecutionFlowDumper {
+    private static readonly ILogger _logger = Program.Logger.ForContext<ExecutionFlowDumper>();
 
-    public void Dump(JumpHandler jumpHandler, string destinationFilePath) {
+    public void Dump(ExecutionFlowRecorder executionFlowRecorder, string destinationFilePath) {
         using var printWriter = new StreamWriter(destinationFilePath);
-        string jsonString = JsonConvert.SerializeObject(jumpHandler);
+        string jsonString = JsonConvert.SerializeObject(executionFlowRecorder);
         printWriter.WriteLine(jsonString);
     }
 
-    public JumpHandler ReadFromFileOrCreate(string? filePath) {
+    public ExecutionFlowRecorder ReadFromFileOrCreate(string? filePath) {
         if (String.IsNullOrEmpty(filePath)) {
             _logger.Information("No file specified");
-            return new JumpHandler();
+            return new ExecutionFlowRecorder();
         }
         if (!File.Exists(filePath)) {
             _logger.Information("File doesn't exists");
-            return new JumpHandler();
+            return new ExecutionFlowRecorder();
         }
         try {
             if (string.IsNullOrWhiteSpace(filePath) == false && File.Exists(filePath)) {
-                return JsonConvert.DeserializeObject<JumpHandler>(File.ReadAllText(filePath)) ?? new();
+                return JsonConvert.DeserializeObject<ExecutionFlowRecorder>(File.ReadAllText(filePath)) ?? new();
             } else {
                 return new();
             }

@@ -4,7 +4,7 @@ using Memory;
 
 using System.Collections.Generic;
 
-public class JumpHandler {
+public class ExecutionFlowRecorder {
     public bool DebugMode { set; private get; }
     public IDictionary<uint, ISet<SegmentedAddress>> CallsFromTo { get; }
     private readonly ISet<ulong> _callsEncountered = new HashSet<ulong>();
@@ -12,12 +12,14 @@ public class JumpHandler {
     private readonly ISet<ulong> _jumpsEncountered = new HashSet<ulong>();
     public IDictionary<uint, ISet<SegmentedAddress>> RetsFromTo { get; }
     private readonly ISet<ulong> _retsEncountered = new HashSet<ulong>();
+    public IDictionary<uint, ISet<SegmentedAddress>> ExecutableAddressWrittenBy { get; }
 
-    public JumpHandler() {
+    public ExecutionFlowRecorder() {
         DebugMode = false;
         CallsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         JumpsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         RetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
+        ExecutableAddressWrittenBy = new Dictionary<uint, ISet<SegmentedAddress>>();
     }
 
     public void RegisterCall(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
@@ -30,6 +32,19 @@ public class JumpHandler {
 
     public void RegisterReturn(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
         RegisterAddressJump(RetsFromTo, _retsEncountered, fromCS, fromIP, toCS, toIP);
+    }
+
+    public void RegisterExecutableCodeModification(SegmentedAddress instructionAddress, uint modifiedAddress) {
+        if (instructionAddress.ToPhysical() == 0) {
+            // Probably Exe load
+            return;
+        }
+        if (!ExecutableAddressWrittenBy.TryGetValue(modifiedAddress,
+                out ISet<SegmentedAddress>? instructionsChangingThisAddress)) {
+            instructionsChangingThisAddress = new HashSet<SegmentedAddress>();
+            ExecutableAddressWrittenBy[modifiedAddress] = instructionsChangingThisAddress;
+        }
+        instructionsChangingThisAddress.Add(instructionAddress);
     }
 
     private void RegisterAddressJump(IDictionary<uint, ISet<SegmentedAddress>> FromTo, ISet<ulong> encountered, ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {

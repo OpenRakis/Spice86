@@ -104,9 +104,9 @@ public class ProgramExecutor : IDisposable {
         }
         var counterConfigurator = new CounterConfigurator(configuration);
         bool debugMode = configuration.GdbPort != null;
-        JumpHandler jumpHandler = new JumpDumper().ReadFromFileOrCreate(configuration.JumpFile);
-        jumpHandler.DebugMode = debugMode;
-        Machine = new Machine(this, gui, counterConfigurator, jumpHandler, configuration, debugMode);
+        ExecutionFlowRecorder executionFlowRecorder = new ExecutionFlowDumper().ReadFromFileOrCreate(configuration.JumpFile);
+        executionFlowRecorder.DebugMode = debugMode;
+        Machine = new Machine(this, gui, counterConfigurator, executionFlowRecorder, configuration, debugMode);
         InitializeCpu();
         InitializeDos(configuration);
         if (configuration.InstallInterruptVector) {

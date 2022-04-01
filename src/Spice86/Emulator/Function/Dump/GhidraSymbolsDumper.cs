@@ -22,13 +22,13 @@ public class GhidraSymbolsDumper {
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
         ISet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
         DumpFunctionInformations(lines, dumpedAddresses, functionInformations);
-        DumpLabels(lines, dumpedAddresses, machine.Cpu.JumpHandler);
+        DumpLabels(lines, dumpedAddresses, machine.Cpu.ExecutionFlowRecorder);
         using var printWriter = new StreamWriter(destinationFilePath);
         lines.ForEach(line => printWriter.WriteLine(line));
     }
 
-    private void DumpLabels(List<string> lines, ISet<SegmentedAddress> dumpedAddresses, JumpHandler jumpHandler) {
-        jumpHandler.JumpsFromTo
+    private void DumpLabels(List<string> lines, ISet<SegmentedAddress> dumpedAddresses, ExecutionFlowRecorder executionFlowRecorder) {
+        executionFlowRecorder.JumpsFromTo
             .SelectMany(x => x.Value)
             .OrderBy(x => x)
             .Where(address => !dumpedAddresses.Contains(address))
