@@ -19,8 +19,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.4.1</Version>
-		<PackageReleaseNotes>Game speed modification ability has a better UI. Also sometimes video buffers didn't show anything on Linux, this is fixed.</PackageReleaseNotes>
+		<Version>2.4.2</Version>
+		<PackageReleaseNotes>Execution flow recorder and other recorders for reverse engineering are introduced.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
