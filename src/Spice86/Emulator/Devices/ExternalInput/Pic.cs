@@ -220,7 +220,7 @@ public class Pic : DefaultIOPortHandler {
                 } else if ((value & 0x18) == 0) // OCW2
                   {
                     if ((value & 0xE0) == 0x60) // Specific EOI
-{
+                    {
                         this.inServiceRegister1 &= ~(1u << (value & 0x07));
                     } else {
                         throw new NotImplementedException();
