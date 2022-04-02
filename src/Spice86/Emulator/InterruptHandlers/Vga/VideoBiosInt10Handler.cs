@@ -138,6 +138,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Write Text in Teletype Mode ascii code {@AsciiCode}, chr {@Character}", ConvertUtils.ToHex(chr), ConvertUtils.ToChar(chr));
         }
+        Console.Out.Write(ConvertUtils.ToChar(chr));
     }
 
     private void FillDispatchTable() {
