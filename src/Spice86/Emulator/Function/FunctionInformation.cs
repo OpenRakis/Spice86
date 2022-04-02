@@ -13,7 +13,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     private readonly string _name;
 
-    public Func<int, Action>? FuntionOverride { private get; set; }
+    public Func<int, Action>? FuntionOverride { get; set; }
 
     private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _returns;
 

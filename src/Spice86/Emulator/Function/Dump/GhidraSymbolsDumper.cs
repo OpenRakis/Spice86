@@ -89,7 +89,7 @@ public class GhidraSymbolsDumper {
         }
         string type = split[2];
         if (type != "f") {
-            _logger.Information("Cannot parse line {Line} into a function, type is not f", line);
+            _logger.Debug("Cannot parse line {Line} into a function, type is not f", line);
             // Not a function line
             return null;
         }

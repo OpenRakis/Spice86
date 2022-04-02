@@ -107,6 +107,8 @@ public class Cpu {
         ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, cs, _internalIp);
         State.CS = cs;
         State.SP = (ushort)(numberOfBytesToPop + State.SP);
+        // Set it here for overriden code calling this
+        State.IP = _internalIp;
     }
 
     public bool IsRunning { get; set; } = true;
@@ -131,6 +133,8 @@ public class Cpu {
         State.CS = Stack.Pop();
         State.Flags.FlagRegister = Stack.Pop();
         FunctionHandlerInUse = FunctionHandler;
+        // Set it here for overriden code calling this
+        State.IP = _internalIp;
     }
 
     public void NearRet(int numberOfBytesToPop) {
@@ -138,6 +142,8 @@ public class Cpu {
         _internalIp = Stack.Pop();
         ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, State.CS, _internalIp);
         State.SP = (ushort)(numberOfBytesToPop + State.SP);
+        // Set it here for overriden code calling this
+        State.IP = _internalIp;
     }
 
     public ushort NextUint16() {

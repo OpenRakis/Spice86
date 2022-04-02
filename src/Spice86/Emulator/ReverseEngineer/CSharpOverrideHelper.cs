@@ -16,7 +16,7 @@ using Spice86.Utils;
 using System;
 using System.Collections.Generic;
 
-public partial class CSharpOverrideHelper {
+public class CSharpOverrideHelper {
     private static readonly ILogger _logger = Program.Logger.ForContext<CSharpOverrideHelper>();
 
     protected Cpu Cpu => Machine.Cpu;
@@ -95,7 +95,8 @@ public partial class CSharpOverrideHelper {
     public void DefineFunction(ushort segment, ushort offset, Func<int, Action> overrideFunc, bool failOnExisting = true, string? name = null) {
         SegmentedAddress address = new(segment, offset);
         FunctionInformation? existing = GetFunctionAtAddress(failOnExisting, address);
-        if (existing != null) {
+        if (existing != null && existing.HasOverride) {
+            // Do not overwrite existing code with override
             return;
         }
         String functionName;
@@ -110,12 +111,11 @@ public partial class CSharpOverrideHelper {
             functionName = parsedFunctionInformation.Name;
         }
         FunctionInformation functionInformation = new(address, functionName, overrideFunc);
-        _functionInformations.Add(address, functionInformation);
+        _functionInformations[address] = functionInformation;
     }
 
     private FunctionInformation? GetFunctionAtAddress(bool failOnExisting, SegmentedAddress address) {
-        if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation) &&
-            existingFunctionInformation.HasOverride) {
+        if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
             if (!failOnExisting) {
                 return existingFunctionInformation;
             }
@@ -192,6 +192,34 @@ public partial class CSharpOverrideHelper {
             returnAction.Invoke();
         });
     }
+    
+    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
+        ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
+            Stack.Push(FlagRegister);
+            Stack.Push(expectedReturnCs);
+            Stack.Push(expectedReturnIp);
+            Action returnAction = function.Invoke(0);
+            returnAction.Invoke();
+        });
+    }
+
+    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, int vectorNumber) {
+        ushort targetIP = Memory.GetUint16((ushort)(4 * vectorNumber));
+        ushort targetCS = Memory.GetUint16((ushort)(4 * vectorNumber + 2));
+        SegmentedAddress target = new SegmentedAddress(targetCS, targetIP);
+        Func<int, Action>? function = SearchFunctionOverride(target);
+        if (function == null) {
+            throw FailAsUntested($"Could not find an override at address {target}");
+        }
+        InterruptCall(expectedReturnCs, expectedReturnIp, function);
+    }
+
+    public Func<int, Action>? SearchFunctionOverride(SegmentedAddress target) {
+        if (!Machine.Cpu.FunctionHandler.FunctionInformations.TryGetValue(target, out FunctionInformation? functionInformation)) {
+            return null;
+        }
+        return functionInformation.FuntionOverride;
+    }
 
     private void ExecuteEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp, Action action) {
         uint stackAddressBefore = State.StackPhysicalAddress;
@@ -214,7 +242,7 @@ public partial class CSharpOverrideHelper {
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
-            (b) => renamedOverride.Invoke()
+            _ => renamedOverride.Invoke()
             , false);
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
@@ -225,7 +253,7 @@ public partial class CSharpOverrideHelper {
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackAddresses) {
             byte callbackNumber = callbackAddressEntry.Key;
             SegmentedAddress callbackAddress = callbackAddressEntry.Value;
-            var runnable = new Func<int, Action>((int gotoAddress) => {
+            var runnable = new Func<int, Action>(_ => {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
             });
@@ -246,7 +274,7 @@ public partial class CSharpOverrideHelper {
         for (uint address = startAddress; address <= endAddress; address++) {
             // For closure
             uint addressCopy = address;
-            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, address, point => {
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, address, _ => {
                 Machine.Cpu.ExecutionFlowRecorder.RegisterExecutableCodeModification(new SegmentedAddress(State.CS, State.IP), addressCopy);
             }, false);
             Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
