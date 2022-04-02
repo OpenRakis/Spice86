@@ -242,7 +242,8 @@ class FunctionGenerator {
       firstInstructionOfBeforeSectionAddress = instructionsBeforeEntry.get(0).getInstructionSegmentedAddress();
     }
     String gotosFromOutsideHandlingSection =
-        generateGotoFromOutsideAndInstructionSkip(firstInstructionOfBeforeSectionAddress);
+        generateGotoFromOutsideAndInstructionSkip(firstInstructionOfBeforeSectionAddress,
+            parsedFunction.getEntrySegmentedAddress());
     if (!gotosFromOutsideHandlingSection.isEmpty()) {
       res.append(Utils.indent(gotosFromOutsideHandlingSection, 2) + "\n");
     }
@@ -255,33 +256,51 @@ class FunctionGenerator {
     return res.toString();
   }
 
-  private String generateGotoFromOutsideAndInstructionSkip(SegmentedAddress firstInstructionOfBeforeSectionAddress) {
+  private boolean areAllExternalJumpsToEntry(SegmentedAddress entryAddress, Collection<SegmentedAddress> jumpTargets) {
+    if (jumpTargets.isEmpty()) {
+      return true;
+    }
+    for (SegmentedAddress target : jumpTargets) {
+      if (!target.equals(entryAddress)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private String generateGotoFromOutsideAndInstructionSkip(SegmentedAddress firstInstructionOfBeforeSectionAddress,
+      SegmentedAddress entryAddress) {
     Collection<SegmentedAddress> jumpTargets = CollectionUtils.emptyIfNull(
         parsedProgram.getJumpsFromOutsideForFunction(parsedFunction.getEntrySegmentedAddress()));
-    if (firstInstructionOfBeforeSectionAddress == null && jumpTargets.isEmpty()) {
+    if (firstInstructionOfBeforeSectionAddress == null && areAllExternalJumpsToEntry(entryAddress, jumpTargets)) {
       return "if(gotoTarget!=0){\n  " + InstructionGenerator.generateFailAsUntested(
           "External goto not supported for this function.", true) + "\n}\n";
     }
     StringBuilder res = new StringBuilder("switch(gotoTarget) {\n");
     for (SegmentedAddress target : jumpTargets) {
-      if (target.equals(firstInstructionOfBeforeSectionAddress)) {
-        // Handled separately, do not do double case
+      if (target.equals(firstInstructionOfBeforeSectionAddress) || target.equals(entryAddress)) {
+        // firstInstructionOfBeforeSectionAddress case is handled separately, do not do double case
+        // entry is not needed as callers will call function with 0 in parameter
         continue;
       }
+      String caseString = "  case " + Utils.toHexWith0X(target.toPhysical() - parsedProgram.getEntryAddress()) + ":";
+      String gotoTarget = JumpCallTranslator.getLabelToAddress(target, false);
+      String jumpSourceAddresses = getJumpSourceAddressesToString(target);
       res.append(
-          "  case " + Utils.toHexWith0X(target.toPhysical() - parsedProgram.getEntryAddress()) + ": goto "
-              + JumpCallTranslator.getLabelToAddress(target,
-              false) + ";break;\n");
+          caseString + " goto " + gotoTarget + ";break; // Target of external jump from " + jumpSourceAddresses + "\n");
     }
     if (firstInstructionOfBeforeSectionAddress != null) {
       // instructions before entry point are just after this switch
       res.append("  case " + Utils.toHexWith0X(
-          firstInstructionOfBeforeSectionAddress.toPhysical() - parsedProgram.getEntryAddress()) + ": break;\n");
+          firstInstructionOfBeforeSectionAddress.toPhysical() - parsedProgram.getEntryAddress())
+          + ": break; // Instructions before entry targeted by " + getJumpSourceAddressesToString(
+          firstInstructionOfBeforeSectionAddress) + "\n");
       // default address 0 is for entry point, goto there as there are instructions between
-      res.append("  case 0: goto entry; break; //\n");
+      res.append(
+          "  case 0: goto entry; break; // 0 is the entry point ghidra detected, but in this case function start is not entry point\n");
     } else {
       // default address 0 is for entry point, instructions are just after the switch
-      res.append("  case 0: break;\n");
+      res.append("  case 0: break; // 0 is the entry point ghidra detected, just after this switch\n");
     }
     if (!jumpTargets.isEmpty()) {
       // Only makes sense to generate this when there are labels accessible from outside
@@ -290,6 +309,13 @@ class FunctionGenerator {
     }
     res.append("}");
     return res.toString();
+  }
+
+  private String getJumpSourceAddressesToString(SegmentedAddress target) {
+    String jumpSourceAddresses = CollectionUtils.emptyIfNull(parsedProgram.getJumpTargetOrigins(target))
+        .stream()
+        .map(Utils::toHexWith0X).collect(Collectors.joining(", "));
+    return jumpSourceAddresses;
   }
 
   private void writeInstructions(StringBuilder stringBuilder, List<ParsedInstruction> instructions, int indent,
@@ -1388,6 +1414,7 @@ class ParsedProgram {
   // Sorted by entry address
   private Map<Integer, ParsedFunction> entryPoints = new TreeMap<>();
   private Map<Integer, String> codeSegmentVariables = new TreeMap<>();
+  private Map<SegmentedAddress, Set<Integer>> jumpsToFrom = new TreeMap<>();
   private int entryAddress;
 
   public static ParsedProgram createParsedProgram(Log log, List<ParsedFunction> functions,
@@ -1416,6 +1443,22 @@ class ParsedProgram {
       log.info("Entry point address is " + res.entryAddress);
     }
     // Map address of function -> Set of externally reachable labels
+    registerOutOfFunctionJumps(log, executionFlow, res);
+    generateJumpsToFrom(executionFlow, res);
+    return res;
+  }
+
+  private static void generateJumpsToFrom(ExecutionFlow executionFlow, ParsedProgram res) {
+    for (Map.Entry<Integer, List<SegmentedAddress>> jumpFromTo : executionFlow.getJumpsFromTo().entrySet()) {
+      Integer fromAddress = jumpFromTo.getKey();
+      for (SegmentedAddress toAddress : jumpFromTo.getValue()) {
+        Set<Integer> fromAddresses = res.jumpsToFrom.computeIfAbsent(toAddress, a -> new HashSet<>());
+        fromAddresses.add(fromAddress);
+      }
+    }
+  }
+
+  private static void registerOutOfFunctionJumps(Log log, ExecutionFlow executionFlow, ParsedProgram res) {
     for (Map.Entry<Integer, List<SegmentedAddress>> jumpFromTo : executionFlow.getJumpsFromTo().entrySet()) {
       Integer fromAddress = jumpFromTo.getKey();
       ParsedFunction fromFunction = res.getFunctionAtAddressAny(fromAddress);
@@ -1443,7 +1486,6 @@ class ParsedProgram {
         jumpsFromOutsideForFunction.add(toAddress);
       }
     }
-    return res;
   }
 
   private static Map<Integer, ParsedInstruction> mapInstructionByInstructionAddress(List<ParsedInstruction> list) {
@@ -1515,6 +1557,10 @@ class ParsedProgram {
 
   public Set<SegmentedAddress> getAddressesModifyingExecutableAddress(int address) {
     return this.executionFlow.getExecutableAddressWrittenBy().get(address);
+  }
+
+  public Set<Integer> getJumpTargetOrigins(SegmentedAddress address) {
+    return jumpsToFrom.get(address);
   }
 }
 

@@ -28,8 +28,7 @@ import java.util.stream.StreamSupport;
 //@menupath
 //@toolbar
 public class Spice86TentativeFunctionRenamer extends GhidraScript {
-  //private final String baseFolder = "C:/tmp/dune/c/Cryogenic/src/Cryogenic/bin/Debug/net6.0/";
-  private final String baseFolder = "C:/tmp/Cryogenic/src/Cryogenic/bin/Release/net6.0/";
+  // Put here values taken by CS
   private final List<Integer> segments = Arrays.asList(0x1000, 0x334B, 0x5635, 0x563E);
 
   @Override
@@ -37,21 +36,26 @@ public class Spice86TentativeFunctionRenamer extends GhidraScript {
     Program program = getCurrentProgram();
     Listing listing = program.getListing();
     FunctionIterator functionIterator = listing.getFunctions(true);
+    int renamed = 0;
     while (functionIterator.hasNext()) {
-      renameFunction(functionIterator.next());
+      if (renameFunction(functionIterator.next())) {
+        renamed++;
+      }
     }
+    this.println("Renamed " + renamed + " functions");
   }
 
-  private void renameFunction(Function function) throws InvalidInputException, DuplicateNameException {
+  private boolean renameFunction(Function function) throws InvalidInputException, DuplicateNameException {
     String functionName = function.getName();
     if (!functionName.startsWith("FUN_")) {
-      return;
+      return false;
     }
     println("processing " + functionName + " at address " + Utils.toHexWith0X(
         (int)function.getEntryPoint().getUnsignedOffset()));
     SegmentedAddress address = getAddress(function);
     String name = "not_observed_" + Utils.toHexSegmentOffsetPhysical(address);
     function.setName(name, SourceType.USER_DEFINED);
+    return true;
   }
 
   private SegmentedAddress getAddress(Function function) {

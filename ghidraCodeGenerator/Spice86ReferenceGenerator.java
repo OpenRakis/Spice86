@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-//Imports indirect jumps and calls destinations from spice86 dump file (https://github.com/OpenRakis/Spice86/)
+//Attempts to guess segmented addresses of functions which have been discovered by ghidra but never actually executed in the emulator.
 //@author Kevin Ferrare kevinferrare@gmail.com
 //@category Assembly
 //@keybinding
