@@ -19,7 +19,7 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.4.3</Version>
+		<Version>2.4.4</Version>
 		<PackageReleaseNotes>Symbols and sources included in Nuget package.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -31,12 +31,12 @@
 	</PropertyGroup>
 
 	<!-- Source Link configuration -->
-	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+	<PropertyGroup>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<EmbedUntrackedSources>true</EmbedUntrackedSources>
-		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
 	</PropertyGroup>
-	<ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+	<ItemGroup>
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
 			<PrivateAssets>all</PrivateAssets>
