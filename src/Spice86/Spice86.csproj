@@ -19,8 +19,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.4.2</Version>
-		<PackageReleaseNotes>Execution flow recorder and other recorders for reverse engineering are introduced.</PackageReleaseNotes>
+		<Version>2.4.3</Version>
+		<PackageReleaseNotes>Symbols and sources included in Nuget package.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
