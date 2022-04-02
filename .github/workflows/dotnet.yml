@@ -37,7 +37,7 @@ jobs:
 
     - name: Package NuGet
       working-directory: ./src
-      run: dotnet pack --configuration Release
+      run: dotnet pack --include-symbols --include-source --configuration Release
 
     - name: Upload NuGet
       working-directory: ./src/Spice86/bin/Release
