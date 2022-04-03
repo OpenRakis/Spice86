@@ -62,18 +62,15 @@
 					</MenuItem>
 				</Menu>
 			</Grid>
-			<ItemsRepeater
+			<ItemsPresenter
 				Grid.Row="1"
 				Items="{Binding VideoBuffers}">
-				<ItemsRepeater.ItemTemplate>
+				<ItemsPresenter.ItemTemplate>
 					<DataTemplate DataType="{x:Type vm:VideoBufferViewModel}">
 						<local:VideoBufferView />
 					</DataTemplate>
-				</ItemsRepeater.ItemTemplate>
-				<ItemsRepeater.Layout>
-					<StackLayout Orientation="Vertical" Spacing="8"  />
-				</ItemsRepeater.Layout>
-			</ItemsRepeater>
+				</ItemsPresenter.ItemTemplate>
+			</ItemsPresenter>
 		</Grid>
 	</ScrollViewer>
 </Window>
