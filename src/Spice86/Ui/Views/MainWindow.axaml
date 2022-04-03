@@ -17,9 +17,7 @@
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<ScrollViewer
-		HorizontalScrollBarVisibility="Auto"
-		VerticalScrollBarVisibility="Auto">
+	<ScrollViewer>
 		<Grid RowDefinitions="Auto,*">
 			<Grid HorizontalAlignment="Center" Grid.Row="0" ColumnDefinitions="Auto,Auto,120,Auto,Auto">
 				<Button Grid.Column="0" Content="⏸︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
