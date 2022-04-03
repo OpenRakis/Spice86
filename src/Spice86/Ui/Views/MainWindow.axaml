@@ -71,7 +71,7 @@
 					</DataTemplate>
 				</ItemsRepeater.ItemTemplate>
 				<ItemsRepeater.Layout>
-					<StackLayout Orientation="Horizontal" Spacing="8" />
+					<StackLayout Orientation="Vertical" Spacing="1" />
 				</ItemsRepeater.Layout>
 			</ItemsRepeater>
 		</Grid>
