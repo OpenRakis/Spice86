@@ -19,8 +19,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.4.4</Version>
-		<PackageReleaseNotes>Symbols and sources included in Nuget package.</PackageReleaseNotes>
+		<Version>2.4.5</Version>
+		<PackageReleaseNotes>Way better UI layout, along with bug fixes for functions overrides.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
