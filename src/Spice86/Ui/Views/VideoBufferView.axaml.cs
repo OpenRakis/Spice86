@@ -1,12 +1,12 @@
 namespace Spice86.UI.Views;
-using System;
-using System.Linq;
-
 using Avalonia.Controls;
 using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
 
 using Spice86.UI.ViewModels;
+
+using System;
+using System.Linq;
 
 public partial class VideoBufferView : UserControl {
     public VideoBufferView() {
@@ -17,7 +17,7 @@ public partial class VideoBufferView : UserControl {
 
     private void InitializeComponent() {
         AvaloniaXamlLoader.Load(this);
-        Initialized += VideoBufferView_Initialized;
+        DataContextChanged += VideoBufferView_DataContextChanged;
         MainWindow.AppClosing += MainWindow_AppClosing;
     }
 
@@ -27,10 +27,13 @@ public partial class VideoBufferView : UserControl {
     private Image? _image;
     private bool _appClosing;
 
-    private void VideoBufferView_Initialized(object? sender, EventArgs e) {
+    private void VideoBufferView_DataContextChanged(object? sender, EventArgs e) {
         if (this.DataContext is VideoBufferViewModel vm) {
             _image = this.FindControl<Image>(nameof(Image));
-            if (vm.IsPrimaryDisplay && _image is not null && ApplicationWindow?.DataContext is MainWindowViewModel mainVm) {
+            if (vm._isPrimaryDisplay && _image is not null && ApplicationWindow?.DataContext is MainWindowViewModel mainVm) {
+                _image.PointerMoved -= (s, e) => mainVm.OnMouseMoved(e, _image);
+                _image.PointerPressed -= (s, e) => mainVm.OnMouseClick(e, true);
+                _image.PointerReleased -= (s, e) => mainVm.OnMouseClick(e, false);
                 _image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, _image);
                 _image.PointerPressed += (s, e) => mainVm.OnMouseClick(e, true);
                 _image.PointerReleased += (s, e) => mainVm.OnMouseClick(e, false);
@@ -40,14 +43,9 @@ public partial class VideoBufferView : UserControl {
     }
 
     private void InvalidateImage() {
-        if (this.DataContext is VideoBufferViewModel vm && _appClosing == false) {
-            if (_image is null) {
-                return;
-            }
-            if (_image.Source is null) {
-                _image.Source = vm.Bitmap;
-            }
-            _image.InvalidateVisual();
+        if (_appClosing || _image is null) {
+            return;
         }
+        _image.InvalidateVisual();
     }
 }

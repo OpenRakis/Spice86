@@ -15,7 +15,6 @@ using Spice86.Emulator.Devices.Video;
 using Spice86.UI.Views;
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoBufferViewModel>, IDisposable {
@@ -38,7 +37,7 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     }
 
     public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
-        IsPrimaryDisplay = isPrimaryDisplay;
+        _isPrimaryDisplay = isPrimaryDisplay;
         Width = _initialWidth = width;
         Height = _initialHeight = height;
         Address = address;
@@ -75,11 +74,9 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     public uint Address { get; private set; }
 
 
-    // TODO : Get current DPI from Avalonia or Skia.
-    // It isn't DesktopScaling or RenderScaling as this returns 1 when Windows Desktop Scaling is set at 100%
-    private WriteableBitmap _bitmap = new(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-
     /// <summary>
+    /// TODO : Get current DPI from Avalonia or Skia.
+    /// It isn't DesktopScaling or RenderScaling as this returns 1 when Windows Desktop Scaling is set at 100%
     /// DPI: AvaloniaUI, like WPF, renders UI Controls in Device Independant Pixels.<br/>
     /// According to searches online, DPI is tied to a TopLevel control (a Window).<br/>
     /// Right now, the DPI is hardcoded for WriteableBitmap : https://github.com/AvaloniaUI/Avalonia/issues/1292 <br/>
@@ -87,14 +84,8 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     /// Also WriteableBitmap is an IImage implementation and not a UI Control,<br/>
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
     /// </summary>
-    public WriteableBitmap Bitmap {
-        get => _bitmap;
-        set {
-            if (value is not null) {
-                this.SetProperty(ref _bitmap, value);
-            }
-        }
-    }
+    [ObservableProperty]
+    private WriteableBitmap _bitmap = new(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
 
     private bool _showCursor = true;
 
@@ -112,12 +103,8 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         }
     }
 
+    [ObservableProperty]
     private Cursor? _cursor = Cursor.Default;
-
-    public Cursor? Cursor {
-        get => _cursor;
-        set => this.SetProperty(ref _cursor, value);
-    }
 
     private double _scale = 1;
 
@@ -126,21 +113,16 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         set => this.SetProperty(ref _scale, Math.Max(value, 1));
     }
 
+    [ObservableProperty]
     private int _height = 320;
 
-    public int Height {
-        get => _height;
-        private set => this.SetProperty(ref _height, value);
-    }
-    public bool IsPrimaryDisplay { get; private set; }
+    [ObservableProperty]
+    public bool _isPrimaryDisplay;
 
+    [ObservableProperty]
     private int _width = 200;
-    private bool _appClosing;
 
-    public int Width {
-        get => _width;
-        private set => this.SetProperty(ref _width, value);
-    }
+    private bool _appClosing;
 
     private readonly int _index;
 
@@ -160,12 +142,8 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         GC.SuppressFinalize(this);
     }
 
+    [ObservableProperty]
     private bool _isDrawing;
-
-    public bool IsDrawing {
-        get => _isDrawing;
-        set => this.SetProperty(ref _isDrawing, value);
-    }
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
         if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
@@ -179,14 +157,14 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         int rowBytes = Width;
         long memoryAddress = Address;
         uint* currentRow = firstPixelAddress;
-        for(int row = 0; row < Height; row++) {
+        for (int row = 0; row < Height; row++) {
             uint* startOfLine = currentRow;
             uint* endOfLine = currentRow + Width;
-            for(uint* column = startOfLine; column < endOfLine; column++) {
+            for (uint* column = startOfLine; column < endOfLine; column++) {
                 byte colorIndex = memory[memoryAddress];
                 Rgb pixel = palette[colorIndex];
                 uint argb = pixel.ToArgb();
-                if(pixels.Format == PixelFormat.Rgba8888) {
+                if (pixels.Format == PixelFormat.Rgba8888) {
                     argb = pixel.ToRgba();
                 }
                 *column = argb;

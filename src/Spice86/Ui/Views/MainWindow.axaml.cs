@@ -22,29 +22,30 @@ public partial class MainWindow : Window {
 #endif
     }
 
-    private async void MainWindow_DataContextChanged(object? sender, EventArgs e) {
-        if (sender is MainWindowViewModel vm) {
-            await Dispatcher.UIThread.InvokeAsync(() => vm.SetResolution(320, 200, 1), DispatcherPriority.MaxValue);
-        }
-    }
-
     protected override void OnKeyUp(KeyEventArgs e) {
         base.OnKeyUp(e);
-        if (this.DataContext is MainWindowViewModel vm) {
+        if (DataContext is MainWindowViewModel vm) {
             vm.OnKeyUp(e);
         }
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
         base.OnKeyDown(e);
-        if (this.DataContext is MainWindowViewModel vm) {
+        if (DataContext is MainWindowViewModel vm) {
             vm.OnKeyDown(e);
+        }
+    }
+
+    private async void MainWindow_DataContextChanged(object? sender, EventArgs e) {
+        if (sender is MainWindowViewModel vm) {
+            await Dispatcher.UIThread.InvokeAsync(() => vm.SetResolution(320, 200, 1), DispatcherPriority.MaxValue);
+
         }
     }
 
     public static event EventHandler<CancelEventArgs>? AppClosing;
 
-    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e) {
+    private void MainWindow_Closing(object? sender, CancelEventArgs e) {
         AppClosing?.Invoke(sender, e);
     }
 

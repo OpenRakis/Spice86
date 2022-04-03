@@ -4,12 +4,11 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:vm="using:Spice86.UI.ViewModels"
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-			 x:Class="Spice86.UI.Views.VideoBufferView"
-			>
+			 x:Class="Spice86.UI.Views.VideoBufferView">
 	<Design.DataContext>
 		<vm:VideoBufferViewModel />
 	</Design.DataContext>
-	<LayoutTransformControl IsVisible="{Binding IsDrawing}">
+	<LayoutTransformControl>
 		<LayoutTransformControl.RenderTransform>
 			<ScaleTransform
 				ScaleX="{Binding Scale}"
@@ -19,8 +18,7 @@
 		<Viewbox Stretch="UniformToFill">
 			<Image x:Name="Image"
 				Cursor="{Binding Cursor}"
-				Source="{Binding Bitmap}"
-				 />
+				Source="{Binding Bitmap}" />
 		</Viewbox>
 	</LayoutTransformControl>
 </UserControl>

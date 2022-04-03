@@ -6,7 +6,7 @@
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.UI.Views.MainWindow"
-		Icon="Spice86.ico"
+		Icon="/Ui/Views/Spice86.ico"
 		Title="{Binding MainTitle}"
 		MinWidth="1152"
 		MinHeight="864"
@@ -17,47 +17,63 @@
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<WrapPanel Orientation="Horizontal">
-		<Menu>
-			<MenuItem Header="⏸︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
-			<MenuItem Header="⏵︎" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
-			<Button Content="⟳" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
-			<NumericUpDown Text="{Binding TimeMultiplier}" Minimum="1" />
-		</Menu>
-		<ItemsRepeater Items="{Binding VideoBuffers}">
-			<ItemsRepeater.ItemTemplate>
-				<DataTemplate x:DataType="vm:VideoBufferViewModel">
-					<WrapPanel Orientation="Horizontal">
-						<Menu>
-							<MenuItem Header="Options">
-								<Label Content="{Binding Address, StringFormat={}0x{0:X}}" />
-								<MenuItem>
-									<MenuItem.Header>
-										<StackPanel Orientation="Horizontal">
-											<Label Content="Scale" HorizontalContentAlignment="Center" />
-											<NumericUpDown Text="{Binding Scale}" Margin="5,0,0,0" />
-										</StackPanel>
-									</MenuItem.Header>
-								</MenuItem>
-								<MenuItem IsVisible="{Binding IsPrimaryDisplay}">
-									<MenuItem.Header>
-										<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
-									</MenuItem.Header>
-								</MenuItem>
-								<MenuItem Command="{Binding SaveBitmapCommand}">
-									<MenuItem.Header>
-										<Label Content="Save Bitmap" />
-									</MenuItem.Header>
-								</MenuItem>
-							</MenuItem>
-						</Menu>
+	<ScrollViewer>
+		<Grid RowDefinitions="Auto,*">
+			<Grid HorizontalAlignment="Center" Grid.Row="0" ColumnDefinitions="Auto,Auto,120,Auto,Auto">
+				<Button Grid.Column="0" Content="⏸︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
+				<Button Grid.Column="0" Content="⏵︎" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
+				<Label VerticalAlignment="Center" Grid.Column="1" Content="Time Modifier" />
+				<NumericUpDown Grid.Column="2" Margin="5,0,0,0" Text="{Binding TimeMultiplier}" Minimum="1" />
+				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
+				<Menu Grid.Column="4">
+					<MenuItem Header="Video Buffers Options">
+						<ItemsRepeater Items="{Binding VideoBuffers}">
+							<ItemsRepeater.ItemTemplate>
+								<DataTemplate DataType="{x:Type vm:VideoBufferViewModel}">
+									<MenuItem>
+										<MenuItem.Header>
+											<TextBlock Text="{Binding Address, StringFormat={}0x{0:X}}" />
+										</MenuItem.Header>
+										<MenuItem>
+											<MenuItem.Header>
+												<Grid ColumnDefinitions="Auto,Auto">
+													<Label Grid.Column="0" Content="Scale" HorizontalContentAlignment="Center" />
+													<NumericUpDown Grid.Column="1" Text="{Binding Scale}" Margin="5,0,0,0" />
+												</Grid>
+											</MenuItem.Header>
+										</MenuItem>
+										<MenuItem>
+											<MenuItem.Header>
+												<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
+											</MenuItem.Header>
+										</MenuItem>
+										<MenuItem Command="{Binding SaveBitmapCommand}">
+											<MenuItem.Header>
+												<Label Content="Save Bitmap" />
+											</MenuItem.Header>
+										</MenuItem>
+									</MenuItem>
+								</DataTemplate>
+							</ItemsRepeater.ItemTemplate>
+							<ItemsRepeater.Layout>
+								<StackLayout Orientation="Vertical" Spacing="1" />
+							</ItemsRepeater.Layout>
+						</ItemsRepeater>
+					</MenuItem>
+				</Menu>
+			</Grid>
+			<ItemsRepeater
+				Grid.Row="1"
+				Items="{Binding VideoBuffers}">
+				<ItemsRepeater.ItemTemplate>
+					<DataTemplate DataType="{x:Type vm:VideoBufferViewModel}">
 						<local:VideoBufferView />
-					</WrapPanel>
-				</DataTemplate>
-			</ItemsRepeater.ItemTemplate>
-			<ItemsRepeater.Layout>
-				<StackLayout Orientation="Horizontal" Spacing="8" />
-			</ItemsRepeater.Layout>
-		</ItemsRepeater>
-	</WrapPanel>
+					</DataTemplate>
+				</ItemsRepeater.ItemTemplate>
+				<ItemsRepeater.Layout>
+					<StackLayout Orientation="Horizontal" Spacing="8" />
+				</ItemsRepeater.Layout>
+			</ItemsRepeater>
+		</Grid>
+	</ScrollViewer>
 </Window>

@@ -93,7 +93,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         GC.SuppressFinalize(this);
     }
 
-    private double _timeMultiplier = 1;
+    private double _timeMultiplier = 14;
 
     public double TimeMultiplier {
         get => _timeMultiplier;
@@ -105,7 +105,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
 
     [ICommand]
     public void ResetTimeMultiplier() {
-        TimeMultiplier = 1;
+        TimeMultiplier = 14;
     }
 
     public void SetTimeMultiplier(double timeMultiplier) => _programExecutor?.Machine.Timer.SetTimeMultiplier(timeMultiplier);
