@@ -19,8 +19,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.4.5</Version>
-		<PackageReleaseNotes>Way better UI layout, along with bug fixes for functions overrides.</PackageReleaseNotes>
+		<Version>2.4.6</Version>
+		<PackageReleaseNotes>mouse didn't work anymore - fixed.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
