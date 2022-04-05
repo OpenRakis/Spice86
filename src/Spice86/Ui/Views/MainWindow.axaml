@@ -27,8 +27,8 @@
 				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 				<Menu Grid.Column="4">
 					<MenuItem Header="Video Buffers Options">
-						<ItemsRepeater Items="{Binding VideoBuffers}">
-							<ItemsRepeater.ItemTemplate>
+						<ItemsPresenter Items="{Binding VideoBuffers}">
+							<ItemsPresenter.ItemTemplate>
 								<DataTemplate DataType="{x:Type vm:VideoBufferViewModel}">
 									<MenuItem>
 										<MenuItem.Header>
@@ -54,11 +54,8 @@
 										</MenuItem>
 									</MenuItem>
 								</DataTemplate>
-							</ItemsRepeater.ItemTemplate>
-							<ItemsRepeater.Layout>
-								<StackLayout Orientation="Vertical" Spacing="1" />
-							</ItemsRepeater.Layout>
-						</ItemsRepeater>
+							</ItemsPresenter.ItemTemplate>
+						</ItemsPresenter>
 					</MenuItem>
 				</Menu>
 			</Grid>
