@@ -98,7 +98,7 @@ class ProgramGenerator {
   }
 
   public String outputCSharp() {
-    StringBuilder res = new StringBuilder("namespace " + namespace + ";\n\n ");
+    StringBuilder res = new StringBuilder("namespace " + namespace + ";\n\n");
     res.append("""
         using Spice86.Emulator.Function;
         using Spice86.Emulator.Memory;
@@ -233,7 +233,7 @@ class FunctionGenerator {
     StringBuilder res = new StringBuilder();
     String name = parsedFunction.getName();
     log.info("Generating C# code for function " + name);
-    res.append("public Action " + name + "(int gotoTarget) {\n");
+    res.append("public Action " + name + "(int loadOffset) {\n");
     List<ParsedInstruction> instructionsBeforeEntry = parsedFunction.getInstructionsBeforeEntry();
     List<ParsedInstruction> instructionsAfterEntry = parsedFunction.getInstructionsAfterEntry();
     Set<String> generatedTempVars = new HashSet<>();
@@ -272,11 +272,13 @@ class FunctionGenerator {
       SegmentedAddress entryAddress) {
     Collection<SegmentedAddress> jumpTargets = CollectionUtils.emptyIfNull(
         parsedProgram.getJumpsFromOutsideForFunction(parsedFunction.getEntrySegmentedAddress()));
+
+    StringBuilder res = new StringBuilder("entrydispatcher:\n");
     if (firstInstructionOfBeforeSectionAddress == null && areAllExternalJumpsToEntry(entryAddress, jumpTargets)) {
-      return "if(gotoTarget!=0){\n  " + InstructionGenerator.generateFailAsUntested(
+      return res + "if(loadOffset!=0){\n  " + InstructionGenerator.generateFailAsUntested(
           "External goto not supported for this function.", true) + "\n}\n";
     }
-    StringBuilder res = new StringBuilder("switch(gotoTarget) {\n");
+    res.append("switch(loadOffset) {\n");
     for (SegmentedAddress target : jumpTargets) {
       if (target.equals(firstInstructionOfBeforeSectionAddress) || target.equals(entryAddress)) {
         // firstInstructionOfBeforeSectionAddress case is handled separately, do not do double case
@@ -305,7 +307,7 @@ class FunctionGenerator {
     if (!jumpTargets.isEmpty()) {
       // Only makes sense to generate this when there are labels accessible from outside
       res.append("  default: " + InstructionGenerator.generateFailAsUntested(
-          "\"Could not find any label from outside with address \" + gotoTarget", false) + "\n");
+          "\"Could not find any label from outside with address \" + loadOffset", false) + "\n");
     }
     res.append("}");
     return res.toString();
@@ -1345,7 +1347,7 @@ class JumpCallTranslator {
     if (function == null) {
       return noFunctionAtAddress(address);
     }
-    return functionToString(function, far, false) + "\n    break;";
+    return functionToString(function, far, false) + " break;";
   }
 
   public String functionToString(ParsedFunction parsedFunction, boolean far, boolean withReturn) {
@@ -1363,12 +1365,18 @@ class JumpCallTranslator {
         + ", " + name + ");";
   }
 
-  public String functionToDirectCSharpCallWithReturn(ParsedFunction parsedFunction, Integer internalJumpAddress) {
-    String internalJumpAddressString = "0";
-    if (internalJumpAddress != null) {
-      internalJumpAddressString = Utils.toHexWith0X(internalJumpAddress) + " - cs1 * 0x10";
+  public String functionToDirectCSharpCallWithReturn(ParsedFunction parsedFunction, Integer internalJumpOffset) {
+    String internalJumpOffsetString = "0";
+    if (internalJumpOffset != null) {
+      internalJumpOffsetString = Utils.toHexWith0X(internalJumpOffset) + " - cs1 * 0x10";
     }
-    return "return " + parsedFunction.getName() + "(" + internalJumpAddressString + ");";
+    String res = "if(JumpDispatcher.Jump(" + parsedFunction.getName() + ", " + internalJumpOffsetString + ")) {\n";
+    res += """
+          loadOffset = JumpDispatcher.NextEntryAddress;
+          goto entrydispatcher;
+        }
+        return JumpDispatcher.JumpAsmReturn!;""";
+    return res;
   }
 
   private String noFunctionAtAddress(SegmentedAddress address) {
@@ -1390,9 +1398,13 @@ class JumpCallTranslator {
     res.append("switch(" + tempVarName + ") {\n");
     if (targets != null) {
       for (SegmentedAddress targetFromRecord : targets) {
+        String action = toCSharp.apply(targetFromRecord);
+        if (action.contains("\n")) {
+          action = "{\n" + Utils.indent(action, 4) + "\n  }";
+        }
         res.append(
             "  case " + Utils.toHexWith0X(targetFromRecord.toPhysical() - parsedProgram.getEntryAddress()) + " : "
-                + toCSharp.apply(targetFromRecord)
+                + action
                 + "\n");
       }
     }

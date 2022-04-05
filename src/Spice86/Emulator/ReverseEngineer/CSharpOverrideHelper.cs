@@ -34,7 +34,6 @@ public class CSharpOverrideHelper {
     
     protected Alu Alu => Cpu.Alu;
 
-
     public ushort AX { get => State.AX; set => State.AX = value; }
     public byte AH { get => State.AH; set => State.AH = value; }
     public byte AL { get => State.AL; set => State.AL = value; }
@@ -79,10 +78,13 @@ public class CSharpOverrideHelper {
     public ushort FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
 
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
-
+    
+    protected JumpDispatcher JumpDispatcher { get; }
+    
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine) {
         this._functionInformations = functionInformations;
         this.Machine = machine;
+        this.JumpDispatcher = new();
     }
 
     public void DefineFunction(ushort segment, ushort offset, string name) {
