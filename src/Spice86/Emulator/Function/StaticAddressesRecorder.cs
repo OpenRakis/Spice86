@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 
 public class StaticAddressesRecorder {
-    private readonly bool _debugMode;
+    private readonly bool _recordData;
 
     private readonly Dictionary<uint, string> _names = new();
 
@@ -24,8 +24,8 @@ public class StaticAddressesRecorder {
 
     private int? _currentSegmentIndex;
 
-    public StaticAddressesRecorder(State state, bool debugMode) {
-        this._debugMode = debugMode;
+    public StaticAddressesRecorder(State state, bool recordData) {
+        this._recordData = recordData;
         this._segmentRegisters = state.SegmentRegisters;
     }
 
@@ -38,7 +38,7 @@ public class StaticAddressesRecorder {
     }
 
     public void Commit() {
-        if (_debugMode && _currentSegmentIndex != null && _currentOffset != null && CurrentValueOperation != null && CurrentOperandSize != null && _currentSegmentIndex != null) {
+        if (_recordData && _currentSegmentIndex != null && _currentOffset != null && CurrentValueOperation != null && CurrentOperandSize != null && _currentSegmentIndex != null) {
             ushort segmentValue = _segmentRegisters.GetRegister(_currentSegmentIndex.Value);
             uint physicalAddress = MemoryUtils.ToPhysicalAddress(segmentValue, _currentOffset.Value);
             if (_segmentRegisterBasedAddress.TryGetValue(physicalAddress, out SegmentRegisterBasedAddress? value) == false) {

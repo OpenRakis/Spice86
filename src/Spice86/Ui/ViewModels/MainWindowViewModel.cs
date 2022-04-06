@@ -209,13 +209,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     private void RunMachine() {
-        try {
-            _okayToContinueEvent.Set();
-            _programExecutor = new ProgramExecutor(this, _configuration);
-            _programExecutor.Run();
-        } catch (Exception e) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(e, "An error occurred during execution");
+        if (_configuration == null) {
+            _logger.Error("No configuration available, cannot continue");
+        } else {
+            try {
+                _okayToContinueEvent.Set();
+                _programExecutor = new ProgramExecutor(this, _configuration);
+                _programExecutor.Run();
+            } catch (Exception e) {
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _logger.Error(e, "An error occurred during execution");
+                }
             }
         }
         Exit();

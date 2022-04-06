@@ -28,7 +28,7 @@ public class MachineTest {
     public void TestExecutionBreakpoints() {
         ProgramExecutor programExecutor = CreateProgramExecutor("add");
         Machine machine = programExecutor.Machine;
-        machine.DebugMode = true;
+        machine.RecordData = true;
         State state = machine.Cpu.State;
         MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
         int triggers = 0;
@@ -332,6 +332,7 @@ public class MachineTest {
     private Machine Execute(string binName) {
         using ProgramExecutor programExecutor = CreateProgramExecutor(binName);
         programExecutor.Run();
+        //new StringsOverrides(new(), programExecutor.Machine).entry_F000_FFF0_FFFF0(0);
         return programExecutor.Machine;
     }
 

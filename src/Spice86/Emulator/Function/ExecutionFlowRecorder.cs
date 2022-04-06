@@ -5,7 +5,7 @@ using Memory;
 using System.Collections.Generic;
 
 public class ExecutionFlowRecorder {
-    public bool DebugMode { set; private get; }
+    public bool RecordData { set; private get; }
     public IDictionary<uint, ISet<SegmentedAddress>> CallsFromTo { get; }
     private readonly ISet<ulong> _callsEncountered = new HashSet<ulong>();
     public IDictionary<uint, ISet<SegmentedAddress>> JumpsFromTo { get; }
@@ -15,7 +15,7 @@ public class ExecutionFlowRecorder {
     public IDictionary<uint, ISet<SegmentedAddress>> ExecutableAddressWrittenBy { get; }
 
     public ExecutionFlowRecorder() {
-        DebugMode = false;
+        RecordData = false;
         CallsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         JumpsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         RetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
@@ -48,7 +48,7 @@ public class ExecutionFlowRecorder {
     }
 
     private void RegisterAddressJump(IDictionary<uint, ISet<SegmentedAddress>> FromTo, ISet<ulong> encountered, ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
-        if (!DebugMode) {
+        if (!RecordData) {
             return;
         }
         ulong key = fromCS | (ulong)fromIP << 16 | (ulong)toCS << 32 | (ulong)toIP << 48;
