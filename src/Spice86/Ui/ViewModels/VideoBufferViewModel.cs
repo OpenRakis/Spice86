@@ -145,17 +145,36 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     [ObservableProperty]
     private bool _isDrawing;
 
+    private byte[] _memoryRange = Array.Empty<byte>();
+    private Rgb[] _previousPalette = Array.Empty<Rgb>();
+    
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
-        if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
+        if (_appClosing || _disposedValue || UIUpdateMethod is null) {
             return;
         }
+        
         int size = Width * Height;
-        long endAddress = Address + size;
+        int endAddress = (int)(Address + size);
+        if (_memoryRange.Length == 0) {
+            _memoryRange = new byte[size];
+            _previousPalette = palette;
+        }
+        
+        if (_memoryRange.AsSpan()
+                .SequenceEqual(
+                    memory
+                    .AsSpan(
+                    (int)Address,
+                    size))
+            &&
+            _previousPalette.AsSpan().SequenceEqual(palette)) {
+            return;
+        }
 
         using ILockedFramebuffer pixels = Bitmap.Lock();
         uint* firstPixelAddress = (uint*)pixels.Address;
         int rowBytes = Width;
-        long memoryAddress = Address;
+        uint memoryAddress = Address;
         uint* currentRow = firstPixelAddress;
         for (int row = 0; row < Height; row++) {
             uint* startOfLine = currentRow;
@@ -176,6 +195,13 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
             IsDrawing = true;
         }
         Dispatcher.UIThread.Post(() => UIUpdateMethod?.Invoke(), DispatcherPriority.MaxValue);
+ 
+        Array.ConstrainedCopy(
+            memory, 
+            (int)Address, 
+            _memoryRange, 
+            0, 
+            size);
     }
 
     public override bool Equals(object? obj) {
