@@ -36,9 +36,9 @@ public partial class MainWindow : Window {
         }
     }
 
-    private async void MainWindow_DataContextChanged(object? sender, EventArgs e) {
+    private void MainWindow_DataContextChanged(object? sender, EventArgs e) {
         if (sender is MainWindowViewModel vm) {
-            await Dispatcher.UIThread.InvokeAsync(() => vm.SetResolution(320, 200, 1), DispatcherPriority.MaxValue);
+            Dispatcher.UIThread.Post(() => vm.SetResolution(320, 200, 1), DispatcherPriority.MaxValue);
 
         }
     }
