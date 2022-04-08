@@ -10,17 +10,23 @@ using System.IO;
 
 public class GdbServer : IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<GdbServer>();
+    private EventWaitHandle? _waitHandle;
     private readonly Configuration _configuration;
     private bool _disposedValue;
     private readonly Machine _machine;
     private bool _isRunning = true;
-    private volatile bool _started;
+    private BackgroundWorker? _backgroundWorker;
 
     public GdbServer(Machine machine, Configuration configuration) {
         this._machine = machine;
         this._configuration = configuration;
-        if (configuration.GdbPort != null) {
-            Start(configuration.GdbPort.Value);
+        if (configuration.GdbPort is not null) {
+            _backgroundWorker = new();
+            _backgroundWorker.WorkerSupportsCancellation = false;
+            _backgroundWorker.DoWork += (s, e) => {
+                RunServer(configuration.GdbPort.Value);
+            };
+            Start();
         }
     }
 
@@ -33,6 +39,7 @@ public class GdbServer : IDisposable {
     protected void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
+                _backgroundWorker?.Dispose();
                 _isRunning = false;
             }
             _disposedValue = true;
@@ -44,7 +51,7 @@ public class GdbServer : IDisposable {
     private void AcceptOneConnection(GdbIo gdbIo) {
         var gdbCommandHandler = new GdbCommandHandler(gdbIo, _machine, _configuration);
         gdbCommandHandler.PauseEmulator();
-        this._started = true;
+        _waitHandle?.Set();
         GdbCommandHandler = gdbCommandHandler;
         while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
             string command = gdbIo.ReadCommand();
@@ -79,16 +86,12 @@ public class GdbServer : IDisposable {
         }
     }
 
-    private void Start(int port) {
-        using BackgroundWorker backgroundWorker = new();
-        backgroundWorker.WorkerSupportsCancellation = false;
-        backgroundWorker.DoWork += (s, e) => {
-            RunServer(port);
-        };
-        backgroundWorker.RunWorkerAsync();
+
+    private void Start() {
+        _backgroundWorker?.RunWorkerAsync();
         // wait for thread to start
-        while (!_started) {
-            ;
-        }
+        _waitHandle = new AutoResetEvent(false);
+        _waitHandle.WaitOne(Timeout.Infinite);
+        _waitHandle.Dispose();
     }
 }
