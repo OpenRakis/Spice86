@@ -17,13 +17,13 @@ public class FunctionHandler {
 
     private readonly Stack<FunctionCall> _callerStack = new();
 
-    private readonly bool _debugMode;
+    private readonly bool _recordData;
 
     private readonly Machine _machine;
 
-    public FunctionHandler(Machine machine, bool debugMode) {
+    public FunctionHandler(Machine machine, bool recordData) {
         this._machine = machine;
-        this._debugMode = debugMode;
+        this._recordData = recordData;
     }
 
     public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort expectedReturnSegment, ushort expectedReturnOffset) {
@@ -33,7 +33,7 @@ public class FunctionHandler {
     public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort? expectedReturnSegment, ushort? expectedReturnOffset, string? name, bool recordReturn) {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
         FunctionInformation currentFunction = GetOrCreateFunctionInformation(entryAddress, name);
-        if (_debugMode) {
+        if (_recordData) {
             FunctionInformation? caller = GetFunctionInformation(CurrentFunctionCall);
             SegmentedAddress? expectedReturnAddress = null;
             if (expectedReturnSegment != null && expectedReturnOffset != null) {
@@ -111,7 +111,7 @@ public class FunctionHandler {
     }
 
     public bool Ret(CallType returnCallType) {
-        if (_debugMode) {
+        if (_recordData) {
             if (_callerStack.TryPop(out FunctionCall? currentFunctionCall) == false) {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                     _logger.Warning("Returning but no call was done before!!");

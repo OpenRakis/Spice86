@@ -32,87 +32,9 @@ public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
     private readonly ProgramExecutor _programExecutor;
 
-    public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool debugMode) {
-        _programExecutor = programExecutor;
-        Gui = gui;
-        DebugMode = debugMode;
-
-        // A full 1MB of addressable memory :)
-        Memory = new Memory(0x100000);
-        Cpu = new Cpu(this, executionFlowRecorder, debugMode);
-
-        // Breakpoints
-        MachineBreakpoints = new MachineBreakpoints(this);
-
-        // IO devices
-        IoPortDispatcher = new IOPortDispatcher(this, configuration);
-        Cpu.IoPortDispatcher = IoPortDispatcher;
-
-        this.DmaController = new DmaController(this, configuration);
-        Register(DmaController);
-
-        Pic = new Pic(this, configuration);
-        Register(Pic);
-        VgaCard = new VgaCard(this, gui, configuration);
-        Register(VgaCard);
-        Timer = new Timer(this, Pic, VgaCard, counterConfigurator, configuration);
-        Register(Timer);
-        Keyboard = new Keyboard(this, gui, configuration);
-        Register(Keyboard);
-        Joystick = new Joystick(this, configuration);
-        Register(Joystick);
-        PcSpeaker = new PcSpeaker(this, configuration);
-        Register(PcSpeaker);
-        OPL3FM = new OPL3FM(this, configuration);
-        Register(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, configuration);
-        Register(SoundBlaster);
-        SoundBlaster.AddEnvironnmentVariable();
-        GravisUltraSound = new GravisUltraSound(this, configuration);
-        Register(GravisUltraSound);
-        Midi = new Midi(this, configuration);
-        Register(Midi);
-
-        // Services
-        CallbackHandler = new CallbackHandler(this, (ushort)InterruptHandlersSegment);
-        Cpu.CallbackHandler = CallbackHandler;
-        TimerInt8Handler = new TimerInt8Handler(this);
-        Register(TimerInt8Handler);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this);
-        Register(BiosKeyboardInt9Handler);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, VgaCard);
-        VideoBiosInt10Handler.InitRam();
-        Register(VideoBiosInt10Handler);
-        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
-        Register(BiosEquipmentDeterminationInt11Handler);
-        SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
-        Register(SystemBiosInt15Handler);
-        KeyboardInt16Handler = new KeyboardInt16Handler(this, BiosKeyboardInt9Handler.BiosKeyboardBuffer);
-        Register(KeyboardInt16Handler);
-        SystemClockInt1AHandler = new SystemClockInt1AHandler(this, TimerInt8Handler);
-        Register(SystemClockInt1AHandler);
-        DosInt20Handler = new DosInt20Handler(this);
-        Register(DosInt20Handler);
-        DosInt21Handler = new DosInt21Handler(this);
-        Register(DosInt21Handler);
-        MouseInt33Handler = new MouseInt33Handler(this, gui);
-        Register(MouseInt33Handler);
-    }
-
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
-    public bool DebugMode { get; set; }
-
-    public string DumpCallStack() {
-        FunctionHandler inUse = Cpu.FunctionHandlerInUse;
-        string callStack = "";
-        if (inUse.Equals(Cpu.FunctionHandlerInExternalInterrupt)) {
-            callStack += "From external interrupt:\n";
-        }
-
-        callStack += inUse.DumpCallStack();
-        return callStack;
-    }
+    public bool RecordData { get; set; }
 
     public BiosEquipmentDeterminationInt11Handler BiosEquipmentDeterminationInt11Handler { get; }
 
@@ -175,6 +97,84 @@ public class Machine : IDisposable {
 
     public event Action? Resumed;
 
+    public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+        _programExecutor = programExecutor;
+        Gui = gui;
+        RecordData = recordData;
+
+        // A full 1MB of addressable memory :)
+        Memory = new Memory(0x100000);
+        Cpu = new Cpu(this, executionFlowRecorder, recordData);
+
+        // Breakpoints
+        MachineBreakpoints = new MachineBreakpoints(this);
+
+        // IO devices
+        IoPortDispatcher = new IOPortDispatcher(this, configuration);
+        Cpu.IoPortDispatcher = IoPortDispatcher;
+
+        this.DmaController = new DmaController(this, configuration);
+        Register(DmaController);
+
+        Pic = new Pic(this, configuration);
+        Register(Pic);
+        VgaCard = new VgaCard(this, gui, configuration);
+        Register(VgaCard);
+        Timer = new Timer(this, Pic, VgaCard, counterConfigurator, configuration);
+        Register(Timer);
+        Keyboard = new Keyboard(this, gui, configuration);
+        Register(Keyboard);
+        Joystick = new Joystick(this, configuration);
+        Register(Joystick);
+        PcSpeaker = new PcSpeaker(this, configuration);
+        Register(PcSpeaker);
+        OPL3FM = new OPL3FM(this, configuration);
+        Register(OPL3FM);
+        SoundBlaster = new SoundBlaster(this, configuration);
+        Register(SoundBlaster);
+        SoundBlaster.AddEnvironnmentVariable();
+        GravisUltraSound = new GravisUltraSound(this, configuration);
+        Register(GravisUltraSound);
+        Midi = new Midi(this, configuration);
+        Register(Midi);
+
+        // Services
+        CallbackHandler = new CallbackHandler(this, (ushort)InterruptHandlersSegment);
+        Cpu.CallbackHandler = CallbackHandler;
+        TimerInt8Handler = new TimerInt8Handler(this);
+        Register(TimerInt8Handler);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this);
+        Register(BiosKeyboardInt9Handler);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, VgaCard);
+        VideoBiosInt10Handler.InitRam();
+        Register(VideoBiosInt10Handler);
+        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
+        Register(BiosEquipmentDeterminationInt11Handler);
+        SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
+        Register(SystemBiosInt15Handler);
+        KeyboardInt16Handler = new KeyboardInt16Handler(this, BiosKeyboardInt9Handler.BiosKeyboardBuffer);
+        Register(KeyboardInt16Handler);
+        SystemClockInt1AHandler = new SystemClockInt1AHandler(this, TimerInt8Handler);
+        Register(SystemClockInt1AHandler);
+        DosInt20Handler = new DosInt20Handler(this);
+        Register(DosInt20Handler);
+        DosInt21Handler = new DosInt21Handler(this);
+        Register(DosInt21Handler);
+        MouseInt33Handler = new MouseInt33Handler(this, gui);
+        Register(MouseInt33Handler);
+    }
+
+    public string DumpCallStack() {
+        FunctionHandler inUse = Cpu.FunctionHandlerInUse;
+        string callStack = "";
+        if (inUse.Equals(Cpu.FunctionHandlerInExternalInterrupt)) {
+            callStack += "From external interrupt:\n";
+        }
+
+        callStack += inUse.DumpCallStack();
+        return callStack;
+    }
+
     public void InstallAllCallbacksInInterruptTable() {
         CallbackHandler.InstallAllCallbacksInInterruptTable();
     }
@@ -229,7 +229,7 @@ public class Machine : IDisposable {
                 }
                 Resumed?.Invoke();
             }
-            if (DebugMode) {
+            if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
             }
 

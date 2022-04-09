@@ -30,14 +30,16 @@ using System.Security.Cryptography;
 public class ProgramExecutor : IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<ProgramExecutor>();
     private bool _disposedValue;
+    private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
 
-    public ProgramExecutor(MainWindowViewModel? gui, Configuration? configuration) {
+    public ProgramExecutor(MainWindowViewModel? gui, Configuration configuration) {
         if (configuration == null) {
             throw new ArgumentNullException(nameof(configuration));
         }
-        Machine = CreateMachine(gui, configuration);
-        _gdbServer = StartGdbServer(configuration);
+        _configuration = configuration;
+        Machine = CreateMachine(gui);
+        _gdbServer = StartGdbServer();
     }
 
     public void Dispose() {
@@ -50,6 +52,9 @@ public class ProgramExecutor : IDisposable {
 
     public void Run() {
         Machine.Run();
+        if (_configuration.DumpDataOnExit) {
+            new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine).DumpAll();
+        }
     }
 
     protected void Dispose(bool disposing) {
@@ -91,40 +96,40 @@ public class ProgramExecutor : IDisposable {
         string lowerCaseFileName = fileName.ToLowerInvariant();
         if (lowerCaseFileName.EndsWith(".exe")) {
             return new ExeLoader(Machine, (ushort)entryPointSegment);
-        } else if (lowerCaseFileName.EndsWith(".com")) {
+        } 
+        if (lowerCaseFileName.EndsWith(".com")) {
             return new ComLoader(Machine, (ushort)entryPointSegment);
         }
 
         return new BiosLoader(Machine);
     }
 
-    private Machine CreateMachine(MainWindowViewModel? gui, Configuration? configuration) {
-        if (configuration == null) {
-            throw new ArgumentNullException(nameof(configuration));
+    private Machine CreateMachine(MainWindowViewModel? gui) {
+        if (_configuration == null) {
+            throw new ArgumentNullException(nameof(_configuration));
         }
-        var counterConfigurator = new CounterConfigurator(configuration);
-        bool debugMode = configuration.GdbPort != null;
-        ExecutionFlowRecorder executionFlowRecorder = new ExecutionFlowDumper().ReadFromFileOrCreate(configuration.JumpFile);
-        executionFlowRecorder.DebugMode = debugMode;
-        Machine = new Machine(this, gui, counterConfigurator, executionFlowRecorder, configuration, debugMode);
+        var counterConfigurator = new CounterConfigurator(_configuration);
+        bool recordData = _configuration.GdbPort != null || _configuration.DumpDataOnExit;
+        RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
+        ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(recordData);
+        Machine = new Machine(this, gui, counterConfigurator, executionFlowRecorder, _configuration, recordData);
         InitializeCpu();
-        InitializeDos(configuration);
-        if (configuration.InstallInterruptVector) {
+        InitializeDos(_configuration);
+        if (_configuration.InstallInterruptVector) {
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
             Machine.InstallAllCallbacksInInterruptTable();
         }
 
-        InitializeFunctionHandlers(configuration);
-        LoadFileToRun(configuration);
+        InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
+        LoadFileToRun(_configuration);
         return Machine;
     }
 
-
-    private GdbServer? StartGdbServer(Configuration configuration) {
-        int? gdbPort = configuration.GdbPort;
+    private GdbServer? StartGdbServer() {
+        int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
-            var gdbServer = new GdbServer(Machine, configuration);
+            var gdbServer = new GdbServer(Machine, _configuration);
             return gdbServer;
         }
         return null;
@@ -185,12 +190,7 @@ public class ProgramExecutor : IDisposable {
         Machine.DosInt21Handler.DosFileManager.SetDiskParameters(parentFolder, driveMap);
     }
 
-    private void InitializeFunctionHandlers(Configuration configuration) {
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations = new Dictionary<SegmentedAddress, FunctionInformation>();
-        if (configuration.SymbolsFile != null) {
-            // Extract functions with names from symbols
-            DictionaryUtils.AddAll(functionInformations, new GhidraSymbolsDumper().ReadFromFileOrCreate(configuration.SymbolsFile));
-        }
+    private void InitializeFunctionHandlers(Configuration configuration, IDictionary<SegmentedAddress, FunctionInformation> functionInformations) {
         if (configuration.OverrideSupplier != null) {
             DictionaryUtils.AddAll(functionInformations, GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, Machine));
         }

@@ -63,11 +63,7 @@ public class GhidraSymbolsDumper {
         return $"{ConvertUtils.ToHex16WithoutX(address.Segment)}_{ConvertUtils.ToHex16WithoutX(address.Offset)}_{ConvertUtils.ToHex32WithoutX(address.ToPhysical())}";
     }
 
-    public IDictionary<SegmentedAddress, FunctionInformation> ReadFromFileOrCreate(string? filePath) {
-        if (String.IsNullOrEmpty(filePath)) {
-            _logger.Information("No file specified");
-            return new Dictionary<SegmentedAddress, FunctionInformation>();
-        }
+    public IDictionary<SegmentedAddress, FunctionInformation> ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
             _logger.Information("File doesn't exists");
             return new Dictionary<SegmentedAddress, FunctionInformation>();

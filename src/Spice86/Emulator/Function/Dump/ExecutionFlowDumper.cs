@@ -18,11 +18,7 @@ public class ExecutionFlowDumper {
         printWriter.WriteLine(jsonString);
     }
 
-    public ExecutionFlowRecorder ReadFromFileOrCreate(string? filePath) {
-        if (String.IsNullOrEmpty(filePath)) {
-            _logger.Information("No file specified");
-            return new ExecutionFlowRecorder();
-        }
+    public ExecutionFlowRecorder ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
             _logger.Information("File doesn't exists");
             return new ExecutionFlowRecorder();

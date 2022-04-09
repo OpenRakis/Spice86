@@ -7,6 +7,8 @@ import ghidra.program.model.address.Address;
 import ghidra.program.model.symbol.RefType;
 import ghidra.program.model.symbol.ReferenceManager;
 import ghidra.program.model.symbol.SourceType;
+import ghidra.program.model.symbol.Symbol;
+import ghidra.program.model.symbol.SymbolType;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -34,24 +36,30 @@ public class Spice86ReferenceGenerator extends GhidraScript {
 
     importReferences(executionFlow.getJumpsFromTo(), RefType.COMPUTED_JUMP);
     importReferences(executionFlow.getCallsFromTo(), RefType.COMPUTED_CALL);
+    importReferences(executionFlow.getRetsFromTo(), RefType.COMPUTED_JUMP);
   }
 
-  private void importReferences(Map<Integer, List<SegmentedAddress>> fromTo, RefType refType) {
+  private void importReferences(Map<Integer, List<SegmentedAddress>> fromTo, RefType refType) throws Exception {
     ReferenceManager referenceManager = getCurrentProgram().getReferenceManager();
-    fromTo.entrySet().stream().forEach(e -> {
-          Address from = this.toAddr(e.getKey());
-          if (referenceManager.hasReferencesFrom(from)) {
-            referenceManager.removeAllReferencesFrom(from);
-          }
-          List<SegmentedAddress> toSegmentedAddresses = e.getValue();
-          int index = 0;
-          for (SegmentedAddress toSegmentedAddress : toSegmentedAddresses) {
-            Address to = this.toAddr(toSegmentedAddress.toPhysical());
-            referenceManager.addMemoryReference(from, to, refType, SourceType.IMPORTED, index);
-            index++;
-          }
+    for (Map.Entry<Integer, List<SegmentedAddress>> e : fromTo.entrySet()) {
+      Address from = this.toAddr(e.getKey());
+      if (referenceManager.hasReferencesFrom(from)) {
+        referenceManager.removeAllReferencesFrom(from);
+      }
+      List<SegmentedAddress> toSegmentedAddresses = e.getValue();
+      int index = 0;
+      for (SegmentedAddress toSegmentedAddress : toSegmentedAddresses) {
+        Address to = this.toAddr(toSegmentedAddress.toPhysical());
+        referenceManager.addMemoryReference(from, to, refType, SourceType.IMPORTED, index);
+        index++;
+        Symbol label = this.getSymbolAt(to);
+        if (label == null || label.getSymbolType() != SymbolType.LABEL) {
+          String name = "spice86_generated_label_" + refType.getName() + "_" + Utils.toHexSegmentOffsetPhysical(
+              toSegmentedAddress);
+          this.createLabel(to, name, true, SourceType.USER_DEFINED);
         }
-    );
+      }
+    }
   }
 
   private ExecutionFlow readJumpMapFromFile(String filePath) throws IOException {

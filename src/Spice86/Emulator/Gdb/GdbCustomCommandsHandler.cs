@@ -25,35 +25,31 @@ using Spice86.UI.ViewModels;
 /// </summary>
 public class GdbCustomCommandsHandler {
     private static readonly ILogger _logger = Program.Logger.ForContext<GdbCustomCommandsHandler>();
-    private readonly string? _defaultDumpDirectory;
-    private readonly string? _jumpFile;
-    private readonly string? _symbolsFile;
+    private readonly RecorderDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
-    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string? defaultDumpDirectory, string? jumpFile, string? symbolsFile) {
+    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string recordedDataDirectory) {
         _gdbIo = gdbIo;
         _machine = machine;
         _onBreakpointReached = onBreakpointReached;
-        _defaultDumpDirectory = defaultDumpDirectory;
-        _jumpFile = jumpFile;
-        _symbolsFile = symbolsFile;
+        _recordedDataWriter = new RecorderDataWriter(recordedDataDirectory, machine);
     }
 
     public virtual string HandleCustomCommands(string command) {
-        String[] commandSplit = command.Split(",");
+        string[] commandSplit = command.Split(",");
         if (commandSplit.Length != 2) {
             return _gdbIo.GenerateResponse("");
         }
 
         byte[] customHex = ConvertUtils.HexToByteArray(commandSplit[1]);
         string custom = Encoding.UTF8.GetString(customHex);
-        String[] customSplit = custom.Split(" ");
+        string[] customSplit = custom.Split(" ");
         return ExecuteCustomCommand(customSplit);
     }
 
-    private static double ExtractScale(String[] args) {
+    private static double ExtractScale(string[] args) {
         if (args.Length != 5) {
             // Not specified in input
             return 1;
@@ -71,7 +67,7 @@ public class GdbCustomCommandsHandler {
         return scale;
     }
 
-    private string BreakCycles(String[] args) {
+    private string BreakCycles(string[] args) {
         if (args.Length < 2) {
             return InvalidCommand("breakCycles can only work with one argument.");
         }
@@ -120,53 +116,14 @@ public class GdbCustomCommandsHandler {
     }
 
     private string DumpAll() {
-        string[] args = Array.Empty<string>();
-        DumpMemory(args);
-        DumpGhidraSymbols(args);
-        DumpJumps(args);
-        DumpFunctionsCsv(args);
-        DumpFunctions(args);
-        DumpCSharpStubs(args);
-        return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_defaultDumpDirectory}");
+        try {
+            _recordedDataWriter.DumpAll();
+            return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_recordedDataWriter.DumpDirectory}");
+        } catch (IOException e) {
+            return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
+        }
     }
 
-    private string DumpFunctions(String[] args) {
-        return DumpFunctionWithFormat(args, "FunctionsDetails.txt", new DetailedFunctionInformationToStringConverter());
-    }
-
-    private string DumpFunctionsCsv(String[] args) {
-        return DumpFunctionWithFormat(args, "Functions.csv", new CsvFunctionInformationToStringConverter());
-    }
-    private string DumpGhidraSymbols(String[] args) {
-        string fileName = GetFirstArgumentOrDefaultFile(args, _symbolsFile ?? GenerateDumpFileSuffix("GhidraSymbols.txt"));
-        return DoFileAction(fileName, (f) => {
-            new GhidraSymbolsDumper().Dump(_machine, fileName);
-        }, "Error while dumping jumps");
-    }
-
-    private string DumpFunctionWithFormat(String[] args, string defaultSuffix, FunctionInformationToStringConverter converter) {
-        string fileName = GetFirstArgumentOrDefaultFileSuffix(args, defaultSuffix);
-        return DoFileAction(fileName, (f) => {
-            Cpu cpu = _machine.Cpu;
-            new FunctionInformationDumper().DumpFunctionHandlers(f, converter, cpu.StaticAddressesRecorder, cpu.FunctionHandler);
-        }, "Error while dumping functions");
-    }
-
-    private string DumpCSharpStubs(String[] args) {
-        return DumpFunctionWithFormat(args, "CSharpStub.cs", new CSharpStubToStringConverter());
-    }
-
-    private string DumpMemory(String[] args) {
-        string fileName = GetFirstArgumentOrDefaultFileSuffix(args, "MemoryDump.bin");
-        return DoFileAction(fileName, (f) => _machine.Memory.DumpToFile(f), "Error while dumping memory");
-    }
-
-    private string DumpJumps(string[] args) {
-        string fileName = GetFirstArgumentOrDefaultFile(args, _jumpFile ?? GenerateDumpFileSuffix("jumps.json"));
-        return DoFileAction(fileName, (f) => {
-            new ExecutionFlowDumper().Dump(_machine.Cpu.ExecutionFlowRecorder, fileName);
-        }, "Error while dumping jumps");
-    }
     private string ExecuteCustomCommand(params string[] args) {
         string originalCommand = args[0];
         string command = originalCommand.ToLowerInvariant();
@@ -176,12 +133,6 @@ public class GdbCustomCommandsHandler {
             "breakstop" => BreakStop(),
             "callstack" => CallStack(),
             "peekret" => PeekRet(args),
-            "dumpmemory" => DumpMemory(args),
-            "dumpghidrasymbols" => DumpGhidraSymbols(args),
-            "dumpfunctionscsv" => DumpFunctionsCsv(args),
-            "dumpfunctions" => DumpFunctions(args),
-            "dumpcsharpstubs" => DumpCSharpStubs(args),
-            "dumpjumps" => DumpJumps(args),
             "dumpall" => DumpAll(),
             "breakcycles" => BreakCycles(args),
             "vbuffer" => Vbuffer(args),
@@ -189,7 +140,7 @@ public class GdbCustomCommandsHandler {
         };
     }
 
-    private string ExtractAction(String[] args) {
+    private string ExtractAction(string[] args) {
         if (args.Length >= 2) {
             return args[1];
         }
@@ -197,7 +148,7 @@ public class GdbCustomCommandsHandler {
         throw new ArgumentException("You need to specify an action. Valid actions are [refresh, add, remove]");
     }
 
-    private uint ExtractAddress(String[] args, string action) {
+    private uint ExtractAddress(string[] args, string action) {
         if (args.Length < 3) {
             throw new ArgumentException($"You need to specify an address for action {action}. Format is 0x12AB (hex) or 1234 (decimal)");
         }
@@ -210,28 +161,13 @@ public class GdbCustomCommandsHandler {
         }
     }
 
-    private int[] ExtractResolution(String[] args, string action) {
+    private int[] ExtractResolution(string[] args, string action) {
         if (args.Length < 4) {
             throw new ArgumentException($"You need to specify a resolution for action {action}. Format is 320x200 for resolution");
         }
 
         string resolutionString = args[3];
         return ParseResolution(resolutionString);
-    }
-
-    private string GetFirstArgumentOrDefaultFileSuffix(String[] args, string defaultSuffix) {
-        return GetFirstArgumentOrDefaultFile(args, GenerateDumpFileSuffix(defaultSuffix));
-    }
-
-    private string GetFirstArgumentOrDefaultFile(String[] args, string defaultFile) {
-        if (args.Length >= 2) {
-            return args[1];
-        }
-        return defaultFile;
-    }
-
-    private string GenerateDumpFileSuffix(String suffix) {
-        return $"{_defaultDumpDirectory}/spice86dump{suffix}";
     }
 
     private string GetValidRetValues() {
@@ -242,13 +178,7 @@ public class GdbCustomCommandsHandler {
         return _gdbIo.GenerateMessageToDisplayResponse($@"{additionnalMessage}
             Supported custom commands:
              -help: display this
-             - dumpall: dumps everything possible in the default directory which is {_defaultDumpDirectory}
-             - dumpMemory < file path to dump >: dump the memory as a binary file
-             - dumpGhidraSymbols < file path to dump >: dump the functions in a format that can be imported directly into ghidra with ImportSymbolsScript.py script
-             - dumpJumps < file path to dump >: dump the calls, jumps and returns destinations per instruction. To import in the spice86 code generator.
-             - dumpFunctionsCsv < file path to dump >: dump information about the function calls executed in csv format
-             - dumpFunctions < file path to dump >: dump information about the function calls executed with details in human readable format
-             - dumpCSharpStubs < file path to dump >: dump C# stubs for functions and globals to be used as override
+             - dumpAll: dumps everything possible in the default directory which is {_recordedDataWriter.DumpDirectory}
              - breakCycles <number of cycles to wait before break>: breaks after the given number of cycles is reached
              - breakStop: setups a breakpoint when machine shuts down
              - callStack: dumps the callstack to see in which function you are in the VM.
@@ -287,7 +217,7 @@ public class GdbCustomCommandsHandler {
         }
     }
 
-    private string PeekRet(String[] args) {
+    private string PeekRet(string[] args) {
         if (args.Length == 1) {
             return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn());
         } else {

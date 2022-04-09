@@ -31,7 +31,7 @@ public class CSharpOverrideHelper {
     protected Stack Stack => Cpu.Stack;
 
     protected State State => Cpu.State;
-    
+
     protected Alu Alu => Cpu.Alu;
 
     public ushort AX { get => State.AX; set => State.AX = value; }
@@ -78,10 +78,11 @@ public class CSharpOverrideHelper {
     public ushort FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
 
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
-    
+
     protected JumpDispatcher JumpDispatcher { get; }
-    
-    public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine) {
+
+    public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine) {
         this._functionInformations = functionInformations;
         this.Machine = machine;
         this.JumpDispatcher = new();
@@ -94,13 +95,15 @@ public class CSharpOverrideHelper {
         _functionInformations.Add(address, functionInformation);
     }
 
-    public void DefineFunction(ushort segment, ushort offset, Func<int, Action> overrideFunc, bool failOnExisting = true, string? name = null) {
+    public void DefineFunction(ushort segment, ushort offset, Func<int, Action> overrideFunc,
+        bool failOnExisting = true, string? name = null) {
         SegmentedAddress address = new(segment, offset);
         FunctionInformation? existing = GetFunctionAtAddress(failOnExisting, address);
         if (existing != null && existing.HasOverride) {
             // Do not overwrite existing code with override
             return;
         }
+
         String functionName;
         if (name != null) {
             functionName = name;
@@ -108,10 +111,13 @@ public class CSharpOverrideHelper {
             String methodName = overrideFunc.Method.Name;
             FunctionInformation? parsedFunctionInformation = GhidraSymbolsDumper.NameToFunctionInformation(methodName);
             if (parsedFunctionInformation == null) {
-                throw new UnrecoverableException("Cannot parse " + methodName + " into a spice86 function name as format is not correct.");
+                throw new UnrecoverableException("Cannot parse " + methodName +
+                                                 " into a spice86 function name as format is not correct.");
             }
+
             functionName = parsedFunctionInformation.Name;
         }
+
         FunctionInformation functionInformation = new(address, functionName, overrideFunc);
         _functionInformations[address] = functionInformation;
     }
@@ -121,6 +127,7 @@ public class CSharpOverrideHelper {
             if (!failOnExisting) {
                 return existingFunctionInformation;
             }
+
             string error =
                 $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
@@ -128,8 +135,10 @@ public class CSharpOverrideHelper {
                     "There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.",
                     address, existingFunctionInformation.Name);
             }
+
             throw new UnrecoverableException(error);
         }
+
         return null;
     }
 
@@ -142,10 +151,14 @@ public class CSharpOverrideHelper {
         uint physicalAddress = address.ToPhysical();
         StaticAddressesRecorder recorder = Cpu.StaticAddressesRecorder;
         if (recorder.Names.TryGetValue(physicalAddress, out string? existing)) {
-            string error = $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
+            string error =
+                $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error("There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it. Please check your mappings for duplicates.", address, existing);
+                _logger.Error(
+                    "There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it. Please check your mappings for duplicates.",
+                    address, existing);
             }
+
             throw new UnrecoverableException(error);
         }
 
@@ -162,8 +175,8 @@ public class CSharpOverrideHelper {
         };
     }
 
-    public Action FarRet() {
-        return () => Cpu.FarRet(0);
+    public Action FarRet(ushort numberOfBytesToPop = 0) {
+        return () => Cpu.FarRet(numberOfBytesToPop);
     }
 
     public Action InterruptRet() {
@@ -174,8 +187,8 @@ public class CSharpOverrideHelper {
         return () => State.IP = ip;
     }
 
-    public Action NearRet() {
-        return () => Cpu.NearRet(0);
+    public Action NearRet(ushort numberOfBytesToPop = 0) {
+        return () => Cpu.NearRet(numberOfBytesToPop);
     }
 
     public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
@@ -194,7 +207,7 @@ public class CSharpOverrideHelper {
             returnAction.Invoke();
         });
     }
-    
+
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
             Stack.Push(FlagRegister);
@@ -213,13 +226,16 @@ public class CSharpOverrideHelper {
         if (function == null) {
             throw FailAsUntested($"Could not find an override at address {target}");
         }
+
         InterruptCall(expectedReturnCs, expectedReturnIp, function);
     }
 
     public Func<int, Action>? SearchFunctionOverride(SegmentedAddress target) {
-        if (!Machine.Cpu.FunctionHandler.FunctionInformations.TryGetValue(target, out FunctionInformation? functionInformation)) {
+        if (!Machine.Cpu.FunctionHandler.FunctionInformations.TryGetValue(target,
+                out FunctionInformation? functionInformation)) {
             return null;
         }
+
         return functionInformation.FuntionOverride;
     }
 
@@ -234,7 +250,22 @@ public class CSharpOverrideHelper {
         if (actualReturnCs != expectedReturnCs || actualReturnIp != expectedReturnIp) {
             SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
             SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
-            throw this.FailAsUntested("The original code is trying to jump via call stack modification. Expected to return at: " + expectedReturn + " but actually returning at: " + actualReturn + " Stack address before: " + stackAddressBefore + " Stack address after: " + stackAddressAfter);
+            String message =
+                "The original code is trying to jump via call stack modification. Expected to return at: " +
+                expectedReturn + " but actually returning to: " + actualReturn + " Stack address before: " +
+                stackAddressBefore + " Stack address after: " + stackAddressAfter;
+            if (!_functionInformations.TryGetValue(actualReturn, out FunctionInformation? actualTarget)) {
+                throw this.FailAsUntested(message);
+            }
+
+            message += " Found " + actualTarget.Name + " there.";
+            if (actualTarget.FuntionOverride != null) {
+                message += " Calling it.";
+                _logger.Warning(message);
+                actualTarget.FuntionOverride.Invoke(0);
+            } else {
+                throw this.FailAsUntested(message);
+            }
         }
     }
 
@@ -259,16 +290,19 @@ public class CSharpOverrideHelper {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
             });
-            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, runnable, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}");
+            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, runnable, false,
+                $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}");
         }
     }
 
-    protected void CheckVtableContainsExpected(int segmentRegisterIndex, ushort offset, ushort expectedSegment, ushort expectedOffset) {
+    protected void CheckVtableContainsExpected(int segmentRegisterIndex, ushort offset, ushort expectedSegment,
+        ushort expectedOffset) {
         uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.GetRegister(segmentRegisterIndex), offset);
         ushort foundOffset = Memory.GetUint16(address);
         ushort foundSegment = Memory.GetUint16(address + 2);
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
-            throw this.FailAsUntested($"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");
+            throw this.FailAsUntested(
+                $"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");
         }
     }
 
@@ -277,7 +311,8 @@ public class CSharpOverrideHelper {
             // For closure
             uint addressCopy = address;
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, address, _ => {
-                Machine.Cpu.ExecutionFlowRecorder.RegisterExecutableCodeModification(new SegmentedAddress(State.CS, State.IP), addressCopy);
+                Machine.Cpu.ExecutionFlowRecorder.RegisterExecutableCodeModification(
+                    new SegmentedAddress(State.CS, State.IP), addressCopy);
             }, false);
             Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
         }
@@ -289,10 +324,14 @@ public class CSharpOverrideHelper {
     /// </summary>
     protected UnrecoverableException FailAsUntested(string message) {
         string dumpedCallStack = Machine.DumpCallStack();
-        string error = $"Untested code reached, please tell us how to reach this state.Here is the message: {message} Here is the call stack: {dumpedCallStack}";
+        string error =
+            $"Untested code reached, please tell us how to reach this state.Here is the message: {message} Here is the call stack: {dumpedCallStack}";
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-            _logger.Error("Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}", message, Machine.DumpCallStack());
+            _logger.Error(
+                "Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}",
+                message, Machine.DumpCallStack());
         }
+
         return new UnrecoverableException(error);
     }
 
@@ -300,8 +339,10 @@ public class CSharpOverrideHelper {
         Machine.CallbackHandler.RunFromOverriden(vectorNumber);
     }
 
-    protected void Hlt() {
-        _logger.Information("Program requested exit. Terminating now.");
-        Environment.Exit(0);
+    protected Action Hlt() {
+        return () => {
+            _logger.Information("Program requested exit. Terminating now.");
+            Environment.Exit(0);
+        };
     }
 }
