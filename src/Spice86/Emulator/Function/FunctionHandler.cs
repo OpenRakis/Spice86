@@ -165,7 +165,7 @@ public class FunctionHandler {
     private FunctionCall? CurrentFunctionCall {
         get {
 
-            if (_callerStack.Any() == false) {
+            if (_callerStack.Count > 0 == false) {
                 return null;
             }
             return _callerStack.TryPeek(out FunctionCall? firstElement) ? firstElement : null;

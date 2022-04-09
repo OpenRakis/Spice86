@@ -15,7 +15,7 @@ public static class ConvertUtils {
         StringBuilder stringBuilder = new(value.Length * 2);
         for (int i = 0; i < value.Length; i++) {
             byte b = value[i];
-            stringBuilder.Append($"{b:X2}");
+            stringBuilder.AppendFormat("{0:X2}", b);
         }
 
         return stringBuilder.ToString();
@@ -79,11 +79,11 @@ public static class ConvertUtils {
     }
 
     public static ushort ToAbsoluteOffset(uint physicalAddress) {
-        return (ushort)(physicalAddress - (physicalAddress / SegmentSize) * SegmentSize);
+        return (ushort)(physicalAddress - physicalAddress / SegmentSize * SegmentSize);
     }
 
     public static ushort ToAbsoluteSegment(uint physicalAddress) {
-        return (ushort)(((physicalAddress / SegmentSize) * SegmentSize) >> 4);
+        return (ushort)((physicalAddress / SegmentSize * SegmentSize) >> 4);
     }
 
     public static string ToAbsoluteSegmentedAddress(ushort segment, ushort offset) {

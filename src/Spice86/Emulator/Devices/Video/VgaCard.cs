@@ -150,8 +150,8 @@ public class VgaCard : DefaultIOPortHandler {
 
     public void SetVideoModeValue(byte mode) {
         if (mode == MODE_320_200_256) {
-            int videoHeight = 200;
-            int videoWidth = 320;
+            const int videoHeight = 200;
+            const int videoWidth = 320;
             if (_gui != null) {
                 _gui.SetResolution(videoWidth, videoHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
             }

@@ -164,7 +164,7 @@ public class Alu {
 
     public int Imul16(short value1, short value2) {
         int res = value1 * value2;
-        bool doesNotFitInWord = res != (short)(res);
+        bool doesNotFitInWord = res != (short)res;
         _state.OverflowFlag = doesNotFitInWord;
         _state.CarryFlag = doesNotFitInWord;
         return res;
@@ -172,7 +172,7 @@ public class Alu {
 
     public short Imul8(sbyte value1, sbyte value2) {
         int res = value1 * value2;
-        bool doesNotFitInByte = res != (sbyte)(res);
+        bool doesNotFitInByte = res != (sbyte)res;
         _state.OverflowFlag = doesNotFitInByte;
         _state.CarryFlag = doesNotFitInByte;
         return (short)res;
@@ -258,7 +258,7 @@ public class Alu {
         }
 
         int carry = (value >> (8 - count)) & 0x1;
-        byte res = (byte)((value << count));
+        byte res = (byte)(value << count);
         int mask = (1 << (count - 1)) - 1;
         res = (byte)(res | ((value >> (9 - count)) & mask));
         if (_state.CarryFlag) {
@@ -313,7 +313,7 @@ public class Alu {
         }
 
         int carry = (value >> (16 - count)) & 0x1;
-        ushort res = (ushort)((value << count));
+        ushort res = (ushort)(value << count);
         res = (ushort)(res | (value >> (16 - count)));
         _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask16) != 0;
@@ -520,11 +520,11 @@ public class Alu {
     }
 
     private static uint BorrowBitsSub(uint value1, uint value2, uint dst) {
-        return ((value1 ^ value2 ^ dst) ^ ((value1 ^ dst) & (value1 ^ value2)));
+        return value1 ^ value2 ^ dst ^ ((value1 ^ dst) & (value1 ^ value2));
     }
 
     private static uint CarryBitsAdd(uint value1, uint value2, uint dst) {
-        return ((value1 ^ value2 ^ dst) ^ ((value1 ^ dst) & (~(value1 ^ value2))));
+        return value1 ^ value2 ^ dst ^ ((value1 ^ dst) & (~(value1 ^ value2)));
     }
 
     private static bool IsParity(byte value) {

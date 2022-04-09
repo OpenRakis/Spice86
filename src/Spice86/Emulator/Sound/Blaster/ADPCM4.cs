@@ -32,7 +32,7 @@ internal sealed class ADPCM4 : ADPCMDecoder {
         for (int i = 0; i < count; i++) {
             int sample = source[sourceOffset + i] & 0x0F;
             current = DecodeSample(current, sample);
-            destination[(i * 2)] = current;
+            destination[i * 2] = current;
 
             sample = (source[sourceOffset + i] >> 4) & 0x0F;
             current = DecodeSample(current, sample);

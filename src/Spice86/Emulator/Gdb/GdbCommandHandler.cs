@@ -108,7 +108,7 @@ public class GdbCommandHandler {
     }
 
     private string ProcessVPacket(string commandContent) {
-        return (commandContent) switch {
+        return commandContent switch {
             "MustReplyEmpty" => _gdbIo.GenerateResponse(""),
             "Cont?" => _gdbIo.GenerateResponse(""),
             _ => _gdbIo.GenerateUnsupportedResponse()

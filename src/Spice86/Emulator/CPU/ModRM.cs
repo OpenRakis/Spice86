@@ -76,8 +76,8 @@ public class ModRM {
          * bit 2 through bit 0 = registerMemoryIndex
          */
         int mode = (modRM >> 6) & 0b11;
-        RegisterIndex = ((modRM >> 3) & 0b111);
-        _registerMemoryIndex = (modRM & 0b111);
+        RegisterIndex = (modRM >> 3) & 0b111;
+        _registerMemoryIndex = modRM & 0b111;
         if (mode == 3) {
             // value at reg[memoryRegisterIndex] to be used instead of memoryAddress
             MemoryOffset = null;

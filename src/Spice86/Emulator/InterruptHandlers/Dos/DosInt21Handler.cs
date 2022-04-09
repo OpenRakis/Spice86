@@ -496,7 +496,7 @@ public class DosInt21Handler : InterruptHandler {
                     FileAttributes attributes = File.GetAttributes(fileName);
                     // let's always return the file is read / write
                     bool canWrite = (attributes & FileAttributes.ReadOnly) != FileAttributes.ReadOnly;
-                    _state.CX = (canWrite ? (byte)0 : (byte)1);
+                    _state.CX = canWrite ? (byte)0 : (byte)1;
                     break;
                 }
             case 1: {

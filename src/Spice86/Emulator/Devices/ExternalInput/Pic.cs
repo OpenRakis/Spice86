@@ -109,7 +109,7 @@ public class Pic : DefaultIOPortHandler {
         if (_vectorNumberToIrq.TryGetValue(vectorNumber, out int irqNumber) == false) {
             return false;
         }
-        int maskForVectorNumber = (1 << irqNumber);
+        int maskForVectorNumber = 1 << irqNumber;
         return (maskForVectorNumber & maskRegister) != 0;
     }
 

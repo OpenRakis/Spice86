@@ -1579,7 +1579,7 @@ public class Cpu {
     }
 
     private static string GenerateGrp1Name(int groupIndex, bool op1Byte, ushort op1, ushort op2) {
-        string opName = (groupIndex) switch {
+        string opName = groupIndex switch {
             0 => "ADD",
             1 => "OR",
             2 => "ADC",
@@ -1594,7 +1594,7 @@ public class Cpu {
     }
 
     private static string GenerateGrp2Name(int groupIndex, bool op1Byte, ushort op1, ushort op2) {
-        string? opName = (groupIndex) switch {
+        string? opName = groupIndex switch {
             0 => "ROL",
             1 => "ROR",
             2 => "RCL",
@@ -1645,7 +1645,7 @@ public class Cpu {
 
         ushort res;
         if (op1Byte) {
-            res = (groupIndex) switch {
+            res = groupIndex switch {
                 0 => Alu.Add8((byte)op1, (byte)op2),
                 1 => Alu.Or8((byte)op1, (byte)op2),
                 2 => Alu.Adc8((byte)op1, (byte)op2),
@@ -1657,7 +1657,7 @@ public class Cpu {
                 _ => throw new InvalidGroupIndexException(_machine, groupIndex)
             };
         } else {
-            res = (groupIndex) switch {
+            res = groupIndex switch {
                 0 => Alu.Add16(op1, op2),
                 1 => Alu.Or16(op1, op2),
                 2 => Alu.Adc16(op1, op2),
@@ -1699,7 +1699,7 @@ public class Cpu {
 
         ushort res;
         if (op1Byte) {
-            res = (groupIndex) switch {
+            res = groupIndex switch {
                 0 => Alu.Rol8((byte)op1, (byte)op2),
                 1 => Alu.Ror8((byte)op1, (byte)op2),
                 2 => Alu.Rcl8((byte)op1, (byte)op2),
@@ -1710,7 +1710,7 @@ public class Cpu {
                 _ => throw new InvalidGroupIndexException(_machine, groupIndex)
             };
         } else {
-            res = (groupIndex) switch {
+            res = groupIndex switch {
                 0 => Alu.Rol16(op1, op2),
                 1 => Alu.Ror16(op1, op2),
                 2 => Alu.Rcl16(op1, op2),
@@ -2148,26 +2148,8 @@ public class Cpu {
             _ => throw new InvalidOpCodeException(_machine, opcode, false)
         };
         if (IsLoggingEnabled()) {
-            SetCurrentInstructionName(opcode switch {
-                0x70 => "JO",
-                0x71 => "JNO",
-                0x72 => "JB",
-                0x73 => "JNB",
-                0x74 => "JZ",
-                0x75 => "JNZ",
-                0x76 => "JBE",
-                0x77 => "JA",
-                0x78 => "JS",
-                0x79 => "JNS",
-                0x7A => "JP",
-                0x7B => "JPO",
-                0x7C => "JL",
-                0x7D => "JGE",
-                0x7E => "JNG",
-                0x7F => "JG",
-                0xE3 => "JCXZ",
-                _ => ""
-            } + $" {address} {nameof(jump)}? {jump}");
+            SetCurrentInstructionName(
+                $"{opcode switch {0x70 => "JO", 0x71 => "JNO", 0x72 => "JB", 0x73 => "JNB", 0x74 => "JZ", 0x75 => "JNZ", 0x76 => "JBE", 0x77 => "JA", 0x78 => "JS", 0x79 => "JNS", 0x7A => "JP", 0x7B => "JPO", 0x7C => "JL", 0x7D => "JGE", 0x7E => "JNG", 0x7F => "JG", 0xE3 => "JCXZ", _ => ""}} {address} {nameof(jump)}? {jump}");
         }
 
         if (jump) {

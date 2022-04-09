@@ -385,7 +385,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             case Commands.AutoInitDmaOutput8:
             case Commands.HighSpeedAutoInitDmaOutput8:
                 if (!this.blockTransferSizeSet) {
-                    dsp.BlockTransferSize = ((commandData[1] | (commandData[2] << 8)) + 1);
+                    dsp.BlockTransferSize = (commandData[1] | (commandData[2] << 8)) + 1;
                 }
 
                 this.dsp.Begin(false, false, true);
@@ -395,7 +395,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             case Commands.AutoInitDmaOutput8_Alt:
             case Commands.AutoInitDmaOutput8Fifo_Alt:
                 if (!this.blockTransferSizeSet) {
-                    dsp.BlockTransferSize = ((commandData[1] | (commandData[2] << 8)) + 1);
+                    dsp.BlockTransferSize = (commandData[1] | (commandData[2] << 8)) + 1;
                 }
 
                 this.dsp.Begin(false, (commandData[0] & (1 << 5)) != 0, true);

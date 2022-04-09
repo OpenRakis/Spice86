@@ -515,9 +515,8 @@ public class DosFileManager {
                 return fileNameOnFileSystem;
             }
             Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(fileToProcess));
-            string? filename = Directory
-                .GetFiles(parent)
-                .FirstOrDefault(x => fileToProcessRegex.IsMatch(x));
+            string? filename = Array.Find(Directory
+                .GetFiles(parent), x => fileToProcessRegex.IsMatch(x));
             return filename;
         } catch (IOException e) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {

@@ -26,7 +26,7 @@ public class ExeFile {
         int relocationTableOffset = RelocTable;
         int numRelocationEntries = RelocItems;
         for (int i = 0; i < numRelocationEntries; i++) {
-            uint currentEntry = (uint)(relocationTableOffset + i * 4);
+            uint currentEntry = (uint)(relocationTableOffset + (i * 4));
             ushort offset = MemoryUtils.GetUint16(exe, currentEntry);
             ushort segment = MemoryUtils.GetUint16(exe, currentEntry + 2);
             RelocationTable.Add(new SegmentedAddress(segment, offset));

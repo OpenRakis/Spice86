@@ -14,7 +14,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
         // Take only addresses which have been accessed (and not only computed)
         List<SegmentRegisterBasedAddress> globals = allPotentialGlobals
-            .Where(x => (x.AddressOperations).Any())
+            .Where(x => x.AddressOperations.Any())
             .Where(y => whiteListOfSegmentForOffset
                 .All(z => IsOffsetEqualsAndSegmentDifferent(y, z) == false))
             .ToList();

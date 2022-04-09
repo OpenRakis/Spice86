@@ -28,15 +28,15 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
             header += " overridable";
         }
 
-        res.Append($"{header}\n");
+        res.Append(header).Append('\n');
         res.Append(DumpReturns(returns, "returns"));
         res.Append(DumpReturns(unalignedReturns, "unaligned returns"));
         foreach (FunctionInformation caller in callers) {
-            res.Append($" - caller: {caller}\n");
+            res.Append(" - caller: ").Append(caller).Append('\n');
         }
 
         foreach (FunctionInformation call in calls) {
-            res.Append($" - call: {call}\n");
+            res.Append(" - call: ").Append(call).Append('\n');
         }
 
         return res.ToString();

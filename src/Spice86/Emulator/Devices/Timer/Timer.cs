@@ -103,7 +103,7 @@ public class Timer : DefaultIOPortHandler {
             }
             return;
         } else if (port == ModeCommandeRegister) {
-            int counterIndex = (value >> 6);
+            int counterIndex = value >> 6;
             Counter counter = GetCounter(counterIndex);
             counter.ReadWritePolicy = (value >> 4) & 0b11;
             counter.Mode = (value >> 1) & 0b111;

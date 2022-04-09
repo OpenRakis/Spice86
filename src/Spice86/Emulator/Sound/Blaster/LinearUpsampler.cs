@@ -16,7 +16,7 @@ internal static class LinearUpsampler {
 
         for (int i = 0; i < length; i++) {
             int srcIndex = (int)(i * dest2Src);
-            double remainder = (i * dest2Src) % 1;
+            double remainder = i * dest2Src % 1;
 
             short value1 = Convert8To16(source[srcIndex]);
             if (srcIndex < source.Length - 1) {
@@ -46,7 +46,7 @@ internal static class LinearUpsampler {
             short value1Left = Convert8To16(source[srcIndex]);
             short value1Right = Convert8To16(source[srcIndex + 1]);
             if (srcIndex < source.Length - 3) {
-                double remainder = (i * dest2Src) % 1;
+                double remainder = i * dest2Src % 1;
                 short value2Left = Convert8To16(source[srcIndex + 2]);
                 short value2Right = Convert8To16(source[srcIndex + 3]);
 
@@ -69,7 +69,7 @@ internal static class LinearUpsampler {
 
         for (int i = 0; i < length; i++) {
             int srcIndex = (int)(i * dest2Src);
-            double remainder = (i * dest2Src) % 1;
+            double remainder = i * dest2Src % 1;
 
             short value1 = source[srcIndex];
             if (srcIndex < source.Length - 1) {
@@ -99,7 +99,7 @@ internal static class LinearUpsampler {
             short value1Left = source[srcIndex];
             short value1Right = source[srcIndex + 1];
             if (srcIndex < source.Length - 3) {
-                double remainder = (i * dest2Src) % 1;
+                double remainder = i * dest2Src % 1;
                 short value2Left = source[srcIndex + 2];
                 short value2Right = source[srcIndex + 3];
 

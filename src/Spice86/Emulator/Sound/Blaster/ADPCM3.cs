@@ -31,7 +31,7 @@ internal sealed class ADPCM3 : ADPCM2 {
         for (int i = 0; i < count; i++) {
             int sample = source[sourceOffset + i] & 0x07;
             current = DecodeSample(current, sample);
-            destination[(i * 3)] = current;
+            destination[i * 3] = current;
 
             sample = (source[sourceOffset + i] >> 3) & 0x07;
             current = DecodeSample(current, sample);

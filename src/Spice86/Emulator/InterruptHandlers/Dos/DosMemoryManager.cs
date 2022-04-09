@@ -215,7 +215,7 @@ public class DosMemoryManager {
 
         // next is free
         next.SetFree();
-        next.Size = (ushort)(nextBlockSize);
+        next.Size = (ushort)nextBlockSize;
         return true;
     }
 }

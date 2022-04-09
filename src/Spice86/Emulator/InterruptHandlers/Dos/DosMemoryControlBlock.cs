@@ -60,6 +60,6 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     }
 
     public override string ToString() {
-        return new StringBuilder(System.Text.Json.JsonSerializer.Serialize(this)).Append($"typeField: {TypeField}").Append($"pspSegment: {PspSegment}").Append($"size: {Size}").Append($"fileName: {FileName}").ToString();
+        return new StringBuilder(System.Text.Json.JsonSerializer.Serialize(this)).Append("typeField: ").Append(TypeField).Append("pspSegment: ").Append(PspSegment).Append("size: ").Append(Size).Append("fileName: ").Append(FileName).ToString();
     }
 }
