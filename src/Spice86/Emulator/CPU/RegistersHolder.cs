@@ -4,8 +4,6 @@ using Spice86.Utils;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-
 public class RegistersHolder {
 
     // 3rd bit in register index means to access the high part
@@ -30,7 +28,7 @@ public class RegistersHolder {
         if (obj is not RegistersHolder other) {
             return false;
         }
-        return Enumerable.SequenceEqual(this._registers, other._registers);
+        return this._registers.AsSpan().SequenceEqual(other._registers);
     }
 
     public override int GetHashCode() {
