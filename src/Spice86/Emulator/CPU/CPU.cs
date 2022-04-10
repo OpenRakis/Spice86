@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Emulator.CPU;
 
-using JetBrains.Annotations;
-
 using Serilog;
 
 using Spice86.Emulator.Callback;
@@ -12,9 +10,7 @@ using Spice86.Emulator.Memory;
 using Spice86.Emulator.VM;
 using Spice86.Utils;
 
-using System;
 using System.Collections.Generic;
-using System.Xml.Serialization;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some

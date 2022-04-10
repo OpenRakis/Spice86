@@ -12,6 +12,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Using Remove="System.Linq" />
 		<Using Include="System.Buffers.Binary" />
 	</ItemGroup>
 
