@@ -3,13 +3,12 @@
 using Serilog;
 
 using Spice86.Emulator.CPU;
-using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
+using Spice86.Emulator.VM;
 using Spice86.Utils;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 public class FunctionHandler {
