@@ -5,7 +5,6 @@ using Spice86.Emulator.VM;
 using Spice86.Emulator.Memory;
 
 using System.Collections.Generic;
-using System.Linq;
 
 public class CallbackHandler : IndexBasedDispatcher {
 
@@ -37,7 +36,7 @@ public class CallbackHandler : IndexBasedDispatcher {
     }
 
     public void InstallAllCallbacksInInterruptTable() {
-        foreach (ICallback callback in _dispatchTable.Values.OrderBy(x => x.Index)) {
+        foreach (ICallback callback in _dispatchTable.Values) {
             this.InstallCallbackInInterruptTable(callback);
         }
     }
