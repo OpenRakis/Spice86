@@ -20,8 +20,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.4.6</Version>
-		<PackageReleaseNotes>mouse didn't work anymore - fixed.</PackageReleaseNotes>
+		<Version>2.4.7</Version>
+		<PackageReleaseNotes>Extended override support, better reverse engineering APIs, improved performance.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
