@@ -5,7 +5,6 @@ using Serilog;
 using Spice86.Emulator.Memory;
 
 using System.Collections.Generic;
-using System.Linq;
 
 public class DosMemoryManager {
     private static readonly ILogger _logger = Program.Logger.ForContext<DosMemoryManager>();
@@ -21,7 +20,13 @@ public class DosMemoryManager {
         IList<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
 
         // take the smallest
-        DosMemoryControlBlock? blockOptional = candidates.OrderBy(x => x.Size).FirstOrDefault();
+        DosMemoryControlBlock? blockOptional = null;
+        for (int i = 0; i < candidates.Count; i++) {
+            DosMemoryControlBlock? currentElement = candidates[i];
+            if (blockOptional is null || currentElement.Size < blockOptional.Size) {
+                blockOptional = currentElement;
+            }
+        }
         if (blockOptional is null) {
             // Nothing found
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
