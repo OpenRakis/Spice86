@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 /// An adequate but not great audio resampler.
 /// </summary>
 internal static class LinearUpsampler {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
     public static int Resample8Mono(int sourceRate, int destRate, ReadOnlySpan<byte> source, Span<short> dest) {
         double src2Dest = (double)destRate / (double)sourceRate;
         double dest2Src = (double)sourceRate / (double)destRate;
@@ -33,7 +33,7 @@ internal static class LinearUpsampler {
 
         return length * 2;
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
     public static int Resample8Stereo(int sourceRate, int destRate, ReadOnlySpan<byte> source, Span<short> dest) {
         double src2Dest = (double)destRate / (double)sourceRate;
         double dest2Src = (double)sourceRate / (double)destRate;
@@ -60,7 +60,7 @@ internal static class LinearUpsampler {
 
         return length * 2;
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
     public static int Resample16Mono(int sourceRate, int destRate, ReadOnlySpan<short> source, Span<short> dest) {
         double src2Dest = (double)destRate / (double)sourceRate;
         double dest2Src = (double)sourceRate / (double)destRate;
@@ -86,7 +86,7 @@ internal static class LinearUpsampler {
 
         return length * 2;
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
     public static int Resample16Stereo(int sourceRate, int destRate, ReadOnlySpan<short> source, Span<short> dest) {
         double src2Dest = (double)destRate / (double)sourceRate;
         double dest2Src = (double)sourceRate / (double)destRate;
@@ -114,8 +114,8 @@ internal static class LinearUpsampler {
         return length * 2;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
     private static short Interpolate(short a, short b, double factor) => (short)(((b - a) * factor) + a);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
     private static short Convert8To16(byte s) => (short)((s - 128) << 8);
 }

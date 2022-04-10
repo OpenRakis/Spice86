@@ -162,6 +162,9 @@ public class VgaCard : DefaultIOPortHandler {
         }
     }
 
+    /// <summary>
+    /// Draws to the screen
+    /// </summary>
     /// <returns>true when in retrace</returns>
     public bool TickRetrace() {
         if (_drawing) {

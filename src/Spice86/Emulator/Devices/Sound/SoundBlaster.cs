@@ -72,6 +72,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     private int pauseDuration;
     private volatile bool pausePlayback;
     private BlasterState state;
+    private bool _receivedPortWrite;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -138,7 +139,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     }
 
     public override void WriteByte(int port, byte value) {
-        //if(port == 556) { System.Diagnostics.Debugger.Break(); }
+        _receivedPortWrite = true;
         switch (port) {
             case Ports.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
@@ -251,6 +252,9 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     }
 
     private void AudioPlayback() {
+        if (!_receivedPortWrite) {
+            return;
+        }
         if (!OperatingSystem.IsWindows()) {
             return;
         }
