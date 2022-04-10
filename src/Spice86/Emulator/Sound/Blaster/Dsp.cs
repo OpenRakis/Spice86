@@ -2,7 +2,7 @@
 
 using System;
 using System.Threading;
-using System.Linq;
+
 using Spice86.Emulator.VM;
 
 /// <summary>
