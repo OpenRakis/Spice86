@@ -31,7 +31,8 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
         res.Append(header).Append('\n');
         res.Append(DumpReturns(returns, "returns"));
         res.Append(DumpReturns(unalignedReturns, "unaligned returns"));
-        foreach (FunctionInformation caller in callers) {
+        for (int i = 0; i < callers.Count; i++) {
+            FunctionInformation caller = callers[i];
             res.Append(" - caller: ").Append(caller).Append('\n');
         }
 
@@ -51,8 +52,7 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
             res.Append(": ");
             res.Append(oneReturn);
             res.Append('\n');
-            ISet<SegmentedAddress> targets = entry.Value;
-            foreach (SegmentedAddress target in targets) {
+            foreach (SegmentedAddress target in entry.Value) {
                 res.Append("   - target: ");
                 res.Append(target);
                 res.Append('\n');

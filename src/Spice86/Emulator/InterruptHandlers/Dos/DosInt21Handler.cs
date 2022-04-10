@@ -33,8 +33,7 @@ public class DosInt21Handler : InterruptHandler {
 
     public DosInt21Handler(Machine machine) : base(machine) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        var westernIbmPcCodePage = Encoding.GetEncoding("ibm850");
-        _cp850CharSet = westernIbmPcCodePage;
+        _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dosMemoryManager = new DosMemoryManager(machine.Memory);
         _dosFileManager = new DosFileManager(_memory);
         FillDispatchTable();
@@ -526,8 +525,7 @@ public class DosInt21Handler : InterruptHandler {
                         _logger.Information("GET DEVICE INFORMATION");
                     }
                     // Character or block device?
-                    ushort res = device < DosFileManager.FileHandleOffset ? (ushort)0x80D3 : (ushort)0x02;
-                    _state.DX = res;
+                    _state.DX = device < DosFileManager.FileHandleOffset ? (ushort)0x80D3 : (ushort)0x02;
                     break;
                 }
             case 1: {

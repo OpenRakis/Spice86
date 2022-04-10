@@ -182,7 +182,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     private void DisposeBuffers() {
-        foreach (VideoBufferViewModel buffer in VideoBuffers) {
+        for (int i = 0; i < VideoBuffers.Count; i++) {
+            VideoBufferViewModel buffer = VideoBuffers[i];
             Dispatcher.UIThread.Post(() => {
                 buffer.Dispose();
             }, DispatcherPriority.MaxValue);

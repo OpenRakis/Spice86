@@ -61,7 +61,8 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
     private static Dictionary<int, ISet<SegmentRegisterBasedAddress>> MapBySegment(List<SegmentRegisterBasedAddress> globals) {
         Dictionary<int, ISet<SegmentRegisterBasedAddress>> res = new();
-        foreach (SegmentRegisterBasedAddress address in globals) {
+        for (int i = 0; i < globals.Count; i++) {
+            SegmentRegisterBasedAddress address = globals[i];
             IEnumerable<int> segmentIndexes = address.AddressOperations
                 .Values
                 .SelectMany(x => x);

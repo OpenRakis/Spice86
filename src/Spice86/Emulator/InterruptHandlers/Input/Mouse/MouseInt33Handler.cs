@@ -53,8 +53,7 @@ public class MouseInt33Handler : InterruptHandler {
         }
         _state.CX = x;
         _state.DX = y;
-        ushort clickStatus = (ushort)((leftClick ? 1 : 0) | ((rightClick ? 1 : 0) << 1));
-        _state.BX = clickStatus;
+        _state.BX = (ushort)((leftClick ? 1 : 0) | ((rightClick ? 1 : 0) << 1));
     }
 
     public void MouseInstalledFlag() {

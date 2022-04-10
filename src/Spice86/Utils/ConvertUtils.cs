@@ -29,8 +29,7 @@ public static class ConvertUtils {
         byte[] res = new byte[valueString.Length / 2];
         for (int i = 0; i < valueString.Length; i += 2) {
             string hex = valueString.Substring(i, 2);
-            byte value = byte.Parse(hex, NumberStyles.HexNumber);
-            res[i / 2] = value;
+            res[i / 2] = byte.Parse(hex, NumberStyles.HexNumber);
         }
 
         return res;

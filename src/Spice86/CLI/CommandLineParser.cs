@@ -24,7 +24,7 @@ public class CommandLineParser {
         ParserResult<Configuration>? result = Parser.Default.ParseArguments<Configuration>(args)
             .WithNotParsed((e) => _logger.Error("{@Errors}", e));
         if (result != null) {
-            Configuration? parsedConfig = result.MapResult((initialConfig) => {
+            return result.MapResult((initialConfig) => {
                 initialConfig.Exe = ParseExePath(initialConfig.Exe);
                 initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
                 initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
@@ -32,7 +32,6 @@ public class CommandLineParser {
             }, (error) => {
                 return null!;
             });
-            return parsedConfig;
         }
         return null;
     }

@@ -45,8 +45,7 @@ public class PspGenerator {
         int index = 0;
         for (; index < correctLengthArguments.Length; index++) {
             char str = correctLengthArguments[index];
-            byte chr = Encoding.ASCII.GetBytes(str.ToString())[0];
-            res[index + 1] = chr;
+            res[index + 1] = Encoding.ASCII.GetBytes(str.ToString())[0];
         }
 
         res[index + 1] = 0x0D;

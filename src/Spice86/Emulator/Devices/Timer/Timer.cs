@@ -53,7 +53,8 @@ public class Timer : DefaultIOPortHandler {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));
         }
-        foreach (Counter counter in _counters) {
+        for (int i = 0; i < _counters.Length; i++) {
+            Counter counter = _counters[i];
             counter.Activator.Multiplier = multiplier;
             counter.Activator.UpdateDesiredFrequency((long)multiplier);
         }

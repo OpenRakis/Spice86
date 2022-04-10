@@ -250,7 +250,8 @@ public class Machine : IDisposable {
     private bool disposedValue;
 
     internal void PerformDmaTransfers() {
-        foreach (DmaChannel? channel in this.dmaDeviceChannels) {
+        for (int i = 0; i < dmaDeviceChannels.Count; i++) {
+            DmaChannel? channel = this.dmaDeviceChannels[i];
             if (channel.IsActive && !channel.IsMasked) {
                 channel.Transfer(this.Memory);
             }

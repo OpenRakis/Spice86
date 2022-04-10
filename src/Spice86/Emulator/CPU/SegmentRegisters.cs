@@ -19,7 +19,7 @@ public class SegmentRegisters : RegistersHolder {
     }
 
     private static Dictionary<int, string> GetRegistersNames() {
-        Dictionary<int, string> res = new() {
+        return new() {
             { EsIndex, "ES" },
             { CsIndex, "CS" },
             { SsIndex, "SS" },
@@ -27,6 +27,5 @@ public class SegmentRegisters : RegistersHolder {
             { FsIndex, "FS" },
             { GsIndex, "GS" }
         };
-        return res;
     }
 }

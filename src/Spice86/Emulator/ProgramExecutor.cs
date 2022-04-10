@@ -96,7 +96,7 @@ public class ProgramExecutor : IDisposable {
         string lowerCaseFileName = fileName.ToLowerInvariant();
         if (lowerCaseFileName.EndsWith(".exe")) {
             return new ExeLoader(Machine, (ushort)entryPointSegment);
-        } 
+        }
         if (lowerCaseFileName.EndsWith(".com")) {
             return new ComLoader(Machine, (ushort)entryPointSegment);
         }
@@ -129,8 +129,7 @@ public class ProgramExecutor : IDisposable {
     private GdbServer? StartGdbServer() {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
-            var gdbServer = new GdbServer(Machine, _configuration);
-            return gdbServer;
+            return new GdbServer(Machine, _configuration);
         }
         return null;
     }

@@ -30,8 +30,7 @@ internal sealed class Mt32Player : IDisposable {
         }
         LoadRoms(romsPath);
 
-        AnalogOutputMode analogMode = Mt32GlobalState.GetBestAnalogOutputMode(audioPlayer.Format.SampleRate);
-        context.AnalogOutputMode = analogMode;
+        context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(audioPlayer.Format.SampleRate);
         context.SetSampleRate(audioPlayer.Format.SampleRate);
 
         context.OpenSynth();
@@ -78,7 +77,8 @@ internal sealed class Mt32Player : IDisposable {
     private void LoadRoms(string path) {
         if (path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
             using var zip = new ZipArchive(File.OpenRead(path), ZipArchiveMode.Read);
-            foreach (ZipArchiveEntry? entry in zip.Entries) {
+            for (int i = 0; i < zip.Entries.Count; i++) {
+                ZipArchiveEntry? entry = zip.Entries[i];
                 if (entry.FullName.EndsWith(".ROM", StringComparison.OrdinalIgnoreCase)) {
                     using Stream? stream = entry.Open();
                     context.AddRom(stream);

@@ -9,7 +9,6 @@ using Spice86.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 /// <summary>
@@ -294,7 +293,8 @@ public class DosFileManager {
 
     private int CountHandles(OpenFile openFileToCount) {
         int count = 0;
-        foreach (OpenFile? openFile in _openFiles) {
+        for (int i = 0; i < _openFiles.Length; i++) {
+            OpenFile? openFile = _openFiles[i];
             if (openFile == openFileToCount) {
                 count++;
             }
@@ -379,7 +379,9 @@ public class DosFileManager {
             return null;
         }
         string realFileName = "";
-        foreach (string? file in Directory.GetFiles(directoryCaseSensitive)) {
+        string[] array = Directory.GetFiles(directoryCaseSensitive);
+        for (int i = 0; i < array.Length; i++) {
+            string? file = array[i];
             string? fileToUpper = file.ToUpperInvariant();
             string? searchedFile = caseInsensitivePath.ToUpperInvariant();
             if (fileToUpper == searchedFile) {
@@ -515,9 +517,8 @@ public class DosFileManager {
                 return fileNameOnFileSystem;
             }
             Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(fileToProcess));
-            string? filename = Array.Find(Directory
+            return Array.Find(Directory
                 .GetFiles(parent), x => fileToProcessRegex.IsMatch(x));
-            return filename;
         } catch (IOException e) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _logger.Warning(e, "Error while checking file {@CaseInsensitivePath}: {@Exception}", caseInsensitivePath, e);

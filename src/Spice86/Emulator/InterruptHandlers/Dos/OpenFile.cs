@@ -22,7 +22,8 @@ public class OpenFile {
     }
 
     public void AddMemoryRange(MemoryRange memoryRange) {
-        foreach (MemoryRange loadMemoryRange in _loadedMemoryRanges) {
+        for (int i = 0; i < _loadedMemoryRanges.Count; i++) {
+            MemoryRange loadMemoryRange = _loadedMemoryRanges[i];
             if (loadMemoryRange.StartAddress == memoryRange.StartAddress && loadMemoryRange.EndAddress == memoryRange.EndAddress) {
                 // Same, nothing to do
                 return;

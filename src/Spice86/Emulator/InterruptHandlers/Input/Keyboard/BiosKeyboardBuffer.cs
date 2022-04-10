@@ -45,8 +45,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
             return null;
         }
 
-        ushort newHead = AdvancePointer(HeadAddress);
-        HeadAddress = newHead;
+        HeadAddress = AdvancePointer(HeadAddress);
         return this.GetUint16(head);
     }
 

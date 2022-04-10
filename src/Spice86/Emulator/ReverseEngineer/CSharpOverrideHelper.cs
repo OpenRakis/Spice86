@@ -118,8 +118,7 @@ public class CSharpOverrideHelper {
             functionName = parsedFunctionInformation.Name;
         }
 
-        FunctionInformation functionInformation = new(address, functionName, overrideFunc);
-        _functionInformations[address] = functionInformation;
+        _functionInformations[address] = (new(address, functionName, overrideFunc));
     }
 
     private FunctionInformation? GetFunctionAtAddress(bool failOnExisting, SegmentedAddress address) {
@@ -282,8 +281,7 @@ public class CSharpOverrideHelper {
 
     public void SetProvidedInterruptHandlersAsOverridden() {
         CallbackHandler callbackHandler = Machine.CallbackHandler;
-        Dictionary<byte, SegmentedAddress> callbackAddresses = callbackHandler.GetCallbackAddresses();
-        foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackAddresses) {
+        foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackHandler.GetCallbackAddresses()) {
             byte callbackNumber = callbackAddressEntry.Key;
             SegmentedAddress callbackAddress = callbackAddressEntry.Value;
             var runnable = new Func<int, Action>(_ => {

@@ -30,8 +30,7 @@ public class Midi : DefaultIOPortHandler {
     }
 
     public override byte ReadByte(int port) {
-        byte v = _generalMidi.ReadByte(port);
-        return v;
+        return _generalMidi.ReadByte(port);
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {

@@ -56,7 +56,8 @@ public class ExeLoader : ExecutableFileLoader {
     private void LoadExeFileInMemory(ExeFile exeFile, ushort startSegment) {
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
         _memory.LoadData(physicalStartAddress, exeFile.ProgramImage);
-        foreach (SegmentedAddress address in exeFile.RelocationTable) {
+        for (int i = 0; i < exeFile.RelocationTable.Count; i++) {
+            SegmentedAddress address = exeFile.RelocationTable[i];
             // Read value from memory, add the start segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset) + physicalStartAddress;
             int segmentToRelocate = _memory.GetUint16(addressToEdit);

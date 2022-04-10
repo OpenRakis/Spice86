@@ -52,7 +52,9 @@ public class GdbIo : IDisposable {
 
     public string GenerateResponse(string data) {
         byte checksum = 0;
-        foreach (byte b in Encoding.UTF8.GetBytes(data)) {
+        byte[] array = Encoding.UTF8.GetBytes(data);
+        for (int i = 0; i < array.Length; i++) {
+            byte b = array[i];
             checksum += b;
         }
 

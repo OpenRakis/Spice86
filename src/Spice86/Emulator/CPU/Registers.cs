@@ -23,7 +23,7 @@ public class Registers : RegistersHolder {
     }
 
     private static Dictionary<int, string> GetRegistersNames() {
-        Dictionary<int, string> res = new() {
+        return new() {
             { AxIndex, "AX" },
             { CxIndex, "CX" },
             { DxIndex, "DX" },
@@ -33,6 +33,5 @@ public class Registers : RegistersHolder {
             { SiIndex, "SI" },
             { DiIndex, "DI" }
         };
-        return res;
     }
 }
