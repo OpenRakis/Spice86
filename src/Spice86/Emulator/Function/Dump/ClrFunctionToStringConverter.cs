@@ -5,7 +5,6 @@ using Spice86.Emulator.Memory;
 using Spice86.Utils;
 
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 
 public abstract class ClrFunctionToStringConverter : FunctionInformationToStringConverter {
@@ -14,7 +13,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
         // Take only addresses which have been accessed (and not only computed)
         List<SegmentRegisterBasedAddress> globals = allPotentialGlobals
-            .Where(x => x.AddressOperations.Any())
+            .Where(x => x.AddressOperations.Count > 0)
             .Where(y => whiteListOfSegmentForOffset
                 .All(z => IsOffsetEqualsAndSegmentDifferent(y, z) == false))
             .ToList();
@@ -112,7 +111,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
     private string GenerateGetterSetterForAddress(SegmentRegisterBasedAddress address) {
         Dictionary<AddressOperation, ISet<int>> addressOperations = address.AddressOperations;
-        if (addressOperations.Any() == false) {
+        if (addressOperations.Count > 0 == false) {
             // Nothing was ever read or written there
             return "";
         }
@@ -214,7 +213,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
             // Cannot generate code with either no return or mixed returns
             string reason = "Function has no return";
-            if (!returnTypes.Any() == false) {
+            if (returnTypes.Count == 0 == false) {
                 reason = $"Function has different return types: {string.Join(",", returnTypes)}";
             }
 
