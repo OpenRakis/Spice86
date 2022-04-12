@@ -120,7 +120,7 @@ class ProgramGenerator {
     Collection<ParsedFunction> parsedFunctions = parsedProgram.getEntryPoints().values();
     res.append(Utils.indent(generateConstructor(parsedFunctions), 2));
     res.append("*/\n");
-    res.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2)+"\n");
+    res.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2) + "\n");
     res.append(Utils.indent(generateCodeRewriteDetector(), 2));
     res.append('\n');
     generateFunctions(parsedFunctions, res);
@@ -876,9 +876,8 @@ class InstructionGenerator {
   }
 
   private String advanceRegister(String register, int bits) {
-    String advance = bits == 8 ? "1" : "2";
-    String expression =
-        parameterTranslator.castToUInt16(register + " + (DirectionFlag ? -" + advance + " : " + advance + ")");
+    String direction = "Direction" + bits;
+    String expression = parameterTranslator.castToUInt16(register + " + " + direction);
     return register + " = " + expression + ";";
   }
 
@@ -1451,7 +1450,8 @@ class JumpCallTranslator {
       }
     }
     String failAsUntested =
-        InstructionGenerator.generateFailAsUntested("\"" + errorInCaseNotFound + "\" + ConvertUtils.ToHex32WithoutX(" + tempVarName+")", false);
+        InstructionGenerator.generateFailAsUntested(
+            "\"" + errorInCaseNotFound + "\" + ConvertUtils.ToHex32WithoutX(" + tempVarName + ")", false);
     res.append("  default: " + failAsUntested + "\n" + "    break;\n" + "}");
     return res.toString();
   }

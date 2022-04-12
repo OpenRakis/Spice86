@@ -76,7 +76,8 @@ public class CSharpOverrideHelper {
     public bool TrapFlag { get => State.TrapFlag; set => State.TrapFlag = value; }
     public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
     public ushort FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
-
+    public short Direction8 => (short)(DirectionFlag ? -1 : 1);
+    public short Direction16 => (short)(DirectionFlag ? -2 : 2);
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     protected JumpDispatcher JumpDispatcher { get; }
