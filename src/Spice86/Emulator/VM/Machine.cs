@@ -96,9 +96,12 @@ public class Machine : IDisposable {
     public event Action? Paused;
 
     public event Action? Resumed;
+    
+    public Configuration Configuration { get; }
 
     public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
+        Configuration = configuration;
         Gui = gui;
         RecordData = recordData;
 

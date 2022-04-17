@@ -3,6 +3,7 @@
 using CommandLine;
 
 using Serilog;
+using Serilog.Events;
 
 using Spice86.Emulator;
 using Spice86.Emulator.Errors;
@@ -28,6 +29,16 @@ public class CommandLineParser {
                 initialConfig.Exe = ParseExePath(initialConfig.Exe);
                 initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
                 initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
+                if (initialConfig.HeavyLogs) {
+                    initialConfig.Logs = true;
+                }
+                if (initialConfig.Logs) {
+                    Program.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
+                }
+
+                if (initialConfig.HeavyLogs) {
+                    Program.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+                }
                 return initialConfig;
             }, (error) => {
                 return null!;

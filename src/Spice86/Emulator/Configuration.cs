@@ -61,8 +61,20 @@ public class Configuration {
     [Option('t', nameof(TimeMultiplier), Default = 1, Required = false, HelpText = "<time multiplier> if >1 will go faster, if <1 will go slower.")]
     public double TimeMultiplier { get; init; }
     
-    [Option(nameof(DumpDataOnExit), Default = true, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
+    [Option('d', nameof(DumpDataOnExit), Default = true, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
     public bool DumpDataOnExit { get; set; }
+    
+    [Option('l', nameof(Logs)
+#if DEBUG
+        , Default = true
+#else
+        , Default = false
+#endif
+        ,Required = false, HelpText = "Enable warning level logs")]
+    public bool Logs { get; set; }
+    
+    [Option('h', nameof(HeavyLogs), Default = false, Required = false, HelpText = "Enable verbose level logs")]
+    public bool HeavyLogs { get; init; }
 
     /// <summary>
     /// Only supported on Windows right now. Disabled by unit tests.
