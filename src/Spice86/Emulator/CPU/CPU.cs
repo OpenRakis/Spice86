@@ -148,6 +148,12 @@ public class Cpu {
         State.IP = _internalIp;
     }
 
+    public uint NextUint32() {
+        uint res = _memory.GetUint32(InternalIpPhysicalAddress);
+        _internalIp += 4;
+        return res;
+    }
+
     public ushort NextUint16() {
         ushort res = _memory.GetUint16(InternalIpPhysicalAddress);
         _internalIp += 2;
@@ -199,6 +205,57 @@ public class Cpu {
 
     private void ExecOpcode(byte opcode) {
         int regIndex;
+        if (State.OperandSizeOverride)
+        {
+            switch (opcode) {
+                case 0x2B:
+                    if (IsLoggingEnabled()) { SetCurrentInstructionName("SUB rw rmdw"); }
+
+                    _modRM.Read();
+                    _modRM.R32 = Alu.Sub32(_modRM.R32, _modRM.GetRm32());
+                    break;
+
+                case 0x8B:
+                    if (IsLoggingEnabled()) { SetCurrentInstructionName("MOV rw rmdw"); }
+
+                    _modRM.Read();
+                    _modRM.R32 = _modRM.GetRm32();
+                    break;
+
+                case 0xC1: {
+                    _modRM.Read();
+                    int count = this.NextUint8();
+                    uint value = _modRM.GetRm32();
+                    if (IsLoggingEnabled()) { SetCurrentInstructionName($"SHL rmdw {count}"); }
+
+                    uint val = 0;
+                    switch (_modRM.RegisterIndex) {
+                        case 4:
+                            val = Alu.Shl32(value, count);
+                            break;
+                        case 5:
+                            val = Alu.Shr32(value, count);
+                            break;
+                        default:
+                            HandleInvalidOpcode(opcode);
+                            break;
+                    }
+                    _modRM.SetRm32(val);
+                    break;
+                }
+
+                case 0x3D:
+                    if (IsLoggingEnabled()) { SetCurrentInstructionName("CMP EAX idw"); }
+
+                    Alu.Sub32(State.AX, NextUint32());
+                break;
+
+                default:
+                    HandleInvalidOpcode(opcode);
+                    break;
+            }
+            return;
+        }
         switch (opcode) {
             case 0x00:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADD rmb rb"); }
@@ -298,9 +355,30 @@ public class Cpu {
                 Stack.Push(State.CS);
                 break;
 
-            case 0x0F:
-                HandleInvalidOpcode(opcode);
+            case 0x0F: {
+                byte subcode = NextUint8();
+                switch (subcode)
+                {
+                    case 0x82: {
+                        short offset = (short)NextUint16();
+                        if (State.CarryFlag)
+                            JumpNear((ushort)(_internalIp + offset));
+                        break;
+                    }
+
+                    case 0x85: {
+                        short offset = (short)NextUint16();
+                        if (!State.ZeroFlag)
+                            JumpNear((ushort)(_internalIp + offset));
+                        break;
+                    }
+
+                    default:
+                        HandleInvalidOpcode(opcode);
+                        break;
+                }
                 break;
+            }
 
             case 0x10:
                 if (IsLoggingEnabled()) { SetCurrentInstructionName("ADC rmb rb"); }
@@ -1041,7 +1119,19 @@ public class Cpu {
                     byte value = _modRM.GetRm8();
                     if (IsLoggingEnabled()) { SetCurrentInstructionName($"SHL rmb {count}"); }
 
-                    _modRM.SetRm8(Alu.Shl8(value, count));
+                    byte val = 0;
+                    switch (_modRM.RegisterIndex) {
+                        case 4:
+                            val = Alu.Shl8(value, count);
+                            break;
+                        case 5:
+                            val = Alu.Shr8(value, count);
+                            break;
+                        default:
+                            HandleInvalidOpcode(opcode);
+                            break;
+                    }
+                    _modRM.SetRm8(val);
                     break;
                 }
             case 0xC1: {
@@ -1050,7 +1140,19 @@ public class Cpu {
                     ushort value = _modRM.GetRm16();
                     if (IsLoggingEnabled()) { SetCurrentInstructionName($"SHL rmw {count}"); }
 
-                    _modRM.SetRm16(Alu.Shl16(value, count));
+                    ushort val = 0;
+                    switch (_modRM.RegisterIndex) {
+                        case 4:
+                            val = Alu.Shl16(value, count);
+                            break;
+                        case 5:
+                            val = Alu.Shr16(value, count);
+                            break;
+                        default:
+                            HandleInvalidOpcode(opcode);
+                            break;
+                    }
+                    _modRM.SetRm16(val);
                     break;
                 }
             case 0xC2: {
@@ -2232,6 +2334,10 @@ public class Cpu {
                 }
 
                 State.SegmentOverrideIndex = SegmentRegisters.GsIndex;
+                break;
+
+            case 0x66:
+                State.OperandSizeOverride = true;
                 break;
 
             case 0xF0:

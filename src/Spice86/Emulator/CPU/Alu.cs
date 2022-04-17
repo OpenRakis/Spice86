@@ -28,6 +28,8 @@ public class Alu {
 
     private const uint FourBitParityTable = 0b1001011001101001;
 
+    private const uint MsbMask32 = 0x80000000;
+
     private const ushort MsbMask16 = 0x8000;
 
     private const byte MsbMask8 = 0x80;
@@ -401,6 +403,21 @@ public class Alu {
         return Sub8(value1, value2, true);
     }
 
+    public uint Shl32(uint value, int count) {
+        count &= ShiftCountMask;
+        if (count == 0) {
+            return value;
+        }
+
+        uint msbBefore = (value << (count - 1)) & MsbMask32;
+        _state.CarryFlag = msbBefore != 0;
+        uint res = (uint)(value << count);
+        UpdateFlags32(res);
+        uint msb = res & MsbMask32;
+        _state.OverflowFlag = (msb ^ msbBefore) != 0;
+        return res;
+    }
+
     public ushort Shl16(ushort value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -431,6 +448,20 @@ public class Alu {
         return res;
     }
 
+    public uint Shr32(uint value, int count) {
+        count &= ShiftCountMask;
+        if (count == 0) {
+            return value;
+        }
+
+        uint msb = value & MsbMask32;
+        _state.OverflowFlag = msb != 0;
+        SetCarryFlagForRightShifts((int)value, count);
+        uint res = (uint)(value >> count);
+        UpdateFlags32(res);
+        return res;
+    }
+
     public ushort Shr16(ushort value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -456,6 +487,18 @@ public class Alu {
         SetCarryFlagForRightShifts(value, count);
         byte res = (byte)(value >> count);
         UpdateFlags8(res);
+        return res;
+    }
+
+    public uint Sub32(uint value1, uint value2/*, bool useCarry*/) {
+        int carry = 0;//(useCarry && _state.CarryFlag) ? 1 : 0;
+        uint res = (uint)(value1 - value2 - carry);
+        UpdateFlags32(res);
+        uint borrowBits = BorrowBitsSub(value1, value2, res);
+        uint overflowBits = OverflowBitsSub(value1, value2, res);
+        _state.CarryFlag = ((borrowBits >> 31) & 1) == 1;
+        _state.AuxiliaryFlag = ((borrowBits >> 3) & 1) == 1;
+        _state.OverflowFlag = ((overflowBits >> 31) & 1) == 1;
         return res;
     }
 
@@ -489,6 +532,12 @@ public class Alu {
         _state.AuxiliaryFlag = ((borrowBits >> 3) & 1) == 1;
         _state.OverflowFlag = ((overflowBits >> 7) & 1) == 1;
         return res;
+    }
+
+    public void UpdateFlags32(uint value) {
+        SetZeroFlag(value);
+        SetParityFlag(value);
+        SetSignFlag32(value);
     }
 
     public void UpdateFlags16(ushort value) {
@@ -561,6 +610,10 @@ public class Alu {
 
     private void SetParityFlag(uint value) {
         _state.ParityFlag = IsParity((byte)value);
+    }
+
+    private void SetSignFlag32(uint value) {
+        _state.SignFlag = (value & MsbMask32) != 0;
     }
 
     private void SetSignFlag16(ushort value) {

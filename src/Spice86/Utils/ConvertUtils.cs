@@ -122,6 +122,10 @@ public static class ConvertUtils {
         return $"0x{value:X}";
     }
 
+    public static string ToHex32(uint value) {
+        return $"0x{value:X}";
+    }
+
     public static string ToHex16(ushort value) {
         return $"0x{value:X}";
     }
