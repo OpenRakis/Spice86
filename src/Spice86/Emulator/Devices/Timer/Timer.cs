@@ -106,9 +106,7 @@ public class Timer : DefaultIOPortHandler {
         } else if (port == ModeCommandeRegister) {
             int counterIndex = value >> 6;
             Counter counter = GetCounter(counterIndex);
-            counter.ReadWritePolicy = (value >> 4) & 0b11;
-            counter.Mode = (value >> 1) & 0b111;
-            counter.Bcd = value & 1;
+            counter.Configure(value);
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("SETTING CONTROL REGISTER FOR COUNTER {@CounterIndex}. {@Counter}", counterIndex, counter);
             }
