@@ -243,7 +243,8 @@ class FunctionGenerator {
     StringBuilder res = new StringBuilder();
     String name = parsedFunction.getName();
     log.info("Generating C# code for function " + name);
-    res.append("public Action " + name + "(int loadOffset) {\n");
+    String capitalizedName = name.substring(0, 1).toUpperCase() + name.substring(1);
+    res.append("public Action " + capitalizedName + "(int loadOffset) {\n");
     List<ParsedInstruction> instructionsBeforeEntry = parsedFunction.getInstructionsBeforeEntry();
     List<ParsedInstruction> instructionsAfterEntry = parsedFunction.getInstructionsAfterEntry();
     Set<String> generatedTempVars = new HashSet<>();
