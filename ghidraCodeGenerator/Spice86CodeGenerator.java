@@ -70,14 +70,22 @@ public class Spice86CodeGenerator extends GhidraScript {
     }
   }
 
+  private static String removeFileExtension(String filename) {
+    if (filename == null || filename.isEmpty()) {
+      return filename;
+    }
+    String extPattern = "(?<!^)[.]" + (".*");
+    return filename.replaceAll(extPattern, "");
+  }
+
   private void generateProgram(Log log, ParsedProgram parsedProgram, String generatedCodeFile, String namespace)
       throws IOException {
-    PrintWriter printWriterCode = new PrintWriter(new FileWriter(generatedCodeFile));
     List<String> cSharpFilesContents = new ProgramGenerator(log, this, parsedProgram, namespace).outputCSharpFiles();
-    printWriterCode.print(cSharpFilesContents.get(0));
-    printWriterCode.close();
-    for(int i = 1; i < cSharpFilesContents.size(); i++) {
-      String fileName = "GeneratedCode_" + i + ".cs";
+    for(int i = 0; i < cSharpFilesContents.size(); i++) {
+      String fileName = generatedCodeFile;
+      if(i != 0) {
+        fileName = removeFileExtension(generatedCodeFile) + i + ".cs";
+      }
       PrintWriter printWriterFunctions = new PrintWriter(new FileWriter(fileName));
       printWriterFunctions.print(cSharpFilesContents.get(i));
       printWriterFunctions.close();
@@ -101,7 +109,7 @@ class ProgramGenerator {
   private final ParsedProgram parsedProgram;
   private final String namespace;
   // too many lines in one file makes C# IDEs very slow
-  private static final int MAXIMUM_CHARACTERS_PER_CSHARP_FILE = 2000;
+  private static final int MAXIMUM_CHARACTERS_PER_CSHARP_FILE = 160000;
 
   public ProgramGenerator(Log log, GhidraScript ghidraScript, ParsedProgram parsedProgram, String namespace) {
     this.log = log;
