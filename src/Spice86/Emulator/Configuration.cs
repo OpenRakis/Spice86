@@ -64,13 +64,7 @@ public class Configuration {
     [Option('d', nameof(DumpDataOnExit), Default = true, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
     public bool DumpDataOnExit { get; set; }
     
-    [Option('l', nameof(Logs)
-#if DEBUG
-        , Default = true
-#else
-        , Default = false
-#endif
-        ,Required = false, HelpText = "Enable warning level logs")]
+    [Option('l', nameof(Logs), Default = false, Required = false, HelpText = "Enable warning level logs")]
     public bool Logs { get; set; }
     
     [Option('h', nameof(HeavyLogs), Default = false, Required = false, HelpText = "Enable verbose level logs")]
