@@ -12,13 +12,13 @@ public class RegistersHolder {
     // Registers allowing access to their high / low parts have indexes from 0 to 3 so 2 bits
     private const int Register8IndexHighLowMask = 0b11;
 
-    private readonly ushort[] _registers;
+    private readonly uint[] _registers;
 
     private readonly Dictionary<int, string> _registersNames;
 
     protected RegistersHolder(Dictionary<int, string> registersNames) {
         _registersNames = registersNames;
-        _registers = new ushort[registersNames.Count];
+        _registers = new uint[registersNames.Count];
     }
 
     public override bool Equals(object? obj) {
@@ -41,8 +41,12 @@ public class RegistersHolder {
         return $"{reg16[..1]}{suffix}";
     }
 
-    public ushort GetRegister(int index) {
+    public uint GetRegister32(int index) {
         return _registers[index];
+    }
+
+    public ushort GetRegister(int index) {
+        return (ushort)(GetRegister32(index) & 0xFFFF);
     }
 
     public byte GetRegister8H(int regIndex) {
@@ -65,8 +69,14 @@ public class RegistersHolder {
         return _registersNames[regIndex];
     }
 
-    public void SetRegister(int index, ushort value) {
+    public void SetRegister32(int index, uint value) {
         _registers[index] = value;
+    }
+
+    public void SetRegister(int index, ushort value) {
+        uint currentValue = GetRegister32(index);
+        uint newValue = (currentValue & 0xFFFF0000) | value;
+        SetRegister32(index, newValue);
     }
 
     public void SetRegister8H(int regIndex, byte value) {

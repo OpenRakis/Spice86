@@ -22,14 +22,14 @@ public class State {
             res.Append(nameof(Cycles)).Append('=');
             res.Append(Cycles);
             res.Append(" CS:IP=").Append(ConvertUtils.ToSegmentedAddressRepresentation(CS, IP)).Append('/').Append(ConvertUtils.ToHex(MemoryUtils.ToPhysicalAddress(CS, IP)));
-            res.Append(" AX=").Append(ConvertUtils.ToHex16(AX));
-            res.Append(" BX=").Append(ConvertUtils.ToHex16(BX));
-            res.Append(" CX=").Append(ConvertUtils.ToHex16(CX));
-            res.Append(" DX=").Append(ConvertUtils.ToHex16(DX));
-            res.Append(" SI=").Append(ConvertUtils.ToHex16(SI));
-            res.Append(" DI=").Append(ConvertUtils.ToHex16(DI));
-            res.Append(" BP=").Append(ConvertUtils.ToHex16(BP));
-            res.Append(" SP=").Append(ConvertUtils.ToHex16(SP));
+            res.Append(" EAX=").Append(ConvertUtils.ToHex32(EAX));
+            res.Append(" EBX=").Append(ConvertUtils.ToHex32(EBX));
+            res.Append(" ECX=").Append(ConvertUtils.ToHex32(ECX));
+            res.Append(" EDX=").Append(ConvertUtils.ToHex32(EDX));
+            res.Append(" ESI=").Append(ConvertUtils.ToHex32(ESI));
+            res.Append(" EDI=").Append(ConvertUtils.ToHex32(EDI));
+            res.Append(" EBP=").Append(ConvertUtils.ToHex32(EBP));
+            res.Append(" ESP=").Append(ConvertUtils.ToHex32(ESP));
             res.Append(" SS=").Append(ConvertUtils.ToHex16(SS));
             res.Append(" DS=").Append(ConvertUtils.ToHex16(DS));
             res.Append(" ES=").Append(ConvertUtils.ToHex16(ES));
@@ -52,13 +52,19 @@ public class State {
 
     public ushort AX { get => Registers.GetRegister(Registers.AxIndex); set => Registers.SetRegister(Registers.AxIndex, value); }
 
+    public uint EAX { get => Registers.GetRegister32(Registers.AxIndex); set => Registers.SetRegister32(Registers.AxIndex, value); }
+
     public byte BH { get => Registers.GetRegister8H(Registers.BxIndex); set => Registers.SetRegister8H(Registers.BxIndex, value); }
 
     public byte BL { get => Registers.GetRegister8L(Registers.BxIndex); set => Registers.SetRegister8L(Registers.BxIndex, value); }
 
     public ushort BP { get => Registers.GetRegister(Registers.BpIndex); set => Registers.SetRegister(Registers.BpIndex, value); }
 
+    public uint EBP { get => Registers.GetRegister32(Registers.BpIndex); set => Registers.SetRegister32(Registers.BpIndex, value); }
+
     public ushort BX { get => Registers.GetRegister(Registers.BxIndex); set => Registers.SetRegister(Registers.BxIndex, value); }
+
+    public uint EBX { get => Registers.GetRegister32(Registers.BxIndex); set => Registers.SetRegister32(Registers.BxIndex, value); }
 
     public bool CarryFlag { get => Flags.GetFlag(Flags.Carry); set => Flags.SetFlag(Flags.Carry, value); }
 
@@ -76,11 +82,15 @@ public class State {
 
     public ushort CX { get => Registers.GetRegister(Registers.CxIndex); set => Registers.SetRegister(Registers.CxIndex, value); }
 
+    public uint ECX { get => Registers.GetRegister32(Registers.CxIndex); set => Registers.SetRegister32(Registers.CxIndex, value); }
+
     public long Cycles { get; private set; }
 
     public byte DH { get => Registers.GetRegister8H(Registers.DxIndex); set => Registers.SetRegister8H(Registers.DxIndex, value); }
 
     public ushort DI { get => Registers.GetRegister(Registers.DiIndex); set => Registers.SetRegister(Registers.DiIndex, value); }
+
+    public uint EDI { get => Registers.GetRegister32(Registers.DiIndex); set => Registers.SetRegister32(Registers.DiIndex, value); }
 
     public bool DirectionFlag { get => Flags.GetFlag(Flags.Direction); set => Flags.SetFlag(Flags.Direction, value); }
 
@@ -89,6 +99,8 @@ public class State {
     public ushort DS { get => SegmentRegisters.GetRegister(SegmentRegisters.DsIndex); set => SegmentRegisters.SetRegister(SegmentRegisters.DsIndex, value); }
 
     public ushort DX { get => Registers.GetRegister(Registers.DxIndex); set => Registers.SetRegister(Registers.DxIndex, value); }
+
+    public uint EDX { get => Registers.GetRegister32(Registers.DxIndex); set => Registers.SetRegister32(Registers.DxIndex, value); }
 
     public ushort ES { get => SegmentRegisters.GetRegister(SegmentRegisters.EsIndex); set => SegmentRegisters.SetRegister(SegmentRegisters.EsIndex, value); }
 
@@ -112,13 +124,19 @@ public class State {
 
     public int? SegmentOverrideIndex { get; set; }
 
+    public bool OperandSizeOverride { get; set; }
+
     public SegmentRegisters SegmentRegisters { get; private set; } = new();
 
     public ushort SI { get => Registers.GetRegister(Registers.SiIndex); set => Registers.SetRegister(Registers.SiIndex, value); }
 
+    public uint ESI { get => Registers.GetRegister32(Registers.SiIndex); set => Registers.SetRegister32(Registers.SiIndex, value); }
+
     public bool SignFlag { get => Flags.GetFlag(Flags.Sign); set => Flags.SetFlag(Flags.Sign, value); }
 
     public ushort SP { get => Registers.GetRegister(Registers.SpIndex); set => Registers.SetRegister(Registers.SpIndex, value); }
+
+    public uint ESP { get => Registers.GetRegister32(Registers.SpIndex); set => Registers.SetRegister32(Registers.SpIndex, value); }
 
     public ushort SS { get => SegmentRegisters.GetRegister(SegmentRegisters.SsIndex); set => SegmentRegisters.SetRegister(SegmentRegisters.SsIndex, value); }
 
