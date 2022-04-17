@@ -31,25 +31,28 @@ public class Counter {
 
     public int Mode { get; set; }
 
+    public ushort? Latch { get; set; } = null;
+
     /// <summary>
     // Some programs don't set it so let's use by default the simplest mode (1)
     /// </summary>
     public int ReadWritePolicy { get; set; } = 1;
 
-    public long Ticks { get; private set; }
+    public ushort Ticks { get; private set; } = 0xFFFF;
 
     public ushort Value { get; private set; }
 
     public byte ValueUsingMode {
         get {
-            return ReadWritePolicy switch {
-                0 => throw new UnhandledOperationException(_machine,
-                    "Latch read is not implemented yet"),
-                1 => Lsb,
-                2 => Msb,
-                3 => Policy3,
+            ushort value = Latch ?? Ticks;
+            byte ret = ReadWritePolicy switch {
+                0 => throw new UnhandledOperationException(_machine, "Latch read is not implemented yet"),
+                1 => Lsb(value),
+                2 => Msb(value),
+                3 => Policy3(value),
                 _ => throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {ReadWritePolicy}")
             };
+            return ret;
         }
     }
 
@@ -60,11 +63,22 @@ public class Counter {
     /// <returns></returns>
     public bool ProcessActivation(long currentCycles) {
         if (Activator.IsActivated) {
-            Ticks++;
+            Ticks--;
             return true;
         }
 
         return false;
+    }
+
+    public void Configure(ushort value) {
+        ReadWritePolicy = (ushort)((value >> 4) & 0b11);
+        if (ReadWritePolicy == 0) {
+            Latch = Ticks;
+            ReadWritePolicy = 0b11;
+            return;
+        }
+        Mode = (ushort)((value >> 1) & 0b111);
+        Bcd = (ushort)(value & 1);
     }
 
     public void SetValue(ushort counter) {
@@ -100,22 +114,26 @@ public class Counter {
         }
     }
 
-    private byte Lsb => ConvertUtils.ReadLsb(Value);
+    private byte Lsb(ushort value) {
+        return ConvertUtils.ReadLsb(value);
+    }
 
-    private byte Msb => ConvertUtils.ReadMsb(Value);
+    private byte Msb(ushort value) {
+        return ConvertUtils.ReadMsb(value);
+    }
 
-    private byte Policy3 {
-        get {
-            // LSB first, then MSB
-            if (_firstByteRead) {
-                // return msb
-                _firstByteRead = false;
-                return Msb;
-            }
-            // else return lsb
-            _firstByteRead = true;
-            return Lsb;
+    private byte Policy3(ushort value) {
+    // LSB first, then MSB
+    if (_firstByteRead) {
+        if (Latch != null)
+            Latch = null;
+            // return msb
+            _firstByteRead = false;
+            return Msb(value);
         }
+        // else return lsb
+        _firstByteRead = true;
+        return Lsb(value);
     }
 
     private void UpdateDesiredFreqency(long desiredFrequency) {
