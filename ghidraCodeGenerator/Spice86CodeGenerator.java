@@ -70,11 +70,26 @@ public class Spice86CodeGenerator extends GhidraScript {
     }
   }
 
+  private static String removeFileExtension(String filename) {
+    if (filename == null || filename.isEmpty()) {
+      return filename;
+    }
+    String extPattern = "(?<!^)[.]" + (".*");
+    return filename.replaceAll(extPattern, "");
+  }
+
   private void generateProgram(Log log, ParsedProgram parsedProgram, String generatedCodeFile, String namespace)
       throws IOException {
-    PrintWriter printWriterCode = new PrintWriter(new FileWriter(generatedCodeFile));
-    printWriterCode.print(new ProgramGenerator(log, this, parsedProgram, namespace).outputCSharp());
-    printWriterCode.close();
+    List<String> cSharpFilesContents = new ProgramGenerator(log, this, parsedProgram, namespace).outputCSharpFiles();
+    for(int i = 0; i < cSharpFilesContents.size(); i++) {
+      String fileName = generatedCodeFile;
+      if(i != 0) {
+        fileName = removeFileExtension(generatedCodeFile) + i + ".cs";
+      }
+      PrintWriter printWriterFunctions = new PrintWriter(new FileWriter(fileName));
+      printWriterFunctions.print(cSharpFilesContents.get(i));
+      printWriterFunctions.close();
+    }
   }
 
   private ExecutionFlow readExecutionFlowFromFile(String filePath) throws IOException {
@@ -93,6 +108,8 @@ class ProgramGenerator {
   private final GhidraScript ghidraScript;
   private final ParsedProgram parsedProgram;
   private final String namespace;
+  // too many lines in one file makes C# IDEs very slow
+  private static final int MAXIMUM_CHARACTERS_PER_CSHARP_FILE = 160000;
 
   public ProgramGenerator(Log log, GhidraScript ghidraScript, ParsedProgram parsedProgram, String namespace) {
     this.log = log;
@@ -101,32 +118,47 @@ class ProgramGenerator {
     this.namespace = namespace;
   }
 
-  public String outputCSharp() {
-    StringBuilder res = new StringBuilder("namespace " + namespace + ";\n\n");
-    res.append("""
-        using Spice86.Emulator.Function;
-        using Spice86.Emulator.Memory;
-        using Spice86.Emulator.ReverseEngineer;
-        using Spice86.Emulator.VM;
-        using Spice86.Utils;
-
-        using System;
-        using System.Collections.Generic;
-                
-        """);
-    res.append("public partial class Overrides : CSharpOverrideHelper {\n");
-    res.append("/*");
-    res.append(Utils.indent(generateSegmentStorage(), 2));
-    res.append("\n");
+  public List<String> outputCSharpFiles() {
+    StringBuilder firstFile = new StringBuilder();
+    firstFile.append(generateNamespace());
+    firstFile.append(generateClassDeclaration());
+    firstFile.append("/*");
+    firstFile.append(Utils.indent(generateSegmentStorage(), 2));
+    firstFile.append("\n");
     Collection<ParsedFunction> parsedFunctions = parsedProgram.getEntryPoints().values();
-    res.append(Utils.indent(generateConstructor(parsedFunctions), 2));
-    res.append("*/\n");
-    res.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2) + "\n");
-    res.append(Utils.indent(generateCodeRewriteDetector(), 2));
-    res.append('\n');
-    generateFunctions(parsedFunctions, res);
-    res.append("}\n");
-    return res.toString();
+    firstFile.append(Utils.indent(generateConstructor(parsedFunctions), 2));
+    firstFile.append("*/\n");
+    firstFile.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2) + "\n");
+    firstFile.append(Utils.indent(generateCodeRewriteDetector(), 2));
+    firstFile.append('\n');
+    List<String> functions = generateFunctions(parsedFunctions);
+    firstFile.append("}\n");
+    List<String> files = new ArrayList<>();
+    files.add(firstFile.toString());
+    StringBuilder additionnalFile = new StringBuilder();
+    additionnalFile.append(generateNamespace());
+    additionnalFile.append(generateClassDeclaration());
+    additionnalFile.append("\n");
+    for (String func : functions) {
+      additionnalFile.append(func);
+      if (additionnalFile.length() >= MAXIMUM_CHARACTERS_PER_CSHARP_FILE) {
+        additionnalFile.append("}\n");
+        files.add(additionnalFile.toString());
+        additionnalFile = new StringBuilder();
+        additionnalFile.append(generateNamespace());
+        additionnalFile.append(generateClassDeclaration());
+        additionnalFile.append("\n");
+      }
+    }
+    return files;
+  }
+
+  private String generateClassDeclaration() {
+    return "public partial class Overrides : CSharpOverrideHelper {\n";
+  }
+
+  private String generateNamespace() {
+    return "namespace " + namespace + ";\n\n";
   }
 
   private String generateConstructor(Collection<ParsedFunction> functions) {
@@ -185,12 +217,15 @@ class ProgramGenerator {
         .collect(Collectors.joining(""));
   }
 
-  private void generateFunctions(Collection<ParsedFunction> functions, StringBuilder res) {
+  private List<String> generateFunctions(Collection<ParsedFunction> functions) {
+    List<String> list = new ArrayList<>();
     for (ParsedFunction parsedFunction : functions) {
-      res.append(
-          Utils.indent(new FunctionGenerator(log, ghidraScript, parsedProgram, parsedFunction).outputCSharp(), 2));
-      res.append('\n');
+      String funcStr =
+          Utils.indent(new FunctionGenerator(log, ghidraScript, parsedProgram, parsedFunction).outputCSharp(), 2)
+              + '\n';
+      list.add(funcStr);
     }
+    return list;
   }
 
   private String generateCodeRewriteDetector() {
