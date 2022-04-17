@@ -231,13 +231,13 @@ public class DosInt21Handler : InterruptHandler {
             _logger.Information("GET FREE DISK SPACE FOR DRIVE {@DriveNumber}", driveNumber);
         }
         // 127 sectors per cluster
-        _state.AX = 127;
+        _state.AX = 0x7F;
         // 512 bytes per sector
-        _state.CX = 512;
-        // 4096 clusters available (~250MB)
-        _state.BX = 4096;
-        // 8192 total clusters on disk (~500MB)
-        _state.DX = 8192;
+        _state.CX = 0x200;
+        // 4031 clusters available (~250MB)
+        _state.BX = 0xFBF;
+        // 16383 total clusters on disk (~1000MB)
+        _state.DX = 0x3FFF;
     }
 
     public override byte Index => 0x21;
