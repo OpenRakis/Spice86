@@ -22,18 +22,18 @@ public class Program {
         .WriteTo.Console(outputTemplate: LogFormat)
         .WriteTo.Debug(outputTemplate: LogFormat)
         .MinimumLevel.ControlledBy(LogLevelSwitch)
-        .MinimumLevel.Override("Spice86.Emulator.Devices.Sound.SoundBlaster", LogEventLevel.Warning)
+        .MinimumLevel.Override("Spice86.Emulator.Devices.Sound.SoundBlaster", LogEventLevel.Debug)
         .MinimumLevel.Override("Spice86.Emulator.IOPorts.IOPortDispatcher", LogEventLevel.Debug)
         //PIC can be very verbose when programs mistreat it ...
         .MinimumLevel.Override("Spice86.Emulator.Devices.ExternalInput.Pic", LogEventLevel.Debug)
         //Timer can be very verbose
-        .MinimumLevel.Override("Spice86.Emulator.Devices.Timer.Timer", LogEventLevel.Warning)
+        .MinimumLevel.Override("Spice86.Emulator.Devices.Timer.Timer", LogEventLevel.Debug)
         ////PC speaker is usually not interesting
-        .MinimumLevel.Override("Spice86.Emulator.Devices.Sound.PcSpeaker", LogEventLevel.Warning)
+        .MinimumLevel.Override("Spice86.Emulator.Devices.Sound.PcSpeaker", LogEventLevel.Debug)
         ////Display file IO and other DOS interactions
         .MinimumLevel.Override("Spice86.Emulator.InterruptHandlers.Dos", LogEventLevel.Information)
         ////Display Video bios interactions
-        .MinimumLevel.Override("Spice86.Emulator.InterruptHandlers.Vga", LogEventLevel.Warning)
+        .MinimumLevel.Override("Spice86.Emulator.InterruptHandlers.Vga", LogEventLevel.Debug)
         ////A few logs at load time
         //.MinimumLevel.Override("Spice86.Emulator.LoadableFile", LogEventLevel.Information)
         ////Display program load informations
