@@ -407,6 +407,7 @@ CD-ROM:
 
 Sound:
 - No sound for now, games will not detect sound blaster or adlib.
+- MT-32 and General Midi are supported, but only if Spice86 is run on Windows right now. On other OSes, there will be no sound.
 
 Compatibility list available [here](COMPATIBILITY.md).
 
