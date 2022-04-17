@@ -103,17 +103,6 @@ class ProgramGenerator {
 
   public String outputCSharp() {
     StringBuilder res = new StringBuilder("namespace " + namespace + ";\n\n");
-    res.append("""
-        using Spice86.Emulator.Function;
-        using Spice86.Emulator.Memory;
-        using Spice86.Emulator.ReverseEngineer;
-        using Spice86.Emulator.VM;
-        using Spice86.Utils;
-
-        using System;
-        using System.Collections.Generic;
-                
-        """);
     res.append("public partial class Overrides : CSharpOverrideHelper {\n");
     res.append("/*");
     res.append(Utils.indent(generateSegmentStorage(), 2));
