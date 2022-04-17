@@ -108,6 +108,7 @@ class ProgramGenerator {
         using Spice86.Emulator.Memory;
         using Spice86.Emulator.ReverseEngineer;
         using Spice86.Emulator.VM;
+        using Spice86.Utils;
 
         using System;
         using System.Collections.Generic;
@@ -713,8 +714,7 @@ class InstructionGenerator {
         convertInstructionWithPrefix(parsedInstruction.getMnemonic(), parsedInstruction.getPrefix(),
             parsedInstruction.getParameters());
     isFunctionReturn =
-        instructionString.contains("return ") && (instructionString.contains("JumpDispatcher.JumpAsmReturn") || !(
-            instructionString.contains("if(") || instructionString.contains("switch(")));
+        isUnconditionalReturn(instructionString);
     isGoto =
         instructionString.contains("goto ") && !(instructionString.contains("if(") || instructionString.contains(
             "switch("));
@@ -723,6 +723,17 @@ class InstructionGenerator {
     }
     log.info("Generated instruction " + instructionString);
     return instructionString;
+  }
+
+  private boolean isUnconditionalReturn(String instructionString) {
+    if(!instructionString.contains("return ")) {
+      return false;
+    }
+    if(instructionString.contains("JumpDispatcher.JumpAsmReturn")) {
+      // Check return is the last statement
+      return instructionString.endsWith("return JumpDispatcher.JumpAsmReturn!;");
+    }
+    return !(instructionString.contains("if(") || instructionString.contains("switch("));
   }
 
   private String convertInstructionWithPrefix(String mnemonic, String prefix, String[] params) {
