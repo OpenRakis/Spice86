@@ -52,6 +52,7 @@ public class Cpu {
 
     public Cpu(Machine machine, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
         _machine = machine;
+        IsLogForced = _machine.Configuration.HeavyLogs;
         _memory = machine.Memory;
         State = new State();
         Alu = new Alu(State);
