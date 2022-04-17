@@ -73,7 +73,7 @@ public class Spice86CodeGenerator extends GhidraScript {
   private void generateProgram(Log log, ParsedProgram parsedProgram, String generatedCodeFile, String namespace)
       throws IOException {
     PrintWriter printWriterCode = new PrintWriter(new FileWriter(generatedCodeFile));
-    ArrayList<String> cSharpFilesContents = new ProgramGenerator(log, this, parsedProgram, namespace).outputCSharpFiles();
+    List<String> cSharpFilesContents = new ProgramGenerator(log, this, parsedProgram, namespace).outputCSharpFiles();
     printWriterCode.print(cSharpFilesContents.get(0));
     printWriterCode.close();
     for(int i = 1; i < cSharpFilesContents.size(); i++) {
@@ -100,8 +100,8 @@ class ProgramGenerator {
   private final GhidraScript ghidraScript;
   private final ParsedProgram parsedProgram;
   private final String namespace;
-  // too many lines in one file make C# IDEs very slow
-  private static final int MAXIMUM_LINES_PER_CSHARP_FILE = 2000;
+  // too many lines in one file makes C# IDEs very slow
+  private static final int MAXIMUM_CHARACTERS_PER_CSHARP_FILE = 2000;
 
   public ProgramGenerator(Log log, GhidraScript ghidraScript, ParsedProgram parsedProgram, String namespace) {
     this.log = log;
@@ -110,7 +110,7 @@ class ProgramGenerator {
     this.namespace = namespace;
   }
 
-  public ArrayList<String> outputCSharpFiles() {
+  public List<String> outputCSharpFiles() {
     StringBuilder firstFile = new StringBuilder();
     firstFile.append(generateNamespace());
     firstFile.append(generateClassDeclaration());
@@ -123,18 +123,17 @@ class ProgramGenerator {
     firstFile.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2) + "\n");
     firstFile.append(Utils.indent(generateCodeRewriteDetector(), 2));
     firstFile.append('\n');
-    ArrayList<String> functions = generateFunctions(parsedFunctions);
+    List<String> functions = generateFunctions(parsedFunctions);
     firstFile.append("}\n");
-    ArrayList<String> files = new ArrayList<>();
+    List<String> files = new ArrayList<>();
     files.add(firstFile.toString());
     StringBuilder additionnalFile = new StringBuilder();
     additionnalFile.append(generateNamespace());
     additionnalFile.append(generateClassDeclaration());
     additionnalFile.append("\n");
-    for(int i = 0; i < functions.size(); i++) {
-      String func = functions.get(i);
+    for (String func : functions) {
       additionnalFile.append(func);
-      if(additionnalFile.length() >= MAXIMUM_LINES_PER_CSHARP_FILE) {
+      if (additionnalFile.length() >= MAXIMUM_CHARACTERS_PER_CSHARP_FILE) {
         additionnalFile.append("}\n");
         files.add(additionnalFile.toString());
         additionnalFile = new StringBuilder();
@@ -210,13 +209,13 @@ class ProgramGenerator {
         .collect(Collectors.joining(""));
   }
 
-  private ArrayList<String> generateFunctions(Collection<ParsedFunction> functions) {
-    ArrayList<String> list = new ArrayList<>();
+  private List<String> generateFunctions(Collection<ParsedFunction> functions) {
+    List<String> list = new ArrayList<>();
     for (ParsedFunction parsedFunction : functions) {
-      String funcSb =
+      String funcStr =
           Utils.indent(new FunctionGenerator(log, ghidraScript, parsedProgram, parsedFunction).outputCSharp(), 2)
               + '\n';
-      list.add(funcSb);
+      list.add(funcStr);
     }
     return list;
   }
