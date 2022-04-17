@@ -174,6 +174,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
                     $"Unhandled operation for videoDisplayCombination op={ConvertUtils.ToHex8(op)}");
         }
         _state.AL = 0x1A;
+        _state.AH = 0x00;
     }
 
     private void VideoSubsystemConfiguration() {
