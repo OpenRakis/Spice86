@@ -104,7 +104,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
 
     [ICommand]
     public void ResetTimeMultiplier() {
-        TimeMultiplier = 1;
+        TimeMultiplier = _configuration!.TimeMultiplier;
     }
 
     public void Draw(byte[] memory, Rgb[] palette) {
@@ -213,6 +213,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
             try {
                 _okayToContinueEvent.Set();
                 _programExecutor = new ProgramExecutor(this, _configuration);
+                TimeMultiplier = _configuration.TimeMultiplier;
                 _programExecutor.Run();
             } catch (Exception e) {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {

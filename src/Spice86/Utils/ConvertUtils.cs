@@ -99,7 +99,7 @@ public static class ConvertUtils {
     }
 
     public static char ToChar(byte value) {
-        return Encoding.ASCII.GetString(new[] { value }).ToCharArray()[0];
+        return Encoding.ASCII.GetString(new[] { value })[0];
     }
 
     public static string ToCSharpString(SegmentedAddress address) {

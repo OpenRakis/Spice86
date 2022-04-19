@@ -3,7 +3,6 @@
 using Spice86.Emulator.Memory;
 using Spice86.Utils;
 
-using System;
 using System.Text;
 
 public class State {
@@ -98,10 +97,6 @@ public class State {
     public ushort FS { get => SegmentRegisters.GetRegister(CPU.SegmentRegisters.FsIndex); set => SegmentRegisters.SetRegister(CPU.SegmentRegisters.FsIndex, value); }
 
     public ushort GS { get => SegmentRegisters.GetRegister(CPU.SegmentRegisters.GsIndex); set => SegmentRegisters.SetRegister(CPU.SegmentRegisters.GsIndex, value); }
-
-    public override int GetHashCode() {
-        return HashCode.Combine(IP, Flags, Registers, SegmentRegisters);
-    }
 
     public bool InterruptFlag { get => Flags.GetFlag(CPU.Flags.Interrupt); set => Flags.SetFlag(CPU.Flags.Interrupt, value); }
 

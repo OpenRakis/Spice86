@@ -180,10 +180,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         return (ushort)value;
     }
 
-    public override void WriteWord(int port, ushort value) {
-        WriteWord(port, value);
-    }
-
     int IDmaDevice8.Channel => this.DMA;
 
     int IDmaDevice16.Channel => this.dma16;
@@ -203,7 +199,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     public IEnumerable<int> OutputPorts => new int[] { Ports.DspReset, Ports.DspWrite, Ports.MixerAddress };
 
     public void Dispose() {
-        if (this.playbackThread != null && this.playbackThread.IsAlive) {
+        if (this.playbackThread.IsAlive) {
             this.endPlayback = true;
             this.playbackThread.Join();
         }

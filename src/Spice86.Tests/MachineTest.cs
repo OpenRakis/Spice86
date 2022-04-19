@@ -6,6 +6,8 @@ using Emulator.VM;
 using Emulator.Memory;
 using Emulator.VM.Breakpoint;
 
+using JetBrains.Annotations;
+
 using Serilog;
 
 using System;
@@ -163,7 +165,8 @@ public class MachineTest {
             memory.Memset(10, 0, 10);
         });
     }
-
+    
+    [AssertionMethod]
     private void AssertAddressMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
         int count = 0;
         AddressBreakPoint breakPoint = new AddressBreakPoint(breakPointType, address, breakpoint => { count++; }, isRemovedOnTrigger);
@@ -172,6 +175,8 @@ public class MachineTest {
         machineBreakpoints.ToggleBreakPoint(breakPoint, false);
         Assert.Equal(expectedTriggers, count);
     }
+
+    [AssertionMethod]
     private void AssertAddressRangeMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint startAddress, uint endAddress, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
         int count = 0;
         AddressRangeBreakPoint breakPoint = new AddressRangeBreakPoint(breakPointType, startAddress, endAddress, breakpoint => { count++; }, isRemovedOnTrigger);
@@ -295,11 +300,14 @@ public class MachineTest {
     public void TestSub() {
         TestOneBin("sub");
     }
+
+    [AssertionMethod]
     private Machine TestOneBin(string binName) {
         byte[] expected = GetExpected(binName);
         return this.TestOneBin(binName, expected);
     }
 
+    [AssertionMethod]
     private Machine TestOneBin(string binName, byte[] expected) {
         Machine machine = Execute(binName);
         Memory memory = machine.Memory;
@@ -345,6 +353,7 @@ public class MachineTest {
         return $"Resources/cpuTests/{binName}.bin";
     }
 
+    [AssertionMethod]
     private void CompareMemoryWithExpected(Memory memory, byte[] expected, int start, int end) {
         byte[] actual = memory.Ram;
         for (uint i = 0; i < end; i++) {

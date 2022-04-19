@@ -24,27 +24,18 @@ public class CommandLineParser {
     public static Configuration? ParseCommandLine(string[] args) {
         ParserResult<Configuration>? result = Parser.Default.ParseArguments<Configuration>(args)
             .WithNotParsed((e) => _logger.Error("{@Errors}", e));
-        if (result != null) {
-            return result.MapResult((initialConfig) => {
-                initialConfig.Exe = ParseExePath(initialConfig.Exe);
-                initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
-                initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
-                if (initialConfig.HeavyLogs) {
-                    initialConfig.Logs = true;
-                }
-                if (initialConfig.Logs) {
-                    Program.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
-                }
-
-                if (initialConfig.HeavyLogs) {
-                    Program.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
-                }
-                return initialConfig;
-            }, (error) => {
-                return null!;
-            });
-        }
-        return null;
+        return result?.MapResult(initialConfig => {
+            initialConfig.Exe = ParseExePath(initialConfig.Exe);
+            initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
+            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
+            if (initialConfig.Logs) {
+                Program.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
+            }
+            if (initialConfig.HeavyLogs) {
+                Program.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+            }
+            return initialConfig;
+        }, error => null!);
     }
 
     private static string? ParseExePath(string? exePath) {
