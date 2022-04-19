@@ -30,11 +30,7 @@ public class TimeCounterActivator : CounterActivator {
         }
     }
 
-    public override void UpdateDesiredFrequency(long desiredFrequency) {
-        double frequency = ComputeActualFrequency(desiredFrequency);
-        if (frequency == 0) {
-            return;
-        }
-        _timeBetweenTicks = (long)(System.Diagnostics.Stopwatch.Frequency / frequency);
+    protected override void UpdateNonZeroFrequency(double desiredFrequency) {
+        _timeBetweenTicks = (long)(System.Diagnostics.Stopwatch.Frequency / desiredFrequency);
     }
 }

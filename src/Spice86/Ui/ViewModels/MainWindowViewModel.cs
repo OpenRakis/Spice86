@@ -41,8 +41,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
 
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
 
-    [ObservableProperty]
-    private bool _isPaused = false;
+    [ObservableProperty] private bool _isPaused = false;
 
     public event EventHandler<KeyEventArgs>? KeyUp;
     public event EventHandler<KeyEventArgs>? KeyDown;
@@ -93,22 +92,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         GC.SuppressFinalize(this);
     }
 
-    private double _timeMultiplier = 6;
+    private double _timeMultiplier = 1;
 
     public double TimeMultiplier {
         get => _timeMultiplier;
         set {
             this.SetProperty(ref _timeMultiplier, value);
-            SetTimeMultiplier(_timeMultiplier);
+            _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
         }
     }
 
     [ICommand]
     public void ResetTimeMultiplier() {
-        TimeMultiplier = 6;
+        TimeMultiplier = 1;
     }
-
-    public void SetTimeMultiplier(double timeMultiplier) => _programExecutor?.Machine.Timer.SetTimeMultiplier(timeMultiplier);
 
     public void Draw(byte[] memory, Rgb[] palette) {
         if (_disposedValue || _isSettingResolution) {
@@ -182,13 +179,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     private void DisposeBuffers() {
-        for (int i = 0; i < VideoBuffers.Count; i++) {
-            VideoBufferViewModel buffer = VideoBuffers[i];
-            Dispatcher.UIThread.Post(() => {
+        Dispatcher.UIThread.Post(() => {
+            for (int i = 0; i < VideoBuffers.Count; i++) {
+                VideoBufferViewModel buffer = VideoBuffers[i];
                 buffer.Dispose();
-            }, DispatcherPriority.MaxValue);
-        }
-        _videoBuffers.Clear();
+            }
+            _videoBuffers.Clear();
+        }, DispatcherPriority.MaxValue);
     }
 
     protected virtual void Dispose(bool disposing) {

@@ -19,8 +19,6 @@ using System.Threading.Tasks;
 
 public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
-    private readonly int _initialHeight;
-    private readonly int _initialWidth;
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -38,8 +36,8 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
 
     public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
         _isPrimaryDisplay = isPrimaryDisplay;
-        Width = _initialWidth = width;
-        Height = _initialHeight = height;
+        Width = width;
+        Height = height;
         Address = address;
         _index = index;
         Scale = scale;
@@ -84,8 +82,7 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     /// Also WriteableBitmap is an IImage implementation and not a UI Control,<br/>
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
     /// </summary>
-    [ObservableProperty]
-    private WriteableBitmap _bitmap = new(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+    [ObservableProperty] private WriteableBitmap _bitmap = new(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
 
     private bool _showCursor = true;
 
@@ -103,8 +100,7 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         }
     }
 
-    [ObservableProperty]
-    private Cursor? _cursor = Cursor.Default;
+    [ObservableProperty] private Cursor? _cursor = Cursor.Default;
 
     private double _scale = 1;
 
@@ -113,14 +109,11 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         set => this.SetProperty(ref _scale, Math.Max(value, 1));
     }
 
-    [ObservableProperty]
-    private int _height = 320;
+    [ObservableProperty] private int _height = 320;
 
-    [ObservableProperty]
-    public bool _isPrimaryDisplay;
+    [ObservableProperty] public bool _isPrimaryDisplay;
 
-    [ObservableProperty]
-    private int _width = 200;
+    [ObservableProperty] private int _width = 200;
 
     private bool _appClosing;
 
@@ -129,11 +122,11 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     public int CompareTo(VideoBufferViewModel? other) {
         if (_index < other?._index) {
             return -1;
-        } else if (_index == other?._index) {
-            return 0;
-        } else {
-            return 1;
         }
+        if (_index == other?._index) {
+            return 0;
+        }
+        return 1;
     }
 
     public void Dispose() {
@@ -142,35 +135,12 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         GC.SuppressFinalize(this);
     }
 
-    [ObservableProperty]
-    private bool _isDrawing;
+    [ObservableProperty] private bool _isDrawing;
 
-    private byte[] _memoryRange = Array.Empty<byte>();
-    private Rgb[] _previousPalette = Array.Empty<Rgb>();
-    
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
         if (_appClosing || _disposedValue || UIUpdateMethod is null) {
             return;
         }
-        
-        int size = Width * Height;
-        int endAddress = (int)(Address + size);
-        if (_memoryRange.Length == 0) {
-            _memoryRange = new byte[size];
-            _previousPalette = palette;
-        }
-        
-        if (_memoryRange.AsSpan()
-                .SequenceEqual(
-                    memory
-                    .AsSpan(
-                    (int)Address,
-                    size))
-            &&
-            _previousPalette.AsSpan().SequenceEqual(palette)) {
-            return;
-        }
-
         using ILockedFramebuffer pixels = Bitmap.Lock();
         uint* firstPixelAddress = (uint*)pixels.Address;
         int rowBytes = Width;
@@ -195,13 +165,6 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
             IsDrawing = true;
         }
         Dispatcher.UIThread.Post(() => UIUpdateMethod?.Invoke(), DispatcherPriority.MaxValue);
- 
-        Array.ConstrainedCopy(
-            memory, 
-            (int)Address, 
-            _memoryRange, 
-            0, 
-            size);
     }
 
     public override bool Equals(object? obj) {
@@ -216,7 +179,7 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         if (!_disposedValue) {
             if (disposing) {
                 Dispatcher.UIThread.Post(() => {
-                    Bitmap?.Dispose();
+                    Bitmap.Dispose();
                     Cursor?.Dispose();
                 }, DispatcherPriority.MaxValue);
             }

@@ -42,7 +42,6 @@ public class Timer : DefaultIOPortHandler {
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(machine, i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         }
-
         _vgaCounter = new Counter(machine, 4, new TimeCounterActivator(1));
 
         // 30fps
@@ -53,17 +52,9 @@ public class Timer : DefaultIOPortHandler {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));
         }
-        for (int i = 0; i < _counters.Length; i++) {
-            Counter counter = _counters[i];
+        foreach (Counter counter in _counters) {
             counter.Activator.Multiplier = multiplier;
-            counter.Activator.UpdateDesiredFrequency((long)multiplier);
         }
-        _vgaCounter.Activator.Multiplier = multiplier;
-        _vgaCounter.Activator.UpdateDesiredFrequency((long)multiplier);
-    }
-
-    public Counter this[int counterIndex] {
-        get => GetCounter(counterIndex);
     }
 
     public Counter GetCounter(int counterIndex) {

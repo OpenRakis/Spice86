@@ -32,7 +32,7 @@ public class CyclesCounterActivator : CounterActivator {
         }
     }
 
-    public override void UpdateDesiredFrequency(long desiredFrequency) {
-        _cyclesBetweenActivations = (long)(this._instructionsPerSecond / (Multiplier * desiredFrequency));
+    protected override void UpdateNonZeroFrequency(double desiredFrequency) {
+        _cyclesBetweenActivations = (long)(this._instructionsPerSecond / desiredFrequency);
     }
 }
