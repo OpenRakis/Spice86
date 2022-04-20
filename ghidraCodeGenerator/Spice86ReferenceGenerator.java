@@ -34,12 +34,12 @@ public class Spice86ReferenceGenerator extends GhidraScript {
     ExecutionFlow executionFlow =
         readJumpMapFromFile(baseFolder + "spice86dumpExecutionFlow.json");
 
-    importReferences(executionFlow.getJumpsFromTo(), RefType.COMPUTED_JUMP);
-    importReferences(executionFlow.getCallsFromTo(), RefType.COMPUTED_CALL);
-    importReferences(executionFlow.getRetsFromTo(), RefType.COMPUTED_JUMP);
+    importReferences(executionFlow.getJumpsFromTo(), RefType.COMPUTED_JUMP, "jump_target");
+    importReferences(executionFlow.getCallsFromTo(), RefType.COMPUTED_CALL, "call_target");
+    importReferences(executionFlow.getRetsFromTo(), RefType.COMPUTED_JUMP, "ret_target");
   }
 
-  private void importReferences(Map<Integer, List<SegmentedAddress>> fromTo, RefType refType) throws Exception {
+  private void importReferences(Map<Integer, List<SegmentedAddress>> fromTo, RefType refType, String labelPrefix) throws Exception {
     ReferenceManager referenceManager = getCurrentProgram().getReferenceManager();
     for (Map.Entry<Integer, List<SegmentedAddress>> e : fromTo.entrySet()) {
       Address from = this.toAddr(e.getKey());
@@ -52,14 +52,17 @@ public class Spice86ReferenceGenerator extends GhidraScript {
         Address to = this.toAddr(toSegmentedAddress.toPhysical());
         referenceManager.addMemoryReference(from, to, refType, SourceType.IMPORTED, index);
         index++;
-        Symbol label = this.getSymbolAt(to);
-        if (label == null || label.getSymbolType() != SymbolType.LABEL) {
-          String name = "spice86_generated_label_" + refType.getName() + "_" + Utils.toHexSegmentOffsetPhysical(
+        Symbol symbol = this.getSymbolAt(to);
+        if (shouldCreateLabel(symbol)) {
+          String name = "spice86_generated_label_" + labelPrefix + "_" + Utils.toHexSegmentOffsetPhysical(
               toSegmentedAddress);
           this.createLabel(to, name, true, SourceType.USER_DEFINED);
         }
       }
     }
+  }
+  private boolean shouldCreateLabel(Symbol symbol) {
+    return symbol == null || symbol.getSymbolType() != SymbolType.LABEL || !symbol.getName().contains("spice86");
   }
 
   private ExecutionFlow readJumpMapFromFile(String filePath) throws IOException {

@@ -30,7 +30,8 @@ public class GdbCustomCommandsHandler {
     private readonly Machine _machine;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
-    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached, string recordedDataDirectory) {
+    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached,
+        string recordedDataDirectory) {
         _gdbIo = gdbIo;
         _machine = machine;
         _onBreakpointReached = onBreakpointReached;
@@ -85,7 +86,9 @@ public class GdbCustomCommandsHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
         }
-        return _gdbIo.GenerateMessageToDisplayResponse($"Breakpoint added for cycles. Current cycles is {currentCycles}. Will wait for {cyclesToWait}. Will stop at {cyclesBreak}");
+
+        return _gdbIo.GenerateMessageToDisplayResponse(
+            $"Breakpoint added for cycles. Current cycles is {currentCycles}. Will wait for {cyclesToWait}. Will stop at {cyclesBreak}");
     }
 
     private string BreakStop() {
@@ -94,6 +97,7 @@ public class GdbCustomCommandsHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added for end of execution!\n{@BreakPoint}", breakPoint);
         }
+
         return _gdbIo.GenerateMessageToDisplayResponse("Breakpoint added for end of execution.");
     }
 
@@ -101,13 +105,15 @@ public class GdbCustomCommandsHandler {
         return _gdbIo.GenerateMessageToDisplayResponse(_machine.DumpCallStack());
     }
 
-    private string DoFileAction(string fileName, Action<string> fileNameConsumer, string errorMessageInCaseIOException) {
+    private string DoFileAction(string fileName, Action<string> fileNameConsumer,
+        string errorMessageInCaseIOException) {
         try {
             fileNameConsumer.Invoke(fileName);
         } catch (IOException e) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "{@ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
             }
+
             string errorWithException = $"{errorMessageInCaseIOException}: {e.Message}";
             return _gdbIo.GenerateMessageToDisplayResponse(errorWithException);
         }
@@ -150,7 +156,8 @@ public class GdbCustomCommandsHandler {
 
     private uint ExtractAddress(string[] args, string action) {
         if (args.Length < 3) {
-            throw new ArgumentException($"You need to specify an address for action {action}. Format is 0x12AB (hex) or 1234 (decimal)");
+            throw new ArgumentException(
+                $"You need to specify an address for action {action}. Format is 0x12AB (hex) or 1234 (decimal)");
         }
 
         string addressString = args[2];
@@ -163,7 +170,8 @@ public class GdbCustomCommandsHandler {
 
     private int[] ExtractResolution(string[] args, string action) {
         if (args.Length < 4) {
-            throw new ArgumentException($"You need to specify a resolution for action {action}. Format is 320x200 for resolution");
+            throw new ArgumentException(
+                $"You need to specify a resolution for action {action}. Format is 320x200 for resolution");
         }
 
         string resolutionString = args[3];
@@ -176,20 +184,20 @@ public class GdbCustomCommandsHandler {
 
     private string Help(string additionnalMessage) {
         return _gdbIo.GenerateMessageToDisplayResponse($@"{additionnalMessage}
-            Supported custom commands:
-             -help: display this
-             - dumpAll: dumps everything possible in the default directory which is {_recordedDataWriter.DumpDirectory}
-             - breakCycles <number of cycles to wait before break>: breaks after the given number of cycles is reached
-             - breakStop: setups a breakpoint when machine shuts down
-             - callStack: dumps the callstack to see in which function you are in the VM.
-             - peekRet<optional type>: displays the return address of the current function as stored in the stack in RAM.If a parameter is provided, dump the return on the stack as if the return was one of the provided type. Valid values are: {GetValidRetValues()}
-             - state: displays the state of the machine
-             - vbuffer: family of commands to control video bufers:
-               - vbuffer refresh: refreshes the screen
-               - vbuffer add<address> <resolution> <scale?>: Example vbuffer add 0x1234 320x200 1.5 -> Add an additional buffer displaying what is at address 0x1234, with resolution 320x200 and scale 1.5
-               - vbuffer remove <address>: Deletes the buffer at address
-               - vbuffer list: Lists the buffers currently displayed
-            ");
+Supported custom commands:
+ -help: display this
+ - dumpAll: dumps everything possible in the default directory which is {_recordedDataWriter.DumpDirectory}
+ - breakCycles <number of cycles to wait before break>: breaks after the given number of cycles is reached
+ - breakStop: setups a breakpoint when machine shuts down
+ - callStack: dumps the callstack to see in which function you are in the VM.
+ - peekRet<optional type>: displays the return address of the current function as stored in the stack in RAM.If a parameter is provided, dump the return on the stack as if the return was one of the provided type. Valid values are: {GetValidRetValues()}
+ - state: displays the state of the machine
+ - vbuffer: family of commands to control video bufers:
+   - vbuffer refresh: refreshes the screen
+   - vbuffer add<address> <resolution> <scale?>: Example vbuffer add 0x1234 320x200 1.5 -> Add an additional buffer displaying what is at address 0x1234, with resolution 320x200 and scale 1.5
+   - vbuffer remove <address>: Deletes the buffer at address
+   - vbuffer list: Lists the buffers currently displayed
+");
     }
 
     private string InvalidCommand(string command) {
@@ -211,7 +219,7 @@ public class GdbCustomCommandsHandler {
         }
 
         try {
-            return new[] { int.Parse(split[0]), int.Parse(split[1]) };
+            return new[] {int.Parse(split[0]), int.Parse(split[1])};
         } catch (FormatException nfe) {
             throw new ArgumentException($"Could not parse numbers in resolution {resolution}", nfe);
         }
@@ -224,12 +232,15 @@ public class GdbCustomCommandsHandler {
             string returnType = args[1];
             bool parsed = Enum.TryParse(typeof(CallType), returnType, out object? callType);
             if (parsed == false) {
-                return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand {returnType} as a return type. Valid values are: {GetValidRetValues()}");
+                return _gdbIo.GenerateMessageToDisplayResponse(
+                    $"Could not understand {returnType} as a return type. Valid values are: {GetValidRetValues()}");
             }
+
             if (callType is CallType type) {
                 return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn(type));
             }
         }
+
         return "";
     }
 
@@ -255,7 +266,8 @@ public class GdbCustomCommandsHandler {
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
                 var listBuilder = new StringBuilder();
-                gui?.VideoBuffersAsDictionary.ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList().ForEach(x => listBuilder.AppendLine(x));
+                gui?.VideoBuffersAsDictionary.ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList()
+                    .ForEach(x => listBuilder.AppendLine(x));
                 string list = listBuilder.ToString();
                 return _gdbIo.GenerateMessageToDisplayResponse(list);
             }

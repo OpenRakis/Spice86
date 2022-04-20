@@ -334,7 +334,15 @@ public class CSharpOverrideHelper {
         return new UnrecoverableException(error);
     }
 
-    protected void Interrupt(int vectorNumber) {
+    protected void CheckExternalEvents() {
+        Machine.Timer.Tick();
+        byte? vectorNumber = Cpu.ExternalInterruptVectorNumber;
+        if (vectorNumber != null) {
+            Interrupt(vectorNumber.Value);
+        }
+    }
+
+    protected void Interrupt(byte vectorNumber) {
         Machine.CallbackHandler.RunFromOverriden(vectorNumber);
     }
 

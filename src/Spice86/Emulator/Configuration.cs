@@ -14,8 +14,9 @@ public class Configuration {
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]
     public string? CDrive { get; init; }
 
-    [Option('r', nameof(RecordedDataDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. Working directory if blank")]
-    public string RecordedDataDirectory { get; init; } = Environment.CurrentDirectory;
+    [Option('r', nameof(RecordedDataDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to working directory")]
+    public string RecordedDataDirectory { get; init; } =
+        Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER") ?? Environment.CurrentDirectory;
 
 
     [Option('e', nameof(Exe), Default = null, Required = true, HelpText = "Path to executable")]

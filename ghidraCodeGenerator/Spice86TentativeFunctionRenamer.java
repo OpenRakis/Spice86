@@ -1,25 +1,15 @@
-import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
-import com.google.gson.reflect.TypeToken;
-import com.google.gson.stream.JsonReader;
 import ghidra.app.script.GhidraScript;
-import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.FunctionIterator;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
-import ghidra.program.model.symbol.RefType;
-import ghidra.program.model.symbol.ReferenceManager;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.util.exception.DuplicateNameException;
 import ghidra.util.exception.InvalidInputException;
 
-import java.io.FileReader;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import java.util.List;
+import java.util.Map;
 
 //Imports indirect jumps and calls destinations from spice86 dump file (https://github.com/OpenRakis/Spice86/)
 //@author Kevin Ferrare kevinferrare@gmail.com
@@ -28,8 +18,12 @@ import java.util.stream.StreamSupport;
 //@menupath
 //@toolbar
 public class Spice86TentativeFunctionRenamer extends GhidraScript {
-  // Put here values taken by CS
-  private final List<Integer> segments = Arrays.asList(0x1000, 0x334B, 0x5635, 0x563E);
+  // Map of segments with their length
+  private final Map<Integer, Integer> segments = Map.of(
+      0x1000, 0x335AF - 0x10000,
+      0x334B, 0x56350 - 0x334B0,
+      0x5635, 0x564DE - 0x56350,
+      0x563E, 0x1000);
 
   @Override
   protected void run() throws Exception {
@@ -67,8 +61,11 @@ public class Spice86TentativeFunctionRenamer extends GhidraScript {
 
   private int guessSegment(int entryPointAddress) {
     int foundSegment = 0;
-    for (int segment : segments) {
-      if (entryPointAddress >= segment * 0x10) {
+    for (Map.Entry<Integer, Integer> segmentInformation : segments.entrySet()) {
+      int segment = segmentInformation.getKey();
+      int segmentStart = segment * 0x10;
+      int segmentEnd = segmentStart + segmentInformation.getValue();
+      if (entryPointAddress >= segmentStart && entryPointAddress < segmentEnd) {
         println("OK for segment " + Utils.toHexWith0X(segment));
         foundSegment = segment;
       }

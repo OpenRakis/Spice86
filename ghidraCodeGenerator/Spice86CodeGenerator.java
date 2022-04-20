@@ -47,12 +47,14 @@ import java.util.stream.StreamSupport;
 public class Spice86CodeGenerator extends GhidraScript {
   public void run() throws Exception {
     String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");
+    Set<SegmentedAddress> externalEventCheckPoints = new HashSet<>(Arrays.asList(new SegmentedAddress(0x1000, 0x3)));
     run(baseFolder + "spice86dumpExecutionFlow.json", baseFolder + "ghidrascriptout.txt",
         baseFolder + "GeneratedCode.cs",
-        "Cryogenic.Overrides");
+        "Cryogenic.Overrides", externalEventCheckPoints);
   }
 
-  private void run(String executionFlowFile, String logFile, String generatedCodeFile, String namespace)
+  private void run(String executionFlowFile, String logFile, String generatedCodeFile, String namespace,
+      Set<SegmentedAddress> externalEventCheckPoints)
       throws Exception {
     ExecutionFlow executionFlow = readExecutionFlowFromFile(executionFlowFile);
     try (Log log = new Log(this, logFile, false)) {
@@ -64,7 +66,7 @@ public class Spice86CodeGenerator extends GhidraScript {
           .filter(Objects::nonNull)
           .sorted(Comparator.comparingInt(f -> f.getEntrySegmentedAddress().toPhysical()))
           .toList();
-      ParsedProgram parsedProgram = ParsedProgram.createParsedProgram(log, parsedFunctions, executionFlow);
+      ParsedProgram parsedProgram = ParsedProgram.createParsedProgram(log, parsedFunctions, executionFlow, externalEventCheckPoints);
       log.info("Finished parsing.");
       generateProgram(log, parsedProgram, generatedCodeFile, namespace);
     }
@@ -81,9 +83,9 @@ public class Spice86CodeGenerator extends GhidraScript {
   private void generateProgram(Log log, ParsedProgram parsedProgram, String generatedCodeFile, String namespace)
       throws IOException {
     List<String> cSharpFilesContents = new ProgramGenerator(log, this, parsedProgram, namespace).outputCSharpFiles();
-    for(int i = 0; i < cSharpFilesContents.size(); i++) {
+    for (int i = 0; i < cSharpFilesContents.size(); i++) {
       String fileName = generatedCodeFile;
-      if(i != 0) {
+      if (i != 0) {
         fileName = removeFileExtension(generatedCodeFile) + i + ".cs";
       }
       PrintWriter printWriterFunctions = new PrintWriter(new FileWriter(fileName));
@@ -119,38 +121,43 @@ class ProgramGenerator {
   }
 
   public List<String> outputCSharpFiles() {
-    StringBuilder firstFile = new StringBuilder();
-    firstFile.append(generateNamespace());
-    firstFile.append(generateClassDeclaration());
-    firstFile.append("/*");
-    firstFile.append(Utils.indent(generateSegmentStorage(), 2));
-    firstFile.append("\n");
+    List<String> res = new ArrayList<>();
+    StringBuilder fileContent = generateCSharpClassHeaderAndDefinition();
+    fileContent.append("/*");
+    fileContent.append(Utils.indent(generateSegmentStorage(), 2));
+    fileContent.append("\n");
     Collection<ParsedFunction> parsedFunctions = parsedProgram.getEntryPoints().values();
-    firstFile.append(Utils.indent(generateConstructor(parsedFunctions), 2));
-    firstFile.append("*/\n");
-    firstFile.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2) + "\n");
-    firstFile.append(Utils.indent(generateCodeRewriteDetector(), 2));
-    firstFile.append('\n');
-    List<String> functions = generateFunctions(parsedFunctions);
-    firstFile.append("}\n");
-    List<String> files = new ArrayList<>();
-    files.add(firstFile.toString());
-    StringBuilder additionnalFile = new StringBuilder();
-    additionnalFile.append(generateNamespace());
-    additionnalFile.append(generateClassDeclaration());
-    additionnalFile.append("\n");
-    for (String func : functions) {
-      additionnalFile.append(func);
-      if (additionnalFile.length() >= MAXIMUM_CHARACTERS_PER_CSHARP_FILE) {
-        additionnalFile.append("}\n");
-        files.add(additionnalFile.toString());
-        additionnalFile = new StringBuilder();
-        additionnalFile.append(generateNamespace());
-        additionnalFile.append(generateClassDeclaration());
-        additionnalFile.append("\n");
+    fileContent.append(Utils.indent(generateConstructor(parsedFunctions), 2));
+    fileContent.append("*/\n");
+    fileContent.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2) + "\n");
+    fileContent.append(Utils.indent(generateCodeRewriteDetector(), 2));
+    fileContent.append('\n');
+    Iterator<String> functionInterator = generateFunctions(parsedFunctions).iterator();
+    if (!functionInterator.hasNext()) {
+      closeFileContentAndAddToList(fileContent, res);
+      return res;
+    }
+    while (functionInterator.hasNext()) {
+      fileContent.append(functionInterator.next());
+      if (!functionInterator.hasNext() || fileContent.length() >= MAXIMUM_CHARACTERS_PER_CSHARP_FILE) {
+        closeFileContentAndAddToList(fileContent, res);
+        fileContent = generateCSharpClassHeaderAndDefinition();
       }
     }
-    return files;
+    return res;
+  }
+
+  private void closeFileContentAndAddToList(StringBuilder fileContent, List<String> files) {
+    fileContent.append("}\n");
+    files.add(fileContent.toString());
+  }
+
+  private StringBuilder generateCSharpClassHeaderAndDefinition() {
+    StringBuilder additionalFile = new StringBuilder();
+    additionalFile.append(generateNamespace());
+    additionalFile.append(generateClassDeclaration());
+    additionalFile.append("\n");
+    return additionalFile;
   }
 
   private String generateClassDeclaration() {
@@ -753,6 +760,9 @@ class InstructionGenerator {
     isGoto =
         instructionString.contains("goto ") && !(instructionString.contains("if(") || instructionString.contains(
             "switch("));
+    if (parsedProgram.getExternalEventCheckPoints().contains(parsedInstruction.getInstructionSegmentedAddress())) {
+      instructionString = "CheckExternalEvents();\n" + instructionString;
+    }
     if (generateLabel) {
       return label + instructionString;
     }
@@ -760,11 +770,17 @@ class InstructionGenerator {
     return instructionString;
   }
 
+  private boolean canUseNativeOperation() {
+    ParsedInstruction nextParsedInstruction = parsedProgram.getInstructionAfter(parsedInstruction);
+    return nextParsedInstruction != null && nextParsedInstruction.isModifiesSignificantFlags()
+        && !nextParsedInstruction.isUsesSignificantFlags();
+  }
+
   private boolean isUnconditionalReturn(String instructionString) {
-    if(!instructionString.contains("return ")) {
+    if (!instructionString.contains("return ")) {
       return false;
     }
-    if(instructionString.contains("JumpDispatcher.JumpAsmReturn")) {
+    if (instructionString.contains("JumpDispatcher.JumpAsmReturn")) {
       // Check return is the last statement
       return instructionString.endsWith("return JumpDispatcher.JumpAsmReturn!;");
     }
@@ -816,7 +832,11 @@ class InstructionGenerator {
     String operand = signExtendParameter2IfNeeded(parameters);
     String res = "";
     if (nativeOperation != null) {
-      res += "// " + dest + " " + nativeOperation + "= " + operand + ";\n";
+      String resNativeOperation = dest + " " + nativeOperation + "= " + operand + ";\n";
+      if (canUseNativeOperation()) {
+        return resNativeOperation;
+      }
+      res += "// " + resNativeOperation;
     }
     res += dest + " = " + operation + bitsParameter1 + "(" + dest + ", " + operand + ");";
     return res;
@@ -1243,7 +1263,7 @@ class JumpCallTranslator {
   }
 
   public String getLabel() {
-    if (hasGhidraLabel() || this.parsedProgram.getJumpsAndCalls()
+    if (hasGhidraLabel() || this.parsedProgram.getExecutionFlow()
         .getJumpTargets()
         .contains(this.instructionSegmentedAddress)) {
       return getLabelToAddress(this.instructionSegmentedAddress, true) + "\n";
@@ -1295,7 +1315,7 @@ class JumpCallTranslator {
   }
 
   private List<SegmentedAddress> getTargetsOfJumpCall() {
-    return this.parsedProgram.getJumpsAndCalls()
+    return this.parsedProgram.getExecutionFlow()
         .getCallsJumpsFromTo()
         .get(this.instructionSegmentedAddress.toPhysical());
   }
@@ -1508,6 +1528,8 @@ class JumpCallTranslator {
  */
 class ParsedProgram {
   private ExecutionFlow executionFlow;
+  // List of addresses where to inject code to check timer and other external interrupts
+  private Set<SegmentedAddress> externalEventCheckPoints;
   private Map<Integer, ParsedFunction> instructionAddressToFunction = new HashMap<>();
   private Map<Integer, ParsedInstruction> instructionAddressToInstruction = new HashMap<>();
   private Map<SegmentedAddress, Set<SegmentedAddress>> jumpsFromOutsidePerFunction = new HashMap<>();
@@ -1518,9 +1540,10 @@ class ParsedProgram {
   private int cs1;
 
   public static ParsedProgram createParsedProgram(Log log, List<ParsedFunction> functions,
-      ExecutionFlow executionFlow) {
+      ExecutionFlow executionFlow, Set<SegmentedAddress> externalEventCheckPoints) {
     ParsedProgram res = new ParsedProgram();
     res.executionFlow = executionFlow;
+    res.externalEventCheckPoints = externalEventCheckPoints;
     res.entryPoints.putAll(
         functions.stream().collect(Collectors.toMap(f -> f.getEntrySegmentedAddress().toPhysical(), f -> f)));
     mapInstructions(log, functions, res);
@@ -1587,7 +1610,7 @@ class ParsedProgram {
       Integer fromAddress = jumpFromTo.getKey();
       ParsedFunction fromFunction = res.getFunctionAtAddressAny(fromAddress);
       if (fromFunction == null) {
-        log.error("No function found at address " + Utils.toHexWithout0X(fromAddress));
+        log.error("No source function found at address " + Utils.toHexWithout0X(fromAddress)+" for jump.");
         continue;
       }
       for (SegmentedAddress toAddress : jumpFromTo.getValue()) {
@@ -1624,8 +1647,12 @@ class ParsedProgram {
         .collect(Collectors.toMap(i -> i.getInstructionSegmentedAddress().toPhysical(), i -> parsedFunction));
   }
 
-  public ExecutionFlow getJumpsAndCalls() {
+  public ExecutionFlow getExecutionFlow() {
     return executionFlow;
+  }
+
+  public Set<SegmentedAddress> getExternalEventCheckPoints() {
+    return externalEventCheckPoints;
   }
 
   public Set<SegmentedAddress> getJumpsFromOutsideForFunction(SegmentedAddress address) {
@@ -1646,6 +1673,13 @@ class ParsedProgram {
 
   public ParsedInstruction getInstructionAtSegmentedAddress(SegmentedAddress address) {
     return getInstructionAtAddress(address.toPhysical());
+  }
+
+  public ParsedInstruction getInstructionAfter(ParsedInstruction instruction) {
+    SegmentedAddress currentAddress = instruction.getInstructionSegmentedAddress();
+    SegmentedAddress nextAddress = new SegmentedAddress(currentAddress.getSegment(),
+        currentAddress.getOffset() + instruction.getInstructionLength());
+    return getInstructionAtSegmentedAddress(nextAddress);
   }
 
   public ParsedFunction getFunctionAtSegmentedAddressAny(SegmentedAddress address) {
@@ -1817,6 +1851,13 @@ class ParsedInstruction {
           0x7E, 0x7F, 0x80, 0x81, 0x82, 0x83, 0x9A, 0xA0, 0xA1, 0xA2, 0xA3, 0xA8, 0xA9, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4,
           0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, 0xC1, 0xC2, 0xC6, 0xC7, 0xCA, 0xCD,
           0xD4, 0xD5, 0xDB, 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xF6, 0xF7));
+  private static final Set<String> MNEMONICS_MODIFIYING_SIGNIFICANT_FLAGS = new HashSet<>(
+      Arrays.asList("AAA", "AAD", "AAM", "AAS", "ADC", "ADD", "AND", "CMP", "CMPSB", "CMPSW", "DAS", "DAA", "DEC",
+          "DIV", "IDIV", "IMUL", "INC", "MUL", "NEG", "POPF", "RCL", "RCR", "ROL", "ROR", "SAHF", "SAR", "SBB", "SCASB",
+          "SCASW", "SHL", "SHR", "SUB", "TEST", "XOR"));
+
+  private static final Set<String> MNEMONICS_USING_SIGNIFICANT_FLAGS = new HashSet<>(
+      Arrays.asList("ADC", "DAS", "DAA", "PUSHF", "RCL", "RCR", "SBB"));
 
   static {
     SEGMENT_OVERRIDES.put(0x26, "ES");
@@ -1843,6 +1884,9 @@ class ParsedInstruction {
   private String prefix;
   private String mnemonic;
   private String[] parameters;
+  private boolean modifiesSignificantFlags;
+
+  private boolean usesSignificantFlags;
 
   public String getMnemonic() {
     return mnemonic;
@@ -1854,6 +1898,14 @@ class ParsedInstruction {
 
   public String[] getParameters() {
     return parameters;
+  }
+
+  public boolean isModifiesSignificantFlags() {
+    return modifiesSignificantFlags;
+  }
+
+  public boolean isUsesSignificantFlags() {
+    return usesSignificantFlags;
   }
 
   public Instruction getInstruction() {
@@ -1942,6 +1994,9 @@ class ParsedInstruction {
     if (mnemonicSplit.length > 1) {
       res.prefix = mnemonicSplit[1];
     }
+    res.modifiesSignificantFlags = MNEMONICS_MODIFIYING_SIGNIFICANT_FLAGS.contains(res.mnemonic);
+    res.usesSignificantFlags = MNEMONICS_USING_SIGNIFICANT_FLAGS.contains(res.mnemonic);
+
     String representation = instruction.toString();
     res.parameters = representation.replaceAll(mnemonicWithPrefix, "").trim().split(",");
 
