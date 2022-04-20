@@ -56,6 +56,8 @@ com files and bios files are also supported.
   -d, --DumpDataOnExit               (Default: true) When true, records data at runtime and dumps them at exit time
   -l, --Logs                         (Default: false) Enable warning level logs
   -h, --HeavyLogs                    (Default: false) Enable verbose level logs
+  -d, --DumpDataOnExit               (Default: true) Records data at runtime and dumps them at exit time
+
   --help                             Display this help screen.
   --version                          Display version information.
 ```
