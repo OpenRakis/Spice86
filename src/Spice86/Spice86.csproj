@@ -20,8 +20,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.4.8</Version>
-		<PackageReleaseNotes>Time multiplier now works as intended, fixed crash on application exit, added -d dump option, -l logs options, -v for verbose logs</PackageReleaseNotes>
+		<Version>2.4.9</Version>
+		<PackageReleaseNotes>Fixed emulator timer, external events injection is supported for overrides</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
