@@ -463,7 +463,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     /// </summary>
     private void RaiseInterrupt() {
         this.mixer.InterruptStatusRegister = InterruptStatus.Dma8;
-        this.vm.Pic.RaiseHardwareInterruptRequest((byte)this.IRQ);
+        this.vm.Pic.ProcessInterrupt((byte)this.IRQ);
         System.Diagnostics.Debug.WriteLine("Sound Blaster IRQ");
     }
 

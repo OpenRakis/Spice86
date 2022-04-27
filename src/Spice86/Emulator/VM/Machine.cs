@@ -96,7 +96,7 @@ public class Machine : IDisposable {
     public event Action? Paused;
 
     public event Action? Resumed;
-    
+
     public Configuration Configuration { get; }
 
     public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
@@ -119,7 +119,7 @@ public class Machine : IDisposable {
         this.DmaController = new DmaController(this, configuration);
         Register(DmaController);
 
-        Pic = new Pic(this, configuration);
+        Pic = new Pic(this, true, configuration);
         Register(Pic);
         VgaCard = new VgaCard(this, gui, configuration);
         Register(VgaCard);

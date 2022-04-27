@@ -35,8 +35,7 @@ public class Keyboard : DefaultIOPortHandler {
     }
 
     private void RaiseAndProcessKeyboardInterruptRequest() {
-        _machine.Pic.RaiseHardwareInterruptRequest(1);
-        _machine.Pic.ProcessInterruptVector(9);
+        _machine.Cpu.ExternalInterrupt(9);
     }
 
     private void OnKeyUp(object? sender, KeyEventArgs e) {

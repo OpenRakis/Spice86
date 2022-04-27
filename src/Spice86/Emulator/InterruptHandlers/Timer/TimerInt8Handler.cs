@@ -14,25 +14,18 @@ public class TimerInt8Handler : InterruptHandler {
     private readonly Timer _timer;
 
     public TimerInt8Handler(Machine machine) : base(machine) {
-        _pic = machine.Pic;
         _timer = machine.Timer;
         _memory = machine.Memory;
+        _pic = machine.Pic;
     }
 
     public override byte Index => 0x8;
 
-    public uint TickCounterValue { get => _memory.GetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS); set => _memory.SetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS, value); }
-
     public override void Run() {
         long numberOfTicks = _timer.NumberOfTicks;
         TickCounterValue = (uint)numberOfTicks;
-        int irq = _pic.AcknwowledgeInterruptRequest();
-        // Avoid Timer and Keyboard, which RaiseIRQ and Process the interrupt vector themselves. 
-        if (irq is >= 0 and not 8 and not 9) {
-            uint? vector = _pic.RaiseHardwareInterruptRequest((byte)irq);
-            if (vector is not null) {
-                _pic.ProcessInterruptVector((byte)vector);
-            }
-        }
+        _pic.AcknwowledgeInterrupt();
     }
+
+    public uint TickCounterValue { get => _memory.GetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS); set => _memory.SetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS, value); }
 }
