@@ -373,3 +373,6 @@ MigrationBackup/
 
 #GDB
 .gdb_history
+
+#Sonar
+.sonarqube
