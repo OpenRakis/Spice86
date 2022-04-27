@@ -410,8 +410,9 @@ CD-ROM:
 - No MSCDEX support for now. Some games, like DUNE, can be copied entirely from the CD and run from the hard drive.
 
 Sound:
-- No sound for now, games will not detect sound blaster or adlib.
-- MT-32 and General Midi are supported, but only if Spice86 is run on Windows right now. On other OSes, there will be no sound.
+- Adlib/SoundBlaster MIDI OPL is supported. Playback will only be heard on Windows right now. On other OSes, there will be no sound.
+- SoundBlaster PCM hangs the emulator at the moment Don't use it.
+- MT-32 and General Midi are supported. Playback will only be heard on Windows right now. On other OSes, there will be no sound.
 
 Compatibility list available [here](COMPATIBILITY.md).
 
