@@ -334,11 +334,11 @@ public class CSharpOverrideHelper {
         return new UnrecoverableException(error);
     }
 
-    protected void CheckExternalEvents() {
+    protected void CheckExternalEvents(ushort expectedReturnCs, ushort expectedReturnIp) {
         Machine.Timer.Tick();
         byte? vectorNumber = Cpu.ExternalInterruptVectorNumber;
         if (vectorNumber != null) {
-            Interrupt(vectorNumber.Value);
+            InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);
         }
     }
 

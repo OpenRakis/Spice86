@@ -765,7 +765,12 @@ class InstructionGenerator {
         instructionString.contains("goto ") && !(instructionString.contains("if(") || instructionString.contains(
             "switch("));
     if (parsedProgram.getExternalEventCheckPoints().contains(parsedInstruction.getInstructionSegmentedAddress())) {
-      instructionString = "CheckExternalEvents();\n" + instructionString;
+      int segment = this.parsedInstruction.getInstructionSegmentedAddress().getSegment();
+      int offset = this.parsedInstruction.getInstructionSegmentedAddress().getOffset()
+          + this.parsedInstruction.getInstructionLength();
+
+
+      instructionString = "CheckExternalEvents(" + parsedProgram.getCodeSegmentVariables().get(segment) + ", " + Utils.toHexWith0X(offset)  + ");\n" + instructionString;
     }
     if (generateLabel) {
       return label + instructionString;
