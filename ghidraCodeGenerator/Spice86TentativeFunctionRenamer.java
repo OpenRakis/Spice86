@@ -44,10 +44,14 @@ public class Spice86TentativeFunctionRenamer extends GhidraScript {
     if (!functionName.startsWith("FUN_")) {
       return false;
     }
+    String prefix = "not_observed_";
+    if(functionName.contains("split")) {
+      prefix = "split_";
+    }
     println("processing " + functionName + " at address " + Utils.toHexWith0X(
         (int)function.getEntryPoint().getUnsignedOffset()));
     SegmentedAddress address = getAddress(function);
-    String name = "not_observed_" + Utils.toHexSegmentOffsetPhysical(address);
+    String name = prefix + Utils.toHexSegmentOffsetPhysical(address);
     function.setName(name, SourceType.USER_DEFINED);
     return true;
   }
