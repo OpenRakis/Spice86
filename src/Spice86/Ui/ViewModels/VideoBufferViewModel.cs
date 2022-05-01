@@ -82,7 +82,8 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     /// Also WriteableBitmap is an IImage implementation and not a UI Control,<br/>
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
     /// </summary>
-    [ObservableProperty] private WriteableBitmap _bitmap = new(new PixelSize(320, 200), new Vector(75, 75), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+    [ObservableProperty]
+    private WriteableBitmap _bitmap = new(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
 
     private bool _showCursor = true;
 
@@ -100,7 +101,8 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         }
     }
 
-    [ObservableProperty] private Cursor? _cursor = Cursor.Default;
+    [ObservableProperty]
+    private Cursor? _cursor = Cursor.Default;
 
     private double _scale = 1;
 
@@ -109,11 +111,14 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         set => this.SetProperty(ref _scale, Math.Max(value, 1));
     }
 
-    [ObservableProperty] private int _height = 320;
+    [ObservableProperty]
+    private int _height = 320;
 
-    [ObservableProperty] public bool _isPrimaryDisplay;
+    [ObservableProperty]
+    public bool _isPrimaryDisplay;
 
-    [ObservableProperty] private int _width = 200;
+    [ObservableProperty]
+    private int _width = 200;
 
     private bool _appClosing;
 
