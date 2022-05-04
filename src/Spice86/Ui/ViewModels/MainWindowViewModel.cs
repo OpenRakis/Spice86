@@ -2,6 +2,7 @@
 
 using Avalonia.Collections;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Threading;
 
@@ -13,6 +14,7 @@ using Serilog;
 using Spice86.CLI;
 using Spice86.Emulator;
 using Spice86.Emulator.Devices.Video;
+using Spice86.Ui.Views;
 
 using System;
 using System.Collections.Generic;
@@ -32,6 +34,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     private bool _disposedValue;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
+    private PaletteWindow? paletteWindow;
 
     internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
 
@@ -103,14 +106,39 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     [ICommand]
+    public async Task ShowColorPalette() {
+
+        if (this.paletteWindow != null) {
+            this.paletteWindow.Activate();
+        } else if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+
+            this.paletteWindow = new PaletteWindow(desktop.MainWindow, this) {
+            };
+            this.paletteWindow.Closed += PaletteWindow_Closed;
+            paletteWindow.Show();
+        }
+    }
+
+    private void PaletteWindow_Closed(object? sender, EventArgs e) {
+        if (this.paletteWindow != null) {
+            this.paletteWindow.Closed -= this.PaletteWindow_Closed;
+            this.paletteWindow = null;
+        }
+    }
+
+    [ICommand]
     public void ResetTimeMultiplier() {
         TimeMultiplier = _configuration!.TimeMultiplier;
     }
+
+    [ObservableProperty]
+    private Rgb[] palette = Array.Empty<Rgb>();
 
     public void Draw(byte[] memory, Rgb[] palette) {
         if (_disposedValue || _isSettingResolution) {
             return;
         }
+        Palette = palette;
         foreach (VideoBufferViewModel videoBuffer in SortedBuffers()) {
             videoBuffer.Draw(memory, palette);
         }
