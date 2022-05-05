@@ -7,12 +7,15 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 
+using Spice86.Emulator.Devices.Video;
 using Spice86.UI.ViewModels;
 
+using System.Collections.ObjectModel;
+
 public partial class PaletteWindow : Window {
-    private DispatcherTimer? timer;
+    private DispatcherTimer? _timer;
     private MainWindowViewModel? _mainWindowViewModel;
-    private UniformGrid? grid;
+    private UniformGrid? _grid;
 
     public PaletteWindow() {
         InitializeComponent();
@@ -23,7 +26,7 @@ public partial class PaletteWindow : Window {
 
     private void InitializeComponent() {
         AvaloniaXamlLoader.Load(this);
-        this.grid = this.FindControl<UniformGrid>("grid");
+        this._grid = this.FindControl<UniformGrid>("grid");
     }
 
     public PaletteWindow(Window mainWindow, MainWindowViewModel mainWindowViewModel) {
@@ -33,15 +36,15 @@ public partial class PaletteWindow : Window {
     }
 
     protected override void OnOpened(EventArgs e) {
-        if (this.grid is null) {
+        if (this._grid is null) {
             return;
         }
         base.OnOpened(e);
         for (int i = 0; i < 256; i++)
-            this.grid.Children.Add(new Rectangle() { Fill = new SolidColorBrush() });
+            this._grid.Children.Add(new Rectangle() { Fill = new SolidColorBrush() });
 
-        this.timer = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
-        this.timer.Start();
+        this._timer = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
+        this._timer.Start();
     }
 
     /// <summary>
@@ -50,19 +53,19 @@ public partial class PaletteWindow : Window {
     /// <param name="sender">Source of the event.</param>
     /// <param name="e">Unused EventArgs instance.</param>
     private void UpdateColors(object? sender, EventArgs e) {
-        Emulator.Devices.Video.Rgb[]? palette = _mainWindowViewModel?.Palette;
-        if (this.grid is null) {
+        ReadOnlyCollection<Rgb>? palette = _mainWindowViewModel?.Palette;
+        if (this._grid is null) {
             return;
         }
         if (palette is null)
             return;
 
-        for (int i = 0; i < palette.Length; i++) {
-            Emulator.Devices.Video.Rgb? rgb = palette[i];
+        for (int i = 0; i < palette.Count; i++) {
+            Rgb? rgb = palette[i];
             if (rgb is null) {
                 continue;
             }
-            var brush = (SolidColorBrush?)((Rectangle)this.grid.Children[i]).Fill;
+            var brush = (SolidColorBrush?)((Rectangle)this._grid.Children[i]).Fill;
             if (brush is null) {
                 continue;
             }

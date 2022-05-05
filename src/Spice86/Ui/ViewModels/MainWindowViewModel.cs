@@ -18,6 +18,7 @@ using Spice86.Ui.Views;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 
@@ -86,7 +87,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         Dispatcher.UIThread.Post(() => {
             VideoBuffers.Add(videoBuffer);
         }, DispatcherPriority.MaxValue);
-
     }
 
     public void Dispose() {
@@ -106,14 +106,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     [ICommand]
-    public async Task ShowColorPalette() {
+    public void ShowColorPalette() {
 
         if (this.paletteWindow != null) {
             this.paletteWindow.Activate();
         } else if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-
-            this.paletteWindow = new PaletteWindow(desktop.MainWindow, this) {
-            };
+            this.paletteWindow = new PaletteWindow(desktop.MainWindow, this);
             this.paletteWindow.Closed += PaletteWindow_Closed;
             paletteWindow.Show();
         }
@@ -131,14 +129,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         TimeMultiplier = _configuration!.TimeMultiplier;
     }
 
-    [ObservableProperty]
-    private Rgb[] palette = Array.Empty<Rgb>();
+    private Rgb[] _palette = Array.Empty<Rgb>();
+
+    public ReadOnlyCollection<Rgb> Palette => Array.AsReadOnly(_palette);
 
     public void Draw(byte[] memory, Rgb[] palette) {
         if (_disposedValue || _isSettingResolution) {
             return;
         }
-        Palette = palette;
+        _palette = palette;
         foreach (VideoBufferViewModel videoBuffer in SortedBuffers()) {
             videoBuffer.Draw(memory, palette);
         }
