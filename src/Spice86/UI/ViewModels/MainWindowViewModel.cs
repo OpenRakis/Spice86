@@ -14,7 +14,7 @@ using Serilog;
 using Spice86.CLI;
 using Spice86.Emulator;
 using Spice86.Emulator.Devices.Video;
-using Spice86.Ui.Views;
+using Spice86.UI.Views;
 
 using System;
 using System.Collections.Generic;

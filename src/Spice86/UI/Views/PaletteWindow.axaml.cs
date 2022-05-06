@@ -1,4 +1,4 @@
-namespace Spice86.Ui.Views;
+namespace Spice86.UI.Views;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -36,10 +36,10 @@ public partial class PaletteWindow : Window {
     }
 
     protected override void OnOpened(EventArgs e) {
+        base.OnOpened(e);
         if (this._grid is null) {
             return;
         }
-        base.OnOpened(e);
         for (int i = 0; i < 256; i++)
             this._grid.Children.Add(new Rectangle() { Fill = new SolidColorBrush() });
 

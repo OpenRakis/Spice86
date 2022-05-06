@@ -77,6 +77,6 @@
 		<PackageReference Include="Ymf262Emu" Version="1.0.1" />
 	</ItemGroup>
 	<ItemGroup>
-		<AvaloniaResource Include="Ui\Views\Spice86.ico" />
+		<AvaloniaResource Include="Icon\Spice86.ico" />
 	</ItemGroup>
 </Project>
