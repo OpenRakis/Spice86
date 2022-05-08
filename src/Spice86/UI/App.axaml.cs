@@ -17,6 +17,8 @@ public partial class App : Application {
 
     private const string RegistryValueName = "AppsUseLightTheme";
 
+    public static MainWindow? MainWindow { get; private set; }
+
     public override void Initialize() {
         AvaloniaXamlLoader.Load(this);
     }
@@ -35,6 +37,7 @@ public partial class App : Application {
             desktop.MainWindow.Closed += (s, e) => mainViewModel.Exit();
 
             desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
+            MainWindow = (MainWindow)desktop.MainWindow;
         }
         base.OnFrameworkInitializationCompleted();
     }

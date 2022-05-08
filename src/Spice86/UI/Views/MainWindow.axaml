@@ -24,6 +24,7 @@
 					<MenuItem Header="Debug">
 						<MenuItem Header="Color Palette" Command="{Binding ShowColorPaletteCommand}" />
 						<MenuItem Header="Performance" Command="{Binding ShowPerformanceCommand}" />
+						<MenuItem Header="Dump emulator state to directory..." Command="{Binding DumpEmulatorStateToFileCommand}" />
 					</MenuItem>
 				</Menu>
 				<Grid HorizontalAlignment="Center" Grid.Column="1" ColumnDefinitions="Auto,Auto,120,Auto,Auto">

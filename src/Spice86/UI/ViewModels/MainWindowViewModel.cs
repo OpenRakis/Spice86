@@ -13,6 +13,7 @@ using Serilog;
 using Spice86.CLI;
 using Spice86.Emulator;
 using Spice86.Emulator.Devices.Video;
+using Spice86.Emulator.Function.Dump;
 using Spice86.UI.Views;
 
 using System;
@@ -49,6 +50,33 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
 
     public event EventHandler<KeyEventArgs>? KeyUp;
     public event EventHandler<KeyEventArgs>? KeyDown;
+
+    [ICommand]
+    public async Task DumpEmulatorStateToFile(){
+        if(_programExecutor is null || _configuration is null) {
+            return;
+        }
+        var ofd = new OpenFolderDialog()
+        {
+            Title = "Dump emulator state to directory...",
+            Directory = _configuration.RecordedDataDirectory
+        };
+        if(Directory.Exists(_configuration.RecordedDataDirectory)) {
+            ofd.Directory = _configuration.RecordedDataDirectory;
+        }
+        var dir = _configuration.RecordedDataDirectory;
+        if(App.MainWindow is not null)
+        {
+            dir = await ofd.ShowAsync(App.MainWindow);
+        }
+        if (string.IsNullOrWhiteSpace(dir)
+        && !string.IsNullOrWhiteSpace(_configuration.RecordedDataDirectory)) {
+            dir = _configuration.RecordedDataDirectory;
+        }
+        if(!string.IsNullOrWhiteSpace(dir)) {
+            new RecorderDataWriter(dir, _programExecutor.Machine).DumpAll();
+        }
+    }
 
     [ICommand]
     private void Pause() {
