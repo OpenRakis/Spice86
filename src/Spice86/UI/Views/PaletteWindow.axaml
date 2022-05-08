@@ -6,6 +6,7 @@
         x:Class="Spice86.UI.Views.PaletteWindow"
 		Icon="/Icon/Spice86.ico"
 		WindowStartupLocation="CenterOwner"
-        Title="Color Palette" Height="300" Width="300" MaxHeight="300" MaxWidth="300" ShowInTaskbar="False">
+		CanResize="False"
+        Title="Color Palette" Height="300" Width="300" ShowInTaskbar="False">
 	<UniformGrid Name="grid" Rows="16" Columns="16" />
 </Window>

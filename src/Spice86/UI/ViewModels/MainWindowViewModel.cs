@@ -2,7 +2,6 @@
 
 using Avalonia.Collections;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Threading;
 
@@ -35,7 +34,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     private bool _disposedValue;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
-    private PaletteWindow? paletteWindow;
+    private PaletteWindow? _paletteWindow;
+    private PerformanceWindow? _performanceWindow;
 
     internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
 
@@ -106,21 +106,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     [ICommand]
-    public void ShowColorPalette() {
-
-        if (this.paletteWindow != null) {
-            this.paletteWindow.Activate();
-        } else if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            this.paletteWindow = new PaletteWindow(desktop.MainWindow, this);
-            this.paletteWindow.Closed += PaletteWindow_Closed;
-            paletteWindow.Show();
+    public void ShowPerformance() {
+        if (_performanceWindow != null) {
+            _performanceWindow.Activate();
+        } else if (_programExecutor is not null) {
+            _performanceWindow = new PerformanceWindow() {
+                DataContext = new PerformanceViewModel(
+                    _programExecutor.Machine)
+            };
+            _performanceWindow.Closed += (s, e) => _performanceWindow = null;
+            _performanceWindow.Show();
         }
     }
 
-    private void PaletteWindow_Closed(object? sender, EventArgs e) {
-        if (this.paletteWindow != null) {
-            this.paletteWindow.Closed -= this.PaletteWindow_Closed;
-            this.paletteWindow = null;
+    [ICommand]
+    public void ShowColorPalette() {
+        if (_paletteWindow != null) {
+            _paletteWindow.Activate();
+        } else {
+            _paletteWindow = new PaletteWindow(this);
+            _paletteWindow.Closed += (s, e) => _paletteWindow = null;
+            _paletteWindow.Show();
         }
     }
 

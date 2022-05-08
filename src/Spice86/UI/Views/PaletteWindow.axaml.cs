@@ -1,6 +1,7 @@
 namespace Spice86.UI.Views;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
 using Avalonia.Markup.Xaml;
@@ -29,9 +30,11 @@ public partial class PaletteWindow : Window {
         this._grid = this.FindControl<UniformGrid>("grid");
     }
 
-    public PaletteWindow(Window mainWindow, MainWindowViewModel mainWindowViewModel) {
+    public PaletteWindow(MainWindowViewModel mainWindowViewModel) {
         InitializeComponent();
-        this.Owner = mainWindow;
+        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+            this.Owner = desktop.MainWindow;
+        }
         _mainWindowViewModel = mainWindowViewModel;
     }
 
