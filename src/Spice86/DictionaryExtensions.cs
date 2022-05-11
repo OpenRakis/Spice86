@@ -6,14 +6,13 @@ using System.Collections.Generic;
 internal static class DictionaryExtensions {
 
     /// <summary>
-    /// Like <see cref="GetValueOrDefault"/> but only evaluates the lambda if needed.<br/>
-    /// And adds it to the <paramref name="dict"/> if so.
+    /// Like <see cref="GetValueOrDefault"/> but adds the value to the dict if not found.<br/>
     /// </summary>
     /// <typeparam name="TKey">The generic key type</typeparam>
     /// <typeparam name="TValue">The generic return type</typeparam>
     /// <param name="dict">The input <see cref="IDictionary{TKey, TValue}"/></param>
     /// <param name="key">The input key to use</param>
-    /// <param name="lambda">The lambda to call if the value is not found.</param>
+    /// <param name="backupValue">The value to insert and return if the value is not found.</param>
     /// <returns>The found or computed value</returns>
     public static TValue ComputeIfAbsent<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue backupValue) {
         if (dict.TryGetValue(key, out TValue? value)) {
