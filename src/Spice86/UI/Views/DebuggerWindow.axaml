@@ -1,0 +1,28 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:local="clr-namespace:Spice86.UI.Controls"
+		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Spice86.UI.Views.DebuggerWindow"
+		xmlns:converters="using:Spice86.UI.Converters"
+		xmlns:vm="using:Spice86.UI.ViewModels"
+        Title="Debugger"
+		Icon="/Icon/Spice86.ico"
+		Height="600" Width="800" ShowInTaskbar="False">
+	<Design.DataContext>
+		<vm:DebuggerViewModel />
+	</Design.DataContext>
+	<WrapPanel>
+		<local:GroupBox Header="CPU" BorderBrush="AliceBlue" BorderThickness="1">
+			<WrapPanel Orientation="Vertical">
+				<StackPanel Orientation="Vertical">
+					<Label Content="Cycles" />
+					<TextBlock Text="{Binding Machine.Cpu.State.Cycles}" />
+					<Label Content="IP" />
+					<TextBlock Text="{Binding Machine.Cpu.State.IP}" />
+				</StackPanel>
+			</WrapPanel>
+		</local:GroupBox>
+	</WrapPanel>
+</Window>

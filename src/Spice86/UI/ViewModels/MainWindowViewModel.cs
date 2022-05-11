@@ -37,6 +37,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     private bool _isSettingResolution = false;
     private PaletteWindow? _paletteWindow;
     private PerformanceWindow? _performanceWindow;
+    private DebuggerWindow? _debuggerWindow;
 
     internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
 
@@ -52,28 +53,26 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     public event EventHandler<KeyEventArgs>? KeyDown;
 
     [ICommand]
-    public async Task DumpEmulatorStateToFile(){
-        if(_programExecutor is null || _configuration is null) {
+    public async Task DumpEmulatorStateToFile() {
+        if (_programExecutor is null || _configuration is null) {
             return;
         }
-        var ofd = new OpenFolderDialog()
-        {
+        var ofd = new OpenFolderDialog() {
             Title = "Dump emulator state to directory...",
             Directory = _configuration.RecordedDataDirectory
         };
-        if(Directory.Exists(_configuration.RecordedDataDirectory)) {
+        if (Directory.Exists(_configuration.RecordedDataDirectory)) {
             ofd.Directory = _configuration.RecordedDataDirectory;
         }
         var dir = _configuration.RecordedDataDirectory;
-        if(App.MainWindow is not null)
-        {
+        if (App.MainWindow is not null) {
             dir = await ofd.ShowAsync(App.MainWindow);
         }
         if (string.IsNullOrWhiteSpace(dir)
         && !string.IsNullOrWhiteSpace(_configuration.RecordedDataDirectory)) {
             dir = _configuration.RecordedDataDirectory;
         }
-        if(!string.IsNullOrWhiteSpace(dir)) {
+        if (!string.IsNullOrWhiteSpace(dir)) {
             new RecorderDataWriter(dir, _programExecutor.Machine).DumpAll();
         }
     }
@@ -130,6 +129,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         set {
             this.SetProperty(ref _timeMultiplier, value);
             _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
+        }
+    }
+
+    [ICommand]
+    public void ShowDebugger() {
+        if (_debuggerWindow != null) {
+            _debuggerWindow.Activate();
+        } else if (_programExecutor is not null) {
+            _debuggerWindow = new DebuggerWindow() {
+                DataContext = new DebuggerViewModel(
+                    _programExecutor.Machine)
+            };
+            _debuggerWindow.Closed += (s, e) => _performanceWindow = null;
+            _debuggerWindow.Show();
         }
     }
 
