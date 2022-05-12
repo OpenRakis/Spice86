@@ -457,9 +457,9 @@ General procedure to use them, in order:
 
 4.Spice86TentativeFunctionRenamer.java (renames fun_ into not_observerd_cs_ip)
 
-5.Spice86FunctionsSanitizer.java (may be used several times in a row)
+5.Spice86FunctionsSanitizer.java (may be used several times in a row.)
 
-6.Spice86OrphanedInstructionsScanner.java (plusieurs fois possible, re-create function, reconvert thunk-function to function)
+6.Spice86OrphanedInstructionsScanner.java (this gives you the ranges where instructions are not attached to functions in the console output. You must attach them manually to functions)
 
 7.CodeGenerator.java (ghidrascriptout.txt will be its log file)
 
