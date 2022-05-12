@@ -448,13 +448,21 @@ Before using it, define an environnement variable named SPICE86_DUMPS_FOLDER poi
 They are generated on close if the -d CLI option is used.
 
 General procedure to use them, in order:
+
 1.Ghidra's own script 'ImportSymbolScript.py' (input used is "spice86dumpGhidraSymbols.txt")
+
 2.Ghidra's Auto-Analyze (only enable 'Dissasemble Entry Points')
+
 3.Spice86ReferenceGenerator.java
+
 4.Spice86TentativeFunctionRenamer.java (renames fun_ into not_observerd_cs_ip)
+
 5.Spice86FunctionsSanitizer.java (may be used several times in a row)
+
 6.Spice86OrphanedInstructionsScanner.java (plusieurs fois possible, re-create function, reconvert thunk-function to function)
+
 7.CodeGenerator.java (ghidrascriptout.txt will be its log file)
+
 
 Remember: if Ghidra displays SUBROUTINES, use the 'f' key to convert them into functions. The code generator only works with functions.
 
