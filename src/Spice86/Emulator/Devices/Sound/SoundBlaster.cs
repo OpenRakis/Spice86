@@ -78,7 +78,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
     /// <param name="vm">Virtual machine instance associated with the device.</param>
-    /// <param name="hwnd">Main application window handle.</param>
     /// <param name="irq">IRQ number for the Sound Blaster.</param>
     /// <param name="dma8">8-bit DMA channel for the Sound Blaster.</param>
     /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
@@ -463,7 +462,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     /// </summary>
     private void RaiseInterrupt() {
         this.mixer.InterruptStatusRegister = InterruptStatus.Dma8;
-        this.vm.Pic.ProcessInterrupt((byte)this.IRQ);
+        //hack: hard-coded translation of IRQ 7 to vectorNumber 15.
+        this.vm.Pic.ProcessInterrupt(15);
         System.Diagnostics.Debug.WriteLine("Sound Blaster IRQ");
     }
 

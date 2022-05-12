@@ -34,7 +34,7 @@ public class Counter {
     public ushort? Latch { get; set; } = null;
 
     /// <summary>
-    // Some programs don't set it so let's use by default the simplest mode (1)
+    /// Some programs don't set it so let's use by default the simplest mode (1)
     /// </summary>
     public int ReadWritePolicy { get; set; } = 1;
 
@@ -123,10 +123,10 @@ public class Counter {
     }
 
     private byte Policy3(ushort value) {
-    // LSB first, then MSB
-    if (_firstByteRead) {
-        if (Latch != null)
-            Latch = null;
+        // LSB first, then MSB
+        if (_firstByteRead) {
+            if (Latch != null)
+                Latch = null;
             // return msb
             _firstByteRead = false;
             return Msb(value);
