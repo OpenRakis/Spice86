@@ -35,7 +35,7 @@ public static class MemoryUtils {
     }
 
     public static uint ToPhysicalAddress(ushort segment, ushort offset) {
-        return (uint)((segment) << 4) + offset;
+        return (uint)(segment << 4) + offset;
     }
 
     public static ushort ToSegment(uint physicalAddress) {

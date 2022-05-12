@@ -141,7 +141,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
                 DataContext = new DebuggerViewModel(
                     _programExecutor.Machine)
             };
-            _debuggerWindow.Closed += (s, e) => _performanceWindow = null;
+            _debuggerWindow.Closed += (s, e) => _debuggerWindow = null;
             _debuggerWindow.Show();
         }
     }
