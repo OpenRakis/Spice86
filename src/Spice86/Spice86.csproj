@@ -12,10 +12,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Remove="UI\Controls\GroupBox.xaml" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<Using Remove="System.Linq" />
 		<Using Include="System.Buffers.Binary" />
 	</ItemGroup>
@@ -82,14 +78,5 @@
 	</ItemGroup>
 	<ItemGroup>
 		<AvaloniaResource Include="Icon\Spice86.ico" />
-		<AvaloniaResource Include="UI\Controls\GroupBox.xaml">
-		  <SubType>Designer</SubType>
-		  <Generator>MSBuild:Compile</Generator>
-		</AvaloniaResource>
-	</ItemGroup>
-	<ItemGroup>
-	  <Compile Update="UI\Controls\GroupBox.xaml.cs">
-	    <DependentUpon>%(Filename)</DependentUpon>
-	  </Compile>
 	</ItemGroup>
 </Project>

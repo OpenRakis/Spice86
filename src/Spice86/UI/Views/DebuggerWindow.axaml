@@ -2,7 +2,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:local="clr-namespace:Spice86.UI.Controls"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Spice86.UI.Views.DebuggerWindow"
 		xmlns:converters="using:Spice86.UI.Converters"
@@ -13,16 +12,16 @@
 	<Design.DataContext>
 		<vm:DebuggerViewModel />
 	</Design.DataContext>
-	<WrapPanel>
-		<local:GroupBox Header="CPU" BorderBrush="AliceBlue" BorderThickness="1">
-			<WrapPanel Orientation="Vertical">
-				<StackPanel Orientation="Vertical">
-					<Label Content="Cycles" />
-					<TextBlock Text="{Binding Machine.Cpu.State.Cycles}" />
-					<Label Content="IP" />
-					<TextBlock Text="{Binding Machine.Cpu.State.IP}" />
-				</StackPanel>
-			</WrapPanel>
-		</local:GroupBox>
-	</WrapPanel>
+	<ScrollViewer>
+		<Grid RowDefinitions="Auto,Auto,Auto">
+			<Expander Header="CPU" IsExpanded="True" Grid.Row="0">
+				<DataGrid IsReadOnly="True" Name="CPUDataGrid" Items="{Binding Machine}" AutoGenerateColumns="False">
+					<DataGrid.Columns>
+						<DataGridTextColumn Header="CS" Binding="{Binding Cpu.State.CS}" />
+						<DataGridTextColumn Header="IP" Binding="{Binding Cpu.State.IP}" />
+					</DataGrid.Columns>
+				</DataGrid>
+			</Expander>
+		</Grid>
+	</ScrollViewer>
 </Window>
