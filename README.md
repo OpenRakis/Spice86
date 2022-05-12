@@ -411,7 +411,7 @@ CD-ROM:
 
 Sound:
 - Adlib/SoundBlaster MIDI OPL is supported. Playback will only be heard on Windows right now. On other OSes, there will be no sound.
-- SoundBlaster PCM hangs the emulator at the moment Don't use it.
+- SoundBlaster PCM hangs the emulator at the moment. Don't use it.
 - MT-32 and General Midi are supported. Playback will only be heard on Windows right now. On other OSes, there will be no sound.
 
 Compatibility list available [here](COMPATIBILITY.md).
