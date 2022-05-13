@@ -111,9 +111,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
         var videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
-        Dispatcher.UIThread.Post(() => {
-            VideoBuffers.Add(videoBuffer);
-        }, DispatcherPriority.MaxValue);
+        Dispatcher.UIThread.Post(() =>
+                VideoBuffers.Add(videoBuffer)
+            , DispatcherPriority.MaxValue);
     }
 
     public void Dispose() {
