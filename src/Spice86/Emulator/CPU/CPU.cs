@@ -116,17 +116,17 @@ public class Cpu {
 
     public bool IsRunning { get; set; } = true;
 
-    public Alu Alu { get; private set; }
+    public Alu Alu { get; }
 
-    public FunctionHandler FunctionHandler { get; private set; }
+    public FunctionHandler FunctionHandler { get; }
 
-    public FunctionHandler FunctionHandlerInExternalInterrupt { get; private set; }
+    public FunctionHandler FunctionHandlerInExternalInterrupt { get; }
 
     public FunctionHandler FunctionHandlerInUse { get; private set; }
 
-    public Stack Stack { get; private set; }
+    public Stack Stack { get; }
 
-    public State State { get; private set; }
+    public State State { get; }
 
     public StaticAddressesRecorder StaticAddressesRecorder => _staticAddressesRecorder;
 
@@ -1924,7 +1924,6 @@ public class Cpu {
         }
     }
 
-
     public void Mul8(byte value) {
         ushort result = Alu.Mul8(State.AL, value);
         // Upper part of the result goes in AH
@@ -1964,7 +1963,6 @@ public class Cpu {
         State.AL = (byte)result.Value;
         State.AH = (byte)(v1 % v2);
     }
-
 
     public void IDiv16(ushort value) {
         // no sign extension for v1 as it is already a 32bit value
@@ -2065,7 +2063,7 @@ public class Cpu {
         }
 
         ushort targetIP = _memory.GetUint16((ushort)(4 * vectorNumber.Value));
-        ushort targetCS = _memory.GetUint16((ushort)(4 * vectorNumber.Value + 2));
+        ushort targetCS = _memory.GetUint16((ushort)((4 * vectorNumber.Value) + 2));
         if (ErrorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0) {
             throw new UnhandledOperationException(_machine,
                 $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");
@@ -2105,13 +2103,7 @@ public class Cpu {
         return 0;
     }
 
-    private bool IsLoggingEnabled() {
-        if (IsLogForced is null) {
-            return _logger.IsEnabled(Serilog.Events.LogEventLevel.Debug);
-        }
-
-        return IsLogForced.Value;
-    }
+    private bool IsLoggingEnabled() => IsLogForced ?? _logger.IsEnabled(Serilog.Events.LogEventLevel.Debug);
 
     private static bool IsStringOpcode(int opcode) {
         return _stringOpCodes.Contains(opcode);
@@ -2173,17 +2165,9 @@ public class Cpu {
         HandleCall(CallType.NEAR, State.CS, returnIP, State.CS, callIP);
     }
 
-    public void Out8(int port, byte val) {
-        if (IoPortDispatcher != null) {
-            IoPortDispatcher.WriteByte((ushort)port, val);
-        }
-    }
+    public void Out8(int port, byte val) => IoPortDispatcher?.WriteByte((ushort)port, val);
 
-    public void Out16(int port, ushort val) {
-        if (IoPortDispatcher != null) {
-            IoPortDispatcher.WriteWord((ushort)port, val);
-        }
-    }
+    public void Out16(int port, ushort val) => IoPortDispatcher?.WriteWord((ushort)port, val);
 
     private bool ProcessPrefix(int opcode) {
         switch (opcode) {
@@ -2293,7 +2277,6 @@ public class Cpu {
                 break;
             }
         }
-
         State.CX = cx;
     }
 
@@ -2420,12 +2403,5 @@ public class Cpu {
         }
     }
 
-    private void SetCurrentInstructionName(string log) {
-        // Optimization, do not calculate the log if it is not used
-        if (IsLoggingEnabled()) {
-            State.CurrentInstructionName = log;
-        }
-    }
-
-    // SCASW
+    private void SetCurrentInstructionName(string log) => State.CurrentInstructionName = log;
 }

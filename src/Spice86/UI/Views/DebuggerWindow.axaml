@@ -13,9 +13,12 @@
 		<vm:DebuggerViewModel />
 	</Design.DataContext>
 	<ScrollViewer>
-		<Grid>
-			<TextBlock Text="Pause the emulator to see updates here" IsVisible="{Binding !Machine.IsPaused}" />
-			<TabControl>
+		<Grid RowDefinitions="Auto, Auto, *">
+			<StackPanel Orientation="Horizontal" Grid.Row="0">
+				
+			</StackPanel>
+			<TextBlock Grid.Row="1" HorizontalAlignment="Center" Text="Pause the emulator to see updates here" IsVisible="{Binding !Machine.IsPaused}" />
+			<TabControl Grid.Row="2">
 				<TabItem Header="Summary">
 					<WrapPanel>
 						<DockPanel>
