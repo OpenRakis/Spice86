@@ -12,7 +12,6 @@ using System;
 using System.ComponentModel;
 
 public partial class MainWindow : Window {
-
     public MainWindow() {
         InitializeComponent();
         this.Closing += MainWindow_Closing;
@@ -39,7 +38,6 @@ public partial class MainWindow : Window {
     private void MainWindow_DataContextChanged(object? sender, EventArgs e) {
         if (sender is MainWindowViewModel vm) {
             Dispatcher.UIThread.Post(() => vm.SetResolution(320, 200, 1), DispatcherPriority.MaxValue);
-
         }
     }
 
