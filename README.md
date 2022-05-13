@@ -380,7 +380,7 @@ You can pass arguments (max 127 chars!) to the emulated program with the option 
 ### Time
 The emulated Timer hardware of the PC (Intel 8259) supports measuring time from either:
 - The real elapsed time. Speed can be altered with parameter **--timeMultiplier**.
-- The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--instructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mine without the timer triggering.
+- The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--instructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
 
 ### Screen refresh
 Screen is refreshed 30 times per second and each time a VGA retrace wait is detected (see VideoBiosServicesDispatcher::tick3DA).
@@ -441,8 +441,11 @@ or use this where Spice86.csproj is located:
 
 ### Ghidra code generation scripts
 
-This uses Ghidra and Java, and Python. This is a collection of scripts to be used within Ghidra in order to generate C# code for Spice86 overrides.
-Not all scripts are mandatory or useful. Some of them are experiments.
+This uses Ghidra and Java 17.
+
+This is a collection of scripts to be used within Ghidra in order to generate C# code for Spice86 overrides.
+
+Scripts in the ghidraCodeGenerator directory that are not mentionned below are only experiments.
 
 Before using it, define an environnement variable named SPICE86_DUMPS_FOLDER pointing to a folder where the Spice86 dumps are located.
 They are generated on close if the -d CLI option is used.
@@ -465,6 +468,8 @@ General procedure to use them, in order:
 
 
 Remember: if Ghidra displays SUBROUTINES, use the 'f' key to convert them into functions. The code generator only works with functions.
+
+Also, if you have any weird behaviour, make sure you have Java 17 and ONLY Java 17. That's how Ghidra likes it.
 
 ### Some screenshots
 Cryo dune:
