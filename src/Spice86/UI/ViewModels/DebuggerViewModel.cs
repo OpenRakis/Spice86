@@ -12,7 +12,7 @@ using System;
 public partial class DebuggerViewModel : ObservableObject {
     [ObservableProperty]
     private Machine? _machine;
-    private DispatcherTimer? _timer;
+    private readonly DispatcherTimer? _timer;
 
     public DebuggerViewModel() {
         if (Design.IsDesignMode == false) {
@@ -27,9 +27,11 @@ public partial class DebuggerViewModel : ObservableObject {
     }
 
     public void UpdateMachine(object? sender, EventArgs e) {
+        if(_machine is null || !_machine.IsPaused) {
+            return;
+        }
         Machine? machine = _machine;
         Machine = null;
         Machine = machine;
-
     }
 }

@@ -21,6 +21,9 @@ internal sealed class Mt32Player : IDisposable {
         if (configuration.CreateAudioBackend == false) {
             return;
         }
+        if(!OperatingSystem.IsWindows()) {
+            return;
+        }
         audioPlayer = Audio.CreatePlayer(true);
         if (audioPlayer is null) {
             return;

@@ -261,7 +261,7 @@ public class CSharpOverrideHelper {
             message += " Found " + actualTarget.Name + " there.";
             if (actualTarget.FuntionOverride != null) {
                 message += " Calling it.";
-                _logger.Warning(message);
+                _logger.Warning("{Message}", message);
                 actualTarget.FuntionOverride.Invoke(0);
             } else {
                 throw this.FailAsUntested(message);

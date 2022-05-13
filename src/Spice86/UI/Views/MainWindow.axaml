@@ -24,7 +24,7 @@
 					<MenuItem Header="Debug">
 						<MenuItem Header="Color Palette" Command="{Binding ShowColorPaletteCommand}" />
 						<MenuItem Header="Performance" Command="{Binding ShowPerformanceCommand}" />
-						<MenuItem Header="Debugger" Command="{Binding ShowDebuggerCommand}" />
+						<MenuItem Header="Debugger" IsEnabled="{Binding IsPaused}" Command="{Binding ShowDebuggerCommand}" />
 						<MenuItem Header="Dump emulator state to directory..." Command="{Binding DumpEmulatorStateToFileCommand}" />
 					</MenuItem>
 				</Menu>

@@ -13,34 +13,37 @@
 		<vm:DebuggerViewModel />
 	</Design.DataContext>
 	<ScrollViewer>
-		<TabControl>
-			<TabItem Header="Summary">
-				<WrapPanel>
-					<DockPanel>
-						<Label DockPanel.Dock="Top" Content="CPU" />
-						<UniformGrid>
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.CS, StringFormat=CS: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.IP, StringFormat=IP: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.AX, StringFormat=AX: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.BX, StringFormat=BX: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.CX, StringFormat=CX: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DX, StringFormat=DX: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SI, StringFormat=SI: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DI, StringFormat=DI: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.BP, StringFormat=BP: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SP, StringFormat=SP: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SS, StringFormat=SS: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DS, StringFormat=DS: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.ES, StringFormat=ES: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.FS, StringFormat=FS: {0}}" />
-							<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.GS, StringFormat=GS: {0}}" />
-						</UniformGrid>
-					</DockPanel>
-				</WrapPanel>
-			</TabItem>
-			<TabItem Header="Memory">
-				<Label>WIP...</Label>
-			</TabItem>
-		</TabControl>
+		<Grid>
+			<TextBlock Text="Pause the emulator to see updates here" IsVisible="{Binding !Machine.IsPaused}" />
+			<TabControl>
+				<TabItem Header="Summary">
+					<WrapPanel>
+						<DockPanel>
+							<Label DockPanel.Dock="Top" Content="CPU" />
+							<UniformGrid>
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.CS, StringFormat=CS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.IP, StringFormat=IP: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.AX, StringFormat=AX: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.BX, StringFormat=BX: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.CX, StringFormat=CX: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DX, StringFormat=DX: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SI, StringFormat=SI: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DI, StringFormat=DI: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.BP, StringFormat=BP: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SP, StringFormat=SP: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SS, StringFormat=SS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DS, StringFormat=DS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.ES, StringFormat=ES: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.FS, StringFormat=FS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.GS, StringFormat=GS: {0:X}}" />
+							</UniformGrid>
+						</DockPanel>
+					</WrapPanel>
+				</TabItem>
+				<TabItem Header="Memory">
+					<Label>WIP...</Label>
+				</TabItem>
+			</TabControl>
+		</Grid>
 	</ScrollViewer>
 </Window>

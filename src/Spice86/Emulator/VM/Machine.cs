@@ -223,14 +223,18 @@ public class Machine : IDisposable {
         functionHandler.Ret(CallType.MACHINE);
     }
 
+    public bool IsPaused { get; private set; }
+
     private void RunLoop() {
         while (Cpu.IsRunning) {
             if (Gui?.IsPaused == true) {
+                IsPaused = true;
                 Paused?.Invoke();
                 if (_programExecutor.Step() == false) {
                     Gui?.WaitOne();
                 }
                 Resumed?.Invoke();
+                IsPaused = false;
             }
             if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
@@ -271,6 +275,7 @@ public class Machine : IDisposable {
         if (!disposedValue) {
             if (disposing) {
                 SoundBlaster.Dispose();
+                OPL3FM.Dispose();
             }
             disposedValue = true;
         }

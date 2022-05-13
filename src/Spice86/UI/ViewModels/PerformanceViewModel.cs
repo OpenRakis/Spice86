@@ -9,8 +9,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Emulator.VM;
 
 public partial class PerformanceViewModel : ObservableObject {
-    private DispatcherTimer? _timer;
-    private Machine? _machine;
+    private readonly DispatcherTimer? _timer;
+    private readonly Machine? _machine;
 
     public PerformanceViewModel() {
         if (Design.IsDesignMode == false) {
