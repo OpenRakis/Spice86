@@ -8,6 +8,5 @@
 	<Application.Styles>
 		<FluentTheme Mode="Light" />
 		<FluentTheme Mode="Dark" />
-		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 	</Application.Styles>
 </Application>
