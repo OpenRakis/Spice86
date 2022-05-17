@@ -51,11 +51,11 @@ public class Spice86OrphanedInstructionsScanner extends GhidraScript {
         }
       }
     }
-    println("Found " + orphans.size() + " orphaned instructions:");
     for(Instruction instruction:orphans) {
       long address = instruction.getAddress().getUnsignedOffset();
       println(Utils.toHexWith0X(address));
     }
+    println("Found " + orphans.size() + " orphaned instructions:");
   }
 
   Instruction getInstructionAt(Long address) {

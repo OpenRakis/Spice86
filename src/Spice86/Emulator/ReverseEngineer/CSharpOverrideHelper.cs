@@ -82,6 +82,7 @@ public class CSharpOverrideHelper {
 
     protected JumpDispatcher JumpDispatcher { get; }
 
+    protected bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine) {
         this._functionInformations = functionInformations;
@@ -96,8 +97,11 @@ public class CSharpOverrideHelper {
         _functionInformations.Add(address, functionInformation);
     }
 
-    public void DefineFunction(ushort segment, ushort offset, Func<int, Action> overrideFunc,
-        bool failOnExisting = true, string? name = null) {
+    public void DefineFunction(ushort segment,
+        ushort offset,
+        Func<int, Action> overrideFunc,
+        bool failOnExisting = true,
+        string? name = null) {
         SegmentedAddress address = new(segment, offset);
         FunctionInformation? existing = GetFunctionAtAddress(failOnExisting, address);
         if (existing != null && existing.HasOverride) {
@@ -113,7 +117,7 @@ public class CSharpOverrideHelper {
             FunctionInformation? parsedFunctionInformation = GhidraSymbolsDumper.NameToFunctionInformation(methodName);
             if (parsedFunctionInformation == null) {
                 throw new UnrecoverableException("Cannot parse " + methodName +
-                                                 " into a spice86 function name as format is not correct.");
+                    " into a spice86 function name as format is not correct.");
             }
 
             functionName = parsedFunctionInformation.Name;
@@ -275,7 +279,7 @@ public class CSharpOverrideHelper {
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
-            _ => renamedOverride.Invoke()
+            _ => renamedOverride.Invoke().Invoke()
             , false);
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
@@ -294,7 +298,9 @@ public class CSharpOverrideHelper {
         }
     }
 
-    protected void CheckVtableContainsExpected(int segmentRegisterIndex, ushort offset, ushort expectedSegment,
+    protected void CheckVtableContainsExpected(int segmentRegisterIndex,
+        ushort offset,
+        ushort expectedSegment,
         ushort expectedOffset) {
         uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.GetRegister(segmentRegisterIndex), offset);
         ushort foundOffset = Memory.GetUint16(address);
@@ -310,8 +316,15 @@ public class CSharpOverrideHelper {
             // For closure
             uint addressCopy = address;
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, address, _ => {
-                Machine.Cpu.ExecutionFlowRecorder.RegisterExecutableCodeModification(
-                    new SegmentedAddress(State.CS, State.IP), addressCopy);
+                if (!IsRegisterExecutableCodeModificationEnabled) {
+                    return;
+                }
+                byte oldValue = Memory.UInt8[addressCopy];
+                byte newValue = Memory.CurrentlyWritingByte;
+                if (oldValue != newValue) {
+                    Machine.Cpu.ExecutionFlowRecorder.RegisterExecutableCodeModification(
+                        new SegmentedAddress(State.CS, State.IP), addressCopy, oldValue, newValue);
+                }
             }, false);
             Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
         }

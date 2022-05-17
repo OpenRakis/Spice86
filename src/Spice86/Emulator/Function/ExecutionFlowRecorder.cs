@@ -12,14 +12,16 @@ public class ExecutionFlowRecorder {
     private readonly ISet<ulong> _jumpsEncountered = new HashSet<ulong>();
     public IDictionary<uint, ISet<SegmentedAddress>> RetsFromTo { get; }
     private readonly ISet<ulong> _retsEncountered = new HashSet<ulong>();
-    public IDictionary<uint, ISet<SegmentedAddress>> ExecutableAddressWrittenBy { get; }
+    
+    // modified byte address -> dictionary of modifying instructions with for each instruction a set of the possible changes the instruction did
+    public IDictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>> ExecutableAddressWrittenBy { get; }
 
     public ExecutionFlowRecorder() {
         RecordData = false;
         CallsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         JumpsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         RetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
-        ExecutableAddressWrittenBy = new Dictionary<uint, ISet<SegmentedAddress>>();
+        ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>>();
     }
 
     public void RegisterCall(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
@@ -34,17 +36,22 @@ public class ExecutionFlowRecorder {
         RegisterAddressJump(RetsFromTo, _retsEncountered, fromCS, fromIP, toCS, toIP);
     }
 
-    public void RegisterExecutableCodeModification(SegmentedAddress instructionAddress, uint modifiedAddress) {
-        if (instructionAddress.ToPhysical() == 0) {
+    public void RegisterExecutableCodeModification(SegmentedAddress instructionAddress, uint modifiedAddress, byte oldValue, byte newValue) {
+        uint instructionAddressPhysical = instructionAddress.ToPhysical();
+        if (instructionAddressPhysical == 0) {
             // Probably Exe load
             return;
         }
         if (!ExecutableAddressWrittenBy.TryGetValue(modifiedAddress,
-                out ISet<SegmentedAddress>? instructionsChangingThisAddress)) {
-            instructionsChangingThisAddress = new HashSet<SegmentedAddress>();
+                out IDictionary<uint, ISet<ByteModificationRecord>>? instructionsChangingThisAddress)) {
+            instructionsChangingThisAddress = new Dictionary<uint, ISet<ByteModificationRecord>>();
             ExecutableAddressWrittenBy[modifiedAddress] = instructionsChangingThisAddress;
         }
-        instructionsChangingThisAddress.Add(instructionAddress);
+        if (!instructionsChangingThisAddress.TryGetValue(instructionAddressPhysical, out ISet<ByteModificationRecord>? byteModificationRecords)) {
+            byteModificationRecords = new HashSet<ByteModificationRecord>();
+            instructionsChangingThisAddress[instructionAddressPhysical] = byteModificationRecords;
+        }
+        byteModificationRecords.Add(new ByteModificationRecord(oldValue, newValue));
     }
 
     private void RegisterAddressJump(IDictionary<uint, ISet<SegmentedAddress>> FromTo, ISet<ulong> encountered, ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {

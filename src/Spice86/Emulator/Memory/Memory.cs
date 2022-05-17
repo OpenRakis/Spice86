@@ -19,6 +19,9 @@ public class Memory {
     private readonly UInt16Indexer _uInt16Indexer;
     private readonly UInt8Indexer _uint8Indexer;
 
+    // For breakpoints to access what is getting written
+    public byte CurrentlyWritingByte { get; private set; } = 0;
+
     public Memory(uint size) {
         _physicalMemory = new byte[size];
         _uInt16Indexer = new(this);
@@ -143,23 +146,35 @@ public class Memory {
     }
 
     public void SetUint16(uint address, ushort value) {
-        MonitorWriteAccess(address);
-        MonitorWriteAccess(address + 1);
+        byte value0 = (byte)value;
+        MonitorWriteAccess(address, value0);
+        _physicalMemory[address] = value0;
 
-        MemoryUtils.SetUint16(_physicalMemory, address, value);
+        byte value1 = (byte)(value >> 8);
+        MonitorWriteAccess(address + 1, value1);
+        _physicalMemory[address + 1] = value1;
     }
 
     public void SetUint32(uint address, uint value) {
-        MonitorWriteAccess(address);
-        MonitorWriteAccess(address + 1);
-        MonitorWriteAccess(address + 2);
-        MonitorWriteAccess(address + 3);
+        byte value0 = (byte)value;
+        MonitorWriteAccess(address, value0);
+        _physicalMemory[address] = value0;
 
-        MemoryUtils.SetUint32(_physicalMemory, address, value);
+        byte value1 = (byte)(value >> 8);
+        MonitorWriteAccess(address + 1, value1);
+        _physicalMemory[address + 1] = value1;
+
+        byte value2 = (byte)(value >> 16);
+        MonitorWriteAccess(address + 2, value2);
+        _physicalMemory[address + 2] = value2;
+
+        byte value3 = (byte)(value >> 24);
+        MonitorWriteAccess(address + 3, value3);
+        _physicalMemory[address + 3] = value3;
     }
 
     public void SetUint8(uint address, byte value) {
-        MonitorWriteAccess(address);
+        MonitorWriteAccess(address, value);
         MemoryUtils.SetUint8(_physicalMemory, address, value);
     }
 
@@ -193,7 +208,8 @@ public class Memory {
         _readBreakPoints.TriggerMatchingBreakPoints(address);
     }
 
-    private void MonitorWriteAccess(uint address) {
+    private void MonitorWriteAccess(uint address, byte value) {
+        CurrentlyWritingByte = value;
         _writeBreakPoints.TriggerMatchingBreakPoints(address);
     }
 }
