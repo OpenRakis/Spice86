@@ -15,6 +15,8 @@ public class PauseHandler {
 
     private volatile bool _pauseRequested;
 
+    private readonly object _locked = new();
+
     public void RequestPause() {
         _pauseRequested = true;
         LogStatus($"{nameof(RequestPause)} finished");
@@ -33,7 +35,7 @@ public class PauseHandler {
     public void RequestResume() {
         LogStatus($"{nameof(RequestResume)} started");
         _pauseRequested = false;
-        lock (this) {
+        lock (_locked) {
             Monitor.PulseAll(this);
         }
 
@@ -54,7 +56,7 @@ public class PauseHandler {
 
     private void Await() {
         try {
-            lock (this) {
+            lock (_locked) {
                 Monitor.Wait(this);
             }
         } catch (ThreadInterruptedException exception) {
