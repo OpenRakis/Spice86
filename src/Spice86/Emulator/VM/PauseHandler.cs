@@ -15,8 +15,6 @@ public class PauseHandler : IDisposable {
 
     private volatile bool _pauseRequested;
     private bool disposedValue;
-    private readonly object _locked = new();
-
     private readonly ManualResetEvent _manualResetEvent = new(true);
 
     public void RequestPause() {
@@ -34,11 +32,7 @@ public class PauseHandler : IDisposable {
     public void RequestResume() {
         LogStatus($"{nameof(RequestResume)} started");
         _pauseRequested = false;
-        lock (_locked) {
-            _manualResetEvent.Set();
-            Monitor.PulseAll(this);
-        }
-
+        _manualResetEvent.Set();
         LogStatus($"{nameof(RequestResume)} finished");
     }
 
@@ -56,10 +50,8 @@ public class PauseHandler : IDisposable {
 
     private void Await() {
         try {
-            lock (_locked) {
-                Monitor.Wait(this);
-            }
-        } catch (ThreadInterruptedException exception) {
+            _manualResetEvent.WaitOne(TimeSpan.FromMilliseconds(1));
+        } catch (AbandonedMutexException exception) {
             Thread.CurrentThread.Interrupt();
             throw new UnrecoverableException($"Fatal error while waiting paused in {nameof(Await)}", exception);
         }
