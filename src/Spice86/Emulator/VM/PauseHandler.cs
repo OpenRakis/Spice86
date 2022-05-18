@@ -17,6 +17,8 @@ public class PauseHandler {
 
     private readonly object _locked = new();
 
+    private readonly ManualResetEvent _manualResetEvent = new(true);
+
     public void RequestPause() {
         _pauseRequested = true;
         LogStatus($"{nameof(RequestPause)} finished");
@@ -25,10 +27,7 @@ public class PauseHandler {
     public void RequestPauseAndWait() {
         LogStatus($"{nameof(RequestPauseAndWait)} started");
         _pauseRequested = true;
-        while (!_paused) {
-            ;
-        }
-
+        _manualResetEvent.WaitOne(Timeout.Infinite);
         LogStatus($"{nameof(RequestPauseAndWait)} finished");
     }
 
@@ -36,6 +35,7 @@ public class PauseHandler {
         LogStatus($"{nameof(RequestResume)} started");
         _pauseRequested = false;
         lock (_locked) {
+            _manualResetEvent.Set();
             Monitor.PulseAll(this);
         }
 
