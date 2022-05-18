@@ -15,6 +15,7 @@ import ghidra.program.model.mem.MemoryAccessException;
 import ghidra.program.model.symbol.Symbol;
 import ghidra.program.model.symbol.SymbolType;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.io.Closeable;
 import java.io.FileReader;
@@ -25,6 +26,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,17 +51,14 @@ public class Spice86CodeGenerator extends GhidraScript {
     String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");
     //Places where we need to generate calls to emulated timer
     //This list needs to be extended (not a lot: init, game loop)
-    Set<SegmentedAddress> externalEventCheckPoints = new HashSet<>(Arrays.asList(
-        new SegmentedAddress(0x1000, 0x3),
-        new SegmentedAddress(0x1000, 0xE86E)));
+    Set<SegmentedAddress> externalEventCheckPoints =
+        new HashSet<>(Arrays.asList(new SegmentedAddress(0x1000, 0x3), new SegmentedAddress(0x1000, 0xE86E)));
     run(baseFolder + "spice86dumpExecutionFlow.json", baseFolder + "ghidrascriptout.txt",
-        baseFolder + "GeneratedCode.cs",
-        "Cryogenic.Overrides", externalEventCheckPoints);
+        baseFolder + "GeneratedCode.cs", "Cryogenic.Overrides", externalEventCheckPoints);
   }
 
   private void run(String executionFlowFile, String logFile, String generatedCodeFile, String namespace,
-      Set<SegmentedAddress> externalEventCheckPoints)
-      throws Exception {
+      Set<SegmentedAddress> externalEventCheckPoints) throws Exception {
     ExecutionFlow executionFlow = readExecutionFlowFromFile(executionFlowFile);
     try (Log log = new Log(this, logFile, false)) {
       Program program = getCurrentProgram();
@@ -70,7 +69,8 @@ public class Spice86CodeGenerator extends GhidraScript {
           .filter(Objects::nonNull)
           .sorted(Comparator.comparingInt(f -> f.getEntrySegmentedAddress().toPhysical()))
           .toList();
-      ParsedProgram parsedProgram = ParsedProgram.createParsedProgram(log, parsedFunctions, executionFlow, externalEventCheckPoints);
+      ParsedProgram parsedProgram =
+          ParsedProgram.createParsedProgram(log, parsedFunctions, executionFlow, externalEventCheckPoints);
       log.info("Finished parsing.");
       generateProgram(log, parsedProgram, generatedCodeFile, namespace);
     }
@@ -115,7 +115,7 @@ class ProgramGenerator {
   private final ParsedProgram parsedProgram;
   private final String namespace;
   // too many lines in one file makes C# IDEs very slow
-  private static final int MAXIMUM_CHARACTERS_PER_CSHARP_FILE = 160000;
+  private static final int MAXIMUM_CHARACTERS_PER_CSHARP_FILE = 160000 * 1000;
 
   public ProgramGenerator(Log log, GhidraScript ghidraScript, ParsedProgram parsedProgram, String namespace) {
     this.log = log;
@@ -130,9 +130,9 @@ class ProgramGenerator {
     fileContent.append("/*");
     fileContent.append(Utils.indent(generateSegmentStorage(), 2));
     fileContent.append("\n");
-    Collection<ParsedFunction> parsedFunctions = parsedProgram.getEntryPoints().values();
-    fileContent.append(Utils.indent(generateConstructor(parsedFunctions), 2));
+    fileContent.append(Utils.indent(generateConstructor(), 2));
     fileContent.append("*/\n");
+    Collection<ParsedFunction> parsedFunctions = parsedProgram.getEntryPoints().values();
     fileContent.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2) + "\n");
     fileContent.append(Utils.indent(generateCodeRewriteDetector(), 2));
     fileContent.append('\n');
@@ -172,16 +172,16 @@ class ProgramGenerator {
     return "namespace " + namespace + ";\n\n";
   }
 
-  private String generateConstructor(Collection<ParsedFunction> functions) {
-    StringBuilder res = new StringBuilder(
+  private String generateConstructor() {
+    String res =
         "public Overrides(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ushort entrySegment = "
-            + Utils.toHexWith0X(parsedProgram.getCs1Physical() / 0x10) + ") : base(functionInformations, machine) {\n");
-    res.append(Utils.indent(generateSegmentConstructorAssignment(), 2));
-    res.append('\n');
-    res.append("  DefineGeneratedCodeOverrides();\n");
-    res.append("  DetectCodeRewrites();\n");
-    res.append("}\n\n");
-    return res.toString();
+            + Utils.toHexWith0X(parsedProgram.getCs1Physical() / 0x10) + ") : base(functionInformations, machine) {\n";
+    res += Utils.indent(generateSegmentConstructorAssignment(), 2);
+    res += '\n';
+    res += "  DefineGeneratedCodeOverrides();\n";
+    res += "  DetectCodeRewrites();\n";
+    res += "}\n\n";
+    return res;
   }
 
   private String generateOverrideDefinitionFunction(Collection<ParsedFunction> functions) {
@@ -198,8 +198,7 @@ class ProgramGenerator {
       }
       res.append(
           "  DefineFunction(" + parsedProgram.getCodeSegmentVariables().get(currentSegment) + ", " + Utils.toHexWith0X(
-              address.getOffset())
-              + ", " + name + ", false);");
+              address.getOffset()) + ", " + name + ", false);");
       res.append('\n');
     }
     res.append("}\n\n");
@@ -208,11 +207,9 @@ class ProgramGenerator {
 
   private String generateSegmentConstructorAssignment() {
     return "// Observed cs1 address at generation time is " + Utils.toHexWith0X(parsedProgram.getCs1Physical() / 0x10)
-        + ". Do not set entrySegment to something else if the program is not relocatable.\n"
-        + generateSegmentVars(
+        + ". Do not set entrySegment to something else if the program is not relocatable.\n" + generateSegmentVars(
         e -> "this." + e.getValue() + " = (ushort)(entrySegment + " + Utils.toHexWith0X(
-            e.getKey() - parsedProgram.getCs1Physical() / 0x10)
-            + ");\n");
+            e.getKey() - parsedProgram.getCs1Physical() / 0x10) + ");\n");
   }
 
   private String generateSegmentStorage() {
@@ -223,7 +220,7 @@ class ProgramGenerator {
     return parsedProgram.getCodeSegmentVariables()
         .entrySet()
         .stream()
-        .sorted(Comparator.comparing(e -> e.getValue()))
+        .sorted(Comparator.comparing(Map.Entry::getValue))
         .map(mapper)
         .collect(Collectors.joining(""));
   }
@@ -240,8 +237,7 @@ class ProgramGenerator {
   }
 
   private String generateCodeRewriteDetector() {
-    StringBuilder res = new StringBuilder(
-        "public void DetectCodeRewrites() {\n");
+    StringBuilder res = new StringBuilder("public void DetectCodeRewrites() {\n");
     List<Integer> codeAddresses = parsedProgram.getInstructionAddresses().stream().sorted().toList();
     if (!codeAddresses.isEmpty()) {
       int rangeStart = codeAddresses.get(0);
@@ -370,10 +366,10 @@ class FunctionGenerator {
   }
 
   private String getJumpSourceAddressesToString(SegmentedAddress target) {
-    String jumpSourceAddresses = CollectionUtils.emptyIfNull(parsedProgram.getJumpTargetOrigins(target))
+    return CollectionUtils.emptyIfNull(parsedProgram.getJumpTargetOrigins(target))
         .stream()
-        .map(Utils::toHexWith0X).collect(Collectors.joining(", "));
-    return jumpSourceAddresses;
+        .map(Utils::toHexWith0X)
+        .collect(Collectors.joining(", "));
   }
 
   private void writeInstructions(StringBuilder stringBuilder, List<ParsedInstruction> instructions, int indent,
@@ -469,6 +465,28 @@ class ParameterTranslator {
     return null;
   }
 
+  public String toSpice86ValueFromModifiedParameter(String currentValue, int parameterValue, int parameterOffset,
+      Integer bits, int offset) {
+    String staticValueTranslated = toSpice86Value(currentValue, bits, offset);
+    String staticLiteral = Utils.toHexWith0X(parameterValue);
+    if (!staticValueTranslated.contains(staticLiteral)) {
+      log.error(
+          "This is weird, expected parameter to contain " + staticLiteral + " but value is " + staticValueTranslated);
+    }
+    String replacement = toInstructionParameterPointer(parameterOffset, bits);
+    return staticValueTranslated.replace(staticLiteral, replacement);
+  }
+
+  public String toInstructionParameterPointer(int parameterOffset, Integer bits) {
+    int offset = parsedInstruction.getInstructionSegmentedAddress().getOffset() + parameterOffset;
+    String offsetExpression = "CS:" + Utils.toHexWith0X(offset);
+    log.info(
+        "Instruction at address " + Utils.toHexSegmentOffsetPhysical(parsedInstruction.getInstructionSegmentedAddress())
+            + " is modified by the program at runtime. Read value from memory at " + offsetExpression
+            + " rather than taking the direct value");
+    return toSpice86Value(offsetExpression, bits);
+  }
+
   public String toSpice86Value(String param, Integer bits) {
     return toSpice86Value(param, bits, 0);
   }
@@ -483,7 +501,7 @@ class ParameterTranslator {
     }
   }
 
-  public String getSegmentRegister(String expression) {
+  private String getSegmentRegister(String expression) {
     String[] split = expression.split(":");
     if (split.length == 2) {
       return split[0];
@@ -511,9 +529,22 @@ class ParameterTranslator {
     return "DS";
   }
 
-  private String toSpice86Pointer(String segmentRegister, String offsetString, int bits, int offset) {
+  public String toSpice86Pointer(String segmentRegister, String offsetString, int bits, int offset) {
     String offsetExpression = toOffsetExpression(offsetString, offset);
     return toSpice86Pointer(registerHandler.substituteRegister(segmentRegister), offsetExpression, bits);
+  }
+
+  public String toCsIpPointerValueInMemoryFromModifiedParameter(String expression, int parameterValue,
+      int parameterOffset) {
+    String ip = toSpice86ValueFromModifiedParameter(expression, parameterValue, parameterOffset, 16, 0);
+    String cs = toSpice86ValueFromModifiedParameter(expression, parameterValue, parameterOffset, 16, 2);
+    return toPhysicalAddress(cs, ip);
+  }
+
+  public String toIpPointerValueInMemoryFromModifiedParameter(String expression, int parameterValue,
+      int parameterOffset) {
+    String ip = toSpice86ValueFromModifiedParameter(expression, parameterValue, parameterOffset, 16, 0);
+    return toPhysicalAddress("CS", ip);
   }
 
   public String toCsIpPointerValueInMemory(String expression) {
@@ -527,7 +558,7 @@ class ParameterTranslator {
     return toPhysicalAddress("CS", ip);
   }
 
-  private String toPhysicalAddress(String segmentExpression, String offsetExpression) {
+  public String toPhysicalAddress(String segmentExpression, String offsetExpression) {
     String segmentVariable = segmentExpression;
     if ("CS".equals(segmentExpression)) {
       segmentVariable = codeSegmentVariables.get(parsedInstruction.getInstructionSegmentedAddress().getSegment());
@@ -555,7 +586,7 @@ class ParameterTranslator {
       int value = Utils.uint16(Utils.int16(Utils.parseHex(expression)));
       return Utils.toHexWith0X(value);
     }
-    return castToUInt16("(short)((sbyte)" + expression + ")");
+    return castToUInt16(castToInt16("(sbyte)" + expression));
   }
 
   public String castToUInt16(String expression) {
@@ -565,6 +596,10 @@ class ParameterTranslator {
       return "(ushort)(" + expression + ")";
     }
     return expression;
+  }
+
+  public String castToInt16(String expression) {
+    return "(short)(" + expression + ")";
   }
 
   public boolean isDirectValue(String expression) {
@@ -579,16 +614,13 @@ class ParameterTranslator {
     return false;
   }
 
-  public String toSpice86Pointer(String segment, String offset, int bits) {
+  private String toSpice86Pointer(String segment, String offset, int bits) {
     return "UInt" + bits + "[" + segment + ", " + offset + "]";
   }
 
-  public String pointerExpressionToOffset(String pointerString) {
-    String res = Utils.litteralToUpperHex(pointerString
-        .replaceAll("\\[", "")
-        .replaceAll("]", "")
-        .replaceAll(" \\+ 0x0", "")
-        .replaceAll(" \\+ -", " - "));
+  private String pointerExpressionToOffset(String pointerString) {
+    String res = Utils.litteralToUpperHex(
+        pointerString.replaceAll("\\[", "").replaceAll("]", "").replaceAll(" \\+ 0x0", "").replaceAll(" \\+ -", " - "));
     return registerHandler.substituteRegistersWithSpice86Expression(res);
   }
 
@@ -719,6 +751,9 @@ class InstructionGenerator {
   private boolean isFunctionReturn;
   private boolean isGoto;
 
+  private SelfModifyingCodeHandlingStatusImpl selfModifyingCodeHandlingStatus =
+      new SelfModifyingCodeHandlingStatusImpl();
+
   public JumpCallTranslator getJumpCallTranslator() {
     return jumpCallTranslator;
   }
@@ -759,18 +794,18 @@ class InstructionGenerator {
     String instructionString =
         convertInstructionWithPrefix(parsedInstruction.getMnemonic(), parsedInstruction.getPrefix(),
             parsedInstruction.getParameters());
-    isFunctionReturn =
-        isUnconditionalReturn(instructionString);
-    isGoto =
-        instructionString.contains("goto ") && !(instructionString.contains("if(") || instructionString.contains(
-            "switch("));
+    instructionString = generateModifiedInstructionWarning() + instructionString;
+    isFunctionReturn = isUnconditionalReturn(instructionString);
+    isGoto = instructionString.contains("goto ") && !(instructionString.contains("if(") || instructionString.contains(
+        "switch("));
     if (parsedProgram.getExternalEventCheckPoints().contains(parsedInstruction.getInstructionSegmentedAddress())) {
       int segment = this.parsedInstruction.getInstructionSegmentedAddress().getSegment();
       int offset = this.parsedInstruction.getInstructionSegmentedAddress().getOffset()
           + this.parsedInstruction.getInstructionLength();
 
-
-      instructionString = "CheckExternalEvents(" + parsedProgram.getCodeSegmentVariables().get(segment) + ", " + Utils.toHexWith0X(offset)  + ");\n" + instructionString;
+      instructionString =
+          "CheckExternalEvents(" + parsedProgram.getCodeSegmentVariables().get(segment) + ", " + Utils.toHexWith0X(
+              offset) + ");\n" + instructionString;
     }
     if (generateLabel) {
       return label + instructionString;
@@ -861,6 +896,10 @@ class InstructionGenerator {
   private String signExtendParameter2IfNeeded(String[] parameters) {
     Integer bitsParameter1 = parsedInstruction.getParameter1BitLength();
     Integer bitsParameter2 = parsedInstruction.getParameter2BitLength();
+    if (bitsParameter2 == null) {
+      // No parameter 2 encoded in instruction
+      bitsParameter2 = bitsParameter1;
+    }
     String operand = parameterTranslator.toSpice86Value(parameters[1], bitsParameter2);
     if (bitsParameter1 != bitsParameter2) {
       log.info("Sign extending parameter 2");
@@ -972,8 +1011,7 @@ class InstructionGenerator {
     String value1 = parameterTranslator.toSpice86Value(parameters[1], 16, 0);
     String value2 = parameterTranslator.toSpice86Value(parameters[1], 16, 2);
     // Generate destination2 first as it is a segmentRegister and it will not be used in value1 computation
-    return destinationSegmentRegister + " = " + value2 + ";\n"
-        + destinationRegister + " = " + value1 + ";";
+    return destinationSegmentRegister + " = " + value2 + ";\n" + destinationRegister + " = " + value1 + ";";
   }
 
   private String generateLoop(String condition, String param) {
@@ -1021,7 +1059,7 @@ class InstructionGenerator {
   }
 
   private String generateLea(String[] parameters) {
-    String offset = parameterTranslator.castToUInt16(parameterTranslator.pointerExpressionToOffset(parameters[1]));
+    String offset = parameterTranslator.toOffsetExpression(parameters[1], 0);
     String destination = parameterTranslator.toSpice86Value(parameters[0], 16);
     return destination + " = " + offset + ";";
   }
@@ -1038,54 +1076,69 @@ class InstructionGenerator {
       log.error("Unimplemented instruction " + instuctionAsm);
       instruction = InstructionGenerator.generateFailAsUntested("Unimplemented Instruction!", true);
     }
-    instruction = generateModifiedInstructionWarning() + instruction;
     String address = parsedInstruction.getInstructionSegmentedAddress().toString();
     return "// " + instuctionAsm + " (" + address + ")\n" + instruction;
   }
 
   private String generateModifiedInstructionWarning() {
     // Writes a comment in case of autogenerated code with the instruction bytes that were modified and the addresses of the instructions that did the change
-    StringBuilder res = new StringBuilder();
     int instructionAddress = parsedInstruction.getInstructionSegmentedAddress().toPhysical();
-    Map<Set<SegmentedAddress>, List<Integer>> modifiersForInstruction = new HashMap<>();
+    Map<Set<Integer>, List<Integer>> modifiersForInstruction = new HashMap<>();
     for (int i = 0; i < parsedInstruction.getInstructionLength(); i++) {
       int address = instructionAddress + i;
-      Set<SegmentedAddress> modifiedBy = parsedProgram.getAddressesModifyingExecutableAddress(address);
-      if (modifiedBy == null) {
+      Set<Integer> modifiedBy = parsedProgram.getAddressesModifyingExecutableAddress(address);
+      if (CollectionUtils.isEmpty(modifiedBy)) {
         continue;
       }
       List<Integer> modifiedAddresses = modifiersForInstruction.computeIfAbsent(modifiedBy, v -> new ArrayList<>());
       modifiedAddresses.add(i);
     }
-    for (Map.Entry<Set<SegmentedAddress>, List<Integer>> entry : modifiersForInstruction.entrySet()) {
-      Set<SegmentedAddress> instructionsAddresses = entry.getKey();
+    List<String> res = new ArrayList<>();
+    for (Map.Entry<Set<Integer>, List<Integer>> entry : modifiersForInstruction.entrySet()) {
+      Set<Integer> instructionsAddresses = entry.getKey();
       List<Integer> indexes = entry.getValue();
-      res.append("// Instruction bytes at index ");
-      res.append(indexes.stream().map(i -> Integer.toString(i)).collect(Collectors.joining(", ")));
-      res.append(" modified by those instruction(s): ");
-      res.append(
-          instructionsAddresses.stream().map(Utils::toHexSegmentOffsetPhysical).collect(Collectors.joining(", ")));
-      res.append('\n');
+      String indexesString = indexes.stream().map(i -> Integer.toString(i)).collect(Collectors.joining(", "));
+      String instructionsAddressesString =
+          instructionsAddresses.stream().map(Utils::toHexWithout0X).collect(Collectors.joining(", "));
+      res.add("// Instruction bytes at index " + indexesString + " modified by those instruction(s): "
+          + instructionsAddressesString);
     }
-    return res.toString();
+    if (this.selfModifyingCodeHandlingStatus.isAnyHandled()) {
+      res.add("// Instruction is modified by code, generator handled: "
+          + selfModifyingCodeHandlingStatus.generateHandledItems());
+    }
+    if (!this.selfModifyingCodeHandlingStatus.isAllHandled(parsedInstruction)) {
+      String requiredInstruction = parsedInstruction.generateHandledItems();
+      String handledParser = selfModifyingCodeHandlingStatus.generateHandledItems();
+      String possibleOpCodes = parsedInstruction.getPossibleOpCodes().stream().map(Utils::toHexWithout0X).collect(
+          Collectors.joining(", "));
+      log.error("Unhandled instruction modification at address " + Utils.toHexSegmentOffsetPhysical(
+          parsedInstruction.getInstructionSegmentedAddress()) + ". Here is what was handled by the generator "
+          + selfModifyingCodeHandlingStatus + ". Parser handled: " + handledParser + ". Instruction needed: "
+          + requiredInstruction);
+      res.add(generateFailAsUntested(
+          "Instruction is modified by code but this is at least partially unhandled. Parser handled: " + handledParser
+              + ". Instruction needed: " + requiredInstruction + ". Possible opcodes: " + possibleOpCodes
+              + ". Opcode offset:" + parsedInstruction.getOpCodeOffset(), true));
+    }
+    return String.join("\n", res) + '\n';
   }
 
   private String generateMov(String[] params, Integer bits) {
     String dest = parameterTranslator.toSpice86Value(params[0], bits);
     String source = parameterTranslator.toSpice86Value(params[1], bits);
+    if (parsedInstruction.isParameter1Modified()) {
+      source = parameterTranslator.toSpice86ValueFromModifiedParameter(params[1], parsedInstruction.getParameter1(),
+          parsedInstruction.getParameter1Offset(), bits, 0);
+      this.selfModifyingCodeHandlingStatus.setParameter1Modified(true);
+    }
     return dest + " = " + source + ";";
   }
 
   private String generatePushA() {
     String spTempVar = parameterTranslator.generateTempVar("sp");
-    return "ushort " + spTempVar + " = SP;\n"
-        + "Stack.Push(AX);\n"
-        + "Stack.Push(CX);\n"
-        + "Stack.Push(DX);\n"
-        + "Stack.Push(BX);\n"
-        + "Stack.Push(" + spTempVar + ");\n"
-        + "Stack.Push(BP);\n"
-        + "Stack.Push(SI);\n"
+    return "ushort " + spTempVar + " = SP;\n" + "Stack.Push(AX);\n" + "Stack.Push(CX);\n" + "Stack.Push(DX);\n"
+        + "Stack.Push(BX);\n" + "Stack.Push(" + spTempVar + ");\n" + "Stack.Push(BP);\n" + "Stack.Push(SI);\n"
         + "Stack.Push(DI);";
   }
 
@@ -1093,8 +1146,7 @@ class InstructionGenerator {
     String tempVarName = parameterTranslator.generateTempVar();
     String var1 = parameterTranslator.toSpice86Value(params[0], bits);
     String var2 = parameterTranslator.toSpice86Value(params[1], bits);
-    String res =
-        Utils.getType(bits) + " " + tempVarName + " = " + var1 + ";\n";
+    String res = Utils.getType(bits) + " " + tempVarName + " = " + var1 + ";\n";
     res += "" + var1 + " = " + var2 + ";\n";
     res += "" + var2 + " = " + tempVarName + ";";
     return res;
@@ -1128,6 +1180,12 @@ class InstructionGenerator {
       pops = params[0];
     }
     return "return FarRet(" + pops + ");";
+  }
+
+  private String generateConditionalJump(String condition, String[] params, boolean far) {
+    String res = jumpCallTranslator.generateJump(condition, params[0], far);
+    this.selfModifyingCodeHandlingStatus = jumpCallTranslator.getSelfModifyingCodeHandlingStatus();
+    return res;
   }
 
   private String convertInstructionWithoutPrefixAndComment(String mnemonic, String[] params) {
@@ -1165,25 +1223,25 @@ class InstructionGenerator {
       case "INT" -> generateInterrupt(params[0]);
       case "INT3" -> generateInterrupt("3");
       case "IRET" -> "return InterruptRet();";
-      case "JA" -> jumpCallTranslator.generateJump("A", params[0], false);
-      case "JBE" -> jumpCallTranslator.generateJump("BE", params[0], false);
-      case "JC" -> jumpCallTranslator.generateJump("C", params[0], false);
-      case "JCXZ" -> jumpCallTranslator.generateJump("CXZ", params[0], false);
-      case "JG" -> jumpCallTranslator.generateJump("G", params[0], false);
-      case "JGE" -> jumpCallTranslator.generateJump("GE", params[0], false);
-      case "JL" -> jumpCallTranslator.generateJump("L", params[0], false);
-      case "JLE" -> jumpCallTranslator.generateJump("LE", params[0], false);
-      case "JMP" -> jumpCallTranslator.generateJump("", params[0], false);
-      case "JMPF" -> jumpCallTranslator.generateJump("", params[0], true);
-      case "JNC" -> jumpCallTranslator.generateJump("NC", params[0], false);
-      case "JNS" -> jumpCallTranslator.generateJump("NS", params[0], false);
-      case "JNO" -> jumpCallTranslator.generateJump("NO", params[0], false);
-      case "JNP" -> jumpCallTranslator.generateJump("NP", params[0], false);
-      case "JNZ" -> jumpCallTranslator.generateJump("NZ", params[0], false);
-      case "JO" -> jumpCallTranslator.generateJump("O", params[0], false);
-      case "JS" -> jumpCallTranslator.generateJump("S", params[0], false);
-      case "JP" -> jumpCallTranslator.generateJump("P", params[0], false);
-      case "JZ" -> jumpCallTranslator.generateJump("Z", params[0], false);
+      case "JA" -> generateConditionalJump("A", params, false);
+      case "JBE" -> generateConditionalJump("BE", params, false);
+      case "JC" -> generateConditionalJump("C", params, false);
+      case "JCXZ" -> generateConditionalJump("CXZ", params, false);
+      case "JG" -> generateConditionalJump("G", params, false);
+      case "JGE" -> generateConditionalJump("GE", params, false);
+      case "JL" -> generateConditionalJump("L", params, false);
+      case "JLE" -> generateConditionalJump("LE", params, false);
+      case "JMP" -> generateConditionalJump("", params, false);
+      case "JMPF" -> generateConditionalJump("", params, true);
+      case "JNC" -> generateConditionalJump("NC", params, false);
+      case "JNS" -> generateConditionalJump("NS", params, false);
+      case "JNO" -> generateConditionalJump("NO", params, false);
+      case "JNP" -> generateConditionalJump("NP", params, false);
+      case "JNZ" -> generateConditionalJump("NZ", params, false);
+      case "JO" -> generateConditionalJump("O", params, false);
+      case "JS" -> generateConditionalJump("S", params, false);
+      case "JP" -> generateConditionalJump("P", params, false);
+      case "JZ" -> generateConditionalJump("Z", params, false);
       case "LAHF" -> "AH = (byte)FlagRegister;";
       case "LDS" -> generateLXS("DS", params);
       case "LEA" -> generateLea(params);
@@ -1251,6 +1309,110 @@ class InstructionGenerator {
   }
 }
 
+interface SelfModifyingCodeHandlingStatus {
+  static final String OPCODE_IS_MODIFIED = "Opcode is modified";
+  static final String PARAMETER_1_MODIFIED = "First value group is modified";
+  static final String PARAMETER_2_MODIFIED = "Second value group is modified";
+  static final String MODRM_MODIFIED = "Mod R/M is modified";
+  static final String PREFIX_MODIFIED = "Prefix is modified";
+
+  boolean isOpCodeModified();
+
+  boolean isParameter1Modified();
+
+  boolean isParameter2Modified();
+
+  boolean isModRmModified();
+
+  boolean isPrefixModified();
+
+  default boolean isAnyHandled() {
+    return isOpCodeModified() || isParameter1Modified() || isParameter2Modified();
+  }
+
+  default String generateHandledItems() {
+    List<String> res = new ArrayList<>();
+    if (isOpCodeModified()) {
+      res.add(OPCODE_IS_MODIFIED);
+    }
+    if (isParameter1Modified()) {
+      res.add(PARAMETER_1_MODIFIED);
+    }
+    if (isParameter2Modified()) {
+      res.add(PARAMETER_2_MODIFIED);
+    }
+    if (isModRmModified()) {
+      res.add(MODRM_MODIFIED);
+    }
+    if (isPrefixModified()) {
+      res.add(PREFIX_MODIFIED);
+    }
+    return String.join(", ", res);
+  }
+
+  default boolean isAllHandled(SelfModifyingCodeHandlingStatus other) {
+    return other.isOpCodeModified() == isOpCodeModified() && other.isParameter1Modified() == isParameter1Modified()
+        && other.isParameter2Modified() == isParameter2Modified() && other.isModRmModified() == isModRmModified()
+        && other.isPrefixModified() == isPrefixModified();
+  }
+
+  default boolean isAnyParameterModified() {
+    return isParameter1Modified() || isParameter2Modified();
+  }
+}
+
+class SelfModifyingCodeHandlingStatusImpl implements SelfModifyingCodeHandlingStatus {
+  private boolean opCodeModified;
+  private boolean parameter1Modified;
+  private boolean parameter2Modified;
+  private boolean modRmModified;
+  private boolean prefixModified;
+
+  @Override public boolean isOpCodeModified() {
+    return opCodeModified;
+  }
+
+  public void setOpCodeModified(boolean opCodeModified) {
+    this.opCodeModified = opCodeModified;
+  }
+
+  @Override public boolean isParameter1Modified() {
+    return parameter1Modified;
+  }
+
+  public void setParameter1Modified(boolean parameter1Modified) {
+    this.parameter1Modified = parameter1Modified;
+  }
+
+  @Override public boolean isParameter2Modified() {
+    return parameter2Modified;
+  }
+
+  public void setParameter2Modified(boolean parameter2Modified) {
+    this.parameter2Modified = parameter2Modified;
+  }
+
+  @Override public boolean isModRmModified() {
+    return modRmModified;
+  }
+
+  public void setModRmModified(boolean modRmModified) {
+    this.modRmModified = modRmModified;
+  }
+
+  @Override public boolean isPrefixModified() {
+    return prefixModified;
+  }
+
+  public void setPrefixModified(boolean prefixModified) {
+    this.prefixModified = prefixModified;
+  }
+
+  @Override public String toString() {
+    return new Gson().toJson(this);
+  }
+}
+
 class JumpCallTranslator {
   private final Log log;
   private final GhidraScript ghidraScript;
@@ -1259,6 +1421,8 @@ class JumpCallTranslator {
   private final ParsedInstruction parsedInstruction;
   private final SegmentedAddress instructionSegmentedAddress;
   private final ParsedFunction currentFunction;
+  private SelfModifyingCodeHandlingStatusImpl selfModifyingCodeHandlingStatus =
+      new SelfModifyingCodeHandlingStatusImpl();
 
   public JumpCallTranslator(Log log, GhidraScript ghidraScript, ParameterTranslator parameterTranslator,
       ParsedProgram parsedProgram, ParsedFunction currentFunction, ParsedInstruction parsedInstruction) {
@@ -1269,6 +1433,10 @@ class JumpCallTranslator {
     this.parameterTranslator = parameterTranslator;
     this.parsedInstruction = parsedInstruction;
     this.instructionSegmentedAddress = parsedInstruction.getInstructionSegmentedAddress();
+  }
+
+  public SelfModifyingCodeHandlingStatusImpl getSelfModifyingCodeHandlingStatus() {
+    return selfModifyingCodeHandlingStatus;
   }
 
   public String getLabel() {
@@ -1291,6 +1459,30 @@ class JumpCallTranslator {
   }
 
   private String generateJumpCondition(String condition) {
+    if (parsedInstruction.isOpCodeModified()) {
+      return generateJumpConditionForModifiedOpcode();
+    }
+    return generateJumpConditionForUnmodifiedOpcode(condition);
+  }
+
+  private String generateJumpConditionForModifiedOpcode() {
+    this.selfModifyingCodeHandlingStatus.setOpCodeModified(true);
+    SegmentedAddress instructionAddress = parsedInstruction.getInstructionSegmentedAddress();
+    int opcodeOffset = instructionAddress.getOffset() + parsedInstruction.getOpCodeOffset();
+    String opcodePointer = parameterTranslator.toSpice86Pointer("CS", Utils.toHexWith0X(opcodeOffset), 8, 0);
+    Set<Integer> possibleOpcodes = parsedInstruction.getPossibleOpCodes();
+    List<String> conditions = new ArrayList<>();
+    for (int opcode : possibleOpcodes) {
+      String conditionOnOpcode = opcodePointer + "==" + Utils.toHexWith0X(opcode);
+      String conditionForOpCode =
+          generateJumpConditionForUnmodifiedOpcode(parsedInstruction.opCodeToConditionalJumpCondition(opcode));
+      String condition = "(" + conditionOnOpcode + " && " + conditionForOpCode + ")";
+      conditions.add(condition);
+    }
+    return String.join(" || ", conditions);
+  }
+
+  private String generateJumpConditionForUnmodifiedOpcode(String condition) {
     return switch (condition) {
       case "A" -> "!CarryFlag && !ZeroFlag";
       case "BE" -> "CarryFlag || ZeroFlag";
@@ -1331,21 +1523,58 @@ class JumpCallTranslator {
 
   public String generateJump(String param, boolean far) {
     if (!param.startsWith("0x")) {
-      // Indirect address ...
-      List<SegmentedAddress> targets = getTargetsOfJumpCall();
-      List<String> res = new ArrayList<>();
-      res.add("// Indirect jump to " + param + ", generating possible targets from emulator records");
-      res.add(generateSwitchToIndirectTarget(param, far, targets,
-          "Error: Jump not registered at address ", this::jumpToCaseBody));
-      return Utils.joinLines(res);
+      String target = toPointerValueInMemory(param, far);
+      return generateIndirectJump(param, target);
+    }
+    if (parsedInstruction.isAnyParameterModified()) {
+      // Direct address but parameters are modified
+      String target = readJumpCallTargetFromModifiedInstruction(far);
+      return generateIndirectJump(param, target);
     }
     SegmentedAddress target = readJumpCallTargetFromInstruction(far);
     log.info("Jump target is " + target);
     return generateGoto(target);
   }
 
+  private String generateIndirectJump(String param, String spice86Target) {
+    // Indirect address ...
+    List<SegmentedAddress> targets = getTargetsOfJumpCall();
+    List<String> res = new ArrayList<>();
+    res.add("// Indirect jump to " + param + ", generating possible targets from emulator records");
+    res.add(generateSwitchToIndirectTarget(spice86Target, targets, "Error: Jump not registered at address ",
+        this::jumpToCaseBody));
+    return Utils.joinLines(res);
+  }
+
+  private String readJumpCallTargetFromModifiedInstruction(boolean far) {
+    selfModifyingCodeHandlingStatus.setParameter1Modified(parsedInstruction.isParameter1Modified());
+    if (far) {
+      String segment =
+          toInstructionParameter(parsedInstruction.isParameter2Modified(), parsedInstruction.getParameter2(),
+              parsedInstruction.getParameter2Offset());
+      String offset =
+          toInstructionParameter(parsedInstruction.isParameter1Modified(), parsedInstruction.getParameter1(),
+              parsedInstruction.getParameter1Offset());
+      selfModifyingCodeHandlingStatus.setParameter2Modified(parsedInstruction.isParameter2Modified());
+      return parameterTranslator.toPhysicalAddress(segment, offset);
+    }
+    // instruction length needed because offset is from the next instruction
+    int baseOffset = instructionSegmentedAddress.getOffset() + parsedInstruction.getInstructionLength();
+    String indirectOffset = parameterTranslator.castToInt16(
+        toInstructionParameter(true, parsedInstruction.getParameter1(), parsedInstruction.getParameter1Offset()));
+    String offset = Utils.toHexWith0X(baseOffset) + " + " + indirectOffset;
+    return parameterTranslator.toPhysicalAddress("CS", offset);
+  }
+
+  private String toInstructionParameter(boolean isModified, int value, int offset) {
+    if (isModified) {
+      return parameterTranslator.toInstructionParameterPointer(offset, 16);
+    }
+    return Utils.toHexWith0X(value);
+  }
+
   private SegmentedAddress readJumpCallTargetFromInstruction(boolean far) {
-    // Generating jump target from instruction bytes and not from ghidra listing as it doesnt work well for multiple segments.
+    // Generating jump target from instruction bytes and not from ghidra listing as it doesn't work well for multiple segments.
     if (far) {
       return new SegmentedAddress(parsedInstruction.getParameter2(), parsedInstruction.getParameter1());
     } else {
@@ -1356,8 +1585,7 @@ class JumpCallTranslator {
       if (signedOffset == null) {
         log.info("Error: expected a signed offset for instruction " + parsedInstruction);
       }
-      int targetOffset = Utils.uint16(
-          instructionSegmentedAddress.getOffset() + instructionLength + signedOffset);
+      int targetOffset = Utils.uint16(instructionSegmentedAddress.getOffset() + instructionLength + signedOffset);
       return new SegmentedAddress(targetSegment, targetOffset);
     }
   }
@@ -1375,9 +1603,8 @@ class JumpCallTranslator {
     if (function == null) {
       log.info("Could not convert jump to " + nonEntry + "call because function at target is null");
     } else if (function.equals(this.currentFunction)) {
-      log.info(
-          "Could not convert jump to " + nonEntry + "call because function at target is the current function "
-              + function.getName());
+      log.info("Could not convert jump to " + nonEntry + "call because function at target is the current function "
+          + function.getName());
     } else {
       if (internalJumpAddress != null) {
         log.info("Converted jump to call to address " + Utils.toHexWith0X(internalJumpAddress)
@@ -1413,9 +1640,8 @@ class JumpCallTranslator {
       }
     } else {
       String label = getLabelToAddress(target, false);
-      return InstructionGenerator.generateFailAsUntested(
-          "Would have been a goto but label " + label
-              + " does not exist because no instruction was found there that belongs to a function.", true);
+      return InstructionGenerator.generateFailAsUntested("Would have been a goto but label " + label
+          + " does not exist because no instruction was found there that belongs to a function.", true);
     }
     String convertedCall =
         attemptConvertJumpToFunctionCall(parsedProgram.getFunctionAtSegmentedAddressEntryPoint(target), null);
@@ -1433,13 +1659,13 @@ class JumpCallTranslator {
 
   public String generateCall(String param, boolean far) {
     if (!param.startsWith("0x")) {
-      // Indirect address ...
-      List<SegmentedAddress> targets = getTargetsOfJumpCall();
-      List<String> res = new ArrayList<>();
-      res.add("// Indirect call to " + param + ", generating possible targets from emulator records");
-      res.add(generateSwitchToIndirectTarget(param, far, targets,
-          "Error: Function not registered at address ", address -> functionToCaseBody(address, far)));
-      return Utils.joinLines(res);
+      String target = toPointerValueInMemory(param, far);
+      return generateIndirectCall(param, target, far);
+    }
+    if (parsedInstruction.isAnyParameterModified()) {
+      // Direct address but parameters are modified
+      String target = readJumpCallTargetFromModifiedInstruction(far);
+      return generateIndirectCall(param, target, far);
     }
     SegmentedAddress target = readJumpCallTargetFromInstruction(far);
     log.info("Call target is " + target);
@@ -1448,6 +1674,16 @@ class JumpCallTranslator {
       return noFunctionAtAddress(target);
     }
     return functionToString(function, far, false);
+  }
+
+  private String generateIndirectCall(String param, String target, boolean far) {
+    // Indirect address ...
+    List<SegmentedAddress> targets = getTargetsOfJumpCall();
+    List<String> res = new ArrayList<>();
+    res.add("// Indirect call to " + param + ", generating possible targets from emulator records");
+    res.add(generateSwitchToIndirectTarget(target, targets, "Error: Function not registered at address ",
+        address -> functionToCaseBody(address, far)));
+    return Utils.joinLines(res);
   }
 
   private String functionToCaseBody(SegmentedAddress address, boolean far) {
@@ -1492,11 +1728,23 @@ class JumpCallTranslator {
     return InstructionGenerator.generateFailAsUntested("Could not find a valid function at address " + address, true);
   }
 
-  private String generateSwitchToIndirectTarget(String expression, boolean far, List<SegmentedAddress> targets,
+  private String toPointerValueInMemory(String expression, boolean far) {
+    if (parsedInstruction.isParameter1Modified()) {
+      if (far) {
+        return parameterTranslator.toCsIpPointerValueInMemoryFromModifiedParameter(expression,
+            parsedInstruction.getParameter1(), parsedInstruction.getParameter1Offset());
+      }
+      return parameterTranslator.toIpPointerValueInMemoryFromModifiedParameter(expression,
+          parsedInstruction.getParameter1(), parsedInstruction.getParameter1Offset());
+    }
+    if (far) {
+      return parameterTranslator.toCsIpPointerValueInMemory(expression);
+    }
+    return parameterTranslator.toIpPointerValueInMemory(expression);
+  }
+
+  private String generateSwitchToIndirectTarget(String target, List<SegmentedAddress> targets,
       String errorInCaseNotFound, java.util.function.Function<SegmentedAddress, String> toCSharp) {
-    String target = far ?
-        parameterTranslator.toCsIpPointerValueInMemory(expression) :
-        parameterTranslator.toIpPointerValueInMemory(expression);
     String tempVarName = parameterTranslator.generateTempVar("targetAddress_");
     if (target.contains("cs1")) {
       log.info("Removing exe load address from switch target address calculation " + target);
@@ -1518,15 +1766,11 @@ class JumpCallTranslator {
         log.info("Target " + Utils.toHexSegmentOffsetPhysical(targetFromRecord) + " becomes " + targetPhysicalRelocated
             + " when relocated " + Utils.toHexWith0X(targetFromRecord.toPhysical()) + " - " + Utils.toHexWith0X(
             parsedProgram.getCs1Physical()));
-        res.append(
-            "  case " + targetPhysicalRelocated + " : "
-                + action
-                + "\n");
+        res.append("  case " + targetPhysicalRelocated + " : " + action + "\n");
       }
     }
-    String failAsUntested =
-        InstructionGenerator.generateFailAsUntested(
-            "\"" + errorInCaseNotFound + "\" + ConvertUtils.ToHex32WithoutX(" + tempVarName + ")", false);
+    String failAsUntested = InstructionGenerator.generateFailAsUntested(
+        "\"" + errorInCaseNotFound + "\" + ConvertUtils.ToHex32WithoutX(" + tempVarName + ")", false);
     res.append("  default: " + failAsUntested + "\n" + "    break;\n" + "}");
     return res.toString();
   }
@@ -1546,10 +1790,12 @@ class ParsedProgram {
   private Map<Integer, ParsedFunction> entryPoints = new TreeMap<>();
   private Map<Integer, String> codeSegmentVariables = new TreeMap<>();
   private Map<SegmentedAddress, Set<Integer>> jumpsToFrom = new TreeMap<>();
+  // Address -> list of values this address can be at
+  private Map<Integer, Set<Integer>> possibleInstructionByteValues = new TreeMap<>();
   private int cs1;
 
-  public static ParsedProgram createParsedProgram(Log log, List<ParsedFunction> functions,
-      ExecutionFlow executionFlow, Set<SegmentedAddress> externalEventCheckPoints) {
+  public static ParsedProgram createParsedProgram(Log log, List<ParsedFunction> functions, ExecutionFlow executionFlow,
+      Set<SegmentedAddress> externalEventCheckPoints) {
     ParsedProgram res = new ParsedProgram();
     res.executionFlow = executionFlow;
     res.externalEventCheckPoints = externalEventCheckPoints;
@@ -1562,6 +1808,8 @@ class ParsedProgram {
     // Map address of function -> Set of externally reachable labels
     registerOutOfFunctionJumps(log, executionFlow, res);
     generateJumpsToFrom(executionFlow, res);
+    registerPossibleInstructionsBytes(executionFlow, res);
+    registerModifiedInstructions(log, executionFlow, res);
     return res;
   }
 
@@ -1583,13 +1831,12 @@ class ParsedProgram {
 
   private static void generateSegmentVariables(Log log, List<ParsedFunction> functions, ParsedProgram res) {
     log.info("Generating segment variables");
-    List<Integer> segments =
-        functions.stream()
-            .map(ParsedFunction::getEntrySegmentedAddress)
-            .map(SegmentedAddress::getSegment)
-            .distinct()
-            .sorted()
-            .toList();
+    List<Integer> segments = functions.stream()
+        .map(ParsedFunction::getEntrySegmentedAddress)
+        .map(SegmentedAddress::getSegment)
+        .distinct()
+        .sorted()
+        .toList();
     int csIndex = 1;
     for (Integer segment : segments) {
       String varName = "cs" + csIndex++;
@@ -1619,7 +1866,7 @@ class ParsedProgram {
       Integer fromAddress = jumpFromTo.getKey();
       ParsedFunction fromFunction = res.getFunctionAtAddressAny(fromAddress);
       if (fromFunction == null) {
-        log.error("No source function found at address " + Utils.toHexWithout0X(fromAddress)+" for jump.");
+        log.error("No source function found at address " + Utils.toHexWithout0X(fromAddress) + " for jump.");
         continue;
       }
       for (SegmentedAddress toAddress : jumpFromTo.getValue()) {
@@ -1634,8 +1881,7 @@ class ParsedProgram {
         }
         // At this point toAddress belongs to toFunction which is different from fromFunction
         log.info("Found an externally accessible label at address " + Utils.toHexSegmentOffsetPhysical(toAddress)
-            + ". This address belongs to function "
-            + toFunction.getName());
+            + ". This address belongs to function " + toFunction.getName());
         // Let's register it as externally targeted label
         Set<SegmentedAddress> jumpsFromOutsideForFunction =
             res.jumpsFromOutsidePerFunction.computeIfAbsent(toFunction.getEntrySegmentedAddress(),
@@ -1645,9 +1891,34 @@ class ParsedProgram {
     }
   }
 
+  private static void registerPossibleInstructionsBytes(ExecutionFlow executionFlow, ParsedProgram res) {
+    res.possibleInstructionByteValues = executionFlow.getExecutableAddressWrittenBy()
+        .entrySet()
+        .stream()
+        .collect(Collectors.toMap(e -> e.getKey(), e -> getPossibleInstructionByteValues(e.getValue())));
+  }
+
+  private static void registerModifiedInstructions(Log log, ExecutionFlow executionFlow, ParsedProgram res) {
+    log.info("Registering modified code to parsed instructions");
+    for (ParsedInstruction parsedInstruction : res.instructionAddressToInstruction.values()) {
+      log.info("Processing modified code for " + parsedInstruction.toString());
+      parsedInstruction.completeWithSelfModifyingCodeInformation(res.possibleInstructionByteValues);
+    }
+  }
+
+  private static Set<Integer> getPossibleInstructionByteValues(
+      Map<Integer, Set<ByteModificationRecord>> byteValuesAtAddress) {
+    return byteValuesAtAddress.values()
+        .stream()
+        .flatMap(Collection::stream)
+        .map(byteModificationRecord -> Arrays.asList(byteModificationRecord.getOldValue(),
+            byteModificationRecord.getNewValue()))
+        .flatMap(Collection::stream)
+        .collect(Collectors.toSet());
+  }
+
   private static Map<Integer, ParsedInstruction> mapInstructionByInstructionAddress(List<ParsedInstruction> list) {
-    return list.stream()
-        .collect(Collectors.toMap(i -> i.getInstructionSegmentedAddress().toPhysical(), i -> i));
+    return list.stream().collect(Collectors.toMap(i -> i.getInstructionSegmentedAddress().toPhysical(), i -> i));
   }
 
   private static Map<Integer, ParsedFunction> mapFunctionByInstructionAddress(ParsedFunction parsedFunction,
@@ -1723,8 +1994,17 @@ class ParsedProgram {
     return cs1;
   }
 
-  public Set<SegmentedAddress> getAddressesModifyingExecutableAddress(int address) {
-    return this.executionFlow.getExecutableAddressWrittenBy().get(address);
+  public Set<Integer> getPossibleInstructionByteValues(int address) {
+    return possibleInstructionByteValues.get(address);
+  }
+
+  public Set<Integer> getAddressesModifyingExecutableAddress(int address) {
+    Map<Integer, Set<ByteModificationRecord>> modifiedByInstructions =
+        this.executionFlow.getExecutableAddressWrittenBy().get(address);
+    if (modifiedByInstructions == null) {
+      return Collections.emptySet();
+    }
+    return modifiedByInstructions.keySet();
   }
 
   public Set<Integer> getJumpTargetOrigins(SegmentedAddress address) {
@@ -1733,14 +2013,11 @@ class ParsedProgram {
 }
 
 class ExecutionFlow {
-  @SerializedName("CallsFromTo")
-  private Map<Integer, List<SegmentedAddress>> callsFromTo;
-  @SerializedName("JumpsFromTo")
-  private Map<Integer, List<SegmentedAddress>> jumpsFromTo;
-  @SerializedName("RetsFromTo")
-  private Map<Integer, List<SegmentedAddress>> retsFromTo;
-  @SerializedName("ExecutableAddressWrittenBy")
-  private Map<Integer, Set<SegmentedAddress>> executableAddressWrittenBy;
+  @SerializedName("CallsFromTo") private Map<Integer, List<SegmentedAddress>> callsFromTo;
+  @SerializedName("JumpsFromTo") private Map<Integer, List<SegmentedAddress>> jumpsFromTo;
+  @SerializedName("RetsFromTo") private Map<Integer, List<SegmentedAddress>> retsFromTo;
+  @SerializedName("ExecutableAddressWrittenBy") private Map<Integer, Map<Integer, Set<ByteModificationRecord>>>
+      executableAddressWrittenBy;
 
   private Map<Integer, List<SegmentedAddress>> callsJumpsFromTo = new HashMap<>();
   private Set<SegmentedAddress> jumpTargets;
@@ -1763,8 +2040,31 @@ class ExecutionFlow {
     return jumpTargets;
   }
 
-  public Map<Integer, Set<SegmentedAddress>> getExecutableAddressWrittenBy() {
+  public Map<Integer, Map<Integer, Set<ByteModificationRecord>>> getExecutableAddressWrittenBy() {
     return executableAddressWrittenBy;
+  }
+}
+
+class ByteModificationRecord {
+  @SerializedName("OldValue") private int oldValue;
+
+  @SerializedName("NewValue") private int newValue;
+
+  public int getOldValue() {
+    return oldValue;
+  }
+
+  public int getNewValue() {
+    return newValue;
+  }
+
+  @Override public boolean equals(Object o) {
+    return this == o
+        || o instanceof ByteModificationRecord that && this.oldValue == that.oldValue && this.newValue == that.newValue;
+  }
+
+  @Override public int hashCode() {
+    return new HashCodeBuilder().append(oldValue).append(newValue).toHashCode();
   }
 }
 
@@ -1824,30 +2124,30 @@ class ModRM {
     return defaultSegment;
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return new Gson().toJson(this);
   }
 }
 
-class ParsedInstruction {
-  private static final Set<Integer> STRING_OPCODES_CHECKING_ZERO_FLAG = new HashSet<>(
-      Arrays.asList(0xA6, 0xA7, 0xAE, 0xAF));
-  private static final Set<Integer> OPCODES_ON_8_BITS = new HashSet<>(Arrays.asList(
-      0x00, 0x02, 0x04, 0x08, 0x0A, 0x0C, 0x10, 0x12, 0x14, 0x18, 0x1A, 0x1C, 0x20, 0x22, 0x24, 0x27, 0x28, 0x2A, 0x2C,
-      0x2F, 0x30, 0x32, 0x34, 0x37, 0x38, 0x3A, 0x3C, 0x3F, 0x6A, 0x6C, 0x6E, 0x80, 0x82, 0x84, 0x86, 0x88, 0x8A,
-      0xA0,
-      0xA2, 0xA4, 0xA6, 0xA8, 0xAA, 0xAC, 0xAE, 0x6C, 0x6E, 0xB0, 0xB1, 0xB2, 0xB3,
-      0xB4, 0xB5, 0xB6, 0xB7, 0xC0, 0xC6, 0xD0, 0xD2, 0xD4, 0xD5, 0xD7, 0xE4, 0xE6, 0xEC, 0xEE, 0xF6, 0xFE));
-  private static final Set<Integer> OPCODES_ON_16_BITS = new HashSet<>(Arrays.asList(
-      0x01, 0x03, 0x05, 0x06, 0x07, 0x09, 0x0B, 0x0D, 0x0E, 0x11, 0x13, 0x15, 0x16, 0x17, 0x19, 0x1B, 0x1D, 0x1E, 0x1F,
-      0x21, 0x23, 0x25, 0x29, 0x2B, 0x2D, 0x31, 0x33, 0x35, 0x39, 0x3B, 0x3D, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46,
-      0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
-      0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x68, 0x69, 0x6B, 0x6D, 0x6F, 0x81, 0x83, 0x85, 0x87, 0x89, 0x8B,
-      0x8C, 0x8D, 0x8E, 0x8F, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x9C, 0x9D, 0xA1, 0xA3, 0xA9, 0xB8, 0xB9, 0xBA,
-      0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC1, 0xC7, 0xD1, 0xD3, 0xE5, 0xE7, 0xED, 0xEF, 0xF7, 0xFF));
-  private static final Set<Integer> PREFIXES_OPCODES = new HashSet<>(
-      Arrays.asList(0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3));
+class ParsedInstruction implements SelfModifyingCodeHandlingStatus {
+  private static final Set<Integer> STRING_OPCODES_CHECKING_ZERO_FLAG =
+      new HashSet<>(Arrays.asList(0xA6, 0xA7, 0xAE, 0xAF));
+  private static final Set<Integer> OPCODES_ON_8_BITS = new HashSet<>(
+      Arrays.asList(0x00, 0x02, 0x04, 0x08, 0x0A, 0x0C, 0x10, 0x12, 0x14, 0x18, 0x1A, 0x1C, 0x20, 0x22, 0x24, 0x27,
+          0x28, 0x2A, 0x2C, 0x2F, 0x30, 0x32, 0x34, 0x37, 0x38, 0x3A, 0x3C, 0x3F, 0x6A, 0x6C, 0x6E, 0x70, 0x71, 0x72,
+          0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0x80, 0x82, 0x84, 0x86, 0x88,
+          0x8A, 0xA0, 0xA2, 0xA4, 0xA6, 0xA8, 0xAA, 0xAC, 0xAE, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xC0,
+          0xC6, 0xCD, 0xD0, 0xD2, 0xD4, 0xD5, 0xD7, 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE6, 0xEB, 0xEC, 0xEE, 0xF6, 0xFE));
+  private static final Set<Integer> OPCODES_ON_16_BITS = new HashSet<>(
+      Arrays.asList(0x01, 0x03, 0x05, 0x06, 0x07, 0x09, 0x0B, 0x0D, 0x0E, 0x11, 0x13, 0x15, 0x16, 0x17, 0x19, 0x1B,
+          0x1D, 0x1E, 0x1F, 0x21, 0x23, 0x25, 0x29, 0x2B, 0x2D, 0x31, 0x33, 0x35, 0x39, 0x3B, 0x3D, 0x40, 0x41, 0x42,
+          0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54,
+          0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x68, 0x69, 0x6B, 0x6D, 0x6F,
+          0x81, 0x83, 0x85, 0x87, 0x89, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x9C,
+          0x9D, 0xA1, 0xA3, 0xA9, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC1, 0xC7, 0xD1, 0xD3, 0xE5, 0xE7,
+          0xE8, 0xE9, 0xEA, 0xED, 0xEF, 0xF7, 0xFF));
+  private static final Set<Integer> PREFIXES_OPCODES =
+      new HashSet<>(Arrays.asList(0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3));
   private static final Map<Integer, String> SEGMENT_OVERRIDES = new HashMap<>();
   private static final Set<Integer> OPCODES_WITH_MODRM = new HashSet<>(
       Arrays.asList(0x00, 0x01, 0x02, 0x03, 0x08, 0x09, 0x0A, 0x0B, 0x10, 0x11, 0x12, 0x13, 0x18, 0x19, 0x1A, 0x1B,
@@ -1865,8 +2165,10 @@ class ParsedInstruction {
           "DIV", "IDIV", "IMUL", "INC", "MUL", "NEG", "POPF", "RCL", "RCR", "ROL", "ROR", "SAHF", "SAR", "SBB", "SCASB",
           "SCASW", "SHL", "SHR", "SUB", "TEST", "XOR"));
 
-  private static final Set<String> MNEMONICS_USING_SIGNIFICANT_FLAGS = new HashSet<>(
-      Arrays.asList("ADC", "DAS", "DAA", "PUSHF", "RCL", "RCR", "SBB"));
+  private static final Set<String> MNEMONICS_USING_SIGNIFICANT_FLAGS =
+      new HashSet<>(Arrays.asList("ADC", "DAS", "DAA", "PUSHF", "RCL", "RCR", "SBB"));
+
+  private static final Map<Integer, String> CONDITIONAL_JUMPS_OPCODES = new HashMap<>();
 
   static {
     SEGMENT_OVERRIDES.put(0x26, "ES");
@@ -1875,20 +2177,50 @@ class ParsedInstruction {
     SEGMENT_OVERRIDES.put(0x3E, "DS");
     SEGMENT_OVERRIDES.put(0x64, "FS");
     SEGMENT_OVERRIDES.put(0x65, "GS");
+
+    CONDITIONAL_JUMPS_OPCODES.put(0x70, "O");
+    CONDITIONAL_JUMPS_OPCODES.put(0x71, "NO");
+    CONDITIONAL_JUMPS_OPCODES.put(0x72, "B");
+    CONDITIONAL_JUMPS_OPCODES.put(0x73, "NB");
+    CONDITIONAL_JUMPS_OPCODES.put(0x74, "Z");
+    CONDITIONAL_JUMPS_OPCODES.put(0x75, "NZ");
+    CONDITIONAL_JUMPS_OPCODES.put(0x76, "BE");
+    CONDITIONAL_JUMPS_OPCODES.put(0x77, "A");
+    CONDITIONAL_JUMPS_OPCODES.put(0x78, "S");
+    CONDITIONAL_JUMPS_OPCODES.put(0x79, "NS");
+    CONDITIONAL_JUMPS_OPCODES.put(0x7A, "P");
+    CONDITIONAL_JUMPS_OPCODES.put(0x7B, "PO");
+    CONDITIONAL_JUMPS_OPCODES.put(0x7C, "L");
+    CONDITIONAL_JUMPS_OPCODES.put(0x7D, "GE");
+    CONDITIONAL_JUMPS_OPCODES.put(0x7E, "NG");
+    CONDITIONAL_JUMPS_OPCODES.put(0x7F, "G");
+    CONDITIONAL_JUMPS_OPCODES.put(0xE3, "CXZ");
+  }
+
+  public static String opCodeToConditionalJumpCondition(int opcode) {
+    return CONDITIONAL_JUMPS_OPCODES.get(opcode);
   }
 
   private transient Instruction instruction;
   private SegmentedAddress instructionSegmentedAddress;
-  private Integer parameter1BitLength;
-  private Integer parameter2BitLength;
   private List<Integer> prefixes = new ArrayList<>();
+  private List<Integer> prefixesOffsets = new ArrayList<>();
   private String segment;
   private int opCode;
+  private int opCodeOffset;
   private Integer modRmByte;
+  private Integer modRmByteOffset;
+
   private ModRM modRM;
   private Integer parameter1;
   private Integer parameter1Signed;
+  private Integer parameter1Offset;
+  private Integer parameter1BitLength;
+
+  // In case parameter2 is rewritten by other instructions this will not be null and point to the parameter offset
   private Integer parameter2;
+  private Integer parameter2Offset;
+  private Integer parameter2BitLength;
   private int instructionLength;
   private String prefix;
   private String mnemonic;
@@ -1896,6 +2228,12 @@ class ParsedInstruction {
   private boolean modifiesSignificantFlags;
 
   private boolean usesSignificantFlags;
+
+  private boolean prefixModified;
+  private Set<Integer> possibleOpCodes;
+  private Set<Integer> possibleModRm;
+  private boolean parameter1Modified;
+  private boolean parameter2Modified;
 
   public String getMnemonic() {
     return mnemonic;
@@ -1962,6 +2300,10 @@ class ParsedInstruction {
     return parameter1;
   }
 
+  public Integer getParameter1Offset() {
+    return parameter1Offset;
+  }
+
   public Integer getParameter1Signed() {
     return parameter1Signed;
   }
@@ -1970,8 +2312,44 @@ class ParsedInstruction {
     return parameter2;
   }
 
+  public Integer getParameter2Offset() {
+    return parameter2Offset;
+  }
+
   public int getInstructionLength() {
     return instructionLength;
+  }
+
+  public boolean isPrefixModified() {
+    return prefixModified;
+  }
+
+  @Override
+  public boolean isOpCodeModified() {
+    return possibleOpCodes.size() > 1;
+  }
+
+  public Set<Integer> getPossibleOpCodes() {
+    return possibleOpCodes;
+  }
+
+  public int getOpCodeOffset() {
+    return opCodeOffset;
+  }
+
+  @Override
+  public boolean isModRmModified() {
+    return possibleModRm.size() > 1;
+  }
+
+  @Override
+  public boolean isParameter1Modified() {
+    return parameter1Modified;
+  }
+
+  @Override
+  public boolean isParameter2Modified() {
+    return parameter2Modified;
   }
 
   public boolean isStringCheckingZeroFlag() {
@@ -1988,6 +2366,51 @@ class ParsedInstruction {
 
   public boolean isHlt() {
     return mnemonic.startsWith("HLT");
+  }
+
+  public void completeWithSelfModifyingCodeInformation(Map<Integer, Set<Integer>> possibleInstructionByteValues) {
+    int physicalAddress = this.instructionSegmentedAddress.toPhysical();
+    for (int prefixOffset : prefixesOffsets) {
+      if (possibleInstructionByteValues.containsKey(physicalAddress + prefixOffset)) {
+        this.prefixModified = true;
+        break;
+      }
+    }
+    this.possibleOpCodes = completePossibleValues(possibleInstructionByteValues, opCodeOffset, opCode);
+    this.possibleModRm = completePossibleValues(possibleInstructionByteValues, modRmByteOffset, modRmByte);
+    this.parameter1Modified =
+        isParameterModified(possibleInstructionByteValues, parameter1, parameter1BitLength, parameter1Offset);
+    this.parameter2Modified =
+        isParameterModified(possibleInstructionByteValues, parameter2, parameter2BitLength, parameter2Offset);
+  }
+
+  private Set<Integer> completePossibleValues(Map<Integer, Set<Integer>> possibleInstructionByteValues, Integer offset,
+      Integer defaultValue) {
+    if (offset == null || defaultValue == null) {
+      return Collections.emptySet();
+    }
+    int physicalAddress = this.instructionSegmentedAddress.toPhysical();
+
+    Set<Integer> res = possibleInstructionByteValues.get(physicalAddress + offset);
+    if (res != null) {
+      return res;
+    }
+    return new HashSet<>(Arrays.asList(defaultValue));
+  }
+
+  private boolean isParameterModified(Map<Integer, Set<Integer>> possibleInstructionByteValues, Integer parameter,
+      Integer parameterBitLength, Integer parameterOffset) {
+    if (parameter == null) {
+      return false;
+    }
+    int physicalAddress = this.instructionSegmentedAddress.toPhysical();
+    int length = parameterBitLength / 8;
+    for (int offset = 0; offset < length; offset++) {
+      if (possibleInstructionByteValues.containsKey(physicalAddress + parameterOffset + offset)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public static ParsedInstruction parseInstruction(Log log, Instruction instruction,
@@ -2016,18 +2439,19 @@ class ParsedInstruction {
       for (int i = 0; i < bytes.length; i++) {
         s += String.format("%X", bytes[i]) + ", ";
       }
-      log.info(
-          "Instruction at address " + instructionAddress + " / " + Utils.toHexWith0X(
-              instruction.getAddress().getUnsignedOffset()) + " bytes " + s);
+      log.info("Instruction at address " + instructionAddress + " / " + Utils.toHexWith0X(
+          instruction.getAddress().getUnsignedOffset()) + " bytes " + s);
     } catch (MemoryAccessException e) {
       log.info("Could not read instruction, caught " + e);
       return null;
     }
     res.instructionLength = bytes.length;
     BytesReader bytesReader = new BytesReader(bytes);
+    int opCodeOrPrefixIndex = 0;
     int opCode = bytesReader.nextUint8();
     while (PREFIXES_OPCODES.contains(opCode)) {
       res.prefixes.add(opCode);
+      res.prefixesOffsets.add(opCodeOrPrefixIndex);
       if (SEGMENT_OVERRIDES.containsKey(opCode)) {
         res.segment = SEGMENT_OVERRIDES.get(opCode);
       }
@@ -2035,27 +2459,23 @@ class ParsedInstruction {
         log.error("Instruction has prefix opcode but no opcode");
         return null;
       }
+      opCodeOrPrefixIndex = bytesReader.getIndex();
       opCode = bytesReader.nextUint8();
-
     }
     res.opCode = opCode;
+    res.opCodeOffset = opCodeOrPrefixIndex;
     if (OPCODES_ON_8_BITS.contains(opCode)) {
       res.parameter1BitLength = 8;
     } else if (OPCODES_ON_16_BITS.contains(opCode)) {
       res.parameter1BitLength = 16;
     }
-    if (opCode == 0x83) {
-      //GRP1 operations with this opcode have param2 sign extended to match param1 which is 16 bits
-      res.parameter2BitLength = 8;
-    } else {
-      res.parameter2BitLength = res.parameter1BitLength;
-    }
     if (OPCODES_WITH_MODRM.contains(opCode)) {
       res.modRmByte = bytesReader.nextUint8();
+      res.modRmByteOffset = bytesReader.getIndex();
       res.modRM = new ModRM(res.modRmByte, bytesReader);
       log.info("Instruction has modrm. modrm byte is " + res.modRmByte + " interpreted as " + res.modRM);
       if (res.segment == null) {
-        // Only set it if not overriden by prefix
+        // Only set it if not overridden by prefix
         res.segment = res.modRM.getDefaultSegment();
       }
     }
@@ -2064,27 +2484,35 @@ class ParsedInstruction {
       return res;
     }
     if (!OPCODES_WITH_DIRECT_VALUE.contains(opCode)) {
-      log.warning(
-          "Opcode " + Utils.toHexWithout0X(opCode)
-              + " is not supposed to have a direct value but instruction has trailing bytes.");
+      log.warning("Opcode " + Utils.toHexWithout0X(opCode)
+          + " is not supposed to have a direct value but instruction has trailing bytes.");
     }
     if (remainingLength == 1) {
+      res.parameter1Offset = bytesReader.getIndex();
       res.parameter1 = bytesReader.nextUint8();
       res.parameter1Signed = Utils.int8(res.parameter1);
     } else if (remainingLength == 2) {
+      res.parameter1Offset = bytesReader.getIndex();
       res.parameter1 = bytesReader.nextUint16();
       res.parameter1Signed = Utils.int16(res.parameter1);
     } else if (remainingLength == 4) {
+      res.parameter1Offset = bytesReader.getIndex();
       res.parameter1 = bytesReader.nextUint16();
+      res.parameter2Offset = bytesReader.getIndex();
       res.parameter2 = bytesReader.nextUint16();
+      if (opCode == 0x83) {
+        //GRP1 operations with this opcode have param2 sign extended to match param1 which is 16 bits
+        res.parameter2BitLength = 8;
+      } else {
+        res.parameter2BitLength = res.parameter1BitLength;
+      }
     } else {
       log.warning("Found " + remainingLength + " trailing bytes, not supported.");
     }
     return res;
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return new Gson().toJson(this);
   }
 }
@@ -2118,6 +2546,10 @@ class BytesReader {
   boolean hasNextUint16() {
     return remaining() >= 2;
   }
+
+  public int getIndex() {
+    return index;
+  }
 }
 
 class Log implements Closeable {
@@ -2150,8 +2582,7 @@ class Log implements Closeable {
     }
   }
 
-  @Override
-  public void close() {
+  @Override public void close() {
     printWriterLogs.close();
   }
 }
@@ -2211,8 +2642,7 @@ class ParsedFunction {
     long offset = entrySegmentedAddress.getOffset() + delta;
     if (offset < 0 || offset > 0xFFFF) {
       log.error("Instruction outside of function segment. Function entry: " + entrySegmentedAddress
-          + " / Instruction address: " + Utils.toHexWithout0X(instructionAddress)
-          + " / Instruction delta: " + delta
+          + " / Instruction address: " + Utils.toHexWithout0X(instructionAddress) + " / Instruction delta: " + delta
           + " / Instruction offset: " + offset);
       return null;
     }
@@ -2267,8 +2697,7 @@ class ParsedFunction {
   }
 
   private static void dispatchInstruction(ParsedInstruction instruction, SegmentedAddress entry,
-      List<ParsedInstruction> instructionsBeforeEntry,
-      List<ParsedInstruction> instructionsAfterEntry) {
+      List<ParsedInstruction> instructionsBeforeEntry, List<ParsedInstruction> instructionsAfterEntry) {
     if (instruction == null) {
       return;
     }
@@ -2305,32 +2734,26 @@ class ParsedFunction {
     return instructionsAfterEntry;
   }
 
-  @Override
-  public boolean equals(Object obj) {
+  @Override public boolean equals(Object obj) {
     if (this == obj) {
       return true;
     }
 
-    return (obj instanceof ParsedFunction other)
-        && other.entrySegmentedAddress.equals(this.entrySegmentedAddress);
+    return (obj instanceof ParsedFunction other) && other.entrySegmentedAddress.equals(this.entrySegmentedAddress);
   }
 
-  @Override
-  public int hashCode() {
+  @Override public int hashCode() {
     return entrySegmentedAddress.hashCode();
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return new Gson().toJson(this);
   }
 }
 
 class SegmentedAddress implements Comparable<SegmentedAddress> {
-  @SerializedName("Segment")
-  private final int segment;
-  @SerializedName("Offset")
-  private final int offset;
+  @SerializedName("Segment") private final int segment;
+  @SerializedName("Offset") private final int offset;
 
   public SegmentedAddress(int segment, int offset) {
     this.segment = Utils.uint16(segment);
@@ -2349,28 +2772,23 @@ class SegmentedAddress implements Comparable<SegmentedAddress> {
     return segment * 0x10 + offset;
   }
 
-  @Override
-  public int hashCode() {
+  @Override public int hashCode() {
     return toPhysical();
   }
 
-  @Override
-  public boolean equals(Object obj) {
+  @Override public boolean equals(Object obj) {
     if (this == obj) {
       return true;
     }
 
-    return (obj instanceof SegmentedAddress other)
-        && toPhysical() == other.toPhysical();
+    return (obj instanceof SegmentedAddress other) && toPhysical() == other.toPhysical();
   }
 
-  @Override
-  public int compareTo(SegmentedAddress other) {
+  @Override public int compareTo(SegmentedAddress other) {
     return Integer.compare(this.toPhysical(), other.toPhysical());
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return Utils.toHexSegmentOffset(this) + " / " + Utils.toHexWith0X(this.toPhysical());
   }
 }
