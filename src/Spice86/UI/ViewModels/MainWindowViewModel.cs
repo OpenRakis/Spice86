@@ -300,6 +300,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     public void WaitOne() {
-        _okayToContinueEvent.WaitOne();
+        _okayToContinueEvent.WaitOne(Timeout.Infinite);
     }
 }
