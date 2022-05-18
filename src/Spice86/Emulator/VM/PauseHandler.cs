@@ -6,7 +6,7 @@ using Spice86.Emulator.Errors;
 
 using System.Threading;
 
-public class PauseHandler {
+public class PauseHandler : IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<PauseHandler>();
 
     private volatile bool _paused;
@@ -14,7 +14,7 @@ public class PauseHandler {
     private volatile bool _pauseEnded;
 
     private volatile bool _pauseRequested;
-
+    private bool disposedValue;
     private readonly object _locked = new();
 
     private readonly ManualResetEvent _manualResetEvent = new(true);
@@ -69,5 +69,20 @@ public class PauseHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("{@Message}: {@PauseRequested},{@Paused},{@PauseEnded}", message, _pauseRequested, _paused, _pauseEnded);
         }
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (!disposedValue) {
+            if (disposing) {
+                _manualResetEvent.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

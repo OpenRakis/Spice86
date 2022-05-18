@@ -4,7 +4,7 @@ using Spice86.Emulator.CPU;
 using Spice86.Emulator.VM.Breakpoint;
 using Spice86.Emulator.Memory;
 
-public class MachineBreakpoints {
+public class MachineBreakpoints : IDisposable {
     private readonly BreakPointHolder _cycleBreakPoints = new();
 
     private readonly BreakPointHolder _executionBreakPoints = new();
@@ -14,6 +14,7 @@ public class MachineBreakpoints {
     private readonly State _state;
 
     private BreakPoint? _machineStopBreakPoint;
+    private bool disposedValue;
 
     public MachineBreakpoints(Machine machine) {
         _state = machine.Cpu.State;
@@ -25,7 +26,7 @@ public class MachineBreakpoints {
         PauseHandler.WaitIfPaused();
     }
 
-    public PauseHandler PauseHandler { get; private set; } = new();
+    public PauseHandler PauseHandler { get; } = new();
 
     public void OnMachineStop() {
         if (_machineStopBreakPoint is not null) {
@@ -60,5 +61,20 @@ public class MachineBreakpoints {
             long cycles = _state.Cycles;
             _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
         }
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (!disposedValue) {
+            if (disposing) {
+                PauseHandler.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

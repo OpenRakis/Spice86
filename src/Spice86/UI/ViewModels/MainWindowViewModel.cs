@@ -267,6 +267,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
             if (disposing) {
                 DisposeBuffers();
                 _programExecutor?.Dispose();
+                _okayToContinueEvent.Dispose();
             }
             _disposedValue = true;
         }
