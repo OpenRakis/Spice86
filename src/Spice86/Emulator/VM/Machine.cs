@@ -276,6 +276,7 @@ public class Machine : IDisposable {
             if (disposing) {
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
+                MachineBreakpoints.Dispose();
             }
             disposedValue = true;
         }
