@@ -25,9 +25,9 @@ public class CSharpOverrideHelper {
 
     protected Memory Memory => Machine.Memory;
 
-    protected UInt16Indexer UInt16 => Memory.UInt16;
-
     protected UInt8Indexer UInt8 => Memory.UInt8;
+    protected UInt16Indexer UInt16 => Memory.UInt16;
+    protected UInt32Indexer UInt32 => Memory.UInt32;
     protected Stack Stack => Cpu.Stack;
 
     protected State State => Cpu.State;
