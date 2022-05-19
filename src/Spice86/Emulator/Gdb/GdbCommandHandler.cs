@@ -65,6 +65,9 @@ public class GdbCommandHandler {
                 'Z' => _gdbCommandBreakpointHandler.AddBreakpoint(commandContent),
                 _ => _gdbIo.GenerateUnsupportedResponse()
             };
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Responded with {@Response}", response);
+            }
             if (response != null) {
                 _gdbIo.SendResponse(response);
             }

@@ -15,16 +15,14 @@ public class GdbServer : IDisposable {
     private bool _disposedValue;
     private readonly Machine _machine;
     private bool _isRunning = true;
-    private BackgroundWorker? _backgroundWorker;
+    private Thread? _gdbServerThread;
 
     public GdbServer(Machine machine, Configuration configuration) {
         this._machine = machine;
         this._configuration = configuration;
         if (configuration.GdbPort is not null) {
-            _backgroundWorker = new();
-            _backgroundWorker.WorkerSupportsCancellation = false;
-            _backgroundWorker.DoWork += (s, e) => {
-                RunServer(configuration.GdbPort.Value);
+            _gdbServerThread = new(RunServer){
+                Name = "GdbServer"
             };
             Start();
         }
@@ -39,7 +37,7 @@ public class GdbServer : IDisposable {
     protected void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                _backgroundWorker?.Dispose();
+                _gdbServerThread?.Join();
                 _isRunning = false;
             }
             _disposedValue = true;
@@ -55,14 +53,18 @@ public class GdbServer : IDisposable {
         GdbCommandHandler = gdbCommandHandler;
         while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
             string command = gdbIo.ReadCommand();
-            if (string.IsNullOrWhiteSpace(command) == false) {
+            if (!string.IsNullOrWhiteSpace(command)) {
                 gdbCommandHandler.RunCommand(command);
             }
         }
         _logger.Information("Client disconnected");
     }
 
-    private void RunServer(int port) {
+    private void RunServer() {
+        if(_configuration.GdbPort is null) {
+            return;
+        }
+        int port = _configuration.GdbPort.Value;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Starting GDB server");
         }
@@ -86,9 +88,8 @@ public class GdbServer : IDisposable {
         }
     }
 
-
     private void Start() {
-        _backgroundWorker?.RunWorkerAsync();
+        _gdbServerThread?.Start();
         // wait for thread to start
         _waitHandle = new AutoResetEvent(false);
         _waitHandle.WaitOne(Timeout.Infinite);

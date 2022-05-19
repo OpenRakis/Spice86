@@ -6,7 +6,7 @@ using Spice86.Emulator.Errors;
 
 using System.Threading;
 
-public class PauseHandler {
+public class PauseHandler : IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<PauseHandler>();
 
     private volatile bool _paused;
@@ -14,6 +14,8 @@ public class PauseHandler {
     private volatile bool _pauseEnded;
 
     private volatile bool _pauseRequested;
+    private bool disposedValue;
+    private readonly ManualResetEvent _manualResetEvent = new(true);
 
     public void RequestPause() {
         _pauseRequested = true;
@@ -23,20 +25,14 @@ public class PauseHandler {
     public void RequestPauseAndWait() {
         LogStatus($"{nameof(RequestPauseAndWait)} started");
         _pauseRequested = true;
-        while (!_paused) {
-            ;
-        }
-
+        _manualResetEvent.WaitOne(Timeout.Infinite);
         LogStatus($"{nameof(RequestPauseAndWait)} finished");
     }
 
     public void RequestResume() {
         LogStatus($"{nameof(RequestResume)} started");
         _pauseRequested = false;
-        lock (this) {
-            Monitor.PulseAll(this);
-        }
-
+        _manualResetEvent.Set();
         LogStatus($"{nameof(RequestResume)} finished");
     }
 
@@ -54,10 +50,8 @@ public class PauseHandler {
 
     private void Await() {
         try {
-            lock (this) {
-                Monitor.Wait(this);
-            }
-        } catch (ThreadInterruptedException exception) {
+            _manualResetEvent.WaitOne(TimeSpan.FromMilliseconds(1));
+        } catch (AbandonedMutexException exception) {
             Thread.CurrentThread.Interrupt();
             throw new UnrecoverableException($"Fatal error while waiting paused in {nameof(Await)}", exception);
         }
@@ -67,5 +61,20 @@ public class PauseHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("{@Message}: {@PauseRequested},{@Paused},{@PauseEnded}", message, _pauseRequested, _paused, _pauseEnded);
         }
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (!disposedValue) {
+            if (disposing) {
+                _manualResetEvent.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

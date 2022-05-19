@@ -267,6 +267,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
             if (disposing) {
                 DisposeBuffers();
                 _programExecutor?.Dispose();
+                _okayToContinueEvent.Dispose();
             }
             _disposedValue = true;
         }
@@ -299,6 +300,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     public void WaitOne() {
-        _okayToContinueEvent.WaitOne();
+        _okayToContinueEvent.WaitOne(Timeout.Infinite);
     }
 }
