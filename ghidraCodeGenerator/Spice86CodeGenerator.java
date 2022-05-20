@@ -771,6 +771,8 @@ public class Spice86CodeGenerator extends GhidraScript {
   }
 
   static class InstructionGenerator {
+    // Set to false to avoid incrementing the cycles at each instruction
+    private static final boolean GENERATE_COUNT_CYCLES = true;
     private final Log log;
     private final ParameterTranslator parameterTranslator;
     private final RegisterHandler registerHandler;
@@ -840,10 +842,17 @@ public class Spice86CodeGenerator extends GhidraScript {
                 offset) + ");\n" + instructionString;
       }
       if (generateLabel) {
-        return label + instructionString;
+        instructionString = label + instructionString;
+      }
+      if(GENERATE_COUNT_CYCLES) {
+        instructionString = generateCycleInc() + instructionString;
       }
       log.info("Generated instruction " + instructionString);
       return instructionString;
+    }
+
+    private String generateCycleInc() {
+      return "State.IncCycles();\n";
     }
 
     private boolean canUseNativeOperation() {

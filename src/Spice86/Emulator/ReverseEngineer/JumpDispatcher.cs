@@ -6,12 +6,21 @@
  * 
  */
 public class JumpDispatcher {
+    private static int InstanceCounter = 0;
     // Caller needs to return this when the Jump method returns false
     public Action? JumpAsmReturn { get; set; }
     // Caller needs to jump to its entry point with gotoAddress = NextEntryAddress when Jump returns true
     public int NextEntryAddress { get; private set; }
+    private int _instanceId = InstanceCounter++;
     private readonly Stack<Func<int, Action>> _jumpStack = new();
     private Func<int, Action>? _returnTo;
+
+    public JumpDispatcher() {
+    }
+    
+    public JumpDispatcher(Func<int, Action> initialTarget) {
+        _jumpStack.Push(initialTarget);
+    }
 
     // Emulates a jump by calling target and jumping inside it at entryAddress.
     // Maintains a stack of jumps so that if the same target is called twice without returning, it returns first to it and continues from there to avoid stack overflow
@@ -25,6 +34,8 @@ public class JumpDispatcher {
         }
         Func<int, Action> currentReturn = _jumpStack.Pop();
         if (_returnTo != null && _returnTo == currentReturn) {
+            // Push it back, it is the place we are going to.
+            _jumpStack.Push(currentReturn);
             _returnTo = null;
             return true;
         }

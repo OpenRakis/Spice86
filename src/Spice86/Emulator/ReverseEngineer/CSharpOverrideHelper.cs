@@ -80,7 +80,7 @@ public class CSharpOverrideHelper {
     public short Direction16 => (short)(DirectionFlag ? -2 : 2);
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
-    protected JumpDispatcher JumpDispatcher { get; }
+    protected JumpDispatcher JumpDispatcher { get; set; }
 
     protected bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
@@ -196,7 +196,7 @@ public class CSharpOverrideHelper {
     }
 
     public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
-        ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
+        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
             Stack.Push(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
@@ -204,7 +204,7 @@ public class CSharpOverrideHelper {
     }
 
     public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
-        ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
+        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
             Stack.Push(expectedReturnCs);
             Stack.Push(expectedReturnIp);
             Action returnAction = function.Invoke(0);
@@ -213,7 +213,7 @@ public class CSharpOverrideHelper {
     }
 
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
-        ExecuteEnsuringSameStack(expectedReturnCs, expectedReturnIp, () => {
+        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
             Stack.Push(FlagRegister);
             Stack.Push(expectedReturnCs);
             Stack.Push(expectedReturnIp);
@@ -243,11 +243,11 @@ public class CSharpOverrideHelper {
         return functionInformation.FuntionOverride;
     }
 
-    private void ExecuteEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp, Action action) {
+    private void ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, Action action) {
         uint stackAddressBefore = State.StackPhysicalAddress;
         State.CS = expectedReturnCs;
         State.IP = expectedReturnIp;
-        action.Invoke();
+        ExecuteCall(function, action);
         ushort actualReturnCs = State.CS;
         ushort actualReturnIp = State.IP;
         uint stackAddressAfter = State.StackPhysicalAddress;
@@ -266,11 +266,19 @@ public class CSharpOverrideHelper {
             if (actualTarget.FuntionOverride != null) {
                 message += " Calling it.";
                 _logger.Warning("{Message}", message);
-                actualTarget.FuntionOverride.Invoke(0);
+                ExecuteCall(actualTarget.FuntionOverride, () => actualTarget.FuntionOverride.Invoke(0));
             } else {
                 throw this.FailAsUntested(message);
             }
         }
+    }
+
+    private void ExecuteCall(Func<int, Action> function, Action action) {
+        JumpDispatcher currentJumpDispatcher = JumpDispatcher;
+        // Ensure the jump dispatcher has the function we are calling as starting point
+        JumpDispatcher = new JumpDispatcher(function);
+        action.Invoke();
+        JumpDispatcher = currentJumpDispatcher;
     }
 
     public void OverrideInstruction(ushort segment, ushort offset, Func<Action> renamedOverride) {
@@ -335,13 +343,10 @@ public class CSharpOverrideHelper {
     /// reached.
     /// </summary>
     protected UnrecoverableException FailAsUntested(string message) {
-        string dumpedCallStack = Machine.DumpCallStack();
         string error =
-            $"Untested code reached, please tell us how to reach this state.Here is the message: {message} Here is the call stack: {dumpedCallStack}";
+            $"Untested code reached, please tell us how to reach this state. Here is the message: {message}. Here is the Machine stack: {State.ToString()}";
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-            _logger.Error(
-                "Untested code reached, please tell us how to reach this state.Here is the message: {@Message} Here is the call stack: {@DumpedCallStack}",
-                message, Machine.DumpCallStack());
+            _logger.Error(error);
         }
 
         return new UnrecoverableException(error);
