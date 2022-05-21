@@ -30,7 +30,7 @@ public class Pic : DefaultIOPortHandler {
 
     private const int SlavePortB = 0xA1;
 
-    private static readonly Dictionary<int, int> _vectorNumberToIrq = new();
+    private static readonly Dictionary<int, int> _irqToVectorNumber = new();
 
     private int _commandsToProcess = 2;
 
@@ -42,13 +42,29 @@ public class Pic : DefaultIOPortHandler {
 
     static Pic() {
         // timer
-        _vectorNumberToIrq.Add(8, 0);
+        _irqToVectorNumber.Add(0, 8);
         // keyboard
-        _vectorNumberToIrq.Add(9, 1);
+        _irqToVectorNumber.Add(1, 9);
     }
 
     public Pic(Machine machine, bool initialized, Configuration configuration) : base(machine, configuration) {
         _initialized = initialized;
+    }
+
+    public void RegisterVectorNumberToIrq(byte vectorNumber, int irq) => _irqToVectorNumber.Add(irq, vectorNumber);
+
+    public void ProcessInterruptRequest(int irq)
+    {
+        IsLastIrqAcknowledged = false;
+        if(_irqToVectorNumber.TryGetValue(irq, out var vectorNumber))
+        {
+            ProcessInterruptVector((byte)vectorNumber);
+        }
+        else
+        {
+            throw new ArgumentOutOfRangeException(nameof(irq));
+        }
+        AcknwowledgeInterrupt();
     }
 
     public void AcknwowledgeInterrupt() {
@@ -63,7 +79,7 @@ public class Pic : DefaultIOPortHandler {
     }
 
     public bool IrqMasked(int vectorNumber) {
-        if (_vectorNumberToIrq.TryGetValue(vectorNumber, out var irqNumber) == false) {
+        if (_irqToVectorNumber.TryGetValue(vectorNumber, out var irqNumber) == false) {
             return false;
         }
         int maskForVectorNumber = (1 << irqNumber);
@@ -87,7 +103,7 @@ public class Pic : DefaultIOPortHandler {
         base.WriteByte(port, value);
     }
 
-    public void ProcessInterrupt(byte vectorNumber) {
+    public void ProcessInterruptVector(byte vectorNumber) {
         if (IrqMasked(vectorNumber)) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Cannot process interrupt {@ProcessInterrupt}, IRQ is masked.", ConvertUtils.ToHex8(vectorNumber));
