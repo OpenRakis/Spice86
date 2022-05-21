@@ -72,11 +72,12 @@
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.18" />
 		<PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
-		<!-- WARNING: TinyAudio is Windows-only right now -->
-		<PackageReference Include="TinyAudio" Version="0.3.1" />
 		<PackageReference Include="Ymf262Emu" Version="1.0.1" />
 	</ItemGroup>
 	<ItemGroup>
 		<AvaloniaResource Include="Icon\Spice86.ico" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\TinyAudio\TinyAudio.csproj" />
 	</ItemGroup>
 </Project>
