@@ -49,14 +49,14 @@ public static class ConvertUtils {
         return (sbyte)value;
     }
 
-    /// <summary> </summary>
+    /// <summary>Parses a hex string as uint </summary>
     /// <param name="value"> </param>
     /// <returns>the value as a uint</returns>
     public static uint ParseHex32(string value) {
         return uint.Parse(Replace0xWithBlank(value), NumberStyles.HexNumber);
     }
 
-    /// <summary> </summary>
+    /// <summary>Parses a hex string as ushort </summary>
     /// <param name="value"> </param>
     /// <returns>the value as a ushort</returns>
     public static ushort ParseHex16(string value) {
@@ -78,7 +78,7 @@ public static class ConvertUtils {
     }
 
     public static ushort ToAbsoluteOffset(uint physicalAddress) {
-        return (ushort)(physicalAddress - physicalAddress / SegmentSize * SegmentSize);
+        return (ushort)(physicalAddress - (physicalAddress / SegmentSize * SegmentSize));
     }
 
     public static ushort ToAbsoluteSegment(uint physicalAddress) {
