@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<LangVersion>preview</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<NoWarn>CS1591</NoWarn>
+		<Authors>Greg Divis</Authors>
+		<Version>0.3.1</Version>
+		<Description>Simple audio playback library</Description>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/gregdivis/TinyAudio.git</RepositoryUrl>
+	</PropertyGroup>
+</Project>
