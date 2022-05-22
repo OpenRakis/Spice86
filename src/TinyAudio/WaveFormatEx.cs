@@ -17,7 +17,7 @@ internal struct WAVEFORMATEX
     public ushort cbSize;
 }
 
-[SupportedOSPlatform(("windows"))]
+[SupportedOSPlatform("windows")]
 [StructLayout(LayoutKind.Sequential)]
 internal struct WAVEFORMATEXTENSIBLE
 {
