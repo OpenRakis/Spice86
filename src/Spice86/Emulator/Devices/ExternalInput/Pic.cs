@@ -51,7 +51,11 @@ public class Pic : DefaultIOPortHandler {
         _initialized = initialized;
     }
 
-    public void RegisterVectorNumberToIrq(byte vectorNumber, int irq) => _irqToVectorNumber.Add(irq, vectorNumber);
+    public void RegisterVectorNumberToIrq(byte vectorNumber, int irq) {
+        if(!_irqToVectorNumber.ContainsKey(irq)) {
+            _irqToVectorNumber.Add(irq, vectorNumber);
+        }
+    }
 
     public void ProcessInterruptRequest(int irq)
     {
