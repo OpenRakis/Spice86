@@ -96,7 +96,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             IsBackground = true,
             Priority = ThreadPriority.AboveNormal
         };
-        _machine.Pic.RegisterVectorNumberToIrq(15, this.IRQ);
         this.playbackThread.Start();
     }
 
@@ -463,7 +462,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     /// </summary>
     private void RaiseInterrupt() {
         this.mixer.InterruptStatusRegister = InterruptStatus.Dma8;
-        //hack: hard-coded translation of IRQ 7 to vectorNumber 15.
         this.vm.Pic.ProcessInterruptRequest(this.IRQ);
         System.Diagnostics.Debug.WriteLine("Sound Blaster IRQ");
     }
