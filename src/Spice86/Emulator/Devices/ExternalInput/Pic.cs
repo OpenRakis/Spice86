@@ -30,7 +30,7 @@ public class Pic : DefaultIOPortHandler {
 
     private const int SlavePortB = 0xA1;
 
-    private static readonly Dictionary<int, int> _irqToVectorNumber = new();
+    private static readonly Dictionary<int, int> _vectorToIrq = new();
 
     private int _commandsToProcess = 2;
 
@@ -42,33 +42,39 @@ public class Pic : DefaultIOPortHandler {
 
     static Pic() {
         // timer
-        _irqToVectorNumber.Add(0, 8);
+        _vectorToIrq.Add(8, 0);
         // keyboard
-        _irqToVectorNumber.Add(1, 9);
+        _vectorToIrq.Add(9, 1);
     }
 
     public Pic(Machine machine, bool initialized, Configuration configuration) : base(machine, configuration) {
         _initialized = initialized;
     }
 
-    public void RegisterVectorNumberToIrq(byte vectorNumber, int irq) {
-        if(!_irqToVectorNumber.ContainsKey(irq)) {
-            _irqToVectorNumber.Add(irq, vectorNumber);
+    public void ProcessInterruptRequest(int irq) {
+        byte? vectorNumber = irq switch {
+            0 => 0x8,
+            1 => 0x9,
+            2 => 0xA,
+            3 => 0xB,
+            4 => 0xC,
+            5 => 0xD,
+            6 => 0xE,
+            7 => 0xF,
+            8 => 0x70,
+            9 => 0x71,
+            10 => 0x72,
+            11 => 0x73,
+            12 => 0x74,
+            13 => 0x75,
+            14 => 0x76,
+            15 => 0x77,
+            _ => null
+        };
+        if (vectorNumber is null) {
+            throw new UnrecoverableException("IRQ not supported at the moment");
         }
-    }
-
-    public void ProcessInterruptRequest(int irq)
-    {
-        IsLastIrqAcknowledged = false;
-        if(_irqToVectorNumber.TryGetValue(irq, out var vectorNumber))
-        {
-            ProcessInterruptVector((byte)vectorNumber);
-        }
-        else
-        {
-            throw new ArgumentOutOfRangeException(nameof(irq));
-        }
-        AcknwowledgeInterrupt();
+        ProcessInterruptVector(vectorNumber.Value);
     }
 
     public void AcknwowledgeInterrupt() {
@@ -83,7 +89,7 @@ public class Pic : DefaultIOPortHandler {
     }
 
     public bool IrqMasked(int vectorNumber) {
-        if (_irqToVectorNumber.TryGetValue(vectorNumber, out var irqNumber) == false) {
+        if (_vectorToIrq.TryGetValue(vectorNumber, out var irqNumber) == false) {
             return false;
         }
         int maskForVectorNumber = (1 << irqNumber);
