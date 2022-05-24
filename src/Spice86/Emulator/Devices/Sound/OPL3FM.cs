@@ -44,9 +44,6 @@ public sealed class OPL3FM : DefaultIOPortHandler {
         };
     }
 
-    public IEnumerable<int> OutputPorts => new int[] { 0x388, 0x389 };
-    private IEnumerable<int> InputPorts => new int[] { 0x388 };
-
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(0x388, this);
         ioPortDispatcher.AddIOPortHandler(0x389, this);
@@ -137,7 +134,6 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     /// <summary>
     /// Generates and plays back output waveform data.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private void GenerateWaveforms() {
         float[]? buffer = new float[1024];
         float[] playBuffer;
