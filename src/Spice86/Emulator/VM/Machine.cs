@@ -86,9 +86,9 @@ public class Machine : IDisposable {
 
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
     public DmaController DmaController { get; }
+
     /// <summary>
     /// Gets the current DOS environment variables.
-    /// TODO: Make use of it by allocating the block of memory corresponding to it in virtual memory.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
     public OPL3FM OPL3FM { get; }
@@ -239,7 +239,6 @@ public class Machine : IDisposable {
             if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
             }
-            PerformDmaTransfers();
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
         }
