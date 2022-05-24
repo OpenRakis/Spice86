@@ -109,6 +109,7 @@ public class Timer : DefaultIOPortHandler {
     public void Tick() {
         long cycles = _cpu.State.Cycles;
         if (_counters[0].ProcessActivation(cycles)) {
+            _machine.PerformDmaTransfers();
             _pic.ProcessInterruptVector(0x8);
         }
 
