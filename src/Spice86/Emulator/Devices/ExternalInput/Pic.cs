@@ -51,8 +51,13 @@ public class Pic : DefaultIOPortHandler {
         _initialized = initialized;
     }
 
+    /// <summary>
+    /// Services an IRQ request
+    /// </summary>
+    /// <param name="irq">The IRQ Number, which will be interally translated to a vector number</param>
+    /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
     public void ProcessInterruptRequest(int irq) {
-        byte? vectorNumber = irq switch {
+        byte vectorNumber = irq switch {
             0 => 0x8,
             1 => 0x9,
             2 => 0xA,
@@ -69,12 +74,9 @@ public class Pic : DefaultIOPortHandler {
             13 => 0x75,
             14 => 0x76,
             15 => 0x77,
-            _ => null
+            _ => throw new UnrecoverableException("IRQ not supported at the moment")
         };
-        if (vectorNumber is null) {
-            throw new UnrecoverableException("IRQ not supported at the moment");
-        }
-        ProcessInterruptVector(vectorNumber.Value);
+        ProcessInterruptVector(vectorNumber);
     }
 
     public void AcknwowledgeInterrupt() {
