@@ -83,6 +83,7 @@ public class CSharpOverrideHelper {
     protected JumpDispatcher JumpDispatcher { get; set; }
 
     protected bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
+
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine) {
         this._functionInformations = functionInformations;
@@ -117,7 +118,7 @@ public class CSharpOverrideHelper {
             FunctionInformation? parsedFunctionInformation = GhidraSymbolsDumper.NameToFunctionInformation(methodName);
             if (parsedFunctionInformation == null) {
                 throw new UnrecoverableException("Cannot parse " + methodName +
-                    " into a spice86 function name as format is not correct.");
+                                                 " into a spice86 function name as format is not correct.");
             }
 
             functionName = parsedFunctionInformation.Name;
@@ -243,21 +244,24 @@ public class CSharpOverrideHelper {
         return functionInformation.FuntionOverride;
     }
 
-    private void ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, Action action) {
-        uint stackAddressBefore = State.StackPhysicalAddress;
+    private void ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<int, Action> function, Action action) {
+        uint expectedStackAddress = State.StackPhysicalAddress;
         State.CS = expectedReturnCs;
         State.IP = expectedReturnIp;
         ExecuteCall(function, action);
         ushort actualReturnCs = State.CS;
         ushort actualReturnIp = State.IP;
-        uint stackAddressAfter = State.StackPhysicalAddress;
-        if (actualReturnCs != expectedReturnCs || actualReturnIp != expectedReturnIp) {
+        uint actualStackAddress = State.StackPhysicalAddress;
+        // Do not return to the caller until we are sure we are at the right place
+        while (actualReturnCs != expectedReturnCs ||
+               actualReturnIp != expectedReturnIp || actualStackAddress != expectedStackAddress) {
             SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
             SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
             String message =
                 "The original code is trying to jump via call stack modification. Expected to return at: " +
                 expectedReturn + " but actually returning to: " + actualReturn + " Stack address before: " +
-                stackAddressBefore + " Stack address after: " + stackAddressAfter;
+                expectedStackAddress + " Stack address after: " + actualStackAddress;
             if (!_functionInformations.TryGetValue(actualReturn, out FunctionInformation? actualTarget)) {
                 throw this.FailAsUntested(message);
             }
@@ -266,7 +270,10 @@ public class CSharpOverrideHelper {
             if (actualTarget.FuntionOverride != null) {
                 message += " Calling it.";
                 _logger.Warning("{Message}", message);
-                ExecuteCall(actualTarget.FuntionOverride, () => actualTarget.FuntionOverride.Invoke(0));
+                ExecuteCall(actualTarget.FuntionOverride, () => actualTarget.FuntionOverride.Invoke(0).Invoke());
+                actualStackAddress = State.StackPhysicalAddress;
+                actualReturnCs = State.CS;
+                actualReturnIp = State.IP;
             } else {
                 throw this.FailAsUntested(message);
             }
@@ -327,6 +334,7 @@ public class CSharpOverrideHelper {
                 if (!IsRegisterExecutableCodeModificationEnabled) {
                     return;
                 }
+
                 byte oldValue = Memory.UInt8[addressCopy];
                 byte newValue = Memory.CurrentlyWritingByte;
                 if (oldValue != newValue) {

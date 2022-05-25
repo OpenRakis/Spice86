@@ -316,25 +316,7 @@ public class MachineTest {
     }
 
     private ProgramExecutor CreateProgramExecutor(string binName) {
-        Configuration configuration = new Configuration() {
-            CreateAudioBackend = false
-        };
-        // making sure int8 is not going to be triggered during the tests
-        configuration.InstructionsPerSecond = 10000000;
-        configuration.Exe = GetBinPath(binName);
-        // Don't expect any hash for the exe
-        configuration.ExpectedChecksumValue = Array.Empty<byte>();
-        configuration.InstallInterruptVector = false;
-
-        ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
-        Machine machine = programExecutor.Machine;
-        Cpu cpu = machine.Cpu;
-        // Disabling custom IO handling
-        cpu.IoPortDispatcher = null;
-        cpu.ErrorOnUninitializedInterruptHandler = false;
-        State state = cpu.State;
-        state.Flags.IsDOSBoxCompatible = false;
-        return programExecutor;
+        return new MachineCreator().CreateProgramExecutorFromBinName(binName);
     }
 
     private Machine Execute(string binName) {
@@ -347,10 +329,6 @@ public class MachineTest {
     private byte[] GetExpected(string binName) {
         string resPath = $"Resources/cpuTests/res/{binName}.bin";
         return File.ReadAllBytes(resPath);
-    }
-
-    private string GetBinPath(string binName) {
-        return $"Resources/cpuTests/{binName}.bin";
     }
 
     [AssertionMethod]

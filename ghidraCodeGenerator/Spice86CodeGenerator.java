@@ -126,11 +126,9 @@ public class Spice86CodeGenerator extends GhidraScript {
     public List<String> outputCSharpFiles() {
       List<String> res = new ArrayList<>();
       StringBuilder fileContent = generateCSharpClassHeaderAndDefinition();
-      fileContent.append("/*");
       fileContent.append(Utils.indent(generateSegmentStorage(), 2));
       fileContent.append("\n");
       fileContent.append(Utils.indent(generateConstructor(), 2));
-      fileContent.append("*/\n");
       Collection<ParsedFunction> parsedFunctions = parsedProgram.getEntryPoints().values();
       fileContent.append(Utils.indent(generateOverrideDefinitionFunction(parsedFunctions), 2) + "\n");
       fileContent.append(Utils.indent(generateCodeRewriteDetector(), 2));
@@ -158,28 +156,33 @@ public class Spice86CodeGenerator extends GhidraScript {
     private StringBuilder generateCSharpClassHeaderAndDefinition() {
       StringBuilder additionalFile = new StringBuilder();
       additionalFile.append(generateNamespace());
+      additionalFile.append(generateImports());
       additionalFile.append(generateClassDeclaration());
       additionalFile.append("\n");
       return additionalFile;
-    }
-
-    private String generateClassDeclaration() {
-      return "public partial class Overrides : CSharpOverrideHelper {\n";
     }
 
     private String generateNamespace() {
       return "namespace " + namespace + ";\n\n";
     }
 
+    private String generateImports() {
+      return "using Spice86.Emulator.Function;\n\n";
+    }
+
+    private String generateClassDeclaration() {
+      return "public partial class GeneratedOverrides : CSharpOverrideHelper {\n";
+    }
+
     private String generateConstructor() {
       String res =
-          "public Overrides(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ushort entrySegment = "
+          "public GeneratedOverrides(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ushort entrySegment = "
               + Utils.toHexWith0X(parsedProgram.getCs1Physical() / 0x10)
               + ") : base(functionInformations, machine) {\n";
       res += Utils.indent(generateSegmentConstructorAssignment(), 2);
       res += '\n';
-      res += "  DefineGeneratedCodeOverrides();\n";
-      res += "  DetectCodeRewrites();\n";
+      res += "  // DefineGeneratedCodeOverrides();\n";
+      res += "  // DetectCodeRewrites();\n";
       res += "}\n\n";
       return res;
     }
@@ -215,7 +218,7 @@ public class Spice86CodeGenerator extends GhidraScript {
 
     private String generateSegmentStorage() {
       return generateSegmentVars(
-          v -> "private ushort " + v.getValue() + "; // " + Utils.toHexWith0X(v.getKey()) + "\n");
+          v -> "protected ushort " + v.getValue() + "; // " + Utils.toHexWith0X(v.getKey()) + "\n");
     }
 
     private String generateSegmentVars(java.util.function.Function<Map.Entry<Integer, String>, String> mapper) {
@@ -844,7 +847,7 @@ public class Spice86CodeGenerator extends GhidraScript {
       if (generateLabel) {
         instructionString = label + instructionString;
       }
-      if(GENERATE_COUNT_CYCLES) {
+      if (GENERATE_COUNT_CYCLES) {
         instructionString = generateCycleInc() + instructionString;
       }
       log.info("Generated instruction " + instructionString);
@@ -2128,8 +2131,16 @@ public class Spice86CodeGenerator extends GhidraScript {
       jumpTargets = jumpsFromTo.values().stream().flatMap(Collection::stream).collect(Collectors.toSet());
     }
 
+    public Map<Integer, List<SegmentedAddress>> getCallsFromTo() {
+      return callsFromTo;
+    }
+
     public Map<Integer, List<SegmentedAddress>> getJumpsFromTo() {
       return jumpsFromTo;
+    }
+
+    public Map<Integer, List<SegmentedAddress>> getRetsFromTo() {
+      return retsFromTo;
     }
 
     public Map<Integer, List<SegmentedAddress>> getCallsJumpsFromTo() {
@@ -2700,7 +2711,7 @@ public class Spice86CodeGenerator extends GhidraScript {
 
     public static ParsedFunction createParsedFunction(Log log, GhidraScript ghidraScript, Function function) {
       String name = function.getName();
-      SegmentedAddress entrySegmentedAddress = extractAddress(name);
+      SegmentedAddress entrySegmentedAddress = Utils.extractSpice86Address(name);
       long ghidraAddress = function.getEntryPoint().getUnsignedOffset();
       log.info(
           "Parsing function " + name + " at address " + entrySegmentedAddress + " / ghidra address "
@@ -2726,18 +2737,6 @@ public class Spice86CodeGenerator extends GhidraScript {
         return null;
       }
       return new ParsedFunction(function, name, entrySegmentedAddress, instructionsBeforeEntry, instructionsAfterEntry);
-    }
-
-    private static SegmentedAddress extractAddress(String name) {
-      String[] split = name.split("_");
-      if (split.length < 4) {
-        return null;
-      }
-      try {
-        return new SegmentedAddress(Utils.parseHex(split[split.length - 3]), Utils.parseHex(split[split.length - 2]));
-      } catch (NumberFormatException nfe) {
-        return null;
-      }
     }
 
     private static SegmentedAddress getInstructionAddress(Log log, Instruction instruction,
@@ -2967,12 +2966,13 @@ public class Spice86CodeGenerator extends GhidraScript {
     }
 
     public static int uint(int value, int bits) {
-      return switch (bits){
+      return switch (bits) {
         case 8 -> uint8(value);
         case 16 -> uint16(value);
         default -> throw new RuntimeException("Unsupported bits number " + bits);
       };
     }
+
     public static int uint8(int value) {
       return value & 0xFF;
     }
@@ -3009,6 +3009,18 @@ public class Spice86CodeGenerator extends GhidraScript {
 
     public static int toAbsoluteOffset(int physicalAddress) {
       return physicalAddress - (physicalAddress / SEGMENT_SIZE) * SEGMENT_SIZE;
+    }
+
+    public static SegmentedAddress extractSpice86Address(String name) {
+      String[] split = name.split("_");
+      if (split.length < 4) {
+        return null;
+      }
+      try {
+        return new SegmentedAddress(Utils.parseHex(split[split.length - 3]), Utils.parseHex(split[split.length - 2]));
+      } catch (NumberFormatException nfe) {
+        return null;
+      }
     }
   }
 }
