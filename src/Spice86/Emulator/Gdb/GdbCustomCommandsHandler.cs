@@ -2,10 +2,10 @@
 
 using Serilog;
 
-using Spice86.Emulator.CPU;
 using Spice86.Emulator.Devices.Video;
 using Spice86.Emulator.Function;
 using Spice86.Emulator.Function.Dump;
+using Spice86.Emulator.Memory;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.VM.Breakpoint;
 using Spice86.Emulator.Memory;
@@ -19,6 +19,7 @@ using System.Text;
 using Spice86.UI.ViewModels;
 
 using System.Reflection;
+using Spice86.Emulator.CPU;
 
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
@@ -75,21 +76,19 @@ public class GdbCustomCommandsHandler {
         }
 
         string cyclesToWaitString = args[1];
-        if (!int.TryParse(cyclesToWaitString, out _)) {
-            return InvalidCommand($"breakCycles argument needs to be a number. You gave {cyclesToWaitString}");
-        }
+        if (long.TryParse(cyclesToWaitString, out var cyclesToWait)) {
+            long currentCycles = _machine.Cpu.State.Cycles;
+            long cyclesBreak = currentCycles + cyclesToWait;
+            var breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
+            _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
+            }
 
-        long cyclesToWait = long.Parse(cyclesToWaitString);
-        long currentCycles = _machine.Cpu.State.Cycles;
-        long cyclesBreak = currentCycles + cyclesToWait;
-        var breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
-        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
+            return _gdbIo.GenerateMessageToDisplayResponse(
+                $"Breakpoint added for cycles. Current cycles is {currentCycles}. Will wait for {cyclesToWait}. Will stop at {cyclesBreak}");
         }
-
-        return _gdbIo.GenerateMessageToDisplayResponse(
-            $"Breakpoint added for cycles. Current cycles is {currentCycles}. Will wait for {cyclesToWait}. Will stop at {cyclesBreak}");
+        return InvalidCommand($"breakCycles argument needs to be a number. You gave {cyclesToWaitString}");
     }
 
     private string BreakStop() {
@@ -273,7 +272,7 @@ Supported custom commands:
         }
 
         try {
-            return new[] {int.Parse(split[0]), int.Parse(split[1])};
+            return new[] { int.Parse(split[0]), int.Parse(split[1]) };
         } catch (FormatException nfe) {
             throw new ArgumentException($"Could not parse numbers in resolution {resolution}", nfe);
         }
