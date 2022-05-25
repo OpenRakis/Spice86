@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Emulator.Devices.DirectMemoryAccess;
 
-using Spice86.Emulator.Devices;
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.VM;
 
