@@ -27,11 +27,16 @@ public partial class DebuggerViewModel : ObservableObject {
     }
 
     public void UpdateMachine(object? sender, EventArgs e) {
-        if(_machine is null || !_machine.IsPaused) {
+        if (_machine is null || !_machine.IsPaused) {
             return;
         }
         Machine? machine = _machine;
         Machine = null;
         Machine = machine;
+        Memory = null;
+        Memory = Convert.ToHexString(machine.Memory.Ram);
     }
+
+    [ObservableProperty]
+    private string? _memory;
 }

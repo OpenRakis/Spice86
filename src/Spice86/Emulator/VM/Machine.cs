@@ -225,12 +225,17 @@ public class Machine : IDisposable {
 
     public bool IsPaused { get; private set; }
 
+    private bool _exitEmulationLoop = false;
+
+    public void ExitEmulationLoop() => _exitEmulationLoop = true;
     private void RunLoop() {
-        while (Cpu.IsRunning) {
+        _exitEmulationLoop = false;
+        while (Cpu.IsRunning && !_exitEmulationLoop) {
             if (Gui?.IsPaused == true) {
                 IsPaused = true;
                 Paused?.Invoke();
                 if (_programExecutor.Step() == false) {
+                    Gui.IsPaused = true;
                     Gui?.WaitOne();
                 }
                 Resumed?.Invoke();
