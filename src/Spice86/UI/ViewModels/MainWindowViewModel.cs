@@ -33,6 +33,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     private static readonly ILogger _logger = Program.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposedValue;
+    private bool _restartingEmulator = false;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
     private PaletteWindow? _paletteWindow;
@@ -43,7 +44,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
 
     private ProgramExecutor? _programExecutor;
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
-    readonly ManualResetEvent _okayToContinueEvent = new(true);
+    private ManualResetEvent _okayToContinueEvent = new(true);
 
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
 
@@ -99,10 +100,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         if (configuration is null) {
             Exit();
         }
-        MainTitle = $"{nameof(Spice86)} {configuration?.Exe}";
+        SetMainTitle();
     }
 
-    public string? MainTitle { get; private set; }
+    private void SetMainTitle() {
+        MainTitle = $"{nameof(Spice86)} {_configuration?.Exe}";
+    }
+
+    [ObservableProperty]
+    private string? _mainTitle;
 
     public AvaloniaList<VideoBufferViewModel> VideoBuffers {
         get => _videoBuffers;
@@ -120,6 +126,52 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    [RelayCommand]
+    public Task DebugExecutableCommand() {
+        return StartNewExecutable(true);
+    }
+
+    [RelayCommand]
+    public Task StartExecutable() {
+        return StartNewExecutable();
+    }
+
+    private async Task StartNewExecutable(bool pauseOnStart = false) {
+        if (App.MainWindow is not null) {
+            OpenFileDialog? ofd = new OpenFileDialog() {
+                Title = "Start Executable...",
+                AllowMultiple = false,
+                Filters = {
+                    new FileDialogFilter() {
+                        Extensions = {"exe", "com" },
+                        Name = "DOS Executables"
+                    },
+                    new FileDialogFilter() {
+                        Extensions = { "*" },
+                        Name = "All Files"
+                    }
+                }
+            };
+            var files = await ofd.ShowAsync(App.MainWindow);
+            if (files?.Any() == true && _configuration is not null) {
+                _configuration.Exe = files[0];
+                _configuration.ExeArgs = "";
+                _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
+                DisposeEmulator();
+                SetMainTitle();
+                _okayToContinueEvent = new(true);
+                IsPaused = pauseOnStart;
+                _restartingEmulator = true;
+                _programExecutor?.Machine.ExitEmulationLoop();
+                while (_emulatorThread?.IsAlive == true) {
+                    Dispatcher.UIThread.RunJobs();
+                }
+                RunEmulator();
+                _restartingEmulator = false;
+            }
+        }
     }
 
     private double _timeMultiplier = 1;
@@ -206,7 +258,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
 
     public int MouseY { get; set; }
 
-    public IDictionary<uint, VideoBufferViewModel> VideoBuffersAsDictionary => VideoBuffers.ToDictionary(x => x.Address, x => x);
+    public IDictionary<uint, VideoBufferViewModel> VideoBuffersAsDictionary =>
+        VideoBuffers
+        .ToDictionary(x =>
+            x.Address,
+            x => x);
 
     public int Width { get; private set; }
 
@@ -214,8 +270,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
 
     public bool IsRightButtonClicked { get; private set; }
 
-    public void OnMainWindowOpened(object? sender, EventArgs e) {
-        if (sender is Window) {
+    public void OnMainWindowOpened(object? sender, EventArgs e) => RunEmulator();
+
+    private void RunEmulator() {
+        if (_configuration is not null &&
+            !string.IsNullOrWhiteSpace(_configuration.Exe) &&
+            !string.IsNullOrWhiteSpace(_configuration.CDrive)) {
             _emulatorThread = new Thread(RunMachine) {
                 Name = "Emulator"
             };
@@ -265,12 +325,21 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                DisposeBuffers();
-                _programExecutor?.Dispose();
-                _okayToContinueEvent.Dispose();
+                DisposeEmulator();
             }
             _disposedValue = true;
         }
+    }
+
+    private void DisposeEmulator() {
+        Dispatcher.UIThread.Post(() => {
+            _performanceWindow?.Close();
+            _debuggerWindow?.Close();
+            _paletteWindow?.Close();
+        }, DispatcherPriority.MaxValue);
+        DisposeBuffers();
+        _programExecutor?.Dispose();
+        _okayToContinueEvent.Dispose();
     }
 
     private static Configuration? GenerateConfiguration(string[] args) {
@@ -296,7 +365,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
                 }
             }
         }
-        Exit();
+        if (!_restartingEmulator) {
+            Exit();
+        }
     }
 
     public void WaitOne() {

@@ -13,12 +13,9 @@
 		<vm:DebuggerViewModel />
 	</Design.DataContext>
 	<ScrollViewer>
-		<Grid RowDefinitions="Auto, Auto, *">
-			<StackPanel Orientation="Horizontal" Grid.Row="0">
-				
-			</StackPanel>
-			<TextBlock Grid.Row="1" HorizontalAlignment="Center" Text="Pause the emulator to see updates here" IsVisible="{Binding !Machine.IsPaused}" />
-			<TabControl Grid.Row="2">
+		<Grid RowDefinitions="Auto,*">
+			<TextBlock Grid.Row="0" HorizontalAlignment="Center" Text="Pause the emulator to see updates here" IsVisible="{Binding !Machine.IsPaused}" />
+			<TabControl Grid.Row="1">
 				<TabItem Header="Summary">
 					<WrapPanel>
 						<DockPanel>
@@ -39,12 +36,13 @@
 								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.ES, StringFormat=ES: {0:X}}" />
 								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.FS, StringFormat=FS: {0:X}}" />
 								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.GS, StringFormat=GS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.Flags.FlagRegister, StringFormat=Flags: {0:X}}" />
 							</UniformGrid>
 						</DockPanel>
 					</WrapPanel>
 				</TabItem>
 				<TabItem Header="Memory">
-					<Label>WIP...</Label>
+					<TextBlock Text="{Binding Memory}" />
 				</TabItem>
 			</TabControl>
 		</Grid>
