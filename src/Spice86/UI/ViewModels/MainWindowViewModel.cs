@@ -351,7 +351,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     private void RunMachine() {
-        if (_configuration == null) {
+        if (_configuration is null) {
             _logger.Error("No configuration available, cannot continue");
         } else {
             try {
