@@ -60,7 +60,7 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
             };
             string? file = await picker.ShowAsync(desktop.MainWindow);
             if (string.IsNullOrWhiteSpace(file) == false) {
-                _bitmap.Save(file);
+                _bitmap?.Save(file);
             }
         }
     }
@@ -83,7 +83,7 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
     /// </summary>
     [ObservableProperty]
-    private WriteableBitmap _bitmap = new(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+    private WriteableBitmap? _bitmap = new(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
 
     private bool _showCursor = true;
 
@@ -143,7 +143,7 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
     [ObservableProperty] private bool _isDrawing;
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
-        if (_appClosing || _disposedValue || UIUpdateMethod is null) {
+        if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
             return;
         }
         using ILockedFramebuffer pixels = Bitmap.Lock();
@@ -184,8 +184,10 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         if (!_disposedValue) {
             if (disposing) {
                 Dispatcher.UIThread.Post(() => {
-                    Bitmap.Dispose();
+                    Bitmap?.Dispose();
+                    Bitmap = null;
                     Cursor?.Dispose();
+                    UIUpdateMethod?.Invoke();
                 }, DispatcherPriority.MaxValue);
             }
             _disposedValue = true;
