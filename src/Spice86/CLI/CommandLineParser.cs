@@ -26,6 +26,7 @@ public class CommandLineParser {
             .WithNotParsed((e) => _logger.Error("{@Errors}", e));
         return result?.MapResult(initialConfig => {
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
+            initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
             if (initialConfig.Logs) {
