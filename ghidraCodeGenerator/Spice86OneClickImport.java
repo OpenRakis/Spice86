@@ -4,6 +4,12 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import ghidra.app.cmd.disassemble.DisassembleCommand;
 import ghidra.app.cmd.function.CreateFunctionCmd;
+import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileOptions;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.app.decompiler.parallel.DecompileConfigurer;
+import ghidra.app.decompiler.parallel.DecompilerCallback;
+import ghidra.app.decompiler.parallel.ParallelDecompiler;
 import ghidra.app.script.GhidraScript;
 import ghidra.framework.cmd.Command;
 import ghidra.program.database.function.OverlappingFunctionException;
@@ -22,6 +28,7 @@ import ghidra.program.model.symbol.Symbol;
 import ghidra.program.model.symbol.SymbolType;
 import ghidra.util.exception.DuplicateNameException;
 import ghidra.util.exception.InvalidInputException;
+import ghidra.util.task.TaskMonitor;
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -57,32 +64,38 @@ public class Spice86OneClickImport extends GhidraScript {
   @Override
   protected void run() throws Exception {
     String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");
-    Log log = new Log(this, baseFolder + "spice86ImportLog.txt", true);
-    FunctionCreator functionCreator = new FunctionCreator(this, log);
+    try (Log log = new Log(this, baseFolder + "spice86ImportLog.txt", true)) {
+      FunctionCreator functionCreator = new FunctionCreator(this, log);
 
-    log.info("Reading function symbols");
-    Map<SegmentedAddress, String> functions =
-        new SymbolsFileReader().readFunctionFile(baseFolder + "spice86dumpGhidraSymbols.txt");
+      log.info("Reading function symbols");
+      Map<SegmentedAddress, String> functions =
+          new SymbolsFileReader().readFunctionFile(baseFolder + "spice86dumpGhidraSymbols.txt");
 
-    log.info("Importing function symbols");
-    new FunctionImporter(this, functionCreator).importFunctions(functions);
+      log.info("Importing function symbols");
+      new FunctionImporter(this, log, functionCreator).importFunctions(functions);
 
-    log.info("Reading execution flow");
-    ExecutionFlow executionFlow =
-        readJumpMapFromFile(baseFolder + "spice86dumpExecutionFlow.json");
+      log.info("Reading execution flow");
+      ExecutionFlow executionFlow =
+          readJumpMapFromFile(baseFolder + "spice86dumpExecutionFlow.json");
 
-    log.info("Importing execution flow");
-    ReferencesImporter referencesImporter = new ReferencesImporter(this, log);
-    referencesImporter.importReferences(executionFlow);
+      log.info("Importing execution flow");
+      ReferencesImporter referencesImporter = new ReferencesImporter(this, log);
+      referencesImporter.importReferences(executionFlow);
+      referencesImporter.disassembleEntryPoints(executionFlow, functions);
 
-    log.info("Renaming functions guessed by ghidra");
-    SegmentedAddressGuesser segmentedAddressGuesser = new SegmentedAddressGuesser(log, SEGMENTS);
-    FunctionRenamer functionRenamer = new FunctionRenamer(this, log, segmentedAddressGuesser);
-    functionRenamer.renameAll();
+      log.info("Decompiling functions to discover new code. Expect this to take some time");
+      EntryPointDisassembler entryPointDisassembler = new EntryPointDisassembler(this, log);
+      entryPointDisassembler.decompileAllFunctions();
 
-    log.info("Splitting jump functions");
-    FunctionSplitter functionSplitter = new FunctionSplitter(this, log, segmentedAddressGuesser, functionCreator);
-    functionSplitter.splitAllFunctions();
+      log.info("Renaming functions guessed by ghidra");
+      SegmentedAddressGuesser segmentedAddressGuesser = new SegmentedAddressGuesser(log, SEGMENTS);
+      FunctionRenamer functionRenamer = new FunctionRenamer(this, log, segmentedAddressGuesser);
+      functionRenamer.renameAll();
+
+      log.info("Splitting jump functions");
+      FunctionSplitter functionSplitter = new FunctionSplitter(this, log, segmentedAddressGuesser, functionCreator);
+      functionSplitter.splitAllFunctions();
+    }
   }
 
   private ExecutionFlow readJumpMapFromFile(String filePath) throws IOException {
@@ -133,7 +146,7 @@ public class Spice86OneClickImport extends GhidraScript {
     }
   }
 
-  static class ReferencesImporter {
+  class ReferencesImporter {
     private GhidraScript ghidraScript;
     private EntryPointDisassembler entryPointDisassembler;
 
@@ -144,8 +157,14 @@ public class Spice86OneClickImport extends GhidraScript {
 
     public void importReferences(ExecutionFlow executionFlow) throws Exception {
       importReferences(executionFlow.getJumpsFromTo(), RefType.COMPUTED_JUMP, "jump_target");
-      importReferences(executionFlow.getCallsFromTo(), RefType.COMPUTED_CALL, "call_target");
-      //importReferences(executionFlow.getRetsFromTo(), RefType.COMPUTED_JUMP, "ret_target");
+      importReferences(executionFlow.getCallsFromTo(), RefType.COMPUTED_CALL, null);
+    }
+
+    public void disassembleEntryPoints(ExecutionFlow executionFlow, Map<SegmentedAddress, String> functions) {
+      disassembleAll(executionFlow.getJumpsFromTo());
+      disassembleAll(executionFlow.getCallsFromTo());
+      disassembleAll(executionFlow.getRetsFromTo());
+      functions.keySet().stream().forEach(entryPointDisassembler::disassembleEntryPoint);
     }
 
     private void importReferences(Map<Integer, List<SegmentedAddress>> fromTo, RefType refType, String labelPrefix)
@@ -163,7 +182,7 @@ public class Spice86OneClickImport extends GhidraScript {
           referenceManager.addMemoryReference(from, to, refType, SourceType.USER_DEFINED, index);
           index++;
           Symbol symbol = ghidraScript.getSymbolAt(to);
-          if (shouldCreateLabel(symbol)) {
+          if (labelPrefix != null && shouldCreateLabel(symbol)) {
             String name =
                 "spice86_imported_label_" + labelPrefix + "_" + Utils.toHexSegmentOffsetPhysical(toSegmentedAddress);
             ghidraScript.createLabel(to, name, true, SourceType.USER_DEFINED);
@@ -171,6 +190,10 @@ public class Spice86OneClickImport extends GhidraScript {
           entryPointDisassembler.disassembleEntryPoint(to);
         }
       }
+    }
+
+    private void disassembleAll(Map<Integer, List<SegmentedAddress>> fromTo) {
+      fromTo.values().stream().flatMap(Collection::stream).forEach(entryPointDisassembler::disassembleEntryPoint);
     }
 
     private boolean shouldCreateLabel(Symbol existingSymbol) {
@@ -189,10 +212,12 @@ public class Spice86OneClickImport extends GhidraScript {
 
   static class FunctionImporter {
     private GhidraScript ghidraScript;
+    private Log log;
     private FunctionCreator functionCreator;
 
-    public FunctionImporter(GhidraScript ghidraScript, FunctionCreator functionCreator) {
+    public FunctionImporter(GhidraScript ghidraScript, Log log, FunctionCreator functionCreator) {
       this.ghidraScript = ghidraScript;
+      this.log = log;
       this.functionCreator = functionCreator;
     }
 
@@ -202,14 +227,16 @@ public class Spice86OneClickImport extends GhidraScript {
         String name = functionEntry.getValue();
 
         Address entry = ghidraScript.toAddr(segmentedAddress.toPhysical());
+        log.info("Importing function at address " + entry);
         functionCreator.removeSymbolAt(entry);
+        functionCreator.removeFunctionAt(entry);
         functionCreator.createOrUpdateFunction(entry, name);
       }
     }
 
   }
 
-  static class FunctionCreator {
+  class FunctionCreator {
     private GhidraScript ghidraScript;
     private Log log;
     private EntryPointDisassembler entryPointDisassembler;
@@ -226,6 +253,9 @@ public class Spice86OneClickImport extends GhidraScript {
         log.info("Found symbol " + symbol.getName() + " at address " + address + ". Deleting it.");
         ghidraScript.removeSymbol(address, symbol.getName());
       }
+    }
+
+    public void removeFunctionAt(Address address) {
       Function function = ghidraScript.getFunctionAt(address);
       if (function != null) {
         log.info("Found function " + function.getName() + " at address " + address + ". Deleting it.");
@@ -234,7 +264,7 @@ public class Spice86OneClickImport extends GhidraScript {
     }
 
     public void createOrUpdateFunction(Address address, String name) {
-      entryPointDisassembler.createFunction(name, address);
+      entryPointDisassembler.createOrUpdateFunction(name, address);
     }
   }
 
@@ -281,7 +311,7 @@ public class Spice86OneClickImport extends GhidraScript {
     }
   }
 
-  static class EntryPointDisassembler {
+  class EntryPointDisassembler {
     private GhidraScript ghidraScript;
     private Log log;
 
@@ -292,26 +322,72 @@ public class Spice86OneClickImport extends GhidraScript {
 
     public void recreateFunction(Function function) {
       String name = function.getName();
-      createFunction(name, function.getEntryPoint());
+      createOrUpdateFunction(name, function.getEntryPoint());
     }
 
-    public void createFunction(String name, Address entryPoint) {
-      CreateFunctionCmd cmd =
-          new CreateFunctionCmd("Re-create " + name, entryPoint, null, SourceType.USER_DEFINED, true,
-              true);
-      boolean result = Utils.executeCommand(ghidraScript, cmd);
-      log.info("Creation attempt status for " + name + ": " + (result ? "success" : "failure"));
-      disassembleEntryPoint(entryPoint);
+    public void createOrUpdateFunction(String name, Address entryPoint) {
+      boolean existing = ghidraScript.getCurrentProgram().getListing().getFunctionAt(entryPoint) != null;
+      if (existing) {
+        log.info("Re-creating function at address " + entryPoint + " with name " + name);
+      } else {
+        log.info("Creating function at address " + entryPoint + " with name " + name);
+      }
+      if (!runCreateFunctionCommand(entryPoint, name, existing)) {
+        throw new RuntimeException("Failed to create function at " + entryPoint);
+      }
+    }
+
+    private boolean runCreateFunctionCommand(Address entryPoint, String name, boolean recreate) {
+      CreateFunctionCmd cmd = new CreateFunctionCmd(name, entryPoint, null, SourceType.USER_DEFINED, false, recreate);
+      return cmd.applyTo(ghidraScript.getCurrentProgram(), ghidraScript.getMonitor());
+    }
+
+    public void disassembleEntryPoint(SegmentedAddress address) {
+      Address ghidraAddress = ghidraScript.toAddr(address.toPhysical());
+      disassembleEntryPoint(ghidraAddress);
     }
 
     public void disassembleEntryPoint(Address address) {
       if (ghidraScript.getInstructionAt(address) != null) {
         // Already disassembled
+        log.info("No need to disassemble " + address);
         return;
       }
       DisassembleCommand disassembleCommand = new DisassembleCommand(address, null, true);
-      boolean result = Utils.executeCommand(ghidraScript, disassembleCommand);
+      boolean result = disassembleCommand.applyTo(ghidraScript.getCurrentProgram(), ghidraScript.getMonitor());
       log.info("Disassembly status for " + address + ": " + (result ? "success" : "failure"));
+    }
+
+    public void decompileAllFunctions() throws Exception {
+      DecompilerCallback<Void> callback =
+          new DecompilerCallback<Void>(ghidraScript.getCurrentProgram(),
+              new BasicConfigurer(ghidraScript.getCurrentProgram())) {
+            @Override
+            public Void process(DecompileResults results, TaskMonitor tMonitor)
+                throws Exception {
+              return null;
+            }
+          };
+      List<Function> functions = Utils.getAllFunctions(ghidraScript);
+      ParallelDecompiler.decompileFunctions(callback, functions, ghidraScript.getMonitor());
+    }
+  }
+
+  class BasicConfigurer implements DecompileConfigurer {
+    private Program program;
+
+    public BasicConfigurer(Program program) {
+      this.program = program;
+    }
+
+    @Override
+    public void configure(DecompInterface decompiler) {
+      decompiler.toggleCCode(true);
+      decompiler.toggleSyntaxTree(true);
+      decompiler.setSimplificationStyle("decompile");
+      DecompileOptions opts = new DecompileOptions();
+      opts.grabFromProgram(program);
+      decompiler.setOptions(opts);
     }
   }
 
