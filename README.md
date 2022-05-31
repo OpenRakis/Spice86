@@ -342,7 +342,7 @@ Let's suppose that the overrides defined in the previous paragraph are in Cryoge
 Spice86 --OverrideSupplierClassName="Cryogenic.DuneCdOverrideSupplier, Cryogenic, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
 ```
 
-If you just want to use the function names and not the overrides, you could add **--useCodeOverride=false** to the command line.
+If you only want to use the function names and not the overrides, you could remove **--UseCodeOverride** from the command line.
 
 If you build a project around this, just call Spice86 like this in your main:
 ```csharp
