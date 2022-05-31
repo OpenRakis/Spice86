@@ -19,6 +19,7 @@ import ghidra.program.model.address.AddressSet;
 import ghidra.program.model.address.AddressSetView;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.FunctionIterator;
+import ghidra.program.model.listing.Instruction;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.symbol.RefType;
@@ -40,11 +41,13 @@ import java.io.PrintWriter;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 //Imports data into ghidra from spice86 and reorganizes the code in a way the generator can work on it without too many errors
@@ -83,19 +86,50 @@ public class Spice86OneClickImport extends GhidraScript {
       referencesImporter.importReferences(executionFlow);
       referencesImporter.disassembleEntryPoints(executionFlow, functions);
 
-      log.info("Decompiling functions to discover new code. Expect this to take some time");
-      EntryPointDisassembler entryPointDisassembler = new EntryPointDisassembler(this, log);
-      entryPointDisassembler.decompileAllFunctions();
+      int renames = 0;
+      int splits = 0;
+      int functionsWithOrphans = 0;
+      int currentRenames = 0;
+      int currentSplits = 0;
+      int currentFunctionsWithOrphans = 0;
+      boolean changes;
+      do {
+        changes = false;
+        log.info(
+            "Decompiling functions to discover new code. This will take a while and even get stuck at 99% for some minutes. Don't panic.");
+        EntryPointDisassembler entryPointDisassembler = new EntryPointDisassembler(this, log);
+        entryPointDisassembler.decompileAllFunctions();
 
-      log.info("Renaming functions guessed by ghidra");
-      SegmentedAddressGuesser segmentedAddressGuesser = new SegmentedAddressGuesser(log, SEGMENTS);
-      FunctionRenamer functionRenamer = new FunctionRenamer(this, log, segmentedAddressGuesser);
-      functionRenamer.renameAll();
+        log.info("Renaming functions guessed by ghidra");
+        SegmentedAddressGuesser segmentedAddressGuesser = new SegmentedAddressGuesser(log, SEGMENTS);
+        FunctionRenamer functionRenamer = new FunctionRenamer(this, log, segmentedAddressGuesser);
+        currentRenames = functionRenamer.renameAll();
+        changes |= hasChanges(log, renames, currentRenames, "Rename");
 
-      log.info("Splitting jump functions");
-      FunctionSplitter functionSplitter = new FunctionSplitter(this, log, segmentedAddressGuesser, functionCreator);
-      functionSplitter.splitAllFunctions();
+        log.info("Splitting jump functions");
+        FunctionSplitter functionSplitter = new FunctionSplitter(this, log, segmentedAddressGuesser, functionCreator);
+        currentSplits = functionSplitter.splitAllFunctions();
+        changes |= hasChanges(log, splits, currentSplits, "Split");
+
+        log.info("Recreating functions with potential orphans");
+        OrphanedInstructionsScanner orphanedInstructionsScanner =
+            new OrphanedInstructionsScanner(this, log, entryPointDisassembler);
+        currentFunctionsWithOrphans = orphanedInstructionsScanner.reattachOrphans();
+        changes |= hasChanges(log, functionsWithOrphans, currentFunctionsWithOrphans, "Orphan finder");
+
+        renames = currentRenames;
+        splits = currentSplits;
+        functionsWithOrphans = currentFunctionsWithOrphans;
+      } while (changes);
     }
+  }
+
+  private boolean hasChanges(Log log, int previous, int now, String message) {
+    if (previous != now) {
+      log.info(message + " did some changes. Previous: " + previous + " now: " + now);
+      return true;
+    }
+    return false;
   }
 
   private ExecutionFlow readJumpMapFromFile(String filePath) throws IOException {
@@ -279,7 +313,7 @@ public class Spice86OneClickImport extends GhidraScript {
       this.segmentedAddressGuesser = segmentedAddressGuesser;
     }
 
-    protected void renameAll() throws Exception {
+    protected int renameAll() throws Exception {
       FunctionIterator functionIterator = Utils.getFunctionIterator(ghidraScript);
       int renamed = 0;
       while (functionIterator.hasNext()) {
@@ -288,6 +322,7 @@ public class Spice86OneClickImport extends GhidraScript {
         }
       }
       log.info("Renamed " + renamed + " functions");
+      return renamed;
     }
 
     private boolean renameFunction(Function function) throws InvalidInputException, DuplicateNameException {
@@ -318,11 +353,6 @@ public class Spice86OneClickImport extends GhidraScript {
     public EntryPointDisassembler(GhidraScript ghidraScript, Log log) {
       this.ghidraScript = ghidraScript;
       this.log = log;
-    }
-
-    public void recreateFunction(Function function) {
-      String name = function.getName();
-      createOrUpdateFunction(name, function.getEntryPoint());
     }
 
     public void createOrUpdateFunction(String name, Address entryPoint) {
@@ -413,22 +443,26 @@ public class Spice86OneClickImport extends GhidraScript {
       for (Function function : functions) {
         numberOfCreated += splitOneFunction(function);
       }
+      log.info("Splitted " + numberOfCreated + " functions.");
       return numberOfCreated;
     }
 
     private int splitOneFunction(Function function)
-        throws InvalidInputException, OverlappingFunctionException, DuplicateNameException {
+        throws InvalidInputException, OverlappingFunctionException {
       int numberOfCreated = 0;
       AddressSetView body = function.getBody();
-      log.log("Checking " + function.getName());
       List<AddressRange> addressRangeList = IteratorUtils.toList(body.iterator());
       if (addressRangeList.size() <= 1) {
+        log.info("Function " + function.getName() + " Doesn't need to be split");
         // Nothing to split
         return 0;
       }
+      log.info("Function " + function.getName() + " Needs to be split in " + addressRangeList.size());
       Program program = ghidraScript.getCurrentProgram();
       Listing listing = program.getListing();
       Address entryPoint = function.getEntryPoint();
+      // Removing the function since it is going to be recreated in chunks
+      functionCreator.removeFunctionAt(entryPoint);
       for (AddressRange addressRange : addressRangeList) {
         Address start = addressRange.getMinAddress();
         AddressSetView newBody = new AddressSet(addressRange);
@@ -436,8 +470,6 @@ public class Spice86OneClickImport extends GhidraScript {
         if (!start.equals(entryPoint)) {
           numberOfCreated++;
         }
-        // Calling this first to take care of eventual symbol removal
-        functionCreator.removeSymbolAt(start);
         listing.createFunction(newName, start, newBody, SourceType.USER_DEFINED);
       }
       return numberOfCreated;
@@ -484,6 +516,131 @@ public class Spice86OneClickImport extends GhidraScript {
       log.info("Address " + Utils.toHexWith0X(entryPointAddress) + " corresponds to segment " + Utils.toHexWith0X(
           foundSegment));
       return foundSegment;
+    }
+  }
+
+  class OrphanedInstructionsScanner {
+    private long minAddress = 0x0;
+    private long maxAddress = 0xFFFFF;
+    private GhidraScript ghidraScript;
+    private Log log;
+    private EntryPointDisassembler entryPointDisassembler;
+
+    public OrphanedInstructionsScanner(GhidraScript ghidraScript, Log log,
+        EntryPointDisassembler entryPointDisassembler) {
+      this.ghidraScript = ghidraScript;
+      this.log = log;
+      this.entryPointDisassembler = entryPointDisassembler;
+    }
+
+    private TreeMap<Long, Long> createFunctionRanges() {
+      TreeMap<Long, Long> rangeMap = new TreeMap<>();
+      List<Function> functions = Utils.getAllFunctions(ghidraScript);
+      for (Function function : functions) {
+        AddressSetView body = function.getBody();
+        for (AddressRange range : body) {
+          rangeMap.put(range.getMinAddress().getUnsignedOffset(), range.getMaxAddress().getUnsignedOffset());
+        }
+      }
+      return rangeMap;
+    }
+
+    private List<Instruction> findOrphans(TreeMap<Long, Long> rangeMap) {
+      // reading instructions between those addresses
+      List<Instruction> orphans = new ArrayList<>();
+      for (long address = minAddress; address < maxAddress; ) {
+        Long rangeEnd = rangeMap.get(address);
+        if (rangeEnd != null) {
+          address = rangeEnd + 1;
+        } else {
+          Instruction instruction = getInstructionAt(address);
+          if (instruction != null) {
+            orphans.add(instruction);
+            address += instruction.getLength();
+          } else {
+            //println("In the void " + address);
+            address++;
+          }
+        }
+      }
+      return orphans;
+    }
+
+    private Map<Integer, Integer> createInstructionIndexesRanges(List<Instruction> instructions) {
+      Map<Integer, Integer> res = new HashMap<>();
+      for (int i = 0; i < instructions.size(); ) {
+        int rangeIndexStart = i;
+        int rangeIndexEnd = i;
+        while (isNextOrphanNextInstruction(instructions, ++i)) {
+          rangeIndexEnd = i;
+        }
+        res.put(rangeIndexStart, rangeIndexEnd);
+      }
+      return res;
+    }
+
+    private void processOrphanRanges(Map<Integer, Integer> ranges, List<Instruction> orphans) {
+      for (Map.Entry<Integer, Integer> range : ranges.entrySet()) {
+        int rangeIndexStart = range.getKey();
+        Instruction start = orphans.get(rangeIndexStart);
+        int rangeIndexEnd = range.getValue();
+        Instruction end = orphans.get(rangeIndexEnd);
+        String rangeDescription = toInstructionAddress(start) + " -> " + toInstructionAddress(end);
+        Function function = findFirstFunctionBeforeInstruction(start);
+
+        if (function == null) {
+          log.warning("Did not find any function for range " + rangeDescription);
+          continue;
+        }
+        String functionName = function.getName();
+        log.info("Function " + functionName + " found for range " + rangeDescription + ". Attempting to re-create it.");
+        entryPointDisassembler.createOrUpdateFunction(functionName, function.getEntryPoint());
+      }
+    }
+
+    public int reattachOrphans() throws Exception {
+      // Mapping functions addresses, sorted by key
+      TreeMap<Long, Long> functionRanges = createFunctionRanges();
+      List<Instruction> orphans = findOrphans(functionRanges);
+      Map<Integer, Integer> ranges = createInstructionIndexesRanges(orphans);
+      processOrphanRanges(ranges, orphans);
+      log.info("Found " + orphans.size() + " orphaned instructions spanning over " + ranges.size() + " ranges.");
+      return ranges.size();
+    }
+
+    private Function findFirstFunctionBeforeInstruction(Instruction instruction) {
+      Instruction previous = instruction;
+      while (previous != null) {
+        Address address = previous.getAddress();
+        Function res = ghidraScript.getFunctionAt(address);
+        if (res != null) {
+          return res;
+        }
+        previous = previous.getPrevious();
+      }
+      return null;
+    }
+
+    private String toInstructionAddress(Instruction instruction) {
+      return Utils.toHexWith0X(instruction.getAddress().getUnsignedOffset());
+    }
+
+    private boolean isNextOrphanNextInstruction(List<Instruction> orphans, int index) {
+      if (index + 1 >= orphans.size()) {
+        return false;
+      }
+      Instruction instruction = orphans.get(index);
+      Instruction next = instruction.getNext();
+      if (next == null) {
+        return false;
+      }
+      Instruction nextOrphan = orphans.get(index + 1);
+
+      return next.getAddress().getUnsignedOffset() == nextOrphan.getAddress().getUnsignedOffset();
+    }
+
+    Instruction getInstructionAt(Long address) {
+      return ghidraScript.getInstructionAt(ghidraScript.toAddr(address));
     }
   }
 
