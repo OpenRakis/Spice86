@@ -20,7 +20,7 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.5.2</Version>
+		<Version>2.5.3</Version>
 		<PackageReleaseNotes>Remove bogus reference that crashed the emulator</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
