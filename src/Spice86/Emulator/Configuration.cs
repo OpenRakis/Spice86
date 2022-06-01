@@ -68,17 +68,10 @@ public class Configuration {
 
     [Option('t', nameof(TimeMultiplier), Default = 1, Required = false, HelpText = "<time multiplier> if >1 will go faster, if <1 will go slower.")]
     public double TimeMultiplier { get; init; }
-<<<<<<< HEAD
     
     [Option('d', nameof(DumpDataOnExit), Default = null, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
     public bool? DumpDataOnExit { get; set; }
     
-=======
-
-    [Option('d', nameof(DumpDataOnExit), Default = true, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
-    public bool DumpDataOnExit { get; set; }
-
->>>>>>> 271416a (Ability to Start/Debug program from the UI)
     [Option('l', nameof(Logs), Default = false, Required = false, HelpText = "Enable warning level logs")]
     public bool Logs { get; set; }
 
