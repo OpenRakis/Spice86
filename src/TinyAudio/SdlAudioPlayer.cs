@@ -3,10 +3,12 @@ namespace TinyAudio;
 using System;
 using System.Runtime.Versioning;
 using System.Threading;
+using SDL_Sharp;
 
-[SupportedOSPlatform("linux")]
-public sealed class AlsaApiAudioPlayer : AudioPlayer {
-    public AlsaApiAudioPlayer(AudioFormat format) : base(format) {
+public sealed class SdlAudioPlayer : AudioPlayer {
+
+
+    public SdlAudioPlayer(AudioFormat format) : base(format) {
     }
 
     protected override void Start(bool useCallback) {
