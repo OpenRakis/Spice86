@@ -49,7 +49,7 @@ public class ProgramExecutor : IDisposable {
 
     public void Run() {
         Machine.Run();
-        if (_configuration.DumpDataOnExit) {
+        if (_configuration.DumpDataOnExit is true or null) {
             new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine).DumpAll();
         }
     }
@@ -106,7 +106,7 @@ public class ProgramExecutor : IDisposable {
             throw new ArgumentNullException(nameof(_configuration));
         }
         var counterConfigurator = new CounterConfigurator(_configuration);
-        bool recordData = _configuration.GdbPort != null || _configuration.DumpDataOnExit;
+        bool recordData = _configuration.GdbPort != null || _configuration.DumpDataOnExit is true;
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(recordData);
         Machine = new Machine(this, gui, counterConfigurator, executionFlowRecorder, _configuration, recordData);
@@ -194,7 +194,7 @@ public class ProgramExecutor : IDisposable {
             return;
         }
         Cpu cpu = Machine.Cpu;
-        bool useCodeOverride = configuration.UseCodeOverride;
+        bool useCodeOverride = configuration.UseCodeOverride ?? true;
         SetupFunctionHandler(cpu.FunctionHandler, functionInformations, useCodeOverride);
         SetupFunctionHandler(cpu.FunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
     }

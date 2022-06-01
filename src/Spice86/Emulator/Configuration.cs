@@ -50,8 +50,8 @@ public class Configuration {
     [Option('p', nameof(ProgramEntryPointSegment), Default = 0x1000, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
     public int ProgramEntryPointSegment { get; init; }
 
-    [Option('u', nameof(UseCodeOverride), Default = true, Required = false, HelpText = "<true or false> if false it will use the names provided by overrideSupplierClassName but not the code")]
-    public bool UseCodeOverride { get; init; }
+    [Option('u', nameof(UseCodeOverride), Default = null, Required = false, HelpText = "<true or false> if false it will use the names provided by overrideSupplierClassName but not the code")]
+    public bool? UseCodeOverride { get; set; }
 
     /// <summary>
     /// Only for <see cref="Devices.Timer.Timer"/>
@@ -62,8 +62,8 @@ public class Configuration {
     [Option('t', nameof(TimeMultiplier), Default = 1, Required = false, HelpText = "<time multiplier> if >1 will go faster, if <1 will go slower.")]
     public double TimeMultiplier { get; init; }
     
-    [Option('d', nameof(DumpDataOnExit), Default = true, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
-    public bool DumpDataOnExit { get; set; }
+    [Option('d', nameof(DumpDataOnExit), Default = null, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
+    public bool? DumpDataOnExit { get; set; }
     
     [Option('l', nameof(Logs), Default = false, Required = false, HelpText = "Enable warning level logs")]
     public bool Logs { get; set; }
