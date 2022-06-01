@@ -21,7 +21,7 @@
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<Version>2.5.3</Version>
-		<PackageReleaseNotes>Remove bogus reference that crashed the emulator</PackageReleaseNotes>
+		<PackageReleaseNotes>Truly support -u and -d as being true by default.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
