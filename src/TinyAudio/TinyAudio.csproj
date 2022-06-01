@@ -11,4 +11,8 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/gregdivis/TinyAudio.git</RepositoryUrl>
 	</PropertyGroup>
+	<ItemGroup>
+	  <PackageReference Include="SDL-Sharp" Version="2.1.2" />
+	  <PackageReference Include="SDL-Sharp-DLL" Version="2.0.1" />
+	</ItemGroup>
 </Project>
