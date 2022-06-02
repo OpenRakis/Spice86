@@ -19,20 +19,20 @@ using System.Collections.Generic;
 public class CSharpOverrideHelper {
     private static readonly ILogger _logger = Program.Logger.ForContext<CSharpOverrideHelper>();
 
-    protected Cpu Cpu => Machine.Cpu;
+    public Cpu Cpu => Machine.Cpu;
 
-    protected Machine Machine { get; }
+    public Machine Machine { get; }
 
-    protected Memory Memory => Machine.Memory;
+    public Memory Memory => Machine.Memory;
 
-    protected UInt8Indexer UInt8 => Memory.UInt8;
-    protected UInt16Indexer UInt16 => Memory.UInt16;
-    protected UInt32Indexer UInt32 => Memory.UInt32;
-    protected Stack Stack => Cpu.Stack;
+    public UInt8Indexer UInt8 => Memory.UInt8;
+    public UInt16Indexer UInt16 => Memory.UInt16;
+    public UInt32Indexer UInt32 => Memory.UInt32;
+    public Stack Stack => Cpu.Stack;
 
-    protected State State => Cpu.State;
+    public State State => Cpu.State;
 
-    protected Alu Alu => Cpu.Alu;
+    public Alu Alu => Cpu.Alu;
 
     public ushort AX { get => State.AX; set => State.AX = value; }
     public byte AH { get => State.AH; set => State.AH = value; }
@@ -80,9 +80,9 @@ public class CSharpOverrideHelper {
     public short Direction16 => (short)(DirectionFlag ? -2 : 2);
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
-    protected JumpDispatcher JumpDispatcher { get; set; }
+    public JumpDispatcher JumpDispatcher { get; set; }
 
-    protected bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
+    public bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
 
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine) {
@@ -127,7 +127,7 @@ public class CSharpOverrideHelper {
         _functionInformations[address] = (new(address, functionName, overrideFunc));
     }
 
-    private FunctionInformation? GetFunctionAtAddress(bool failOnExisting, SegmentedAddress address) {
+    public FunctionInformation? GetFunctionAtAddress(bool failOnExisting, SegmentedAddress address) {
         if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
             if (!failOnExisting) {
                 return existingFunctionInformation;
@@ -255,7 +255,7 @@ public class CSharpOverrideHelper {
         uint actualStackAddress = State.StackPhysicalAddress;
         // Do not return to the caller until we are sure we are at the right place
         while (actualReturnCs != expectedReturnCs ||
-               actualReturnIp != expectedReturnIp || actualStackAddress != expectedStackAddress) {
+               actualReturnIp != expectedReturnIp) {
             SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
             SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
             String message =
@@ -298,6 +298,17 @@ public class CSharpOverrideHelper {
             , false);
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
+    
+    public void DoOnTopOfInstruction(ushort segment, ushort offset, Action action) {
+        AddressBreakPoint breakPoint = new(
+            BreakPointType.EXECUTION,
+            MemoryUtils.ToPhysicalAddress(
+                segment,
+                offset),
+            _ => action.Invoke()
+            , false);
+        Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+    }
 
     public void SetProvidedInterruptHandlersAsOverridden() {
         CallbackHandler callbackHandler = Machine.CallbackHandler;
@@ -313,7 +324,7 @@ public class CSharpOverrideHelper {
         }
     }
 
-    protected void CheckVtableContainsExpected(int segmentRegisterIndex,
+    public void CheckVtableContainsExpected(int segmentRegisterIndex,
         ushort offset,
         ushort expectedSegment,
         ushort expectedOffset) {
@@ -326,7 +337,7 @@ public class CSharpOverrideHelper {
         }
     }
 
-    protected void DefineExecutableArea(uint startAddress, uint endAddress) {
+    public void DefineExecutableArea(uint startAddress, uint endAddress) {
         for (uint address = startAddress; address <= endAddress; address++) {
             // For closure
             uint addressCopy = address;
@@ -350,7 +361,7 @@ public class CSharpOverrideHelper {
     /// Call this in your override when you re-implement a function with a branch that seems never
     /// reached.
     /// </summary>
-    protected UnrecoverableException FailAsUntested(string message) {
+    public UnrecoverableException FailAsUntested(string message) {
         string error =
             $"Untested code reached, please tell us how to reach this state. Here is the message: {message}. Here is the Machine stack: {State.ToString()}";
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
@@ -360,7 +371,7 @@ public class CSharpOverrideHelper {
         return new UnrecoverableException(error);
     }
 
-    protected void CheckExternalEvents(ushort expectedReturnCs, ushort expectedReturnIp) {
+    public void CheckExternalEvents(ushort expectedReturnCs, ushort expectedReturnIp) {
         Machine.Timer.Tick();
         byte? vectorNumber = Cpu.ExternalInterruptVectorNumber;
         if (vectorNumber != null) {
@@ -368,11 +379,11 @@ public class CSharpOverrideHelper {
         }
     }
 
-    protected void Interrupt(byte vectorNumber) {
+    public void Interrupt(byte vectorNumber) {
         Machine.CallbackHandler.RunFromOverriden(vectorNumber);
     }
 
-    protected Action Hlt() {
+    public Action Hlt() {
         return () => {
             _logger.Information("Program requested exit. Terminating now.");
             Environment.Exit(0);

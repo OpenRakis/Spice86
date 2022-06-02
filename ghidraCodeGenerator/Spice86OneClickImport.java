@@ -57,13 +57,11 @@ import java.util.stream.Collectors;
 //@menupath
 //@toolbar
 public class Spice86OneClickImport extends GhidraScript {
-
   private final static Map<Integer, Integer> SEGMENTS = Map.of(
-      0x1000, 0x335AF - 0x10000,
-      0x334B, 0x56350 - 0x334B0,
-      0x5635, 0x564DE - 0x56350,
-      0x563E, 0x1000);
-
+      0x1000, 0xFFFF,
+      0xC000, 0xFFFF,
+      0xD000, 0xFFFF,
+      0xE000, 0xFFFF);
   @Override
   protected void run() throws Exception {
     String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");

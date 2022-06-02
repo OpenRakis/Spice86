@@ -53,7 +53,7 @@ public class FunctionHandler {
         }
     }
 
-    private FunctionInformation GetOrCreateFunctionInformation(SegmentedAddress entryAddress, string? name) {
+    public FunctionInformation GetOrCreateFunctionInformation(SegmentedAddress entryAddress, string? name) {
         if (!FunctionInformations.TryGetValue(entryAddress, out FunctionInformation? res)) {
             res = new FunctionInformation(entryAddress, string.IsNullOrWhiteSpace(name) ? "unknown" : name);
             FunctionInformations.Add(entryAddress, res);

@@ -19,7 +19,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     
     public void DumpAll() {
         _logger.Information("Dumping all data to {DumpDirectory}", DumpDirectory);
-        DumpMemory();
+        DumpMemory("");
         DumpGhidraSymbols();
         DumpExecutionFlow();
         DumpFunctionsCsv();
@@ -48,8 +48,8 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
 
-    private void DumpMemory() {
-        _machine.Memory.DumpToFile(GenerateDumpFileName("MemoryDump.bin"));
+    public void DumpMemory(string suffix) {
+        _machine.Memory.DumpToFile(GenerateDumpFileName($"MemoryDump{suffix}.bin"));
     }
 
     private void DumpExecutionFlow() {

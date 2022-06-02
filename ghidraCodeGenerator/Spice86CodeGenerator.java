@@ -51,15 +51,14 @@ public class Spice86CodeGenerator extends GhidraScript {
     String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");
     //Places where we need to generate calls to emulated timer
     //This list needs to be extended (not a lot: init, game loop)
-    Set<SegmentedAddress> externalEventCheckPoints =
-        new HashSet<>(Arrays.asList(new SegmentedAddress(0x1000, 0x3), new SegmentedAddress(0x1000, 0xE86E)));
     run(baseFolder + "spice86dumpExecutionFlow.json", baseFolder + "ghidrascriptout.txt",
-        baseFolder + "GeneratedCode.cs", "Cryogenic.Overrides", externalEventCheckPoints);
+        baseFolder + "GeneratedCode.cs", baseFolder + "CodeGeneratorConfig.json");
   }
 
-  private void run(String executionFlowFile, String logFile, String generatedCodeFile, String namespace,
-      Set<SegmentedAddress> externalEventCheckPoints) throws Exception {
+  private void run(String executionFlowFile, String logFile, String generatedCodeFile, String codeGeneratorConfigFile)
+      throws Exception {
     ExecutionFlow executionFlow = readExecutionFlowFromFile(executionFlowFile);
+    CodeGeneratorConfig codeGeneratorConfig = readCodeGeneratorConfigFromFile(codeGeneratorConfigFile);
     try (Log log = new Log(this, logFile, false)) {
       Program program = getCurrentProgram();
       Listing listing = program.getListing();
@@ -70,9 +69,9 @@ public class Spice86CodeGenerator extends GhidraScript {
           .sorted(Comparator.comparingInt(f -> f.getEntrySegmentedAddress().toPhysical()))
           .toList();
       ParsedProgram parsedProgram =
-          ParsedProgram.createParsedProgram(log, parsedFunctions, executionFlow, externalEventCheckPoints);
+          ParsedProgram.createParsedProgram(log, parsedFunctions, executionFlow, codeGeneratorConfig.getCodeToInject());
       log.info("Finished parsing.");
-      generateProgram(log, parsedProgram, generatedCodeFile, namespace);
+      generateProgram(log, parsedProgram, generatedCodeFile, codeGeneratorConfig.getNamespace());
     }
   }
 
@@ -104,6 +103,15 @@ public class Spice86CodeGenerator extends GhidraScript {
       }.getType();
       ExecutionFlow res = new Gson().fromJson(reader, type);
       res.init();
+      return res;
+    }
+  }
+
+  private CodeGeneratorConfig readCodeGeneratorConfigFromFile(String filePath) throws IOException {
+    try (FileReader fileReader = new FileReader(filePath); JsonReader reader = new JsonReader(fileReader)) {
+      Type type = new TypeToken<CodeGeneratorConfig>() {
+      }.getType();
+      CodeGeneratorConfig res = new Gson().fromJson(reader, type);
       return res;
     }
   }
@@ -835,27 +843,30 @@ public class Spice86CodeGenerator extends GhidraScript {
       isFunctionReturn = isUnconditionalReturn(instructionString);
       isGoto = instructionString.contains("goto ") && !(instructionString.contains("if(") || instructionString.contains(
           "switch("));
-      if (parsedProgram.getExternalEventCheckPoints().contains(parsedInstruction.getInstructionSegmentedAddress())) {
-        int segment = this.parsedInstruction.getInstructionSegmentedAddress().getSegment();
-        int offset = this.parsedInstruction.getInstructionSegmentedAddress().getOffset()
-            + this.parsedInstruction.getInstructionLength();
-
-        instructionString =
-            "CheckExternalEvents(" + parsedProgram.getCodeSegmentVariables().get(segment) + ", " + Utils.toHexWith0X(
-                offset) + ");\n" + instructionString;
-      }
+      instructionString = generateCodeToInject() + generateCycleInc() + instructionString;
       if (generateLabel) {
+        // Label above instruction, injected code and cycle inc
         instructionString = label + instructionString;
-      }
-      if (GENERATE_COUNT_CYCLES) {
-        instructionString = generateCycleInc() + instructionString;
       }
       log.info("Generated instruction " + instructionString);
       return instructionString;
     }
 
+    private String generateCodeToInject() {
+      SegmentedAddress nextInstructionAddress = parsedInstruction.getNextInstructionSegmentedAddress();
+      String nextSegment = parsedProgram.getCodeSegmentVariables().get(nextInstructionAddress.getSegment());
+      String nextOffset = Utils.toHexWith0X(nextInstructionAddress.getOffset());
+
+      List<String> codeToInject = parsedProgram.getCodeToInject()
+          .getCodeToInject(parsedInstruction.getInstructionSegmentedAddress().toPhysical(), nextSegment, nextOffset);
+      if (CollectionUtils.isNotEmpty(codeToInject)) {
+        return String.join("\n", codeToInject) + "\n";
+      }
+      return "";
+    }
+
     private String generateCycleInc() {
-      return "State.IncCycles();\n";
+      return GENERATE_COUNT_CYCLES ? "State.IncCycles();\n" : "";
     }
 
     private boolean canUseNativeOperation() {
@@ -1567,17 +1578,24 @@ public class Spice86CodeGenerator extends GhidraScript {
     }
 
     private String generateJumpConditionForModifiedOpcode() {
-      this.selfModifyingCodeHandlingStatus.setOpCodeModified(true);
       String opcodePointer = parameterTranslator.generateSpice86OpcodePointer();
       Set<Integer> possibleOpcodes = parsedInstruction.getPossibleOpCodes();
       List<String> conditions = new ArrayList<>();
+      boolean allOpcodesHandled = true;
       for (int opcode : possibleOpcodes) {
+        String conditionCode = parsedInstruction.opCodeToConditionalJumpCondition(opcode);
+        if (conditionCode == null) {
+          log.info("Unhandled opcode for conditional jumps " + Utils.toHexWith0X(opcode));
+          allOpcodesHandled = false;
+          continue;
+        }
         String conditionOnOpcode = opcodePointer + "==" + Utils.toHexWith0X(opcode);
         String conditionForOpCode =
-            generateJumpConditionForUnmodifiedOpcode(parsedInstruction.opCodeToConditionalJumpCondition(opcode));
+            generateJumpConditionForUnmodifiedOpcode(conditionCode);
         String condition = "(" + conditionOnOpcode + " && " + conditionForOpCode + ")";
         conditions.add(condition);
       }
+      this.selfModifyingCodeHandlingStatus.setOpCodeModified(allOpcodesHandled);
       return String.join(" || ", conditions);
     }
 
@@ -1710,7 +1728,7 @@ public class Spice86CodeGenerator extends GhidraScript {
               + " corresponding to function " + function.getName());
         }
         // If a function is found, change the jump to a function call
-        return "// Jump converted to " + nonEntry + "function call\n" + functionToDirectCSharpCallWithReturn(function,
+        return "// Jump converted to " + nonEntry + "function call\n" + functionToJumpDispatcherCall(function,
             internalJumpAddress);
       }
       return null;
@@ -1772,7 +1790,7 @@ public class Spice86CodeGenerator extends GhidraScript {
       if (function == null) {
         return noFunctionAtAddress(target);
       }
-      return functionToString(function, far, false);
+      return functionCallToString(function, far);
     }
 
     private String generateIndirectCall(String param, String target, boolean far) {
@@ -1790,15 +1808,11 @@ public class Spice86CodeGenerator extends GhidraScript {
       if (function == null) {
         return noFunctionAtAddress(address);
       }
-      return functionToString(function, far, false) + " break;";
+      return functionCallToString(function, far) + " break;";
     }
 
-    public String functionToString(ParsedFunction parsedFunction, boolean far, boolean withReturn) {
+    public String functionCallToString(ParsedFunction parsedFunction, boolean far) {
       String name = parsedFunction.getName();
-      if (withReturn) {
-        // Direct C# call, do not go through the Near/Far checks
-        return functionToDirectCSharpCallWithReturn(parsedFunction, null);
-      }
       String callType = far ? "Far" : "Near";
       int segment = this.parsedInstruction.getInstructionSegmentedAddress().getSegment();
       int offset = this.parsedInstruction.getInstructionSegmentedAddress().getOffset()
@@ -1810,11 +1824,12 @@ public class Spice86CodeGenerator extends GhidraScript {
     }
 
     public String functionToDirectCSharpCallWithReturn(ParsedFunction parsedFunction, Integer internalJumpOffset) {
-      String internalJumpOffsetString = "0";
-      if (internalJumpOffset != null) {
-        // Rebase the offset from the executable load address
-        internalJumpOffsetString = Utils.toHexWith0X(internalJumpOffset) + " - cs1 * 0x10";
-      }
+      String internalJumpOffsetString = toInternalJumpOffset(internalJumpOffset);
+      return "return " + parsedFunction.getName() + "(" + internalJumpOffsetString + ");";
+    }
+
+    public String functionToJumpDispatcherCall(ParsedFunction parsedFunction, Integer internalJumpOffset) {
+      String internalJumpOffsetString = toInternalJumpOffset(internalJumpOffset);
       String res = "if(JumpDispatcher.Jump(" + parsedFunction.getName() + ", " + internalJumpOffsetString + ")) {\n";
       res += """
             loadOffset = JumpDispatcher.NextEntryAddress;
@@ -1822,6 +1837,14 @@ public class Spice86CodeGenerator extends GhidraScript {
           }
           return JumpDispatcher.JumpAsmReturn!;""";
       return res;
+    }
+
+    private String toInternalJumpOffset(Integer internalJumpOffset) {
+      if (internalJumpOffset != null) {
+        // Rebase the offset from the executable load address
+        return Utils.toHexWith0X(internalJumpOffset) + " - cs1 * 0x10";
+      }
+      return "0";
     }
 
     private String noFunctionAtAddress(SegmentedAddress address) {
@@ -1883,7 +1906,7 @@ public class Spice86CodeGenerator extends GhidraScript {
   static class ParsedProgram {
     private ExecutionFlow executionFlow;
     // List of addresses where to inject code to check timer and other external interrupts
-    private Set<SegmentedAddress> externalEventCheckPoints;
+    private CodeToInject codeToInject;
     private Map<Integer, ParsedFunction> instructionAddressToFunction = new HashMap<>();
     private Map<Integer, ParsedInstruction> instructionAddressToInstruction = new HashMap<>();
     private Map<SegmentedAddress, Set<SegmentedAddress>> jumpsFromOutsidePerFunction = new HashMap<>();
@@ -1896,11 +1919,10 @@ public class Spice86CodeGenerator extends GhidraScript {
     private int cs1;
 
     public static ParsedProgram createParsedProgram(Log log, List<ParsedFunction> functions,
-        ExecutionFlow executionFlow,
-        Set<SegmentedAddress> externalEventCheckPoints) {
+        ExecutionFlow executionFlow, CodeToInject codeToInject) {
       ParsedProgram res = new ParsedProgram();
       res.executionFlow = executionFlow;
-      res.externalEventCheckPoints = externalEventCheckPoints;
+      res.codeToInject = codeToInject;
       res.entryPoints.putAll(
           functions.stream().collect(Collectors.toMap(f -> f.getEntrySegmentedAddress().toPhysical(), f -> f)));
       mapInstructions(log, functions, res);
@@ -2034,8 +2056,8 @@ public class Spice86CodeGenerator extends GhidraScript {
       return executionFlow;
     }
 
-    public Set<SegmentedAddress> getExternalEventCheckPoints() {
-      return externalEventCheckPoints;
+    public CodeToInject getCodeToInject() {
+      return codeToInject;
     }
 
     public Set<SegmentedAddress> getJumpsFromOutsideForFunction(SegmentedAddress address) {
@@ -2177,6 +2199,43 @@ public class Spice86CodeGenerator extends GhidraScript {
 
     @Override public int hashCode() {
       return new HashCodeBuilder().append(oldValue).append(newValue).toHashCode();
+    }
+  }
+
+  static class CodeGeneratorConfig {
+    @SerializedName("Namespace") private String namespace;
+    @SerializedName("CodeToInject") private Map<String, List<Integer>> codeToInject;
+
+    public String getNamespace() {
+      return namespace;
+    }
+
+    public CodeToInject getCodeToInject() {
+      Map<Integer, List<String>> codeToInjectReversed = new HashMap<>();
+      for (Map.Entry<String, List<Integer>> entry : codeToInject.entrySet()) {
+        String code = entry.getKey();
+        List<Integer> addresses = entry.getValue();
+        for (Integer address : addresses) {
+          List<String> codeList = codeToInjectReversed.computeIfAbsent(address, ArrayList::new);
+          codeList.add(code);
+        }
+      }
+      return new CodeToInject(codeToInjectReversed);
+    }
+  }
+
+  static class CodeToInject {
+    private Map<Integer, List<String>> codeToInject;
+
+    public CodeToInject(Map<Integer, List<String>> codeToInject) {
+      this.codeToInject = codeToInject;
+    }
+
+    public List<String> getCodeToInject(int address, String nextSegment, String nextOffset) {
+      return CollectionUtils.emptyIfNull(codeToInject.get(address))
+          .stream()
+          .map(s -> s.replaceAll("\\{nextSegment\\}", nextSegment).replaceAll("\\{nextOffset\\}", nextOffset))
+          .toList();
     }
   }
 
@@ -2787,8 +2846,7 @@ public class Spice86CodeGenerator extends GhidraScript {
               instructionsAfterEntry);
           log.info("Dispatched instruction " + parsedInstruction);
           nextAddress =
-              parsedInstruction.getInstructionSegmentedAddress().toPhysical()
-                  + parsedInstruction.getInstructionLength();
+              parsedInstruction.getNextInstructionSegmentedAddress().toPhysical();
           log.info("Next address is " + Utils.toHexWith0X(nextAddress));
           if (nextAddress > maxAddress) {
             break;
