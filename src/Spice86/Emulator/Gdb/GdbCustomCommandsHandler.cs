@@ -91,6 +91,26 @@ public class GdbCustomCommandsHandler {
         return InvalidCommand($"breakCycles argument needs to be a number. You gave {cyclesToWaitString}");
     }
 
+    private string BreakCsIp(string[] args) {
+        if (args.Length < 3) {
+            return InvalidCommand("breakCsIp can only work with two arguments.");
+        }
+        try {
+            uint cs = ConvertUtils.ParseHex32(args[1]);
+            uint ip = ConvertUtils.ParseHex32(args[2]);
+            var breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
+            _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _logger.Debug("Breakpoint added for cs:ip!\n{@BreakPoint}", breakPoint);
+            }
+
+            return _gdbIo.GenerateMessageToDisplayResponse(
+                $"Breakpoint added for cs:ip. Current cs:ip is {_machine.Cpu.State.CS}:{_machine.Cpu.State.IpPhysicalAddress}. Will stop at {cs}:{ip}");
+        } catch (FormatException fe) {
+            return InvalidCommand($"breakCsIp arguments need to be two numbers. You gave {args[1]}:{args[2]}");
+        }
+    }
+
     private string BreakStop() {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
@@ -145,6 +165,7 @@ public class GdbCustomCommandsHandler {
             "peekret" => PeekRet(args),
             "dumpall" => DumpAll(),
             "breakcycles" => BreakCycles(args),
+            "breakcsip" => BreakCsIp(args),
             "vbuffer" => Vbuffer(args),
             _ => InvalidCommand(originalCommand),
         };
@@ -240,6 +261,7 @@ Supported custom commands:
  -help: display this
  - dumpAll: dumps everything possible in the default directory which is {_recordedDataWriter.DumpDirectory}
  - breakCycles <number of cycles to wait before break>: breaks after the given number of cycles is reached
+ - breakCsIp <number for CS, number for IP>: breaks once CS and IP match and before the instruction is executed
  - breakStop: setups a breakpoint when machine shuts down
  - callStack: dumps the callstack to see in which function you are in the VM.
  - peekRet<optional type>: displays the return address of the current function as stored in the stack in RAM.If a parameter is provided, dump the return on the stack as if the return was one of the provided type. Valid values are: {GetValidRetValues()}
