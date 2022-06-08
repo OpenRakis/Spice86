@@ -196,7 +196,7 @@ public class ProgramExecutor : IDisposable {
             return;
         }
         Cpu cpu = Machine.Cpu;
-        bool useCodeOverride = configuration.UseCodeOverride ?? true;
+        bool useCodeOverride = configuration.UseCodeOverrideOption;
         SetupFunctionHandler(cpu.FunctionHandler, functionInformations, useCodeOverride);
         SetupFunctionHandler(cpu.FunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
     }

@@ -9,7 +9,6 @@ using Spice86.Emulator.Function.Dump;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.VM.Breakpoint;
 using Spice86.Emulator.Memory;
-using Spice86.UI;
 using Spice86.Utils;
 
 using System;
@@ -18,6 +17,8 @@ using System.Linq;
 using System.Text;
 
 using Spice86.UI.ViewModels;
+
+using System.Reflection;
 
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
@@ -133,6 +134,10 @@ public class GdbCustomCommandsHandler {
     private string ExecuteCustomCommand(params string[] args) {
         string originalCommand = args[0];
         string command = originalCommand.ToLowerInvariant();
+        if (command.StartsWith("ram")) {
+            return ReadRam(args);
+        }
+
         return command switch {
             "help" => Help(""),
             "state" => State(),
@@ -144,6 +149,54 @@ public class GdbCustomCommandsHandler {
             "vbuffer" => Vbuffer(args),
             _ => InvalidCommand(originalCommand),
         };
+    }
+
+    private string ReadRam(string[] args) {
+        if (args.Length != 2) {
+            return Help($"ram command takes only one parameter which is the address in format segment:offset\n");
+        }
+        string command = args[0];
+        string bitsString = command.Replace("ram", "");
+        int bits;
+        try {
+            bits = int.Parse(bitsString);
+        } catch (Exception ex) {
+            return Help($"Unparseable bits value {bitsString}");
+        }
+        string addressString = args[1].ToUpper();
+        string[] addressStringSplit = addressString.Split(":");
+        string segmentString = addressStringSplit[0];
+        ushort? segment = ExtractValueFromHexOrRegisterName(segmentString);
+        if (segment == null) {
+            return Help($"Invalid segment value ${segmentString}");
+        }
+        string offsetString = addressStringSplit[1];
+        ushort? offset = ExtractValueFromHexOrRegisterName(offsetString);
+        if (offset == null) {
+            return Help($"Invalid offset value ${offsetString}");
+        }
+        uint physicalAddress = MemoryUtils.ToPhysicalAddress(segment.Value, offset.Value);
+        Memory memory = _machine.Memory;
+        switch (bits) {
+            case 8: return _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex8(memory.UInt8[physicalAddress]));
+            case 16: return _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex16(memory.UInt16[physicalAddress]));
+            case 32: return _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex(memory.UInt32[physicalAddress]));
+        }
+        return Help($"ram command needs to take a valid bit size. value {bits} is not supported.");
+    }
+
+    private ushort? ExtractValueFromHexOrRegisterName(string valueOrRegisterName) {
+        State state = _machine.Cpu.State;
+        PropertyInfo? registerProperty = state.GetType().GetProperty(valueOrRegisterName);
+        if (registerProperty != null) {
+            return (ushort?)registerProperty.GetValue(state, null);
+        }
+
+        try {
+            return ConvertUtils.ParseHex16(valueOrRegisterName);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private string ExtractAction(string[] args) {
@@ -192,6 +245,7 @@ Supported custom commands:
  - callStack: dumps the callstack to see in which function you are in the VM.
  - peekRet<optional type>: displays the return address of the current function as stored in the stack in RAM.If a parameter is provided, dump the return on the stack as if the return was one of the provided type. Valid values are: {GetValidRetValues()}
  - state: displays the state of the machine
+ - ramx: displays the content of ram at the specified segmented address with x being the number of bits to extract. Example: ram8 DS:1234 => Will display the byte at address DS:1234
  - vbuffer: family of commands to control video bufers:
    - vbuffer refresh: refreshes the screen
    - vbuffer add<address> <resolution> <scale?>: Example vbuffer add 0x1234 320x200 1.5 -> Add an additional buffer displaying what is at address 0x1234, with resolution 320x200 and scale 1.5

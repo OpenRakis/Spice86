@@ -1070,8 +1070,8 @@ public class Spice86CodeGenerator extends GhidraScript {
       String destinationSegmentRegister = segmentRegister;
       String value1 = parameterTranslator.toSpice86Value(parameters[1], 16, 0);
       String value2 = parameterTranslator.toSpice86Value(parameters[1], 16, 2);
-      // Generate destination2 first as it is a segmentRegister and it will not be used in value1 computation
-      return destinationSegmentRegister + " = " + value2 + ";\n" + destinationRegister + " = " + value1 + ";";
+      // Generate destinationRegister first as it is not a segment register, so it will not be used in subsequent computations for this instruction
+      return destinationRegister + " = " + value1 + ";\n" + destinationSegmentRegister + " = " + value2 + ";";
     }
 
     private String generateLoop(String condition, String param) {
@@ -1677,8 +1677,9 @@ public class Spice86CodeGenerator extends GhidraScript {
       }
       // instruction length needed because offset is from the next instruction
       int baseOffset = instructionSegmentedAddress.getOffset() + parsedInstruction.getInstructionLength();
-      String indirectOffset = parameterTranslator.castToInt16(
-          toInstructionParameter(true, parsedInstruction.getParameter1(), parsedInstruction.getParameter1Offset()));
+      // Cast to int16 to do the offset computation and then to uint16 to loop around
+      String indirectOffset = parameterTranslator.castToUInt16(parameterTranslator.castToInt16(
+          toInstructionParameter(true, parsedInstruction.getParameter1(), parsedInstruction.getParameter1Offset())));
       String offset = Utils.toHexWith0X(baseOffset) + " + " + indirectOffset;
       return parameterTranslator.toPhysicalAddress("CS", offset);
     }

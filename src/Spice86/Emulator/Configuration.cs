@@ -53,6 +53,13 @@ public class Configuration {
     [Option('u', nameof(UseCodeOverride), Default = null, Required = false, HelpText = "<true or false> if false it will use the names provided by overrideSupplierClassName but not the code")]
     public bool? UseCodeOverride { get; set; }
 
+    // Use this in the code
+    public bool UseCodeOverrideOption {
+        get {
+            return UseCodeOverride ?? true;
+        }
+    }
+
     /// <summary>
     /// Only for <see cref="Devices.Timer.Timer"/>
     /// </summary>
