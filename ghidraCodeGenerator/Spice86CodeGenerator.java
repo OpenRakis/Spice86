@@ -51,7 +51,7 @@ public class Spice86CodeGenerator extends GhidraScript {
     String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");
     //Places where we need to generate calls to emulated timer
     //This list needs to be extended (not a lot: init, game loop)
-    run(baseFolder + "spice86dumpExecutionFlow.json", baseFolder + "ghidrascriptout.txt",
+    run(baseFolder + "spice86dumpExecutionFlow.json", baseFolder + "spice86CodeGeneratorLog.txt",
         baseFolder + "GeneratedCode.cs", baseFolder + "CodeGeneratorConfig.json");
   }
 

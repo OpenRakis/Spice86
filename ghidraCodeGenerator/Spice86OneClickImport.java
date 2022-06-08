@@ -62,6 +62,7 @@ public class Spice86OneClickImport extends GhidraScript {
       0xC000, 0xFFFF,
       0xD000, 0xFFFF,
       0xE000, 0xFFFF);
+
   @Override
   protected void run() throws Exception {
     String baseFolder = System.getenv("SPICE86_DUMPS_FOLDER");
@@ -325,20 +326,27 @@ public class Spice86OneClickImport extends GhidraScript {
 
     private boolean renameFunction(Function function) throws InvalidInputException, DuplicateNameException {
       String functionName = function.getName();
-      if (Utils.extractSpice86Address(functionName) != null) {
-        // Nothing to do
-        return false;
+      SegmentedAddress nameAddress = Utils.extractSpice86Address(functionName);
+      long ghidraAddress = function.getEntryPoint().getUnsignedOffset();
+      if (nameAddress != null) {
+        if (nameAddress.toPhysical() == ghidraAddress) {
+          // Nothing to do
+          return false;
+        }
+        // Can happen when ghidra creates a thunk function and chooses to use the name of the jump target for function name.
+        log.warning("Function at address " + Utils.toHexWith0X(ghidraAddress) + " is named " + functionName
+            + ". Address in name and ghidra address do not match. Renaming it.");
       }
       String prefix = "ghidra_guess_";
       log.info("processing " + functionName + " at address " + Utils.toHexWith0X(
-          (int)function.getEntryPoint().getUnsignedOffset()));
-      SegmentedAddress address = getAddress(function);
+          (int)ghidraAddress));
+      SegmentedAddress address = guessAddress(function);
       String name = prefix + Utils.toHexSegmentOffsetPhysical(address);
       function.setName(name, SourceType.USER_DEFINED);
       return true;
     }
 
-    private SegmentedAddress getAddress(Function function) {
+    private SegmentedAddress guessAddress(Function function) {
       int entryPointAddress = (int)function.getEntryPoint().getUnsignedOffset();
       return segmentedAddressGuesser.guessSegmentedAddress(entryPointAddress);
     }
