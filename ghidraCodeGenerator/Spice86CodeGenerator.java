@@ -69,7 +69,7 @@ public class Spice86CodeGenerator extends GhidraScript {
           .sorted(Comparator.comparingInt(f -> f.getEntrySegmentedAddress().toPhysical()))
           .toList();
       ParsedProgram parsedProgram =
-          ParsedProgram.createParsedProgram(log, parsedFunctions, executionFlow, codeGeneratorConfig.getCodeToInject());
+          ParsedProgram.createParsedProgram(log, parsedFunctions, executionFlow, codeGeneratorConfig);
       log.info("Finished parsing.");
       generateProgram(log, parsedProgram, generatedCodeFile, codeGeneratorConfig.getNamespace());
     }
@@ -858,7 +858,7 @@ public class Spice86CodeGenerator extends GhidraScript {
       String nextOffset = Utils.toHexWith0X(nextInstructionAddress.getOffset());
 
       List<String> codeToInject = parsedProgram.getCodeToInject()
-          .getCodeToInject(parsedInstruction.getInstructionSegmentedAddress().toPhysical(), nextSegment, nextOffset);
+          .getCodeToInject(parsedInstruction.getInstructionSegmentedAddress(), nextSegment, nextOffset);
       if (CollectionUtils.isNotEmpty(codeToInject)) {
         return String.join("\n", codeToInject) + "\n";
       }
@@ -1920,16 +1920,15 @@ public class Spice86CodeGenerator extends GhidraScript {
     private int cs1;
 
     public static ParsedProgram createParsedProgram(Log log, List<ParsedFunction> functions,
-        ExecutionFlow executionFlow, CodeToInject codeToInject) {
+        ExecutionFlow executionFlow, CodeGeneratorConfig codeGeneratorConfig) {
       ParsedProgram res = new ParsedProgram();
       res.executionFlow = executionFlow;
-      res.codeToInject = codeToInject;
       res.entryPoints.putAll(
           functions.stream().collect(Collectors.toMap(f -> f.getEntrySegmentedAddress().toPhysical(), f -> f)));
       mapInstructions(log, functions, res);
 
       generateSegmentVariables(log, functions, res);
-
+      res.codeToInject = getCodeToInject(res.codeSegmentVariables, codeGeneratorConfig.getCodeToInject());
       // Map address of function -> Set of externally reachable labels
       registerOutOfFunctionJumps(log, executionFlow, res);
       generateJumpsToFrom(executionFlow, res);
@@ -1974,6 +1973,38 @@ public class Spice86CodeGenerator extends GhidraScript {
       log.info(
           "First segment address is " + Utils.toHexWithout0X(res.cs1) + " variable " + res.codeSegmentVariables.get(
               res.cs1 / 0x10));
+    }
+
+    private static CodeToInject getCodeToInject(Map<Integer, String> codeSegmentVariables,
+        Map<String, List<String>> codeToInject) {
+      Map<SegmentedAddress, List<String>> codeToInjectReversed = new HashMap<>();
+      for (Map.Entry<String, List<String>> entry : codeToInject.entrySet()) {
+        String code = entry.getKey();
+        List<String> addressExpressions = entry.getValue();
+        for (String addressExpression : addressExpressions) {
+          SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, addressExpression);
+          List<String> codeList = codeToInjectReversed.computeIfAbsent(segmentedAddress, a -> new ArrayList());
+          codeList.add(code);
+        }
+      }
+      return new CodeToInject(codeToInjectReversed);
+    }
+
+    private static SegmentedAddress toSegmentedAddress(Map<Integer, String> codeSegmentVariables,
+        String addressExpression) {
+      String[] split = addressExpression.split(":");
+      Integer segment = getSegmentValue(codeSegmentVariables, split[0]);
+      Integer offset = Utils.parseHex(split[1]);
+      return new SegmentedAddress(segment, offset);
+    }
+
+    private static Integer getSegmentValue(Map<Integer, String> codeSegmentVariables, String segmentName) {
+      return codeSegmentVariables.entrySet()
+          .stream()
+          .filter(e -> e.getValue().equalsIgnoreCase(segmentName))
+          .map(Map.Entry::getKey)
+          .findAny()
+          .orElse(null);
     }
 
     private static void generateJumpsToFrom(ExecutionFlow executionFlow, ParsedProgram res) {
@@ -2205,34 +2236,30 @@ public class Spice86CodeGenerator extends GhidraScript {
 
   static class CodeGeneratorConfig {
     @SerializedName("Namespace") private String namespace;
-    @SerializedName("CodeToInject") private Map<String, List<Integer>> codeToInject;
+    @SerializedName("GenerateIncCycle") private boolean generateIncCycle;
+    @SerializedName("CodeToInject") private Map<String, List<String>> codeToInject;
 
     public String getNamespace() {
       return namespace;
     }
 
-    public CodeToInject getCodeToInject() {
-      Map<Integer, List<String>> codeToInjectReversed = new HashMap<>();
-      for (Map.Entry<String, List<Integer>> entry : codeToInject.entrySet()) {
-        String code = entry.getKey();
-        List<Integer> addresses = entry.getValue();
-        for (Integer address : addresses) {
-          List<String> codeList = codeToInjectReversed.computeIfAbsent(address, ArrayList::new);
-          codeList.add(code);
-        }
-      }
-      return new CodeToInject(codeToInjectReversed);
+    public boolean isGenerateIncCycle() {
+      return generateIncCycle;
+    }
+
+    public Map<String, List<String>> getCodeToInject() {
+      return codeToInject;
     }
   }
 
   static class CodeToInject {
-    private Map<Integer, List<String>> codeToInject;
+    private Map<SegmentedAddress, List<String>> codeToInject;
 
-    public CodeToInject(Map<Integer, List<String>> codeToInject) {
+    public CodeToInject(Map<SegmentedAddress, List<String>> codeToInject) {
       this.codeToInject = codeToInject;
     }
 
-    public List<String> getCodeToInject(int address, String nextSegment, String nextOffset) {
+    public List<String> getCodeToInject(SegmentedAddress address, String nextSegment, String nextOffset) {
       return CollectionUtils.emptyIfNull(codeToInject.get(address))
           .stream()
           .map(s -> s.replaceAll("\\{nextSegment\\}", nextSegment).replaceAll("\\{nextOffset\\}", nextOffset))
