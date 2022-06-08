@@ -1870,7 +1870,7 @@ public class Spice86CodeGenerator extends GhidraScript {
     private String generateSwitchToIndirectTarget(String target, List<SegmentedAddress> targets,
         String errorInCaseNotFound, java.util.function.Function<SegmentedAddress, String> toCSharp) {
       String tempVarName = parameterTranslator.generateTempVar("targetAddress_");
-      if (target.contains("cs1")) {
+      if (target.contains("cs1 * 0x10")) {
         log.info("Removing exe load address from switch target address calculation " + target);
         target = target.replaceAll("cs1 \\* 0x10 \\+ ", "");
       } else {
