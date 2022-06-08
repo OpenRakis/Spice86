@@ -469,25 +469,35 @@ public class Spice86OneClickImport extends GhidraScript {
       Address entryPoint = function.getEntryPoint();
       // Removing the function since it is going to be recreated in chunks
       functionCreator.removeFunctionAt(entryPoint);
+
+      AddressRange entryPointRange = findRangeWithEntryPoint(addressRangeList, entryPoint);
       for (AddressRange addressRange : addressRangeList) {
-        Address start = addressRange.getMinAddress();
         AddressSetView newBody = new AddressSet(addressRange);
-        String newName = generateSplitName(function, start);
-        if (!start.equals(entryPoint)) {
+        if (addressRange == entryPointRange) {
+          String name = function.getName();
+          log.info("Re-creating function named " + name + " with body " + newBody + " and entry point " + entryPoint);
+          listing.createFunction(name, entryPoint, newBody, SourceType.USER_DEFINED);
+        } else {
+          Address start = addressRange.getMinAddress();
+          String newName = generateSplitName(start);
+          log.info("Creating additional function from split named " + newName + " with body " + newBody);
+          listing.createFunction(newName, start, newBody, SourceType.USER_DEFINED);
           numberOfCreated++;
         }
-        listing.createFunction(newName, start, newBody, SourceType.USER_DEFINED);
       }
       return numberOfCreated;
     }
 
-    private String generateSplitName(Function function, Address start) {
-      Address entryPoint = function.getEntryPoint();
-      String name = function.getName();
-      if (start.equals(entryPoint)) {
-        // If entry point matched, recreate it
-        return name;
+    private AddressRange findRangeWithEntryPoint(List<AddressRange> addressRangeList,  Address entryPoint ) {
+      for (AddressRange addressRange : addressRangeList) {
+        if(addressRange.contains(entryPoint)) {
+          return addressRange;
+        }
       }
+      return null;
+    }
+
+    private String generateSplitName(Address start) {
       SegmentedAddress segmentedAddress = segmentedAddressGuesser.guessSegmentedAddress((int)start.getUnsignedOffset());
       // Do not include original name in the new name as it is often unrelated
       return "split_" + Utils.toHexSegmentOffsetPhysical(segmentedAddress);
