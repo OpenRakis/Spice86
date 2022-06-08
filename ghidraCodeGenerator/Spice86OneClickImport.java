@@ -61,7 +61,8 @@ public class Spice86OneClickImport extends GhidraScript {
       0x1000, 0xFFFF,
       0xC000, 0xFFFF,
       0xD000, 0xFFFF,
-      0xE000, 0xFFFF);
+      0xE000, 0xFFFF,
+      0xF000, 0xFFFF);
 
   @Override
   protected void run() throws Exception {
@@ -98,7 +99,6 @@ public class Spice86OneClickImport extends GhidraScript {
             "Decompiling functions to discover new code. This will take a while and even get stuck at 99% for some minutes. Don't panic.");
         EntryPointDisassembler entryPointDisassembler = new EntryPointDisassembler(this, log);
         entryPointDisassembler.decompileAllFunctions();
-
         log.info("Renaming functions guessed by ghidra");
         SegmentedAddressGuesser segmentedAddressGuesser = new SegmentedAddressGuesser(log, SEGMENTS);
         FunctionRenamer functionRenamer = new FunctionRenamer(this, log, segmentedAddressGuesser);
@@ -326,6 +326,10 @@ public class Spice86OneClickImport extends GhidraScript {
 
     private boolean renameFunction(Function function) throws InvalidInputException, DuplicateNameException {
       String functionName = function.getName();
+      if (function.isThunk()) {
+        log.info("Changing Thunk function to normal function for " + functionName);
+        function.setThunkedFunction(null);
+      }
       SegmentedAddress nameAddress = Utils.extractSpice86Address(functionName);
       long ghidraAddress = function.getEntryPoint().getUnsignedOffset();
       if (nameAddress != null) {
@@ -602,7 +606,7 @@ public class Spice86OneClickImport extends GhidraScript {
         int rangeIndexEnd = range.getValue();
         Instruction end = orphans.get(rangeIndexEnd);
         String rangeDescription = toInstructionAddress(start) + " -> " + toInstructionAddress(end);
-        Function function = findFirstFunctionBeforeInstruction(start);
+        Function function = findFirstFunctionAtOrBeforeInstruction(start);
 
         if (function == null) {
           log.warning("Did not find any function for range " + rangeDescription);
@@ -624,7 +628,7 @@ public class Spice86OneClickImport extends GhidraScript {
       return ranges.size();
     }
 
-    private Function findFirstFunctionBeforeInstruction(Instruction instruction) {
+    private Function findFirstFunctionAtOrBeforeInstruction(Instruction instruction) {
       Instruction previous = instruction;
       while (previous != null) {
         Address address = previous.getAddress();
