@@ -15,6 +15,7 @@ using Spice86.Utils;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public class CSharpOverrideHelper {
     private static readonly ILogger _logger = Program.Logger.ForContext<CSharpOverrideHelper>();
@@ -298,7 +299,7 @@ public class CSharpOverrideHelper {
             , false);
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
-    
+
     public void DoOnTopOfInstruction(ushort segment, ushort offset, Action action) {
         AddressBreakPoint breakPoint = new(
             BreakPointType.EXECUTION,
@@ -371,11 +372,22 @@ public class CSharpOverrideHelper {
         return new UnrecoverableException(error);
     }
 
+    public void FailIfValueIsNot(uint value, params uint[] possibleValues) {
+        if (!possibleValues.Contains(value)) {
+            throw FailAsUntested($"Value {value} not in list of supported values");
+        }
+    }
+
     public void CheckExternalEvents(ushort expectedReturnCs, ushort expectedReturnIp) {
         Machine.Timer.Tick();
+        if (!InterruptFlag) {
+            return;
+        }
         byte? vectorNumber = Cpu.ExternalInterruptVectorNumber;
         if (vectorNumber != null) {
             InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);
+            // Reset it so that subsequent interrupts can happen
+            Cpu.ExternalInterruptVectorNumber = null;
         }
     }
 

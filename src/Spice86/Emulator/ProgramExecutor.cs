@@ -32,6 +32,7 @@ public class ProgramExecutor : IDisposable {
     private bool _disposedValue;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
+    private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
 
     public ProgramExecutor(MainWindowViewModel? gui, Configuration configuration) {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -49,7 +50,7 @@ public class ProgramExecutor : IDisposable {
 
     public void Run() {
         Machine.Run();
-        if (_configuration.DumpDataOnExit is true or null) {
+        if (RecordData) {
             new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine).DumpAll();
         }
     }
@@ -106,10 +107,9 @@ public class ProgramExecutor : IDisposable {
             throw new ArgumentNullException(nameof(_configuration));
         }
         var counterConfigurator = new CounterConfigurator(_configuration);
-        bool recordData = _configuration.GdbPort != null || _configuration.DumpDataOnExit is true;
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
-        ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(recordData);
-        Machine = new Machine(this, gui, counterConfigurator, executionFlowRecorder, _configuration, recordData);
+        ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
+        Machine = new Machine(this, gui, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
         InitializeCpu();
         InitializeDos(_configuration);
         if (_configuration.InstallInterruptVector) {
