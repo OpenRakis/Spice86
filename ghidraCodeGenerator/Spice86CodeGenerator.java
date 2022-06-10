@@ -1664,7 +1664,7 @@ public class Spice86CodeGenerator extends GhidraScript {
       if (parsedInstruction.isAnyParameterModified()) {
         // Direct address but parameters are modified
         String target = readJumpCallTargetFromModifiedInstruction(far);
-        return generateIndirectJump(param, target);
+        return generateIndirectJump("location specified by self modifying instruction", target);
       }
       SegmentedAddress target = readJumpCallTargetFromInstruction(far);
       log.info("Jump target is " + target);
@@ -1695,10 +1695,8 @@ public class Spice86CodeGenerator extends GhidraScript {
       }
       // instruction length needed because offset is from the next instruction
       int baseOffset = instructionSegmentedAddress.getOffset() + parsedInstruction.getInstructionLength();
-      // Cast to int16 to do the offset computation and then to uint16 to loop around
-      String indirectOffset = parameterTranslator.castToUInt16(parameterTranslator.castToInt16(
-          toInstructionParameter(true, parsedInstruction.getParameter1(), parsedInstruction.getParameter1Offset())));
-      String offset = Utils.toHexWith0X(baseOffset) + " + " + indirectOffset;
+      String offsetPointer = toInstructionParameter(true, parsedInstruction.getParameter1(), parsedInstruction.getParameter1Offset());
+      String offset = parameterTranslator.castToUInt16(Utils.toHexWith0X(baseOffset) + " + " + offsetPointer);
       return parameterTranslator.toPhysicalAddress("CS", offset);
     }
 
@@ -1801,7 +1799,7 @@ public class Spice86CodeGenerator extends GhidraScript {
       if (parsedInstruction.isAnyParameterModified()) {
         // Direct address but parameters are modified
         String target = readJumpCallTargetFromModifiedInstruction(far);
-        return generateIndirectCall(param, target, far);
+        return generateIndirectCall("location specified by self modifying instruction", target, far);
       }
       SegmentedAddress target = readJumpCallTargetFromInstruction(far);
       log.info("Call target is " + target);
