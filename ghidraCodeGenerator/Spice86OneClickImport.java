@@ -11,7 +11,6 @@ import ghidra.app.decompiler.parallel.DecompileConfigurer;
 import ghidra.app.decompiler.parallel.DecompilerCallback;
 import ghidra.app.decompiler.parallel.ParallelDecompiler;
 import ghidra.app.script.GhidraScript;
-import ghidra.framework.cmd.Command;
 import ghidra.program.database.function.OverlappingFunctionException;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressRange;
@@ -119,9 +118,11 @@ public class Spice86OneClickImport extends GhidraScript {
         currentFunctionsWithOrphans = orphanedInstructionsScanner.reattachOrphans();
         changes |= hasChanges(log, functionsWithOrphans, currentFunctionsWithOrphans, "Orphan finder");
         if (!changes && functionsWithOrphans != 0) {
+          log.info("There are still orphans, recreating the functions directly.");
           // No changes, but still orphans => let's create functions at orphans address ranges (this is a last resort solution but we need all instructions attached to a function)
           currentOrphanRangesConvertedToFunctions = orphanedInstructionsScanner.createFunctionsForOrphanRanges();
-          changes |= hasChanges(log, orphanRangesConvertedToFunctions, currentOrphanRangesConvertedToFunctions, "Remaining Orphan ranges to functions");
+          changes |= hasChanges(log, orphanRangesConvertedToFunctions, currentOrphanRangesConvertedToFunctions,
+              "Remaining Orphan ranges to functions");
         }
 
         renames = currentRenames;
@@ -308,12 +309,15 @@ public class Spice86OneClickImport extends GhidraScript {
       }
     }
 
-    public void createOrUpdateFunction(String name, Address entryPoint, AddressRange addressRange)
+    public void createFunction(String name, Address entryPoint, AddressRange addressRange)
         throws InvalidInputException, OverlappingFunctionException {
       Program program = ghidraScript.getCurrentProgram();
       Listing listing = program.getListing();
       AddressSetView newBody = new AddressSet(addressRange);
+      log.info(
+          "Creating function with entry point " + entryPoint + " with name " + name + " with range " + addressRange);
       listing.createFunction(name, entryPoint, newBody, SourceType.USER_DEFINED);
+      markFunctionAsReturning(entryPoint);
     }
 
     public void createOrUpdateFunction(String name, Address entryPoint) {
@@ -326,6 +330,12 @@ public class Spice86OneClickImport extends GhidraScript {
       if (!runCreateFunctionCommand(entryPoint, name, existing)) {
         throw new RuntimeException("Failed to create function at " + entryPoint);
       }
+      markFunctionAsReturning(entryPoint);
+    }
+
+    private void markFunctionAsReturning(Address entryPoint) {
+      Function function = ghidraScript.getCurrentProgram().getListing().getFunctionAt(entryPoint);
+      function.setNoReturn(false);
     }
 
     private boolean runCreateFunctionCommand(Address entryPoint, String name, boolean recreate) {
@@ -496,12 +506,12 @@ public class Spice86OneClickImport extends GhidraScript {
         if (addressRange == entryPointRange) {
           String name = function.getName();
           log.info("Re-creating function named " + name + " with body " + newBody + " and entry point " + entryPoint);
-          listing.createFunction(name, entryPoint, newBody, SourceType.USER_DEFINED);
+          functionCreator.createFunction(name, entryPoint, addressRange);
         } else {
           Address start = addressRange.getMinAddress();
           String newName = generateSplitName(start);
           log.info("Creating additional function from split named " + newName + " with body " + newBody);
-          listing.createFunction(newName, start, newBody, SourceType.USER_DEFINED);
+          functionCreator.createFunction(newName, start, addressRange);
           numberOfCreated++;
         }
       }
@@ -563,7 +573,8 @@ public class Spice86OneClickImport extends GhidraScript {
     private FunctionCreator functionCreator;
     private SegmentedAddressGuesser segmentedAddressGuesser;
 
-    public OrphanedInstructionsScanner(GhidraScript ghidraScript, Log log, FunctionCreator functionCreator, SegmentedAddressGuesser segmentedAddressGuesser) {
+    public OrphanedInstructionsScanner(GhidraScript ghidraScript, Log log, FunctionCreator functionCreator,
+        SegmentedAddressGuesser segmentedAddressGuesser) {
       this.ghidraScript = ghidraScript;
       this.log = log;
       this.functionCreator = functionCreator;
@@ -650,14 +661,15 @@ public class Spice86OneClickImport extends GhidraScript {
         Instruction end = orphans.get(rangeIndexes.getValue());
         Address entryPoint = start.getAddress();
         Function existingFunction = ghidraScript.getFunctionAt(entryPoint);
-        if(existingFunction!=null) {
-          log.info("Found existing function "+existingFunction.getName()+" at orphan range start. Not doing anything.");
+        if (existingFunction != null) {
+          log.info(
+              "Found existing function " + existingFunction.getName() + " at orphan range start. Not doing anything.");
           continue;
         }
         AddressRange addressRange = new AddressRangeImpl(start.getAddress(), end.getAddress());
         SegmentedAddress segmentedAddress =
             segmentedAddressGuesser.guessSegmentedAddress((int)entryPoint.getUnsignedOffset());
-        functionCreator.createOrUpdateFunction("orphan_range_" + Utils.toHexSegmentOffsetPhysical(segmentedAddress),
+        functionCreator.createFunction("orphan_range_" + Utils.toHexSegmentOffsetPhysical(segmentedAddress),
             entryPoint, addressRange);
         created++;
       }
