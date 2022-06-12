@@ -11,11 +11,11 @@ using TinyAudio.DirectSound.Interop;
 [SupportedOSPlatform("windows")]
 internal sealed class DirectSoundObject : IDisposable
 {
-    private bool disposed;
-    private readonly unsafe DirectSound8Inst* directSound;
+    private bool _disposed;
+    private readonly unsafe DirectSound8Inst* _directSound;
 
-    private static WeakReference? instance;
-    private static readonly object getInstanceLock = new();
+    private static WeakReference? _instance;
+    private static readonly object _getInstanceLock = new();
 
     private const uint bufferFlags = 0x00000008u | 0x00000020u | 0x00000080u | 0x00008000u;
 
@@ -24,7 +24,7 @@ internal sealed class DirectSoundObject : IDisposable
         unsafe
         {
             NativeMethods.DirectSoundCreate8(null, out DirectSound8Inst* ds8, null);
-            this.directSound = ds8;
+            this._directSound = ds8;
 
             uint res = ds8->Vtbl->SetCooperativeLevel(ds8, hwnd, 2);
             if (res != 0)
@@ -38,7 +38,7 @@ internal sealed class DirectSoundObject : IDisposable
 
     public DirectSoundBuffer CreateBuffer(AudioFormat format, TimeSpan bufferLength)
     {
-        if (disposed)
+        if (_disposed)
             throw new ObjectDisposedException(nameof(DirectSoundObject));
         if (bufferLength < new TimeSpan(0, 0, 0, 0, 5) || bufferLength > new TimeSpan(1, 0, 0))
             throw new ArgumentOutOfRangeException(nameof(bufferLength));
@@ -48,7 +48,7 @@ internal sealed class DirectSoundObject : IDisposable
     }
     public DirectSoundBuffer CreateBuffer(AudioFormat format, int bufferSize)
     {
-        if (disposed)
+        if (_disposed)
             throw new ObjectDisposedException(nameof(DirectSoundObject));
         if (bufferSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(bufferSize));
@@ -77,7 +77,7 @@ internal sealed class DirectSoundObject : IDisposable
             DirectSoundBuffer8Inst* dsbuf = null;
             dsbd.lpwfxFormat = &wfx;
 
-            uint res = this.directSound->Vtbl->CreateBuffer(this.directSound, &dsbd, &dsbuf, null);
+            uint res = this._directSound->Vtbl->CreateBuffer(this._directSound, &dsbd, &dsbuf, null);
             if (res != 0)
                 throw new InvalidOperationException("Unable to create DirectSound buffer.");
 
@@ -101,25 +101,25 @@ internal sealed class DirectSoundObject : IDisposable
     /// <returns>Current DirectSound instance.</returns>
     public static DirectSoundObject GetInstance(IntPtr hwnd)
     {
-        lock (getInstanceLock)
+        lock (_getInstanceLock)
         {
-            if (instance?.Target is DirectSoundObject directSound)
+            if (_instance?.Target is DirectSoundObject directSound)
                 return directSound;
 
             directSound = new DirectSoundObject(hwnd);
-            instance = new WeakReference(directSound);
+            _instance = new WeakReference(directSound);
             return directSound;
         }
     }
 
     private void Dispose(bool disposing)
     {
-        if (!this.disposed)
+        if (!this._disposed)
         {
-            this.disposed = true;
+            this._disposed = true;
             unsafe
             {
-                this.directSound->Vtbl->Release(this.directSound);
+                this._directSound->Vtbl->Release(this._directSound);
             }
         }
     }

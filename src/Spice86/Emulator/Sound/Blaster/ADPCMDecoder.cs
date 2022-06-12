@@ -9,7 +9,7 @@ internal abstract class ADPCMDecoder {
     /// <summary>
     /// The current step value.
     /// </summary>
-    protected int step;
+    protected int _step;
 
     /// <summary>
     /// Initializes a new instance of the ADPCMDecoder class.
@@ -32,7 +32,7 @@ internal abstract class ADPCMDecoder {
     /// Resets the decoder to its initial state.
     /// </summary>
     public void Reset() {
-        this.step = 0;
+        this._step = 0;
         this.Reference = 0;
     }
 

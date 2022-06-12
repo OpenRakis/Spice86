@@ -9,9 +9,9 @@ using System.IO.Compression;
 using TinyAudio;
 
 internal sealed class Mt32Player : IDisposable {
-    private readonly Mt32Context context = new();
-    private readonly AudioPlayer? audioPlayer;
-    private bool disposed;
+    private readonly Mt32Context _context = new();
+    private readonly AudioPlayer? _audioPlayer;
+    private bool _disposed;
 
     public Mt32Player(string romsPath, Configuration configuration) {
         if (string.IsNullOrWhiteSpace(romsPath)) {
@@ -21,27 +21,21 @@ internal sealed class Mt32Player : IDisposable {
         if (configuration.CreateAudioBackend == false) {
             return;
         }
-        if(!OperatingSystem.IsWindows()) {
-            return;
-        }
-        audioPlayer = Audio.CreatePlayer(true);
-        if (audioPlayer is null) {
-            return;
-        }
-        if (!OperatingSystem.IsWindows()) {
+        _audioPlayer = Audio.CreatePlayer(true);
+        if (_audioPlayer is null) {
             return;
         }
         LoadRoms(romsPath);
 
-        context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(audioPlayer.Format.SampleRate);
-        context.SetSampleRate(audioPlayer.Format.SampleRate);
+        _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(_audioPlayer.Format.SampleRate);
+        _context.SetSampleRate(_audioPlayer.Format.SampleRate);
 
-        context.OpenSynth();
-        audioPlayer.BeginPlayback(this.FillBuffer);
+        _context.OpenSynth();
+        _audioPlayer.BeginPlayback(this.FillBuffer);
     }
 
-    public void PlayShortMessage(uint message) => context.PlayMessage(message);
-    public void PlaySysex(ReadOnlySpan<byte> data) => context.PlaySysex(data);
+    public void PlayShortMessage(uint message) => _context.PlayMessage(message);
+    public void PlaySysex(ReadOnlySpan<byte> data) => _context.PlaySysex(data);
     public void Pause() {
         if (!OperatingSystem.IsWindows()) {
             return;
@@ -59,18 +53,18 @@ internal sealed class Mt32Player : IDisposable {
     }
 
     public void Dispose() {
-        if (!disposed) {
-            context.Dispose();
+        if (!_disposed) {
+            _context.Dispose();
             if (OperatingSystem.IsWindows()) {
-                audioPlayer?.Dispose();
+                _audioPlayer?.Dispose();
             }
-            disposed = true;
+            _disposed = true;
         }
     }
 
     private void FillBuffer(Span<float> buffer, out int samplesWritten) {
         try {
-            context.Render(buffer);
+            _context.Render(buffer);
             samplesWritten = buffer.Length;
         } catch (ObjectDisposedException) {
             buffer.Clear();
@@ -84,12 +78,12 @@ internal sealed class Mt32Player : IDisposable {
                 ZipArchiveEntry? entry = zip.Entries[i];
                 if (entry.FullName.EndsWith(".ROM", StringComparison.OrdinalIgnoreCase)) {
                     using Stream? stream = entry.Open();
-                    context.AddRom(stream);
+                    _context.AddRom(stream);
                 }
             }
         } else if (Directory.Exists(path)) {
             foreach (string? fileName in Directory.EnumerateFiles(path, "*.ROM")) {
-                context.AddRom(fileName);
+                _context.AddRom(fileName);
             }
         }
     }

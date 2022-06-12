@@ -12,16 +12,16 @@ using Spice86.Emulator.Memory;
 /// Contains information about a DMA channel.
 /// </summary>
 public sealed class DmaChannel {
-    private bool isActive;
-    private bool addressByteRead;
-    private bool addressByteWritten;
-    private bool countByteRead;
-    private bool countByteWritten;
-    private volatile int bytesRemaining;
-    private byte bytesRemainingHighByte;
-    private byte addressHighByte;
-    private int transferRate;
-    private readonly Stopwatch transferTimer = new();
+    private bool _isActive;
+    private bool _addressByteRead;
+    private bool _addressByteWritten;
+    private bool _countByteRead;
+    private bool _countByteWritten;
+    private volatile int _bytesRemaining;
+    private byte _bytesRemainingHighByte;
+    private byte _addressHighByte;
+    private int _transferRate;
+    private readonly Stopwatch _transferTimer = new();
 
     internal DmaChannel() {
     }
@@ -35,16 +35,16 @@ public sealed class DmaChannel {
     /// Gets or sets a value indicating whether a DMA transfer is active.
     /// </summary>
     public bool IsActive {
-        get => this.isActive;
+        get => this._isActive;
         set {
-            if (this.isActive != value) {
+            if (this._isActive != value) {
                 if (value) {
-                    this.transferTimer.Start();
+                    this._transferTimer.Start();
                 } else {
-                    this.transferTimer.Reset();
+                    this._transferTimer.Reset();
                 }
 
-                this.isActive = value;
+                this._isActive = value;
                 OnIsActiveChanged(EventArgs.Empty);
             }
         }
@@ -70,14 +70,14 @@ public sealed class DmaChannel {
     /// </summary>
     public ushort Count { get; internal set; }
     public int TransferBytesRemaining {
-        get => bytesRemaining;
-        internal set => bytesRemaining = value;
+        get => _bytesRemaining;
+        internal set => _bytesRemaining = value;
     }
     /// <summary>
     /// Gets or sets the desired transfer rate in bytes/second.
     /// </summary>
     public int TransferRate {
-        get => this.transferRate;
+        get => this._transferRate;
         set {
             int period = 1;
             int chunkSize = value / 1000;
@@ -87,7 +87,7 @@ public sealed class DmaChannel {
                 period = value / 1000;
             }
 
-            this.transferRate = value;
+            this._transferRate = value;
             this.TransferPeriod = Timer.StopwatchTicksPerMillisecond * period;
             this.TransferChunkSize = chunkSize;
         }
@@ -119,15 +119,15 @@ public sealed class DmaChannel {
     /// <returns>Next byte of the memory address.</returns>
     internal byte ReadAddressByte() {
         try {
-            if (!this.addressByteRead) {
+            if (!this._addressByteRead) {
                 ushort address = (ushort)(this.Address + this.Count - (this.TransferBytesRemaining - 1));
-                this.addressHighByte = (byte)(address >> 8);
+                this._addressHighByte = (byte)(address >> 8);
                 return (byte)(address & 0xFF);
             } else {
-                return this.addressHighByte;
+                return this._addressHighByte;
             }
         } finally {
-            this.addressByteRead = !this.addressByteRead;
+            this._addressByteRead = !this._addressByteRead;
         }
     }
     /// <summary>
@@ -136,13 +136,13 @@ public sealed class DmaChannel {
     /// <param name="value">Next byte of the memory address.</param>
     internal void WriteAddressByte(byte value) {
         try {
-            if (!this.addressByteWritten) {
+            if (!this._addressByteWritten) {
                 this.Address = value;
             } else {
                 this.Address |= (ushort)(value << 8);
             }
         } finally {
-            this.addressByteWritten = !this.addressByteWritten;
+            this._addressByteWritten = !this._addressByteWritten;
         }
     }
     /// <summary>
@@ -151,15 +151,15 @@ public sealed class DmaChannel {
     /// <returns>Next byte of the memory address.</returns>
     internal byte ReadCountByte() {
         try {
-            if (!this.countByteRead) {
+            if (!this._countByteRead) {
                 ushort count = (ushort)(this.TransferBytesRemaining - 1);
-                this.bytesRemainingHighByte = (byte)((count >> 8) & 0xFF);
+                this._bytesRemainingHighByte = (byte)((count >> 8) & 0xFF);
                 return (byte)(count & 0xFF);
             } else {
-                return bytesRemainingHighByte;
+                return _bytesRemainingHighByte;
             }
         } finally {
-            this.countByteRead = !this.countByteRead;
+            this._countByteRead = !this._countByteRead;
         }
     }
     /// <summary>
@@ -168,14 +168,14 @@ public sealed class DmaChannel {
     /// <param name="value">Next byte of the memory address.</param>
     internal void WriteCountByte(byte value) {
         try {
-            if (!this.countByteWritten) {
+            if (!this._countByteWritten) {
                 this.Count = value;
             } else {
                 this.Count |= (ushort)(value << 8);
                 this.TransferBytesRemaining = this.Count + 1;
             }
         } finally {
-            this.countByteWritten = !this.countByteWritten;
+            this._countByteWritten = !this._countByteWritten;
         }
     }
     /// <summary>
@@ -187,7 +187,7 @@ public sealed class DmaChannel {
     /// </remarks>
     internal void Transfer(Memory memory) {
         IDmaDevice8? device = this.Device;
-        if (device != null && this.transferTimer.ElapsedTicks >= this.TransferPeriod) {
+        if (device != null && this._transferTimer.ElapsedTicks >= this.TransferPeriod) {
             uint memoryAddress = ((uint)this.Page << 16) | this.Address;
             uint sourceOffset = (uint)this.Count + 1 - (uint)this.TransferBytesRemaining;
 
@@ -207,20 +207,20 @@ public sealed class DmaChannel {
                 }
             }
 
-            this.transferTimer.Reset();
-            this.transferTimer.Start();
+            this._transferTimer.Reset();
+            this._transferTimer.Start();
         }
     }
     internal void Serialize(BinaryWriter writer) {
-        writer.Write(this.isActive);
-        writer.Write(this.addressByteRead);
-        writer.Write(this.addressByteWritten);
-        writer.Write(this.countByteRead);
-        writer.Write(this.countByteWritten);
-        writer.Write(this.bytesRemaining);
-        writer.Write(this.bytesRemainingHighByte);
-        writer.Write(this.addressHighByte);
-        writer.Write(this.transferRate);
+        writer.Write(this._isActive);
+        writer.Write(this._addressByteRead);
+        writer.Write(this._addressByteWritten);
+        writer.Write(this._countByteRead);
+        writer.Write(this._countByteWritten);
+        writer.Write(this._bytesRemaining);
+        writer.Write(this._bytesRemainingHighByte);
+        writer.Write(this._addressHighByte);
+        writer.Write(this._transferRate);
 
         writer.Write(this.IsMasked);
         writer.Write((int)this.TransferMode);
@@ -231,15 +231,15 @@ public sealed class DmaChannel {
         writer.Write(this.TransferChunkSize);
     }
     internal void Deserialize(BinaryReader reader) {
-        this.isActive = reader.ReadBoolean();
-        this.addressByteRead = reader.ReadBoolean();
-        this.addressByteWritten = reader.ReadBoolean();
-        this.countByteRead = reader.ReadBoolean();
-        this.countByteWritten = reader.ReadBoolean();
-        this.bytesRemaining = reader.ReadInt32();
-        this.bytesRemainingHighByte = reader.ReadByte();
-        this.addressHighByte = reader.ReadByte();
-        this.transferRate = reader.ReadInt32();
+        this._isActive = reader.ReadBoolean();
+        this._addressByteRead = reader.ReadBoolean();
+        this._addressByteWritten = reader.ReadBoolean();
+        this._countByteRead = reader.ReadBoolean();
+        this._countByteWritten = reader.ReadBoolean();
+        this._bytesRemaining = reader.ReadInt32();
+        this._bytesRemainingHighByte = reader.ReadByte();
+        this._addressHighByte = reader.ReadByte();
+        this._transferRate = reader.ReadInt32();
 
         this.IsMasked = reader.ReadBoolean();
         this.TransferMode = (DmaTransferMode)reader.ReadInt32();
