@@ -80,7 +80,9 @@ public class GdbCommandRegisterHandler {
         }
 
         if (regIndex == 8) {
-            return state.IpPhysicalAddress;
+            var value =  state.IpPhysicalAddress;
+            System.Diagnostics.Debug.WriteLine($"{value:X}");
+            return value;
         }
 
         if (regIndex == 9) {

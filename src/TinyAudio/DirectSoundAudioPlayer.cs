@@ -11,11 +11,11 @@ using TinyAudio.DirectSound.Interop;
 [SupportedOSPlatform("windows")]
 public sealed class DirectSoundAudioPlayer : AudioPlayer
 {
-    private readonly DirectSoundBuffer directSoundBuffer;
-    private Timer? bufferTimer;
-    private readonly uint dataInterval;
-    private volatile bool handlingTimer;
-    private bool disposed;
+    private readonly DirectSoundBuffer _directSoundBuffer;
+    private Timer? _bufferTimer;
+    private readonly uint _dataInterval;
+    private volatile bool _handlingTimer;
+    private bool _disposed;
 
     public DirectSoundAudioPlayer(AudioFormat format, TimeSpan bufferLength)
         : base(format)
@@ -29,68 +29,68 @@ public sealed class DirectSoundAudioPlayer : AudioPlayer
         if (hwnd == IntPtr.Zero)
             hwnd = NativeMethods.GetConsoleWindow();
 
-        this.dataInterval = (uint)(bufferLength.TotalMilliseconds * 0.4);
+        this._dataInterval = (uint)(bufferLength.TotalMilliseconds * 0.4);
 
         var dsound = DirectSoundObject.GetInstance(hwnd);
-        this.directSoundBuffer = dsound.CreateBuffer(format, bufferLength);
+        this._directSoundBuffer = dsound.CreateBuffer(format, bufferLength);
     }
 
     protected override void Start(bool useCallback)
     {
         if (useCallback)
         {
-            uint maxBytes = this.directSoundBuffer.GetFreeBytes();
+            uint maxBytes = this._directSoundBuffer.GetFreeBytes();
             if (maxBytes >= 32)
                 this.WriteBuffer(maxBytes);
         }
 
-        this.directSoundBuffer.Play(PlaybackMode.LoopContinuously);
+        this._directSoundBuffer.Play(PlaybackMode.LoopContinuously);
 
         if (useCallback)
-            this.bufferTimer = new Timer(_ => this.PollingThread(), null, 0, this.dataInterval);
+            this._bufferTimer = new Timer(_ => this.PollingThread(), null, 0, this._dataInterval);
     }
     protected override void Stop()
     {
-        this.directSoundBuffer.Stop();
-        this.bufferTimer?.Dispose();
-        this.bufferTimer = null;
+        this._directSoundBuffer.Stop();
+        this._bufferTimer?.Dispose();
+        this._bufferTimer = null;
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (!this.disposed)
+        if (!this._disposed)
         {
             if (disposing)
             {
                 this.StopPlayback();
-                this.directSoundBuffer.Dispose();
+                this._directSoundBuffer.Dispose();
             }
 
-            this.disposed = true;
+            this._disposed = true;
         }
     }
 
     private void PollingThread()
     {
-        if (this.handlingTimer)
+        if (this._handlingTimer)
             return;
 
-        this.handlingTimer = true;
+        this._handlingTimer = true;
         try
         {
-            uint maxBytes = this.directSoundBuffer.GetFreeBytes() & ~3u;
+            uint maxBytes = this._directSoundBuffer.GetFreeBytes() & ~3u;
             if (maxBytes >= 32)
                 this.WriteBuffer(maxBytes);
         }
         finally
         {
-            this.handlingTimer = false;
+            this._handlingTimer = false;
         }
     }
 
     private void WriteBuffer(uint maxBytes)
     {
-        AcquiredBuffer buffer = this.directSoundBuffer.Acquire(maxBytes);
+        AcquiredBuffer buffer = this._directSoundBuffer.Acquire(maxBytes);
         if (buffer.Valid)
         {
             int ptr1Written = 0;
@@ -131,14 +131,14 @@ public sealed class DirectSoundAudioPlayer : AudioPlayer
             }
             finally
             {
-                this.directSoundBuffer.Unlock(buffer.Ptr1, ptr1Written, buffer.Ptr2, ptr2Written);
+                this._directSoundBuffer.Unlock(buffer.Ptr1, ptr1Written, buffer.Ptr2, ptr2Written);
             }
         }
     }
 
     protected override int WriteDataInternal(ReadOnlySpan<byte> data)
     {
-        AcquiredBuffer buffer = this.directSoundBuffer.Acquire(32);
+        AcquiredBuffer buffer = this._directSoundBuffer.Acquire(32);
         if (buffer.Valid)
         {
             int ptr1Written = 0;
@@ -161,7 +161,7 @@ public sealed class DirectSoundAudioPlayer : AudioPlayer
             }
             finally
             {
-                this.directSoundBuffer.Unlock(buffer.Ptr1, ptr1Written, buffer.Ptr2, ptr2Written);
+                this._directSoundBuffer.Unlock(buffer.Ptr1, ptr1Written, buffer.Ptr2, ptr2Written);
             }
 
             return ptr1Written + ptr2Written;

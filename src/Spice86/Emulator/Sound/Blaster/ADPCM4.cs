@@ -50,20 +50,20 @@ internal sealed class ADPCM4 : ADPCMDecoder {
     /// <returns>Decoded 8-bit sample.</returns>
     private byte DecodeSample(byte current, int sample) {
         if ((sample & 0x08) == 0) {
-            current += (byte)(sample << this.step);
+            current += (byte)(sample << this._step);
         } else {
-            current -= (byte)((sample & 0x07) << this.step);
+            current -= (byte)((sample & 0x07) << this._step);
         }
 
         if (current >= Limit) {
-            this.step++;
-            if (this.step > 3) {
-                this.step = 3;
+            this._step++;
+            if (this._step > 3) {
+                this._step = 3;
             }
         } else if (current == 0) {
-            this.step--;
-            if (this.step < 0) {
-                this.step = 0;
+            this._step--;
+            if (this._step < 0) {
+                this._step = 0;
             }
         }
 

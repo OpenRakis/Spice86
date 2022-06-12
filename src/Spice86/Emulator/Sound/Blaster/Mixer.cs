@@ -3,9 +3,9 @@
 using Spice86.Emulator.Devices.Sound;
 
 internal sealed class Mixer {
-    private readonly SoundBlaster blaster;
+    private readonly SoundBlaster _blaster;
 
-    public Mixer(SoundBlaster blaster) => this.blaster = blaster;
+    public Mixer(SoundBlaster blaster) => this._blaster = blaster;
 
     public int CurrentAddress { get; set; }
     public InterruptStatus InterruptStatusRegister { get; set; }
@@ -28,7 +28,7 @@ internal sealed class Mixer {
     }
 
     private byte GetIRQByte() {
-        return this.blaster.IRQ switch {
+        return this._blaster.IRQ switch {
             2 => 1 << 0,
             5 => 1 << 1,
             7 => 1 << 2,
@@ -36,5 +36,5 @@ internal sealed class Mixer {
             _ => 0,
         };
     }
-    private byte GetDMAByte() => (byte)(1 << this.blaster.DMA);
+    private byte GetDMAByte() => (byte)(1 << this._blaster.DMA);
 }

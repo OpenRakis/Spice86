@@ -3,39 +3,39 @@
 using System;
 
 internal sealed class Mt32MidiDevice : MidiDevice {
-    private readonly Lazy<Mt32Player> player;
-    private bool disposed;
+    private readonly Lazy<Mt32Player> _player;
+    private bool _disposed;
 
     public Mt32MidiDevice(string romsPath, Configuration configuration) {
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
 
-        player = new Lazy<Mt32Player>(() => new(romsPath, configuration));
+        _player = new Lazy<Mt32Player>(() => new(romsPath, configuration));
     }
 
     public override void Pause() {
-        if (player.IsValueCreated) {
-            player.Value.Pause();
+        if (_player.IsValueCreated) {
+            _player.Value.Pause();
         }
     }
 
     public override void Resume() {
-        if (player.IsValueCreated) {
-            player.Value.Resume();
+        if (_player.IsValueCreated) {
+            _player.Value.Resume();
         }
     }
 
-    protected override void PlayShortMessage(uint message) => player.Value.PlayShortMessage(message);
-    protected override void PlaySysex(ReadOnlySpan<byte> data) => player.Value.PlaySysex(data);
+    protected override void PlayShortMessage(uint message) => _player.Value.PlayShortMessage(message);
+    protected override void PlaySysex(ReadOnlySpan<byte> data) => _player.Value.PlaySysex(data);
 
     protected override void Dispose(bool disposing) {
-        if (!disposed) {
-            if (disposing && player.IsValueCreated) {
-                player.Value.Dispose();
+        if (!_disposed) {
+            if (disposing && _player.IsValueCreated) {
+                _player.Value.Dispose();
             }
 
-            disposed = true;
+            _disposed = true;
         }
     }
 }

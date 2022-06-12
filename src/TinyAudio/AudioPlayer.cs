@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 /// </summary>
 public abstract class AudioPlayer : IDisposable
 {
-    private readonly InternalBufferWriter writer;
-    private CallbackRaiser? callbackRaiser;
-    private bool disposed;
+    private readonly InternalBufferWriter _writer;
+    private CallbackRaiser? _callbackRaiser;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AudioPlayer"/> class.
@@ -24,7 +24,7 @@ public abstract class AudioPlayer : IDisposable
     {
         this.Format = format ?? throw new ArgumentNullException(nameof(format));
 
-        this.writer = format.SampleFormat switch
+        this._writer = format.SampleFormat switch
         {
             SampleFormat.UnsignedPcm8 => new InternalBufferWriter<byte>(this),
             SampleFormat.SignedPcm16 => new InternalBufferWriter<short>(this),
@@ -73,12 +73,12 @@ public abstract class AudioPlayer : IDisposable
     /// <exception cref="ObjectDisposedException">The <see cref="AudioPlayer"/> instance has been disposed.</exception>
     public void BeginPlayback()
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioPlayer));
         if (this.Playing)
             throw new InvalidOperationException("Playback has already started.");
 
-        this.callbackRaiser = null;
+        this._callbackRaiser = null;
         this.Playing = true;
         this.Start(false);
     }
@@ -88,14 +88,14 @@ public abstract class AudioPlayer : IDisposable
     /// <exception cref="ObjectDisposedException">The <see cref="AudioPlayer"/> instance has been disposed.</exception>
     public void StopPlayback()
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioPlayer));
 
         if (this.Playing)
         {
             this.Stop();
             this.Playing = false;
-            this.callbackRaiser = null;
+            this._callbackRaiser = null;
         }
     }
 
@@ -104,38 +104,38 @@ public abstract class AudioPlayer : IDisposable
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData(ReadOnlySpan<float> data) => this.writer.WriteData(data);
+    public int WriteData(ReadOnlySpan<float> data) => this._writer.WriteData(data);
     /// <summary>
     /// Writes 16-bit PCM data to the output buffer.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData(ReadOnlySpan<short> data) => this.writer.WriteData(data);
+    public int WriteData(ReadOnlySpan<short> data) => this._writer.WriteData(data);
     /// <summary>
     /// Writes 8-bit PCM data to the output buffer.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData(ReadOnlySpan<byte> data) => this.writer.WriteData(data);
+    public int WriteData(ReadOnlySpan<byte> data) => this._writer.WriteData(data);
 
     /// <summary>
     /// Writes 32-bit IEEE floating point data to the output buffer and blocks until all data has been written.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <param name="cancellationToken">Token used to cancel asynchronous operation.</param>
-    public ValueTask WriteDataAsync(ReadOnlyMemory<float> data, CancellationToken cancellationToken = default) => this.writer.WriteDataAsync(data, cancellationToken);
+    public ValueTask WriteDataAsync(ReadOnlyMemory<float> data, CancellationToken cancellationToken = default) => this._writer.WriteDataAsync(data, cancellationToken);
     /// <summary>
     /// Writes 16-bit PCM data to the output buffer and blocks until all data has been written.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <param name="cancellationToken">Token used to cancel asynchronous operation.</param>
-    public ValueTask WriteDataAsync(ReadOnlyMemory<short> data, CancellationToken cancellationToken = default) => this.writer.WriteDataAsync(data, cancellationToken);
+    public ValueTask WriteDataAsync(ReadOnlyMemory<short> data, CancellationToken cancellationToken = default) => this._writer.WriteDataAsync(data, cancellationToken);
     /// <summary>
     /// Writes 8-bit PCM data to the output buffer and blocks until all data has been written.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <param name="cancellationToken">Token used to cancel asynchronous operation.</param>
-    public ValueTask WriteDataAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default) => this.writer.WriteDataAsync(data, cancellationToken);
+    public ValueTask WriteDataAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default) => this._writer.WriteDataAsync(data, cancellationToken);
     /// <summary>
     /// Writes sample data of the type <typeparamref name="TSample"/> to the output buffer and blocks until all data has been written.
     /// </summary>
@@ -150,7 +150,7 @@ public abstract class AudioPlayer : IDisposable
     /// <item><see cref="float"/>: 32-bit IEEE float</item>
     /// </list>
     /// </remarks>
-    public ValueTask WriteDataRawAsync<TSample>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default) where TSample : unmanaged => this.writer.WriteDataRawAsync<TSample>(data, cancellationToken);
+    public ValueTask WriteDataRawAsync<TSample>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default) where TSample : unmanaged => this._writer.WriteDataRawAsync<TSample>(data, cancellationToken);
 
     public void Dispose()
     {
@@ -160,7 +160,7 @@ public abstract class AudioPlayer : IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        this.disposed = true;
+        this._disposed = true;
     }
     protected abstract void Start(bool useCallback);
     protected abstract void Stop();
@@ -172,8 +172,8 @@ public abstract class AudioPlayer : IDisposable
 
     private void RaiseCallbackInternal<TInput>(Span<TInput> buffer, out int samplesWritten) where TInput : unmanaged
     {
-        if (this.callbackRaiser != null)
-            this.callbackRaiser.RaiseCallback(MemoryMarshal.AsBytes(buffer), out samplesWritten);
+        if (this._callbackRaiser != null)
+            this._callbackRaiser.RaiseCallback(MemoryMarshal.AsBytes(buffer), out samplesWritten);
         else
             samplesWritten = 0;
     }
@@ -181,12 +181,12 @@ public abstract class AudioPlayer : IDisposable
     {
         if (callback == null)
             throw new ArgumentNullException(nameof(callback));
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioPlayer));
         if (this.Playing)
             throw new InvalidOperationException("Playback has already started.");
 
-        this.callbackRaiser = this.Format.SampleFormat switch
+        this._callbackRaiser = this.Format.SampleFormat switch
         {
             SampleFormat.UnsignedPcm8 => new CallbackRaiser<TInput, byte>(callback),
             SampleFormat.SignedPcm16 => new CallbackRaiser<TInput, short>(callback),
