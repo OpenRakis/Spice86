@@ -19,26 +19,26 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
-    private readonly AudioPlayer? audioPlayer;
-    private readonly FmSynthesizer? synth;
-    private int currentAddress;
-    private volatile bool endThread;
-    private System.Threading.Thread generateThread;
-    private bool initialized;
-    private bool paused;
-    private byte statusByte;
-    private byte timer1Data;
-    private byte timer2Data;
-    private byte timerControlByte;
+    private readonly AudioPlayer? _audioPlayer;
+    private readonly FmSynthesizer? _synth;
+    private int _currentAddress;
+    private volatile bool _endThread;
+    private System.Threading.Thread _generateThread;
+    private bool _initialized;
+    private bool _paused;
+    private byte _statusByte;
+    private byte _timer1Data;
+    private byte _timer2Data;
+    private byte _timerControlByte;
 
     public OPL3FM(Machine machine, Configuration configuration) : base(machine, configuration) {
-        if (configuration.CreateAudioBackend && OperatingSystem.IsWindows()) {
-            audioPlayer = Audio.CreatePlayer();
+        if (configuration.CreateAudioBackend) {
+            _audioPlayer = Audio.CreatePlayer();
         }
-        if (audioPlayer is not null && OperatingSystem.IsWindows()) {
-            this.synth = new FmSynthesizer(this.audioPlayer.Format.SampleRate);
+        if (_audioPlayer is not null) {
+            this._synth = new FmSynthesizer(this._audioPlayer.Format.SampleRate);
         }
-        this.generateThread = new System.Threading.Thread(this.GenerateWaveforms) {
+        this._generateThread = new System.Threading.Thread(this.GenerateWaveforms) {
             IsBackground = true,
             Priority = System.Threading.ThreadPriority.AboveNormal
         };
@@ -50,76 +50,76 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     }
 
     public void Dispose() {
-        if (this.initialized) {
-            if (!paused) {
-                this.endThread = true;
-                this.generateThread.Join();
+        if (this._initialized) {
+            if (!_paused) {
+                this._endThread = true;
+                this._generateThread.Join();
             }
             if (OperatingSystem.IsWindows()) {
-                this.audioPlayer?.Dispose();
+                this._audioPlayer?.Dispose();
             }
-            this.initialized = false;
+            this._initialized = false;
         }
     }
 
     public void Pause() {
-        if (this.initialized && !this.paused) {
-            this.endThread = true;
-            this.generateThread.Join();
-            this.paused = true;
+        if (this._initialized && !this._paused) {
+            this._endThread = true;
+            this._generateThread.Join();
+            this._paused = true;
         }
     }
 
     public override byte ReadByte(int port) {
-        if ((this.timerControlByte & 0x01) != 0x00 && (this.statusByte & Timer1Mask) == 0) {
-            this.timer1Data++;
-            if (this.timer1Data == 0) {
-                this.statusByte |= Timer1Mask;
+        if ((this._timerControlByte & 0x01) != 0x00 && (this._statusByte & Timer1Mask) == 0) {
+            this._timer1Data++;
+            if (this._timer1Data == 0) {
+                this._statusByte |= Timer1Mask;
             }
         }
 
-        if ((this.timerControlByte & 0x02) != 0x00 && (this.statusByte & Timer2Mask) == 0) {
-            this.timer2Data++;
-            if (this.timer2Data == 0) {
-                this.statusByte |= Timer2Mask;
+        if ((this._timerControlByte & 0x02) != 0x00 && (this._statusByte & Timer2Mask) == 0) {
+            this._timer2Data++;
+            if (this._timer2Data == 0) {
+                this._statusByte |= Timer2Mask;
             }
         }
 
-        return this.statusByte;
+        return this._statusByte;
     }
 
     public override ushort ReadWord(int port) {
-        return this.statusByte;
+        return this._statusByte;
     }
 
     public void Resume() {
-        if (paused) {
-            this.endThread = false;
-            this.generateThread = new System.Threading.Thread(this.GenerateWaveforms) { IsBackground = true };
-            this.generateThread.Start();
-            this.paused = false;
+        if (_paused) {
+            this._endThread = false;
+            this._generateThread = new System.Threading.Thread(this.GenerateWaveforms) { IsBackground = true };
+            this._generateThread.Start();
+            this._paused = false;
         }
     }
 
     public override void WriteByte(int port, byte value) {
         if (port == 0x388) {
-            currentAddress = value;
+            _currentAddress = value;
         } else if (port == 0x389) {
-            if (currentAddress == 0x02) {
-                this.timer1Data = value;
-            } else if (currentAddress == 0x03) {
-                this.timer2Data = value;
-            } else if (currentAddress == 0x04) {
-                this.timerControlByte = value;
+            if (_currentAddress == 0x02) {
+                this._timer1Data = value;
+            } else if (_currentAddress == 0x03) {
+                this._timer2Data = value;
+            } else if (_currentAddress == 0x04) {
+                this._timerControlByte = value;
                 if ((value & 0x80) == 0x80) {
-                    this.statusByte = 0;
+                    this._statusByte = 0;
                 }
             } else {
-                if (!this.initialized) {
+                if (!this._initialized) {
                     this.Initialize();
                 }
 
-                this.synth?.SetRegisterValue(0, currentAddress, value);
+                this._synth?.SetRegisterValue(0, _currentAddress, value);
             }
         }
     }
@@ -137,25 +137,25 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private void GenerateWaveforms() {
         float[]? buffer = new float[1024];
         float[] playBuffer;
-        if (audioPlayer is not null && OperatingSystem.IsWindows()) {
-            bool expandToStereo = this.audioPlayer.Format.Channels == 2;
+        if (_audioPlayer is not null && OperatingSystem.IsWindows()) {
+            bool expandToStereo = this._audioPlayer.Format.Channels == 2;
             if (expandToStereo) {
                 playBuffer = new float[buffer.Length * 2];
             } else {
                 playBuffer = buffer;
             }
 
-            this.audioPlayer.BeginPlayback();
+            this._audioPlayer.BeginPlayback();
             fillBuffer();
-            while (!endThread) {
-                Audio.WriteFullBuffer(this.audioPlayer, playBuffer);
+            while (!_endThread) {
+                Audio.WriteFullBuffer(this._audioPlayer, playBuffer);
                 fillBuffer();
             }
 
-            this.audioPlayer.StopPlayback();
+            this._audioPlayer.StopPlayback();
 
             void fillBuffer() {
-                this.synth?.GetData(buffer);
+                this._synth?.GetData(buffer);
                 if (expandToStereo) {
                     ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
                 }
@@ -167,7 +167,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     /// Performs DirectSound initialization.
     /// </summary>
     private void Initialize() {
-        this.generateThread.Start();
-        this.initialized = true;
+        this._generateThread.Start();
+        this._initialized = true;
     }
 }

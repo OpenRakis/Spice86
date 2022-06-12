@@ -9,12 +9,12 @@ using TinyAudio.Wasapi.Interop;
 internal sealed class MediaDevice
 {
     private const uint CLSCTX_ALL = 1 | 2 | 4 | 16;
-    private readonly unsafe MMDeviceInst* device;
-    private static readonly Lazy<MediaDevice> defaultDevice = new Lazy<MediaDevice>(GetDefaultDevice);
+    private readonly unsafe MMDeviceInst* _device;
+    private static readonly Lazy<MediaDevice> _defaultDevice = new Lazy<MediaDevice>(GetDefaultDevice);
 
-    private unsafe MediaDevice(MMDeviceInst* device) => this.device = device;
+    private unsafe MediaDevice(MMDeviceInst* device) => this._device = device;
 
-    public static MediaDevice Default => defaultDevice.Value;
+    public static MediaDevice Default => _defaultDevice.Value;
 
     public AudioClient CreateAudioClient()
     {
@@ -22,7 +22,7 @@ internal sealed class MediaDevice
         {
             Guid iid = Guids.IID_IAudioClient;
             AudioClientInst* audioClientInst = null;
-            uint res = this.device->Vtbl->Activate(this.device, &iid, CLSCTX_ALL, null, (void**)&audioClientInst);
+            uint res = this._device->Vtbl->Activate(this._device, &iid, CLSCTX_ALL, null, (void**)&audioClientInst);
             if (res != 0)
                 throw new InvalidOperationException();
 

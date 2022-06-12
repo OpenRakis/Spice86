@@ -17,60 +17,60 @@ public sealed class InternalSpeaker {
     /// </summary>
     private const double FrequencyFactor = 1193180;
 
-    private readonly int outputSampleRate = 48000;
-    private readonly int ticksPerSample;
-    private readonly LatchedUInt16 frequencyRegister = new();
-    private readonly Stopwatch durationTimer = new();
-    private readonly ConcurrentQueue<QueuedNote> queuedNotes = new();
-    private readonly object threadStateLock = new();
-    private SpeakerControl controlRegister = SpeakerControl.UseTimer;
-    private Task? generateWaveformTask;
-    private readonly CancellationTokenSource cancelGenerateWaveform = new();
-    private int currentPeriod;
+    private readonly int _outputSampleRate = 48000;
+    private readonly int _ticksPerSample;
+    private readonly LatchedUInt16 _frequencyRegister = new();
+    private readonly Stopwatch _durationTimer = new();
+    private readonly ConcurrentQueue<QueuedNote> _queuedNotes = new();
+    private readonly object _threadStateLock = new();
+    private SpeakerControl _controlRegister = SpeakerControl.UseTimer;
+    private Task? _generateWaveformTask;
+    private readonly CancellationTokenSource _cancelGenerateWaveform = new();
+    private int _currentPeriod;
     private Configuration Configuration { get; init; }
     /// <summary>
     /// Initializes a new instance of the InternalSpeaker class.
     /// </summary>
     public InternalSpeaker(Configuration configuration) {
         Configuration = configuration;
-        this.frequencyRegister.ValueChanged += this.FrequencyChanged;
-        this.ticksPerSample = (int)(Stopwatch.Frequency / (double)this.outputSampleRate);
+        this._frequencyRegister.ValueChanged += this.FrequencyChanged;
+        this._ticksPerSample = (int)(Stopwatch.Frequency / (double)this._outputSampleRate);
     }
 
     /// <summary>
     /// Gets the current frequency in Hz.
     /// </summary>
-    private double Frequency => FrequencyFactor / this.frequencyRegister;
+    private double Frequency => FrequencyFactor / this._frequencyRegister;
     /// <summary>
     /// Gets the current period in samples.
     /// </summary>
-    private int PeriodInSamples => (int)(this.outputSampleRate / this.Frequency);
+    private int PeriodInSamples => (int)(this._outputSampleRate / this.Frequency);
 
     public byte ReadByte(int port) {
         if (port == 0x61) {
-            return (byte)this.controlRegister;
+            return (byte)this._controlRegister;
         }
 
         throw new NotSupportedException();
     }
     public void WriteByte(int port, byte value) {
         if (port == 0x61) {
-            SpeakerControl oldValue = this.controlRegister;
-            this.controlRegister = (SpeakerControl)value;
-            if ((oldValue & SpeakerControl.SpeakerOn) != 0 && (this.controlRegister & SpeakerControl.SpeakerOn) == 0) {
+            SpeakerControl oldValue = this._controlRegister;
+            this._controlRegister = (SpeakerControl)value;
+            if ((oldValue & SpeakerControl.SpeakerOn) != 0 && (this._controlRegister & SpeakerControl.SpeakerOn) == 0) {
                 this.SpeakerDisabled();
             }
         } else if (port == 0x42) {
-            this.frequencyRegister.WriteByte(value);
+            this._frequencyRegister.WriteByte(value);
         } else {
             throw new NotSupportedException();
         }
     }
 
     public void Dispose() {
-        this.frequencyRegister.ValueChanged -= this.FrequencyChanged;
-        lock (this.threadStateLock) {
-            this.cancelGenerateWaveform.Cancel();
+        this._frequencyRegister.ValueChanged -= this.FrequencyChanged;
+        lock (this._threadStateLock) {
+            this._cancelGenerateWaveform.Cancel();
         }
     }
 
@@ -85,7 +85,7 @@ public sealed class InternalSpeaker {
     /// </summary>
     private void SpeakerDisabled() {
         this.EnqueueCurrentNote();
-        this.currentPeriod = 0;
+        this._currentPeriod = 0;
     }
     /// <summary>
     /// Invoked when the frequency has changed.
@@ -95,24 +95,24 @@ public sealed class InternalSpeaker {
     private void FrequencyChanged(object? source, EventArgs e) {
         this.EnqueueCurrentNote();
 
-        this.durationTimer.Reset();
-        this.durationTimer.Start();
-        this.currentPeriod = this.PeriodInSamples;
+        this._durationTimer.Reset();
+        this._durationTimer.Start();
+        this._currentPeriod = this.PeriodInSamples;
     }
     /// <summary>
     /// Enqueues the current note.
     /// </summary>
     private void EnqueueCurrentNote() {
-        if (this.durationTimer.IsRunning && this.currentPeriod != 0) {
-            this.durationTimer.Stop();
+        if (this._durationTimer.IsRunning && this._currentPeriod != 0) {
+            this._durationTimer.Stop();
 
-            int periodDuration = this.ticksPerSample * this.currentPeriod;
-            int repetitions = (int)(this.durationTimer.ElapsedTicks / periodDuration);
-            this.queuedNotes.Enqueue(new QueuedNote(this.currentPeriod, repetitions));
+            int periodDuration = this._ticksPerSample * this._currentPeriod;
+            int repetitions = (int)(this._durationTimer.ElapsedTicks / periodDuration);
+            this._queuedNotes.Enqueue(new QueuedNote(this._currentPeriod, repetitions));
 
-            lock (this.threadStateLock) {
-                if (this.generateWaveformTask == null || this.generateWaveformTask.IsCompleted) {
-                    this.generateWaveformTask = Task.Run(this.GenerateWaveformAsync);
+            lock (this._threadStateLock) {
+                if (this._generateWaveformTask == null || this._generateWaveformTask.IsCompleted) {
+                    this._generateWaveformTask = Task.Run(this.GenerateWaveformAsync);
                 }
             }
         }
@@ -139,9 +139,6 @@ public sealed class InternalSpeaker {
     /// Generates the PC speaker waveform.
     /// </summary>
     private async Task GenerateWaveformAsync() {
-        if (!OperatingSystem.IsWindows()) {
-            return;
-        }
         if (!Configuration.CreateAudioBackend) {
             return;
         }
@@ -164,7 +161,7 @@ public sealed class InternalSpeaker {
         int idleCount = 0;
 
         while (idleCount < 10000) {
-            if (this.queuedNotes.TryDequeue(out QueuedNote note)) {
+            if (this._queuedNotes.TryDequeue(out QueuedNote note)) {
                 int samples = GenerateSquareWave(buffer, note.Period);
                 int periods = note.PeriodCount;
 
@@ -191,18 +188,15 @@ public sealed class InternalSpeaker {
                 while (player.WriteData(floatArray.AsSpan()) > 0) {
                 }
 
-                await Task.Delay(5, this.cancelGenerateWaveform.Token);
+                await Task.Delay(5, this._cancelGenerateWaveform.Token);
                 idleCount++;
             }
 
-            this.cancelGenerateWaveform.Token.ThrowIfCancellationRequested();
+            this._cancelGenerateWaveform.Token.ThrowIfCancellationRequested();
         }
     }
 
     private static void FillWithSilence(AudioPlayer player) {
-        if (!OperatingSystem.IsWindows()) {
-            return;
-        }
         float[]? buffer = new float[4096];
         Span<float> span = buffer.AsSpan();
 

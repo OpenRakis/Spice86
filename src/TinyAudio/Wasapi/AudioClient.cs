@@ -9,17 +9,17 @@ using TinyAudio.Wasapi.Interop;
 [SupportedOSPlatform("windows")]
 internal sealed class AudioClient : IDisposable
 {
-    private static readonly Guid SessionGuid = Guid.NewGuid();
+    private static readonly Guid _SessionGuid = Guid.NewGuid();
     private const ushort WAVE_FORMAT_PCM = 1;
     private const ushort WAVE_FORMAT_EXTENSIBLE = 0xfffe;
     private const uint AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000;
-    private readonly unsafe AudioClientInst* inst;
-    private unsafe AudioRenderClientInst* renderInst;
-    private bool disposed;
+    private readonly unsafe AudioClientInst* _inst;
+    private unsafe AudioRenderClientInst* _renderInst;
+    private bool _disposed;
 
     public unsafe AudioClient(AudioClientInst* inst)
     {
-        this.inst = inst;
+        this._inst = inst;
 
         WAVEFORMATEX* wfx = null;
         try
@@ -51,7 +51,7 @@ internal sealed class AudioClient : IDisposable
     {
         if (format == null)
             throw new ArgumentNullException(nameof(format));
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioClient));
 
         closestMatch = null;
@@ -64,7 +64,7 @@ internal sealed class AudioClient : IDisposable
             WAVEFORMATEX* match = null;
             try
             {
-                uint res = this.inst->Vtbl->IsFormatSupported(this.inst, 0, (WAVEFORMATEX*)&wfx, &match);
+                uint res = this._inst->Vtbl->IsFormatSupported(this._inst, 0, (WAVEFORMATEX*)&wfx, &match);
 
                 if (match != null)
                     closestMatch = GetAudioFormat(match);
@@ -81,7 +81,7 @@ internal sealed class AudioClient : IDisposable
 
     public void Initialize(TimeSpan bufferDuration, AudioFormat? audioFormat = null, bool useCallback = false)
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioClient));
 
         unsafe
@@ -89,29 +89,29 @@ internal sealed class AudioClient : IDisposable
             if (!TryGetWaveFormat(audioFormat ?? this.MixFormat, out WAVEFORMATEXTENSIBLE wfx))
                 throw new ArgumentException("Could not get a WaveFormat", nameof(audioFormat));
 
-            Guid sessionId = SessionGuid;
-            uint res = this.inst->Vtbl->Initialize(this.inst, 0, useCallback ? AUDCLNT_STREAMFLAGS_EVENTCALLBACK : 0, bufferDuration.Ticks, 0, (WAVEFORMATEX*)&wfx, &sessionId);
+            Guid sessionId = _SessionGuid;
+            uint res = this._inst->Vtbl->Initialize(this._inst, 0, useCallback ? AUDCLNT_STREAMFLAGS_EVENTCALLBACK : 0, bufferDuration.Ticks, 0, (WAVEFORMATEX*)&wfx, &sessionId);
             if (res != 0)
                 throw new InvalidOperationException();
 
             Guid renderGuid = Guids.IID_IAudioRenderClient;
             void* service = null;
-            res = this.inst->Vtbl->GetService(this.inst, &renderGuid, &service);
+            res = this._inst->Vtbl->GetService(this._inst, &renderGuid, &service);
             if (res != 0)
                 throw new InvalidOperationException();
 
-            this.renderInst = (AudioRenderClientInst*)service;
+            this._renderInst = (AudioRenderClientInst*)service;
         }
     }
 
     public void SetEventHandle(SafeHandle handle)
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioClient));
 
         unsafe
         {
-            uint res = this.inst->Vtbl->SetEventHandle(this.inst, handle?.DangerousGetHandle() ?? default);
+            uint res = this._inst->Vtbl->SetEventHandle(this._inst, handle?.DangerousGetHandle() ?? default);
             if (res != 0)
                 throw new InvalidOperationException();
         }
@@ -121,7 +121,7 @@ internal sealed class AudioClient : IDisposable
     {
         unsafe
         {
-            uint res = this.inst->Vtbl->Start(this.inst);
+            uint res = this._inst->Vtbl->Start(this._inst);
             if (res != 0)
                 throw new InvalidOperationException();
         }
@@ -130,7 +130,7 @@ internal sealed class AudioClient : IDisposable
     {
         unsafe
         {
-            uint res = this.inst->Vtbl->Stop(this.inst);
+            uint res = this._inst->Vtbl->Stop(this._inst);
             if (res != 0)
                 throw new InvalidOperationException();
         }
@@ -138,38 +138,38 @@ internal sealed class AudioClient : IDisposable
 
     public uint GetBufferSize()
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioClient));
 
         unsafe
         {
             uint size = 0;
-            this.inst->Vtbl->GetBufferSize(this.inst, &size);
+            this._inst->Vtbl->GetBufferSize(this._inst, &size);
             return size;
         }
     }
     public uint GetCurrentPadding()
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioClient));
 
         unsafe
         {
             uint padding = 0;
-            this.inst->Vtbl->GetCurrentPadding(this.inst, &padding);
+            this._inst->Vtbl->GetCurrentPadding(this._inst, &padding);
             return padding;
         }
     }
 
     public bool TryGetBuffer<TSample>(uint framesRequested, out Span<TSample> buffer) where TSample : unmanaged
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioClient));
 
         unsafe
         {
             byte* ptr = null;
-            uint res = this.renderInst->Vtbl->GetBuffer(this.renderInst, framesRequested, &ptr);
+            uint res = this._renderInst->Vtbl->GetBuffer(this._renderInst, framesRequested, &ptr);
             if (res != 0)
             {
                 buffer = default;
@@ -182,11 +182,11 @@ internal sealed class AudioClient : IDisposable
     }
     public unsafe void* GetBuffer(uint framesRequested)
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioClient));
 
         byte* ptr = null;
-        uint res = this.renderInst->Vtbl->GetBuffer(this.renderInst, framesRequested, &ptr);
+        uint res = this._renderInst->Vtbl->GetBuffer(this._renderInst, framesRequested, &ptr);
         if (res != 0)
             throw new InvalidOperationException();
 
@@ -194,12 +194,12 @@ internal sealed class AudioClient : IDisposable
     }
     public void ReleaseBuffer(uint framesWritten)
     {
-        if (this.disposed)
+        if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioClient));
 
         unsafe
         {
-            uint res = this.renderInst->Vtbl->ReleaseBuffer(this.renderInst, framesWritten, 0);
+            uint res = this._renderInst->Vtbl->ReleaseBuffer(this._renderInst, framesWritten, 0);
             if (res != 0)
                 throw new InvalidOperationException();
         }
@@ -309,14 +309,14 @@ internal sealed class AudioClient : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (!this.disposed)
+        if (!this._disposed)
         {
             unsafe
             {
-                this.inst->Vtbl->Release(this.inst);
+                this._inst->Vtbl->Release(this._inst);
             }
 
-            this.disposed = true;
+            this._disposed = true;
         }
     }
 }

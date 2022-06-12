@@ -6,25 +6,27 @@ using System.Threading;
 
 using TinyAudio;
 
-[SupportedOSPlatform("windows")]
 internal static class Audio {
+    private static bool _sdlAudioInitialized = false;
+    
     public static AudioPlayer? CreatePlayer(bool useCallback = false) {
         if (OperatingSystem.IsWindows()) {
             return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+        } else {
+            var sdlPlayer = SdlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+            _sdlAudioInitialized = sdlPlayer is not null;
+            return sdlPlayer;
         }
-        return null;
     }
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer) {
         ReadOnlySpan<float> writeBuffer = buffer;
 
         while (true) {
-            if (OperatingSystem.IsWindows()) {
-                int count = (int)player.WriteData(writeBuffer);
-                writeBuffer = writeBuffer[count..];
-                if (writeBuffer.IsEmpty) {
-                    return;
-                }
+            int count = (int)player.WriteData(writeBuffer);
+            writeBuffer = writeBuffer[count..];
+            if (writeBuffer.IsEmpty) {
+                return;
             }
             Thread.Sleep(1);
         }
@@ -33,9 +35,6 @@ internal static class Audio {
         ReadOnlySpan<short> writeBuffer = buffer;
 
         while (true) {
-            if (!OperatingSystem.IsWindows()) {
-                return;
-            }
             int count = (int)player.WriteData(writeBuffer);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty) {
@@ -57,9 +56,6 @@ internal static class Audio {
         var span = new ReadOnlySpan<float>(floatArray);
 
         while (true) {
-            if (!OperatingSystem.IsWindows()) {
-                return;
-            }
             int count = (int)player.WriteData(span);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty) {
