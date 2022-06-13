@@ -81,7 +81,7 @@ public sealed class GeneralMidi {
     public void WriteByte(int port, byte value) {
         switch (port) {
             case DataPort:
-                if (_midiMapper == null && OperatingSystem.IsWindows()) {
+                if (_midiMapper == null) {
                     _midiMapper = UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath, Configuration) : new WindowsMidiMapper();
                 }
 
