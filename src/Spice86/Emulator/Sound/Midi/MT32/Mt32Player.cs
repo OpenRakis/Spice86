@@ -37,17 +37,11 @@ internal sealed class Mt32Player : IDisposable {
     public void PlayShortMessage(uint message) => _context.PlayMessage(message);
     public void PlaySysex(ReadOnlySpan<byte> data) => _context.PlaySysex(data);
     public void Pause() {
-        if (!OperatingSystem.IsWindows()) {
-            return;
-        }
         //... Do not pause ...
         //audioPlayer?.StopPlayback();
     }
 
     public void Resume() {
-        if (!OperatingSystem.IsWindows()) {
-            return;
-        }
         // ... and restart, this produces an InvalidOperationException
         //audioPlayer?.BeginPlayback(this.FillBuffer);
     }
@@ -55,9 +49,7 @@ internal sealed class Mt32Player : IDisposable {
     public void Dispose() {
         if (!_disposed) {
             _context.Dispose();
-            if (OperatingSystem.IsWindows()) {
-                _audioPlayer?.Dispose();
-            }
+            _audioPlayer?.Dispose();
             _disposed = true;
         }
     }

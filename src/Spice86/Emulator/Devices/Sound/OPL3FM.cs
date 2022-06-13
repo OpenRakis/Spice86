@@ -55,9 +55,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
                 this._endThread = true;
                 this._generateThread.Join();
             }
-            if (OperatingSystem.IsWindows()) {
-                this._audioPlayer?.Dispose();
-            }
+            this._audioPlayer?.Dispose();
             this._initialized = false;
         }
     }
@@ -137,7 +135,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private void GenerateWaveforms() {
         float[]? buffer = new float[1024];
         float[] playBuffer;
-        if (_audioPlayer is not null && OperatingSystem.IsWindows()) {
+        if (_audioPlayer is not null) {
             bool expandToStereo = this._audioPlayer.Format.Channels == 2;
             if (expandToStereo) {
                 playBuffer = new float[buffer.Length * 2];

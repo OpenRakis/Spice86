@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 public sealed class SdlAudioPlayer : AudioPlayer {
     private uint _sdlDeviceId = 0;
     private AudioSpec _obtained;
+    private static TimeSpan _bufferLength;
 
     private SdlAudioPlayer(AudioFormat format) : base(format) {
         
@@ -25,7 +26,7 @@ public sealed class SdlAudioPlayer : AudioPlayer {
             Channels =  (byte) base.Format.Channels,
             Frequency = base.Format.SampleRate,
             Samples = 2048,
-            Format = unchecked((short) AudioFormatFlags.S16LSB),
+            Format = unchecked((short)AudioFormatFlags.S16SYS),
             UserData = null,
             Callback = IntPtr.Zero //SDLCALL MIXER_CallBack in mixer.cpp
         };
@@ -37,7 +38,7 @@ public sealed class SdlAudioPlayer : AudioPlayer {
         Marshal.StructureToPtr(obtained, obtainedPtr, false);
         try {
             _sdlDeviceId = SDL_Sharp.SDL.OpenAudioDevice(null, 0, (AudioSpec*)desiredPtr, (AudioSpec*)obtainedPtr, 0);
-            _obtained = obtained;
+            _obtained = Marshal.PtrToStructure<AudioSpec>(obtainedPtr);
         } finally {
             Marshal.FreeHGlobal(desiredPtr);
             Marshal.FreeHGlobal(obtainedPtr);
@@ -56,16 +57,24 @@ public sealed class SdlAudioPlayer : AudioPlayer {
     protected override unsafe int WriteDataInternal(ReadOnlySpan<byte> data) {
         var value = 0;
         fixed (byte* p = data) {
-            value = SDL.QueueAudio(_sdlDeviceId, (IntPtr)p, data.Length);            
+            var intPtr = (IntPtr)p;
+            value = SDL.QueueAudio(_sdlDeviceId, intPtr, data.Length);
         }
+        var queuedAudio = SDL.GetQueuedAudioSize(_sdlDeviceId);
+        System.Diagnostics.Debug.WriteLine(queuedAudio);
         //success
         if (value == 0) {
-            return data.Length;            
+            if(SDL.PauseAudioDevice(_sdlDeviceId, false) == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("device unpaused");
+            }
+            return data.Length;
         }
         return value;
     }
     
     public static SdlAudioPlayer? Create(TimeSpan bufferLength, bool useCallback = false) {
+        _bufferLength = bufferLength;
         if (SDL.Init(SdlInitFlags.Audio) < 0) {
             return null;
         }
