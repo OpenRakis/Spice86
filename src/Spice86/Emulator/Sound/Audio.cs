@@ -8,15 +8,15 @@ using TinyAudio;
 
 internal static class Audio {
     private static bool _sdlAudioInitialized = false;
-    
+
     public static AudioPlayer? CreatePlayer(bool useCallback = false) {
-        if (OperatingSystem.IsWindows()) {
-            return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
-        } else {
-            var sdlPlayer = SdlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
-            _sdlAudioInitialized = sdlPlayer is not null;
-            return sdlPlayer;
-        }
+        //if (OperatingSystem.IsWindows()) {
+        //    return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+        //} else {
+        var openAlAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+        _sdlAudioInitialized = openAlAudioPlayer is not null;
+        return openAlAudioPlayer;
+        //}
     }
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer) {
