@@ -143,7 +143,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
             OpenFileDialog? ofd = new OpenFileDialog() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
-                Filters = {
+                Filters = new(){
                     new FileDialogFilter() {
                         Extensions = {"exe", "com" },
                         Name = "DOS Executables"
