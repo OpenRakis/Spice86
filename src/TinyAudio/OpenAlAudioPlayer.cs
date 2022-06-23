@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Threading;
+using System.Runtime.InteropServices;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private static TimeSpan _bufferLength;
@@ -55,6 +56,8 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             _al.SetSourceProperty(_source, SourceBoolean.Looping, false);
             _al.SetSourceProperty(_source, SourceFloat.Gain, 1.0f);
             _bufferIndex = _al.GenBuffer();
+            _al?.SourceQueueBuffers(_source, new uint[1] { _bufferIndex });
+            _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
             _openAlBufferFormat = BufferFormat.Stereo16;
         }
     }
@@ -144,7 +147,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
     private bool Available { get; set; }
 
-    protected override unsafe void Start(bool useCallback) {
+    protected override void Start(bool useCallback) {
         if (!Available || !Enabled)
             return;
         if (Streaming)
@@ -152,6 +155,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         if (_source == 0)
             throw new NotSupportedException("Start was called without a valid source.");
         Streaming = true;
+        _al?.SourcePlay(_source);
     }
 
     protected override void Stop() {
@@ -169,15 +173,17 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         _al?.SourceStop(_source);
     }
 
-    protected override unsafe int WriteDataInternal(ReadOnlySpan<byte> data) {
-        for (int i = 0; i < data.Length; i++) {
-            _al?.SourceQueueBuffers(data[i], new uint[1] { _bufferIndex });
+    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
+        fixed (byte* ptr = data) {
+            _al?.BufferData(_bufferIndex, _openAlBufferFormat, ptr, data.Length, Format.SampleRate);
         }
-        return data.Length;
+        int size = 0;
+        _al?.GetBufferProperty(_bufferIndex, GetBufferInteger.Size, out size);
+        return size;
     }
 
     public static OpenAlAudioPlayer Create(TimeSpan bufferLength, bool useCallback = false) {
         _bufferLength = bufferLength;
-        return new(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16, SampleRate: 22050));
+        return new(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16, SampleRate: 48000));
     }
 }
