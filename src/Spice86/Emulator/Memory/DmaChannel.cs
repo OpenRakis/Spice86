@@ -60,7 +60,10 @@ public sealed class DmaChannel {
     /// <summary>
     /// Gets the DMA transfer memory page.
     /// </summary>
-    public byte Page { get; internal set; }
+    public byte Page {
+        get;
+        internal set;
+    }
     /// <summary>
     /// Gets the DMA transfer memory address.
     /// </summary>
