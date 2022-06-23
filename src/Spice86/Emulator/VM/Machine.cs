@@ -244,6 +244,7 @@ public class Machine : IDisposable {
             if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
             }
+            PerformDmaTransfers();
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
         }
