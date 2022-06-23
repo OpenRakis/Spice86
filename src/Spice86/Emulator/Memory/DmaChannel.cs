@@ -195,7 +195,7 @@ public sealed class DmaChannel {
             uint sourceOffset = (uint)this.Count + 1 - (uint)this.TransferBytesRemaining;
 
             int count = Math.Min(this.TransferChunkSize, this.TransferBytesRemaining);
-            byte[]? source = memory.GetData(memoryAddress + sourceOffset, (uint)count);
+            Span<byte> source = memory.GetSpan((int)(memoryAddress + sourceOffset), count);
 
             count = device.WriteBytes(source);
 

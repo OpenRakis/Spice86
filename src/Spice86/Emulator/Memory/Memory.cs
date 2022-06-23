@@ -65,6 +65,11 @@ public class Memory {
         File.WriteAllBytes(path, _physicalMemory);
     }
 
+    public Span<byte> GetSpan(int address, int length) {
+        MonitorRangeReadAccess((uint)address, (uint)(address + length));
+        return _physicalMemory.AsSpan(address, length);
+    }
+
     public byte[] GetData(uint address, uint length) {
         MonitorRangeReadAccess(address, address + length);
         byte[] res = new byte[length];
@@ -76,7 +81,7 @@ public class Memory {
 
     public int Size => _physicalMemory.Length;
 
-    
+
 
     public UInt8Indexer UInt8 => _uint8Indexer;
     public UInt16Indexer UInt16 => _uInt16Indexer;
