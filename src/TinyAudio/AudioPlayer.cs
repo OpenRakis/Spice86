@@ -10,8 +10,7 @@ using System.Threading.Tasks;
 /// <summary>
 /// Implements a background audio playback stream.
 /// </summary>
-public abstract class AudioPlayer : IDisposable
-{
+public abstract class AudioPlayer : IDisposable {
     private readonly InternalBufferWriter _writer;
     private CallbackRaiser? _callbackRaiser;
     private bool _disposed;
@@ -20,12 +19,10 @@ public abstract class AudioPlayer : IDisposable
     /// Initializes a new instance of the <see cref="AudioPlayer"/> class.
     /// </summary>
     /// <param name="format">Format of the audio stream.</param>
-    protected AudioPlayer(AudioFormat format)
-    {
+    protected AudioPlayer(AudioFormat format) {
         this.Format = format ?? throw new ArgumentNullException(nameof(format));
 
-        this._writer = format.SampleFormat switch
-        {
+        this._writer = format.SampleFormat switch {
             SampleFormat.UnsignedPcm8 => new InternalBufferWriter<byte>(this),
             SampleFormat.SignedPcm16 => new InternalBufferWriter<short>(this),
             SampleFormat.IeeeFloat32 => new InternalBufferWriter<float>(this),
@@ -71,8 +68,7 @@ public abstract class AudioPlayer : IDisposable
     /// </summary>
     /// <exception cref="InvalidOperationException">The stream is already playing.</exception>
     /// <exception cref="ObjectDisposedException">The <see cref="AudioPlayer"/> instance has been disposed.</exception>
-    public void BeginPlayback()
-    {
+    public void BeginPlayback() {
         if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioPlayer));
         if (this.Playing)
@@ -86,13 +82,11 @@ public abstract class AudioPlayer : IDisposable
     /// Stops audio playback if it is currently playing.
     /// </summary>
     /// <exception cref="ObjectDisposedException">The <see cref="AudioPlayer"/> instance has been disposed.</exception>
-    public void StopPlayback()
-    {
+    public void StopPlayback() {
         if (this._disposed)
             throw new ObjectDisposedException(nameof(AudioPlayer));
 
-        if (this.Playing)
-        {
+        if (this.Playing) {
             this.Stop();
             this.Playing = false;
             this._callbackRaiser = null;
@@ -152,14 +146,12 @@ public abstract class AudioPlayer : IDisposable
     /// </remarks>
     public ValueTask WriteDataRawAsync<TSample>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default) where TSample : unmanaged => this._writer.WriteDataRawAsync<TSample>(data, cancellationToken);
 
-    public void Dispose()
-    {
+    public void Dispose() {
         this.Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
-    {
+    protected virtual void Dispose(bool disposing) {
         this._disposed = true;
     }
     protected abstract void Start(bool useCallback);
@@ -170,15 +162,13 @@ public abstract class AudioPlayer : IDisposable
     protected void RaiseCallback(Span<short> buffer, out int samplesWritten) => this.RaiseCallbackInternal(buffer, out samplesWritten);
     protected void RaiseCallback(Span<float> buffer, out int samplesWritten) => this.RaiseCallbackInternal(buffer, out samplesWritten);
 
-    private void RaiseCallbackInternal<TInput>(Span<TInput> buffer, out int samplesWritten) where TInput : unmanaged
-    {
+    private void RaiseCallbackInternal<TInput>(Span<TInput> buffer, out int samplesWritten) where TInput : unmanaged {
         if (this._callbackRaiser != null)
             this._callbackRaiser.RaiseCallback(MemoryMarshal.AsBytes(buffer), out samplesWritten);
         else
             samplesWritten = 0;
     }
-    private void BeginPlaybackInternal<TInput>(BufferNeededCallback<TInput> callback) where TInput : unmanaged
-    {
+    private void BeginPlaybackInternal<TInput>(BufferNeededCallback<TInput> callback) where TInput : unmanaged {
         if (callback == null)
             throw new ArgumentNullException(nameof(callback));
         if (this._disposed)
@@ -186,8 +176,7 @@ public abstract class AudioPlayer : IDisposable
         if (this.Playing)
             throw new InvalidOperationException("Playback has already started.");
 
-        this._callbackRaiser = this.Format.SampleFormat switch
-        {
+        this._callbackRaiser = this.Format.SampleFormat switch {
             SampleFormat.UnsignedPcm8 => new CallbackRaiser<TInput, byte>(callback),
             SampleFormat.SignedPcm16 => new CallbackRaiser<TInput, short>(callback),
             SampleFormat.IeeeFloat32 => new CallbackRaiser<TInput, float>(callback),
@@ -198,13 +187,11 @@ public abstract class AudioPlayer : IDisposable
         this.Start(true);
     }
 
-    private async ValueTask WriteDataInternalAsync<T>(ReadOnlyMemory<T> data, CancellationToken cancellationToken) where T : unmanaged
-    {
+    private async ValueTask WriteDataInternalAsync<T>(ReadOnlyMemory<T> data, CancellationToken cancellationToken) where T : unmanaged {
         int bytesWritten = 0;
         int byteLength = Unsafe.SizeOf<T>() * data.Length;
 
-        while (true)
-        {
+        while (true) {
             bytesWritten += this.WriteDataInternal(MemoryMarshal.Cast<T, byte>(data.Span)[bytesWritten..]);
             if (bytesWritten >= byteLength)
                 return;
@@ -212,13 +199,11 @@ public abstract class AudioPlayer : IDisposable
             await Task.Delay(5, cancellationToken).ConfigureAwait(false);
         }
     }
-    private async ValueTask WriteDataRawInternalAsync<T>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) where T : unmanaged
-    {
+    private async ValueTask WriteDataRawInternalAsync<T>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) where T : unmanaged {
         int bytesWritten = 0;
         int byteLength = Unsafe.SizeOf<T>() * data.Length;
 
-        while (true)
-        {
+        while (true) {
             bytesWritten += this.WriteDataInternal(data.Span[bytesWritten..]);
             if (bytesWritten >= byteLength)
                 return;
@@ -227,10 +212,8 @@ public abstract class AudioPlayer : IDisposable
         }
     }
 
-    private abstract class InternalBufferWriter
-    {
-        protected InternalBufferWriter()
-        {
+    private abstract class InternalBufferWriter {
+        protected InternalBufferWriter() {
         }
 
         public abstract int WriteData<TInput>(ReadOnlySpan<TInput> data) where TInput : unmanaged;
@@ -239,16 +222,14 @@ public abstract class AudioPlayer : IDisposable
     }
 
     private sealed class InternalBufferWriter<TOutput> : InternalBufferWriter
-        where TOutput : unmanaged
-    {
+        where TOutput : unmanaged {
         private readonly AudioPlayer player;
         private TOutput[]? conversionBuffer;
 
         public InternalBufferWriter(AudioPlayer player) => this.player = player;
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override int WriteData<TInput>(ReadOnlySpan<TInput> data)
-        {
+        public override int WriteData<TInput>(ReadOnlySpan<TInput> data) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput))
                 return this.player.WriteDataInternal(MemoryMarshal.AsBytes(data)) / Unsafe.SizeOf<TOutput>();
@@ -261,8 +242,7 @@ public abstract class AudioPlayer : IDisposable
             return this.player.WriteDataInternal(MemoryMarshal.AsBytes(this.conversionBuffer.AsSpan(0, data.Length))) / Unsafe.SizeOf<TOutput>();
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override ValueTask WriteDataAsync<TInput>(ReadOnlyMemory<TInput> data, CancellationToken cancellationToken)
-        {
+        public override ValueTask WriteDataAsync<TInput>(ReadOnlyMemory<TInput> data, CancellationToken cancellationToken) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput))
                 return this.player.WriteDataInternalAsync(data, cancellationToken);
@@ -275,8 +255,7 @@ public abstract class AudioPlayer : IDisposable
             return this.player.WriteDataInternalAsync<TOutput>(this.conversionBuffer.AsMemory(0, data.Length), cancellationToken);
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override ValueTask WriteDataRawAsync<TInput>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
-        {
+        public override ValueTask WriteDataRawAsync<TInput>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput))
                 return this.player.WriteDataRawInternalAsync<TInput>(data, cancellationToken);
@@ -290,10 +269,8 @@ public abstract class AudioPlayer : IDisposable
         }
     }
 
-    private abstract class CallbackRaiser
-    {
-        protected CallbackRaiser()
-        {
+    private abstract class CallbackRaiser {
+        protected CallbackRaiser() {
         }
 
         public abstract void RaiseCallback(Span<byte> buffer, out int samplesWritten);
@@ -301,26 +278,20 @@ public abstract class AudioPlayer : IDisposable
 
     private sealed class CallbackRaiser<TInput, TOutput> : CallbackRaiser
         where TInput : unmanaged
-        where TOutput : unmanaged
-    {
+        where TOutput : unmanaged {
         private readonly BufferNeededCallback<TInput> callback;
         private TInput[]? conversionBuffer;
 
-        public CallbackRaiser(BufferNeededCallback<TInput> callback)
-        {
+        public CallbackRaiser(BufferNeededCallback<TInput> callback) {
             this.callback = callback;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override void RaiseCallback(Span<byte> buffer, out int samplesWritten)
-        {
+        public override void RaiseCallback(Span<byte> buffer, out int samplesWritten) {
             // if formats are the same no sample conversion is needed
-            if (typeof(TInput) == typeof(TOutput))
-            {
+            if (typeof(TInput) == typeof(TOutput)) {
                 this.callback(MemoryMarshal.Cast<byte, TInput>(buffer), out samplesWritten);
-            }
-            else
-            {
+            } else {
                 int minBufferSize = buffer.Length / Unsafe.SizeOf<TOutput>();
                 if (this.conversionBuffer == null || this.conversionBuffer.Length < minBufferSize)
                     Array.Resize(ref this.conversionBuffer, minBufferSize);

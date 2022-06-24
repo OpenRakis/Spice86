@@ -1,38 +1,196 @@
-namespace TinyAudio;
+//namespace TinyAudio;
 
-using Silk.NET.OpenAL;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+//using Silk.NET.OpenAL;
+//using System;
+//using System.Linq;
+//using System.Threading.Tasks;
+//using System.Collections.Generic;
+//using System.Threading;
+//using System.Runtime.InteropServices;
 
-public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
-    private static TimeSpan _bufferLength;
-    
-    readonly AL al = null;
-    readonly ALContext alContext = null;
-    readonly Device* device = null;
-    readonly Context* context = null;
-    readonly uint source = 0;
-    bool disposed = false;
-    float volume = 1.0f;
-    bool enabled = true;
 
-    private OpenAlAudioPlayer(AudioFormat format) : base(format) {
-        
-    }
+///WIP, this needs the following packages :
+///	<ItemGroup>
+///	  <PackageReference Include = "Silk.NET.OpenAL" Version = "2.15.0" />
+///   <PackageReference Include = "Silk.NET.OpenAL.Extensions.Soft" Version = "2.15.0" />
+///   <PackageReference Include = "Silk.NET.OpenAL.Soft.Native" Version = "1.21.1.1" />
+/// </ItemGroup >
+//public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
+//    private static TimeSpan _bufferLength;
 
-    protected override unsafe void Start(bool useCallback) {
-    }
+//    private readonly AL? _al = null;
+//    private readonly ALContext? _alContext = null;
+//    private readonly Device* _device = null;
+//    private readonly Context* _context = null;
+//    private readonly uint _source = 0;
+//    private bool _disposed = false;
+//    private float _volume = 1.0f;
+//    private bool _enabled = true;
+//    private readonly uint _bufferIndex;
+//    private readonly BufferFormat _openAlBufferFormat;
+//    private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+//    private OpenAlAudioPlayer(AudioFormat format) : base(format) {
+//        try {
+//            _al = AL.GetApi(true);
+//            _alContext = ALContext.GetApi(true);
+//        } catch {
+//            try {
+//                _al = AL.GetApi(false);
+//                _alContext = ALContext.GetApi(false);
+//            } catch {
+//                Available = false;
+//                return;
+//            }
+//        }
+//        _device = _alContext.OpenDevice("");
 
-    protected override void Stop() {
-    }
+//        Available = _device != null;
 
-    protected override unsafe int WriteDataInternal(ReadOnlySpan<byte> data) {
-    }
-    
-    public static OpenAlAudioPlayer Create(TimeSpan bufferLength, bool useCallback = false) {
-        _bufferLength = bufferLength;
-        return new(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16, SampleRate: 22050));
-    }
-}
+//        if (Available) {
+//            _context = _alContext.CreateContext(_device, null);
+//            _alContext.MakeContextCurrent(_context);
+//            if (_al.GetError() != AudioError.NoError) {
+//                Available = false;
+//                if (_context != null)
+//                    _alContext.DestroyContext(_context);
+//                _alContext.CloseDevice(_device);
+//                _al.Dispose();
+//                _alContext.Dispose();
+//                _disposed = true;
+//                return;
+//            }
+//            _source = _al.GenSource();
+//            _al.SetSourceProperty(_source, SourceBoolean.Looping, false);
+//            _al.SetSourceProperty(_source, SourceFloat.Gain, 1.0f);
+//            _bufferIndex = _al.GenBuffer();
+//            _al?.SourceQueueBuffers(_source, new uint[1] { _bufferIndex });
+//            _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
+//            _openAlBufferFormat = BufferFormat.Stereo16;
+//        }
+//    }
+
+//    /// <summary>
+//    /// <inheritdoc/>
+//    /// </summary>
+//    public bool Enabled {
+//        get => _enabled;
+//        set {
+//            if (_enabled == value)
+//                return;
+
+//            if (!value && Available && Streaming) {
+//                Stop();
+//                Reset();
+//            }
+
+//            _enabled = value;
+//        }
+//    }
+
+//    /// <summary>
+//    /// <inheritdoc/>
+//    /// </summary>
+//    private bool Streaming { get; set; } = false;
+
+//    /// <summary>
+//    /// <inheritdoc/>
+//    /// </summary>
+//    public float Volume {
+//        get => _volume;
+//        set {
+//            value = Math.Max(0.0f, Math.Min(value, 1.0f));
+
+//            if (_volume == value)
+//                return;
+
+//            _volume = value;
+
+//            if (Available)
+//                _al?.SetSourceProperty(_source, SourceFloat.Gain, _volume);
+//        }
+//    }
+
+//    private int Size { get; set; }
+
+//    protected override void Dispose(bool disposing) {
+//        if (!this._disposed) {
+//            if (disposing) {
+//                _cancellationTokenSource.Cancel();
+
+//                if (_al?.IsBuffer(_bufferIndex) == true) {
+//                    _al.DeleteBuffer(_bufferIndex);
+//                    AudioError error = _al.GetError();
+//                    if (error != AudioError.NoError) {
+//                        Console.WriteLine($"OpenAL error while deleting buffer: " + error);
+//                    }
+//                }
+//                Size = 0;
+
+//                if (Available) {
+//                    _al?.DeleteSource(_source);
+//                    _alContext?.DestroyContext(_context);
+//                    _alContext?.CloseDevice(_device);
+//                    _al?.Dispose();
+//                    _alContext?.Dispose();
+//                }
+
+//                Streaming = false;
+//                Enabled = false;
+//                Available = false;
+//            }
+//            _disposed = true;
+//        }
+//    }
+
+//    /// <summary>
+//    /// <inheritdoc/>
+//    /// </summary>
+//    public void Reset() {
+//        if (!Available)
+//            return;
+
+//        _al?.SetSourceProperty(_source, SourceInteger.Buffer, 0u);
+//    }
+
+//    private bool Available { get; set; }
+
+//    protected override void Start(bool useCallback) {
+//        if (!Available || !Enabled)
+//            return;
+//        if (Streaming)
+//            return;
+//        if (_source == 0)
+//            throw new NotSupportedException("Start was called without a valid source.");
+//        Streaming = true;
+//        _al?.SourcePlay(_source);
+//    }
+
+//    protected override void Stop() {
+//        if (!Available || !Enabled)
+//            return;
+
+//        if (!Streaming)
+//            return;
+
+//        if (_source == 0)
+//            throw new NotSupportedException("Stop was called without a valid source.");
+
+//        Streaming = false;
+
+//        _al?.SourceStop(_source);
+//    }
+
+//    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
+//        fixed (byte* ptr = data) {
+//            _al?.BufferData(_bufferIndex, _openAlBufferFormat, ptr, data.Length, Format.SampleRate);
+//        }
+//        int size = 0;
+//        _al?.GetBufferProperty(_bufferIndex, GetBufferInteger.Size, out size);
+//        return size;
+//    }
+
+//    public static OpenAlAudioPlayer Create(TimeSpan bufferLength, bool useCallback = false) {
+//        _bufferLength = bufferLength;
+//        return new(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16, SampleRate: 48000));
+//    }
+//}
