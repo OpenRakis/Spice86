@@ -7,14 +7,12 @@ using System.Threading;
 using TinyAudio;
 
 internal static class Audio {
-    private static bool _sdlAudioInitialized = false;
 
     public static AudioPlayer? CreatePlayer(bool useCallback = false) {
         if (OperatingSystem.IsWindows()) {
             return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
         } else {
-            var openAlAudioPlayer = SdlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
-            _sdlAudioInitialized = openAlAudioPlayer is not null;
+            var openAlAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
             return openAlAudioPlayer;
             return null;
         }
