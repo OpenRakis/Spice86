@@ -82,9 +82,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         }
     }
 
-    /// <summary>
-    /// <inheritdoc/>
-    /// </summary>
     private bool Streaming { get; set; } = false;
 
     public float Volume {
@@ -168,26 +165,44 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         _al?.SourceStop(_source);
     }
 
+    private readonly List<byte> _dataCache = new List<byte>();
+
     protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
         if (_al is null) {
             throw new NullReferenceException(nameof(_al));
         }
+        _al.SourcePlay(_source);
         ThrowIfAlError();
         int processed = 0;
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out processed);
         uint buffer = 0;
-        System.Diagnostics.Debug.WriteLine(processed);
-        if (processed == 0) {
+        if (processed == 0 && _alBuffers.Count <= 10) {
             buffer = _al.GenBuffer();
+            ThrowIfAlError();
             _alBuffers.Add(buffer, buffer);
         }
-        else if (processed >= 1) {
-            _al.SourceUnqueueBuffers(_source, 1, &buffer);            
+        else if (processed == 0) {
+            _dataCache.AddRange(data.ToArray());
+            return data.Length;
         }
-        _al.BufferData(buffer, _openAlBufferFormat, data.ToArray(), Format.SampleRate);
-        ThrowIfAlError();
-        _al.SourceQueueBuffers(_source,1, &buffer);
-        ThrowIfAlError();
+        else if (processed >= 1) {
+            _al.SourceUnqueueBuffers(_source, 1, &buffer);        
+            ThrowIfAlError();
+        }
+        if (processed >= 1) {
+            _al.BufferData(buffer, _openAlBufferFormat, data.ToArray(), Format.SampleRate);            
+            ThrowIfAlError();
+        }
+        else if (processed == 0 && buffer != 0) {
+            _dataCache.AddRange(data.ToArray());
+            int maxLength = _dataCache.Count - _dataCache.Count % 4;
+            byte[] buf = _dataCache.GetRange(0, maxLength).ToArray();
+            _al.BufferData(buffer, _openAlBufferFormat, buf.ToArray(), Format.SampleRate);
+            ThrowIfAlError();
+            _dataCache.RemoveRange(0, maxLength);
+            _al.SourceQueueBuffers(_source,1, &buffer);
+            ThrowIfAlError();
+        }
         _al.SourcePlay(_source);
         ThrowIfAlError();
         return data.Length;
@@ -204,7 +219,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
     public static OpenAlAudioPlayer Create(TimeSpan bufferLength, bool useCallback = false) {
         _bufferLength = bufferLength;
-        return new OpenAlAudioPlayer(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16,
+        return new OpenAlAudioPlayer(new AudioFormat(Channels: 1, SampleFormat: SampleFormat.SignedPcm16,
             SampleRate: 48000));
     }
 }
