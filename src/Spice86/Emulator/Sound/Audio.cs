@@ -9,13 +9,13 @@ using TinyAudio;
 internal static class Audio {
 
     public static AudioPlayer? CreatePlayer(bool useCallback = false) {
-        if (OperatingSystem.IsWindows()) {
-            return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
-        } else {
-            var openAlAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
-            return openAlAudioPlayer;
-            return null;
-        }
+        //if (OperatingSystem.IsWindows()) {
+        //    return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+        //} else {
+        var openAlAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+        return openAlAudioPlayer;
+        //return null;
+        //}
     }
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer) {
