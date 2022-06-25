@@ -11,16 +11,14 @@ using System.Threading;
 using System.Runtime.InteropServices;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
+    private const int MaxAlBuffers = 2;
     private static TimeSpan _bufferLength;
-
     private readonly AL? _al = null;
     private readonly ALContext? _alContext = null;
     private readonly Device* _device = null;
     private readonly Context* _context = null;
     private readonly uint _source = 0;
     private bool _disposed = false;
-    private float _volume = 1.0f;
-    private bool _enabled = true;
     private readonly BufferFormat _openAlBufferFormat;
     private readonly Dictionary<uint, uint> _alBuffers = new();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -33,21 +31,20 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         } catch {
             try {
                 _al = AL.GetApi(false);
+                _al.GetError();
                 _alContext = ALContext.GetApi(false);
             } catch {
-                Available = false;
                 return;
             }
         }
         _device = _alContext.OpenDevice(null);
 
-        Available = _device != null;
+        bool available = _device != null;
 
-        if (Available) {
+        if (available) {
             _context = _alContext.CreateContext(_device, null);
             _alContext.MakeContextCurrent(_context);
             if (_al?.GetError() != AudioError.NoError) {
-                Available = false;
                 if (_context != null) {
                     _alContext.DestroyContext(_context);
                 }
@@ -59,53 +56,104 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 return;
             }
 
-            if (_al is not null) {
-                _source = _al.GenSource();                
+            if (available) {
+                _source = _al.GenSource();
+                _al?.SetSourceProperty(_source, SourceBoolean.Looping, false);
+                _al?.SetSourceProperty(_source, SourceFloat.ReferenceDistance, 0);
+                _al?.SetSourceProperty(_source, SourceFloat.Pitch, 1.0f);
+                _al?.SetSourceProperty(_source, SourceFloat.Pitch, 1.0f);
+                _al?.SetSourceProperty(_source, SourceFloat.Gain, 1.0f);
+                _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
+                _al?.SetSourceProperty(_source, SourceInteger.SourceType, (int)SourceType.Streaming);
+                _al?.SetSourceProperty(_source, SourceBoolean.SourceRelative, false);
+                _al?.GetError();
+                for (int i = 0; i < MaxAlBuffers; i++) {
+                    if (_al is not null) {
+                        var buffer = _al.GenBuffer();
+                        ThrowIfAlError();
+                        _alBuffers.Add(buffer, buffer);
+                    }
+                }
+                _al?.SourceQueueBuffers(_source, _alBuffers.Keys.ToArray());
+                ThrowIfAlError();
             }
             _openAlBufferFormat = BufferFormat.Stereo16;
         }
     }
-    
-    public bool Enabled {
-        get => _enabled;
-        set {
-            if (_enabled == value) {
-                return;
-            }
 
-            if (!value && Available && Streaming) {
-                Stop();
-                Reset();
-            }
+    public void Reset() {
+        if (_source == 0) {
+            throw new NotSupportedException("Reset was called without a valid source.");
+        }
+        _al?.SetSourceProperty(_source, SourceInteger.Buffer, 0u);
+    }
 
-            _enabled = value;
+    protected override void Start(bool useCallback) {
+        if (_source == 0) {
+            throw new NotSupportedException("Start was called without a valid source.");
+        }
+        Play();
+    }
+
+    private void Play() {
+        int state = 0;
+        _al?.GetSourceProperty(_source, GetSourceInteger.SourceState, out state);
+        var currentState = (SourceState)state;
+        if (currentState != SourceState.Playing) {
+            _al?.SourcePlay(_source);
+            //System.Diagnostics.Debug.WriteLine("Source was not playing...");
         }
     }
 
-    private bool Streaming { get; set; } = false;
-
-    public float Volume {
-        get => _volume;
-        set {
-            value = Math.Max(0.0f, Math.Min(value, 1.0f));
-
-            if (Math.Abs(_volume - value) < 0.00001f) {
-                return;
-            }
-
-            _volume = value;
-
-            if (Available) {
-                _al?.SetSourceProperty(_source, SourceFloat.Gain, _volume);
-            }
+    protected override void Stop() {
+        if (_source == 0) {
+            throw new NotSupportedException("Stop was called without a valid source.");
         }
+        _al?.SourceStop(_source);
+    }
+
+    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
+        if (_al is null) {
+            throw new NullReferenceException(nameof(_al));
+        }
+        Play();
+        int processed = 0;
+        _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out processed);
+        while (processed >= 1) {
+            uint buffer = 0;
+            _al.SourceUnqueueBuffers(_source, 1, &buffer);
+            ThrowIfAlError();
+            if (data.Length > 0 && buffer > 0) {
+                _al.BufferData(buffer, _openAlBufferFormat, data.ToArray(), Format.SampleRate);
+                ThrowIfAlError();
+                _al.SourceQueueBuffers(_source, new uint[] { buffer });
+                ThrowIfAlError();
+            }
+            _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out processed);
+        }
+        Play();
+        return data.Length;
+    }
+
+    private void ThrowIfAlError() {
+        AudioError? error = _al?.GetError();
+        if (error != AudioError.NoError) {
+            throw new InvalidDataException(error.ToString());
+        }
+    }
+
+    public static OpenAlAudioPlayer Create(TimeSpan bufferLength, bool useCallback = false) {
+        _bufferLength = bufferLength;
+        return new OpenAlAudioPlayer(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16,
+            SampleRate: 44100));
     }
 
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
                 _cancellationTokenSource.Cancel();
-                foreach (var bufferIndex in _alBuffers) {
+                Stop();
+                foreach (KeyValuePair<uint, uint> bufferIndex in _alBuffers) {
                     _al?.DeleteBuffer(bufferIndex.Key);
                     AudioError? error = _al?.GetError();
                     if (error != AudioError.NoError) {
@@ -113,113 +161,16 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                     }
                 }
                 _alBuffers.Clear();
-                if (Available) {
+                if (_device is not null) {
                     _al?.DeleteSource(_source);
                     _alContext?.DestroyContext(_context);
                     _alContext?.CloseDevice(_device);
                     _al?.Dispose();
                     _alContext?.Dispose();
                 }
-
-                Streaming = false;
-                Enabled = false;
-                Available = false;
             }
-
             _disposed = true;
         }
     }
 
-    public void Reset() {
-        if (!Available) {
-            return;
-        }
-
-        _al?.SetSourceProperty(_source, SourceInteger.Buffer, 0u);
-    }
-
-    private bool Available { get; set; }
-
-    protected override void Start(bool useCallback) {
-        if (!Available || !Enabled || Streaming) {
-            return;
-        }
-        if (_source == 0) {
-            throw new NotSupportedException("Start was called without a valid source.");
-        }
-        Streaming = true;
-        _al?.SetSourceProperty(_source, SourceBoolean.Looping, false);
-        _al?.SetSourceProperty(_source, SourceFloat.Gain, 1.0f);
-        _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
-        _al?.SourcePlay(_source);
-    }
-
-    protected override void Stop() {
-        if (!Available || !Enabled || !Streaming) {
-            return;
-        }
-        if (_source == 0) {
-            throw new NotSupportedException("Stop was called without a valid source.");
-        }
-        Streaming = false;
-        _al?.SourceStop(_source);
-    }
-
-    private readonly List<byte> _dataCache = new List<byte>();
-
-    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
-        if (_al is null) {
-            throw new NullReferenceException(nameof(_al));
-        }
-        _al.SourcePlay(_source);
-        ThrowIfAlError();
-        int processed = 0;
-        _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out processed);
-        uint buffer = 0;
-        if (processed == 0 && _alBuffers.Count <= 10) {
-            buffer = _al.GenBuffer();
-            ThrowIfAlError();
-            _alBuffers.Add(buffer, buffer);
-        }
-        else if (processed == 0) {
-            _dataCache.AddRange(data.ToArray());
-            return data.Length;
-        }
-        else if (processed >= 1) {
-            _al.SourceUnqueueBuffers(_source, 1, &buffer);        
-            ThrowIfAlError();
-        }
-        if (processed >= 1) {
-            _al.BufferData(buffer, _openAlBufferFormat, data.ToArray(), Format.SampleRate);            
-            ThrowIfAlError();
-        }
-        else if (processed == 0 && buffer != 0) {
-            _dataCache.AddRange(data.ToArray());
-            int maxLength = _dataCache.Count - _dataCache.Count % 4;
-            byte[] buf = _dataCache.GetRange(0, maxLength).ToArray();
-            _al.BufferData(buffer, _openAlBufferFormat, buf.ToArray(), Format.SampleRate);
-            ThrowIfAlError();
-            _dataCache.RemoveRange(0, maxLength);
-            _al.SourceQueueBuffers(_source,1, &buffer);
-            ThrowIfAlError();
-        }
-        _al.SourcePlay(_source);
-        ThrowIfAlError();
-        return data.Length;
-    }
-
-    private void ThrowIfAlError()
-    {
-        AudioError? error = _al?.GetError();
-        if (error != AudioError.NoError)
-        {
-            throw new InvalidDataException(error.ToString());
-        }
-    }
-
-    public static OpenAlAudioPlayer Create(TimeSpan bufferLength, bool useCallback = false) {
-        _bufferLength = bufferLength;
-        return new OpenAlAudioPlayer(new AudioFormat(Channels: 1, SampleFormat: SampleFormat.SignedPcm16,
-            SampleRate: 48000));
-    }
 }
