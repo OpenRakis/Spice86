@@ -1,12 +1,10 @@
 ﻿namespace Spice86.Emulator.VM;
 
-using System;
-using System.Diagnostics;
-using System.IO;
-
-using Spice86.Emulator.InterruptHandlers;
 using Spice86.Emulator.Devices.Timer;
 using Spice86.Emulator.Memory;
+
+using System;
+using System.Diagnostics;
 
 /// <summary>
 /// Contains information about a DMA channel.
@@ -23,13 +21,9 @@ public sealed class DmaChannel {
     private int _transferRate;
     private readonly Stopwatch _transferTimer = new();
 
+
     internal DmaChannel() {
     }
-
-    /// <summary>
-    /// Occurs when the <see cref="IsActive"/> property has changed.
-    /// </summary>
-    internal event EventHandler? IsActiveChanged;
 
     /// <summary>
     /// Gets or sets a value indicating whether a DMA transfer is active.
@@ -43,9 +37,7 @@ public sealed class DmaChannel {
                 } else {
                     this._transferTimer.Reset();
                 }
-
                 this._isActive = value;
-                OnIsActiveChanged(EventArgs.Empty);
             }
         }
     }
@@ -190,7 +182,7 @@ public sealed class DmaChannel {
     /// </remarks>
     internal void Transfer(Memory memory) {
         IDmaDevice8? device = this.Device;
-        if (device != null && this._transferTimer.ElapsedTicks >= this.TransferPeriod) {
+        if (device is not null && this._transferTimer.ElapsedTicks >= this.TransferPeriod) {
             uint memoryAddress = ((uint)this.Page << 16) | this.Address;
             uint sourceOffset = (uint)this.Count + 1 - (uint)this.TransferBytesRemaining;
 
@@ -214,58 +206,4 @@ public sealed class DmaChannel {
             this._transferTimer.Start();
         }
     }
-    internal void Serialize(BinaryWriter writer) {
-        writer.Write(this._isActive);
-        writer.Write(this._addressByteRead);
-        writer.Write(this._addressByteWritten);
-        writer.Write(this._countByteRead);
-        writer.Write(this._countByteWritten);
-        writer.Write(this._bytesRemaining);
-        writer.Write(this._bytesRemainingHighByte);
-        writer.Write(this._addressHighByte);
-        writer.Write(this._transferRate);
-
-        writer.Write(this.IsMasked);
-        writer.Write((int)this.TransferMode);
-        writer.Write(this.Page);
-        writer.Write(this.Address);
-        writer.Write(this.Count);
-        writer.Write(this.TransferPeriod);
-        writer.Write(this.TransferChunkSize);
-    }
-    internal void Deserialize(BinaryReader reader) {
-        this._isActive = reader.ReadBoolean();
-        this._addressByteRead = reader.ReadBoolean();
-        this._addressByteWritten = reader.ReadBoolean();
-        this._countByteRead = reader.ReadBoolean();
-        this._countByteWritten = reader.ReadBoolean();
-        this._bytesRemaining = reader.ReadInt32();
-        this._bytesRemainingHighByte = reader.ReadByte();
-        this._addressHighByte = reader.ReadByte();
-        this._transferRate = reader.ReadInt32();
-
-        this.IsMasked = reader.ReadBoolean();
-        this.TransferMode = (DmaTransferMode)reader.ReadInt32();
-        this.Page = reader.ReadByte();
-        this.Address = reader.ReadUInt16();
-        this.Count = reader.ReadUInt16();
-        this.TransferPeriod = reader.ReadInt64();
-        this.TransferChunkSize = reader.ReadInt32();
-    }
-
-    private void OnIsActiveChanged(EventArgs e) => this.IsActiveChanged?.Invoke(this, e);
-}
-
-/// <summary>
-/// Specifies the transfer mode of a DMA channel.
-/// </summary>
-public enum DmaTransferMode {
-    /// <summary>
-    /// The DMA channel is in single-cycle mode.
-    /// </summary>
-    SingleCycle,
-    /// <summary>
-    /// The DMA channel is in auto-initialize mode.
-    /// </summary>
-    AutoInitialize
 }
