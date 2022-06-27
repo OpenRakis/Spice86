@@ -36,9 +36,9 @@ public sealed class SdlAudioPlayer : AudioPlayer {
             Channels =  (byte) base.Format.Channels,
             Frequency = base.Format.SampleRate,
             Samples = 2048,
-            Format = unchecked((short) AudioFormatFlags.S16LSB),
+            Format = unchecked((short) AudioFormatFlags.S16SYS),
             UserData = null,
-            Callback = callback
+            Callback = useCallback ? callback : IntPtr.Zero
             //SDLCALL MIXER_CallBack in mixer.cpp
         };
         AudioSpec obtained = new();
@@ -79,20 +79,14 @@ public sealed class SdlAudioPlayer : AudioPlayer {
         }
         var value = 0;
         fixed (byte* p = data) {
-            var intPtr = (IntPtr)p;
-            value = SDL.QueueAudio(_sdlDeviceId, intPtr, data.Length);
+            value = SDL.QueueAudio(_sdlDeviceId, p, data.Length);
         }
-        var queuedAudio = SDL.GetQueuedAudioSize(_sdlDeviceId);
-        System.Diagnostics.Debug.WriteLine(queuedAudio);
         //success
         if (value == 0) {
-            if(SDL.PauseAudioDevice(_sdlDeviceId, false) == 0)
-            {
-                System.Diagnostics.Debug.WriteLine("device unpaused");
-            }
+            SDL.PauseAudioDevice(_sdlDeviceId, false);
             return data.Length;
         }
-        return value;
+        return data.Length;
     }
     
     public static SdlAudioPlayer? Create(TimeSpan bufferLength, bool useCallback = false) {
@@ -101,6 +95,6 @@ public sealed class SdlAudioPlayer : AudioPlayer {
             return null;
         }
 
-        return new(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16, SampleRate: 22050));
+        return new(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16, SampleRate: 44100));
     }
 }
