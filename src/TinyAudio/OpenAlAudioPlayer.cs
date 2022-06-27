@@ -11,7 +11,7 @@ using System.Threading;
 using System.Runtime.InteropServices;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
-    private const int MaxAlBuffers = 2;
+    private const int MaxAlBuffers = 1;
     private static TimeSpan _bufferLength;
     private readonly AL? _al = null;
     private readonly ALContext? _alContext = null;
@@ -116,20 +116,18 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         if (_al is null) {
             throw new NullReferenceException(nameof(_al));
         }
-        Play();
         int processed = 0;
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out processed);
-        while (processed >= 1) {
+        if (processed > 0) {
             uint buffer = 0;
             _al.SourceUnqueueBuffers(_source, 1, &buffer);
-            ThrowIfAlError();
+            _al.GetError();
             if (data.Length > 0 && buffer > 0) {
                 _al.BufferData(buffer, _openAlBufferFormat, data.ToArray(), Format.SampleRate);
-                ThrowIfAlError();
-                _al.SourceQueueBuffers(_source, new uint[] { buffer });
-                ThrowIfAlError();
+                _al.GetError();
+                _al.SourceQueueBuffers(_source, 1, &buffer);
+                _al.GetError();
             }
-            _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out processed);
         }
         Play();
         return data.Length;
@@ -145,7 +143,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     public static OpenAlAudioPlayer Create(TimeSpan bufferLength, bool useCallback = false) {
         _bufferLength = bufferLength;
         return new OpenAlAudioPlayer(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16,
-            SampleRate: 44100));
+            SampleRate: 48000));
     }
 
     protected override void Dispose(bool disposing) {
@@ -172,5 +170,4 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             _disposed = true;
         }
     }
-
 }
