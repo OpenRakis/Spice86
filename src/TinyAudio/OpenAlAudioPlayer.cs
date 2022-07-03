@@ -3,12 +3,9 @@ namespace TinyAudio;
 using Silk.NET.OpenAL;
 
 using System;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using System.Runtime.InteropServices;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private const int MaxAlBuffers = 10;
@@ -64,10 +61,12 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             ThrowIfAlError();
             _al?.SetSourceProperty(_source, SourceBoolean.Looping, false);
             _al?.SetSourceProperty(_source, SourceFloat.Pitch, 1.0f);
-            _al?.SetSourceProperty(_source, SourceFloat.Pitch, 1.0f);
             _al?.SetSourceProperty(_source, SourceFloat.Gain, 1.0f);
             _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
             ThrowIfAlError();
+        }
+        for(int i = 0; i < MaxAlBuffers; i++) {
+            GenNewBuffer();
         }
         _openAlBufferFormat = BufferFormat.Stereo16;
     }
