@@ -12,8 +12,6 @@
 		<RepositoryUrl>https://github.com/gregdivis/TinyAudio.git</RepositoryUrl>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="SDL-Sharp" Version="2.1.2" />
-		<PackageReference Include="SDL-Sharp-DLL" Version="2.0.1" />
 		<PackageReference Include="Silk.NET.OpenAL" Version="2.15.0" />
 		<PackageReference Include="Silk.NET.OpenAL.Extensions.Soft" Version="2.15.0" />
 		<PackageReference Include="Silk.NET.OpenAL.Soft.Native" Version="1.21.1.1" />
