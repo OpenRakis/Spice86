@@ -11,7 +11,8 @@ using System.Threading;
 using System.Runtime.InteropServices;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
-    private const int MaxAlBuffers = 2000;
+    private const int MaxAlBuffers = 10;
+    private const int OpenALBufferModulo = 1024;
     private readonly AL? _al = null;
     private readonly ALContext? _alContext = null;
     private readonly Device* _device = null;
@@ -123,20 +124,17 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     /// <summary>
     /// Gives the converted audio data to the OpenAL backend.
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    /// <exception cref="NullReferenceException"></exception>
     protected override int WriteDataInternal(ReadOnlySpan<byte> input) {
         if (_al is null) {
             throw new NullReferenceException(nameof(_al));
         }
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out int processed);
-        // Must be a multiple of 4 or elese _al.BufferData will return InvalidValue
+        // Must be a multiple of 4 or else _al.BufferData will return InvalidValue
         // Except 4 doesn't seem to work
         // 1024 works...
-        int remainingLength = input.Length - input.Length % 1024;
+        int remainingLength = input.Length - input.Length % OpenALBufferModulo;
         if (processed > 0) {
-            byte[] data = null;
+            byte[]? data = null;
             byte[] allInput = input.ToArray();
             while (processed > 0 && remainingLength > 0) {
                 uint buffer = 0;
@@ -154,7 +152,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                     }
                     remainingLength = tempRemainingLength;
                     data = allInput[..data.Length];
-                    remainingLength = data.Length - data.Length % 1024;
+                    remainingLength = data.Length - data.Length % OpenALBufferModulo;
                 }
 
                 byte[] bytes = data[0..remainingLength];
@@ -164,6 +162,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 if (state is SourceState.Playing or SourceState.Paused) {
                     _al.SourceQueueBuffers(_source, 1, &buffer);
                     ThrowIfAlError();
+                    Play();
                 } else {
                     Play();
                     _al.SourceQueueBuffers(_source, 1, &buffer);
@@ -172,13 +171,38 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 processed--;
             }
         } else if(_alBuffers.Count < MaxAlBuffers) {
-            uint buffer = GenNewBuffer();
-            if (remainingLength > 0 && buffer > 0) {
-                var data = input.ToArray()[0..remainingLength];
-                _al.BufferData(buffer, _openAlBufferFormat, data, Format.SampleRate);
+            byte[]? data = null;
+            byte[] allInput = input.ToArray();
+            while (remainingLength > 0) {
+                uint buffer = GenNewBuffer();
+                if (buffer == 0) {
+                    break;
+                }
+                if (data is null) {
+                    data = allInput;
+                } else {
+                    int tempRemainingLength = input.Length - data.Length;
+                    if (tempRemainingLength <= 0) {
+                        break;
+                    }
+                    remainingLength = tempRemainingLength;
+                    data = allInput[..data.Length];
+                    remainingLength = data.Length - data.Length % OpenALBufferModulo;
+                }
+                byte[] bytes = data[0..remainingLength];
+                _al.BufferData(buffer, _openAlBufferFormat, bytes, Format.SampleRate);
                 ThrowIfAlError();
-                _al.SourceQueueBuffers(_source, 1, &buffer);
-                ThrowIfAlError();
+                SourceState state = GetSourceState();
+                if (state is SourceState.Playing or SourceState.Paused) {
+                    _al.SourceQueueBuffers(_source, 1, &buffer);
+                    ThrowIfAlError();
+                    Play();
+                } else {
+                    Play();
+                    _al.SourceQueueBuffers(_source, 1, &buffer);
+                    ThrowIfAlError();
+                }
+
             }
         } else {
             Play();
