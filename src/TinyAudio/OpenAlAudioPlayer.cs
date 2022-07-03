@@ -11,8 +11,7 @@ using System.Threading;
 using System.Runtime.InteropServices;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
-    private const int MaxAlBuffers = 1;
-    private static TimeSpan _bufferLength;
+    private const int MaxAlBuffers = 2000;
     private readonly AL? _al = null;
     private readonly ALContext? _alContext = null;
     private readonly Device* _device = null;
@@ -41,44 +40,46 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
         bool available = _device != null;
 
-        if (available) {
-            _context = _alContext.CreateContext(_device, null);
-            _alContext.MakeContextCurrent(_context);
-            if (_al?.GetError() != AudioError.NoError) {
-                if (_context != null) {
-                    _alContext.DestroyContext(_context);
-                }
-
-                _alContext.CloseDevice(_device);
-                _al?.Dispose();
-                _alContext.Dispose();
-                _disposed = true;
-                return;
-            }
-
-            if (available) {
-                _source = _al.GenSource();
-                _al?.SetSourceProperty(_source, SourceBoolean.Looping, false);
-                _al?.SetSourceProperty(_source, SourceFloat.ReferenceDistance, 0);
-                _al?.SetSourceProperty(_source, SourceFloat.Pitch, 1.0f);
-                _al?.SetSourceProperty(_source, SourceFloat.Pitch, 1.0f);
-                _al?.SetSourceProperty(_source, SourceFloat.Gain, 1.0f);
-                _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
-                _al?.SetSourceProperty(_source, SourceInteger.SourceType, (int)SourceType.Streaming);
-                _al?.SetSourceProperty(_source, SourceBoolean.SourceRelative, false);
-                _al?.GetError();
-                for (int i = 0; i < MaxAlBuffers; i++) {
-                    if (_al is not null) {
-                        var buffer = _al.GenBuffer();
-                        ThrowIfAlError();
-                        _alBuffers.Add(buffer, buffer);
-                    }
-                }
-                _al?.SourceQueueBuffers(_source, _alBuffers.Keys.ToArray());
-                ThrowIfAlError();
-            }
-            _openAlBufferFormat = BufferFormat.Stereo16;
+        if (!available) {
+            return;
         }
+
+        _context = _alContext.CreateContext(_device, null);
+        _alContext.MakeContextCurrent(_context);
+        if (_al?.GetError() != AudioError.NoError) {
+            if (_context != null) {
+                _alContext.DestroyContext(_context);
+            }
+
+            _alContext.CloseDevice(_device);
+            _al?.Dispose();
+            _alContext.Dispose();
+            _disposed = true;
+            return;
+        }
+
+        if (available) {
+            _source = _al.GenSource();
+            ThrowIfAlError();
+            _al?.SetSourceProperty(_source, SourceBoolean.Looping, false);
+            _al?.SetSourceProperty(_source, SourceFloat.Pitch, 1.0f);
+            _al?.SetSourceProperty(_source, SourceFloat.Pitch, 1.0f);
+            _al?.SetSourceProperty(_source, SourceFloat.Gain, 1.0f);
+            _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
+            ThrowIfAlError();
+        }
+        _openAlBufferFormat = BufferFormat.Stereo16;
+    }
+
+    private uint GenNewBuffer()
+    {
+        if (_al is null) {
+            throw new NullReferenceException(nameof(_al));
+        }
+        uint buffer = _al.GenBuffer();
+        ThrowIfAlError();
+        _alBuffers.Add(buffer, buffer);
+        return buffer;
     }
 
     public void Reset() {
@@ -96,13 +97,20 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     }
 
     private void Play() {
-        int state = 0;
-        _al?.GetSourceProperty(_source, GetSourceInteger.SourceState, out state);
-        var currentState = (SourceState)state;
+        SourceState currentState = GetSourceState();
         if (currentState != SourceState.Playing) {
             _al?.SourcePlay(_source);
+            ThrowIfAlError();
             //System.Diagnostics.Debug.WriteLine("Source was not playing...");
         }
+    }
+
+    private SourceState GetSourceState()
+    {
+        int state = 0;
+        _al?.GetSourceProperty(_source, GetSourceInteger.SourceState, out state);
+        var currentState = (SourceState) state;
+        return currentState;
     }
 
     protected override void Stop() {
@@ -112,25 +120,72 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         _al?.SourceStop(_source);
     }
 
-    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
+    /// <summary>
+    /// Gives the converted audio data to the OpenAL backend.
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    /// <exception cref="NullReferenceException"></exception>
+    protected override int WriteDataInternal(ReadOnlySpan<byte> input) {
         if (_al is null) {
             throw new NullReferenceException(nameof(_al));
         }
-        int processed = 0;
-        _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out processed);
+        _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out int processed);
+        // Must be a multiple of 4 or elese _al.BufferData will return InvalidValue
+        // Except 4 doesn't seem to work
+        // 1024 works...
+        int remainingLength = input.Length - input.Length % 1024;
         if (processed > 0) {
-            uint buffer = 0;
-            _al.SourceUnqueueBuffers(_source, 1, &buffer);
-            _al.GetError();
-            if (data.Length > 0 && buffer > 0) {
-                _al.BufferData(buffer, _openAlBufferFormat, data.ToArray(), Format.SampleRate);
+            byte[] data = null;
+            byte[] allInput = input.ToArray();
+            while (processed > 0 && remainingLength > 0) {
+                uint buffer = 0;
+                _al.SourceUnqueueBuffers(_source, 1, &buffer);
                 _al.GetError();
-                _al.SourceQueueBuffers(_source, 1, &buffer);
-                _al.GetError();
+                if (buffer == 0) {
+                    break;
+                }
+                if (data is null) {
+                    data = allInput;
+                } else {
+                    int tempRemainingLength = input.Length - data.Length;
+                    if (tempRemainingLength <= 0) {
+                        break;
+                    }
+                    remainingLength = tempRemainingLength;
+                    data = allInput[..data.Length];
+                    remainingLength = data.Length - data.Length % 1024;
+                }
+
+                byte[] bytes = data[0..remainingLength];
+                _al.BufferData(buffer, _openAlBufferFormat, bytes, Format.SampleRate);
+                ThrowIfAlError();
+                SourceState state = GetSourceState();
+                if (state is SourceState.Playing or SourceState.Paused) {
+                    _al.SourceQueueBuffers(_source, 1, &buffer);
+                    ThrowIfAlError();
+                } else {
+                    Play();
+                    _al.SourceQueueBuffers(_source, 1, &buffer);
+                    ThrowIfAlError();
+                }
+                processed--;
             }
+        } else if(_alBuffers.Count < MaxAlBuffers) {
+            uint buffer = GenNewBuffer();
+            if (remainingLength > 0 && buffer > 0) {
+                var data = input.ToArray()[0..remainingLength];
+                _al.BufferData(buffer, _openAlBufferFormat, data, Format.SampleRate);
+                ThrowIfAlError();
+                _al.SourceQueueBuffers(_source, 1, &buffer);
+                ThrowIfAlError();
+            }
+        } else {
+            Play();
+            return 0;
         }
         Play();
-        return data.Length;
+        return remainingLength;
     }
 
     private void ThrowIfAlError() {
@@ -141,7 +196,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     }
 
     public static OpenAlAudioPlayer Create(TimeSpan bufferLength, bool useCallback = false) {
-        _bufferLength = bufferLength;
         return new OpenAlAudioPlayer(new AudioFormat(Channels: 2, SampleFormat: SampleFormat.SignedPcm16,
             SampleRate: 48000));
     }
