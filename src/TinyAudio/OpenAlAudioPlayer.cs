@@ -124,8 +124,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             throw new NullReferenceException(nameof(_al));
         }
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out int processed);
-        // We must use a multiple of 16 or else _al.BufferData will return InvalidValue
-        int remainingLength = input.Length - (input.Length % OpenALBufferModulo);
+        int remainingLength = GetRemainingLength(input);
         if (processed > 0) {
             byte[]? data = null;
             byte[] inputToArray = input.ToArray();
@@ -155,6 +154,17 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         return remainingLength;
     }
 
+    /// <summary>
+    /// FIXME:
+    /// We must use a multiple of 16 or else _al.BufferData will return InvalidValue...
+    /// But at the same time, refusing too small buffers makes PCM not work at all, since we constantly do not buffer anything more...
+    /// </summary>
+    private static int GetRemainingLength(ReadOnlySpan<byte> input)
+    {
+        int value = input.Length - (input.Length % OpenALBufferModulo);
+        return value;
+    }
+
     private bool BufferData(uint buffer, byte[] inputToArray, ref byte[]? data, ref int remainingLength)
     {
         if (buffer == 0)
@@ -179,7 +189,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
         byte[] bytes = data[0..remainingLength];
         _al?.BufferData(buffer, _openAlBufferFormat, bytes, Format.SampleRate);
-        ThrowIfAlError();
+        _al.GetError();
         SourceState state = GetSourceState();
         if (state is SourceState.Playing or SourceState.Paused)
         {
