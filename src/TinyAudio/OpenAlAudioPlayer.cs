@@ -9,7 +9,7 @@ using System.Threading;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private const int MaxAlBuffers = 10;
-    private const int OpenALBufferModulo = 1024;
+    private const int OpenALBufferModulo = 16;
     private readonly AL? _al = null;
     private readonly ALContext? _alContext = null;
     private readonly Device* _device = null;
@@ -64,9 +64,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             _al?.SetSourceProperty(_source, SourceFloat.Gain, 1.0f);
             _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
             ThrowIfAlError();
-        }
-        for(int i = 0; i < MaxAlBuffers; i++) {
-            GenNewBuffer();
         }
         _openAlBufferFormat = BufferFormat.Stereo16;
     }
@@ -127,9 +124,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             throw new NullReferenceException(nameof(_al));
         }
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out int processed);
-        // Must be a multiple of 4 or else _al.BufferData will return InvalidValue
-        // Except 4 doesn't seem to work
-        // 1024 works...
+        // We must use a multiple of 16 or else _al.BufferData will return InvalidValue
         int remainingLength = input.Length - (input.Length % OpenALBufferModulo);
         if (processed > 0) {
             byte[]? data = null;
