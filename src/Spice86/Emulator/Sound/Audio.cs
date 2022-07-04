@@ -12,7 +12,7 @@ internal static class Audio {
         if (OperatingSystem.IsWindows()) {
             return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
         } else {
-            var xplatAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(99), useCallback);
+            var xplatAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
             return xplatAudioPlayer;
         }
     }
