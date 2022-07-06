@@ -5,6 +5,7 @@ using Silk.NET.OpenAL;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
@@ -95,10 +96,12 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
     private void Play() {
         SourceState currentState = GetSourceState();
-        if (currentState != SourceState.Playing) {
-            _al?.SourcePlay(_source);
-            ThrowIfAlError();
+        if (currentState == SourceState.Playing) {
+            return;
         }
+
+        _al?.SourcePlay(_source);
+        ThrowIfAlError();
     }
 
     private SourceState GetSourceState()
@@ -115,6 +118,8 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         }
         _al?.SourceStop(_source);
     }
+
+    private Stack<byte[]> _backBuffer = new();
 
     /// <summary>
     /// Gives the converted audio data to the OpenAL backend.
@@ -161,8 +166,14 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     /// </summary>
     private static int GetRemainingLength(ReadOnlySpan<byte> input)
     {
-        int value = input.Length - (input.Length % OpenALBufferModulo);
-        return value;
+        if (input.Length == 0) {
+            return 0;
+        }
+        int remainingLength = input.Length - (input.Length % OpenALBufferModulo);
+        if (remainingLength == 0) {
+            remainingLength = input.Length;
+        }
+        return remainingLength;
     }
 
     private bool BufferData(uint buffer, byte[] inputToArray, ref byte[]? data, ref int remainingLength)
@@ -187,9 +198,28 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             remainingLength = data.Length - (data.Length % OpenALBufferModulo);
         }
 
-        byte[] bytes = data[0..remainingLength];
-        _al?.BufferData(buffer, _openAlBufferFormat, bytes, Format.SampleRate);
-        _al.GetError();
+        if (_backBuffer.TryPeek(out _)) {
+            while (_backBuffer.TryPop(out byte[]? bytes)) {
+                byte[] newData = new byte[bytes.Length + data.Length];
+                Array.Copy(bytes, newData, bytes.Length);
+                Array.Copy(data, 0, newData, bytes.Length, data.Length);
+                data = newData;
+            }
+            _al?.BufferData(buffer, _openAlBufferFormat, data, Format.SampleRate);
+            if (_al?.GetError() == AudioError.InvalidValue) {
+                _backBuffer.Push(data);
+                Play();
+                return false;
+            }
+        } else {
+            byte[] currentBytes = data[0..remainingLength];
+            _al?.BufferData(buffer, _openAlBufferFormat, currentBytes, Format.SampleRate);
+            if (_al?.GetError() == AudioError.InvalidValue) {
+                _backBuffer.Push(currentBytes);
+                Play();
+                return false;
+            }
+        }
         SourceState state = GetSourceState();
         if (state is SourceState.Playing or SourceState.Paused)
         {
