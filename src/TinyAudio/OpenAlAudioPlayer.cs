@@ -9,8 +9,8 @@ using System.Linq;
 using System.Threading;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
-    private const int MaxAlBuffers = 20;
-    private const int OpenALBufferModulo = 16;
+    private const int MaxAlBuffers = 100;
+    private const int OpenAlBufferModulo = 16;
     private static AL? _al = null;
     private static ALContext? _alContext = null;
     private static Device* _device = null;
@@ -162,18 +162,12 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         Play();
         return remainingLength;
     }
-
-    /// <summary>
-    /// FIXME:
-    /// We must use a multiple of 16 or else _al.BufferData will return InvalidValue...
-    /// But at the same time, refusing too small buffers makes PCM not work at all, since we constantly do not buffer anything more...
-    /// </summary>
     private static int GetRemainingLength(ReadOnlySpan<byte> input)
     {
         if (input.Length == 0) {
             return 0;
         }
-        int remainingLength = input.Length - (input.Length % OpenALBufferModulo);
+        int remainingLength = input.Length - (input.Length % OpenAlBufferModulo);
         if (remainingLength == 0) {
             remainingLength = input.Length;
         }
@@ -199,7 +193,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             }
 
             data = inputToArray[..data.Length];
-            remainingLength = data.Length - (data.Length % OpenALBufferModulo);
+            remainingLength = data.Length - (data.Length % OpenAlBufferModulo);
         }
 
         if (_backBuffer.TryPeek(out _)) {
@@ -223,7 +217,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         {
             _al?.SourceQueueBuffers(_source, 1, &buffer);
             ThrowIfAlError();
-            Play();
         }
         else
         {
@@ -231,7 +224,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             _al?.SourceQueueBuffers(_source, 1, &buffer);
             ThrowIfAlError();
         }
-        Play();
         return false;
     }
 
