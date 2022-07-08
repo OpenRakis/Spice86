@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-using TinyAudio;
+using MicroAudio;
 
 using Ymf262Emu;
 

@@ -1,13 +1,14 @@
-namespace TinyAudio;
+namespace MicroAudio;
 
 using Silk.NET.OpenAL;
 
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Runtime.Versioning;
 using System.Threading;
 
+[UnsupportedOSPlatform("browser")]
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private const int MaxAlBuffers = 100;
     private const int OpenAlBufferModulo = 16;

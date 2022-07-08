@@ -78,6 +78,6 @@
 		<AvaloniaResource Include="Icon\Spice86.ico" />
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\TinyAudio\TinyAudio.csproj" />
+	  <ProjectReference Include="..\MicroAudio\MicroAudio.csproj" />
 	</ItemGroup>
 </Project>
