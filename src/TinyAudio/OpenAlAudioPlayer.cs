@@ -142,7 +142,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 uint buffer = 0;
                 _al.SourceUnqueueBuffers(_source, 1, &buffer);
                 _al.GetError();
-                if (BufferData(buffer, inputToArray, ref data, ref remainingLength)) {
+                if (!TryBufferData(buffer, inputToArray, ref data, ref remainingLength)) {
                     break;
                 }
                 processed--;
@@ -152,7 +152,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             byte[] inputToArray = input.ToArray();
             while (remainingLength > 0) {
                 uint buffer = GenNewBuffer();
-                if (BufferData(buffer, inputToArray, ref data, ref remainingLength)) {
+                if (!TryBufferData(buffer, inputToArray, ref data, ref remainingLength)) {
                     break;
                 }
             }
@@ -174,11 +174,11 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         return remainingLength;
     }
 
-    private bool BufferData(uint buffer, byte[] inputToArray, ref byte[]? data, ref int remainingLength)
+    private bool TryBufferData(uint buffer, byte[] inputToArray, ref byte[]? data, ref int remainingLength)
     {
         if (buffer == 0)
         {
-            return true;
+            return false;
         }
 
         if (data is null)
@@ -189,7 +189,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         {
             if (inputToArray.Length - data.Length <= 0)
             {
-                return true;
+                return false;
             }
 
             data = inputToArray[..data.Length];
@@ -204,12 +204,12 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 data = newData;
             }
             if (!TryBufferData(buffer, data)) {
-                return false;
+                return true;
             }
         } else {
             byte[] currentBytes = data[0..remainingLength];
             if (!TryBufferData(buffer, currentBytes)) {
-                return false;
+                return true;
             }
         }
         SourceState state = GetSourceState();
@@ -224,7 +224,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             _al?.SourceQueueBuffers(_source, 1, &buffer);
             ThrowIfAlError();
         }
-        return false;
+        return true;
     }
 
     private bool TryBufferData(uint buffer, byte[] data)
