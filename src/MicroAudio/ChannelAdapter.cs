@@ -1,4 +1,4 @@
-﻿namespace TinyAudio;
+﻿namespace MicroAudio;
 
 using System;
 

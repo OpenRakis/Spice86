@@ -4,17 +4,16 @@ using System;
 using System.Runtime.Versioning;
 using System.Threading;
 
-using TinyAudio;
+using MicroAudio;
 
 internal static class Audio {
 
     public static AudioPlayer? CreatePlayer(bool useCallback = false) {
-        if (OperatingSystem.IsWindows()) {
-            return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
-        } else {
-            var xplatAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
-            return xplatAudioPlayer;
+        if (OperatingSystem.IsBrowser()) {
+            return null;
         }
+        var xplatAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+        return xplatAudioPlayer;
     }
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer) {

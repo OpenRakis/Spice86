@@ -2,12 +2,11 @@
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<LangVersion>preview</LangVersion>
+		<WarningsAsErrors>nullable</WarningsAsErrors>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<NoWarn>CS1591</NoWarn>
 		<Authors>Greg Divis</Authors>
 		<Version>0.3.1</Version>
-		<Description>Simple audio playback library</Description>
+		<Description>Simple audio playback library, forked from the original TinyAudio by Greg Divis</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/gregdivis/TinyAudio.git</RepositoryUrl>
 	</PropertyGroup>

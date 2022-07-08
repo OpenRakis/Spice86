@@ -6,7 +6,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 
-using TinyAudio;
+using MicroAudio;
 
 internal sealed class Mt32Player : IDisposable {
     private readonly Mt32Context _context = new();

@@ -8,6 +8,8 @@ using Spice86.Emulator.Sound;
 using Spice86.Emulator.Sound.Blaster;
 using Spice86.Emulator.VM;
 
+using MicroAudio;
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -246,7 +248,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         if (!Configuration.CreateAudioBackend) {
             return;
         }
-        using TinyAudio.AudioPlayer? player = Audio.CreatePlayer();
+        using AudioPlayer? player = Audio.CreatePlayer();
         if (player is null) {
             return;
         }
