@@ -160,7 +160,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             return 0;
         }
         Play();
-        return remainingLength;
+        return remainingLength > input.Length ? input.Length : remainingLength;
     }
     private static int GetRemainingLength(int length)
     {
@@ -189,15 +189,26 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         {
             data = inputToArray[..data.Length];
         }
-
-        while (_backBuffer.TryPop(out byte[]? bytes)) {
-            byte[] newData = new byte[bytes.Length + data.Length];
-            Array.Copy(bytes, newData, bytes.Length);
-            Array.Copy(data, 0, newData, bytes.Length, data.Length);
-            data = newData;
+        if(_backBuffer.TryPeek(out _))
+        {
+            while (_backBuffer.TryPop(out byte[]? bytes)) {
+                byte[] newData = new byte[bytes.Length + data.Length];
+                Array.Copy(bytes, newData, bytes.Length);
+                Array.Copy(data, 0, newData, bytes.Length, data.Length);
+                data = newData;
+            }
+            return TryQueueBuffer(buffer, data);
         }
-        remainingLength = GetRemainingLength(data.Length);
-        byte[] currentBytes = data[0..remainingLength];
+        else
+        {
+            remainingLength = GetRemainingLength(data.Length);
+            byte[] currentBytes = data[0..remainingLength];
+            return TryQueueBuffer(buffer, currentBytes);
+        }
+    }
+
+    private bool TryQueueBuffer(uint buffer, byte[] currentBytes)
+    {
         if (TryBufferData(buffer, currentBytes)) {
             SourceState state = GetSourceState();
             if (state is SourceState.Playing or SourceState.Paused)
@@ -211,8 +222,9 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 _al?.SourceQueueBuffers(_source, 1, &buffer);
                 ThrowIfAlError();
             }
+            return true;
         }
-        return true;
+        return false;
     }
 
     private bool TryBufferData(uint buffer, byte[] data)
