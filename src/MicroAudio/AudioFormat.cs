@@ -1,4 +1,4 @@
-﻿namespace TinyAudio;
+﻿namespace MicroAudio;
 
 /// <summary>
 /// Specifies an audio playback format.

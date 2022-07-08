@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-using TinyAudio;
+using MicroAudio;
 
 /// <summary>
 /// Emulates a PC speaker.
