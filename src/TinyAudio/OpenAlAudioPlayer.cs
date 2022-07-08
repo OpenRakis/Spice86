@@ -9,12 +9,12 @@ using System.Linq;
 using System.Threading;
 
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
-    private const int MaxAlBuffers = 10;
+    private const int MaxAlBuffers = 20;
     private const int OpenALBufferModulo = 16;
-    private readonly AL? _al = null;
-    private readonly ALContext? _alContext = null;
-    private readonly Device* _device = null;
-    private readonly Context* _context = null;
+    private static AL? _al = null;
+    private static ALContext? _alContext = null;
+    private static Device* _device = null;
+    private static Context* _context = null;
     private readonly uint _source = 0;
     private bool _disposed = false;
     private readonly BufferFormat _openAlBufferFormat;
@@ -23,19 +23,22 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
     private OpenAlAudioPlayer(AudioFormat format) : base(format) {
         try {
-            _al = AL.GetApi(true);
+            _al ??= AL.GetApi(true);
             _al.GetError();
-            _alContext = ALContext.GetApi(true);
+            _alContext ??= ALContext.GetApi(true);
         } catch {
             try {
-                _al = AL.GetApi(false);
+                _al ??= AL.GetApi(false);
                 _al.GetError();
-                _alContext = ALContext.GetApi(false);
+                _alContext ??= ALContext.GetApi(false);
             } catch {
                 return;
             }
         }
-        _device = _alContext.OpenDevice(null);
+
+        if (_device is null) {
+            _device = _alContext.OpenDevice(null);            
+        }
 
         bool available = _device != null;
 
@@ -43,8 +46,10 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             return;
         }
 
-        _context = _alContext.CreateContext(_device, null);
-        _alContext.MakeContextCurrent(_context);
+        if (_context is null) {
+            _context = _alContext.CreateContext(_device, null);
+            _alContext.MakeContextCurrent(_context);
+        }
         if (_al?.GetError() != AudioError.NoError) {
             if (_context != null) {
                 _alContext.DestroyContext(_context);
@@ -152,7 +157,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 }
             }
         } else {
-            Play();
             return 0;
         }
         Play();
@@ -205,18 +209,12 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 Array.Copy(data, 0, newData, bytes.Length, data.Length);
                 data = newData;
             }
-            _al?.BufferData(buffer, _openAlBufferFormat, data, Format.SampleRate);
-            if (_al?.GetError() == AudioError.InvalidValue) {
-                _backBuffer.Push(data);
-                Play();
+            if (!TryBufferData(buffer, data)) {
                 return false;
             }
         } else {
             byte[] currentBytes = data[0..remainingLength];
-            _al?.BufferData(buffer, _openAlBufferFormat, currentBytes, Format.SampleRate);
-            if (_al?.GetError() == AudioError.InvalidValue) {
-                _backBuffer.Push(currentBytes);
-                Play();
+            if (!TryBufferData(buffer, currentBytes)) {
                 return false;
             }
         }
@@ -233,8 +231,19 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             _al?.SourceQueueBuffers(_source, 1, &buffer);
             ThrowIfAlError();
         }
-
+        Play();
         return false;
+    }
+
+    private bool TryBufferData(uint buffer, byte[] data)
+    {
+        _al?.BufferData(buffer, _openAlBufferFormat, data, Format.SampleRate);
+        if (_al?.GetError() == AudioError.InvalidValue)
+        {
+            _backBuffer.Push(data);
+            return false;
+        }
+        return true;
     }
 
     private void ThrowIfAlError() {
