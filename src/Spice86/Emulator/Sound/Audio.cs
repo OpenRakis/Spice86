@@ -7,12 +7,11 @@ using System.Threading;
 using MicroAudio;
 
 internal static class Audio {
-
-    public static AudioPlayer? CreatePlayer(bool useCallback = false) {
+    public static AudioPlayer? CreatePlayer() {
         if (OperatingSystem.IsBrowser()) {
             return null;
         }
-        var xplatAudioPlayer = OpenAlAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+        var xplatAudioPlayer = OpenAlAudioPlayer.Create();
         return xplatAudioPlayer;
     }
 
