@@ -1,8 +1,6 @@
 ﻿namespace Spice86.Emulator.Sound.Midi;
 
-using Spice86.Emulator.Devices;
 using Spice86.Emulator.Sound.Midi.MT32;
-using Spice86.Emulator.VM;
 
 using System;
 using System.Collections.Generic;
@@ -81,8 +79,12 @@ public sealed class GeneralMidi {
     public void WriteByte(int port, byte value) {
         switch (port) {
             case DataPort:
-                if (_midiMapper == null) {
-                    _midiMapper = UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath, Configuration) : new WindowsMidiMapper();
+                if (_midiMapper is null) {
+                    if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
+                        _midiMapper = new Mt32MidiDevice(this.Mt32RomsPath, Configuration);
+                    } else if(OperatingSystem.IsWindows()) {
+                        _midiMapper = new WindowsMidiMapper();
+                    }
                 }
 
                 _midiMapper?.SendByte(value);
