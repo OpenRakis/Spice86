@@ -23,7 +23,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private readonly FmSynthesizer? _synth;
     private int _currentAddress;
     private volatile bool _endThread;
-    private System.Threading.Thread _generateThread;
+    private System.Threading.Thread _playbackThread;
     private bool _initialized;
     private bool _paused;
     private byte _statusByte;
@@ -38,9 +38,10 @@ public sealed class OPL3FM : DefaultIOPortHandler {
         if (_audioPlayer is not null) {
             this._synth = new FmSynthesizer(this._audioPlayer.Format.SampleRate);
         }
-        this._generateThread = new System.Threading.Thread(this.GenerateWaveforms) {
+        this._playbackThread = new System.Threading.Thread(this.GenerateWaveforms) {
             IsBackground = true,
-            Priority = System.Threading.ThreadPriority.AboveNormal
+            Priority = System.Threading.ThreadPriority.AboveNormal,
+            Name = "OPLAudio"
         };
     }
 
@@ -53,7 +54,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
         if (this._initialized) {
             if (!_paused) {
                 this._endThread = true;
-                this._generateThread.Join();
+                this._playbackThread.Join();
             }
             this._audioPlayer?.Dispose();
             this._initialized = false;
@@ -63,7 +64,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     public void Pause() {
         if (this._initialized && !this._paused) {
             this._endThread = true;
-            this._generateThread.Join();
+            this._playbackThread.Join();
             this._paused = true;
         }
     }
@@ -93,8 +94,8 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     public void Resume() {
         if (_paused) {
             this._endThread = false;
-            this._generateThread = new System.Threading.Thread(this.GenerateWaveforms) { IsBackground = true };
-            this._generateThread.Start();
+            this._playbackThread = new System.Threading.Thread(this.GenerateWaveforms) { IsBackground = true };
+            this._playbackThread.Start();
             this._paused = false;
         }
     }
@@ -165,7 +166,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     /// Performs DirectSound initialization.
     /// </summary>
     private void Initialize() {
-        this._generateThread.Start();
+        this._playbackThread.Start();
         this._initialized = true;
     }
 }
