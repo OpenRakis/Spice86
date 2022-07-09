@@ -1,12 +1,14 @@
 ﻿namespace Spice86.Emulator.Sound.Midi.MT32;
 
+using Backend.Audio.OpenAl;
+
 using Mt32emu;
 
 using System;
 using System.IO;
 using System.IO.Compression;
 
-using MicroAudio;
+using Spice86.Backend.Audio.OpenAl;
 
 internal sealed class Mt32Player : IDisposable {
     private readonly Mt32Context _context = new();

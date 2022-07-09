@@ -1,6 +1,10 @@
-namespace MicroAudio;
+namespace Spice86.Backend.Audio.OpenAl;
+
+using Serilog;
 
 using Silk.NET.OpenAL;
+
+using Spice86.Backend.Audio.OpenAl;
 
 using System;
 using System.Collections.Generic;
@@ -10,11 +14,11 @@ using System.Threading;
 
 [UnsupportedOSPlatform("browser")]
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
+    private readonly ILogger _logger = Program.Logger.ForContext<OpenAlAudioPlayer>();
     private const int MaxAlBuffers = 100;
-    private const int OpenAlBufferModulo = 16;
     private readonly Stack<byte[]> _backBuffer = new();
-    private static AL? _al = null;
-    private static ALContext? _alContext = null;
+    private readonly AL? _al;
+    private static ALContext? _alContext;
     private static Device* _device = null;
     private static Context* _context = null;
     private readonly uint _source = 0;
@@ -25,17 +29,13 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
     private OpenAlAudioPlayer(AudioFormat format) : base(format) {
         try {
-            _al ??= AL.GetApi(true);
+            _al = AL.GetApi(true);
             _al.GetError();
             _alContext ??= ALContext.GetApi(true);
         } catch {
-            try {
-                _al ??= AL.GetApi(false);
-                _al.GetError();
-                _alContext ??= ALContext.GetApi(false);
-            } catch {
-                return;
-            }
+            _al = AL.GetApi(false);
+            _al.GetError();
+            _alContext ??= ALContext.GetApi(false);
         }
 
         if (_device is null) {
@@ -76,7 +76,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         _openAlBufferFormat = BufferFormat.Stereo16;
     }
 
-    private uint GenNewBuffer()
+    private uint GenerateNewOpenAlBuffer()
     {
         if (_al is null) {
             throw new NullReferenceException(nameof(_al));
@@ -116,6 +116,11 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         int state = 0;
         _al?.GetSourceProperty(_source, GetSourceInteger.SourceState, out state);
         var currentState = (SourceState) state;
+#if DEBUG
+        if (currentState != SourceState.Playing && System.Diagnostics.Debugger.IsAttached) {
+            _logger.Warning("{@Source} was not playing, it is {@State}", _source, currentState);
+        }
+#endif
         return currentState;
     }
 
@@ -134,15 +139,14 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             throw new NullReferenceException(nameof(_al));
         }
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out int processed);
-        int remainingLength = GetRemainingLength(input.Length);
         if (processed > 0) {
             byte[]? data = null;
             byte[] inputToArray = input.ToArray();
-            while (processed > 0 && remainingLength > 0) {
+            while (processed > 0) {
                 uint buffer = 0;
                 _al.SourceUnqueueBuffers(_source, 1, &buffer);
                 _al.GetError();
-                if (!TryEnqueueData(buffer, inputToArray, ref data, ref remainingLength)) {
+                if (!TryEnqueueData(buffer, inputToArray, ref data)) {
                     break;
                 }
                 processed--;
@@ -150,31 +154,16 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         } else if(_alBuffers.Count < MaxAlBuffers) {
             byte[]? data = null;
             byte[] inputToArray = input.ToArray();
-            while (remainingLength > 0) {
-                uint buffer = GenNewBuffer();
-                if (!TryEnqueueData(buffer, inputToArray, ref data, ref remainingLength)) {
-                    break;
-                }
-            }
+            uint buffer = GenerateNewOpenAlBuffer();
+            TryEnqueueData(buffer, inputToArray, ref data);
         } else {
             return 0;
         }
         Play();
-        return remainingLength > input.Length ? input.Length : remainingLength;
-    }
-    private static int GetRemainingLength(int length)
-    {
-        if (length == 0) {
-            return 0;
-        }
-        int remainingLength = length - (length % OpenAlBufferModulo);
-        if (remainingLength == 0) {
-            remainingLength = length;
-        }
-        return remainingLength;
+        return input.Length;
     }
 
-    private bool TryEnqueueData(uint buffer, byte[] inputToArray, ref byte[]? data, ref int remainingLength)
+    private bool TryEnqueueData(uint buffer, byte[] inputToArray, ref byte[]? data)
     {
         if (buffer == 0 || inputToArray.Length - data?.Length <= 0)
         {
@@ -201,9 +190,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         }
         else
         {
-            remainingLength = GetRemainingLength(data.Length);
-            byte[] currentBytes = data[0..remainingLength];
-            return TryQueueBuffer(buffer, currentBytes);
+            return TryQueueBuffer(buffer, data);
         }
     }
 
@@ -238,7 +225,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         return true;
     }
 
-    private static void ThrowIfAlError() {
+    private void ThrowIfAlError() {
         AudioError? error = _al?.GetError();
         if(error is AudioError.InvalidValue) {
             throw new InvalidDataException(error.ToString());

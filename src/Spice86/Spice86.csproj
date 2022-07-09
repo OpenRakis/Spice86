@@ -60,6 +60,8 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="Silk.NET.OpenAL" Version="2.15.0" />
+		<PackageReference Include="Silk.NET.OpenAL.Extensions.Soft" Version="2.15.0" />
 		<PackageReference Include="System.IO" Version="4.3.0" />
 		<PackageReference Include="System.IO.UnmanagedMemoryStream" Version="4.3.0" />
 		<PackageReference Include="System.Memory" Version="4.5.5" />
@@ -76,8 +78,5 @@
 	</ItemGroup>
 	<ItemGroup>
 		<AvaloniaResource Include="Icon\Spice86.ico" />
-	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\MicroAudio\MicroAudio.csproj" />
 	</ItemGroup>
 </Project>
