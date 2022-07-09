@@ -30,54 +30,19 @@ public class Memory {
         _uInt32Indexer = new(this);
     }
 
-    /// <summary>
-    /// Writes a string to memory as a null-terminated ANSI byte array.
-    /// </summary>
-    /// <param name="segment">Segment to write string.</param>
-    /// <param name="offset">Offset to write string.</param>
-    /// <param name="value">String to write to the specified address.</param>
-    /// <param name="writeNull">Value indicating whether a null should be written after the string.</param>
-    public void SetString(uint segment, uint offset, string value, bool writeNull) {
-        byte[]? buffer = ArrayPool<byte>.Shared.Rent(value.Length);
-        try {
-            uint length = (uint)Encoding.Latin1.GetBytes(value, buffer);
-            for (uint i = 0; i < length; i++) {
-                this.SetUint8(offset + i, buffer[(int)i]);
-            }
-
-            if (writeNull) {
-                this.SetUint8(offset + length, 0);
-            }
-        } finally {
-            ArrayPool<byte>.Shared.Return(buffer);
-        }
-    }
-
-    /// <summary>
-    /// Writes a string to memory as a null-terminated ANSI byte array.
-    /// </summary>
-    /// <param name="segment">Segment to write string.</param>
-    /// <param name="offset">Offset to write string.</param>
-    /// <param name="value">String to write to the specified address.</param>
-    public void SetString(uint segment, uint offset, string value) => SetString(segment, offset, value, true);
-
     public void DumpToFile(string path) {
         File.WriteAllBytes(path, _physicalMemory);
     }
 
-    public byte[] GetData(uint address, uint length) {
+    public Span<byte> GetSpan(uint address, uint length) {
         MonitorRangeReadAccess(address, address + length);
-        byte[] res = new byte[length];
-        Array.Copy(_physicalMemory, address, res, 0, length);
-        return res;
+        return _physicalMemory.AsSpan((int)address, (int)length);
     }
 
     public byte[] Ram => _physicalMemory;
-
-    public int Size => _physicalMemory.Length;
-
     
-
+    public int Size => _physicalMemory.Length;
+    
     public UInt8Indexer UInt8 => _uint8Indexer;
     public UInt16Indexer UInt16 => _uInt16Indexer;
     public UInt32Indexer UInt32 => _uInt32Indexer;
