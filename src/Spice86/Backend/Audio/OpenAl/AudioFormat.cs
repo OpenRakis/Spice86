@@ -1,4 +1,4 @@
-﻿namespace MicroAudio;
+﻿namespace Spice86.Backend.Audio.OpenAl;
 
 /// <summary>
 /// Specifies an audio playback format.
