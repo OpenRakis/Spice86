@@ -283,7 +283,7 @@ public class DosFileManager {
 
         try {
             // Do not access Ram property directly to trigger breakpoints if needed
-            byte[] data = _memory.GetData(bufferAddress, writeLength);
+            Span<byte> data = _memory.GetSpan((int)bufferAddress, writeLength);
             file.RandomAccessFile.Write(data);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
@@ -605,7 +605,7 @@ public class DosFileManager {
 
     private DosFileOperationResult WriteToDevice(ushort fileHandle, ushort writeLength, uint bufferAddress) {
         string deviceName = GetDeviceName(fileHandle);
-        byte[] buffer = _memory.GetData(bufferAddress, writeLength);
+        Span<byte> buffer = _memory.GetSpan((int)bufferAddress, writeLength);
         Console.WriteLine(deviceName + ConvertUtils.ToString(buffer));
         return DosFileOperationResult.Value16(writeLength);
     }

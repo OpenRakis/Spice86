@@ -95,13 +95,13 @@ public class MachineTest {
 
         // GetData
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
-            memory.GetData(5, 10);
+            memory.GetSpan(5, 10);
             // Should not trigger for this
-            memory.GetData(0, 5);
-            memory.GetData(6, 5);
+            memory.GetSpan(0, 5);
+            memory.GetSpan(6, 5);
         });
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
-            memory.GetData(0, 6);
+            memory.GetSpan(0, 6);
         });
 
         // LoadData
