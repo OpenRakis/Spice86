@@ -1,10 +1,12 @@
 ﻿namespace Spice86.Emulator.Sound;
 
+using Backend.Audio.OpenAl;
+
 using System;
 using System.Runtime.Versioning;
 using System.Threading;
 
-using MicroAudio;
+using Spice86.Backend.Audio.OpenAl;
 
 internal static class Audio {
     public static AudioPlayer? CreatePlayer() {

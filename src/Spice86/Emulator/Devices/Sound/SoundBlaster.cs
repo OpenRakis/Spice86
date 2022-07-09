@@ -2,13 +2,13 @@
 
 using Serilog;
 
+using Spice86.Backend.Audio.OpenAl;
+
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Memory;
 using Spice86.Emulator.Sound;
 using Spice86.Emulator.Sound.Blaster;
 using Spice86.Emulator.VM;
-
-using MicroAudio;
 
 using System;
 using System.Collections.Generic;

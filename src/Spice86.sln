@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86", "Spice86\Spice86.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Tests", "Spice86.Tests\Spice86.Tests.csproj", "{EF777E70-34DB-48CD-B10F-BF49CB328414}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroAudio", "MicroAudio\MicroAudio.csproj", "{5FD708C6-D8D3-4504-86C8-A36181A33F82}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,10 +25,6 @@ Global
 		{168FB07F-AAAF-48EB-B2CE-FCA06274F3C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{168FB07F-AAAF-48EB-B2CE-FCA06274F3C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{168FB07F-AAAF-48EB-B2CE-FCA06274F3C5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5FD708C6-D8D3-4504-86C8-A36181A33F82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5FD708C6-D8D3-4504-86C8-A36181A33F82}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5FD708C6-D8D3-4504-86C8-A36181A33F82}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5FD708C6-D8D3-4504-86C8-A36181A33F82}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
