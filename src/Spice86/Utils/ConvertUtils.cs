@@ -145,6 +145,10 @@ public static class ConvertUtils {
         return Encoding.ASCII.GetString(value);
     }
 
+    public static string ToString(Span<byte> value) {
+        return Encoding.ASCII.GetString(value);
+    }
+    
     public static ushort Uint16(ushort value) {
         return (ushort)(value & 0xFFFF);
     }
