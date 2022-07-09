@@ -153,13 +153,16 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             }
         } else if(_alBuffers.Count < MaxAlBuffers) {
             byte[]? data = null;
+            //TODO: Try to avoid this allocation. Use byte[] for all the call stack.
+            // Easier said than done !
+            // The more allocations we avoid along the way
+            // The better the Debug performance is.
             byte[] inputToArray = input.ToArray();
             uint buffer = GenerateNewOpenAlBuffer();
             TryEnqueueData(buffer, inputToArray, ref data);
         } else {
             return 0;
         }
-        Play();
         return input.Length;
     }
 
@@ -178,6 +181,9 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         {
             data = inputToArray[..data.Length];
         }
+        // We keep the backbuffer stuff just in case
+        // it is not used anymore at runtime
+        // Which means OpenAL accepts all buffers.
         if(_backBuffer.TryPeek(out _))
         {
             while (_backBuffer.TryPop(out byte[]? bytes)) {
@@ -197,18 +203,9 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private bool TryQueueBuffer(uint buffer, byte[] currentBytes)
     {
         if (TryBufferData(buffer, currentBytes)) {
-            SourceState state = GetSourceState();
-            if (state is SourceState.Playing or SourceState.Paused)
-            {
-                _al?.SourceQueueBuffers(_source, 1, &buffer);
-                ThrowIfAlError();
-            }
-            else
-            {
-                Play();
-                _al?.SourceQueueBuffers(_source, 1, &buffer);
-                ThrowIfAlError();
-            }
+           _al?.SourceQueueBuffers(_source, 1, &buffer);
+            ThrowIfAlError();
+            Play();
             return true;
         }
         return false;
