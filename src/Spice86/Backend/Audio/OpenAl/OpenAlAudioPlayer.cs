@@ -183,7 +183,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         }
         // We keep the backbuffer stuff just in case
         // it is not used anymore at runtime
-        // Which means OpenAL accepts all buffers.
+        // Which means OpenAL accepts all our  buffer data sizes.
         if(_backBuffer.TryPeek(out _))
         {
             while (_backBuffer.TryPop(out byte[]? bytes)) {
@@ -192,12 +192,8 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
                 Array.Copy(data, 0, newData, bytes.Length, data.Length);
                 data = newData;
             }
-            return TryQueueBuffer(buffer, data);
         }
-        else
-        {
-            return TryQueueBuffer(buffer, data);
-        }
+        return TryQueueBuffer(buffer, data);
     }
 
     private bool TryQueueBuffer(uint buffer, byte[] currentBytes)
