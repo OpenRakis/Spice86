@@ -4,8 +4,6 @@ using Serilog;
 
 using Silk.NET.OpenAL;
 
-using Spice86.Backend.Audio.OpenAl;
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,7 +14,6 @@ using System.Threading;
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private readonly ILogger _logger = Program.Logger.ForContext<OpenAlAudioPlayer>();
     private const int MaxAlBuffers = 100;
-    private readonly Stack<byte[]> _backBuffer = new();
     private readonly AL? _al;
     private static ALContext? _alContext;
     private static Device* _device = null;
@@ -116,11 +113,9 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         int state = 0;
         _al?.GetSourceProperty(_source, GetSourceInteger.SourceState, out state);
         var currentState = (SourceState) state;
-#if DEBUG
-        if (currentState != SourceState.Playing && System.Diagnostics.Debugger.IsAttached) {
-            _logger.Warning("{@Source} was not playing, it is {@State}", _source, currentState);
+        if (currentState == SourceState.Stopped) {
+            //_logger.Warning("{@Source} was not playing, it is {@State}", _source, currentState);
         }
-#endif
         return currentState;
     }
 
@@ -140,82 +135,43 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         }
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out int processed);
         if (processed > 0) {
-            byte[]? data = null;
-            byte[] inputToArray = input.ToArray();
             while (processed > 0) {
                 uint buffer = 0;
                 _al.SourceUnqueueBuffers(_source, 1, &buffer);
                 _al.GetError();
-                if (!TryEnqueueData(buffer, inputToArray, ref data)) {
+                if (TryBufferData(buffer, input)) {
+                    Play();
+                }
+                else
+                {
                     break;
                 }
                 processed--;
             }
         } else if(_alBuffers.Count < MaxAlBuffers) {
-            byte[]? data = null;
-            //TODO: Try to avoid this allocation. Use byte[] for all the call stack.
-            // Easier said than done !
-            // The more allocations we avoid along the way
-            // The better the Debug performance is.
-            byte[] inputToArray = input.ToArray();
             uint buffer = GenerateNewOpenAlBuffer();
-            TryEnqueueData(buffer, inputToArray, ref data);
+            if(TryBufferData(buffer, input)) {
+                Play();
+            }
         } else {
             return 0;
         }
         return input.Length;
     }
 
-    private bool TryEnqueueData(uint buffer, byte[] inputToArray, ref byte[]? data)
+    private bool TryBufferData(uint buffer, ReadOnlySpan<byte> input)
     {
-        if (buffer == 0 || inputToArray.Length - data?.Length <= 0)
+        if (buffer == 0)
         {
             return false;
         }
-
-        if (data is null)
-        {
-            data = inputToArray;
-        }
-        else
-        {
-            data = inputToArray[..data.Length];
-        }
-        // We keep the backbuffer stuff just in case
-        // it is not used anymore at runtime
-        // Which means OpenAL accepts all our  buffer data sizes.
-        if(_backBuffer.TryPeek(out _))
-        {
-            while (_backBuffer.TryPop(out byte[]? bytes)) {
-                byte[] newData = new byte[bytes.Length + data.Length];
-                Array.Copy(bytes, newData, bytes.Length);
-                Array.Copy(data, 0, newData, bytes.Length, data.Length);
-                data = newData;
-            }
-        }
-        return TryQueueBuffer(buffer, data);
-    }
-
-    private bool TryQueueBuffer(uint buffer, byte[] currentBytes)
-    {
-        if (TryBufferData(buffer, currentBytes)) {
-           _al?.SourceQueueBuffers(_source, 1, &buffer);
+        _al?.BufferData(buffer, _openAlBufferFormat, input.ToArray(), Format.SampleRate);
+        if (_al?.GetError() != AudioError.InvalidValue) {
+            _al?.SourceQueueBuffers(_source, 1, &buffer);
             ThrowIfAlError();
-            Play();
             return true;
         }
         return false;
-    }
-
-    private bool TryBufferData(uint buffer, byte[] data)
-    {
-        _al?.BufferData(buffer, _openAlBufferFormat, data, Format.SampleRate);
-        if (_al?.GetError() == AudioError.InvalidValue)
-        {
-            _backBuffer.Push(data);
-            return false;
-        }
-        return true;
     }
 
     private void ThrowIfAlError() {
