@@ -8,14 +8,14 @@ using System.Runtime.Versioning;
 /// </summary>
 [SupportedOSPlatform("windows")]
 internal sealed class WindowsMidiMapper : MidiDevice {
-    private IntPtr midiOutHandle;
+    private IntPtr _midiOutHandle;
 
     public WindowsMidiMapper() {
-        NativeMethods.midiOutOpen(out midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
+        NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
     }
     ~WindowsMidiMapper() => Dispose(false);
 
-    protected override void PlayShortMessage(uint message) => NativeMethods.midiOutShortMsg(midiOutHandle, message);
+    protected override void PlayShortMessage(uint message) => NativeMethods.midiOutShortMsg(_midiOutHandle, message);
     protected override void PlaySysex(ReadOnlySpan<byte> data) { }
     public override void Pause() {
         // ... don't pause ...
@@ -28,9 +28,9 @@ internal sealed class WindowsMidiMapper : MidiDevice {
     }
 
     protected override void Dispose(bool disposing) {
-        if (midiOutHandle != IntPtr.Zero) {
-            NativeMethods.midiOutClose(midiOutHandle);
-            midiOutHandle = IntPtr.Zero;
+        if (_midiOutHandle != IntPtr.Zero) {
+            NativeMethods.midiOutClose(_midiOutHandle);
+            _midiOutHandle = IntPtr.Zero;
         }
     }
 }

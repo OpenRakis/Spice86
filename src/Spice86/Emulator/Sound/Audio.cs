@@ -1,48 +1,42 @@
 ﻿namespace Spice86.Emulator.Sound;
 
+using Backend.Audio.OpenAl;
+
 using System;
 using System.Runtime.Versioning;
 using System.Threading;
 
-using TinyAudio;
+using Spice86.Backend.Audio.OpenAl;
 
-[SupportedOSPlatform("windows")]
 internal static class Audio {
-    public static AudioPlayer? CreatePlayer(bool useCallback = false) {
-        if (OperatingSystem.IsWindows()) {
-            return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+    public static AudioPlayer? CreatePlayer() {
+        if (OperatingSystem.IsBrowser()) {
+            return null;
         }
-        return null;
+        var xplatAudioPlayer = OpenAlAudioPlayer.Create();
+        return xplatAudioPlayer;
     }
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer) {
         ReadOnlySpan<float> writeBuffer = buffer;
 
         while (true) {
-            if (OperatingSystem.IsWindows()) {
-                int count = (int)player.WriteData(writeBuffer);
-                writeBuffer = writeBuffer[count..];
-                if (writeBuffer.IsEmpty) {
-                    return;
-                }
+            int count = (int)player.WriteData(writeBuffer);
+            writeBuffer = writeBuffer[count..];
+            if (writeBuffer.IsEmpty) {
+                return;
             }
-            Thread.Sleep(1);
         }
     }
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<short> buffer) {
         ReadOnlySpan<short> writeBuffer = buffer;
 
         while (true) {
-            if (!OperatingSystem.IsWindows()) {
-                return;
-            }
             int count = (int)player.WriteData(writeBuffer);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty) {
                 return;
             }
-
-            Thread.Sleep(1);
         }
     }
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<byte> buffer) {
@@ -57,16 +51,11 @@ internal static class Audio {
         var span = new ReadOnlySpan<float>(floatArray);
 
         while (true) {
-            if (!OperatingSystem.IsWindows()) {
-                return;
-            }
             int count = (int)player.WriteData(span);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty) {
                 return;
             }
-
-            Thread.Sleep(1);
         }
     }
 }

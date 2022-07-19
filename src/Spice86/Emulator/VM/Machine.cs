@@ -31,6 +31,8 @@ using System.Collections.Generic;
 public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
     private readonly ProgramExecutor _programExecutor;
+    private readonly HashSet<DmaChannel> _dmaDeviceChannels = new();
+    private bool _disposed;
 
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
@@ -86,9 +88,9 @@ public class Machine : IDisposable {
 
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
     public DmaController DmaController { get; }
+
     /// <summary>
     /// Gets the current DOS environment variables.
-    /// TODO: Make use of it by allocating the block of memory corresponding to it in virtual memory.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
     public OPL3FM OPL3FM { get; }
@@ -199,7 +201,7 @@ public class Machine : IDisposable {
             }
 
             DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-            dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+            _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
         }
     }
 
@@ -224,13 +226,30 @@ public class Machine : IDisposable {
     }
 
     public bool IsPaused { get; private set; }
+    public bool IsAnyDmaChannelActive {
+        get {
+            foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
+                ;
+                if (dmaChannel.IsActive && !dmaChannel.IsMasked) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private bool _exitEmulationLoop = false;
+
+    public void ExitEmulationLoop() => _exitEmulationLoop = true;
 
     private void RunLoop() {
-        while (Cpu.IsRunning) {
+        _exitEmulationLoop = false;
+        while (Cpu.IsRunning && !_exitEmulationLoop) {
             if (Gui?.IsPaused == true) {
                 IsPaused = true;
                 Paused?.Invoke();
                 if (_programExecutor.Step() == false) {
+                    Gui.IsPaused = true;
                     Gui?.WaitOne();
                 }
                 Resumed?.Invoke();
@@ -253,9 +272,6 @@ public class Machine : IDisposable {
         return "null";
     }
 
-    private readonly List<DmaChannel> dmaDeviceChannels = new();
-    private bool disposedValue;
-
     /// <summary>
     /// Performs any pending DMA transfers.
     /// </summary>
@@ -263,22 +279,21 @@ public class Machine : IDisposable {
     /// This method must be called frequently in the main emulation loop for DMA transfers to function properly.
     /// </remarks>
     internal void PerformDmaTransfers() {
-        for (int i = 0; i < dmaDeviceChannels.Count; i++) {
-            DmaChannel? channel = this.dmaDeviceChannels[i];
-            if (channel.IsActive && !channel.IsMasked) {
-                channel.Transfer(this.Memory);
+        foreach (DmaChannel? dmaChannel in _dmaDeviceChannels) {
+            if (dmaChannel.IsActive && !dmaChannel.IsMasked) {
+                dmaChannel.Transfer(this.Memory);
             }
         }
     }
 
     protected virtual void Dispose(bool disposing) {
-        if (!disposedValue) {
+        if (!_disposed) {
             if (disposing) {
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 MachineBreakpoints.Dispose();
             }
-            disposedValue = true;
+            _disposed = true;
         }
     }
 

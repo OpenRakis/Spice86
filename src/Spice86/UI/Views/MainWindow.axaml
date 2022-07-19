@@ -21,6 +21,10 @@
 		<DockPanel LastChildFill="True">
 			<Grid ColumnDefinitions="Auto, *" DockPanel.Dock="Top">
 				<Menu Grid.Column="0">
+					<MenuItem Header="Program">
+						<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
+						<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Start the executable paused, to be used with GDB"></MenuItem>
+					</MenuItem>
 					<MenuItem Header="Debug">
 						<MenuItem Header="Color Palette" Command="{Binding ShowColorPaletteCommand}" />
 						<MenuItem Header="Performance" Command="{Binding ShowPerformanceCommand}" />
@@ -30,7 +34,7 @@
 				</Menu>
 				<Grid HorizontalAlignment="Center" Grid.Column="1" ColumnDefinitions="Auto,Auto,120,Auto,Auto">
 					<Button Grid.Column="0" Content="⏸︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
-					<Button Grid.Column="0" Content="⏵︎" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
+					<Button Grid.Column="0" Content="⏵︎" Command="{Binding ContinueCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
 					<Label VerticalAlignment="Center" Grid.Column="1" Content="Time Modifier" />
 					<NumericUpDown Grid.Column="2" Margin="5,0,0,0" Text="{Binding TimeMultiplier}" Minimum="1" />
 					<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />

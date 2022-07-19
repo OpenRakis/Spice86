@@ -364,7 +364,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     public UnrecoverableException FailAsUntested(string message) {
         string error =
-            $"Untested code reached, please tell us how to reach this state. Here is the message: {message}. Here is the Machine stack: {State.ToString()}";
+            $"Untested code reached, please tell us how to reach this state. Here is the message: {message}. Here is the Machine stack: {State}";
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
             _logger.Error("{Error}", error);
         }

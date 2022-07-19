@@ -12,18 +12,18 @@ public class Configuration {
     public string? Mt32RomsPath { get; init; }
 
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]
-    public string? CDrive { get; init; }
+    public string? CDrive { get; set; }
 
     [Option('r', nameof(RecordedDataDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to working directory")]
     public string RecordedDataDirectory { get; init; } =
         Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER") ?? Environment.CurrentDirectory;
 
 
-    [Option('e', nameof(Exe), Default = null, Required = true, HelpText = "Path to executable")]
+    [Option('e', nameof(Exe), Default = null, Required = false, HelpText = "Path to executable")]
     public string? Exe { get; set; }
 
     [Option('a', nameof(ExeArgs), Default = null, Required = false, HelpText = "List of parameters to give to the emulated program")]
-    public string? ExeArgs { get; init; }
+    public string? ExeArgs { get; set; }
 
 
     [Option('x', nameof(ExpectedChecksum), Default = null, Required = false, HelpText = "Hexadecimal string representing the expected checksum of the emulated program")]
@@ -74,7 +74,7 @@ public class Configuration {
     
     [Option('l', nameof(Logs), Default = false, Required = false, HelpText = "Enable warning level logs")]
     public bool Logs { get; set; }
-    
+
     [Option('h', nameof(HeavyLogs), Default = false, Required = false, HelpText = "Enable verbose level logs")]
     public bool HeavyLogs { get; init; }
 

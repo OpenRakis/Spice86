@@ -2,13 +2,12 @@
 
 using Serilog;
 
-using Spice86.Emulator.CPU;
 using Spice86.Emulator.Devices.Video;
 using Spice86.Emulator.Function;
 using Spice86.Emulator.Function.Dump;
+using Spice86.Emulator.Memory;
 using Spice86.Emulator.VM;
 using Spice86.Emulator.VM.Breakpoint;
-using Spice86.Emulator.Memory;
 using Spice86.Utils;
 
 using System;
@@ -19,6 +18,7 @@ using System.Text;
 using Spice86.UI.ViewModels;
 
 using System.Reflection;
+using Spice86.Emulator.CPU;
 
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
@@ -75,21 +75,39 @@ public class GdbCustomCommandsHandler {
         }
 
         string cyclesToWaitString = args[1];
-        if (!int.TryParse(cyclesToWaitString, out _)) {
-            return InvalidCommand($"breakCycles argument needs to be a number. You gave {cyclesToWaitString}");
-        }
+        if (long.TryParse(cyclesToWaitString, out var cyclesToWait)) {
+            long currentCycles = _machine.Cpu.State.Cycles;
+            long cyclesBreak = currentCycles + cyclesToWait;
+            var breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
+            _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
+            }
 
-        long cyclesToWait = long.Parse(cyclesToWaitString);
-        long currentCycles = _machine.Cpu.State.Cycles;
-        long cyclesBreak = currentCycles + cyclesToWait;
-        var breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
-        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
+            return _gdbIo.GenerateMessageToDisplayResponse(
+                $"Breakpoint added for cycles. Current cycles is {currentCycles}. Will wait for {cyclesToWait}. Will stop at {cyclesBreak}");
         }
+        return InvalidCommand($"breakCycles argument needs to be a number. You gave {cyclesToWaitString}");
+    }
 
-        return _gdbIo.GenerateMessageToDisplayResponse(
-            $"Breakpoint added for cycles. Current cycles is {currentCycles}. Will wait for {cyclesToWait}. Will stop at {cyclesBreak}");
+    private string BreakCsIp(string[] args) {
+        if (args.Length < 3) {
+            return InvalidCommand("breakCsIp can only work with two arguments.");
+        }
+        try {
+            uint cs = ConvertUtils.ParseHex32(args[1]);
+            uint ip = ConvertUtils.ParseHex32(args[2]);
+            var breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
+            _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _logger.Debug("Breakpoint added for cs:ip!\n{@BreakPoint}", breakPoint);
+            }
+
+            return _gdbIo.GenerateMessageToDisplayResponse(
+                $"Breakpoint added for cs:ip. Current cs:ip is {_machine.Cpu.State.CS}:{_machine.Cpu.State.IpPhysicalAddress}. Will stop at {cs}:{ip}");
+        } catch (FormatException fe) {
+            return InvalidCommand($"breakCsIp arguments need to be two numbers. You gave {args[1]}:{args[2]}");
+        }
     }
 
     private string BreakStop() {
@@ -146,6 +164,7 @@ public class GdbCustomCommandsHandler {
             "peekret" => PeekRet(args),
             "dumpall" => DumpAll(),
             "breakcycles" => BreakCycles(args),
+            "breakcsip" => BreakCsIp(args),
             "vbuffer" => Vbuffer(args),
             _ => InvalidCommand(originalCommand),
         };
@@ -241,6 +260,7 @@ Supported custom commands:
  -help: display this
  - dumpAll: dumps everything possible in the default directory which is {_recordedDataWriter.DumpDirectory}
  - breakCycles <number of cycles to wait before break>: breaks after the given number of cycles is reached
+ - breakCsIp <number for CS, number for IP>: breaks once CS and IP match and before the instruction is executed
  - breakStop: setups a breakpoint when machine shuts down
  - callStack: dumps the callstack to see in which function you are in the VM.
  - peekRet<optional type>: displays the return address of the current function as stored in the stack in RAM.If a parameter is provided, dump the return on the stack as if the return was one of the provided type. Valid values are: {GetValidRetValues()}
@@ -273,7 +293,7 @@ Supported custom commands:
         }
 
         try {
-            return new[] {int.Parse(split[0]), int.Parse(split[1])};
+            return new[] { int.Parse(split[0]), int.Parse(split[1]) };
         } catch (FormatException nfe) {
             throw new ArgumentException($"Could not parse numbers in resolution {resolution}", nfe);
         }

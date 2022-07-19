@@ -1,8 +1,6 @@
 ﻿namespace Spice86.Emulator.Sound.Midi;
 
-using Spice86.Emulator.Devices;
 using Spice86.Emulator.Sound.Midi.MT32;
-using Spice86.Emulator.VM;
 
 using System;
 using System.Collections.Generic;
@@ -11,8 +9,8 @@ using System.Collections.Generic;
 /// Virtual device which emulates general midi playback.
 /// </summary>
 public sealed class GeneralMidi {
-    private MidiDevice? midiMapper;
-    private readonly Queue<byte> dataBytes = new();
+    private MidiDevice? _midiMapper;
+    private readonly Queue<byte> _dataBytes = new();
 
     private const int DataPort = 0x330;
     private const int StatusPort = 0x331;
@@ -50,7 +48,7 @@ public sealed class GeneralMidi {
         get {
             GeneralMidiStatus status = GeneralMidiStatus.OutputReady;
 
-            if (dataBytes.Count > 0) {
+            if (_dataBytes.Count > 0) {
                 status |= GeneralMidiStatus.InputReady;
             }
 
@@ -62,8 +60,8 @@ public sealed class GeneralMidi {
     public byte ReadByte(int port) {
         switch (port) {
             case DataPort:
-                if (dataBytes.Count > 0) {
-                    return dataBytes.Dequeue();
+                if (_dataBytes.Count > 0) {
+                    return _dataBytes.Dequeue();
                 } else {
                     return 0;
                 }
@@ -81,24 +79,28 @@ public sealed class GeneralMidi {
     public void WriteByte(int port, byte value) {
         switch (port) {
             case DataPort:
-                if (midiMapper == null && OperatingSystem.IsWindows()) {
-                    midiMapper = UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath, Configuration) : new WindowsMidiMapper();
+                if (_midiMapper is null) {
+                    if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
+                        _midiMapper = new Mt32MidiDevice(this.Mt32RomsPath, Configuration);
+                    } else if(OperatingSystem.IsWindows()) {
+                        _midiMapper = new WindowsMidiMapper();
+                    }
                 }
 
-                midiMapper?.SendByte(value);
+                _midiMapper?.SendByte(value);
                 break;
 
             case StatusPort:
                 switch (value) {
                     case ResetCommand:
                         State = GeneralMidiState.NormalMode;
-                        dataBytes.Clear();
-                        dataBytes.Enqueue(CommandAcknowledge);
+                        _dataBytes.Clear();
+                        _dataBytes.Enqueue(CommandAcknowledge);
                         break;
 
                     case EnterUartModeCommand:
                         State = GeneralMidiState.UartMode;
-                        dataBytes.Enqueue(CommandAcknowledge);
+                        _dataBytes.Enqueue(CommandAcknowledge);
                         break;
                 }
                 break;
@@ -107,14 +109,14 @@ public sealed class GeneralMidi {
     public void WriteWord(int port, ushort value) => this.WriteByte(port, (byte)value);
 
     public void Pause() {
-        midiMapper?.Pause();
+        _midiMapper?.Pause();
     }
     public void Resume() {
-        midiMapper?.Resume();
+        _midiMapper?.Resume();
     }
     public void Dispose() {
-        midiMapper?.Dispose();
-        midiMapper = null;
+        _midiMapper?.Dispose();
+        _midiMapper = null;
     }
 
     [Flags]
