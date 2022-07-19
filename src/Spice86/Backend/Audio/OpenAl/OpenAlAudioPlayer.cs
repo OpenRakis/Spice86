@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Versioning;
-using System.Threading;
 
 [UnsupportedOSPlatform("browser")]
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
@@ -22,8 +21,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private bool _disposed = false;
     private readonly BufferFormat _openAlBufferFormat;
     private readonly Dictionary<uint, uint> _alBuffers = new();
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
-
     private OpenAlAudioPlayer(AudioFormat format) : base(format) {
         try {
             _al = AL.GetApi(true);
@@ -73,8 +70,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         _openAlBufferFormat = BufferFormat.Stereo16;
     }
 
-    private uint GenerateNewOpenAlBuffer()
-    {
+    private uint GenerateNewOpenAlBuffer() {
         if (_al is null) {
             throw new NullReferenceException(nameof(_al));
         }
@@ -86,14 +82,14 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
     public void Reset() {
         if (_source == 0) {
-            throw new NotSupportedException("Reset was called without a valid source.");
+            throw new NotSupportedException($"{nameof(Reset)} was called without a valid source.");
         }
         _al?.SetSourceProperty(_source, SourceInteger.Buffer, 0u);
     }
 
     protected override void Start(bool useCallback) {
         if (_source == 0) {
-            throw new NotSupportedException("Start was called without a valid source.");
+            throw new NotSupportedException($"{nameof(Start)} was called without a valid source.");
         }
         Play();
     }
@@ -108,8 +104,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         ThrowIfAlError();
     }
 
-    private SourceState GetSourceState()
-    {
+    private SourceState GetSourceState() {
         int state = 0;
         _al?.GetSourceProperty(_source, GetSourceInteger.SourceState, out state);
         var currentState = (SourceState) state;
@@ -121,7 +116,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
     protected override void Stop() {
         if (_source == 0) {
-            throw new NotSupportedException("Stop was called without a valid source.");
+            throw new NotSupportedException($"{nameof(Stop)} was called without a valid source.");
         }
         _al?.SourceStop(_source);
     }
@@ -135,43 +130,28 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         }
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out int processed);
         if (processed > 0) {
-            while (processed > 0) {
-                uint buffer = 0;
-                _al.SourceUnqueueBuffers(_source, 1, &buffer);
-                _al.GetError();
-                if (TryBufferData(buffer, input)) {
-                    Play();
-                }
-                else
-                {
-                    break;
-                }
-                processed--;
-            }
+            uint buffer = 0;
+            _al.SourceUnqueueBuffers(_source, 1, &buffer);
+            _al.GetError();
+            TryBufferData(buffer, input);
         } else if(_alBuffers.Count < MaxAlBuffers) {
             uint buffer = GenerateNewOpenAlBuffer();
-            if(TryBufferData(buffer, input)) {
-                Play();
-            }
+            TryBufferData(buffer, input);
         } else {
             return 0;
         }
         return input.Length;
     }
 
-    private bool TryBufferData(uint buffer, ReadOnlySpan<byte> input)
-    {
-        if (buffer == 0)
-        {
-            return false;
+    private void TryBufferData(uint buffer, ReadOnlySpan<byte> input) {
+        if (buffer == 0) {
+            throw new NotSupportedException($"${nameof(TryBufferData)} was called without a valid ${nameof(buffer)}.");
         }
         _al?.BufferData(buffer, _openAlBufferFormat, input.ToArray(), Format.SampleRate);
-        if (_al?.GetError() != AudioError.InvalidValue) {
-            _al?.SourceQueueBuffers(_source, 1, &buffer);
-            ThrowIfAlError();
-            return true;
-        }
-        return false;
+        ThrowIfAlError();
+        _al?.SourceQueueBuffers(_source, 1, &buffer);
+        ThrowIfAlError();
+        Play();
     }
 
     private void ThrowIfAlError() {
@@ -192,7 +172,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _cancellationTokenSource.Cancel();
                 Stop();
                 foreach (KeyValuePair<uint, uint> bufferIndex in _alBuffers) {
                     _al?.DeleteBuffer(bufferIndex.Key);
