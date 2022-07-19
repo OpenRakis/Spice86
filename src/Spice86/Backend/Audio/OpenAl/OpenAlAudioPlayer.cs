@@ -15,7 +15,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private const int MaxAlBuffers = 100;
     private readonly AL? _al;
     private static ALContext? _alContext;
-    private static Device* _device = null;
+    private readonly Device* _device = null;
     private static Context* _context = null;
     private readonly uint _source = 0;
     private bool _disposed = false;
@@ -133,19 +133,19 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             uint buffer = 0;
             _al.SourceUnqueueBuffers(_source, 1, &buffer);
             _al.GetError();
-            TryBufferData(buffer, input);
+            BufferData(buffer, input);
         } else if(_alBuffers.Count < MaxAlBuffers) {
             uint buffer = GenerateNewOpenAlBuffer();
-            TryBufferData(buffer, input);
+            BufferData(buffer, input);
         } else {
             return 0;
         }
         return input.Length;
     }
 
-    private void TryBufferData(uint buffer, ReadOnlySpan<byte> input) {
+    private void BufferData(uint buffer, ReadOnlySpan<byte> input) {
         if (buffer == 0) {
-            throw new NotSupportedException($"${nameof(TryBufferData)} was called without a valid ${nameof(buffer)}.");
+            throw new NotSupportedException($"${nameof(BufferData)} was called without a valid ${nameof(buffer)}.");
         }
         _al?.BufferData(buffer, _openAlBufferFormat, input.ToArray(), Format.SampleRate);
         ThrowIfAlError();
