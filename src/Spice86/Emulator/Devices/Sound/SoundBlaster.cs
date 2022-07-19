@@ -93,7 +93,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         _dsp.AutoInitBufferComplete += (o, e) => RaiseInterrupt();
         _playbackThread = new Thread(AudioPlayback) {
             IsBackground = true,
-            Priority = ThreadPriority.AboveNormal,
+            Priority = ThreadPriority.Highest,
             Name = "PCMAudio"
         };
         _playbackThread.Start();
