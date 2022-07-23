@@ -13,21 +13,23 @@ using System.Runtime.Versioning;
 public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private readonly ILogger _logger = Program.Logger.ForContext<OpenAlAudioPlayer>();
     private const int MaxAlBuffers = 100;
-    private readonly AL? _al;
+    private static AL? _al;
     private static ALContext? _alContext;
-    private readonly Device* _device = null;
+    private static Device* _device = null;
     private static Context* _context = null;
     private readonly uint _source = 0;
     private bool _disposed = false;
-    private readonly BufferFormat _openAlBufferFormat;
-    private readonly Dictionary<uint, uint> _alBuffers = new();
+    private const BufferFormat OpenAlBufferFormat = BufferFormat.Stereo16;
+    private readonly List<uint> _alBuffers = new();
+    private static int _numberOfOpenAlPlayerInstances = 0;
+
     private OpenAlAudioPlayer(AudioFormat format) : base(format) {
         try {
-            _al = AL.GetApi(true);
+            _al ??= AL.GetApi(true);
             _al.GetError();
             _alContext ??= ALContext.GetApi(true);
         } catch {
-            _al = AL.GetApi(false);
+            _al ??= AL.GetApi(false);
             _al.GetError();
             _alContext ??= ALContext.GetApi(false);
         }
@@ -50,7 +52,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             if (_context != null) {
                 _alContext.DestroyContext(_context);
             }
-
             _alContext.CloseDevice(_device);
             _al?.Dispose();
             _alContext.Dispose();
@@ -67,7 +68,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             _al?.SetSourceProperty(_source, SourceInteger.ByteOffset, 0);
             ThrowIfAlError();
         }
-        _openAlBufferFormat = BufferFormat.Stereo16;
+        _numberOfOpenAlPlayerInstances++;
     }
 
     private uint GenerateNewOpenAlBuffer() {
@@ -76,7 +77,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         }
         uint buffer = _al.GenBuffer();
         ThrowIfAlError();
-        _alBuffers.Add(buffer, buffer);
+        _alBuffers.Add(buffer);
         return buffer;
     }
 
@@ -147,8 +148,9 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         if (buffer == 0) {
             throw new NotSupportedException($"${nameof(BufferData)} was called without a valid ${nameof(buffer)}.");
         }
-        _al?.BufferData(buffer, _openAlBufferFormat, input.ToArray(), Format.SampleRate);
+        _al?.BufferData(buffer, OpenAlBufferFormat, input.ToArray(), Format.SampleRate);
         ThrowIfAlError();
+        Play();
         _al?.SourceQueueBuffers(_source, 1, &buffer);
         ThrowIfAlError();
         Play();
@@ -173,22 +175,22 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         if (!_disposed) {
             if (disposing) {
                 Stop();
-                foreach (KeyValuePair<uint, uint> bufferIndex in _alBuffers) {
-                    _al?.DeleteBuffer(bufferIndex.Key);
+                foreach (uint bufferIndex in _alBuffers) {
+                    _al?.DeleteBuffer(bufferIndex);
                     AudioError? error = _al?.GetError();
                     if (error != AudioError.NoError) {
                         Console.WriteLine($"OpenAL error while deleting buffer: {error}");
                     }
                 }
-                _alBuffers.Clear();
-                if (_device is not null) {
+                if(_numberOfOpenAlPlayerInstances == 1) {
                     _al?.DeleteSource(_source);
                     _alContext?.DestroyContext(_context);
                     _alContext?.CloseDevice(_device);
                     _al?.Dispose();
                     _alContext?.Dispose();
-                }
+                    }
             }
+            _numberOfOpenAlPlayerInstances--;
             _disposed = true;
         }
     }

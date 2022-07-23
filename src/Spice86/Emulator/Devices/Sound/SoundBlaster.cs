@@ -281,7 +281,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
                         return;
                     }
                 }
-
                 player.BeginPlayback();
             }
 

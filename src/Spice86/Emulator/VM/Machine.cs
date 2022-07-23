@@ -244,7 +244,7 @@ public class Machine : IDisposable {
 
     private void RunLoop() {
         _exitEmulationLoop = false;
-        while (Cpu.IsRunning && !_exitEmulationLoop) {
+        while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
             if (Gui?.IsPaused == true) {
                 IsPaused = true;
                 Paused?.Invoke();
