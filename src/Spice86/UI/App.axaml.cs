@@ -34,7 +34,7 @@ public partial class App : Application {
             desktop.MainWindow = new MainWindow {
                 DataContext = mainViewModel,
             };
-            desktop.MainWindow.Closed += (s, e) => mainViewModel.Exit();
+            desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();
 
             desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
             MainWindow = (MainWindow)desktop.MainWindow;

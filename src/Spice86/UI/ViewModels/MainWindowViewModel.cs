@@ -99,6 +99,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         _configuration = configuration;
         if (configuration is null) {
             Exit();
+            Environment.Exit(0);
         }
         SetMainTitle();
     }
@@ -243,13 +244,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     }
 
     public void Exit() {
-        Dispatcher.UIThread.Post(() => {
-            if (Design.IsDesignMode) {
-                return;
-            }
-            this.Dispose();
-        }, DispatcherPriority.MaxValue);
-        Environment.Exit(0);
+        this.Dispose();
     }
 
     public int Height { get; private set; }
@@ -269,7 +264,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     public bool IsLeftButtonClicked { get; private set; }
 
     public bool IsRightButtonClicked { get; private set; }
-
     public void OnMainWindowOpened(object? sender, EventArgs e) => RunEmulator();
 
     private void RunEmulator() {
@@ -326,6 +320,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         if (!_disposedValue) {
             if (disposing) {
                 DisposeEmulator();
+                if(_emulatorThread?.IsAlive == true) {
+                    _emulatorThread.Join();
+                }
             }
             _disposedValue = true;
         }
@@ -364,9 +361,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
                     _logger.Error(e, "An error occurred during execution");
                 }
             }
-        }
-        if (!_restartingEmulator) {
-            Exit();
         }
     }
 

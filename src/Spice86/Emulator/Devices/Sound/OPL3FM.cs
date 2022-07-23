@@ -7,8 +7,6 @@ using Spice86.Emulator.Sound;
 using Spice86.Emulator.VM;
 
 using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 using Ymf262Emu;
 
@@ -51,18 +49,18 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     }
 
     public void Dispose() {
-        if (this._initialized) {
-            if (!_paused) {
-                this._endThread = true;
+        if (!_paused) {
+            this._endThread = true;
+            if(_playbackThread.IsAlive){
                 this._playbackThread.Join();
             }
-            this._audioPlayer?.Dispose();
-            this._initialized = false;
         }
+        this._audioPlayer?.Dispose();
+        this._initialized = false;
     }
 
     public void Pause() {
-        if (this._initialized && !this._paused) {
+        if (this._initialized && !this._paused && _playbackThread.IsAlive) {
             this._endThread = true;
             this._playbackThread.Join();
             this._paused = true;
@@ -163,7 +161,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     }
 
     /// <summary>
-    /// Performs DirectSound initialization.
+    /// Performs sound initialization.
     /// </summary>
     private void Initialize() {
         this._playbackThread.Start();
