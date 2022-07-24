@@ -22,6 +22,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     private const BufferFormat OpenAlBufferFormat = BufferFormat.Stereo16;
     private readonly List<uint> _alBuffers = new();
     private static int _numberOfOpenAlPlayerInstances = 0;
+    private bool _started;
 
     private OpenAlAudioPlayer(AudioFormat format) : base(format) {
         try {
@@ -92,15 +93,15 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         if (_source == 0) {
             throw new NotSupportedException($"{nameof(Start)} was called without a valid source.");
         }
+        _started = true;
         Play();
     }
 
     private void Play() {
         SourceState currentState = GetSourceState();
-        if (currentState == SourceState.Playing) {
+        if (currentState == SourceState.Playing && _started) {
             return;
         }
-
         _al?.SourcePlay(_source);
         ThrowIfAlError();
     }
@@ -120,6 +121,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
             throw new NotSupportedException($"{nameof(Stop)} was called without a valid source.");
         }
         _al?.SourceStop(_source);
+        _started = false;
     }
 
     /// <summary>
@@ -150,7 +152,6 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
         }
         _al?.BufferData(buffer, OpenAlBufferFormat, input.ToArray(), Format.SampleRate);
         ThrowIfAlError();
-        Play();
         _al?.SourceQueueBuffers(_source, 1, &buffer);
         ThrowIfAlError();
         Play();
