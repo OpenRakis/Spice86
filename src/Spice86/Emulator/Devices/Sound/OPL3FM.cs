@@ -38,7 +38,6 @@ public sealed class OPL3FM : DefaultIOPortHandler {
         }
         this._playbackThread = new System.Threading.Thread(this.GenerateWaveforms) {
             IsBackground = true,
-            Priority = System.Threading.ThreadPriority.Highest,
             Name = "OPLAudio"
         };
     }
