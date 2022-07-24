@@ -229,7 +229,6 @@ public class Machine : IDisposable {
     public bool IsAnyDmaChannelActive {
         get {
             foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
-                ;
                 if (dmaChannel.IsActive && !dmaChannel.IsMasked) {
                     return true;
                 }
