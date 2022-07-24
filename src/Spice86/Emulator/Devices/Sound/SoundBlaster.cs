@@ -132,7 +132,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             case Ports.MixerData:
                 return _mixer.ReadData();
         }
-
         return 0;
     }
 
@@ -200,6 +199,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             _endPlayback = true;
             _playbackThread.Join();
         }
+        GC.SuppressFinalize(this);
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
