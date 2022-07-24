@@ -226,16 +226,6 @@ public class Machine : IDisposable {
     }
 
     public bool IsPaused { get; private set; }
-    public bool IsAnyDmaChannelActive {
-        get {
-            foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
-                if (dmaChannel.IsActive && !dmaChannel.IsMasked) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
 
     private bool _exitEmulationLoop = false;
 
