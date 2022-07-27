@@ -173,6 +173,10 @@ public sealed class DmaChannel {
             this._countByteWritten = !this._countByteWritten;
         }
     }
+
+    public bool MustTransferData =>
+        Device is not null && this._transferTimer.ElapsedTicks >= this.TransferPeriod;
+
     /// <summary>
     /// Performs a DMA transfer.
     /// </summary>
@@ -182,7 +186,7 @@ public sealed class DmaChannel {
     /// </remarks>
     internal void Transfer(Memory memory) {
         IDmaDevice8? device = this.Device;
-        if (device is not null && this._transferTimer.ElapsedTicks >= this.TransferPeriod) {
+        if (MustTransferData && device is not null) {
             uint memoryAddress = ((uint)this.Page << 16) | this.Address;
             uint sourceOffset = (uint)this.Count + 1 - (uint)this.TransferBytesRemaining;
 
