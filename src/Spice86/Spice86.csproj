@@ -68,7 +68,7 @@
 		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<PackageReference Include="Avalonia" Version="0.10.17" />
-		<PackageReference Include="Avalonia.Desktop" Version="0.10.16" />
+		<PackageReference Include="Avalonia.Desktop" Version="0.10.17" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.17" />
 		<PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
