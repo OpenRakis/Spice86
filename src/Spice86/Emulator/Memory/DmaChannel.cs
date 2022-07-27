@@ -191,10 +191,10 @@ public sealed class DmaChannel {
             uint sourceOffset = (uint)this.Count + 1 - (uint)this.TransferBytesRemaining;
 
             int count = Math.Min(this.TransferChunkSize, this.TransferBytesRemaining);
-            Span<byte> source = memory.GetSpan((int)(memoryAddress + sourceOffset), count);
+            int startAddress = (int)(memoryAddress + sourceOffset);
+            Span<byte> source = memory.GetSpan(startAddress, count);
 
             count = device.WriteBytes(source);
-
             this.TransferBytesRemaining -= count;
 
             if (this.TransferBytesRemaining <= 0) {
@@ -205,9 +205,7 @@ public sealed class DmaChannel {
                     this.TransferBytesRemaining = this.Count + 1;
                 }
             }
-
-            this._transferTimer.Reset();
-            this._transferTimer.Start();
+            this._transferTimer.Restart();
         }
     }
 }
