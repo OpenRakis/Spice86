@@ -237,7 +237,7 @@ public class Machine : IDisposable {
             if (Gui?.IsPaused == true) {
                 IsPaused = true;
                 Paused?.Invoke();
-                if (_programExecutor.Step() == false) {
+                if (!_programExecutor.Step()) {
                     Gui.IsPaused = true;
                     Gui?.WaitOne();
                 }
@@ -269,7 +269,7 @@ public class Machine : IDisposable {
     /// </remarks>
     internal void PerformDmaTransfers() {
         foreach (DmaChannel? dmaChannel in _dmaDeviceChannels) {
-            if (dmaChannel.IsActive && !dmaChannel.IsMasked) {
+            if (dmaChannel.IsActive && !dmaChannel.IsMasked && dmaChannel.MustTransferData) {
                 dmaChannel.Transfer(this.Memory);
             }
         }
