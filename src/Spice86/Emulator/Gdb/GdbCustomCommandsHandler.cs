@@ -19,6 +19,7 @@ using Spice86.UI.ViewModels;
 
 using System.Reflection;
 using Spice86.Emulator.CPU;
+using Spice86.UI.Interfaces;
 
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
@@ -105,7 +106,7 @@ public class GdbCustomCommandsHandler {
 
             return _gdbIo.GenerateMessageToDisplayResponse(
                 $"Breakpoint added for cs:ip. Current cs:ip is {_machine.Cpu.State.CS}:{_machine.Cpu.State.IpPhysicalAddress}. Will stop at {cs}:{ip}");
-        } catch (FormatException fe) {
+        } catch (FormatException) {
             return InvalidCommand($"breakCsIp arguments need to be two numbers. You gave {args[1]}:{args[2]}");
         }
     }
@@ -179,7 +180,7 @@ public class GdbCustomCommandsHandler {
         int bits;
         try {
             bits = int.Parse(bitsString);
-        } catch (Exception ex) {
+        } catch (Exception) {
             return Help($"Unparseable bits value {bitsString}");
         }
         string addressString = args[1].ToUpper();
@@ -213,7 +214,7 @@ public class GdbCustomCommandsHandler {
 
         try {
             return ConvertUtils.ParseHex16(valueOrRegisterName);
-        } catch (Exception ex) {
+        } catch (Exception) {
             return null;
         }
     }
@@ -330,7 +331,7 @@ Supported custom commands:
     private string Vbuffer(string[] args) {
         try {
             string action = ExtractAction(args);
-            MainWindowViewModel? gui = _machine.Gui;
+            IGui? gui = _machine.Gui;
             VgaCard vgaCard = _machine.VgaCard;
 
             // Actions for 1 parameter
@@ -355,7 +356,7 @@ Supported custom commands:
             int[] resolution = ExtractResolution(args, action);
             double scale = ExtractScale(args);
             if ("add".Equals(action)) {
-                if (gui?.VideoBuffersAsDictionary.TryGetValue(address, out VideoBufferViewModel? existing) == true) {
+                if (gui?.VideoBuffersAsDictionary.TryGetValue(address, out IVideoBufferViewModel? existing) == true) {
                     return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
                 }
 
