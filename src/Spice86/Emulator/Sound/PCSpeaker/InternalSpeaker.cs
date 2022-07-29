@@ -8,8 +8,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Spice86.Backend.Audio.OpenAl;
-
 /// <summary>
 /// Emulates a PC speaker.
 /// </summary>

@@ -3,18 +3,18 @@
 using Backend.Audio.OpenAl;
 
 using System;
-using System.Runtime.Versioning;
-using System.Threading;
-
-using Spice86.Backend.Audio.OpenAl;
 
 internal static class Audio {
     public static AudioPlayer? CreatePlayer() {
         if (OperatingSystem.IsBrowser()) {
             return null;
         }
-        var xplatAudioPlayer = OpenAlAudioPlayer.Create();
-        return xplatAudioPlayer;
+        if(OperatingSystem.IsWindows()) {
+            return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25));
+        }
+        else {
+            return OpenAlAudioPlayer.Create();
+        }
     }
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer) {

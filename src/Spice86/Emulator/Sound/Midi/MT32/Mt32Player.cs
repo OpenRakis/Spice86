@@ -8,8 +8,6 @@ using System;
 using System.IO;
 using System.IO.Compression;
 
-using Spice86.Backend.Audio.OpenAl;
-
 internal sealed class Mt32Player : IDisposable {
     private readonly Mt32Context _context = new();
     private readonly AudioPlayer? _audioPlayer;
