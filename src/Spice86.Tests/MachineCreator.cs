@@ -4,6 +4,8 @@ using Emulator;
 using Emulator.CPU;
 using Emulator.VM;
 
+using Spice86.UI.Keyboard;
+
 using System;
 
 public class MachineCreator {
@@ -22,7 +24,7 @@ public class MachineCreator {
         configuration.ExpectedChecksumValue = Array.Empty<byte>();
         configuration.InstallInterruptVector = false;
 
-        ProgramExecutor programExecutor = new ProgramExecutor(null, configuration);
+        ProgramExecutor programExecutor = new ProgramExecutor(null, new AvaloniaKeyScanCodeConverter(), configuration);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
         // Disabling custom IO handling

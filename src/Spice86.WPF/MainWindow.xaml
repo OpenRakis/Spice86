@@ -1,0 +1,64 @@
+﻿<Window
+    x:Class="Spice86.WPF.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:Spice86.WPF"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Spice86"
+    Width="800"
+    Height="450"
+    mc:Ignorable="d">
+    <ScrollViewer>
+        <DockPanel LastChildFill="True">
+            <Grid DockPanel.Dock="Top">
+                <Menu Grid.Column="0">
+                    <MenuItem Header="Program">
+                        <MenuItem Command="{Binding StartExecutableCommand}" Header="Start Executable..." />
+                        <MenuItem
+                            Command="{Binding DebugExecutableCommand}"
+                            Header="Debug Executable..."
+                            ToolTip="Start the executable paused, to be used with GDB" />
+                    </MenuItem>
+                    <MenuItem Header="Debug">
+                        <MenuItem Command="{Binding ShowColorPaletteCommand}" Header="Color Palette" />
+                        <MenuItem Command="{Binding ShowPerformanceCommand}" Header="Performance" />
+                        <MenuItem
+                            Command="{Binding ShowDebuggerCommand}"
+                            Header="Debugger"
+                            IsEnabled="{Binding IsPaused}" />
+                        <MenuItem Command="{Binding DumpEmulatorStateToFileCommand}" Header="Dump emulator state to directory..." />
+                    </MenuItem>
+                </Menu>
+                <Grid Grid.Column="1" HorizontalAlignment="Center">
+                    <Button
+                        Grid.Column="0"
+                        Command="{Binding PauseCommand}"
+                        Content="⏸︎" />
+                    <Button
+                        Grid.Column="0"
+                        Command="{Binding ContinueCommand}"
+                        Content="⏵︎" />
+                    <Label
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Content="Time Modifier" />
+                    <Button
+                        Grid.Column="3"
+                        Margin="5,0,0,0"
+                        Command="{Binding ResetTimeMultiplierCommand}"
+                        Content="Reset" />
+                    <Menu Grid.Column="4">
+                        <MenuItem Header="Video Buffers Options" />
+                    </Menu>
+                </Grid>
+            </Grid>
+            <Viewbox DataContext="{Binding FirstBuffer}" Stretch="UniformToFill">
+                <Image
+                    x:Name="Image"
+                    Cursor="{Binding Cursor}"
+                    Source="{Binding Bitmap}" />
+            </Viewbox>
+        </DockPanel>
+    </ScrollViewer>
+</Window>

@@ -1,12 +1,9 @@
 ﻿namespace Spice86.UI.ViewModels;
 
-using Avalonia.Collections;
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Threading;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+
+using Microsoft.Win32;
 
 using Serilog;
 
@@ -15,14 +12,19 @@ using Spice86.Emulator;
 using Spice86.Emulator.Devices.Video;
 using Spice86.Emulator.Function.Dump;
 using Spice86.UI.Interfaces;
-using Spice86.UI.Keyboard;
-using Spice86.UI.Views;
+using Spice86.WPF;
+using Spice86.WPF.Converters;
 
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Threading;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -31,21 +33,21 @@ using System.Threading;
 /// <li>Communicates keyboard and mouse events to the emulator</li>
 /// </ul>
 /// </summary>
-public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
-    private static readonly ILogger _logger = Program.Logger.ForContext<MainWindowViewModel>();
+public partial class WPFMainWindowViewModel : ObservableObject, IGui, IDisposable {
+    private static readonly ILogger _logger = Program.Logger.ForContext<WPFMainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposedValue;
     private bool _restartingEmulator = false;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
-    private PaletteWindow? _paletteWindow;
-    private PerformanceWindow? _performanceWindow;
-    private DebuggerWindow? _debuggerWindow;
+    //private PaletteWindow? _paletteWindow;
+    //private PerformanceWindow? _performanceWindow;
+    //private DebuggerWindow? _debuggerWindow;
 
     internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
 
     private ProgramExecutor? _programExecutor;
-    private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
+    private ObservableCollection<WPFVideoBufferViewModel> _videoBuffers = new();
     private ManualResetEvent _okayToContinueEvent = new(true);
 
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
@@ -55,32 +57,33 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     public event EventHandler<EventArgs>? KeyUp;
     public event EventHandler<EventArgs>? KeyDown;
 
-    [RelayCommand]
-    public async Task DumpEmulatorStateToFile() {
+    [ICommand]
+    public void DumpEmulatorStateToFile() {
         if (_programExecutor is null || _configuration is null) {
             return;
         }
-        var ofd = new OpenFolderDialog() {
+        var ofd = new OpenFileDialog() {
+            Multiselect = false,
+            CheckPathExists = true,
             Title = "Dump emulator state to directory...",
-            Directory = _configuration.RecordedDataDirectory
+            InitialDirectory = _configuration.RecordedDataDirectory
         };
         if (Directory.Exists(_configuration.RecordedDataDirectory)) {
-            ofd.Directory = _configuration.RecordedDataDirectory;
+            ofd.InitialDirectory = _configuration.RecordedDataDirectory;
         }
-        var dir = _configuration.RecordedDataDirectory;
-        if (App.MainWindow is not null) {
-            dir = await ofd.ShowAsync(App.MainWindow);
-        }
-        if (string.IsNullOrWhiteSpace(dir)
-        && !string.IsNullOrWhiteSpace(_configuration.RecordedDataDirectory)) {
-            dir = _configuration.RecordedDataDirectory;
-        }
-        if (!string.IsNullOrWhiteSpace(dir)) {
-            new RecorderDataWriter(dir, _programExecutor.Machine).DumpAll();
+        if(ofd.ShowDialog(App.Current.MainWindow) == true) {
+            var dir = Path.GetDirectoryName(ofd.FileName);
+            if (string.IsNullOrWhiteSpace(dir)
+            && !string.IsNullOrWhiteSpace(_configuration.RecordedDataDirectory)) {
+                dir = _configuration.RecordedDataDirectory;
+            }
+            if (!string.IsNullOrWhiteSpace(dir)) {
+                new RecorderDataWriter(dir, _programExecutor.Machine).DumpAll();
+            }
         }
     }
 
-    [RelayCommand]
+    [ICommand]
     private void Pause() {
         if (_emulatorThread is not null) {
             _okayToContinueEvent.Reset();
@@ -88,8 +91,8 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         }
     }
 
-    [RelayCommand]
-    private void Play() {
+    [ICommand]
+    private void Continue() {
         if (_emulatorThread is not null) {
             _okayToContinueEvent.Set();
             IsPaused = false;
@@ -113,16 +116,16 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     [ObservableProperty]
     private string? _mainTitle;
 
-    public AvaloniaList<VideoBufferViewModel> VideoBuffers {
+    public ObservableCollection<WPFVideoBufferViewModel> VideoBuffers {
         get => _videoBuffers;
         set => this.SetProperty(ref _videoBuffers, value);
     }
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
-        var videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
-        Dispatcher.UIThread.Post(() =>
+        var videoBuffer = new WPFVideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
+        Dispatcher.CurrentDispatcher.Invoke(() =>
                 VideoBuffers.Add(videoBuffer)
-            , DispatcherPriority.MaxValue);
+            , DispatcherPriority.Render);
     }
 
     public void Dispose() {
@@ -131,35 +134,36 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         GC.SuppressFinalize(this);
     }
 
-    [RelayCommand]
+    [ICommand]
     public Task DebugExecutableCommand() {
         return StartNewExecutable(true);
     }
 
-    [RelayCommand]
+    [ICommand]
     public Task StartExecutable() {
         return StartNewExecutable();
     }
 
     private async Task StartNewExecutable(bool pauseOnStart = false) {
-        if (App.MainWindow is not null) {
-            OpenFileDialog? ofd = new OpenFileDialog() {
-                Title = "Start Executable...",
-                AllowMultiple = false,
-                Filters = new(){
-                    new FileDialogFilter() {
-                        Extensions = {"exe", "com" },
-                        Name = "DOS Executables"
-                    },
-                    new FileDialogFilter() {
-                        Extensions = { "*" },
-                        Name = "All Files"
-                    }
-                }
-            };
-            var files = await ofd.ShowAsync(App.MainWindow);
-            if (files?.Any() == true && _configuration is not null) {
-                _configuration.Exe = files[0];
+        OpenFileDialog? ofd = new OpenFileDialog() {
+            Title = "Start Executable...",
+            Multiselect = false,
+            CheckFileExists = true,
+            //Filters = new(){
+            //    new FileDialogFilter() {
+            //        Extensions = {"exe", "com" },
+            //        Name = "DOS Executables"
+            //    },
+            //    new FileDialogFilter() {
+            //        Extensions = { "*" },
+            //        Name = "All Files"
+            //    }
+            //}
+        };
+        if(ofd.ShowDialog(App.Current.MainWindow) == true) {
+            var file = ofd.FileName;
+            if (!string.IsNullOrWhiteSpace(file) && _configuration is not null) {
+                _configuration.Exe = file;
                 _configuration.ExeArgs = "";
                 _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
                 DisposeEmulator();
@@ -169,7 +173,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 _restartingEmulator = true;
                 _programExecutor?.Machine.ExitEmulationLoop();
                 while (_emulatorThread?.IsAlive == true) {
-                    Dispatcher.UIThread.RunJobs();
+                    await Dispatcher.Yield();
                 }
                 RunEmulator();
                 _restartingEmulator = false;
@@ -187,46 +191,46 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         }
     }
 
-    [RelayCommand]
+    [ICommand]
     public void ShowDebugger() {
-        if (_debuggerWindow != null) {
-            _debuggerWindow.Activate();
-        } else if (_programExecutor is not null) {
-            _debuggerWindow = new DebuggerWindow() {
-                DataContext = new DebuggerViewModel(
-                    _programExecutor.Machine)
-            };
-            _debuggerWindow.Closed += (s, e) => _debuggerWindow = null;
-            _debuggerWindow.Show();
-        }
+        //if (_debuggerWindow != null) {
+        //    _debuggerWindow.Activate();
+        //} else if (_programExecutor is not null) {
+        //    _debuggerWindow = new DebuggerWindow() {
+        //        DataContext = new DebuggerViewModel(
+        //            _programExecutor.Machine)
+        //    };
+        //    _debuggerWindow.Closed += (s, e) => _debuggerWindow = null;
+        //    _debuggerWindow.Show();
+        //}
     }
 
-    [RelayCommand]
+    [ICommand]
     public void ShowPerformance() {
-        if (_performanceWindow != null) {
-            _performanceWindow.Activate();
-        } else if (_programExecutor is not null) {
-            _performanceWindow = new PerformanceWindow() {
-                DataContext = new PerformanceViewModel(
-                    _programExecutor.Machine)
-            };
-            _performanceWindow.Closed += (s, e) => _performanceWindow = null;
-            _performanceWindow.Show();
-        }
+        //if (_performanceWindow != null) {
+        //    _performanceWindow.Activate();
+        //} else if (_programExecutor is not null) {
+        //    _performanceWindow = new PerformanceWindow() {
+        //        DataContext = new WPerformanceViewModel(
+        //            _programExecutor.Machine)
+        //    };
+        //    _performanceWindow.Closed += (s, e) => _performanceWindow = null;
+        //    _performanceWindow.Show();
+        //}
     }
 
-    [RelayCommand]
+    [ICommand]
     public void ShowColorPalette() {
-        if (_paletteWindow != null) {
-            _paletteWindow.Activate();
-        } else {
-            _paletteWindow = new PaletteWindow(this);
-            _paletteWindow.Closed += (s, e) => _paletteWindow = null;
-            _paletteWindow.Show();
-        }
+        //if (_paletteWindow != null) {
+        //    _paletteWindow.Activate();
+        //} else {
+        //    _paletteWindow = new PaletteWindow(this);
+        //    _paletteWindow.Closed += (s, e) => _paletteWindow = null;
+        //    _paletteWindow.Show();
+        //}
     }
 
-    [RelayCommand]
+    [ICommand]
     public void ResetTimeMultiplier() {
         TimeMultiplier = _configuration!.TimeMultiplier;
     }
@@ -240,7 +244,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
             return;
         }
         _palette = palette;
-        foreach (VideoBufferViewModel videoBuffer in SortedBuffers()) {
+        foreach (WPFVideoBufferViewModel videoBuffer in SortedBuffers()) {
             videoBuffer.Draw(memory, palette);
         }
     }
@@ -266,6 +270,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     public bool IsLeftButtonClicked { get; private set; }
 
     public bool IsRightButtonClicked { get; private set; }
+
     public void OnMainWindowOpened(object? sender, EventArgs e) => RunEmulator();
 
     private void RunEmulator() {
@@ -279,17 +284,17 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         }
     }
 
-    public void OnMouseClick(PointerEventArgs @event, bool click) {
-        if (@event.Pointer.IsPrimary) {
+    public void OnMouseClick(MouseEventArgs @event, bool click) {
+        if (@event.MouseDevice.LeftButton == MouseButtonState.Pressed) {
             IsLeftButtonClicked = click;
         }
 
-        if (@event.Pointer.IsPrimary == false) {
+        if (@event.MouseDevice.RightButton == MouseButtonState.Pressed) {
             IsRightButtonClicked = click;
         }
     }
 
-    public void OnMouseMoved(PointerEventArgs @event, Image image) {
+    public void OnMouseMoved(MouseEventArgs @event, UIElement image) {
         MouseX = (int)@event.GetPosition(image).X;
         MouseY = (int)@event.GetPosition(image).Y;
     }
@@ -309,13 +314,13 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     private void DisposeBuffers() {
-        Dispatcher.UIThread.Post(() => {
+        Dispatcher.CurrentDispatcher.Invoke(() => {
             for (int i = 0; i < VideoBuffers.Count; i++) {
-                VideoBufferViewModel buffer = VideoBuffers[i];
+                WPFVideoBufferViewModel buffer = VideoBuffers[i];
                 buffer.Dispose();
             }
             _videoBuffers.Clear();
-        }, DispatcherPriority.MaxValue);
+        }, DispatcherPriority.Render);
     }
 
     protected virtual void Dispose(bool disposing) {
@@ -331,11 +336,11 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     private void DisposeEmulator() {
-        Dispatcher.UIThread.Post(() => {
-            _performanceWindow?.Close();
-            _debuggerWindow?.Close();
-            _paletteWindow?.Close();
-        }, DispatcherPriority.MaxValue);
+        Dispatcher.CurrentDispatcher.Invoke(() => {
+            //_performanceWindow?.Close();
+            //_debuggerWindow?.Close();
+            //_paletteWindow?.Close();
+        }, DispatcherPriority.Render);
         DisposeBuffers();
         _programExecutor?.Dispose();
         _okayToContinueEvent.Dispose();
@@ -345,7 +350,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         return CommandLineParser.ParseCommandLine(args);
     }
 
-    private IEnumerable<VideoBufferViewModel> SortedBuffers() {
+    private IEnumerable<WPFVideoBufferViewModel> SortedBuffers() {
         return VideoBuffers.OrderBy(x => x.Address).Select(x => x);
     }
 
@@ -355,7 +360,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         } else {
             try {
                 _okayToContinueEvent.Set();
-                _programExecutor = new ProgramExecutor(this, new AvaloniaKeyScanCodeConverter(), _configuration);
+                _programExecutor = new ProgramExecutor(this, new WPFKeyScanCodeConverter(), _configuration); ;
                 TimeMultiplier = _configuration.TimeMultiplier;
                 _programExecutor.Run();
             } catch (Exception e) {

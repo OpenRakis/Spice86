@@ -4,7 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-public partial class DebuggerWindow : Window {
+internal partial class DebuggerWindow : Window {
     public DebuggerWindow() {
         InitializeComponent();
 #if DEBUG

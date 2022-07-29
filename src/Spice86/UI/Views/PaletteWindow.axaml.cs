@@ -13,7 +13,7 @@ using Spice86.UI.ViewModels;
 
 using System.Collections.ObjectModel;
 
-public partial class PaletteWindow : Window {
+internal partial class PaletteWindow : Window {
     private DispatcherTimer? _timer;
     private MainWindowViewModel? _mainWindowViewModel;
     private UniformGrid? _grid;

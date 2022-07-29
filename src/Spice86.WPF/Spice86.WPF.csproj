@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<OutputType>Exe</OutputType>
+	<TargetFramework>net6.0-windows</TargetFramework>
+	<Nullable>enable</Nullable>
+	<UseWPF>true</UseWPF>
+	<WarningsAsErrors>nullable</WarningsAsErrors>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<Using Remove="System.Linq" />
+		<Using Include="System.Buffers.Binary" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="CommunityToolkit.Mvvm" Version="7.1.2" />
+	  <PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  </PackageReference>
+	  <PackageReference Include="Serilog" Version="2.11.0" />
+	  <PackageReference Include="Serilog.Sinks.Console" Version="4.0.1" />
+	  <PackageReference Include="Serilog.Sinks.Debug" Version="2.0.0" />
+	  <PackageReference Include="SerilogAnalyzer" Version="0.15.0">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  </PackageReference>
+	  <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+	  <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.16" />
+	  <!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
+	  <ProjectReference Include="..\Spice86\Spice86.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -6,10 +6,9 @@ using Serilog;
 
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.VM;
-using Spice86.UI.ViewModels;
-
-using System;
-using System.Collections.Generic;
+using Spice86.UI;
+using Spice86.UI.Interfaces;
+using Spice86.UI.Keyboard;
 
 /// <summary>
 /// Basic implementation of a keyboard
@@ -17,20 +16,22 @@ using System.Collections.Generic;
 public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
     private static readonly ILogger _logger = Program.Logger.ForContext<Keyboard>();
-    private readonly MainWindowViewModel? _gui;
+    private readonly IGui? _gui;
+    private readonly IKeyScanCodeConverter _keyScanCodeConverter;
 
     public bool IsHardwareQueueEmpty => LastKeyboardInput is null;
 
-    public Keyboard(Machine machine, MainWindowViewModel? gui, Configuration configuration) : base(machine, configuration) {
+    public Keyboard(Machine machine, IGui? gui, IKeyScanCodeConverter keyScanCodeConverter, Configuration configuration) : base(machine, configuration) {
         _gui = gui;
-        if (_gui is not null) {
+        _keyScanCodeConverter = keyScanCodeConverter;
+        if(_gui is not null) {
             _gui.KeyUp += OnKeyUp;
             _gui.KeyDown += OnKeyDown;
         }
     }
 
-    private void OnKeyDown(object? sender, KeyEventArgs e) {
-        LastKeyboardInput = new(e.Key, true);
+    private void OnKeyDown(object? sender, EventArgs e) {
+        LastKeyboardInput = new(e, true);
         RaiseAndProcessKeyboardInterruptRequest();
     }
 
@@ -38,8 +39,8 @@ public class Keyboard : DefaultIOPortHandler {
         _machine.Cpu.ExternalInterrupt(9);
     }
 
-    private void OnKeyUp(object? sender, KeyEventArgs e) {
-        LastKeyboardInput = new(e.Key, false);
+    private void OnKeyUp(object? sender, EventArgs e) {
+        LastKeyboardInput = new(e, false);
         RaiseAndProcessKeyboardInterruptRequest();
     }
 
@@ -53,16 +54,17 @@ public class Keyboard : DefaultIOPortHandler {
         }
         byte? scancode = null;
         if (LastKeyboardInput is not null) {
-            if (LastKeyboardInput.Value.IsPressed == true) {
-                scancode = KeyScancodeConverter.GetKeyPressedScancode(LastKeyboardInput.Value.Key);
+            KeyboardInput lastKeyboardInput = (KeyboardInput)LastKeyboardInput;
+            if (lastKeyboardInput.IsPressed) {
+                scancode = _keyScanCodeConverter.GetKeyPressedScancode(lastKeyboardInput);
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.Key, scancode);
+                    _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
 
                 }
             } else {
-                scancode = KeyScancodeConverter.GetKeyReleasedScancode(LastKeyboardInput.Value.Key);
+                scancode = _keyScanCodeConverter.GetKeyReleasedScancode(lastKeyboardInput);
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _logger.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.Key, scancode);
+                    _logger.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
                 }
             }
 

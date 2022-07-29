@@ -11,7 +11,7 @@ using Spice86.UI.ViewModels;
 using System;
 using System.ComponentModel;
 
-public partial class MainWindow : Window {
+internal partial class MainWindow : Window {
     public MainWindow() {
         InitializeComponent();
         this.Closing += MainWindow_Closing;

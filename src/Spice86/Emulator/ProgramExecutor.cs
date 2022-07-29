@@ -15,6 +15,8 @@ using Spice86.Emulator.LoadableFile.Dos.Com;
 using Spice86.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Emulator.Memory;
 using Spice86.Emulator.VM;
+using Spice86.UI.Interfaces;
+using Spice86.UI.Keyboard;
 using Spice86.UI.ViewModels;
 using Spice86.Utils;
 
@@ -34,9 +36,9 @@ public class ProgramExecutor : IDisposable {
     private readonly GdbServer? _gdbServer;
     private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
 
-    public ProgramExecutor(MainWindowViewModel? gui, Configuration configuration) {
+    public ProgramExecutor(IGui? gui, IKeyScanCodeConverter keyScanCodeConverter, Configuration configuration) {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        Machine = CreateMachine(gui);
+        Machine = CreateMachine(gui, keyScanCodeConverter);
         _gdbServer = StartGdbServer();
     }
 
@@ -102,14 +104,14 @@ public class ProgramExecutor : IDisposable {
         return new BiosLoader(Machine);
     }
 
-    private Machine CreateMachine(MainWindowViewModel? gui) {
+    private Machine CreateMachine(IGui? gui, IKeyScanCodeConverter keyScanCodeConverter) {
         if (_configuration == null) {
             throw new ArgumentNullException(nameof(_configuration));
         }
         var counterConfigurator = new CounterConfigurator(_configuration);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
-        Machine = new Machine(this, gui, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
+        Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
         InitializeCpu();
         InitializeDos(_configuration);
         if (_configuration.InstallInterruptVector) {
