@@ -8,7 +8,7 @@ using Spice86.UI.ViewModels;
 using System;
 using System.Linq;
 
-public partial class VideoBufferView : UserControl {
+internal partial class VideoBufferView : UserControl {
     public VideoBufferView() {
         InitializeComponent();
     }

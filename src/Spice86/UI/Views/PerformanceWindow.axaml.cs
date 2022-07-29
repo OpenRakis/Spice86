@@ -4,7 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-public partial class PerformanceWindow : Window {
+internal partial class PerformanceWindow : Window {
     public PerformanceWindow() {
         InitializeComponent();
 #if DEBUG

@@ -1,14 +1,16 @@
-﻿namespace Spice86.Emulator.Devices.Input.Keyboard;
+﻿namespace Spice86.WPF.Converters;
 
-using Avalonia.Input;
+using Spice86.UI.Interfaces;
+using Spice86.UI.Keyboard;
 
 using System.Collections.Generic;
+using System.Windows.Input;
 
-public static class KeyScancodeConverter {
+internal class WPFKeyScanCodeConverter : IKeyScanCodeConverter {
     private static readonly Dictionary<Key, byte> _keyPressedScanCode = new();
     private static readonly Dictionary<byte, byte> _scanCodeToAscii = new();
 
-    static KeyScancodeConverter() {
+    static WPFKeyScanCodeConverter() {
         // Some keys are not supported by AvaloniaUI so not putting them.
         _keyPressedScanCode.Add(Key.LeftCtrl, 0x1D);
         _keyPressedScanCode.Add(Key.RightCtrl, 0x1D);
@@ -153,7 +155,7 @@ public static class KeyScancodeConverter {
         _scanCodeToAscii.Add(0x4E, 0x2B);
     }
 
-    public static byte? GetAsciiCode(byte scancode) {
+    public byte? GetAsciiCode(byte scancode) {
         byte keypressedScancode = scancode;
         if (keypressedScancode > 0x7F) {
             keypressedScancode -= 0x80;
@@ -164,15 +166,15 @@ public static class KeyScancodeConverter {
         return _scanCodeToAscii[keypressedScancode];
     }
 
-    public static byte? GetKeyPressedScancode(Key keyCode) {
-        if (!_keyPressedScanCode.ContainsKey(keyCode)) {
+    public byte? GetKeyPressedScancode(KeyboardInput keyInput) {
+        if (!_keyPressedScanCode.ContainsKey(((KeyEventArgs)keyInput.EventArgs).Key)) {
             return null;
         }
-        return _keyPressedScanCode[keyCode];
+        return _keyPressedScanCode[((KeyEventArgs)keyInput.EventArgs).Key];
     }
 
-    public static byte? GetKeyReleasedScancode(Key keyCode) {
-        byte? pressed = GetKeyPressedScancode(keyCode);
+    public byte? GetKeyReleasedScancode(KeyboardInput keyInput) {
+        byte? pressed = GetKeyPressedScancode(keyInput);
         if (pressed != null) {
             return (byte)(pressed + 0x80);
         }

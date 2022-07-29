@@ -20,6 +20,7 @@ using Spice86.Emulator.InterruptHandlers.Timer;
 using Spice86.Emulator.InterruptHandlers.Vga;
 using Spice86.Emulator.IOPorts;
 using Spice86.Emulator.Memory;
+using Spice86.UI.Interfaces;
 using Spice86.UI.ViewModels;
 
 using System;
@@ -52,7 +53,7 @@ public class Machine : IDisposable {
 
     public GravisUltraSound GravisUltraSound { get; }
 
-    public MainWindowViewModel? Gui { get; }
+    public IGui? Gui { get; }
 
     public IOPortDispatcher IoPortDispatcher { get; }
 
@@ -101,7 +102,7 @@ public class Machine : IDisposable {
 
     public Configuration Configuration { get; }
 
-    public Machine(ProgramExecutor programExecutor, MainWindowViewModel? gui, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+    public Machine(ProgramExecutor programExecutor, IGui? gui, IKeyScanCodeConverter keyScanCodeConverter, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
         Configuration = configuration;
         Gui = gui;
@@ -127,7 +128,7 @@ public class Machine : IDisposable {
         Register(VgaCard);
         Timer = new Timer(this, Pic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
-        Keyboard = new Keyboard(this, gui, configuration);
+        Keyboard = new Keyboard(this, gui, keyScanCodeConverter, configuration);
         Register(Keyboard);
         Joystick = new Joystick(this, configuration);
         Register(Joystick);
@@ -148,7 +149,7 @@ public class Machine : IDisposable {
         Cpu.CallbackHandler = CallbackHandler;
         TimerInt8Handler = new TimerInt8Handler(this);
         Register(TimerInt8Handler);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
         VideoBiosInt10Handler = new VideoBiosInt10Handler(this, VgaCard);
         VideoBiosInt10Handler.InitRam();

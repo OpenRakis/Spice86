@@ -18,13 +18,12 @@ using System.Linq;
 public class Program {
     private const string LogFormat = "[{Timestamp:HH:mm:ss} {Level:u3} {Properties}] {Message:lj}{NewLine}{Exception}";
     public static LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
-    private static readonly ILogger _logger = new LoggerConfiguration()
+
+    public static ILogger Logger { get; } = new LoggerConfiguration()
         .WriteTo.Console(outputTemplate: LogFormat)
         .WriteTo.Debug(outputTemplate: LogFormat)
         .MinimumLevel.ControlledBy(LogLevelSwitch)
         .CreateLogger();
-    
-    public static ILogger Logger => _logger;
 
     /// <summary>
     /// Alternate Entry Point

@@ -12,7 +12,7 @@ using Spice86.UI.Views;
 using System;
 using System.Runtime.Versioning;
 
-public partial class App : Application {
+internal partial class App : Application {
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
     private const string RegistryValueName = "AppsUseLightTheme";
