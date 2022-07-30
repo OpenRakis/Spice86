@@ -1,13 +1,8 @@
 ﻿namespace Spice86.WPF;
 
 using Spice86.UI.ViewModels;
+using Spice86.WPF.Views;
 
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 
 /// <summary>
@@ -15,8 +10,17 @@ using System.Windows;
 /// </summary>
 public partial class App : Application {
     private void Application_Startup(object sender, StartupEventArgs e) {
+        var mainViewModel = new WPFMainWindowViewModel();
+        mainViewModel.SetConfiguration(e.Args);
         var mainWindow = new MainWindow() {
-            DataContext = new WPFMainWindowViewModel()
+            DataContext = mainViewModel
         };
+        mainWindow.Closed += (s, e) => mainViewModel.Dispose();
+
+        mainWindow.Initialized += mainViewModel.OnMainWindowOpened;
+        Application.Current.MainWindow = mainWindow;
+        
+        mainWindow.Show();
+
     }
 }

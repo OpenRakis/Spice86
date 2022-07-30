@@ -1,26 +1,25 @@
 ﻿namespace Spice86.UI.ViewModels;
 
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-
 using Microsoft.Win32;
 
-using Spice86.Emulator.Devices.Video;
-using Spice86.UI.Interfaces;
-using Spice86.WPF;
+using ReactiveUI;
+
+using Spice86.Shared;
+using Spice86.Shared.Interfaces;
+using Spice86.WPF.Views;
 
 using System;
 using System.ComponentModel;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-public partial class WPFVideoBufferViewModel : ObservableObject, IComparable<WPFVideoBufferViewModel>, IVideoBufferViewModel, IDisposable {
+public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVideoBufferViewModel>, IVideoBufferViewModel, IDisposable {
     private bool _disposedValue;
+
+
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -46,13 +45,22 @@ public partial class WPFVideoBufferViewModel : ObservableObject, IComparable<WPF
         MainWindow.AppClosing += MainWindow_AppClosing;
     }
 
+    public int Width {
+        get => _width;
+        set => this.RaiseAndSetIfChanged(ref _width, value);
+    }
+
+    public int Height {
+        get => _height;
+        set => this.RaiseAndSetIfChanged(ref _height, value);
+    }
+
     private Action? UIUpdateMethod { get; set; }
 
     internal void SetUIUpdateMethod(Action invalidateImagAction) {
         UIUpdateMethod = invalidateImagAction;
     }
 
-    [ICommand]
     public void SaveBitmap() {
         var picker = new SaveFileDialog {
             DefaultExt = "bmp",
@@ -75,22 +83,26 @@ public partial class WPFVideoBufferViewModel : ObservableObject, IComparable<WPF
         }
     }
 
-    private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
+    private void MainWindow_AppClosing(object? sender, CancelEventArgs e) {
         _appClosing = true;
     }
 
     public uint Address { get; private set; }
 
 
-    [ObservableProperty]
     private WriteableBitmap? _bitmap = new(new BitmapImage());
+
+    public WriteableBitmap? Bitmap {
+        get => _bitmap;
+        set => this.RaiseAndSetIfChanged(ref _bitmap, value);
+    }
 
     private bool _showCursor = true;
 
     public bool ShowCursor {
         get => _showCursor;
         set {
-            this.SetProperty(ref _showCursor, value);
+            this.RaiseAndSetIfChanged(ref _showCursor, value);
             if (_showCursor) {
                 Cursor?.Dispose();
                 Cursor = Cursors.Arrow;
@@ -101,23 +113,29 @@ public partial class WPFVideoBufferViewModel : ObservableObject, IComparable<WPF
         }
     }
 
-    [ObservableProperty]
     private Cursor? _cursor = Cursors.Arrow;
+
+    public Cursor? Cursor {
+        get => _cursor;
+        set => this.RaiseAndSetIfChanged(ref _cursor, value);
+    }
 
     private double _scale = 1;
 
     public double Scale {
         get => _scale;
-        set => this.SetProperty(ref _scale, Math.Max(value, 1));
+        set => this.RaiseAndSetIfChanged(ref _scale, Math.Max(value, 1));
     }
 
-    [ObservableProperty]
     private int _height = 320;
 
-    [ObservableProperty]
-    public bool _isPrimaryDisplay;
+    private bool _isPrimaryDisplay;
 
-    [ObservableProperty]
+    public bool IsPrimaryDisplay {
+        get => _isPrimaryDisplay;
+        private set => this.RaiseAndSetIfChanged(ref _isPrimaryDisplay, value);
+    }
+
     private int _width = 200;
 
     private bool _appClosing;
@@ -140,10 +158,14 @@ public partial class WPFVideoBufferViewModel : ObservableObject, IComparable<WPF
         GC.SuppressFinalize(this);
     }
 
-    [ObservableProperty]
     private bool _isDrawing;
 
-    public unsafe void Draw(byte[] memory, Rgb[] palette) {
+    public bool IsDrawing {
+        get => _isDrawing;
+        set => this.RaiseAndSetIfChanged(ref _isDrawing, value);
+    }
+
+    public void Draw(byte[] memory, Rgb[] palette) {
         if (_appClosing || _disposedValue || UIUpdateMethod is null || _bitmap is null) {
             return;
         }

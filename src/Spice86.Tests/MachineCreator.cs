@@ -1,10 +1,9 @@
 namespace Spice86.Tests;
 
-using Emulator;
-using Emulator.CPU;
-using Emulator.VM;
-
-using Spice86.UI.Keyboard;
+using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 using System;
 
@@ -14,17 +13,17 @@ public class MachineCreator {
     }
 
     public ProgramExecutor CreateProgramExecutorForBin(string binPath) {
-        Configuration configuration = new Configuration() {
-            CreateAudioBackend = false
+        Configuration configuration = new Configuration {
+            CreateAudioBackend = false,
+            // making sure int8 is not going to be triggered during the tests
+            InstructionsPerSecond = 10000000,
+            Exe = binPath,
+            // Don't expect any hash for the exe
+            ExpectedChecksumValue = Array.Empty<byte>(),
+            InstallInterruptVector = false
         };
-        // making sure int8 is not going to be triggered during the tests
-        configuration.InstructionsPerSecond = 10000000;
-        configuration.Exe = binPath;
-        // Don't expect any hash for the exe
-        configuration.ExpectedChecksumValue = Array.Empty<byte>();
-        configuration.InstallInterruptVector = false;
 
-        ProgramExecutor programExecutor = new ProgramExecutor(null, new AvaloniaKeyScanCodeConverter(), configuration);
+        ProgramExecutor programExecutor = new ProgramExecutor(null, null, configuration);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
         // Disabling custom IO handling

@@ -1,7 +1,7 @@
 ﻿namespace Spice86.WPF.Converters;
 
-using Spice86.UI.Interfaces;
-using Spice86.UI.Keyboard;
+using Spice86.Shared;
+using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
 using System.Windows.Input;
