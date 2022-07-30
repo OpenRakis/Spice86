@@ -1,10 +1,10 @@
 namespace Spice86.Tests;
 
-using Emulator;
-using Emulator.Function;
-using Emulator.Memory;
-using Emulator.ReverseEngineer;
-using Emulator.VM;
+using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
 
 using System;
 using System.Collections.Generic;

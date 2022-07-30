@@ -1,11 +1,5 @@
 namespace Spice86.Tests;
 
-using Emulator;
-using Emulator.CPU;
-using Emulator.VM;
-using Emulator.Memory;
-using Emulator.VM.Breakpoint;
-
 using JetBrains.Annotations;
 
 using Serilog;
@@ -13,9 +7,13 @@ using Serilog;
 using System;
 using System.IO;
 
-using Utils;
-
 using Xunit;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Utils;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.VM;
 
 public class MachineTest {
 

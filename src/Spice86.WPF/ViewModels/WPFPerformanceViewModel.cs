@@ -1,14 +1,15 @@
 ﻿namespace Spice86.UI.ViewModels;
+
+using ReactiveUI;
+
+using Spice86.Core.Emulator.VM;
+
 using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Threading;
 
-using CommunityToolkit.Mvvm.ComponentModel;
-
-using Spice86.Emulator.VM;
-
-public partial class WPFPerformanceViewModel : ObservableObject {
+public partial class WPFPerformanceViewModel : ReactiveObject {
     private readonly DispatcherTimer? _timer;
     private readonly Machine? _machine;
 
@@ -40,10 +41,18 @@ public partial class WPFPerformanceViewModel : ObservableObject {
         InstructionsExecuted = _machine.Cpu.State.Cycles;
     }
 
-    [ObservableProperty]
     private long _instructionsExecuted;
 
-    [ObservableProperty]
+    public long InstructionsExecuted {
+        get => _instructionsExecuted;
+        set => this.RaiseAndSetIfChanged(ref _instructionsExecuted, value);
+    }
+
+    public long InstructionsPerSecond {
+        get => _instructionsPerSecond;
+        set => this.RaiseAndSetIfChanged(ref _instructionsPerSecond, value);
+    }
+
     private long _instructionsPerSecond = -1;
 
 }
