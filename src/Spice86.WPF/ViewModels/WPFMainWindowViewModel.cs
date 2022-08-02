@@ -164,10 +164,10 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
     }
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
-        var videoBuffer = new WPFVideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
-        Dispatcher.CurrentDispatcher.Invoke(() =>
-                VideoBuffers.Add(videoBuffer)
-            , DispatcherPriority.Render);
+        App.Current.Dispatcher.Invoke(() => {
+            var videoBuffer = new WPFVideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
+            VideoBuffers.Add(videoBuffer);
+        }, DispatcherPriority.Render);
     }
 
     public void Dispose() {
@@ -333,7 +333,7 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
     }
 
     private void DisposeBuffers() {
-        Dispatcher.CurrentDispatcher.Invoke(() => {
+        App.Current.Dispatcher.Invoke(() => {
             for (int i = 0; i < VideoBuffers.Count; i++) {
                 WPFVideoBufferViewModel buffer = VideoBuffers[i];
                 buffer.Dispose();
@@ -355,7 +355,7 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
     }
 
     private void DisposeEmulator() {
-        Dispatcher.CurrentDispatcher.Invoke(() => {
+        App.Current.Dispatcher.Invoke(() => {
             _performanceWindow?.Close();
             _paletteWindow?.Close();
         }, DispatcherPriority.Render);
