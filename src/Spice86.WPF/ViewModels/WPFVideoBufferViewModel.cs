@@ -2,10 +2,14 @@
 
 using Microsoft.Win32;
 
+using Prism.Commands;
+
 using ReactiveUI;
 
 using Spice86.Shared;
 using Spice86.Shared.Interfaces;
+using Spice86.WPF;
+using Spice86.WPF.CustomControls;
 using Spice86.WPF.Views;
 
 using System;
@@ -21,7 +25,7 @@ using System.Windows.Threading;
 public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVideoBufferViewModel>, IVideoBufferViewModel, IDisposable {
     private bool _disposedValue;
 
-
+    public DelegateCommand SaveBitmapCommand;
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -35,6 +39,8 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
         Address = 1;
         _index = 1;
         Scale = 1;
+        _renderTarget = new FastBitmap(Width, Height);
+        SaveBitmapCommand = new(SaveBitmap);
     }
 
     public WPFVideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
@@ -45,10 +51,11 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
         _index = index;
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
-        Dispatcher.CurrentDispatcher.Invoke(() => {
-            _bitmap = new WriteableBitmap(320, 200, 96, 96, PixelFormats.Bgra32, new BitmapPalette(GetPaletteColors()));
-        });
+        _renderTarget = new FastBitmap(Width, Height);
+        SaveBitmapCommand = new(SaveBitmap);
     }
+
+    private FastBitmap _renderTarget;
 
     public int Width {
         get => _width;
@@ -67,12 +74,6 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
         set => this.RaiseAndSetIfChanged(ref _framesRendered, value);
     }
 
-    private Action? UIUpdateMethod { get; set; }
-
-    internal void SetUIUpdateMethod(Action invalidateImagAction) {
-        UIUpdateMethod = invalidateImagAction;
-    }
-
     public void SaveBitmap() {
         var picker = new SaveFileDialog {
             DefaultExt = "bmp",
@@ -80,14 +81,14 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
             CheckPathExists = true
         };
         if(picker.ShowDialog(Application.Current.MainWindow) == true) {
-            if (string.IsNullOrWhiteSpace(picker.FileName) == false && _bitmap is not null) {
-                SaveBitmapToFile(picker.FileName, _bitmap.Clone());
+            if (string.IsNullOrWhiteSpace(picker.FileName) == false) {
+                SaveBitmapToFile(picker.FileName, this.Bitmap);
             }
         }
     }
 
-    private static void SaveBitmapToFile(string filename, BitmapSource source) {
-        if (filename != string.Empty) {
+    private static void SaveBitmapToFile(string filename, BitmapSource? source) {
+        if (filename != string.Empty && source is not null) {
             using FileStream stream = new FileStream(filename, FileMode.Create);
             BmpBitmapEncoder encoder = new();
             encoder.Frames.Add(BitmapFrame.Create(source));
@@ -101,17 +102,8 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
 
     public uint Address { get; private set; }
 
-    private static List<Color> GetPaletteColors() {
-        Dictionary<Color, Color> colors = new();
-        return colors.Values.ToList();
-    }
-
-
-    private WriteableBitmap? _bitmap;
-
-    public WriteableBitmap? Bitmap {
-        get => _bitmap;
-        set => this.RaiseAndSetIfChanged(ref _bitmap, value);
+    public BitmapSource? Bitmap {
+        get => _renderTarget.InteropBitmap;
     }
 
     private bool _showCursor = true;
@@ -182,25 +174,32 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
         set => this.RaiseAndSetIfChanged(ref _isDrawing, value);
     }
 
-    public void Draw(byte[] memory, Rgb[] palette) {
-        if (_appClosing || _disposedValue || UIUpdateMethod is null || _bitmap is null) {
+    public unsafe void Draw(byte[] memory, Rgb[] palette) {
+        if (_appClosing || _disposedValue || Bitmap is null) {
             return;
         }
-        _bitmap.Lock();
-        int rowBytes = Width;
-        uint memoryAddress = Address;
-        int size = Width * Height;
-        long endAddress = Address + size;
-        var buffer = Array.CreateInstance(typeof(uint), size);
-        for (long i = Address; i < endAddress; i++) {
-            byte colorIndex = memory[i];
-            Rgb pixel = palette[colorIndex];
-            uint argb = pixel.ToArgb();
+
+        uint totalPixels = (uint)Width * (uint)Height;
+        uint startAddress = Address;
+        long endAddress = Address + totalPixels;
+        IntPtr destination = this._renderTarget.PixelBuffer;
+
+        uint* destPtr = (uint*)destination.ToPointer();
+
+        int offset = 0;
+        for (int y = 0; y < Height; y++) {
+            uint* startPtr = destPtr + offset;
+            uint* endPtr = destPtr + offset + Width;
+            for (uint* x = startPtr; x < endPtr; x++) {
+                byte src = memory[startAddress + offset];
+                Rgb? pixel = palette[src];
+                *x = pixel.ToArgb();
+                offset++;
+            }
         }
-        _bitmap.WritePixels(new Int32Rect(0, 0, _bitmap.PixelWidth, _bitmap.PixelHeight), buffer, _bitmap.PixelWidth, 0);
-        _bitmap.Unlock();
-        Dispatcher.CurrentDispatcher.Invoke(() => {
-            UIUpdateMethod?.Invoke();
+
+        App.Current.Dispatcher.Invoke(() => {
+            _renderTarget.InteropBitmap?.Invalidate();
             FramesRendered++;
         }, DispatcherPriority.Render);
     }
@@ -216,8 +215,9 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                Dispatcher.CurrentDispatcher.Invoke(() => {
+                App.Current.Dispatcher.Invoke(() => {
                     Cursor?.Dispose();
+                    _renderTarget.Dispose();
                 }, DispatcherPriority.Render);
             }
             _disposedValue = true;

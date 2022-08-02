@@ -7,7 +7,7 @@
         xmlns:converters="clr-namespace:Spice86.WPF.Converters"
         mc:Ignorable="d"
         ResizeMode="NoResize"
-        Title="Performance" Height="100" Width="300" ShowInTaskbar="False">
+        Title="Performance" SizeToContent="WidthAndHeight" ShowInTaskbar="False">
     <Window.Resources>
         <converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
     </Window.Resources>
@@ -22,6 +22,14 @@
         <TextBlock Text="{Binding InstructionsPerSecond,
 				   Converter={StaticResource InvalidNumberToQuestionMarkConverter},
 				   StringFormat={}{0:N0}}"/>
+        <Label Content="Frames per second (avg across all video buffers)" />
+        <TextBlock Text="{Binding FramesPerSecond,
+			Converter={StaticResource InvalidNumberToQuestionMarkConverter},
+			StringFormat={}{0:N0}}"/>
+        <Label Content="Last frame render time (avg across all video buffers)" />
+        <TextBlock Text="{Binding VideoBuffersLastFrameRenderTime,
+			Converter={StaticResource InvalidNumberToQuestionMarkConverter},
+			StringFormat={}{0:N0} ms}"/>
     </StackPanel>
 
 </Window>

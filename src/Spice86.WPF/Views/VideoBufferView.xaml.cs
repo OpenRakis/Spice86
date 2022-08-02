@@ -32,14 +32,6 @@ public partial class VideoBufferView : UserControl {
                 _image.MouseDown += (s, e) => mainVm.OnMouseClick(e, true);
                 _image.MouseUp += (s, e) => mainVm.OnMouseClick(e, false);
             }
-            vm.SetUIUpdateMethod(InvalidateImage);
         }
-    }
-
-    private void InvalidateImage() {
-        if (_appClosing || _image is null) {
-            return;
-        }
-        _image.InvalidateVisual();
     }
 }
