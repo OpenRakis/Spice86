@@ -16,6 +16,7 @@ using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel>, IDisposable {
@@ -33,6 +34,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         Address = 1;
         _index = 1;
         Scale = 1;
+        _frameRenderTimeWatch = new Stopwatch();
     }
 
     public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
@@ -43,6 +45,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         _index = index;
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
+        _frameRenderTimeWatch = new Stopwatch();
     }
 
     private Action? UIUpdateMethod { get; set; }
@@ -121,6 +124,9 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     [ObservableProperty]
     private int _width = 200;
 
+    [ObservableProperty]
+    private long _framesRendered = 0;
+
     private bool _appClosing;
 
     private readonly int _index;
@@ -141,12 +147,15 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         GC.SuppressFinalize(this);
     }
 
+    private Stopwatch _frameRenderTimeWatch;
+
     [ObservableProperty] private bool _isDrawing;
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
         if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
             return;
         }
+        _frameRenderTimeWatch.Restart();
         using ILockedFramebuffer pixels = Bitmap.Lock();
         uint* firstPixelAddress = (uint*)pixels.Address;
         int rowBytes = Width;
@@ -170,8 +179,16 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         if (!IsDrawing) {
             IsDrawing = true;
         }
-        Dispatcher.UIThread.Post(() => UIUpdateMethod?.Invoke(), DispatcherPriority.MaxValue);
+        Dispatcher.UIThread.Post(() => {
+            UIUpdateMethod?.Invoke();
+            FramesRendered++;
+        }, DispatcherPriority.MaxValue);
+        _frameRenderTimeWatch.Stop();
+        LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
     }
+
+    [ObservableProperty]
+    private long _lastFrameRenderTimeMs;
 
     public override bool Equals(object? obj) {
         return this == obj || (obj is VideoBufferViewModel other) && _index == other._index;

@@ -27,6 +27,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Threading;
 
 /// <summary>
@@ -59,6 +60,10 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
 
     public DelegateCommand ContinueCommand { get; private set; }
 
+    public DelegateCommand ResetTimeMultiplierCommand { get; private set; }
+
+    private static object _lock = new();
+
     public WPFMainWindowViewModel() {
         StartExecutableCommand = new(StartExecutable);
         DebugExecutableCommand = new(DebugExecutable);
@@ -67,6 +72,8 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
         PauseCommand = new(Pause);
         ContinueCommand = new(Continue);
         ShowPerformanceCommand = new(ShowPerformance);
+        ResetTimeMultiplierCommand = new(ResetTimeMultiplier);
+        BindingOperations.EnableCollectionSynchronization(_videoBuffers, _lock);
     }
 
     private Task DebugExecutable() {
@@ -140,7 +147,7 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
         SetMainTitle();
     }
 
-    private string? MainTitle {
+    public string? MainTitle {
         get => _mainTitle;
         set => this.RaiseAndSetIfChanged(ref _mainTitle, value);
     }
@@ -281,7 +288,9 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
 
     public bool IsRightButtonClicked { get; private set; }
 
-    public void OnMainWindowOpened(object? sender, EventArgs e) => RunEmulator();
+    public void OnMainWindowOpened(object? sender, EventArgs e) {
+        RunEmulator();
+    }
 
     private void RunEmulator() {
         if (_configuration is not null &&

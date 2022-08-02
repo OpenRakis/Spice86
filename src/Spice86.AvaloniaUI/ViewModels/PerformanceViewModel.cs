@@ -1,6 +1,4 @@
 ﻿namespace Spice86.AvaloniaUI.ViewModels;
-using System;
-
 using Avalonia.Controls;
 using Avalonia.Threading;
 
@@ -8,8 +6,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.VM;
 
+using System;
+using System.Linq;
+
 public partial class PerformanceViewModel : ObservableObject {
     private readonly DispatcherTimer? _timer;
+    private readonly MainWindowViewModel? _mainViewModel;
     private readonly Machine? _machine;
 
     public PerformanceViewModel() {
@@ -18,12 +20,14 @@ public partial class PerformanceViewModel : ObservableObject {
         }
     }
 
-    public PerformanceViewModel(Machine machine) {
+    public PerformanceViewModel(Machine machine, MainWindowViewModel mainViewModel) {
+        _mainViewModel = mainViewModel;
         _machine = machine;
-        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdatePerformanceInfo);
+        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(300), DispatcherPriority.Normal, UpdatePerformanceInfo);
         _timer.Start();
     }
 
+    private Dictionary<uint, long> _framesRendered = new();
 
     private DateTimeOffset _lastUpdateTime;
 
@@ -34,10 +38,21 @@ public partial class PerformanceViewModel : ObservableObject {
         if (DateTimeOffset.Now - _lastUpdateTime >= TimeSpan.FromSeconds(1)) {
             if (_lastUpdateTime != DateTimeOffset.MinValue) {
                 InstructionsPerSecond = _machine.Cpu.State.Cycles - InstructionsExecuted;
+                if(_mainViewModel is not null) {
+                    FramesPerSecond = _mainViewModel.VideoBuffers
+                        .Select(x => x.FramesRendered - _framesRendered
+                            .GetValueOrDefault(x.Address))
+                                .Average(x => x);
+                    VideoBuffersLastFrameRenderTime = _mainViewModel.VideoBuffers.Average(x => x.LastFrameRenderTimeMs);
+
+                }
             }
             _lastUpdateTime = DateTimeOffset.Now;
         }
         InstructionsExecuted = _machine.Cpu.State.Cycles;
+        if(_mainViewModel is not null) {
+            _framesRendered = new(_mainViewModel.VideoBuffers.Select(x => new KeyValuePair<uint, long>(x.Address, x.FramesRendered)));
+        }
     }
 
     [ObservableProperty]
@@ -45,5 +60,11 @@ public partial class PerformanceViewModel : ObservableObject {
 
     [ObservableProperty]
     private long _instructionsPerSecond = -1;
+
+    [ObservableProperty]
+    private double _framesPerSecond = -1;
+
+    [ObservableProperty]
+    private double _videoBuffersLastFrameRenderTime = 0;
 
 }

@@ -16,11 +16,8 @@ public partial class App : Application {
             DataContext = mainViewModel
         };
         mainWindow.Closed += (s, e) => mainViewModel.Dispose();
-
-        mainWindow.Initialized += mainViewModel.OnMainWindowOpened;
         Application.Current.MainWindow = mainWindow;
-        
         mainWindow.Show();
-
+        mainViewModel.OnMainWindowOpened(this, EventArgs.Empty);
     }
 }
