@@ -206,7 +206,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         } else if (_programExecutor is not null) {
             _performanceWindow = new PerformanceWindow() {
                 DataContext = new PerformanceViewModel(
-                    _programExecutor.Machine)
+                    _programExecutor.Machine, this)
             };
             _performanceWindow.Closed += (s, e) => _performanceWindow = null;
             _performanceWindow.Show();
@@ -254,10 +254,10 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     public int MouseY { get; set; }
 
     public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary =>
-        (IDictionary<uint, IVideoBufferViewModel>)VideoBuffers
+        VideoBuffers
         .ToDictionary(x =>
             x.Address,
-            x => x);
+            x => (IVideoBufferViewModel)x);
 
     public int Width { get; private set; }
 

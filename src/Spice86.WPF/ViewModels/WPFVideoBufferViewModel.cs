@@ -11,8 +11,10 @@ using Spice86.WPF.Views;
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
@@ -43,6 +45,9 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
         _index = index;
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
+        Dispatcher.CurrentDispatcher.Invoke(() => {
+            _bitmap = new WriteableBitmap(320, 200, 96, 96, PixelFormats.Bgra32, new BitmapPalette(GetPaletteColors()));
+        });
     }
 
     public int Width {
@@ -53,6 +58,13 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
     public int Height {
         get => _height;
         set => this.RaiseAndSetIfChanged(ref _height, value);
+    }
+
+    private long _framesRendered = 0;
+
+    public long FramesRendered {
+        get => _height;
+        set => this.RaiseAndSetIfChanged(ref _framesRendered, value);
     }
 
     private Action? UIUpdateMethod { get; set; }
@@ -89,8 +101,13 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
 
     public uint Address { get; private set; }
 
+    private static List<Color> GetPaletteColors() {
+        Dictionary<Color, Color> colors = new();
+        return colors.Values.ToList();
+    }
 
-    private WriteableBitmap? _bitmap = new(new BitmapImage());
+
+    private WriteableBitmap? _bitmap;
 
     public WriteableBitmap? Bitmap {
         get => _bitmap;
@@ -182,7 +199,10 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
         }
         _bitmap.WritePixels(new Int32Rect(0, 0, _bitmap.PixelWidth, _bitmap.PixelHeight), buffer, _bitmap.PixelWidth, 0);
         _bitmap.Unlock();
-        Dispatcher.CurrentDispatcher.Invoke(() => UIUpdateMethod?.Invoke(), DispatcherPriority.Render);
+        Dispatcher.CurrentDispatcher.Invoke(() => {
+            UIUpdateMethod?.Invoke();
+            FramesRendered++;
+        }, DispatcherPriority.Render);
     }
 
     public override bool Equals(object? obj) {
