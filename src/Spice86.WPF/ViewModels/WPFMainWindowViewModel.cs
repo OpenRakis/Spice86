@@ -220,7 +220,7 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
     public double TimeMultiplier {
         get => _timeMultiplier;
         set {
-            this.RaiseAndSetIfChanged(ref _timeMultiplier, value);
+            this.RaiseAndSetIfChanged(ref _timeMultiplier, Math.Min(1, value));
             _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
         }
     }
@@ -231,7 +231,7 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
         } else if (_programExecutor is not null) {
             _performanceWindow = new PerformanceWindow() {
                 DataContext = new WPFPerformanceViewModel(
-                    _programExecutor.Machine)
+                    _programExecutor.Machine, this)
             };
             _performanceWindow.Closed += (s, e) => _performanceWindow = null;
             _performanceWindow.Show();

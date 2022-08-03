@@ -6,10 +6,10 @@ using System.Windows.Data;
 
 internal class InvalidNumberToQuestionMarkConverter : IValueConverter {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        if (value is long l && l == -1) {
+        if (value is long l && l == -1 || value is double d && d == -1) {
             return "?";
         }
-        return null;
+        return value;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
