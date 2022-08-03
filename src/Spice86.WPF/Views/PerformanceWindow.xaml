@@ -1,35 +1,31 @@
-﻿<Window x:Class="Spice86.WPF.Views.PerformanceWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Spice86.WPF.Views"
-        xmlns:converters="clr-namespace:Spice86.WPF.Converters"
-        mc:Ignorable="d"
-        ResizeMode="NoResize"
-        Title="Performance" SizeToContent="WidthAndHeight" ShowInTaskbar="False">
+﻿<Window
+    x:Class="Spice86.WPF.Views.PerformanceWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:Spice86.WPF.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:Spice86.WPF.Views"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Performance"
+    ResizeMode="NoResize"
+    ShowInTaskbar="False"
+    SizeToContent="WidthAndHeight"
+    mc:Ignorable="d">
     <Window.Resources>
         <converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
     </Window.Resources>
     <Window.Style>
-        <Style TargetType="Window" BasedOn="{StaticResource {x:Type Window}}"/>
+        <Style BasedOn="{StaticResource {x:Type Window}}" TargetType="Window" />
     </Window.Style>
     <StackPanel Orientation="Vertical">
         <Label Content="Instructions executed" />
-        <TextBlock Text="{Binding InstructionsExecuted,
-				   StringFormat={}{0:N0}}"/>
+        <TextBlock Text="{Binding InstructionsExecuted, StringFormat={}{0:N0}}" />
         <Label Content="Instructions per second" />
-        <TextBlock Text="{Binding InstructionsPerSecond,
-				   Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-				   StringFormat={}{0:N0}}"/>
+        <TextBlock Text="{Binding InstructionsPerSecond, Converter={StaticResource InvalidNumberToQuestionMarkConverter}, StringFormat={}{0:N0}}" />
         <Label Content="Frames per second (avg across all video buffers)" />
-        <TextBlock Text="{Binding FramesPerSecond,
-			Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-			StringFormat={}{0:N0}}"/>
+        <TextBlock Text="{Binding FramesPerSecond, Converter={StaticResource InvalidNumberToQuestionMarkConverter}, StringFormat={}{0:N0}}" />
         <Label Content="Last frame render time (avg across all video buffers)" />
-        <TextBlock Text="{Binding VideoBuffersLastFrameRenderTime,
-			Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-			StringFormat={}{0:N0} ms}"/>
+        <TextBlock Text="{Binding VideoBuffersLastFrameRenderTime, Converter={StaticResource InvalidNumberToQuestionMarkConverter}, StringFormat={}{0:N0} ms}" />
     </StackPanel>
 
 </Window>

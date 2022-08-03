@@ -14,11 +14,10 @@ using Spice86.WPF.Views;
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
@@ -26,6 +25,7 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
     private bool _disposedValue;
 
     public DelegateCommand SaveBitmapCommand;
+    private Stopwatch _frameRenderTimeWatch;
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -41,6 +41,7 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
         Scale = 1;
         _renderTarget = new FastBitmap(Width, Height);
         SaveBitmapCommand = new(SaveBitmap);
+        _frameRenderTimeWatch = new Stopwatch();
     }
 
     public WPFVideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
@@ -53,6 +54,7 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
         MainWindow.AppClosing += MainWindow_AppClosing;
         _renderTarget = new FastBitmap(Width, Height);
         SaveBitmapCommand = new(SaveBitmap);
+        _frameRenderTimeWatch = new Stopwatch();
     }
 
     private FastBitmap _renderTarget;
@@ -70,7 +72,7 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
     private long _framesRendered = 0;
 
     public long FramesRendered {
-        get => _height;
+        get => _framesRendered;
         set => this.RaiseAndSetIfChanged(ref _framesRendered, value);
     }
 
@@ -179,6 +181,8 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
             return;
         }
 
+        _frameRenderTimeWatch.Restart();
+
         uint totalPixels = (uint)Width * (uint)Height;
         uint startAddress = Address;
         long endAddress = Address + totalPixels;
@@ -202,6 +206,16 @@ public partial class WPFVideoBufferViewModel : ReactiveObject, IComparable<WPFVi
             _renderTarget.InteropBitmap?.Invalidate();
             FramesRendered++;
         }, DispatcherPriority.Render);
+
+        _frameRenderTimeWatch.Stop();
+        LastFrameRenderTime = _frameRenderTimeWatch.ElapsedMilliseconds;
+    }
+
+    private long _lastFrameRenderTimeMs;
+
+    public long LastFrameRenderTime {
+        get => _lastFrameRenderTimeMs;
+        set => this.RaiseAndSetIfChanged(ref _lastFrameRenderTimeMs, value);
     }
 
     public override bool Equals(object? obj) {

@@ -27,6 +27,8 @@
 		<PackageReference Include="ReactiveUI" Version="18.3.1" />
 		<PackageReference Include="ReactiveUI.Events.WPF" Version="15.1.1" />
 		<PackageReference Include="ReactiveUI.WPF" Version="18.3.1" />
+		<PackageReference Include="System.Management" Version="6.0.0" />
+		<PackageReference Include="DotNetProjects.Extended.Wpf.Toolkit" Version="5.0.103" />
 	</ItemGroup>
 
 	<ItemGroup>

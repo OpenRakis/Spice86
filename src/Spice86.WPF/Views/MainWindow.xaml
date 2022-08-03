@@ -7,9 +7,13 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:views="clr-namespace:Spice86.WPF.Views"
     xmlns:vm="clr-namespace:Spice86.UI.ViewModels"
+    xmlns:xceed="http://schemas.xceed.com/wpf/xaml/toolkit"
     Title="{Binding MainTitle}"
-    Width="800"
-    Height="450"
+    Width="1024"
+    Height="768"
+    MinWidth="1024"
+    MinHeight="768"
+    ResizeMode="CanResizeWithGrip"
     mc:Ignorable="d">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -59,6 +63,10 @@
                         Grid.Column="1"
                         VerticalAlignment="Center"
                         Content="Time Modifier" />
+                    <xceed:DoubleUpDown
+                        Grid.Column="2"
+                        Margin="5,0,0,0"
+                        Text="{Binding TimeMultiplier}" />
                     <Button
                         Grid.Column="3"
                         Margin="5,0,0,0"
@@ -66,8 +74,8 @@
                         Content="Reset" />
                     <Menu Grid.Column="4">
                         <MenuItem Header="Video Buffers Options">
-                            <ListView ItemsSource="{Binding VideoBuffers}">
-                                <ListView.ItemTemplate>
+                            <ListBox ItemsSource="{Binding VideoBuffers}">
+                                <ListBox.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:WPFVideoBufferViewModel}">
                                         <MenuItem>
                                             <MenuItem.Header>
@@ -104,19 +112,24 @@
                                             </MenuItem>
                                         </MenuItem>
                                     </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </MenuItem>
                     </Menu>
                 </Grid>
             </Grid>
-            <ListBox ItemsSource="{Binding VideoBuffers}">
-                <ListBox.ItemTemplate>
+            <ItemsControl ItemsSource="{Binding VideoBuffers}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Vertical" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:WPFVideoBufferViewModel}">
                         <views:VideoBufferView />
                     </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </DockPanel>
     </ScrollViewer>
 </Window>
