@@ -235,22 +235,26 @@ public class Machine : IDisposable {
     private void RunLoop() {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
-            if (Gui?.IsPaused == true) {
-                IsPaused = true;
-                Paused?.Invoke();
-                if (!_programExecutor.Step()) {
-                    Gui.IsPaused = true;
-                    Gui?.WaitOne();
-                }
-                Resumed?.Invoke();
-                IsPaused = false;
-            }
+            PauseIfAskedTo();
             if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
             }
             PerformDmaTransfers();
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
+        }
+    }
+
+    private void PauseIfAskedTo() {
+        if (Gui?.IsPaused == true) {
+            IsPaused = true;
+            Paused?.Invoke();
+            if (!_programExecutor.Step()) {
+                Gui.IsPaused = true;
+                Gui?.WaitOne();
+            }
+            Resumed?.Invoke();
+            IsPaused = false;
         }
     }
 
