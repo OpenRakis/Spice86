@@ -50,7 +50,7 @@ public partial class VideoBufferViewModel : ObservableObject, IComparable<VideoB
         UIUpdateMethod = invalidateImagAction;
     }
 
-    [ICommand]
+    [RelayCommand]
     public async Task SaveBitmap() {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             var picker = new SaveFileDialog {

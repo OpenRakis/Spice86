@@ -52,7 +52,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
     public event EventHandler<KeyEventArgs>? KeyUp;
     public event EventHandler<KeyEventArgs>? KeyDown;
 
-    [ICommand]
+    [RelayCommand]
     public async Task DumpEmulatorStateToFile() {
         if (_programExecutor is null || _configuration is null) {
             return;
@@ -77,7 +77,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         }
     }
 
-    [ICommand]
+    [RelayCommand]
     private void Pause() {
         if (_emulatorThread is not null) {
             _okayToContinueEvent.Reset();
@@ -85,7 +85,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         }
     }
 
-    [ICommand]
+    [RelayCommand]
     private void Play() {
         if (_emulatorThread is not null) {
             _okayToContinueEvent.Set();
@@ -132,7 +132,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         }
     }
 
-    [ICommand]
+    [RelayCommand]
     public void ShowDebugger() {
         if (_debuggerWindow != null) {
             _debuggerWindow.Activate();
@@ -146,7 +146,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         }
     }
 
-    [ICommand]
+    [RelayCommand]
     public void ShowPerformance() {
         if (_performanceWindow != null) {
             _performanceWindow.Activate();
@@ -160,7 +160,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         }
     }
 
-    [ICommand]
+    [RelayCommand]
     public void ShowColorPalette() {
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
@@ -171,7 +171,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable {
         }
     }
 
-    [ICommand]
+    [RelayCommand]
     public void ResetTimeMultiplier() {
         TimeMultiplier = _configuration!.TimeMultiplier;
     }
