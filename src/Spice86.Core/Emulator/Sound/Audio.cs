@@ -2,7 +2,7 @@
 
 using Backend.Audio.OpenAl;
 
-using Spice86.Core.Backend.Audio.OpenAl;
+using Spice86.Core.Backend.Audio;
 
 using System;
 

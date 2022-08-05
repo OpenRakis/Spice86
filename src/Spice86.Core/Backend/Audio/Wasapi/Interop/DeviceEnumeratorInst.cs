@@ -1,10 +1,10 @@
-﻿namespace Spice86.Core.Backend.Audio.OpenAl.Wasapi.Interop;
+﻿namespace Spice86.Core.Backend.Audio.Wasapi.Interop;
 
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
 [SupportedOSPlatform("windows")]
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct AudioClientInst {
-    public AudioClientV* Vtbl;
+internal unsafe struct DeviceEnumeratorInst {
+    public DeviceEnumeratorV* Vtbl;
 }

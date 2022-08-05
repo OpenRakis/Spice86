@@ -2,6 +2,7 @@
 using System;
 using System.Runtime.Versioning;
 
+using Spice86.Core.Backend.Audio;
 using Spice86.Core.Backend.Audio.OpenAl;
 using Spice86.Core.Backend.Audio.OpenAl.DirectSound.Interop;
 

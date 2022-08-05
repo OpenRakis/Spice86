@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Backend.Audio.OpenAl;
+﻿namespace Spice86.Core.Backend.Audio;
 
 using System;
 

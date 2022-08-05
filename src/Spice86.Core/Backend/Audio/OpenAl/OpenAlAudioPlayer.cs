@@ -2,6 +2,8 @@ namespace Spice86.Core.Backend.Audio.OpenAl;
 
 using Silk.NET.OpenAL;
 
+using Spice86.Core.Backend.Audio;
+
 using System;
 using System.Collections.Generic;
 using System.IO;

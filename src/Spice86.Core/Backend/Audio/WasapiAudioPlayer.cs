@@ -1,7 +1,7 @@
-﻿namespace Spice86.Core.Backend.Audio.OpenAl;
+﻿namespace Spice86.Core.Backend.Audio;
 using System.Runtime.Versioning;
 
-using Spice86.Core.Backend.Audio.OpenAl.Wasapi;
+using Spice86.Core.Backend.Audio.Wasapi;
 
 [SupportedOSPlatform("windows")]
 public sealed class WasapiAudioPlayer : AudioPlayer {

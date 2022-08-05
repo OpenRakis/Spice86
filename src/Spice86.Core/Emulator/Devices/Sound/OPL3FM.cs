@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Spice86.Core.Backend.Audio.OpenAl;
+using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound;
