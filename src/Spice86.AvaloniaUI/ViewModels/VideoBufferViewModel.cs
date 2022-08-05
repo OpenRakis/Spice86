@@ -65,9 +65,9 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     private void DrawThreadMethod() {
         while(!_exitDrawThread) {
             _drawAction?.Invoke();
-            _manualResetEvent.Reset();
             if(!_exitDrawThread) {
-                _manualResetEvent.WaitOne();
+                _manualResetEvent.Reset();
+                _manualResetEvent.WaitOne(1500);
             }
         }
     }
@@ -231,17 +231,17 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
+                _exitDrawThread = true;
+                if (_drawThread?.IsAlive == true) {
+                    _drawThread.Join();
+                }
+                _manualResetEvent.Dispose();
                 Dispatcher.UIThread.Post(() => {
-                    _exitDrawThread = true;
-                    _manualResetEvent.Set();
-                    if (_drawThread?.IsAlive == true) {
-                        _drawThread.Join();
-                    }
                     Bitmap?.Dispose();
                     Bitmap = null;
                     Cursor?.Dispose();
                     UIUpdateMethod?.Invoke();
-                }, DispatcherPriority.Render);
+                }, DispatcherPriority.MaxValue);
             }
             _disposedValue = true;
         }
