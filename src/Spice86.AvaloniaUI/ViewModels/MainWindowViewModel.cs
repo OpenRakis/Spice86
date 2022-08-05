@@ -161,7 +161,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 _configuration.Exe = files[0];
                 _configuration.ExeArgs = "";
                 _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
-                DisposeEmulator();
+                Dispatcher.UIThread.Post(() => {
+                    DisposeEmulator();
+                }, DispatcherPriority.MaxValue);
                 SetMainTitle();
                 _okayToContinueEvent = new(true);
                 IsPaused = pauseOnStart;
@@ -306,13 +308,11 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     private void DisposeBuffers() {
-        Dispatcher.UIThread.Post(() => {
-            for (int i = 0; i < VideoBuffers.Count; i++) {
-                VideoBufferViewModel buffer = VideoBuffers[i];
-                buffer.Dispose();
-            }
-            _videoBuffers.Clear();
-        });
+        for (int i = 0; i < VideoBuffers.Count; i++) {
+            VideoBufferViewModel buffer = VideoBuffers[i];
+            buffer.Dispose();
+        }
+        _videoBuffers.Clear();
     }
 
     protected virtual void Dispose(bool disposing) {
@@ -328,11 +328,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     private void DisposeEmulator() {
-        Dispatcher.UIThread.Post(() => {
-            _performanceWindow?.Close();
-            _debuggerWindow?.Close();
-            _paletteWindow?.Close();
-        });
+        _performanceWindow?.Close();
+        _debuggerWindow?.Close();
+        _paletteWindow?.Close();
         DisposeBuffers();
         _programExecutor?.Dispose();
         _okayToContinueEvent.Dispose();
