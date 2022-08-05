@@ -4,6 +4,7 @@ using Backend.Audio.OpenAl;
 
 using Mt32emu;
 
+using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Sound;
 

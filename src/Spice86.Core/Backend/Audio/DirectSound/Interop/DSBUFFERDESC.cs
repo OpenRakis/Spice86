@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Backend.Audio.OpenAl.DirectSound.Interop;
 
-using Spice86.Core.Backend.Audio.OpenAl;
+using Spice86.Core.Backend.Audio;
 
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;

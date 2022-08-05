@@ -1,8 +1,8 @@
-﻿namespace Spice86.Core.Backend.Audio.OpenAl.Wasapi;
+﻿namespace Spice86.Core.Backend.Audio.Wasapi;
 using System;
 using System.Runtime.Versioning;
 
-using Spice86.Core.Backend.Audio.OpenAl.Wasapi.Interop;
+using Spice86.Core.Backend.Audio.Wasapi.Interop;
 
 [SupportedOSPlatform("windows")]
 internal sealed class MediaDevice {

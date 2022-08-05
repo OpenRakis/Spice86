@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Backend.Audio.OpenAl.Wasapi.Interop;
+﻿namespace Spice86.Core.Backend.Audio.Wasapi.Interop;
 
-using Spice86.Core.Backend.Audio.OpenAl;
+using Spice86.Core.Backend.Audio;
 
 using System;
 using System.Runtime.InteropServices;
