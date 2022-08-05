@@ -37,7 +37,7 @@ internal partial class MainWindow : Window {
 
     private void MainWindow_DataContextChanged(object? sender, EventArgs e) {
         if (sender is MainWindowViewModel vm) {
-            Dispatcher.UIThread.Post(() => vm.SetResolution(320, 200, 1), DispatcherPriority.MaxValue);
+            Dispatcher.UIThread.Post(() => vm.SetResolution(320, 200, 1));
         }
     }
 

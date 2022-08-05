@@ -22,6 +22,12 @@ using System.Threading.Tasks;
 public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
 
+    private Thread _drawThread;
+
+    private bool _exitDrawThread;
+
+    private ManualResetEvent _manualResetEvent = new(false);
+
     /// <summary>
     /// For AvaloniaUI Designer
     /// </summary>
@@ -35,6 +41,10 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         _index = 1;
         Scale = 1;
         _frameRenderTimeWatch = new Stopwatch();
+        _drawThread = new Thread(DrawThreadMethod) {
+            Name = "UIRenderThread"
+        };
+        _drawThread.Start();
     }
 
     public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
@@ -46,6 +56,20 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
         _frameRenderTimeWatch = new Stopwatch();
+        _drawThread = new Thread(DrawThreadMethod) {
+            Name = "UIRenderThread"
+        };
+        _drawThread.Start();
+    }
+
+    private void DrawThreadMethod() {
+        while(!_exitDrawThread) {
+            _drawAction?.Invoke();
+            _manualResetEvent.Reset();
+            if(!_exitDrawThread) {
+                _manualResetEvent.WaitOne();
+            }
+        }
     }
 
     private Action? UIUpdateMethod { get; set; }
@@ -151,40 +175,46 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
 
     [ObservableProperty] private bool _isDrawing;
 
+    private Action? _drawAction;
+
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
         if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
             return;
         }
-        _frameRenderTimeWatch.Restart();
-        using ILockedFramebuffer pixels = Bitmap.Lock();
-        uint* firstPixelAddress = (uint*)pixels.Address;
-        int rowBytes = Width;
-        uint memoryAddress = Address;
-        uint* currentRow = firstPixelAddress;
-        for (int row = 0; row < Height; row++) {
-            uint* startOfLine = currentRow;
-            uint* endOfLine = currentRow + Width;
-            for (uint* column = startOfLine; column < endOfLine; column++) {
-                byte colorIndex = memory[memoryAddress];
-                Rgb pixel = palette[colorIndex];
-                uint argb = pixel.ToArgb();
-                if (pixels.Format == PixelFormat.Rgba8888) {
-                    argb = pixel.ToRgba();
+        _drawAction ??= new Action(() => {
+            _frameRenderTimeWatch.Restart();
+            using ILockedFramebuffer pixels = Bitmap.Lock();
+            uint* firstPixelAddress = (uint*)pixels.Address;
+            int rowBytes = Width;
+            uint memoryAddress = Address;
+            uint* currentRow = firstPixelAddress;
+            for (int row = 0; row < Height; row++) {
+                uint* startOfLine = currentRow;
+                uint* endOfLine = currentRow + Width;
+                for (uint* column = startOfLine; column < endOfLine; column++) {
+                    byte colorIndex = memory[memoryAddress];
+                    Rgb pixel = palette[colorIndex];
+                    uint argb = pixel.ToArgb();
+                    if (pixels.Format == PixelFormat.Rgba8888) {
+                        argb = pixel.ToRgba();
+                    }
+                    *column = argb;
+                    memoryAddress++;
                 }
-                *column = argb;
-                memoryAddress++;
+                currentRow += rowBytes;
             }
-            currentRow += rowBytes;
-        }
-        if (!IsDrawing) {
-            IsDrawing = true;
-        }
-        Dispatcher.UIThread.Post(() => {
-            UIUpdateMethod?.Invoke();
-            FramesRendered++;
-        }, DispatcherPriority.MaxValue);
-        _frameRenderTimeWatch.Stop();
-        LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
+            if (!IsDrawing) {
+                IsDrawing = true;
+            }
+
+            Dispatcher.UIThread.Post(() => {
+                UIUpdateMethod?.Invoke();
+                FramesRendered++;
+            }, DispatcherPriority.Render);
+            _frameRenderTimeWatch.Stop();
+            LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
+        });
+        _manualResetEvent.Set();
     }
 
     [ObservableProperty]
@@ -202,11 +232,16 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         if (!_disposedValue) {
             if (disposing) {
                 Dispatcher.UIThread.Post(() => {
+                    _exitDrawThread = true;
+                    _manualResetEvent.Set();
+                    if (_drawThread?.IsAlive == true) {
+                        _drawThread.Join();
+                    }
                     Bitmap?.Dispose();
                     Bitmap = null;
                     Cursor?.Dispose();
                     UIUpdateMethod?.Invoke();
-                }, DispatcherPriority.MaxValue);
+                }, DispatcherPriority.Render);
             }
             _disposedValue = true;
         }

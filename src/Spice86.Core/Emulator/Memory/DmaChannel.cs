@@ -174,7 +174,7 @@ public sealed class DmaChannel {
     }
 
     public bool MustTransferData =>
-        Device is not null && _transferTimer.ElapsedTicks >= TransferPeriod;
+        Device is not null && !IsMasked && IsActive && _transferTimer.ElapsedTicks >= TransferPeriod;
 
     /// <summary>
     /// Performs a DMA transfer.

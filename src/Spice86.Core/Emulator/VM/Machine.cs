@@ -24,6 +24,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 /// <summary>
@@ -273,10 +274,8 @@ public class Machine : IDisposable {
     /// This method must be called frequently in the main emulation loop for DMA transfers to function properly.
     /// </remarks>
     internal void PerformDmaTransfers() {
-        foreach (DmaChannel? dmaChannel in _dmaDeviceChannels) {
-            if (dmaChannel.IsActive && !dmaChannel.IsMasked && dmaChannel.MustTransferData) {
-                dmaChannel.Transfer(Memory);
-            }
+        foreach (DmaChannel? dmaChannel in _dmaDeviceChannels.Where(dmaChannel => dmaChannel.MustTransferData)) {
+            dmaChannel.Transfer(Memory);
         }
     }
 
