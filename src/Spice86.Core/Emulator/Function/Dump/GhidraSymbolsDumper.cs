@@ -5,8 +5,6 @@ using Memory;
 using Serilog;
 
 using Spice86.Core.Emulator.Function;
-
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
 
@@ -14,8 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-
-using VM;
 
 public class GhidraSymbolsDumper {
     private static readonly ILogger _logger = Log.Logger.ForContext<GhidraSymbolsDumper>();
