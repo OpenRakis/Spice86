@@ -66,8 +66,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         while(!_exitDrawThread) {
             _drawAction?.Invoke();
             if(!_exitDrawThread) {
-                _manualResetEvent.Reset();
-                _manualResetEvent.WaitOne(1500);
+                _manualResetEvent.WaitOne();
             }
         }
     }
@@ -215,6 +214,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
             LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
         });
         _manualResetEvent.Set();
+        _manualResetEvent.Reset();
     }
 
     [ObservableProperty]
@@ -232,6 +232,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         if (!_disposedValue) {
             if (disposing) {
                 _exitDrawThread = true;
+                _manualResetEvent.Set();
                 if (_drawThread?.IsAlive == true) {
                     _drawThread.Join();
                 }
