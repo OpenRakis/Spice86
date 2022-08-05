@@ -121,8 +121,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
         var videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         Dispatcher.UIThread.Post(() =>
-                VideoBuffers.Add(videoBuffer)
-            , DispatcherPriority.MaxValue);
+                VideoBuffers.Add(videoBuffer));
     }
 
     public void Dispose() {
@@ -313,7 +312,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 buffer.Dispose();
             }
             _videoBuffers.Clear();
-        }, DispatcherPriority.MaxValue);
+        });
     }
 
     protected virtual void Dispose(bool disposing) {
@@ -333,7 +332,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
             _performanceWindow?.Close();
             _debuggerWindow?.Close();
             _paletteWindow?.Close();
-        }, DispatcherPriority.MaxValue);
+        });
         DisposeBuffers();
         _programExecutor?.Dispose();
         _okayToContinueEvent.Dispose();
