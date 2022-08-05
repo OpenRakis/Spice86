@@ -2,8 +2,6 @@
 
 using Memory;
 
-using Spice86.Core.Emulator.Memory;
-
 using System.Collections.Generic;
 
 public class ExecutionFlowRecorder {
