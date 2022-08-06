@@ -185,7 +185,7 @@ public sealed class DmaChannel {
     /// </remarks>
     internal void Transfer(Memory memory) {
         IDmaDevice8? device = Device;
-        if (!MustTransferData || device is null) {
+        if (device is null) {
             return;
         }
         uint memoryAddress = (uint)Page << 16 | Address;
