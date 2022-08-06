@@ -202,7 +202,9 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
                 _configuration.Exe = file;
                 _configuration.ExeArgs = "";
                 _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
-                DisposeEmulator();
+                App.Current.Dispatcher.Invoke(() => {
+                    DisposeEmulator();
+                });
                 SetMainTitle();
                 _okayToContinueEvent = new(true);
                 IsPaused = pauseOnStart;
@@ -277,10 +279,10 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
     public int MouseY { get; set; }
 
     public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary =>
-        (IDictionary<uint, IVideoBufferViewModel>)VideoBuffers
+        VideoBuffers
         .ToDictionary(x =>
             x.Address,
-            x => x);
+            x => (IVideoBufferViewModel)x);
 
     public int Width { get; private set; }
 
@@ -333,13 +335,11 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
     }
 
     private void DisposeBuffers() {
-        App.Current.Dispatcher.Invoke(() => {
-            for (int i = 0; i < VideoBuffers.Count; i++) {
-                WPFVideoBufferViewModel buffer = VideoBuffers[i];
-                buffer.Dispose();
-            }
-            _videoBuffers.Clear();
-        }, DispatcherPriority.Render);
+        for (int i = 0; i < VideoBuffers.Count; i++) {
+            WPFVideoBufferViewModel buffer = VideoBuffers[i];
+            buffer.Dispose();
+        }
+        _videoBuffers.Clear();
     }
 
     protected virtual void Dispose(bool disposing) {
@@ -355,10 +355,8 @@ public partial class WPFMainWindowViewModel : ReactiveObject, IGui, IDisposable 
     }
 
     private void DisposeEmulator() {
-        App.Current.Dispatcher.Invoke(() => {
-            _performanceWindow?.Close();
-            _paletteWindow?.Close();
-        }, DispatcherPriority.Render);
+        _performanceWindow?.Close();
+        _paletteWindow?.Close();
         DisposeBuffers();
         _programExecutor?.Dispose();
         _okayToContinueEvent.Dispose();
