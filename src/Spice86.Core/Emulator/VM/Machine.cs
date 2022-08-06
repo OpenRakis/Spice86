@@ -181,10 +181,12 @@ public class Machine : IDisposable {
 
     private void DmaThreadMethod() {
         while(!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
-            PauseIfAskedTo();
+            Gui?.WaitOne();
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel? dmaChannel = _dmaDeviceChannels[i];
-                dmaChannel.Transfer(Memory);
+                if(dmaChannel.MustTransferData) {
+                    dmaChannel.Transfer(Memory);
+                }
             }
             _dmaThreadManualResetEvent.Reset();
             _dmaThreadManualResetEvent.WaitOne(1);
@@ -294,13 +296,19 @@ public class Machine : IDisposable {
     /// This method must be called frequently in the main emulation loop for DMA transfers to function properly.
     /// </remarks>
     internal void PerformDmaTransfers() {
+        if (AnyDmaChannelMustTransferData()) {
+            _dmaThreadManualResetEvent.Set();
+        }
+    }
+
+    private bool AnyDmaChannelMustTransferData() {
         for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
             DmaChannel? dmaChannel = _dmaDeviceChannels[i];
-            if(dmaChannel.MustTransferData) {
-                _dmaThreadManualResetEvent.Set();
-                break;
+            if (dmaChannel.MustTransferData) {
+                return true;
             }
         }
+        return false;
     }
 
     protected virtual void Dispose(bool disposing) {
