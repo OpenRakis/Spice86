@@ -33,8 +33,11 @@ using System.Collections.Generic;
 public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
     private readonly ProgramExecutor _programExecutor;
-    private readonly HashSet<DmaChannel> _dmaDeviceChannels = new();
+    private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private bool _disposed;
+    private bool _exitDmaThread;
+    private ManualResetEvent _dmaThreadManualResetEvent = new(true);
+    private Thread _dmaThread;
 
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
@@ -169,6 +172,23 @@ public class Machine : IDisposable {
         Register(DosInt21Handler);
         MouseInt33Handler = new MouseInt33Handler(this, gui);
         Register(MouseInt33Handler);
+
+        _dmaThread = new Thread(DmaThreadMethod) {
+            Name = "DMATransfersThread"
+        };
+        _dmaThread.Start();
+    }
+
+    private void DmaThreadMethod() {
+        while(!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
+            PauseIfAskedTo();
+            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+                DmaChannel? dmaChannel = _dmaDeviceChannels[i];
+                dmaChannel.Transfer(Memory);
+            }
+            _dmaThreadManualResetEvent.Reset();
+            _dmaThreadManualResetEvent.WaitOne(1);
+        }
     }
 
     public string DumpCallStack() {
@@ -274,14 +294,24 @@ public class Machine : IDisposable {
     /// This method must be called frequently in the main emulation loop for DMA transfers to function properly.
     /// </remarks>
     internal void PerformDmaTransfers() {
-        foreach (DmaChannel? dmaChannel in _dmaDeviceChannels) {
-            dmaChannel.Transfer(Memory);
+        for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+            DmaChannel? dmaChannel = _dmaDeviceChannels[i];
+            if(dmaChannel.MustTransferData) {
+                _dmaThreadManualResetEvent.Set();
+                break;
+            }
         }
     }
 
     protected virtual void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                _exitDmaThread = true;
+                _dmaThreadManualResetEvent.Set();
+                if(_dmaThread.IsAlive) {
+                    _dmaThread.Join();
+                }
+                _dmaThreadManualResetEvent.Dispose();
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 MachineBreakpoints.Dispose();
