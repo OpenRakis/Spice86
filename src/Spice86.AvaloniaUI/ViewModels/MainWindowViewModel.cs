@@ -318,6 +318,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
+                PlayCommand.Execute(null);
                 DisposeEmulator();
                 if(_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
