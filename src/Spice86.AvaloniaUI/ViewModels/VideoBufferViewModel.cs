@@ -73,8 +73,8 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
 
     private Action? UIUpdateMethod { get; set; }
 
-    internal void SetUIUpdateMethod(Action invalidateImagAction) {
-        UIUpdateMethod = invalidateImagAction;
+    internal void SetUIUpdateMethod(Action invalidateImageAction) {
+        UIUpdateMethod = invalidateImageAction;
     }
 
     [RelayCommand]
