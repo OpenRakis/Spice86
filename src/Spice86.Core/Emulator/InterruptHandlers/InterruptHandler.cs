@@ -1,13 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers;
 
 
-using Spice86.Core.Emulator.InterruptHandlers;
-
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.Callback;
 
 public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
     protected State _state;
