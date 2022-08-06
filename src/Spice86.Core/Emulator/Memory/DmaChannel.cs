@@ -185,26 +185,27 @@ public sealed class DmaChannel {
     /// </remarks>
     internal void Transfer(Memory memory) {
         IDmaDevice8? device = Device;
-        if (MustTransferData && device is not null) {
-            uint memoryAddress = (uint)Page << 16 | Address;
-            uint sourceOffset = (uint)Count + 1 - (uint)TransferBytesRemaining;
-
-            int count = Math.Min(TransferChunkSize, TransferBytesRemaining);
-            int startAddress = (int)(memoryAddress + sourceOffset);
-            Span<byte> source = memory.GetSpan(startAddress, count);
-
-            count = device.WriteBytes(source);
-            TransferBytesRemaining -= count;
-
-            if (TransferBytesRemaining <= 0) {
-                if (TransferMode == DmaTransferMode.SingleCycle) {
-                    IsActive = false;
-                    device.SingleCycleComplete();
-                } else {
-                    TransferBytesRemaining = Count + 1;
-                }
-            }
-            _transferTimer.Restart();
+        if (!MustTransferData || device is null) {
+            return;
         }
+        uint memoryAddress = (uint)Page << 16 | Address;
+        uint sourceOffset = (uint)Count + 1 - (uint)TransferBytesRemaining;
+
+        int count = Math.Min(TransferChunkSize, TransferBytesRemaining);
+        int startAddress = (int)(memoryAddress + sourceOffset);
+        Span<byte> source = memory.GetSpan(startAddress, count);
+
+        count = device.WriteBytes(source);
+        TransferBytesRemaining -= count;
+
+        if (TransferBytesRemaining <= 0) {
+            if (TransferMode == DmaTransferMode.SingleCycle) {
+                IsActive = false;
+                device.SingleCycleComplete();
+            } else {
+                TransferBytesRemaining = Count + 1;
+            }
+        }
+        _transferTimer.Restart();
     }
 }
