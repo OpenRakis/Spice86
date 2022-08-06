@@ -15,7 +15,6 @@ internal partial class MainWindow : Window {
     public MainWindow() {
         InitializeComponent();
         Closing += MainWindow_Closing;
-        DataContextChanged += MainWindow_DataContextChanged;
 #if DEBUG
         this.AttachDevTools();
 #endif
@@ -32,12 +31,6 @@ internal partial class MainWindow : Window {
         base.OnKeyDown(e);
         if (DataContext is MainWindowViewModel vm) {
             vm.OnKeyDown(e);
-        }
-    }
-
-    private void MainWindow_DataContextChanged(object? sender, EventArgs e) {
-        if (sender is MainWindowViewModel vm) {
-            Dispatcher.UIThread.Post(() => vm.SetResolution(320, 200, 1));
         }
     }
 
