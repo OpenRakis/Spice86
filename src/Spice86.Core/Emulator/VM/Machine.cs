@@ -274,7 +274,7 @@ public class Machine : IDisposable {
     /// This method must be called frequently in the main emulation loop for DMA transfers to function properly.
     /// </remarks>
     internal void PerformDmaTransfers() {
-        foreach (DmaChannel? dmaChannel in _dmaDeviceChannels.Where(dmaChannel => dmaChannel.MustTransferData)) {
+        foreach (DmaChannel? dmaChannel in _dmaDeviceChannels) {
             dmaChannel.Transfer(Memory);
         }
     }
