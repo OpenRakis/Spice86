@@ -27,6 +27,7 @@ internal static class Audio {
             if (writeBuffer.IsEmpty) {
                 return;
             }
+            Thread.Sleep(1);
         }
     }
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<short> buffer) {
@@ -38,6 +39,7 @@ internal static class Audio {
             if (writeBuffer.IsEmpty) {
                 return;
             }
+            Thread.Sleep(1);
         }
     }
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<byte> buffer) {
@@ -57,6 +59,7 @@ internal static class Audio {
             if (writeBuffer.IsEmpty) {
                 return;
             }
+            Thread.Sleep(1);
         }
     }
 }
