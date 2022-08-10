@@ -60,19 +60,19 @@ public partial class App : Application {
     }
 
     private static Uri GetWindowsTheme() {
-        var key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath);
-        var registryValueObject = key?.GetValue(RegistryValueName);
+        RegistryKey? key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath);
+        object? registryValueObject = key?.GetValue(RegistryValueName);
         if (registryValueObject == null) {
             return ResourceLocator.LightColorScheme;
         }
 
-        var registryValue = (int)registryValueObject;
+        int registryValue = (int)registryValueObject;
 
         return registryValue > 0 ? ResourceLocator.LightColorScheme : ResourceLocator.DarkColorScheme;
     }
 
     private void CHangeThemeIfWindowsChangedIt() {
-        var newWindowsTheme = GetWindowsTheme();
+        Uri? newWindowsTheme = GetWindowsTheme();
         if (_currentTheme != newWindowsTheme) {
             _currentTheme = newWindowsTheme;
             ChangeTheme(_currentTheme);
@@ -91,7 +91,7 @@ public partial class App : Application {
 
     private void WatchTheme() {
         var currentUser = WindowsIdentity.GetCurrent();
-        var query = string.Format(
+        string? query = string.Format(
             CultureInfo.InvariantCulture,
             @"SELECT * FROM RegistryValueChangeEvent WHERE Hive = 'HKEY_USERS' AND KeyPath = '{0}\\{1}' AND ValueName = '{2}'",
             currentUser?.User?.Value,
@@ -130,7 +130,7 @@ public partial class App : Application {
         /// </param>
         public static void RemoveAdonisResources(ResourceDictionary rootResourceDictionary) {
             Uri[] adonisResources = { ClassicTheme };
-            var currentTheme = FindFirstContainedResourceDictionaryByUri(rootResourceDictionary, adonisResources);
+            ResourceDictionary? currentTheme = FindFirstContainedResourceDictionaryByUri(rootResourceDictionary, adonisResources);
 
             if (currentTheme != null) {
                 RemoveResourceDictionaryFromResourcesDeep(currentTheme, rootResourceDictionary);
@@ -156,9 +156,9 @@ public partial class App : Application {
         /// Optional uri to an external color scheme that is not provided by AdonisUI.
         /// </param>
         public static void SetColorScheme(ResourceDictionary rootResourceDictionary, Uri colorSchemeResourceUri, Uri? currentColorSchemeResourceUri = null) {
-            var knownColorSchemes = currentColorSchemeResourceUri != null ? new[] { currentColorSchemeResourceUri } : new[] { LightColorScheme, DarkColorScheme };
+            Uri[]? knownColorSchemes = currentColorSchemeResourceUri != null ? new[] { currentColorSchemeResourceUri } : new[] { LightColorScheme, DarkColorScheme };
 
-            var currentTheme = FindFirstContainedResourceDictionaryByUri(rootResourceDictionary, knownColorSchemes);
+            ResourceDictionary? currentTheme = FindFirstContainedResourceDictionaryByUri(rootResourceDictionary, knownColorSchemes);
 
             if (currentTheme != null) {
                 RemoveResourceDictionaryFromResourcesDeep(currentTheme, rootResourceDictionary);

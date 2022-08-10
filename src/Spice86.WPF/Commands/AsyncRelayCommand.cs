@@ -41,7 +41,7 @@ public class AsyncRelayCommand : CommandBase {
 
     /// <summary>Defines the method to be called when the command is invoked. </summary>
     protected override async void Execute() {
-        var task = _execute();
+        Task? task = _execute();
         if (task != null) {
             IsRunning = true;
             await task;
@@ -96,7 +96,7 @@ public class AsyncRelayCommand<TParameter> : CommandBase<TParameter> {
 
     /// <summary>Defines the method to be called when the command is invoked. </summary>
     protected override async void Execute(TParameter parameter) {
-        var task = _execute(parameter);
+        Task? task = _execute(parameter);
         if (task != null) {
             IsRunning = true;
             await task;
