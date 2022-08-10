@@ -8,6 +8,9 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using MessageBox.Avalonia.BaseWindows.Base;
+using MessageBox.Avalonia.Enums;
+
 using Serilog;
 
 using Spice86.AvaloniaUI;
@@ -358,6 +361,11 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                     _logger.Error(e, "An error occurred during execution");
                 }
+                Dispatcher.UIThread.InvokeAsync(async () => {
+                    IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
+                        .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
+                    await errorMessage.ShowDialog(App.MainWindow);
+                });
             }
         }
     }
