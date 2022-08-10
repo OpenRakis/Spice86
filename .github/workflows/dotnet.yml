@@ -22,18 +22,18 @@ jobs:
         dotnet-version: '6.0.x'
 
     - name: Test with dotnet
-      working-directory: ./src
+      working-directory: ./src/Spice86.Tests
       run: dotnet test --configuration Release
 
     - name: Build with dotnet
-      working-directory: ./src
+      working-directory: ./src/Spice86.AvaloniaUI
       run: dotnet build --configuration Release
 
     - name: Package NuGet
-      working-directory: ./src
+      working-directory: ./src/Spice86.AvaloniaUI
       run: dotnet pack --include-symbols --include-source --configuration Release
 
     - name: Upload NuGet
-      working-directory: ./src/Spice86/bin/Release
+      working-directory: ./src/Spice86.AvaloniaUI/bin/Release
       run: nuget push *.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}} -SkipDuplicate
 
