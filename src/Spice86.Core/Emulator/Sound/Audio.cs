@@ -3,6 +3,7 @@
 using Backend.Audio.OpenAl;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Core.Backend.Audio.Sdl;
 
 using System;
 
@@ -14,7 +15,7 @@ internal static class Audio {
         if (OperatingSystem.IsWindows()) {
             return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25));
         } else {
-            return OpenAlAudioPlayer.Create();
+            return SdlAudioPlayer.Create();
         }
     }
 
