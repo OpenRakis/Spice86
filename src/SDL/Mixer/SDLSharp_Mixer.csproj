@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\SDL\SDLSharp.csproj" />
+
+  </ItemGroup>
+
+  <PropertyGroup>
+	  <WarningsAsErrors>nullable</WarningsAsErrors>
+	  <TargetFramework>net6.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
