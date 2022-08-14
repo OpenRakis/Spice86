@@ -5,16 +5,16 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const*/byte* SDL_GetError();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern byte* SDL_GetErrorMsg(byte* output, int maxlen);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetError(/*const char*/ byte* fmt/*, __arglist*/);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_ClearError();
 
         public static void SetError(Exception ex)

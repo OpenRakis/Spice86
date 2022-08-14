@@ -5,7 +5,7 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_EnclosePoints(
           /*const*/ Point* points,
           int count,
@@ -13,7 +13,7 @@ namespace SDLSharp
           out Rect result
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_EnclosePoints(
           /*const*/ Point* points,
           int count,
@@ -21,20 +21,20 @@ namespace SDLSharp
           out Rect result
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_HasIntersection(
           in Rect a,
           in Rect b
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_IntersectRect(
           in Rect a,
           in Rect b,
           out Rect result
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_IntersectRectAndLine(
           in Rect rect,
           ref int x1,
@@ -43,24 +43,24 @@ namespace SDLSharp
           ref int y2
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_PointInRect(
           in Point p,
           in Rect r
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_RectEmpty(
           in Rect r
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_RectEquals(
           in Rect a,
           in Rect b
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_UnionRect(
           in Rect a,
           in Rect b,

@@ -12,7 +12,7 @@ namespace SDLSharp
             True = 1,
         }
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_free(void* ptr);
 
         public static string? UTF8ToString(byte* utf8)

@@ -6,38 +6,38 @@ namespace SDLSharp
     static unsafe partial class NativeMethods
     {
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern PixelFormat SDL_AllocFormat(
           UInt32 pixel_format
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Palette SDL_AllocPalette(
           int ncolors
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_CalculateGammaRamp(
           float gamma,
           ushort* ramp
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_FreeFormat(
           IntPtr format
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_FreePalette(
           IntPtr palette
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetPixelFormatName(
           UInt32 format
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_GetRGB(
           UInt32 pixel,
           PixelFormat format,
@@ -46,7 +46,7 @@ namespace SDLSharp
           out byte b
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_GetRGBA(
           UInt32 pixel,
           PixelFormat format,
@@ -56,7 +56,7 @@ namespace SDLSharp
           out byte a
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern UInt32 SDL_MapRGB(
           PixelFormat format,
           byte r,
@@ -64,7 +64,7 @@ namespace SDLSharp
           byte b
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern UInt32 SDL_MapRGBA(
           PixelFormat format,
           byte r,
@@ -73,7 +73,7 @@ namespace SDLSharp
           byte a
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern UInt32 SDL_MasksToPixelFormatEnum(
           int bpp,
           UInt32 Rmask,
@@ -82,7 +82,7 @@ namespace SDLSharp
           UInt32 Amask
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_PixelFormatEnumToMasks(
           UInt32 format,
           out int bpp,
@@ -92,7 +92,7 @@ namespace SDLSharp
           out UInt32 Amask
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetPaletteColors(
           Palette palette,
           /*const*/ Color* colors,
@@ -100,7 +100,7 @@ namespace SDLSharp
           int ncolors
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetPixelFormatPalette(
           PixelFormat format,
           Palette palette

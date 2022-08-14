@@ -6,13 +6,13 @@ namespace SDLSharp
     static unsafe partial class NativeMethods
     {
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_VideoInit(/*const char*/ byte* driver_name);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_VideoQuit();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Window SDL_CreateWindow(
             /*const char*/ byte* title,
             int x,
@@ -22,10 +22,10 @@ namespace SDLSharp
             WindowFlags flags
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Window SDL_CreateWindowFrom(IntPtr data);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_CreateWindowAndRenderer(
             int width,
             int height,
@@ -34,44 +34,44 @@ namespace SDLSharp
             out Renderer renderer
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_DestroyWindow(IntPtr window);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_DisableScreenSaver();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_EnableScreenSaver();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_IsScreenSaverEnabled();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_DisplayMode* SDL_GetClosestDisplayMode(
           int displayIndex,
           in SDL_DisplayMode mode,
           out SDL_DisplayMode closest
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetCurrentDisplayMode(int displayIndex, out SDL_DisplayMode mode);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetCurrentVideoDriver();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetDesktopDisplayMode(
           int displayIndex,
           out SDL_DisplayMode mode
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetDisplayBounds(
           int displayIndex,
           out Rect rect
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetDisplayDPI(
           int displayIndex,
           out float ddpi,
@@ -79,40 +79,40 @@ namespace SDLSharp
           out float vdpi
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetDisplayMode(
           int displayIndex,
           int modeIndex,
           out SDL_DisplayMode mode
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetDisplayUsableBounds(
           int displayIndex,
           out Rect rect
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetDisplayName(
           int displayIndex
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern IntPtr SDL_GetGrabbedWindow();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetNumDisplayModes(int displayIndex);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetNumVideoDisplays();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetNumVideoDrivers();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetVideoDriver(int index);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetWindowBordersSize(
           Window window,
           out int top,
@@ -121,37 +121,37 @@ namespace SDLSharp
           out int right
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern float SDL_GetWindowBrightness(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void* SDL_GetWindowData(
           Window window,
           /*const*/ char* name
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetWindowDisplayIndex(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetWindowDisplayMode(
           Window window,
           out SDL_DisplayMode mode
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern WindowFlags SDL_GetWindowFlags(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern IntPtr SDL_GetWindowFromID(UInt32 id);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetWindowGammaRamp(
           Window window,
           ushort* red,
@@ -159,127 +159,127 @@ namespace SDLSharp
           ushort* blue
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_GetWindowGrab(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern UInt32 SDL_GetWindowID(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_GetWindowMaximumSize(
           Window window,
           out int w,
           out int h
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_GetWindowMinimumSize(
           Window window,
           out int w,
           out int h
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetWindowOpacity(
           Window window,
           out float opacity
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern UInt32 SDL_GetWindowPixelFormat(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_GetWindowPosition(
           Window window,
           out int x,
           out int y
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_GetWindowSize(
           Window window,
           out int w,
           out int h
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern IntPtr SDL_GetWindowSurface(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetWindowTitle(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_HideWindow(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_ShowWindow(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_MaximizeWindow(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_MinimizeWindow(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_RaiseWindow(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_RestoreWindow(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowBordered(
           Window window,
           SDL_Bool bordered
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowBrightness(
           Window window,
           float brightness
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowData(
           Window window,
           /*const char*/ byte* name,
           void* userdata
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetWindowDisplayMode(
           Window window,
           SDL_DisplayMode* mode
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetWindowFullscreen(
           Window window,
           WindowFlags flags
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowGammaRamp(
           Window window,
           /*const*/ ushort* red,
@@ -287,89 +287,89 @@ namespace SDLSharp
           /*const*/ ushort* blue
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowGrab(
           Window window,
           SDL_Bool grabbed
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowHitTest(
           Window window,
           IntPtr callback, // SDL_HitTest
           IntPtr callback_data
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowIcon(
           Window window,
           Surface icon
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetWindowInputFocus(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowMaximumSize(
           Window window,
           int max_w,
           int max_h
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowMinimumSize(
           Window window,
           int min_w,
           int min_h
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetWindowModalFor(
           Window modal_window,
           Window parent_window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowOpacity(
           Window window,
           float opacity
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowPosition(
           Window window,
           int x,
           int y
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowResizable(
           Window window,
           SDL_Bool resizable
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowSize(
           Window window,
           int w,
           int h
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetWindowTitle(
           Window window,
           /*const char*/ byte* title
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_ShowMessageBox(
           in SDL_MessageBoxData messageboxdata,
           out int buttonid
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_ShowSimpleMessageBox(
           UInt32 flags,
           /*const char*/ byte* title,
@@ -377,7 +377,7 @@ namespace SDLSharp
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_ShowSimpleMessageBox(
           UInt32 flags,
           /*const char*/ byte* title,
@@ -385,12 +385,12 @@ namespace SDLSharp
           IntPtr window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_UpdateWindowSurface(
           Window window
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_UpdateWindowSurfaceRects(
           Window window,
           /*const*/ Rect* rects,

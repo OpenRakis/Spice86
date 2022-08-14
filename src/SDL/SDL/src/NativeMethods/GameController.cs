@@ -5,70 +5,70 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GameControllerAddMapping(/*const char*/ byte* mappingstring);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GameControllerAddMappingsFromRW(RWOps rw, int freerw);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern GameControllerMapping SDL_GameControllerMappingForGUID(SDL_JoystickGUID guid);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern GameControllerMapping SDL_GameControllerMapping(GameController gamecontroller);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_IsGameController(int joystick_index);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GameControllerNameForIndex(int joystick_index);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern GameController SDL_GameControllerOpen(int joystick_index);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern GameController SDL_GameControllerFromInstanceId(int joyid);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GameControllerName(GameController gamecontroller);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_GameControllerGetAttached(GameController gamecontroller);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern IntPtr SDL_GameControllerGetJoystick(GameController gamecontroller);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GameControllerEventState(int state);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_GameControllerUpdate();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern GameControllerAxis SDL_GameControllerGetAxisFromString(/*const char*/ byte* pchString);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GameControllerGetStringForAxis(GameControllerAxis axis);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_GameControllerButtonBind SDL_GameControllerGetBindForAxis(GameController gamecontroller, GameControllerAxis axis);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern short SDL_GameControllerGetAxis(GameController gamecontroller, GameControllerAxis axis);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern GameControllerButton SDL_GameControllerGetButtonFromString(/*const char*/ byte* pchString);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GameControllerGetStringForButton(GameControllerButton button);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_GameControllerButtonBind SDL_GameControllerGetBindForButton(GameController gamecontroller, GameControllerButton button);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern byte SDL_GameControllerGetButton(GameController gamecontroller, GameControllerButton button);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern byte SDL_GameControllerClose(IntPtr gamecontroller);
 
         public enum SDL_GameControllerBindType

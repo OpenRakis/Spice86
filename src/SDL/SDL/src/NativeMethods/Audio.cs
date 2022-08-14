@@ -5,13 +5,13 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_AudioInit(/*const char*/ byte* driver_name);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_AudioQuit();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_BuildAudioCVT(
           out SDL_AudioCVT cvt,
           AudioDataFormat src_format,
@@ -22,22 +22,22 @@ namespace SDLSharp
           int dst_rate
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_ClearQueuedAudio(uint dev);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_CloseAudioDevice(uint dev);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_ConvertAudio(ref SDL_AudioCVT cvt);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern uint SDL_DequeueAudio(uint dev, void* data, uint len);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_FreeWAV(byte* buffer);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_AudioSpec* SDL_LoadWAV_RW(
           RWOps src,
           int freesrc,
@@ -45,31 +45,31 @@ namespace SDLSharp
           out byte* audio_buf,
           out uint audio_len);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetAudioDeviceName(int index, int iscapture);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern AudioStatus SDL_GetAudioDeviceStatus(uint dev);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetAudioDriver(int index);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetCurrentAudioDriver();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetNumAudioDevices(int iscapture);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetNumAudioDrivers();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern uint SDL_GetQueuedAudioSize(uint dev);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_LockAudioDevice(uint dev);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_MixAudioFormat(
           byte* dst,
           /*const*/ byte* src,
@@ -77,7 +77,7 @@ namespace SDLSharp
           uint len,
           int volume);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern uint SDL_OpenAudioDevice(
           /*const char*/ byte* device,
           int iscapture,
@@ -86,13 +86,13 @@ namespace SDLSharp
           AllowedAudioStreamChange allowed_changes
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_PauseAudioDevice(uint dev, int pause_on);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_UnlockAudioDevice(uint dev);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_QueueAudio(
             uint dev,
             /*const*/ byte* data,
