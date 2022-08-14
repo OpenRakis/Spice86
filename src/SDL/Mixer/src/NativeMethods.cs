@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using static SDLSharp.NativeMethods;
 
@@ -6,8 +7,27 @@ namespace SDLSharp
 {
     internal static unsafe class MixerNativeMethods
     {
+        static MixerNativeMethods() =>
+            NativeLibrary.SetDllImportResolver(Assembly.GetExecutingAssembly(), DllImportResolver);
+    
+        static IntPtr DllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+        {
+            IntPtr handle;
+            if (NativeLibrary.TryLoad(LibSdl2MixerName, assembly, searchPath, out handle)) {
+                return handle;
+            }
+            else if (NativeLibrary.TryLoad(LibSDLMixerAlternateName, assembly, searchPath, out handle)) {
+                return handle;
+            }
+            else if (NativeLibrary.TryLoad(LibSDLMixerAlternateLinuxName, assembly, searchPath, out handle)) {
+                return handle;
+            }
+            return IntPtr.Zero;
+        }
+        
         private const string LibSdl2MixerName = "SDL2_mixer";
-
+        private const string LibSDLMixerAlternateName = "SDL2_mixer-2.0";
+        private const string LibSDLMixerAlternateLinuxName = "libSDL2_mixer-2.0.so.0";
         [DllImport(LibSdl2MixerName)]
         public static extern /*const*/ SDL_Version* Mix_Linked_Version();
 

@@ -1,4 +1,7 @@
-﻿namespace Spice86.Core.Emulator.Sound;
+﻿using Spice86.Core.Backend.Audio.PortAudio;
+using Spice86.Core.Backend.Audio.SoundIOSharp;
+
+namespace Spice86.Core.Emulator.Sound;
 
 using Backend.Audio.OpenAl;
 
@@ -15,7 +18,7 @@ internal static class Audio {
         if (OperatingSystem.IsWindows()) {
             return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25));
         } else {
-            return SdlAudioPlayer.Create();
+            return SoundIOPlayer.Create();
         }
     }
 

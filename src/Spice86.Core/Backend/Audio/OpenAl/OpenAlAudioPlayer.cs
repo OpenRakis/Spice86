@@ -26,14 +26,14 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
 
     private OpenAlAudioPlayer(AudioFormat format) : base(format) {
         try {
-            _al ??= AL.GetApi(true);
+            _al ??= AL.GetApi(false);
             _al.GetError();
-            _alContext ??= ALContext.GetApi(true);
+            _alContext ??= ALContext.GetApi(false);
         } catch {
             try {
-                _al ??= AL.GetApi(false);
+                _al ??= AL.GetApi(true);
                 _al.GetError();
-                _alContext ??= ALContext.GetApi(false);
+                _alContext ??= ALContext.GetApi(true);
             } catch {
                 return;
             }
