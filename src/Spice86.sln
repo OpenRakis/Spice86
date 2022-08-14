@@ -19,6 +19,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SDLSharp_Mixer", "SDL\Mixer
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SDLSharp", "SDL\SDL\SDLSharp.csproj", "{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bufdio", "Bufdio\Bufdio.csproj", "{7D5BE77E-870A-411B-8B05-E52AC9D784B4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "libsoundio-sharp", "libsoundio-sharp\libsoundio-sharp.csproj", "{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +57,14 @@ Global
 		{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

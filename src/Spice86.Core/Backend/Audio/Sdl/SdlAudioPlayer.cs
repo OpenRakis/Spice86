@@ -15,7 +15,7 @@ internal class SdlAudioPlayer : AudioPlayer {
     public SdlAudioPlayer(Backend.Audio.AudioFormat format) : base(format) {
         if (!_sdlInitialized) {
             SDL.Init(InitFlags.Audio);
-            Mixer.Open(22050, AudioDataFormat.Signed16Bit, 2, 1024);
+            Mixer.Open(48000, AudioDataFormat.Signed16Bit, 2, 1024);
         }
         _numberOfSdlPlayerInstances++;
     }
@@ -30,14 +30,16 @@ internal class SdlAudioPlayer : AudioPlayer {
 
     protected unsafe override int WriteDataInternal(ReadOnlySpan<byte> data) {
         fixed(byte* ptr = data) {
-            var chunk = MixerChunk.Load(RWOps.FromHandle((IntPtr)ptr, true));
+            IntPtr intPtr = (IntPtr)ptr;
+            RWOps fromHandle = RWOps.FromHandle(intPtr, true);
+            MixerChunk chunk = MixerChunk.Load(fromHandle);
             Mixer.Channels.Play(chunk);
         }
         return data.Length;
     }
 
     public static SdlAudioPlayer Create() {
-        return new SdlAudioPlayer(new Backend.Audio.AudioFormat(SampleRate: 22050, Channels: 2,
+        return new SdlAudioPlayer(new Backend.Audio.AudioFormat(SampleRate: 48000, Channels: 2,
             SampleFormat: SampleFormat.SignedPcm16));
     }
 

@@ -36,6 +36,8 @@
 
 	</ItemGroup>
 	<ItemGroup>
+	  <ProjectReference Include="..\Bufdio\Bufdio.csproj" />
+	  <ProjectReference Include="..\libsoundio-sharp\libsoundio-sharp.csproj" />
 	  <ProjectReference Include="..\SDL\Mixer\SDLSharp_Mixer.csproj" />
 	  <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 	  <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />

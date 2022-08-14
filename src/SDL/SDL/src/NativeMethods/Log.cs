@@ -47,7 +47,6 @@ namespace SDLSharp
         );
 
         public const int MAX_LOG_MESSAGE = 4096;
-        private const string LibSDL2Name = "SDL2";
     }
 
     public enum LogPriority
