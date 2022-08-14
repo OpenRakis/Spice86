@@ -5,19 +5,19 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_LogSetAllPriority(LogPriority level);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_LogSetPriority(LogCategory category, LogPriority level);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern LogPriority SDL_LogGetPriority(LogCategory category);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_LogResetPriorities();
 
-        [DllImport("SDL2", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibSDL2Name, CallingConvention = CallingConvention.Cdecl)]
         public static extern void SDL_LogMessage(
           LogCategory category,
           LogPriority priority,
@@ -25,13 +25,13 @@ namespace SDLSharp
         //__arglist
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_LogGetOutputFunction(
           out /*SDL_LogOutputFunction*/ IntPtr callback,
           out IntPtr userdata
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_LogSetOutputFunction(
           /*SDL_LogOutputFunction*/ IntPtr callback,
           IntPtr userdata
@@ -47,6 +47,7 @@ namespace SDLSharp
         );
 
         public const int MAX_LOG_MESSAGE = 4096;
+        private const string LibSDL2Name = "SDL2";
     }
 
     public enum LogPriority

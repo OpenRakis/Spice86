@@ -5,7 +5,7 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_BlitScaled(
           Surface src,
           /* const*/ Rect* srcrect,
@@ -13,7 +13,7 @@ namespace SDLSharp
           Rect* dstrect
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_BlitSurface(
           Surface src,
           /* const*/ Rect* srcrect,
@@ -21,7 +21,7 @@ namespace SDLSharp
           Rect* dstrect
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_ConvertPixels(
           int width,
           int height,
@@ -33,21 +33,21 @@ namespace SDLSharp
           int dst_pitch
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Surface SDL_ConvertSurface(
           Surface src,
           /*const*/ PixelFormat fmt,
           UInt32 flags
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Surface SDL_ConvertSurfaceFormat(
           Surface src,
           UInt32 pixel_format,
           UInt32 flags
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Surface SDL_CreateRGBSurface(
           UInt32 flags,
           int width,
@@ -59,7 +59,7 @@ namespace SDLSharp
           UInt32 Amask
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Surface SDL_CreateRGBSurfaceFrom(
           void* pixels,
           int width,
@@ -72,7 +72,7 @@ namespace SDLSharp
           UInt32 Amask
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Surface SDL_CreateRGBSurfaceWithFormat(
           UInt32 flags,
           int width,
@@ -81,7 +81,7 @@ namespace SDLSharp
           UInt32 format
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Surface SDL_CreateRGBSurfaceWithFormatFrom(
           void* pixels,
           int width,
@@ -91,14 +91,14 @@ namespace SDLSharp
           UInt32 format
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_FillRect(
           Surface dst,
           /*const*/ Rect* rect,
           UInt32 color
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_FillRects(
           Surface dst,
           /*const*/ Rect* rects,
@@ -106,34 +106,34 @@ namespace SDLSharp
           UInt32 color
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_FreeSurface(IntPtr surface);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_GetClipRect(
           Surface surface,
           out Rect rect
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetColorKey(
           Surface surface,
           out UInt32 key
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetSurfaceAlphaMod(
           Surface surface,
           out byte alpha
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetSurfaceBlendMode(
           Surface surface,
           out BlendMode blendMode
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_GetSurfaceColorMod(
           Surface surface,
           out byte r,
@@ -141,16 +141,16 @@ namespace SDLSharp
           out byte b
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Surface SDL_LoadBMP_RW(
           RWOps src,
           int freesrc
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_LockSurface(Surface surface);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_LowerBlit(
           Surface surface,
           Rect* srcrect,
@@ -158,7 +158,7 @@ namespace SDLSharp
           Rect* dstrect
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_LowerBlitScaled(
           Surface surface,
           Rect* srcrect,
@@ -166,39 +166,39 @@ namespace SDLSharp
           Rect* dstrect
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SaveBMP_RW(
           Surface surface,
           RWOps dst,
           int freedst
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_SetClipRect(
           Surface surface,
           /*const*/ Rect* rect
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetColorKey(
           Surface surface,
           int flag,
           UInt32 key
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetSurfaceAlphaMod(
           Surface surface,
           byte alpha
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetSurfaceBlendMode(
           Surface surface,
           BlendMode blendMode
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetSurfaceColorMod(
           Surface surface,
           byte r,
@@ -206,19 +206,19 @@ namespace SDLSharp
           byte b
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetSurfacePalette(
           Surface surface,
           Palette palette
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_SetSurfaceRLE(
           Surface surface,
           int flag
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_UnlockSurface(Surface surface);
 
         [StructLayout(LayoutKind.Sequential)]

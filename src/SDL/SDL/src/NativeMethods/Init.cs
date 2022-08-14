@@ -5,25 +5,25 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_Init(InitFlags flags);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_InitSubSystem(InitFlags flags);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_Quit();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_QuitSubSystem(InitFlags flags);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetMainReady();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern uint SDL_WasInit(InitFlags flags);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern int SDL_WinRTRunApp(
           [MarshalAs(UnmanagedType.FunctionPtr)]
       MainFunction mainFunction,

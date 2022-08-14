@@ -5,39 +5,39 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_AddHintCallback(
             /* const char */ byte* name,
             /*HintCallback*/ IntPtr callback,
             IntPtr userdata
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_DelHintCallback(
             /* const char */ byte* name,
             /*HintCallback*/ IntPtr callback,
             IntPtr userdata
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_ClearHints();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*char*/ byte* SDL_GetHint(/* const char*/byte* name);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_GetHintBoolean(
             /* const char*/byte* name,
             SDL_Bool default_value
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_SetHint(
             /* const char*/byte* name,
             /* const char*/byte* value
         );
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_SetHintWithPriority(
             /* const char*/byte* name,
             /* const char*/byte* value,

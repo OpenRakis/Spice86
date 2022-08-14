@@ -5,52 +5,52 @@ namespace SDLSharp
 {
     static unsafe partial class NativeMethods
     {
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Keycode SDL_GetKeyFromName(/*const char*/ byte* name);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Keycode SDL_GetKeyFromScancode(Scancode scancode);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*const char*/ byte* SDL_GetKeyName(Keycode key);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern IntPtr SDL_GetKeyboardFocus();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern byte* SDL_GetKeyboardState(out int numkeys);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Keymod SDL_GetModState();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Scancode SDL_GetScancodeFromKey(Keycode key);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern Scancode SDL_GetScancodeFromName(/*const char*/ byte* name);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern /*cosnt char**/ byte* SDL_GetScancodeName(Scancode scancode);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_HasScreenKeyboardSupport();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_IsScreenKeyboardShown(Window window);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern SDL_Bool SDL_IsTextInputActive();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetModState(Keymod modstate);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_SetInputRect(Rect* rect);
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_StartTextInput();
 
-        [DllImport("SDL2")]
+        [DllImport(LibSDL2Name)]
         public static extern void SDL_StopTextInput();
 
         public const int SCANCODE_MASK = (1 << 30);
