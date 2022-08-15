@@ -1,12 +1,8 @@
 ﻿using Spice86.Core.Backend.Audio.PortAudio;
-using Spice86.Core.Backend.Audio.SoundIOSharp;
 
 namespace Spice86.Core.Emulator.Sound;
 
-using Backend.Audio.OpenAl;
-
 using Spice86.Core.Backend.Audio;
-using Spice86.Core.Backend.Audio.Sdl;
 
 using System;
 

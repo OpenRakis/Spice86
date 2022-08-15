@@ -4,7 +4,6 @@ using Bufdio.Bindings.PortAudio;
 using Bufdio.Exceptions;
 using Bufdio.Utilities;
 using Bufdio.Utilities.Extensions;
-using FFmpeg.AutoGen;
 
 namespace Bufdio;
 
@@ -16,7 +15,6 @@ public static class BufdioLib
 {
     internal static class Constants
     {
-        public const AVSampleFormat FFmpegSampleFormat = AVSampleFormat.AV_SAMPLE_FMT_FLT;
         public const PaBinding.PaSampleFormat PaSampleFormat = PaBinding.PaSampleFormat.paFloat32;
     }
 
@@ -58,26 +56,6 @@ public static class BufdioLib
             Ensure.That<BufdioException>(IsPortAudioInitialized, "PortAudio is not initialized.");
             return _outputDevices;
         }
-    }
-
-    /// <summary>
-    /// Initialize and register FFmpeg functionalities by providing path to FFmpeg native libraries.
-    /// Leave directory parameter empty in order to use system-wide libraries.
-    /// Will returns immediately if already initialized.
-    /// </summary>
-    /// <param name="ffmpegDirectory">
-    /// Path to FFmpeg native libaries, leave this empty to use system-wide libraries.
-    /// </param>
-    public static void InitializeFFmpeg(string ffmpegDirectory = default)
-    {
-        if (IsFFmpegInitialized)
-        {
-            return;
-        }
-
-        ffmpeg.RootPath = ffmpegDirectory ?? "";
-        ffmpeg.av_log_set_level(ffmpeg.AV_LOG_QUIET);
-        IsFFmpegInitialized = true;
     }
 
     /// <summary>
