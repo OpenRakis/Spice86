@@ -12,12 +12,12 @@ public readonly struct AudioDecoderResult
     /// <param name="succeeded">Whether or not the frame is successfully reads.</param>
     /// <param name="eof">Whether or not the decoder reaches end-of-file.</param>
     /// <param name="errorMessage">An error message while reading audio frame.</param>
-    public AudioDecoderResult(AudioFrame frame, bool succeeded, bool eof, string errorMessage = default)
+    public AudioDecoderResult(AudioFrame frame, bool succeeded, bool eof, string? errorMessage = default)
     {
         Frame = frame;
         IsSucceeded = succeeded;
         IsEOF = eof;
-        ErrorMessage = errorMessage;
+        ErrorMessage = string.IsNullOrWhiteSpace(errorMessage) ? "" : errorMessage;
     }
 
     /// <summary>

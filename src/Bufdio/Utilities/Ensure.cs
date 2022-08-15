@@ -6,13 +6,13 @@ namespace Bufdio.Utilities;
 [DebuggerStepThrough]
 internal static class Ensure
 {
-    public static void That<TException>(bool condition, string message = null) where TException : Exception
+    public static void That<TException>(bool condition, string? message = null) where TException : Exception
     {
         if (!condition)
         {
-            throw string.IsNullOrEmpty(message)
+            throw string.IsNullOrWhiteSpace(message)
                 ? Activator.CreateInstance<TException>()
-                : (TException)Activator.CreateInstance(typeof(TException), message);
+                : (TException)Activator.CreateInstance(typeof(TException), message)!;
         }
     }
 

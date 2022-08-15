@@ -66,7 +66,7 @@ internal static partial class PaBinding
         double sampleRate,
         long framesPerBuffer,
         PaStreamFlags streamFlags,
-        PaStreamCallback streamCallback,
+        PaStreamCallback? streamCallback,
         IntPtr userData)
     {
         return _openStream(

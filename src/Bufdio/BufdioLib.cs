@@ -19,7 +19,7 @@ public static class BufdioLib
     }
 
     private static AudioDevice _defaultOutputDevice;
-    private static List<AudioDevice> _outputDevices;
+    private static List<AudioDevice> _outputDevices = new();
 
     /// <summary>
     /// Gets whether or not the FFmpeg is already initialized.
@@ -67,7 +67,7 @@ public static class BufdioLib
     /// Path to port audio native libary, eg: portaudio.dll, libportaudio.so, libportaudio.dylib.
     /// </param>
     /// <exception cref="BufdioException">Thrown when output device is not available.</exception>
-    public static void InitializePortAudio(string portAudioPath = default)
+    public static void InitializePortAudio(string? portAudioPath = default)
     {
         if (IsPortAudioInitialized)
         {

@@ -21,7 +21,7 @@ internal static class PortAudioExtensions
         throw new PortAudioException(code);
     }
 
-    public static string PaErrorToText(this int code)
+    public static string? PaErrorToText(this int code)
     {
         return Marshal.PtrToStringAnsi(PaBinding.Pa_GetErrorText(code));
     }

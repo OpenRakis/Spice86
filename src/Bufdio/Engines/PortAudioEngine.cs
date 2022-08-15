@@ -26,7 +26,7 @@ public sealed class PortAudioEngine : IAudioEngine
     /// <exception cref="PortAudioException">
     /// Might be thrown when errors occured during PortAudio stream initialization.
     /// </exception>
-    public PortAudioEngine(AudioEngineOptions options = default)
+    public PortAudioEngine(AudioEngineOptions? options = default)
     {
         _options = options ?? new AudioEngineOptions();
 
