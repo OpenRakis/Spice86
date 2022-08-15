@@ -5,18 +5,18 @@ namespace Bufdio.Bindings.PortAudio;
 
 internal static partial class PaBinding
 {
-    private static Initialize _initialize;
-    private static Terminate _terminate;
-    private static GetVersionInfo _getVersionInfo;
-    private static GetErrorText _getErrorText;
-    private static GetDefaultOutputDevice _getDefaultOutputDevice;
-    private static GetDeviceInfo _getDeviceInfo;
-    private static GetDeviceCount _getDeviceCount;
-    private static OpenStream _openStream;
-    private static StartStream _startStream;
-    private static WriteStream _writeStream;
-    private static AbortStream _abortStream;
-    private static CloseStream _closeStream;
+    private static Initialize _initialize = null!;
+    private static Terminate _terminate = null!;
+    private static GetVersionInfo _getVersionInfo = null!;
+    private static GetErrorText _getErrorText = null!;
+    private static GetDefaultOutputDevice _getDefaultOutputDevice = null!;
+    private static GetDeviceInfo _getDeviceInfo = null!;
+    private static GetDeviceCount _getDeviceCount = null!;
+    private static OpenStream _openStream = null!;
+    private static StartStream _startStream = null!;
+    private static WriteStream _writeStream = null!;
+    private static AbortStream _abortStream = null!;
+    private static CloseStream _closeStream = null!;
 
     public unsafe delegate PaStreamCallbackResult PaStreamCallback(
         void* input,
@@ -56,7 +56,7 @@ internal static partial class PaBinding
         double sampleRate,
         long framesPerBuffer,
         PaStreamFlags streamFlags,
-        PaStreamCallback streamCallback,
+        PaStreamCallback? streamCallback,
         IntPtr userData);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
