@@ -14,7 +14,7 @@ public static class SampleConverter {
     /// </summary>
     /// <param name="source">Source samples.</param>
     /// <param name="target">Target sample buffer.</param>
-    public static void Pcm16ToFloat(Span<short> source, Span<float> target) {
+    private static void Pcm16ToFloat(Span<short> source, Span<float> target) {
         if (Vector.IsHardwareAccelerated) {
             Span<Vector<short>> srcVector = MemoryMarshal.Cast<short, Vector<short>>(source);
             Span<Vector<float>> destVector = MemoryMarshal.Cast<float, Vector<float>>(target);
@@ -26,11 +26,13 @@ public static class SampleConverter {
                 destVector[targetIndex + 1] = Vector.Multiply(Vector.ConvertToSingle(iSrc2), 1f / 32768);
             }
 
-            for (int i = srcVector.Length * Vector<short>.Count; i < source.Length; i++)
+            for (int i = srcVector.Length * Vector<short>.Count; i < source.Length; i++) {
                 target[i] = source[i] / 32768f;
+            }
         } else {
-            for (int i = 0; i < source.Length; i++)
+            for (int i = 0; i < source.Length; i++) {
                 target[i] = source[i] / 32768f;
+            }
         }
     }
     /// <summary>
@@ -38,7 +40,7 @@ public static class SampleConverter {
     /// </summary>
     /// <param name="source">Source samples.</param>
     /// <param name="target">Target sample buffer.</param>
-    public static void Pcm8ToFloat(Span<byte> source, Span<float> target) {
+    private static void Pcm8ToFloat(Span<byte> source, Span<float> target) {
         if (Vector.IsHardwareAccelerated) {
             Span<Vector<byte>> srcVector = source.Cast<byte, Vector<byte>>();
             Span<Vector<float>> destVector = target.Cast<float, Vector<float>>();
@@ -60,11 +62,13 @@ public static class SampleConverter {
                 destVector[targetIndex + 3] = Vector.Multiply(Vector.ConvertToSingle(iSrc4), 1f / 128);
             }
 
-            for (int i = srcVector.Length * Vector<byte>.Count; i < source.Length; i++)
+            for (int i = srcVector.Length * Vector<byte>.Count; i < source.Length; i++) {
                 target[i] = (source[i] - 127) / 128f;
+            }
         } else {
-            for (int i = 0; i < source.Length; i++)
+            for (int i = 0; i < source.Length; i++) {
                 target[i] = (source[i] - 127) / 128f;
+            }
         }
     }
 
@@ -73,7 +77,7 @@ public static class SampleConverter {
     /// </summary>
     /// <param name="source">Source samples.</param>
     /// <param name="target">Target sample buffer.</param>
-    public static void Pcm8ToPcm16(Span<byte> source, Span<short> target) {
+    private static void Pcm8ToPcm16(Span<byte> source, Span<short> target) {
         if (Vector.IsHardwareAccelerated) {
             Span<Vector<byte>> srcVector = source.Cast<byte, Vector<byte>>();
             Span<Vector<short>> destVector = target.Cast<short, Vector<short>>();
@@ -90,11 +94,13 @@ public static class SampleConverter {
                 destVector[targetIndex + 1] = Vector.Multiply(sSrc2, (short)256);
             }
 
-            for (int i = srcVector.Length * Vector<byte>.Count; i < source.Length; i++)
+            for (int i = srcVector.Length * Vector<byte>.Count; i < source.Length; i++) {
                 target[i] = (short)((source[i] - 127) * 256);
+            }
         } else {
-            for (int i = 0; i < source.Length; i++)
+            for (int i = 0; i < source.Length; i++) {
                 target[i] = (short)((source[i] - 127) * 256);
+            }
         }
     }
     /// <summary>
@@ -102,7 +108,7 @@ public static class SampleConverter {
     /// </summary>
     /// <param name="source">Source samples.</param>
     /// <param name="target">Target sample buffer.</param>
-    public static void FloatToPcm16(Span<float> source, Span<short> target) {
+    private static void FloatToPcm16(Span<float> source, Span<short> target) {
         if (Vector.IsHardwareAccelerated) {
             Span<Vector<float>> srcVector = source.Cast<float, Vector<float>>();
             Span<Vector<short>> destVector = target.Cast<short, Vector<short>>();
@@ -116,11 +122,13 @@ public static class SampleConverter {
                 destVector[targetIndex] = Vector.Narrow(src1, src2);
             }
 
-            for (int i = srcVector.Length * Vector<float>.Count; i < source.Length; i++)
+            for (int i = srcVector.Length * Vector<float>.Count; i < source.Length; i++) {
                 target[i] = (short)(source[i] * 32767f);
+            }
         } else {
-            for (int i = 0; i < source.Length; i++)
+            for (int i = 0; i < source.Length; i++) {
                 target[i] = (short)(source[i] * 32767f);
+            }
         }
     }
 

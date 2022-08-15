@@ -43,8 +43,9 @@ internal partial class PaletteWindow : Window {
         if (_grid is null) {
             return;
         }
-        for (int i = 0; i < 256; i++)
+        for (int i = 0; i < 256; i++) {
             _grid.Children.Add(new Rectangle() { Fill = new SolidColorBrush() });
+        }
 
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
         _timer.Start();

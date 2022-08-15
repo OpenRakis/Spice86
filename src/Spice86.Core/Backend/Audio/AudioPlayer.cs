@@ -285,7 +285,6 @@ public abstract class AudioPlayer : IDisposable {
             this.callback = callback;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public override void RaiseCallback(Span<byte> buffer, out int samplesWritten) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput)) {
@@ -296,7 +295,7 @@ public abstract class AudioPlayer : IDisposable {
                     Array.Resize(ref conversionBuffer, minBufferSize);
 
                 callback(conversionBuffer.AsSpan(0, minBufferSize), out samplesWritten);
-                SampleConverter.InternalConvert<TInput, TOutput>(conversionBuffer.AsSpan(0, minBufferSize), buffer.Cast<byte, TOutput>());
+                SampleConverter.InternalConvert(conversionBuffer.AsSpan(0, minBufferSize), buffer.Cast<byte, TOutput>());
             }
         }
     }
