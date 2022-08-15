@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿using System.Text;
+
+namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
@@ -195,13 +197,13 @@ public class Machine : IDisposable {
 
     public string DumpCallStack() {
         FunctionHandler inUse = Cpu.FunctionHandlerInUse;
-        string callStack = "";
+        StringBuilder sb = new();
         if (inUse.Equals(Cpu.FunctionHandlerInExternalInterrupt)) {
-            callStack += "From external interrupt:\n";
+            sb.AppendLine("From external interrupt:");
         }
 
-        callStack += inUse.DumpCallStack();
-        return callStack;
+        sb.Append(inUse.DumpCallStack());
+        return sb.ToString();
     }
 
     public void InstallAllCallbacksInInterruptTable() {
