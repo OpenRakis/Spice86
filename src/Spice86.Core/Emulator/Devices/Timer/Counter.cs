@@ -127,8 +127,10 @@ public class Counter {
     private byte Policy3(ushort value) {
         // LSB first, then MSB
         if (_firstByteRead) {
-            if (Latch != null)
+            if (Latch != null) {
                 Latch = null;
+            }
+
             // return msb
             _firstByteRead = false;
             return Msb(value);

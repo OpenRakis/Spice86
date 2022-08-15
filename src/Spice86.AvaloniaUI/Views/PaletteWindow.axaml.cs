@@ -61,8 +61,9 @@ internal partial class PaletteWindow : Window {
         if (_grid is null) {
             return;
         }
-        if (palette is null)
+        if (palette is null) {
             return;
+        }
 
         for (int i = 0; i < palette.Count; i++) {
             Rgb? rgb = palette[i];
