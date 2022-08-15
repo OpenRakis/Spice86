@@ -22,11 +22,11 @@ using System.Threading.Tasks;
 public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
 
-    private Thread _drawThread;
+    private readonly Thread _drawThread;
 
     private bool _exitDrawThread;
 
-    private ManualResetEvent _manualResetEvent = new(false);
+    private readonly ManualResetEvent _manualResetEvent = new(false);
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -170,7 +170,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         GC.SuppressFinalize(this);
     }
 
-    private Stopwatch _frameRenderTimeWatch;
+    private readonly Stopwatch _frameRenderTimeWatch;
 
     [ObservableProperty] private bool _isDrawing;
 

@@ -36,8 +36,8 @@ public class Machine : IDisposable {
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private bool _disposed;
     private bool _exitDmaThread;
-    private ManualResetEvent _dmaThreadManualResetEvent = new(true);
-    private Thread _dmaThread;
+    private readonly ManualResetEvent _dmaThreadManualResetEvent = new(true);
+    private readonly Thread _dmaThread;
 
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
