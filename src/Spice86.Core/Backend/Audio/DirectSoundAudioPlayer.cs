@@ -108,21 +108,21 @@ public sealed class DirectSoundAudioPlayer : AudioPlayer {
         }
     }
 
-    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
+    protected override int WriteDataInternal(Span<byte> data) {
         AcquiredBuffer buffer = directSoundBuffer.Acquire(32);
         if (buffer.Valid) {
             int ptr1Written = 0;
             int ptr2Written = 0;
             try {
                 Span<byte> span1 = buffer.GetSpan1<byte>();
-                ReadOnlySpan<byte> src = data[..Math.Min(span1.Length, data.Length)];
+                Span<byte> src = data[..Math.Min(span1.Length, data.Length)];
                 src.CopyTo(span1);
                 ptr1Written = src.Length;
 
                 src = data[src.Length..];
                 if (!src.IsEmpty && buffer.Split) {
                     Span<byte> span2 = buffer.GetSpan2<byte>();
-                    ReadOnlySpan<byte> src2 = src[..Math.Min(src.Length, span2.Length)];
+                    Span<byte> src2 = src[..Math.Min(src.Length, span2.Length)];
                     src2.CopyTo(span2);
                     ptr2Written = src2.Length;
                 }

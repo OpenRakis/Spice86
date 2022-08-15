@@ -40,7 +40,7 @@ public sealed class WasapiAudioPlayer : AudioPlayer {
         callbackWaitHandle = null;
     }
 
-    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
+    protected override int WriteDataInternal(Span<byte> data) {
         int written = 0;
         uint maxFrames = audioClient.GetBufferSize() - audioClient.GetCurrentPadding();
         if (maxFrames > 0) {

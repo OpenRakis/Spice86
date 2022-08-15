@@ -28,7 +28,7 @@ internal class SdlAudioPlayer : AudioPlayer {
         Mixer.Channels.Halt();
     }
 
-    protected unsafe override int WriteDataInternal(ReadOnlySpan<byte> data) {
+    protected unsafe override int WriteDataInternal(Span<byte> data) {
         fixed(byte* ptr = data) {
             IntPtr intPtr = (IntPtr)ptr;
             RWOps fromHandle = RWOps.FromHandle(intPtr, true);

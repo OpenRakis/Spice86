@@ -97,38 +97,38 @@ public abstract class AudioPlayer : IDisposable {
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData(ReadOnlySpan<float> data) => _writer.WriteData(data);
+    public int WriteData(Span<float> data) => _writer.WriteData(data);
     /// <summary>
     /// Writes 16-bit PCM data to the output buffer.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData(ReadOnlySpan<short> data) => _writer.WriteData(data);
+    public int WriteData(Span<short> data) => _writer.WriteData(data);
     /// <summary>
     /// Writes 8-bit PCM data to the output buffer.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData(ReadOnlySpan<byte> data) => _writer.WriteData(data);
+    public int WriteData(Span<byte> data) => _writer.WriteData(data);
 
     /// <summary>
     /// Writes 32-bit IEEE floating point data to the output buffer and blocks until all data has been written.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <param name="cancellationToken">Token used to cancel asynchronous operation.</param>
-    public ValueTask WriteDataAsync(ReadOnlyMemory<float> data, CancellationToken cancellationToken = default) => _writer.WriteDataAsync(data, cancellationToken);
+    public ValueTask WriteDataAsync(Memory<float> data, CancellationToken cancellationToken = default) => _writer.WriteDataAsync(data, cancellationToken);
     /// <summary>
     /// Writes 16-bit PCM data to the output buffer and blocks until all data has been written.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <param name="cancellationToken">Token used to cancel asynchronous operation.</param>
-    public ValueTask WriteDataAsync(ReadOnlyMemory<short> data, CancellationToken cancellationToken = default) => _writer.WriteDataAsync(data, cancellationToken);
+    public ValueTask WriteDataAsync(Memory<short> data, CancellationToken cancellationToken = default) => _writer.WriteDataAsync(data, cancellationToken);
     /// <summary>
     /// Writes 8-bit PCM data to the output buffer and blocks until all data has been written.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <param name="cancellationToken">Token used to cancel asynchronous operation.</param>
-    public ValueTask WriteDataAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default) => _writer.WriteDataAsync(data, cancellationToken);
+    public ValueTask WriteDataAsync(Memory<byte> data, CancellationToken cancellationToken = default) => _writer.WriteDataAsync(data, cancellationToken);
     /// <summary>
     /// Writes sample data of the type <typeparamref name="TSample"/> to the output buffer and blocks until all data has been written.
     /// </summary>
@@ -143,7 +143,7 @@ public abstract class AudioPlayer : IDisposable {
     /// <item><see cref="float"/>: 32-bit IEEE float</item>
     /// </list>
     /// </remarks>
-    public ValueTask WriteDataRawAsync<TSample>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default) where TSample : unmanaged => _writer.WriteDataRawAsync<TSample>(data, cancellationToken);
+    public ValueTask WriteDataRawAsync<TSample>(Memory<byte> data, CancellationToken cancellationToken = default) where TSample : unmanaged => _writer.WriteDataRawAsync<TSample>(data, cancellationToken);
 
     public void Dispose() {
         Dispose(true);
@@ -155,7 +155,7 @@ public abstract class AudioPlayer : IDisposable {
     }
     protected abstract void Start(bool useCallback);
     protected abstract void Stop();
-    protected abstract int WriteDataInternal(ReadOnlySpan<byte> data);
+    protected abstract int WriteDataInternal(Span<byte> data);
 
     protected void RaiseCallback(Span<byte> buffer, out int samplesWritten) => RaiseCallbackInternal(buffer, out samplesWritten);
     protected void RaiseCallback(Span<short> buffer, out int samplesWritten) => RaiseCallbackInternal(buffer, out samplesWritten);
@@ -186,7 +186,7 @@ public abstract class AudioPlayer : IDisposable {
         Start(true);
     }
 
-    private async ValueTask WriteDataInternalAsync<T>(ReadOnlyMemory<T> data, CancellationToken cancellationToken) where T : unmanaged {
+    private async ValueTask WriteDataInternalAsync<T>(Memory<T> data, CancellationToken cancellationToken) where T : unmanaged {
         int bytesWritten = 0;
         int byteLength = Unsafe.SizeOf<T>() * data.Length;
 
@@ -198,7 +198,7 @@ public abstract class AudioPlayer : IDisposable {
             await Task.Delay(5, cancellationToken).ConfigureAwait(false);
         }
     }
-    private async ValueTask WriteDataRawInternalAsync<T>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) where T : unmanaged {
+    private async ValueTask WriteDataRawInternalAsync<T>(Memory<byte> data, CancellationToken cancellationToken) where T : unmanaged {
         int bytesWritten = 0;
         int byteLength = Unsafe.SizeOf<T>() * data.Length;
 
@@ -215,9 +215,9 @@ public abstract class AudioPlayer : IDisposable {
         protected InternalBufferWriter() {
         }
 
-        public abstract int WriteData<TInput>(ReadOnlySpan<TInput> data) where TInput : unmanaged;
-        public abstract ValueTask WriteDataAsync<TInput>(ReadOnlyMemory<TInput> data, CancellationToken cancellationToken) where TInput : unmanaged;
-        public abstract ValueTask WriteDataRawAsync<TInput>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) where TInput : unmanaged;
+        public abstract int WriteData<TInput>(Span<TInput> data) where TInput : unmanaged;
+        public abstract ValueTask WriteDataAsync<TInput>(Memory<TInput> data, CancellationToken cancellationToken) where TInput : unmanaged;
+        public abstract ValueTask WriteDataRawAsync<TInput>(Memory<byte> data, CancellationToken cancellationToken) where TInput : unmanaged;
     }
 
     private sealed class InternalBufferWriter<TOutput> : InternalBufferWriter
@@ -228,7 +228,7 @@ public abstract class AudioPlayer : IDisposable {
         public InternalBufferWriter(AudioPlayer player) => this.player = player;
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override int WriteData<TInput>(ReadOnlySpan<TInput> data) {
+        public override int WriteData<TInput>(Span<TInput> data) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput))
                 return player.WriteDataInternal(MemoryMarshal.AsBytes(data)) / Unsafe.SizeOf<TOutput>();
@@ -241,7 +241,7 @@ public abstract class AudioPlayer : IDisposable {
             return player.WriteDataInternal(MemoryMarshal.AsBytes(conversionBuffer.AsSpan(0, data.Length))) / Unsafe.SizeOf<TOutput>();
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override ValueTask WriteDataAsync<TInput>(ReadOnlyMemory<TInput> data, CancellationToken cancellationToken) {
+        public override ValueTask WriteDataAsync<TInput>(Memory<TInput> data, CancellationToken cancellationToken) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput))
                 return player.WriteDataInternalAsync(data, cancellationToken);
@@ -254,7 +254,7 @@ public abstract class AudioPlayer : IDisposable {
             return player.WriteDataInternalAsync<TOutput>(conversionBuffer.AsMemory(0, data.Length), cancellationToken);
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override ValueTask WriteDataRawAsync<TInput>(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) {
+        public override ValueTask WriteDataRawAsync<TInput>(Memory<byte> data, CancellationToken cancellationToken) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput))
                 return player.WriteDataRawInternalAsync<TInput>(data, cancellationToken);
