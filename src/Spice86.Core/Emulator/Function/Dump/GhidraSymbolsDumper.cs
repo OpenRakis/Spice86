@@ -23,7 +23,7 @@ public class GhidraSymbolsDumper {
         ISet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
         DumpFunctionInformations(lines, dumpedAddresses, functionInformations);
         DumpLabels(lines, dumpedAddresses, machine.Cpu.ExecutionFlowRecorder);
-        using var printWriter = new StreamWriter(destinationFilePath);
+        using StreamWriter printWriter = new StreamWriter(destinationFilePath);
         lines.ForEach(line => printWriter.WriteLine(line));
     }
 

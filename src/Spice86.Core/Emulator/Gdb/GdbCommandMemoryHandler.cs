@@ -35,7 +35,7 @@ public class GdbCommandMemoryHandler {
             }
             Memory memory = _machine.Memory;
             int memorySize = memory.Size;
-            var response = new StringBuilder((int)length * 2);
+            StringBuilder response = new StringBuilder((int)length * 2);
             for (long i = 0; i < length; i++) {
                 long readAddress = address + i;
                 if (readAddress >= memorySize) {

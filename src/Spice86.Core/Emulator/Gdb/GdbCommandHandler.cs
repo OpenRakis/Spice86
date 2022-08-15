@@ -123,7 +123,7 @@ public class GdbCommandHandler {
     private string QueryVariable(string command) {
         if (command.StartsWith("Supported:")) {
             string[] supportedRequestItems = command.Replace("Supported:", "").Split(";");
-            var supportedRequest = supportedRequestItems
+            Dictionary<string, object> supportedRequest = supportedRequestItems
                 .ToDictionary(x => ParseSupportedQuery(x))
                 .ToDictionary(data => data.Key.Item1, data => data.Key.Item2);
             if (supportedRequest.TryGetValue("xmlRegisters", out object? value) == false || value.Equals("i386") == false) {

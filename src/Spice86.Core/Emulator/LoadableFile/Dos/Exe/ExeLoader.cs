@@ -24,7 +24,7 @@ public class ExeLoader : ExecutableFileLoader {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Exe size: {@ExeSize}", exe.Length);
         }
-        var exeFile = new ExeFile(exe);
+        ExeFile exeFile = new ExeFile(exe);
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _logger.Debug("Read header: {@ReadHeader}", exeFile);
         }

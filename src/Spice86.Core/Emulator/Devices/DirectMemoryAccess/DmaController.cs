@@ -32,7 +32,7 @@ public sealed class DmaController : DefaultIOPortHandler {
     private readonly List<DmaChannel> _channels = new(8);
     internal DmaController(Machine machine, Configuration configuration) : base(machine, configuration) {
         for (int i = 0; i < 8; i++) {
-            var channel = new DmaChannel();
+            DmaChannel channel = new DmaChannel();
             _channels.Add(channel);
         }
 
@@ -48,7 +48,7 @@ public sealed class DmaController : DefaultIOPortHandler {
 
     public IEnumerable<int> OutputPorts {
         get {
-            var ports = new List<int>(AllPorts)
+            List<int> ports = new List<int>(AllPorts)
             {
                 ModeRegister8,
                 ModeRegister16,

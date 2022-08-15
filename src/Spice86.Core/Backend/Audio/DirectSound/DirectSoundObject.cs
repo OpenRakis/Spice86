@@ -49,12 +49,12 @@ internal sealed class DirectSoundObject : IDisposable {
             throw new ArgumentOutOfRangeException(nameof(bufferSize));
 
         unsafe {
-            var dsbd = new DSBUFFERDESC {
+            DSBUFFERDESC dsbd = new DSBUFFERDESC {
                 dwSize = (uint)sizeof(DSBUFFERDESC),
                 dwFlags = bufferFlags
             };
 
-            var wfx = new WAVEFORMATEX {
+            WAVEFORMATEX wfx = new WAVEFORMATEX {
                 nChannels = (ushort)format.Channels,
                 wBitsPerSample = (ushort)(format.BytesPerSample * 8u),
                 wFormatTag = 1,

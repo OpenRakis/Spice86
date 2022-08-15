@@ -55,7 +55,7 @@ public class CommandLineParser {
         }
 
         try {
-            var supplierClass = Type.GetType(supplierClassName);
+            Type? supplierClass = Type.GetType(supplierClassName);
             if (!typeof(IOverrideSupplier).IsAssignableFrom(supplierClass)) {
                 string error = $"Provided class {supplierClassName} does not implement the {typeof(IOverrideSupplier).FullName} interface ";
                 throw new UnrecoverableException(error);

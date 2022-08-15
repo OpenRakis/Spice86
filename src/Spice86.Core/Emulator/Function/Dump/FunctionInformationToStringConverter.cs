@@ -72,7 +72,7 @@ public abstract class FunctionInformationToStringConverter {
     }
 
     protected string JoinNewLine(IEnumerable<string> enumerable) {
-        var sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         foreach (string? item in enumerable) {
             sb.Append(item);
         }

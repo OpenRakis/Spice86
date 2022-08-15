@@ -14,7 +14,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     public override string GetFileHeader(List<SegmentRegisterBasedAddress> allPotentialGlobals, HashSet<SegmentedAddress> whiteListOfSegmentForOffset) {
 
         // Take only addresses which have been accessed (and not only computed)
-        var globals = allPotentialGlobals
+        List<SegmentRegisterBasedAddress> globals = allPotentialGlobals
             .Where(x => x.AddressOperations.Count > 0)
             .Where(y => whiteListOfSegmentForOffset
                 .All(z => IsOffsetEqualsAndSegmentDifferent(y, z) == false))
@@ -207,7 +207,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
             return GetNoStubReasonCommentForMethod(functionInformation, "Function already has an override");
         }
 
-        var returnTypes = functionInformation.Returns.Keys.Concat(functionInformation.UnalignedReturns.Keys)
+        List<CallType> returnTypes = functionInformation.Returns.Keys.Concat(functionInformation.UnalignedReturns.Keys)
             .Select(x => x.ReturnCallType)
             .Distinct()
             .ToList();

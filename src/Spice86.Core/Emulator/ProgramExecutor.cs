@@ -76,7 +76,7 @@ public class ProgramExecutor : IDisposable {
         }
 
         try {
-            using var mySHA256 = SHA256.Create();
+            using SHA256 mySHA256 = SHA256.Create();
             byte[] actualHash = mySHA256.ComputeHash(file);
 
             if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
@@ -107,8 +107,8 @@ public class ProgramExecutor : IDisposable {
         if (_configuration == null) {
             throw new ArgumentNullException(nameof(_configuration));
         }
-        var counterConfigurator = new CounterConfigurator(_configuration);
-        var reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
+        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration);
+        RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
         Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
         InitializeCpu();
