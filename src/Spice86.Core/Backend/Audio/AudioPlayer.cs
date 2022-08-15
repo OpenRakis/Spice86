@@ -191,7 +191,7 @@ public abstract class AudioPlayer : IDisposable {
         int byteLength = Unsafe.SizeOf<T>() * data.Length;
 
         while (true) {
-            bytesWritten += WriteDataInternal(MemoryMarshal.Cast<T, byte>(data.Span)[bytesWritten..]);
+            bytesWritten += WriteDataInternal(data.Span.Cast<T, byte>()[bytesWritten..]);
             if (bytesWritten >= byteLength)
                 return;
 
@@ -231,14 +231,14 @@ public abstract class AudioPlayer : IDisposable {
         public override int WriteData<TInput>(Span<TInput> data) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput))
-                return player.WriteDataInternal(MemoryMarshal.AsBytes(data)) / Unsafe.SizeOf<TOutput>();
+                return player.WriteDataInternal(data.AsBytes()) / Unsafe.SizeOf<TOutput>();
 
             int minBufferSize = data.Length;
             if (conversionBuffer == null || conversionBuffer.Length < minBufferSize)
                 Array.Resize(ref conversionBuffer, minBufferSize);
 
             SampleConverter.InternalConvert<TInput, TOutput>(data, conversionBuffer);
-            return player.WriteDataInternal(MemoryMarshal.AsBytes(conversionBuffer.AsSpan(0, data.Length))) / Unsafe.SizeOf<TOutput>();
+            return player.WriteDataInternal(conversionBuffer.AsSpan(0, data.Length).AsBytes()) / Unsafe.SizeOf<TOutput>();
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public override ValueTask WriteDataAsync<TInput>(Memory<TInput> data, CancellationToken cancellationToken) {
@@ -263,7 +263,7 @@ public abstract class AudioPlayer : IDisposable {
             if (conversionBuffer == null || conversionBuffer.Length < minBufferSize)
                 Array.Resize(ref conversionBuffer, minBufferSize);
 
-            SampleConverter.InternalConvert<TInput, TOutput>(MemoryMarshal.Cast<byte, TInput>(data.Span), conversionBuffer);
+            SampleConverter.InternalConvert<TInput, TOutput>(data.Span.Cast<byte, TInput>(), conversionBuffer);
             return player.WriteDataInternalAsync<TOutput>(conversionBuffer.AsMemory(0, minBufferSize), cancellationToken);
         }
     }
@@ -289,14 +289,14 @@ public abstract class AudioPlayer : IDisposable {
         public override void RaiseCallback(Span<byte> buffer, out int samplesWritten) {
             // if formats are the same no sample conversion is needed
             if (typeof(TInput) == typeof(TOutput)) {
-                callback(MemoryMarshal.Cast<byte, TInput>(buffer), out samplesWritten);
+                callback(buffer.Cast<byte, TInput>(), out samplesWritten);
             } else {
                 int minBufferSize = buffer.Length / Unsafe.SizeOf<TOutput>();
                 if (conversionBuffer == null || conversionBuffer.Length < minBufferSize)
                     Array.Resize(ref conversionBuffer, minBufferSize);
 
                 callback(conversionBuffer.AsSpan(0, minBufferSize), out samplesWritten);
-                SampleConverter.InternalConvert<TInput, TOutput>(conversionBuffer.AsSpan(0, minBufferSize), MemoryMarshal.Cast<byte, TOutput>(buffer));
+                SampleConverter.InternalConvert<TInput, TOutput>(conversionBuffer.AsSpan(0, minBufferSize), buffer.Cast<byte, TOutput>());
             }
         }
     }
