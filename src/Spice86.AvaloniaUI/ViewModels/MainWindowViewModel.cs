@@ -53,7 +53,8 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
 
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
 
-    [ObservableProperty] private bool _isPaused = false;
+    [ObservableProperty]
+    private bool _isPaused = false;
 
     public event EventHandler<EventArgs>? KeyUp;
     public event EventHandler<EventArgs>? KeyDown;
@@ -123,8 +124,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
         var videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
-        Dispatcher.UIThread.Post(() =>
-                VideoBuffers.Add(videoBuffer));
+        Dispatcher.UIThread.Post(() => VideoBuffers.Add(videoBuffer));
     }
 
     public void Dispose() {
@@ -230,7 +230,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
 
     [RelayCommand]
     public void ResetTimeMultiplier() {
-        TimeMultiplier = _configuration!.TimeMultiplier;
+        if (_configuration is not null) {
+            TimeMultiplier = _configuration.TimeMultiplier;            
+        }
     }
 
     private Rgb[] _palette = Array.Empty<Rgb>();
@@ -259,7 +261,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
 
     public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary =>
         VideoBuffers
-        .ToDictionary(x =>
+        .ToDictionary(static x =>
             x.Address,
             x => (IVideoBufferViewModel)x);
 
@@ -345,7 +347,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     private IEnumerable<VideoBufferViewModel> SortedBuffers() {
-        return VideoBuffers.OrderBy(x => x.Address).Select(x => x);
+        return VideoBuffers.OrderBy(static x => x.Address).Select(static x => x);
     }
 
     private void RunMachine() {
