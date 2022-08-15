@@ -42,14 +42,14 @@ public static class SampleConverter {
         if (Vector.IsHardwareAccelerated) {
             ReadOnlySpan<Vector<byte>> srcVector = MemoryMarshal.Cast<byte, Vector<byte>>(source);
             Span<Vector<float>> destVector = MemoryMarshal.Cast<float, Vector<float>>(target);
-            var addVector = new Vector<short>(-127);
+            Vector<short> addVector = new Vector<short>(-127);
 
             for (int i = 0; i < srcVector.Length; i++) {
                 int targetIndex = i * 4;
                 Vector.Widen(srcVector[i], out Vector<ushort> usSrc1, out Vector<ushort> usSrc2);
 
-                var sSrc1 = Vector.Add(Vector.AsVectorInt16(usSrc1), addVector);
-                var sSrc2 = Vector.Add(Vector.AsVectorInt16(usSrc2), addVector);
+                Vector<short> sSrc1 = Vector.Add(Vector.AsVectorInt16(usSrc1), addVector);
+                Vector<short> sSrc2 = Vector.Add(Vector.AsVectorInt16(usSrc2), addVector);
 
                 Vector.Widen(sSrc1, out Vector<int> iSrc1, out Vector<int> iSrc2);
                 Vector.Widen(sSrc2, out Vector<int> iSrc3, out Vector<int> iSrc4);
@@ -77,14 +77,14 @@ public static class SampleConverter {
         if (Vector.IsHardwareAccelerated) {
             ReadOnlySpan<Vector<byte>> srcVector = MemoryMarshal.Cast<byte, Vector<byte>>(source);
             Span<Vector<short>> destVector = MemoryMarshal.Cast<short, Vector<short>>(target);
-            var addVector = new Vector<short>(-127);
+            Vector<short> addVector = new Vector<short>(-127);
 
             for (int i = 0; i < srcVector.Length; i++) {
                 int targetIndex = i * 2;
                 Vector.Widen(srcVector[i], out Vector<ushort> usSrc1, out Vector<ushort> usSrc2);
 
-                var sSrc1 = Vector.Multiply(Vector.Add(Vector.AsVectorInt16(usSrc1), addVector), (short)128);
-                var sSrc2 = Vector.Multiply(Vector.Add(Vector.AsVectorInt16(usSrc2), addVector), (short)128);
+                Vector<short> sSrc1 = Vector.Multiply(Vector.Add(Vector.AsVectorInt16(usSrc1), addVector), (short)128);
+                Vector<short> sSrc2 = Vector.Multiply(Vector.Add(Vector.AsVectorInt16(usSrc2), addVector), (short)128);
 
                 destVector[targetIndex] = Vector.Multiply(sSrc1, (short)256);
                 destVector[targetIndex + 1] = Vector.Multiply(sSrc2, (short)256);
@@ -110,8 +110,8 @@ public static class SampleConverter {
             for (int i = 0; i < srcVector.Length - 1; i += 2) {
                 int targetIndex = i / 2;
 
-                var src1 = Vector.ConvertToInt32(Vector.Multiply(srcVector[i], 32767f));
-                var src2 = Vector.ConvertToInt32(Vector.Multiply(srcVector[i + 1], 32767f));
+                Vector<int> src1 = Vector.ConvertToInt32(Vector.Multiply(srcVector[i], 32767f));
+                Vector<int> src2 = Vector.ConvertToInt32(Vector.Multiply(srcVector[i + 1], 32767f));
 
                 destVector[targetIndex] = Vector.Narrow(src1, src2);
             }

@@ -228,7 +228,7 @@ public class CSharpOverrideHelper {
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, int vectorNumber) {
         ushort targetIP = Memory.GetUint16((ushort)(4 * vectorNumber));
         ushort targetCS = Memory.GetUint16((ushort)(4 * vectorNumber + 2));
-        var target = new SegmentedAddress(targetCS, targetIP);
+        SegmentedAddress target = new SegmentedAddress(targetCS, targetIP);
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function == null) {
             throw FailAsUntested($"Could not find an override at address {target}");
@@ -258,8 +258,8 @@ public class CSharpOverrideHelper {
         // Do not return to the caller until we are sure we are at the right place
         while (actualReturnCs != expectedReturnCs ||
                actualReturnIp != expectedReturnIp) {
-            var expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
-            var actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
+            SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
+            SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
             string message =
                 "The original code is trying to jump via call stack modification. Expected to return at: " +
                 expectedReturn + " but actually returning to: " + actualReturn + " Stack address before: " +
@@ -317,7 +317,7 @@ public class CSharpOverrideHelper {
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackHandler.GetCallbackAddresses()) {
             byte callbackNumber = callbackAddressEntry.Key;
             SegmentedAddress callbackAddress = callbackAddressEntry.Value;
-            var runnable = new Func<int, Action>(_ => {
+            Func<int, Action> runnable = new Func<int, Action>(_ => {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
             });
@@ -343,7 +343,7 @@ public class CSharpOverrideHelper {
         for (uint address = startAddress; address <= endAddress; address++) {
             // For closure
             uint addressCopy = address;
-            var breakPoint = new AddressBreakPoint(BreakPointType.WRITE, address, _ => {
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, address, _ => {
                 if (!IsRegisterExecutableCodeModificationEnabled) {
                     return;
                 }

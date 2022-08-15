@@ -28,7 +28,7 @@ internal sealed class LibraryLoader : IDisposable
 
     public TDelegate LoadFunc<TDelegate>(string name)
     {
-        var ptr = PlatformInfo.IsWindows ? Kernel32.GetProcAddress(_handle, name) : NativeLibrary.GetExport(_handle, name);
+        IntPtr ptr = PlatformInfo.IsWindows ? Kernel32.GetProcAddress(_handle, name) : NativeLibrary.GetExport(_handle, name);
         Ensure.That<Exception>(ptr != IntPtr.Zero, $"Could not load function name: {name}.");
 
         return Marshal.GetDelegateForFunctionPointer<TDelegate>(ptr);

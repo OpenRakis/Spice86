@@ -32,7 +32,7 @@ public class Flags {
     }
 
     public static string DumpFlags(int flags) {
-        var res = new StringBuilder();
+        StringBuilder res = new StringBuilder();
         res.Append(GetFlag(flags, Overflow, 'O'));
         res.Append(GetFlag(flags, Direction, 'D'));
         res.Append(GetFlag(flags, Interrupt, 'I'));

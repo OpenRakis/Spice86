@@ -69,7 +69,7 @@ internal sealed class Mt32Player : IDisposable {
     }
     private void LoadRoms(string path) {
         if (path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
-            using var zip = new ZipArchive(File.OpenRead(path), ZipArchiveMode.Read);
+            using ZipArchive zip = new ZipArchive(File.OpenRead(path), ZipArchiveMode.Read);
             for (int i = 0; i < zip.Entries.Count; i++) {
                 ZipArchiveEntry? entry = zip.Entries[i];
                 if (entry.FullName.EndsWith(".ROM", StringComparison.OrdinalIgnoreCase)) {

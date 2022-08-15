@@ -16,7 +16,7 @@ public sealed class DirectSoundAudioPlayer : AudioPlayer {
     public DirectSoundAudioPlayer(AudioFormat format, TimeSpan bufferLength)
         : base(format) {
         IntPtr hwnd;
-        using (var p = Process.GetCurrentProcess()) {
+        using (Process p = Process.GetCurrentProcess()) {
             hwnd = p.MainWindowHandle;
         }
 
@@ -25,7 +25,7 @@ public sealed class DirectSoundAudioPlayer : AudioPlayer {
 
         dataInterval = (uint)(bufferLength.TotalMilliseconds * 0.4);
 
-        var dsound = DirectSoundObject.GetInstance(hwnd);
+        DirectSoundObject dsound = DirectSoundObject.GetInstance(hwnd);
         directSoundBuffer = dsound.CreateBuffer(format, bufferLength);
     }
 

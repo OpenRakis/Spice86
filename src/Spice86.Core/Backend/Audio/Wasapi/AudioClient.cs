@@ -227,7 +227,7 @@ internal sealed class AudioClient : IDisposable {
             else
                 return null;
         } else if (wfx->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
-            var wfx2 = (WAVEFORMATEXTENSIBLE*)wfx;
+            WAVEFORMATEXTENSIBLE* wfx2 = (WAVEFORMATEXTENSIBLE*)wfx;
             if (wfx2->SubFormat == Guids.KSDATAFORMAT_SUBTYPE_PCM) {
                 if (wfx->wBitsPerSample == 8)
                     sampleFormat = SampleFormat.UnsignedPcm8;

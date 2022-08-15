@@ -68,7 +68,7 @@ internal partial class PaletteWindow : Window {
             if (rgb is null) {
                 continue;
             }
-            var brush = (SolidColorBrush?)((Rectangle)_grid.Children[i]).Fill;
+            SolidColorBrush? brush = (SolidColorBrush?)((Rectangle)_grid.Children[i]).Fill;
             if (brush is null) {
                 continue;
             }

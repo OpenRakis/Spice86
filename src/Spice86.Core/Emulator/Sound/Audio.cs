@@ -51,7 +51,7 @@ internal static class Audio {
             floatArray[i] = writeBuffer[i];
         }
 
-        var span = new Span<float>(floatArray);
+        Span<float> span = new Span<float>(floatArray);
 
         while (true) {
             int count = player.WriteData(span);

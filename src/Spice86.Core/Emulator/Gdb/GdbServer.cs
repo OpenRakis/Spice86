@@ -49,7 +49,7 @@ public class GdbServer : IDisposable {
     public GdbCommandHandler? GdbCommandHandler { get; private set; }
 
     private void AcceptOneConnection(GdbIo gdbIo) {
-        var gdbCommandHandler = new GdbCommandHandler(gdbIo, _machine, _configuration);
+        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo, _machine, _configuration);
         gdbCommandHandler.PauseEmulator();
         _waitHandle?.Set();
         GdbCommandHandler = gdbCommandHandler;
@@ -73,7 +73,7 @@ public class GdbServer : IDisposable {
         try {
             while (_isRunning) {
                 try {
-                    using var gdbIo = new GdbIo(port);
+                    using GdbIo gdbIo = new GdbIo(port);
                     AcceptOneConnection(gdbIo);
                 } catch (IOException e) {
                     _logger.Error(e, "Error in the GDB server, restarting it...");

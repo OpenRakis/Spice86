@@ -54,7 +54,7 @@ public class Keyboard : DefaultIOPortHandler {
         }
         byte? scancode = null;
         if (LastKeyboardInput is not null) {
-            var lastKeyboardInput = (KeyboardInput)LastKeyboardInput;
+            KeyboardInput lastKeyboardInput = (KeyboardInput)LastKeyboardInput;
             if (lastKeyboardInput.IsPressed) {
                 scancode = _keyScanCodeConverter?.GetKeyPressedScancode(lastKeyboardInput);
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {

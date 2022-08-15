@@ -469,7 +469,7 @@ public class DosInt21Handler : InterruptHandler {
 
     private string GetDosString(Memory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
-        var stringBuilder = new StringBuilder();
+        StringBuilder stringBuilder = new StringBuilder();
         while (memory.GetUint8(stringStart) != end) {
             string c = ConvertDosChar(memory.GetUint8(stringStart++));
             stringBuilder.Append(c);

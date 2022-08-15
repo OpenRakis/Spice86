@@ -64,7 +64,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         if (_programExecutor is null || _configuration is null) {
             return;
         }
-        var ofd = new OpenFolderDialog() {
+        OpenFolderDialog ofd = new OpenFolderDialog() {
             Title = "Dump emulator state to directory...",
             Directory = _configuration.RecordedDataDirectory
         };
@@ -123,7 +123,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
-        var videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
+        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         Dispatcher.UIThread.Post(() => VideoBuffers.Add(videoBuffer));
     }
 

@@ -82,7 +82,7 @@ public class DosFileManager {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Creating file {@HostFileName} with attribute {@FileAttribute}", hostFileName, fileAttribute);
         }
-        var path = new FileInfo(hostFileName);
+        FileInfo path = new FileInfo(hostFileName);
         try {
             if (File.Exists(path.FullName)) {
                 File.Delete(path.FullName);
@@ -122,7 +122,7 @@ public class DosFileManager {
         if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder) == false) {
             _currentMatchingFileSearchSpec = hostSearchSpec.Replace(_currentMatchingFileSearchFolder, "");
             try {
-                var matchingPaths = Directory.GetFiles(
+                List<string> matchingPaths = Directory.GetFiles(
                     _currentMatchingFileSearchFolder,
                     _currentMatchingFileSearchSpec,
                     new EnumerationOptions() {
@@ -401,7 +401,7 @@ public class DosFileManager {
         if (string.IsNullOrWhiteSpace(directory)) {
             return null;
         }
-        var directoryInfo = new DirectoryInfo(directory);
+        DirectoryInfo directoryInfo = new DirectoryInfo(directory);
         if (directoryInfo.Exists) {
             return directory;
         }
@@ -595,7 +595,7 @@ public class DosFileManager {
             _logger.Information("Found matching file {@MatchingFile}", matchingFile);
         }
         DosDiskTransferArea dosDiskTransferArea = new(_memory, GetDiskTransferAreaAddressPhysical());
-        var attributes = new FileInfo(matchingFile);
+        FileInfo attributes = new FileInfo(matchingFile);
         DateTime creationZonedDateTime = attributes.CreationTimeUtc;
         DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
         DateTime creationLocalTime = creationZonedDateTime.ToLocalTime();

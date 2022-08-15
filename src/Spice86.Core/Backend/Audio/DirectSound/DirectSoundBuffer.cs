@@ -26,7 +26,7 @@ internal sealed class DirectSoundBuffer : IDisposable {
         this.sound = sound;
 
         unsafe {
-            var caps = new DSBCAPS { dwSize = (uint)sizeof(DSBCAPS) };
+            DSBCAPS caps = new DSBCAPS { dwSize = (uint)sizeof(DSBCAPS) };
             uint res = dsb->Vtbl->GetCaps(dsb, &caps);
             bufferSize = caps.dwBufferBytes;
         }

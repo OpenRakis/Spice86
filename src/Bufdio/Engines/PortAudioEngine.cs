@@ -30,7 +30,7 @@ public sealed class PortAudioEngine : IAudioEngine
     {
         _options = options ?? new AudioEngineOptions();
 
-        var parameters = new PaBinding.PaStreamParameters
+        PaBinding.PaStreamParameters parameters = new PaBinding.PaStreamParameters
         {
             channelCount = _options.Channels,
             device = _options.Device.DeviceIndex,
@@ -44,10 +44,10 @@ public sealed class PortAudioEngine : IAudioEngine
         unsafe
         {
             PaBinding.PaStreamParameters tempParameters;
-            var parametersPtr = new IntPtr(&tempParameters);
+            IntPtr parametersPtr = new IntPtr(&tempParameters);
             Marshal.StructureToPtr(parameters, parametersPtr, false);
 
-            var code = PaBinding.Pa_OpenStream(
+            int code = PaBinding.Pa_OpenStream(
                 new IntPtr(&stream),
                 IntPtr.Zero,
                 parametersPtr,
@@ -72,7 +72,7 @@ public sealed class PortAudioEngine : IAudioEngine
         {
             fixed (float* buffer = samples)
             {
-                var frames = samples.Length / _options.Channels;
+                int frames = samples.Length / _options.Channels;
                 PaBinding.Pa_WriteStream(_stream, (IntPtr)buffer, frames);
             }
         }

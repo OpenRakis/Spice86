@@ -26,7 +26,7 @@ public class GdbIo : IDisposable {
 
     public GdbIo(int port) {
         IPHostEntry host = Dns.GetHostEntry("localhost");
-        var ip = new IPAddress(host.AddressList.First().GetAddressBytes());
+        IPAddress ip = new IPAddress(host.AddressList.First().GetAddressBytes());
         _tcpListener = new TcpListener(ip, port);
         _tcpListener.Start();
         _serverSocket = _tcpListener.Server;
@@ -72,7 +72,7 @@ public class GdbIo : IDisposable {
     public string ReadCommand() {
         _rawCommand.Clear();
         int chr = _stream.ReadByte();
-        var resBuilder = new StringBuilder();
+        StringBuilder resBuilder = new StringBuilder();
         while (chr >= 0) {
             _rawCommand.Add((byte)chr);
             if ((char)chr == '#') {

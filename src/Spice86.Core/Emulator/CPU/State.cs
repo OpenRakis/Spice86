@@ -18,7 +18,7 @@ public class State {
 
     public string DumpedRegFlags {
         get {
-            var res = new StringBuilder();
+            StringBuilder res = new StringBuilder();
             res.Append(nameof(Cycles)).Append('=');
             res.Append(Cycles);
             res.Append(" CS:IP=").Append(ConvertUtils.ToSegmentedAddressRepresentation(CS, IP)).Append('/').Append(ConvertUtils.ToHex(MemoryUtils.ToPhysicalAddress(CS, IP)));

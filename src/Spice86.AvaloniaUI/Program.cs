@@ -29,7 +29,7 @@ public class Program {
     /// </summary>
     [STAThread]
     public static void RunWithOverrides<T>(string[] args, string expectedChecksum) where T : class, new() {
-        var argsList = args.ToList();
+        List<string> argsList = args.ToList();
 
         // Inject override
         argsList.Add($"--{nameof(Configuration.OverrideSupplierClassName)}={typeof(T).AssemblyQualifiedName}");

@@ -16,7 +16,7 @@ public class ExecutionFlowDumper {
     private static readonly ILogger _logger = new Serilogger().Logger.ForContext<ExecutionFlowDumper>();
 
     public void Dump(ExecutionFlowRecorder executionFlowRecorder, string destinationFilePath) {
-        using var printWriter = new StreamWriter(destinationFilePath);
+        using StreamWriter printWriter = new StreamWriter(destinationFilePath);
         string jsonString = JsonConvert.SerializeObject(executionFlowRecorder);
         printWriter.WriteLine(jsonString);
     }

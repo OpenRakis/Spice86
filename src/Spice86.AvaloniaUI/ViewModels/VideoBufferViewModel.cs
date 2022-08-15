@@ -80,7 +80,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     [RelayCommand]
     public async Task SaveBitmap() {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            var picker = new SaveFileDialog {
+            SaveFileDialog picker = new SaveFileDialog {
                 DefaultExtension = "bmp",
                 InitialFileName = "screenshot.bmp",
                 Title = "Save Bitmap"

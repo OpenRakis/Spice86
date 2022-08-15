@@ -78,7 +78,7 @@ public class GdbCustomCommandsHandler {
         if (long.TryParse(cyclesToWaitString, out long cyclesToWait)) {
             long currentCycles = _machine.Cpu.State.Cycles;
             long cyclesBreak = currentCycles + cyclesToWait;
-            var breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
             _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
                 _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
@@ -97,7 +97,7 @@ public class GdbCustomCommandsHandler {
         try {
             uint cs = ConvertUtils.ParseHex32(args[1]);
             uint ip = ConvertUtils.ParseHex32(args[2]);
-            var breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
             _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
                 _logger.Debug("Breakpoint added for cs:ip!\n{@BreakPoint}", breakPoint);
@@ -339,7 +339,7 @@ Supported custom commands:
                 gui?.Draw(memory.Ram, vgaCard.VgaDac.Rgbs);
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
-                var listBuilder = new StringBuilder();
+                StringBuilder listBuilder = new StringBuilder();
                 gui?.VideoBuffersToDictionary.ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList()
                     .ForEach(x => listBuilder.AppendLine(x));
                 string list = listBuilder.ToString();

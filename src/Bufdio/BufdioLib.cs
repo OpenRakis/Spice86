@@ -79,16 +79,16 @@ public static class BufdioLib
         PaBinding.InitializeBindings(new LibraryLoader(portAudioPath));
         PaBinding.Pa_Initialize();
 
-        var deviceCount = PaBinding.Pa_GetDeviceCount();
+        int deviceCount = PaBinding.Pa_GetDeviceCount();
         Ensure.That<BufdioException>(deviceCount > 0, "No output devices are available.");
 
-        var defaultDevice = PaBinding.Pa_GetDefaultOutputDevice();
+        int defaultDevice = PaBinding.Pa_GetDefaultOutputDevice();
         _defaultOutputDevice = defaultDevice.PaGetPaDeviceInfo().PaToAudioDevice(defaultDevice);
         _outputDevices = new List<AudioDevice>();
 
-        for (var i = 0; i < deviceCount; i++)
+        for (int i = 0; i < deviceCount; i++)
         {
-            var deviceInfo = i.PaGetPaDeviceInfo();
+            PaBinding.PaDeviceInfo deviceInfo = i.PaGetPaDeviceInfo();
 
             if (deviceInfo.maxOutputChannels > 0)
             {
