@@ -43,39 +43,6 @@ internal sealed class AudioClient : IDisposable {
     public uint FrameSize { get; }
     public uint SampleSize { get; }
 
-    public bool IsFormatSupported(AudioFormat format, out AudioFormat? closestMatch) {
-        if (format == null) {
-            throw new ArgumentNullException(nameof(format));
-        }
-
-        if (disposed) {
-            throw new ObjectDisposedException(nameof(AudioClient));
-        }
-
-        closestMatch = null;
-
-        if (!TryGetWaveFormat(format, out WAVEFORMATEXTENSIBLE wfx)) {
-            return false;
-        }
-
-        unsafe {
-            WAVEFORMATEX* match = null;
-            try {
-                uint res = inst->Vtbl->IsFormatSupported(inst, 0, (WAVEFORMATEX*)&wfx, &match);
-
-                if (match != null) {
-                    closestMatch = GetAudioFormat(match);
-                }
-
-                return res == 0;
-            } finally {
-                if (match != null) {
-                    Marshal.FreeCoTaskMem(new IntPtr(match));
-                }
-            }
-        }
-    }
-
     public void Initialize(TimeSpan bufferDuration, AudioFormat? audioFormat = null, bool useCallback = false) {
         if (disposed) {
             throw new ObjectDisposedException(nameof(AudioClient));
@@ -173,19 +140,7 @@ internal sealed class AudioClient : IDisposable {
             return true;
         }
     }
-    public unsafe void* GetBuffer(uint framesRequested) {
-        if (disposed) {
-            throw new ObjectDisposedException(nameof(AudioClient));
-        }
 
-        byte* ptr = null;
-        uint res = renderInst->Vtbl->GetBuffer(renderInst, framesRequested, &ptr);
-        if (res != 0) {
-            throw new InvalidOperationException();
-        }
-
-        return ptr;
-    }
     public void ReleaseBuffer(uint framesWritten) {
         if (disposed) {
             throw new ObjectDisposedException(nameof(AudioClient));
@@ -283,10 +238,11 @@ internal sealed class AudioClient : IDisposable {
 
     private void Dispose(bool disposing) {
         if (!disposed) {
-            unsafe {
-                inst->Vtbl->Release(inst);
+            if (disposing) {
+                unsafe {
+                    inst->Vtbl->Release(inst);
+                }
             }
-
             disposed = true;
         }
     }
