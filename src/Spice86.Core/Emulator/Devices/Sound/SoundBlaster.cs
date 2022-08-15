@@ -261,9 +261,9 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             _dsp.Read(buffer);
             int length;
             if (_dsp.Is16Bit && _dsp.IsStereo) {
-                length = LinearUpsampler.Resample16Stereo(_dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
+                length = LinearUpsampler.Resample16Stereo(_dsp.SampleRate, sampleRate, buffer.Cast<byte, short>(), writeBuffer);
             } else if (_dsp.Is16Bit) {
-                length = LinearUpsampler.Resample16Mono(_dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
+                length = LinearUpsampler.Resample16Mono(_dsp.SampleRate, sampleRate, buffer.Cast<byte, short>(), writeBuffer);
             } else if (_dsp.IsStereo) {
                 length = LinearUpsampler.Resample8Stereo(_dsp.SampleRate, sampleRate, buffer, writeBuffer);
             } else {

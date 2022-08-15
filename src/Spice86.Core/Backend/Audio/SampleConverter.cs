@@ -14,9 +14,9 @@ public static class SampleConverter {
     /// </summary>
     /// <param name="source">Source samples.</param>
     /// <param name="target">Target sample buffer.</param>
-    public static void Pcm16ToFloat(ReadOnlySpan<short> source, Span<float> target) {
+    public static void Pcm16ToFloat(Span<short> source, Span<float> target) {
         if (Vector.IsHardwareAccelerated) {
-            ReadOnlySpan<Vector<short>> srcVector = MemoryMarshal.Cast<short, Vector<short>>(source);
+            Span<Vector<short>> srcVector = MemoryMarshal.Cast<short, Vector<short>>(source);
             Span<Vector<float>> destVector = MemoryMarshal.Cast<float, Vector<float>>(target);
 
             for (int i = 0; i < srcVector.Length; i++) {
@@ -38,10 +38,10 @@ public static class SampleConverter {
     /// </summary>
     /// <param name="source">Source samples.</param>
     /// <param name="target">Target sample buffer.</param>
-    public static void Pcm8ToFloat(ReadOnlySpan<byte> source, Span<float> target) {
+    public static void Pcm8ToFloat(Span<byte> source, Span<float> target) {
         if (Vector.IsHardwareAccelerated) {
-            ReadOnlySpan<Vector<byte>> srcVector = MemoryMarshal.Cast<byte, Vector<byte>>(source);
-            Span<Vector<float>> destVector = MemoryMarshal.Cast<float, Vector<float>>(target);
+            Span<Vector<byte>> srcVector = source.Cast<byte, Vector<byte>>();
+            Span<Vector<float>> destVector = target.Cast<float, Vector<float>>();
             Vector<short> addVector = new Vector<short>(-127);
 
             for (int i = 0; i < srcVector.Length; i++) {
@@ -73,10 +73,10 @@ public static class SampleConverter {
     /// </summary>
     /// <param name="source">Source samples.</param>
     /// <param name="target">Target sample buffer.</param>
-    public static void Pcm8ToPcm16(ReadOnlySpan<byte> source, Span<short> target) {
+    public static void Pcm8ToPcm16(Span<byte> source, Span<short> target) {
         if (Vector.IsHardwareAccelerated) {
-            ReadOnlySpan<Vector<byte>> srcVector = MemoryMarshal.Cast<byte, Vector<byte>>(source);
-            Span<Vector<short>> destVector = MemoryMarshal.Cast<short, Vector<short>>(target);
+            Span<Vector<byte>> srcVector = source.Cast<byte, Vector<byte>>();
+            Span<Vector<short>> destVector = target.Cast<short, Vector<short>>();
             Vector<short> addVector = new Vector<short>(-127);
 
             for (int i = 0; i < srcVector.Length; i++) {
@@ -102,10 +102,10 @@ public static class SampleConverter {
     /// </summary>
     /// <param name="source">Source samples.</param>
     /// <param name="target">Target sample buffer.</param>
-    public static void FloatToPcm16(ReadOnlySpan<float> source, Span<short> target) {
+    public static void FloatToPcm16(Span<float> source, Span<short> target) {
         if (Vector.IsHardwareAccelerated) {
-            ReadOnlySpan<Vector<float>> srcVector = MemoryMarshal.Cast<float, Vector<float>>(source);
-            Span<Vector<short>> destVector = MemoryMarshal.Cast<short, Vector<short>>(target);
+            Span<Vector<float>> srcVector = source.Cast<float, Vector<float>>();
+            Span<Vector<short>> destVector = target.Cast<short, Vector<short>>();
 
             for (int i = 0; i < srcVector.Length - 1; i += 2) {
                 int targetIndex = i / 2;
@@ -125,17 +125,17 @@ public static class SampleConverter {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void InternalConvert<TFrom, TTo>(ReadOnlySpan<TFrom> source, Span<TTo> target)
+    internal static void InternalConvert<TFrom, TTo>(Span<TFrom> source, Span<TTo> target)
         where TFrom : unmanaged
         where TTo : unmanaged {
         if (typeof(TFrom) == typeof(short) && typeof(TTo) == typeof(float))
-            Pcm16ToFloat(MemoryMarshal.Cast<TFrom, short>(source), MemoryMarshal.Cast<TTo, float>(target));
+            Pcm16ToFloat(source.Cast<TFrom, short>(), target.Cast<TTo, float>());
         else if (typeof(TFrom) == typeof(byte) && typeof(TTo) == typeof(short))
-            Pcm8ToPcm16(MemoryMarshal.Cast<TFrom, byte>(source), MemoryMarshal.Cast<TTo, short>(target));
+            Pcm8ToPcm16(source.Cast<TFrom, byte>(), target.Cast<TTo, short>());
         else if (typeof(TFrom) == typeof(float) && typeof(TTo) == typeof(short))
-            FloatToPcm16(MemoryMarshal.Cast<TFrom, float>(source), MemoryMarshal.Cast<TTo, short>(target));
+            FloatToPcm16(source.Cast<TFrom, float>(), target.Cast<TTo, short>());
         else if (typeof(TFrom) == typeof(byte) && typeof(TTo) == typeof(float))
-            Pcm8ToFloat(MemoryMarshal.Cast<TFrom, byte>(source), MemoryMarshal.Cast<TTo, float>(target));
+            Pcm8ToFloat(source.Cast<TFrom, byte>(), target.Cast<TTo, float>());
         else
             throw new NotImplementedException();
     }
