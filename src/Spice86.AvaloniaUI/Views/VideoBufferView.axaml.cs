@@ -13,8 +13,6 @@ internal partial class VideoBufferView : UserControl {
         InitializeComponent();
     }
 
-    private MainWindow? ApplicationWindow => this.GetSelfAndLogicalAncestors().OfType<MainWindow>().FirstOrDefault();
-
     private void InitializeComponent() {
         AvaloniaXamlLoader.Load(this);
         DataContextChanged += VideoBufferView_DataContextChanged;
@@ -30,7 +28,7 @@ internal partial class VideoBufferView : UserControl {
     private void VideoBufferView_DataContextChanged(object? sender, EventArgs e) {
         if (DataContext is VideoBufferViewModel vm) {
             _image = this.FindControl<Image>(nameof(Image));
-            if (vm.IsPrimaryDisplay && _image is not null && ApplicationWindow?.DataContext is MainWindowViewModel mainVm) {
+            if (vm.IsPrimaryDisplay && _image is not null && App.MainWindow?.DataContext is MainWindowViewModel mainVm) {
                 _image.PointerMoved -= (s, e) => mainVm.OnMouseMoved(e, _image);
                 _image.PointerPressed -= (s, e) => mainVm.OnMouseClick(e, true);
                 _image.PointerReleased -= (s, e) => mainVm.OnMouseClick(e, false);
