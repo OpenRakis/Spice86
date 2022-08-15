@@ -40,8 +40,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
     /// </summary>
     public uint Frequency {
         get {
-            if (disposed)
+            if (disposed) {
                 return 0;
+            }
 
             unsafe {
                 uint frequency = 0;
@@ -51,8 +52,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
         }
         set {
             unsafe {
-                if (!disposed)
+                if (!disposed) {
                     soundBuffer->Vtbl->SetFrequency(soundBuffer, value);
+                }
             }
         }
     }
@@ -61,8 +63,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
     /// </summary>
     public int Pan {
         get {
-            if (disposed)
+            if (disposed) {
                 return 0;
+            }
 
             unsafe {
                 int pan = 0;
@@ -72,8 +75,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
         }
         set {
             unsafe {
-                if (!disposed)
+                if (!disposed) {
                     soundBuffer->Vtbl->SetPan(soundBuffer, value);
+                }
             }
         }
     }
@@ -82,8 +86,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
     /// </summary>
     public int Volume {
         get {
-            if (disposed)
+            if (disposed) {
                 return 0;
+            }
 
             unsafe {
                 int volume;
@@ -93,8 +98,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
         }
         set {
             unsafe {
-                if (!disposed)
+                if (!disposed) {
                     soundBuffer->Vtbl->SetVolume(soundBuffer, value);
+                }
             }
         }
     }
@@ -103,8 +109,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
     /// </summary>
     public bool IsPlaying {
         get {
-            if (disposed)
+            if (disposed) {
                 return false;
+            }
 
             unsafe {
                 uint status;
@@ -118,8 +125,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
     /// </summary>
     public int Position {
         get {
-            if (disposed)
+            if (disposed) {
                 return 0;
+            }
 
             GetPosition(out uint playPos, out _);
 
@@ -136,13 +144,15 @@ internal sealed class DirectSoundBuffer : IDisposable {
     /// </summary>
     /// <param name="playbackMode">Specifies the buffer playback behavior.</param>
     public void Play(PlaybackMode playbackMode) {
-        if (disposed)
+        if (disposed) {
             throw new ObjectDisposedException(nameof(DirectSoundBuffer));
+        }
 
         unsafe {
             uint res = soundBuffer->Vtbl->Play(soundBuffer, 0, 0, (uint)playbackMode);
-            if (res != 0)
+            if (res != 0) {
                 throw new InvalidOperationException("Unable to play DirectSound buffer.");
+            }
         }
     }
     /// <summary>
@@ -150,8 +160,9 @@ internal sealed class DirectSoundBuffer : IDisposable {
     /// </summary>
     public void Stop() {
         unsafe {
-            if (!disposed)
+            if (!disposed) {
                 soundBuffer->Vtbl->Stop(soundBuffer);
+            }
         }
     }
 
@@ -159,17 +170,19 @@ internal sealed class DirectSoundBuffer : IDisposable {
         GetPosition(out uint playPos, out _);
 
         uint maxBytes;
-        if (isEmpty)
+        if (isEmpty) {
             maxBytes = bufferSize;
-        else if (writePos > playPos)
+        } else if (writePos > playPos) {
             maxBytes = bufferSize - writePos + playPos;
-        else if (writePos < playPos)
+        } else if (writePos < playPos) {
             maxBytes = playPos - writePos;
-        else
+        } else {
             maxBytes = 0;
+        }
 
-        if (maxBytes < minLength)
+        if (maxBytes < minLength) {
             return default;
+        }
 
         unsafe {
             void* ptr1;
@@ -178,11 +191,13 @@ internal sealed class DirectSoundBuffer : IDisposable {
             uint length2;
 
             uint res = soundBuffer->Vtbl->Lock(soundBuffer, writePos, maxBytes, &ptr1, &length1, &ptr2, &length2, 0);
-            if (res != 0)
+            if (res != 0) {
                 throw new InvalidOperationException("Unable to lock DirectSound buffer.");
+            }
 
-            if (ptr1 == null)
+            if (ptr1 == null) {
                 throw new InvalidOperationException();
+            }
 
             return new(this, new IntPtr(ptr1), new IntPtr(ptr2), length1, length2);
         }
@@ -206,14 +221,15 @@ internal sealed class DirectSoundBuffer : IDisposable {
         GetPosition(out uint playPos, out _);
 
         uint maxBytes;
-        if (isEmpty)
+        if (isEmpty) {
             maxBytes = bufferSize;
-        else if (writePos > playPos)
+        } else if (writePos > playPos) {
             maxBytes = bufferSize - writePos + playPos;
-        else if (writePos < playPos)
+        } else if (writePos < playPos) {
             maxBytes = playPos - writePos;
-        else
+        } else {
             maxBytes = 0;
+        }
 
         return maxBytes;
     }

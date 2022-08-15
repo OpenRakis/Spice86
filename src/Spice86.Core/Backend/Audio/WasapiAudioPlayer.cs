@@ -52,8 +52,9 @@ public sealed class WasapiAudioPlayer : AudioPlayer {
                     written = len;
                 }
             } finally {
-                if (release)
+                if (release) {
                     audioClient.ReleaseBuffer((uint)written / (uint)audioClient.MixFormat.BytesPerFrame);
+                }
             }
         }
 
@@ -94,8 +95,9 @@ public sealed class WasapiAudioPlayer : AudioPlayer {
                         throw new InvalidOperationException("Format not supported.");
                     }
                 } finally {
-                    if (release)
+                    if (release) {
                         audioClient.ReleaseBuffer((uint)written / (uint)audioClient.MixFormat.Channels);
+                    }
                 }
             }
 

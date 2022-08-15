@@ -19,8 +19,9 @@ internal sealed class MediaDevice {
             Guid iid = Guids.IID_IAudioClient;
             AudioClientInst* audioClientInst = null;
             uint res = device->Vtbl->Activate(device, &iid, CLSCTX_ALL, null, (void**)&audioClientInst);
-            if (res != 0)
+            if (res != 0) {
                 throw new InvalidOperationException();
+            }
 
             return new AudioClient(audioClientInst);
         }
@@ -33,18 +34,21 @@ internal sealed class MediaDevice {
             DeviceEnumeratorInst* enumInst = null;
             try {
                 uint res = NativeMethods.CoCreateInstance(&clsid, null, CLSCTX_ALL, &iid, (void**)&enumInst);
-                if (res != 0)
+                if (res != 0) {
                     throw new InvalidOperationException();
+                }
 
                 MMDeviceInst* deviceInst = null;
                 res = enumInst->Vtbl->GetDefaultAudioEndpoint(enumInst, EDataFlow.eRender, ERole.eConsole, &deviceInst);
-                if (res != 0)
+                if (res != 0) {
                     throw new InvalidOperationException();
+                }
 
                 return new MediaDevice(deviceInst);
             } finally {
-                if (enumInst != null)
+                if (enumInst != null) {
                     enumInst->Vtbl->Release(enumInst);
+                }
             }
         }
     }

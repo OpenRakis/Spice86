@@ -28,8 +28,9 @@ internal readonly struct AcquiredBuffer {
         }
     }
     public Span<TSample> GetSpan2<TSample>() where TSample : unmanaged {
-        if (Ptr2 == default)
+        if (Ptr2 == default) {
             return default;
+        }
 
         unsafe {
             return new(Ptr2.ToPointer(), (int)length2 / sizeof(TSample));

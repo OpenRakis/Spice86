@@ -25,8 +25,9 @@ internal sealed class DirectSoundObject : IDisposable {
             directSound = ds8;
 
             uint res = ds8->Vtbl->SetCooperativeLevel(ds8, hwnd, 2);
-            if (res != 0)
+            if (res != 0) {
                 throw new InvalidOperationException("Unable to set DirectSound cooperative level.");
+            }
         }
     }
     ~DirectSoundObject() {
@@ -34,19 +35,25 @@ internal sealed class DirectSoundObject : IDisposable {
     }
 
     public DirectSoundBuffer CreateBuffer(AudioFormat format, TimeSpan bufferLength) {
-        if (disposed)
+        if (disposed) {
             throw new ObjectDisposedException(nameof(DirectSoundObject));
-        if (bufferLength < new TimeSpan(0, 0, 0, 0, 5) || bufferLength > new TimeSpan(1, 0, 0))
+        }
+
+        if (bufferLength < new TimeSpan(0, 0, 0, 0, 5) || bufferLength > new TimeSpan(1, 0, 0)) {
             throw new ArgumentOutOfRangeException(nameof(bufferLength));
+        }
 
         double bytesPerSec = format.SampleRate * format.Channels * format.BytesPerSample;
         return CreateBuffer(format, (int)(bufferLength.TotalSeconds * bytesPerSec));
     }
     public DirectSoundBuffer CreateBuffer(AudioFormat format, int bufferSize) {
-        if (disposed)
+        if (disposed) {
             throw new ObjectDisposedException(nameof(DirectSoundObject));
-        if (bufferSize <= 0)
+        }
+
+        if (bufferSize <= 0) {
             throw new ArgumentOutOfRangeException(nameof(bufferSize));
+        }
 
         unsafe {
             DSBUFFERDESC dsbd = new DSBUFFERDESC {
@@ -70,8 +77,9 @@ internal sealed class DirectSoundObject : IDisposable {
             dsbd.lpwfxFormat = &wfx;
 
             uint res = directSound->Vtbl->CreateBuffer(directSound, &dsbd, &dsbuf, null);
-            if (res != 0)
+            if (res != 0) {
                 throw new InvalidOperationException("Unable to create DirectSound buffer.");
+            }
 
             return new DirectSoundBuffer(dsbuf, this);
         }
@@ -92,8 +100,9 @@ internal sealed class DirectSoundObject : IDisposable {
     /// <returns>Current DirectSound instance.</returns>
     public static DirectSoundObject GetInstance(IntPtr hwnd) {
         lock (getInstanceLock) {
-            if (instance?.Target is DirectSoundObject directSound)
+            if (instance?.Target is DirectSoundObject directSound) {
                 return directSound;
+            }
 
             directSound = new DirectSoundObject(hwnd);
             instance = new WeakReference(directSound);
