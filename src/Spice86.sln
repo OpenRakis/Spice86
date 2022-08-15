@@ -13,15 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Shared", "Spice86.S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Tests", "Spice86.Tests\Spice86.Tests.csproj", "{CA85DD9F-9B91-47BE-A00E-36D1D1C29311}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SDL", "SDL", "{6A159B0E-57D9-4B72-BFFA-0E1392018E7F}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SDLSharp_Mixer", "SDL\Mixer\SDLSharp_Mixer.csproj", "{52F731AF-09B2-477D-8D31-4296E1868E86}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SDLSharp", "SDL\SDL\SDLSharp.csproj", "{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bufdio", "Bufdio\Bufdio.csproj", "{7D5BE77E-870A-411B-8B05-E52AC9D784B4}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "libsoundio-sharp", "libsoundio-sharp\libsoundio-sharp.csproj", "{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,29 +41,15 @@ Global
 		{CA85DD9F-9B91-47BE-A00E-36D1D1C29311}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA85DD9F-9B91-47BE-A00E-36D1D1C29311}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA85DD9F-9B91-47BE-A00E-36D1D1C29311}.Release|Any CPU.Build.0 = Release|Any CPU
-		{52F731AF-09B2-477D-8D31-4296E1868E86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{52F731AF-09B2-477D-8D31-4296E1868E86}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{52F731AF-09B2-477D-8D31-4296E1868E86}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{52F731AF-09B2-477D-8D31-4296E1868E86}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5A17D5D2-5BDE-49D7-8768-2C7EBF17108A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{52F731AF-09B2-477D-8D31-4296E1868E86} = {6A159B0E-57D9-4B72-BFFA-0E1392018E7F}
-		{C10A12C5-1B65-4B33-81A9-B8CDA05A02E7} = {6A159B0E-57D9-4B72-BFFA-0E1392018E7F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {020167FB-AD64-4756-930F-EBF609283573}

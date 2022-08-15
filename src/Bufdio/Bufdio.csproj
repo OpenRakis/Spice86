@@ -20,8 +20,4 @@
     <Version>0.1.0</Version>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FFmpeg.AutoGen" Version="4.4.1" />
-  </ItemGroup>
-
 </Project>
