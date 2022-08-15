@@ -142,7 +142,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     private int _height = 320;
 
     [ObservableProperty]
-    public bool _isPrimaryDisplay;
+    private bool _isPrimaryDisplay;
 
     [ObservableProperty]
     private int _width = 200;
@@ -172,7 +172,8 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
 
     private readonly Stopwatch _frameRenderTimeWatch;
 
-    [ObservableProperty] private bool _isDrawing;
+    [ObservableProperty]
+    private bool _isDrawing;
 
     private Action? _drawAction;
 
@@ -233,7 +234,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
             if (disposing) {
                 _exitDrawThread = true;
                 _manualResetEvent.Set();
-                if (_drawThread?.IsAlive == true) {
+                if (_drawThread.IsAlive == true) {
                     _drawThread.Join();
                 }
                 _manualResetEvent.Dispose();
