@@ -251,7 +251,7 @@ public abstract class AudioPlayer : IDisposable {
                 Array.Resize(ref conversionBuffer, minBufferSize);
 
             SampleConverter.InternalConvert<TInput, TOutput>(data.Span, conversionBuffer);
-            return player.WriteDataInternalAsync<TOutput>(conversionBuffer.AsMemory(0, data.Length), cancellationToken);
+            return player.WriteDataInternalAsync(conversionBuffer.AsMemory(0, data.Length), cancellationToken);
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public override ValueTask WriteDataRawAsync<TInput>(Memory<byte> data, CancellationToken cancellationToken) {
@@ -264,7 +264,7 @@ public abstract class AudioPlayer : IDisposable {
                 Array.Resize(ref conversionBuffer, minBufferSize);
 
             SampleConverter.InternalConvert<TInput, TOutput>(data.Span.Cast<byte, TInput>(), conversionBuffer);
-            return player.WriteDataInternalAsync<TOutput>(conversionBuffer.AsMemory(0, minBufferSize), cancellationToken);
+            return player.WriteDataInternalAsync(conversionBuffer.AsMemory(0, minBufferSize), cancellationToken);
         }
     }
 
