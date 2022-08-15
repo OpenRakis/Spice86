@@ -182,8 +182,8 @@ public class Machine : IDisposable {
     private void DmaThreadMethod() {
         while(!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
             Gui?.WaitOne();
-            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                DmaChannel? dmaChannel = _dmaDeviceChannels[i];
+            foreach (DmaChannel dmaChannel in _dmaDeviceChannels)
+            {
                 if(dmaChannel.MustTransferData) {
                     dmaChannel.Transfer(Memory);
                 }
@@ -219,14 +219,16 @@ public class Machine : IDisposable {
     public void Register(IIOPortHandler ioPortHandler) {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
 
-        if (ioPortHandler is IDmaDevice8 dmaDevice) {
-            if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
-                throw new ArgumentException("Invalid DMA channel on DMA device.");
-            }
-
-            DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-            _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
+            return;
         }
+
+        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
+            throw new ArgumentException("Invalid DMA channel on DMA device.");
+        }
+
+        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
+        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
     }
 
     public void Register(ICallback callback) {
