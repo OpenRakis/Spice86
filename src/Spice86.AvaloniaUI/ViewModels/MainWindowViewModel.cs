@@ -276,10 +276,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         if (_configuration is not null &&
             !string.IsNullOrWhiteSpace(_configuration.Exe) &&
             !string.IsNullOrWhiteSpace(_configuration.CDrive)) {
-            _emulatorThread = new Thread(RunMachine) {
-                Name = "Emulator"
-            };
-            _emulatorThread.Start();
+            RunMachine();
         }
     }
 
@@ -350,29 +347,48 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         return VideoBuffers.OrderBy(static x => x.Address).Select(static x => x);
     }
 
+    private async Task ShowEmulationErrorMessage(Exception e) {
+        IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
+            .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
+        await errorMessage.ShowDialog(App.MainWindow);
+    }
+
     private void RunMachine() {
+        EmulatorErrorOccured += OnEmulatorErrorOccured;
+        _emulatorThread = new Thread(MachineThread) {
+                Name = "Emulator"
+            };
+        _emulatorThread.Start();
+    }
+
+    // We use async void, but thankfully this doesn't generate an exception.
+    // So this is OK...
+    private async void OnEmulatorErrorOccured(Exception e) {
+        await Dispatcher.UIThread.InvokeAsync(async () => { await ShowEmulationErrorMessage(e); });
+    }
+
+    private event Action<Exception>? EmulatorErrorOccured;
+
+    private void MachineThread() {
         if (_configuration is null) {
             _logger.Error("No configuration available, cannot continue");
-        } else {
-            try {
-                _okayToContinueEvent.Set();
-                _programExecutor = new ProgramExecutor(this, new AvaloniaKeyScanCodeConverter(), _configuration);
-                TimeMultiplier = _configuration.TimeMultiplier;
-                _programExecutor.Run();
-            } catch (Exception e) {
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _logger.Error(e, "An error occurred during execution");
-                }
-                Dispatcher.UIThread.InvokeAsync(async () => {
-                    IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
-                        .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
-                    await errorMessage.ShowDialog(App.MainWindow);
-                });
+            throw new InvalidOperationException(
+                $"{nameof(_configuration)} cannot be null when trying to run the emulator machine.");
+        }
+        try {
+            _okayToContinueEvent.Set();
+            _programExecutor = new ProgramExecutor(this, new AvaloniaKeyScanCodeConverter(), _configuration);
+            TimeMultiplier = _configuration.TimeMultiplier;
+            _programExecutor.Run();
+        } catch (Exception e) {
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _logger.Error(e, "An error occurred during execution");
             }
+            EmulatorErrorOccured?.Invoke(e);
         }
     }
 
     public void WaitOne() {
-        _okayToContinueEvent.WaitOne(Timeout.Infinite);
-    }
+            _okayToContinueEvent.WaitOne(Timeout.Infinite);
+        }
 }
