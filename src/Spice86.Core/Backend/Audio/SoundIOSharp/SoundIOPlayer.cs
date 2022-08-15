@@ -11,7 +11,7 @@ public sealed  class SoundIOPlayer : AudioPlayer {
         _api = new();
         _api.ConnectBackend(GetBackend());
         _api.FlushEvents();
-            _device = _api.GetOutputDevice(_api.DefaultOutputDeviceIndex);
+        _device = _api.GetOutputDevice(_api.DefaultOutputDeviceIndex);
         SoundIOOutStream outStream = _device.CreateOutStream();
         outStream.Format = SoundIOFormat.S16LE;
         _outStream = outStream;
@@ -38,7 +38,7 @@ public sealed  class SoundIOPlayer : AudioPlayer {
     }
 
     protected override void Dispose(bool disposing) {
-        if (_disposed) {
+        if (!_disposed) {
             if (disposing) {
                 _outStream.Dispose();
                 _device.RemoveReference();
@@ -48,7 +48,7 @@ public sealed  class SoundIOPlayer : AudioPlayer {
         }
     }
 
-    private static unsafe void WriteSample (IntPtr intPtr, byte sample) {
+    private static unsafe void WriteSample(IntPtr intPtr, byte sample) {
         void* ptr = intPtr.ToPointer();
         byte* bytePtr = (byte*)ptr;
         *bytePtr = sample;

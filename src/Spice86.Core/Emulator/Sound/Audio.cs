@@ -18,7 +18,7 @@ internal static class Audio {
         if (OperatingSystem.IsWindows()) {
             return WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25));
         } else {
-            return SoundIOPlayer.Create();
+            return PortAudioPlayer.Create();
         }
     }
 
