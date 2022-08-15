@@ -22,8 +22,8 @@ internal static class Audio {
         }
     }
 
-    public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer) {
-        ReadOnlySpan<float> writeBuffer = buffer;
+    public static void WriteFullBuffer(AudioPlayer player, Span<float> buffer) {
+        Span<float> writeBuffer = buffer;
 
         while (true) {
             int count = player.WriteData(writeBuffer);
@@ -34,8 +34,8 @@ internal static class Audio {
             Thread.Sleep(1);
         }
     }
-    public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<short> buffer) {
-        ReadOnlySpan<short> writeBuffer = buffer;
+    public static void WriteFullBuffer(AudioPlayer player, Span<short> buffer) {
+        Span<short> writeBuffer = buffer;
 
         while (true) {
             int count = player.WriteData(writeBuffer);
@@ -46,8 +46,8 @@ internal static class Audio {
             Thread.Sleep(1);
         }
     }
-    public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<byte> buffer) {
-        ReadOnlySpan<byte> writeBuffer = buffer;
+    public static void WriteFullBuffer(AudioPlayer player, Span<byte> buffer) {
+        Span<byte> writeBuffer = buffer;
 
         float[]? floatArray = new float[writeBuffer.Length];
 
@@ -55,7 +55,7 @@ internal static class Audio {
             floatArray[i] = writeBuffer[i];
         }
 
-        var span = new ReadOnlySpan<float>(floatArray);
+        var span = new Span<float>(floatArray);
 
         while (true) {
             int count = player.WriteData(span);

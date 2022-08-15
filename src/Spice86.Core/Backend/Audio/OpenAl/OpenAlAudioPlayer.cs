@@ -121,7 +121,7 @@ public sealed unsafe class OpenAlAudioPlayer : AudioPlayer {
     /// <summary>
     /// Gives the converted audio data to the OpenAL backend.
     /// </summary>
-    protected override int WriteDataInternal(ReadOnlySpan<byte> input) {
+    protected override int WriteDataInternal(Span<byte> input) {
         if (_al is null) {
             throw new NullReferenceException(nameof(_al));
         }

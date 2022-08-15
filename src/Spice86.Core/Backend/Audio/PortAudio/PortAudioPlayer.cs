@@ -36,9 +36,9 @@ public class PortAudioPlayer : AudioPlayer {
         //NOP
     }
 
-    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
-        ReadOnlySpan<float> samples = data.Cast<byte, float>();
-        _engine.Send(new(samples.ToArray()));
+    protected override int WriteDataInternal(Span<byte> data) {
+        Span<float> samples = data.Cast<byte, float>();
+        _engine.Send(samples);
         return data.Length;
     }
 }

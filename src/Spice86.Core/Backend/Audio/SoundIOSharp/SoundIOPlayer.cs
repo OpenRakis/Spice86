@@ -54,7 +54,7 @@ public sealed  class SoundIOPlayer : AudioPlayer {
         *bytePtr = sample;
     }
 
-    protected override int WriteDataInternal(ReadOnlySpan<byte> data) {
+    protected override int WriteDataInternal(Span<byte> data) {
         int frameCount = 0;
         SoundIOChannelAreas results = _outStream.BeginWrite(ref frameCount);
         for (int i = 0; i < Math.Min(frameCount, data.Length); i++) {
