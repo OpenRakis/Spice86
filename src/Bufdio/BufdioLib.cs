@@ -22,11 +22,6 @@ public static class BufdioLib
     private static List<AudioDevice> _outputDevices = new();
 
     /// <summary>
-    /// Gets whether or not the FFmpeg is already initialized.
-    /// </summary>
-    public static bool IsFFmpegInitialized { get; private set; }
-
-    /// <summary>
     /// Gets whether or not the PortAudio library is already initialized.
     /// </summary>
     /// <exception cref="BufdioException">Thrown if PortAudio is not initialized.</exception>

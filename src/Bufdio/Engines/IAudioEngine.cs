@@ -9,7 +9,7 @@ namespace Bufdio.Engines;
 public interface IAudioEngine : IDisposable
 {
     /// <summary>
-    /// Sends audio samples to the output device (this is should be a blocking calls).
+    /// Sends audio samples to the output device (this should be a blocking calls).
     /// </summary>
     /// <param name="samples">Audio samples in <c>Float32</c> format.</param>
     void Send(Span<float> samples);

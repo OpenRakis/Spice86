@@ -6,20 +6,6 @@ namespace Bufdio.Bindings.PortAudio;
 internal static partial class PaBinding
 {
     [StructLayout(LayoutKind.Sequential)]
-    public readonly struct PaVersionInfo
-    {
-        public readonly int versionMajor;
-        public readonly int versionMinor;
-        public readonly int versionSubMinor;
-
-        [MarshalAs(UnmanagedType.LPStr)]
-        public readonly string versionControlRevision;
-
-        [MarshalAs(UnmanagedType.LPStr)]
-        public readonly string verionText;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
     public struct PaStreamParameters
     {
         public int device;
