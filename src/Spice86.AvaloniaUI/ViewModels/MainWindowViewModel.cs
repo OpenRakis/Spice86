@@ -59,6 +59,15 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     public event EventHandler<EventArgs>? KeyUp;
     public event EventHandler<EventArgs>? KeyDown;
 
+    private bool _isMainWindowClosing = false;
+
+    public MainWindowViewModel()
+    {
+        if(App.MainWindow is not null) {
+            App.MainWindow.Closing += (s, e) => _isMainWindowClosing = true;
+        }
+    }
+
     [RelayCommand]
     public async Task DumpEmulatorStateToFile() {
         if (_programExecutor is null || _configuration is null) {
@@ -350,7 +359,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private async Task ShowEmulationErrorMessage(Exception e) {
         IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
             .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
-        await errorMessage.ShowDialog(App.MainWindow);
+        if(!_disposedValue && !_isMainWindowClosing) {
+            await errorMessage.ShowDialog(App.MainWindow);
+        }
     }
 
     private void RunMachine() {
@@ -364,7 +375,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     // We use async void, but thankfully this doesn't generate an exception.
     // So this is OK...
     private async void OnEmulatorErrorOccured(Exception e) {
-        await Dispatcher.UIThread.InvokeAsync(async () => { await ShowEmulationErrorMessage(e); });
+        await Dispatcher.UIThread.InvokeAsync(async () => await ShowEmulationErrorMessage(e));
     }
 
     private event Action<Exception>? EmulatorErrorOccured;
