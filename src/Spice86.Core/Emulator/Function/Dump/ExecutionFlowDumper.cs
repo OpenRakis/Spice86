@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Logging;
 
 using System;
+using System.Diagnostics;
 using System.IO;
 
 public class ExecutionFlowDumper {
@@ -33,6 +34,7 @@ public class ExecutionFlowDumper {
                 return new();
             }
         } catch (JsonException e) {
+            e.Demystify();
             throw new UnrecoverableException($"File {filePath} is not valid", e);
         }
     }

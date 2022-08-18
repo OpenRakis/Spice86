@@ -15,6 +15,7 @@ using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -129,6 +130,7 @@ public class GdbCustomCommandsHandler {
         try {
             fileNameConsumer.Invoke(fileName);
         } catch (IOException e) {
+            e.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "{@ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
             }
@@ -145,6 +147,7 @@ public class GdbCustomCommandsHandler {
             _recordedDataWriter.DumpAll();
             return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_recordedDataWriter.DumpDirectory}");
         } catch (IOException e) {
+            e.Demystify();
             return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
         }
     }
@@ -236,6 +239,7 @@ public class GdbCustomCommandsHandler {
         try {
             return ParseAddress(addressString);
         } catch (FormatException nfe) {
+            nfe.Demystify();
             throw new ArgumentException($"Could not parse address {addressString}", nfe);
         }
     }
@@ -295,6 +299,7 @@ Supported custom commands:
         try {
             return new[] { int.Parse(split[0]), int.Parse(split[1]) };
         } catch (FormatException nfe) {
+            nfe.Demystify();
             throw new ArgumentException($"Could not parse numbers in resolution {resolution}", nfe);
         }
     }
@@ -365,6 +370,7 @@ Supported custom commands:
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand action {action}");
             }
         } catch (ArgumentException e) {
+            e.Demystify();
             return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
         }
     }

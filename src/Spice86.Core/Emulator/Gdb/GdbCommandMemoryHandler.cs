@@ -9,6 +9,7 @@ using Spice86.Logging;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Utils;
 using Spice86.Core.Emulator.VM;
+using System.Diagnostics;
 
 public class GdbCommandMemoryHandler {
     private static readonly ILogger _logger = new Serilogger().Logger.ForContext<GdbCommandMemoryHandler>();
@@ -49,6 +50,7 @@ public class GdbCommandMemoryHandler {
 
             return _gdbIo.GenerateResponse(response.ToString());
         } catch (FormatException nfe) {
+            nfe.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(nfe, "Memory read requested but could not understand the request {@CommandContent}", commandContent);
             }
@@ -98,6 +100,7 @@ public class GdbCommandMemoryHandler {
             memory.LoadData(address, data);
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
+            nfe.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(nfe, "Memory write requested but could not understand the request {@CommandContent}", commandContent);
             }

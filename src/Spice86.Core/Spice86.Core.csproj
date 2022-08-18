@@ -1,18 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-	<TargetFramework>net6.0</TargetFramework>
-	<ImplicitUsings>enable</ImplicitUsings>
-	<Nullable>enable</Nullable>
-	<WarningsAsErrors>nullable</WarningsAsErrors>
-	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<WarningsAsErrors>nullable</WarningsAsErrors>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
 	<ItemGroup>
 		<Using Remove="System.Linq" />
 		<Using Include="System.Buffers.Binary" />
 		<Using Include="CommunityToolkit.HighPerformance" />
 	</ItemGroup>
 	<ItemGroup>
+		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
 		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
 		<PackageReference Include="JetBrains.Annotations" Version="2022.1.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
@@ -35,8 +36,8 @@
 
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\Bufdio\Bufdio.csproj" />
-	  <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
-	  <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+		<ProjectReference Include="..\Bufdio\Bufdio.csproj" />
+		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
+		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
 	</ItemGroup>
 </Project>
