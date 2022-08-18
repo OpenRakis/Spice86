@@ -5,6 +5,7 @@ using Serilog;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Logging;
 
+using System.Diagnostics;
 using System.Threading;
 
 public class PauseHandler : IDisposable {
@@ -53,6 +54,7 @@ public class PauseHandler : IDisposable {
         try {
             _manualResetEvent.WaitOne(TimeSpan.FromMilliseconds(1));
         } catch (AbandonedMutexException exception) {
+            exception.Demystify();
             Thread.CurrentThread.Interrupt();
             throw new UnrecoverableException($"Fatal error while waiting paused in {nameof(Await)}", exception);
         }

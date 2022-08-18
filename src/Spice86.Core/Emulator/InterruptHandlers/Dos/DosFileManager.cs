@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 /// <summary>
 /// TODO : Fix it !
@@ -67,6 +68,7 @@ public class DosFileManager {
                 file.RandomAccessFile.Close();
             }
         } catch (IOException e) {
+            e.Demystify();
             throw new UnrecoverableException("IOException while closing file", e);
         }
 
@@ -90,6 +92,7 @@ public class DosFileManager {
 
             File.Create(path.FullName).Close();
         } catch (IOException e) {
+            e.Demystify();
             throw new UnrecoverableException("IOException while creating file", e);
         }
 
@@ -133,6 +136,7 @@ public class DosFileManager {
                 _matchingFilesIterator = matchingPaths.GetEnumerator();
                 return FindNextMatchingFile();
             } catch (IOException e) {
+                e.Demystify();
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                     _logger.Error(e, "Error while walking path {@CurrentMatchingFileSearchFolder} or getting attributes.", _currentMatchingFileSearchFolder);
                 }
@@ -158,6 +162,7 @@ public class DosFileManager {
             try {
                 UpdateDTAFromFile(_matchingFilesIterator.Current);
             } catch (IOException e) {
+                e.Demystify();
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                     _logger.Warning(e, "Error while getting attributes.");
                 }
@@ -197,6 +202,7 @@ public class DosFileManager {
             uint newOffset = Seek(randomAccessFile, originOfMove, offset);
             return DosFileOperationResult.Value32(newOffset);
         } catch (IOException e) {
+            e.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "An error occurred while seeking file {@Error}", e);
             }
@@ -233,6 +239,7 @@ public class DosFileManager {
         try {
             actualReadLength = file.RandomAccessFile.Read(buffer, 0, readLength);
         } catch (IOException e) {
+            e.Demystify();
             throw new UnrecoverableException("IOException while reading file", e);
         }
 
@@ -288,6 +295,7 @@ public class DosFileManager {
             Span<byte> data = _memory.GetSpan((int)bufferAddress, writeLength);
             file.RandomAccessFile.Write(data);
         } catch (IOException e) {
+            e.Demystify();
             throw new UnrecoverableException("IOException while writing file", e);
         }
 
@@ -523,6 +531,7 @@ public class DosFileManager {
             return Array.Find(Directory
                 .GetFiles(parent), x => fileToProcessRegex.IsMatch(x));
         } catch (IOException e) {
+            e.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _logger.Warning(e, "Error while checking file {@CaseInsensitivePath}: {@Exception}", caseInsensitivePath, e);
             }

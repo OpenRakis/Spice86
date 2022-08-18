@@ -28,6 +28,7 @@ using Spice86.Shared.Interfaces;
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 /// <summary>
 /// Emulates an IBM PC
@@ -182,11 +183,10 @@ public class Machine : IDisposable {
     }
 
     private void DmaThreadMethod() {
-        while(!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
+        while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
             Gui?.WaitOne();
-            foreach (DmaChannel dmaChannel in _dmaDeviceChannels)
-            {
-                if(dmaChannel.MustTransferData) {
+            foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
+                if (dmaChannel.MustTransferData) {
                     dmaChannel.Transfer(Memory);
                 }
             }
@@ -246,6 +246,7 @@ public class Machine : IDisposable {
         } catch (InvalidVMOperationException) {
             throw;
         } catch (Exception e) {
+            e.Demystify();
             throw new InvalidVMOperationException(this, e);
         }
 
@@ -320,7 +321,7 @@ public class Machine : IDisposable {
             if (disposing) {
                 _exitDmaThread = true;
                 _dmaThreadManualResetEvent.Set();
-                if(_dmaThread.IsAlive) {
+                if (_dmaThread.IsAlive) {
                     _dmaThread.Join();
                 }
                 _dmaThreadManualResetEvent.Dispose();

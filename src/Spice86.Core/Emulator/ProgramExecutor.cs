@@ -23,6 +23,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
+using System.Diagnostics;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -84,6 +85,7 @@ public class ProgramExecutor : IDisposable {
                 throw new UnrecoverableException(error);
             }
         } catch (UnauthorizedAccessException e) {
+            e.Demystify();
             throw new UnrecoverableException("Executable file hash calculation failed", e);
         }
     }
@@ -215,6 +217,7 @@ public class ProgramExecutor : IDisposable {
             byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
         } catch (IOException e) {
+            e.Demystify();
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
     }

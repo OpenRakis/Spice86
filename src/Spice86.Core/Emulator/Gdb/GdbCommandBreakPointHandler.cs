@@ -8,6 +8,7 @@ using Spice86.Core.Utils;
 using Spice86.Logging;
 
 using System;
+using System.Diagnostics;
 using System.IO;
 
 public class GdbCommandBreakpointHandler {
@@ -49,6 +50,7 @@ public class GdbCommandBreakpointHandler {
         try {
             _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
         } catch (IOException e) {
+            e.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "IOException while sending breakpoint info");
             }
@@ -77,6 +79,7 @@ public class GdbCommandBreakpointHandler {
             }
             return new AddressBreakPoint((BreakPointType)breakPointType, address, OnBreakPointReached, false);
         } catch (FormatException nfe) {
+            nfe.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(nfe, "Cannot parse breakpoint {@Command}", command);
             }

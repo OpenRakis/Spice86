@@ -8,6 +8,7 @@ using Spice86.Core.Utils;
 using Spice86.Logging;
 
 using System;
+using System.Diagnostics;
 using System.Text;
 
 public class GdbCommandRegisterHandler {
@@ -42,6 +43,7 @@ public class GdbCommandRegisterHandler {
             }
             return _gdbIo.GenerateResponse(_gdbFormatter.FormatValueAsHex32(GetRegisterValue((int)index)));
         } catch (FormatException nfe) {
+            nfe.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(nfe, "Register read requested but could not understand the request {@CommandContent}", commandContent);
             }
@@ -59,6 +61,7 @@ public class GdbCommandRegisterHandler {
 
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
+            nfe.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(nfe, "Register write requested but could not understand the request {@CommandContent}", commandContent);
             }

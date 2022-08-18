@@ -8,6 +8,7 @@ using Spice86.Logging;
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 
 public class GdbServer : IDisposable {
@@ -76,10 +77,12 @@ public class GdbServer : IDisposable {
                     using GdbIo gdbIo = new GdbIo(port);
                     AcceptOneConnection(gdbIo);
                 } catch (IOException e) {
+                    e.Demystify();
                     _logger.Error(e, "Error in the GDB server, restarting it...");
                 }
             }
         } catch (Exception e) {
+            e.Demystify();
             _logger.Error(e, "Unhandled error in the GDB server, restarting it...");
         } finally {
             _machine.Cpu.IsRunning = false;
