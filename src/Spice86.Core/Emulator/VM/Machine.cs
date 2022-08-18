@@ -26,7 +26,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -40,7 +39,7 @@ public class Machine : IDisposable {
     private bool _disposed;
     private bool _exitDmaThread;
     private readonly ManualResetEvent _dmaThreadManualResetEvent = new(true);
-    private readonly Thread _dmaThread;
+    private Thread? _dmaThread;
 
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
@@ -175,11 +174,6 @@ public class Machine : IDisposable {
         Register(DosInt21Handler);
         MouseInt33Handler = new MouseInt33Handler(this, gui);
         Register(MouseInt33Handler);
-
-        _dmaThread = new Thread(DmaThreadMethod) {
-            Name = "DMATransfersThread"
-        };
-        _dmaThread.Start();
     }
 
     private void DmaThreadMethod() {
@@ -242,6 +236,12 @@ public class Machine : IDisposable {
         FunctionHandler functionHandler = Cpu.FunctionHandler;
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         try {
+            if (_dmaThread is null) {
+                _dmaThread = new Thread(DmaThreadMethod) {
+                    Name = "DMATransfersThread"
+                };
+                _dmaThread.Start();
+            }
             RunLoop();
         } catch (InvalidVMOperationException) {
             throw;
@@ -321,7 +321,7 @@ public class Machine : IDisposable {
             if (disposing) {
                 _exitDmaThread = true;
                 _dmaThreadManualResetEvent.Set();
-                if (_dmaThread.IsAlive) {
+                if (_dmaThread?.IsAlive == true) {
                     _dmaThread.Join();
                 }
                 _dmaThreadManualResetEvent.Dispose();
