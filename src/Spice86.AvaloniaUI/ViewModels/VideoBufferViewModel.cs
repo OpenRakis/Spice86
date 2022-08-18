@@ -22,7 +22,7 @@ using System.Threading.Tasks;
 public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
 
-    private readonly Thread _drawThread;
+    private Thread? _drawThread;
 
     private bool _exitDrawThread;
 
@@ -41,10 +41,6 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         _index = 1;
         Scale = 1;
         _frameRenderTimeWatch = new Stopwatch();
-        _drawThread = new Thread(DrawThreadMethod) {
-            Name = "UIRenderThread"
-        };
-        _drawThread.Start();
     }
 
     public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
@@ -63,9 +59,9 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     }
 
     private void DrawThreadMethod() {
-        while(!_exitDrawThread) {
+        while (!_exitDrawThread) {
             _drawAction?.Invoke();
-            if(!_exitDrawThread) {
+            if (!_exitDrawThread) {
                 _manualResetEvent.WaitOne();
             }
         }
@@ -181,6 +177,12 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
             return;
         }
+        if (_drawThread is null) {
+            _drawThread = new Thread(DrawThreadMethod) {
+                Name = "UIRenderThread"
+            };
+            _drawThread.Start();
+        }
         _drawAction ??= new Action(() => {
             _frameRenderTimeWatch.Restart();
             using ILockedFramebuffer pixels = Bitmap.Lock();
@@ -234,7 +236,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
             if (disposing) {
                 _exitDrawThread = true;
                 _manualResetEvent.Set();
-                if (_drawThread.IsAlive == true) {
+                if (_drawThread?.IsAlive == true) {
                     _drawThread.Join();
                 }
                 _manualResetEvent.Dispose();
