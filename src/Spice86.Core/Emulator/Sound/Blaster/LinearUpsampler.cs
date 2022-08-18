@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Blaster;
 
 using System;
-using System.Runtime.CompilerServices;
 
 /// <summary>
 /// An adequate but not great audio resampler.
