@@ -38,6 +38,7 @@ public class Machine : IDisposable {
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private bool _disposed;
     private bool _exitDmaThread;
+    private readonly ManualResetEvent _dmaThreadManualResetEvent = new(true);
     private Thread? _dmaThread;
 
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
@@ -177,14 +178,14 @@ public class Machine : IDisposable {
 
     private void DmaThreadMethod() {
         while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
-            if (Gui?.IsPaused == true) {
-                Gui?.WaitOne();
-            }
+            Gui?.WaitOne();
             foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
                 if (dmaChannel.MustTransferData) {
                     dmaChannel.Transfer(Memory);
                 }
             }
+            _dmaThreadManualResetEvent.Reset();
+            _dmaThreadManualResetEvent.WaitOne(1);
         }
     }
 
@@ -300,7 +301,9 @@ public class Machine : IDisposable {
     /// This method must be called frequently in the main emulation loop for DMA transfers to function properly.
     /// </remarks>
     internal void PerformDmaTransfers() {
-        //NOP
+        if (AnyDmaChannelMustTransferData()) {
+            _dmaThreadManualResetEvent.Set();
+        }
     }
 
     private bool AnyDmaChannelMustTransferData() {
@@ -317,9 +320,11 @@ public class Machine : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 _exitDmaThread = true;
+                _dmaThreadManualResetEvent.Set();
                 if (_dmaThread?.IsAlive == true) {
                     _dmaThread.Join();
                 }
+                _dmaThreadManualResetEvent.Dispose();
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 MachineBreakpoints.Dispose();
