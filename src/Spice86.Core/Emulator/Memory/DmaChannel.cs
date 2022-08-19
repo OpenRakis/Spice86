@@ -183,13 +183,13 @@ public sealed class DmaChannel {
     /// <remarks>
     /// This method should only be called if the channel is active.
     /// </remarks>
-    internal void Transfer(Memory memory) {
+    internal bool Transfer(Memory memory) {
         if (!MustTransferData) {
-            return;
+            return false;
         }
         IDmaDevice8? device = Device;
         if (device is null) {
-            return;
+            return false;
         }
         uint memoryAddress = (uint)Page << 16 | Address;
         uint sourceOffset = (uint)Count + 1 - (uint)TransferBytesRemaining;
@@ -210,5 +210,6 @@ public sealed class DmaChannel {
             }
         }
         _transferTimer.Restart();
+        return true;
     }
 }
