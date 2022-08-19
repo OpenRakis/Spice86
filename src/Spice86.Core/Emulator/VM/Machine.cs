@@ -175,17 +175,15 @@ public class Machine : IDisposable {
         Register(MouseInt33Handler);
     }
 
-    private void DmaThreadMethod() {
+    private void PerformDmaTransfers() {
         while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
             if (Gui?.IsPaused == true) {
                 Gui?.WaitOne();
             }
-            if (AnyDmaChannelMustTransferData()) {
-                for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                    DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                    while (dmaChannel.MustTransferData) {
-                        dmaChannel.Transfer(Memory);
-                    }
+            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+                DmaChannel dmaChannel = _dmaDeviceChannels[i];
+                if (dmaChannel.MustTransferData) {
+                    dmaChannel.Transfer(Memory);
                 }
             }
         }
@@ -239,7 +237,7 @@ public class Machine : IDisposable {
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         try {
             if (_dmaThread is null) {
-                _dmaThread = new Thread(DmaThreadMethod) {
+                _dmaThread = new Thread(PerformDmaTransfers) {
                     Name = "DMATransfersThread"
                 };
                 _dmaThread.Start();
@@ -293,16 +291,6 @@ public class Machine : IDisposable {
         }
 
         return "null";
-    }
-
-    private bool AnyDmaChannelMustTransferData() {
-        for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-            DmaChannel? dmaChannel = _dmaDeviceChannels[i];
-            if (dmaChannel.MustTransferData) {
-                return true;
-            }
-        }
-        return false;
     }
 
     protected virtual void Dispose(bool disposing) {
