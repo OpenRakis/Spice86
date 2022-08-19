@@ -177,20 +177,6 @@ public class Machine : IDisposable {
         Register(MouseInt33Handler);
     }
 
-    private void DmaTransfersThreadMethod() {
-        while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
-            if (Gui?.IsPaused == true) {
-                Gui?.WaitOne();
-            }
-            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                dmaChannel.Transfer(Memory);
-            }
-            _dmaManualResetEvent.Reset();
-            _dmaManualResetEvent.WaitOne(1);
-        }
-    }
-
     public string DumpCallStack() {
         FunctionHandler inUse = Cpu.FunctionHandlerInUse;
         StringBuilder sb = new();
@@ -244,7 +230,6 @@ public class Machine : IDisposable {
                 };
                 _dmaThread.Start();
             }
-            PerformDmaTransfers();
             RunLoop();
         } catch (InvalidVMOperationException) {
             throw;
@@ -255,6 +240,20 @@ public class Machine : IDisposable {
 
         MachineBreakpoints.OnMachineStop();
         functionHandler.Ret(CallType.MACHINE);
+    }
+
+    private void DmaTransfersThreadMethod() {
+        while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
+            if (Gui?.IsPaused == true) {
+                Gui?.WaitOne();
+            }
+            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+                DmaChannel dmaChannel = _dmaDeviceChannels[i];
+                dmaChannel.Transfer(Memory);
+            }
+            _dmaManualResetEvent.Reset();
+            _dmaManualResetEvent.WaitOne(1);
+        }
     }
 
     public void PerformDmaTransfers() {
@@ -272,6 +271,7 @@ public class Machine : IDisposable {
     private void RunLoop() {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
+            PerformDmaTransfers();
             PauseIfAskedTo();
             if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
