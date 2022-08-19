@@ -173,7 +173,7 @@ public sealed class DmaChannel {
         }
     }
 
-    public bool MustTransferData =>
+    private bool MustTransferData =>
         Device is not null && !IsMasked && IsActive && _transferTimer.ElapsedTicks >= TransferPeriod;
 
     /// <summary>
@@ -184,6 +184,9 @@ public sealed class DmaChannel {
     /// This method should only be called if the channel is active.
     /// </remarks>
     internal void Transfer(Memory memory) {
+        if (!MustTransferData) {
+            return;
+        }
         IDmaDevice8? device = Device;
         if (device is null) {
             return;

@@ -182,9 +182,7 @@ public class Machine : IDisposable {
             }
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                if (dmaChannel.MustTransferData) {
-                    dmaChannel.Transfer(Memory);
-                }
+                dmaChannel.Transfer(Memory);
             }
         }
     }
@@ -238,7 +236,7 @@ public class Machine : IDisposable {
         try {
             if (_dmaThread is null) {
                 _dmaThread = new Thread(PerformDmaTransfers) {
-                    Name = "DMATransfersThread"
+                    Name = "DMATransfersThread",
                 };
                 _dmaThread.Start();
             }
