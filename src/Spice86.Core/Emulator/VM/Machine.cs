@@ -266,6 +266,7 @@ public class Machine : IDisposable {
             if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
             }
+            PerformDmaTransfers();
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
         }
@@ -290,6 +291,26 @@ public class Machine : IDisposable {
         }
 
         return "null";
+    }
+
+    /// <summary>
+    /// Performs any pending DMA transfers.
+    /// </summary>
+    /// <remarks>
+    /// This method must be called frequently in the main emulation loop for DMA transfers to function properly.
+    /// </remarks>
+    internal void PerformDmaTransfers() {
+        //NOP
+    }
+
+    private bool AnyDmaChannelMustTransferData() {
+        for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+            DmaChannel? dmaChannel = _dmaDeviceChannels[i];
+            if (dmaChannel.MustTransferData) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected virtual void Dispose(bool disposing) {
