@@ -52,10 +52,6 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
         _frameRenderTimeWatch = new Stopwatch();
-        _drawThread = new Thread(DrawThreadMethod) {
-            Name = "UIRenderThread"
-        };
-        _drawThread.Start();
     }
 
     private void DrawThreadMethod() {
