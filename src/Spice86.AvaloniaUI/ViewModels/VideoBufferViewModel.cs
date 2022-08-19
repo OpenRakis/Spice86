@@ -164,9 +164,6 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
 
     private readonly Stopwatch _frameRenderTimeWatch;
 
-    [ObservableProperty]
-    private bool _isDrawing;
-
     private Action? _drawAction;
 
     public unsafe void Draw(byte[] memory, Rgb[] palette) {
@@ -200,9 +197,6 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
                     memoryAddress++;
                 }
                 currentRow += rowBytes;
-            }
-            if (!IsDrawing) {
-                IsDrawing = true;
             }
 
             Dispatcher.UIThread.Post(() => {
