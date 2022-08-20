@@ -7,12 +7,9 @@ public class PortAudioPlayer : AudioPlayer {
     private readonly IAudioEngine _engine;
     private bool _disposed;
     private PortAudioPlayer(AudioFormat format) : base(format) {
-        var path = "libportaudio.so";
+        string? path = null;
         if(OperatingSystem.IsWindows()) {
             path = "libportaudio.dll";
-        }
-        if(OperatingSystem.IsMacOS()) {
-            path = "libportaudio.dylib";
         }
         BufdioLib.InitializePortAudio(path);
         AudioEngineOptions options = new AudioEngineOptions(2, format.SampleRate);
