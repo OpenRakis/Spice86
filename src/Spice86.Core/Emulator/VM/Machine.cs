@@ -246,11 +246,10 @@ public class Machine : IDisposable {
         functionHandler.Ret(CallType.MACHINE);
     }
 
-    private Stopwatch _dmaWaitMeasureStopwatch = new();
-
-    private Stopwatch _dmaTransferStopWatch = new();
+    private readonly Stopwatch _dmaSleepWatch = new();
 
     private void DmaTransfersThreadMethod() {
+        _dmaSleepWatch.Start();
         while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
@@ -258,26 +257,14 @@ public class Machine : IDisposable {
                     Gui?.WaitOne();
                 }
                 bool transferOcurred = dmaChannel.Transfer(Memory);
-                if (transferOcurred) {
-                    _dmaTransferStopWatch.Restart();
+                //This exists only so the UI responds on Linux...
+                if (!transferOcurred && _dmaSleepWatch.ElapsedMilliseconds >= 200) {
+                    _dmaManualResetEvent.WaitOne(1);
+                    _dmaSleepWatch.Restart();
                 }
-            }
-            if(_dmaTransferStopWatch.ElapsedMilliseconds >= 5000) {
-#if DEBUG
-                Console.WriteLine("DMAThread: last transfer was 5 seconds ago or more. Sleeping for some milliseconds, unless awaken.");
-                _dmaTransferStopWatch.Reset();
-#endif
-                _dmaManualResetEvent.WaitOne(1);
-#if DEBUG
-                _dmaWaitMeasureStopwatch.Stop();
-                if (_dmaWaitMeasureStopwatch.ElapsedMilliseconds > 0) {
-                    Console.WriteLine($"DMAThread waited {_dmaWaitMeasureStopwatch.ElapsedMilliseconds}");
-                }
-#endif
             }
         }
-        _dmaTransferStopWatch.Stop();
-        _dmaWaitMeasureStopwatch.Stop();
+        _dmaSleepWatch.Stop();
     }
 
     public void PerformDmaTransfers() {
