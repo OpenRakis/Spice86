@@ -280,5 +280,5 @@ internal sealed class Dsp {
     /// <summary>
     /// Size of output buffer in samples.
     /// </summary>
-    private const int TargetBufferSize = 2048;
+    private const int TargetBufferSize = 4096;
 }
