@@ -2,6 +2,8 @@
 
 namespace Spice86.Core.Emulator.VM;
 
+using Serilog;
+
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
@@ -23,6 +25,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.Vga;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -37,6 +40,7 @@ public class Machine : IDisposable {
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly ManualResetEvent _dmaManualResetEvent = new(false);
+    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<Machine>();
 
     private bool _disposed;
     private bool _exitDmaThread;
@@ -242,18 +246,38 @@ public class Machine : IDisposable {
         functionHandler.Ret(CallType.MACHINE);
     }
 
+    private Stopwatch _dmaWaitMeasureStopwatch = new();
+
+    private Stopwatch _dmaTransferStopWatch = new();
+
     private void DmaTransfersThreadMethod() {
         while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
-            if (Gui?.IsPaused == true) {
-                Gui?.WaitOne();
-            }
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                dmaChannel.Transfer(Memory);
+                if (Gui?.IsPaused == true || IsPaused) {
+                    Gui?.WaitOne();
+                }
+                bool transferOcurred = dmaChannel.Transfer(Memory);
+                if (transferOcurred) {
+                    _dmaTransferStopWatch.Restart();
+                }
             }
-            _dmaManualResetEvent.Reset();
-            _dmaManualResetEvent.WaitOne(1);
+            if(_dmaTransferStopWatch.ElapsedMilliseconds >= 5000) {
+#if DEBUG
+                Console.WriteLine("DMAThread: last transfer was 5 seconds ago or more. Sleeping for some milliseconds, unless awaken.");
+                _dmaTransferStopWatch.Reset();
+#endif
+                _dmaManualResetEvent.WaitOne(1);
+#if DEBUG
+                _dmaWaitMeasureStopwatch.Stop();
+                if (_dmaWaitMeasureStopwatch.ElapsedMilliseconds > 0) {
+                    Console.WriteLine($"DMAThread waited {_dmaWaitMeasureStopwatch.ElapsedMilliseconds}");
+                }
+#endif
+            }
         }
+        _dmaTransferStopWatch.Stop();
+        _dmaWaitMeasureStopwatch.Stop();
     }
 
     public void PerformDmaTransfers() {
@@ -271,7 +295,6 @@ public class Machine : IDisposable {
     private void RunLoop() {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
-            PerformDmaTransfers();
             PauseIfAskedTo();
             if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
