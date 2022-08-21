@@ -92,8 +92,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         _dsp = new Dsp(machine, dma8, dma16);
         _dsp.AutoInitBufferComplete += (o, e) => RaiseInterrupt();
         _playbackThread = new Thread(AudioPlayback) {
-            IsBackground = true,
-            Name = "PCMAudio"
+            Name = "PCMAudio",
+            Priority = ThreadPriority.AboveNormal
         };
         _playbackThread.Start();
     }
@@ -248,7 +248,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         if (!Configuration.CreateAudioBackend) {
             return;
         }
-        using AudioPlayer? player = Audio.CreatePlayer();
+        using AudioPlayer? player = Audio.CreatePlayer(4096);
         if (player is null) {
             return;
         }

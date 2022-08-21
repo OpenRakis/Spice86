@@ -53,7 +53,6 @@
 		<PackageReference Include="Avalonia.Desktop" Version="0.10.18" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.18" />
-		<!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
 	</ItemGroup>
 	<ItemGroup>
 		<AvaloniaResource Include="Icon\Spice86.ico" />
@@ -65,19 +64,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="libs\PortAudio\linux-x64\libportaudio.so">
-		<Link>libportaudio.so</Link>
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="libs\PortAudio\osx-x64\libportaudio.dylib">
-		  <Link>libportaudio.dylib</Link>
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	  <None Update="libs\PortAudio\win-x64\libportaudio.dll">
 		  <Link>libportaudio.dll</Link>
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
-	  <None Condition="'$(Configuration)|$(Platform)' == 'Release|x86'" Update="libs\PortAudio\win-x86\libportaudio.dll">
+	  <None Condition="'$(Platform)' == 'x86'" Update="libs\PortAudio\win-x86\libportaudio.dll">
 		  <Link>libportaudio.dll</Link>
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>

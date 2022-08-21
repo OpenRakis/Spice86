@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi.MT32;
 
-using Backend.Audio.OpenAl;
-
 using Mt32emu;
 
 using Spice86.Core.Backend.Audio;
