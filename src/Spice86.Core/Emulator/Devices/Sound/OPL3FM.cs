@@ -37,7 +37,6 @@ public sealed class OPL3FM : DefaultIOPortHandler {
             _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);
         }
         _playbackThread = new Thread(GenerateWaveforms) {
-            IsBackground = true,
             Name = "OPLAudio"
         };
     }

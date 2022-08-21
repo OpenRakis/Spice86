@@ -6,7 +6,7 @@ namespace Spice86.Core.Backend.Audio.PortAudio;
 public class PortAudioPlayer : AudioPlayer {
     private readonly IAudioEngine _engine;
     private bool _disposed;
-    private PortAudioPlayer(AudioFormat format) : base(format) {
+    private PortAudioPlayer(int framesPerBuffer, AudioFormat format) : base(format) {
         var path = "libportaudio.so";
         if(OperatingSystem.IsWindows()) {
             path = "libportaudio.dll";
@@ -16,11 +16,11 @@ public class PortAudioPlayer : AudioPlayer {
         }
         BufdioLib.InitializePortAudio(path);
         AudioEngineOptions options = new AudioEngineOptions(2, format.SampleRate);
-        _engine = new PortAudioEngine(options);
+        _engine = new PortAudioEngine(framesPerBuffer, options);
     }
 
-    public static PortAudioPlayer Create() {
-        return new PortAudioPlayer(new AudioFormat(SampleRate: 48000, Channels: 2,
+    public static PortAudioPlayer Create(int framesPerBuffer) {
+        return new PortAudioPlayer(framesPerBuffer, new AudioFormat(SampleRate: 48000, Channels: 2,
             SampleFormat: SampleFormat.IeeeFloat32));
     }
 

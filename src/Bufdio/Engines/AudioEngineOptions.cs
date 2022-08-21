@@ -46,7 +46,7 @@ public sealed class AudioEngineOptions
         Device = BufdioLib.DefaultOutputDevice;
         Channels = FallbackChannelCount(Device, channels);
         SampleRate = sampleRate;
-        Latency = Device.DefaultHighOutputLatency;
+        Latency = Device.DefaultLowOutputLatency;
     }
 
     /// <summary>
@@ -57,8 +57,8 @@ public sealed class AudioEngineOptions
     {
         Device = BufdioLib.DefaultOutputDevice;
         Channels = FallbackChannelCount(Device, 2);
-        SampleRate = 44100;
-        Latency = Device.DefaultHighOutputLatency;
+        SampleRate = 48000;
+        Latency = Device.DefaultLowOutputLatency;
     }
 
     /// <summary>

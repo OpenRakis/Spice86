@@ -104,6 +104,7 @@ public abstract class AudioPlayer : IDisposable {
     protected abstract void Stop();
     protected abstract int WriteDataInternal(Span<byte> data);
 
+    protected void RaiseCallback(Span<byte> buffer, out int samplesWritten) => RaiseCallbackInternal(buffer, out samplesWritten);
     protected void RaiseCallback(Span<short> buffer, out int samplesWritten) => RaiseCallbackInternal(buffer, out samplesWritten);
     protected void RaiseCallback(Span<float> buffer, out int samplesWritten) => RaiseCallbackInternal(buffer, out samplesWritten);
 

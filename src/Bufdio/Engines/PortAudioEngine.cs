@@ -13,7 +13,6 @@ namespace Bufdio.Engines;
 /// </summary>
 public sealed class PortAudioEngine : IAudioEngine
 {
-    private const int FramesPerBuffer = 0; // paFramesPerBufferUnspecified
     private const PaBinding.PaStreamFlags StreamFlags = PaBinding.PaStreamFlags.paNoFlag;
     private readonly AudioEngineOptions _options;
     private readonly IntPtr _stream;
@@ -22,11 +21,12 @@ public sealed class PortAudioEngine : IAudioEngine
     /// <summary>
     /// Initializes <see cref="PortAudioEngine"/> object.
     /// </summary>
+    /// <param name="framesPerBuffer">Must be a power of 2. Can be 0 for undefined.</param>
     /// <param name="options">Optional audio engine options.</param>
     /// <exception cref="PortAudioException">
     /// Might be thrown when errors occured during PortAudio stream initialization.
     /// </exception>
-    public PortAudioEngine(AudioEngineOptions? options = default)
+    public PortAudioEngine(int framesPerBuffer, AudioEngineOptions? options = default)
     {
         _options = options ?? new AudioEngineOptions();
 
@@ -52,7 +52,7 @@ public sealed class PortAudioEngine : IAudioEngine
                 IntPtr.Zero,
                 parametersPtr,
                 _options.SampleRate,
-                FramesPerBuffer,
+                framesPerBuffer,
                 StreamFlags,
                 null,
                 IntPtr.Zero);
