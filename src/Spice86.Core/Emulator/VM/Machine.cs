@@ -257,9 +257,6 @@ public class Machine : IDisposable {
                     Gui?.WaitOne();
                 }
                 bool transferOcurred = dmaChannel.Transfer(Memory);
-                if (transferOcurred) {
-                    Console.WriteLine($"{DateTime.Now} transfer");
-                }
                 //This exists only so the UI responds on Linux...
                 if (!transferOcurred && _dmaSleepWatch.ElapsedMilliseconds >= 1000) {
                     _dmaSleepWatch.Restart();
@@ -285,15 +282,12 @@ public class Machine : IDisposable {
     private void RunLoop() {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
-            PerformDmaTransfers();
-            for(int i = 0; i < 300; i++) {
-                PauseIfAskedTo();
-                if (RecordData) {
-                    MachineBreakpoints.CheckBreakPoint();
-                }
-                Cpu.ExecuteNextInstruction();
-                Timer.Tick();
+            PauseIfAskedTo();
+            if (RecordData) {
+                MachineBreakpoints.CheckBreakPoint();
             }
+            Cpu.ExecuteNextInstruction();
+            Timer.Tick();
         }
     }
 
