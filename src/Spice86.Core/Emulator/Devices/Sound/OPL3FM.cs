@@ -90,7 +90,7 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     public void Resume() {
         if (_paused) {
             _endThread = false;
-            _playbackThread = new Thread(GenerateWaveforms) { IsBackground = true };
+            _playbackThread = new Thread(GenerateWaveforms);
             _playbackThread.Start();
             _paused = false;
         }
