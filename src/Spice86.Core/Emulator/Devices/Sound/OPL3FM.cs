@@ -162,7 +162,9 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     /// Performs sound initialization.
     /// </summary>
     private void Initialize() {
-        _playbackThread.Start();
-        _initialized = true;
+        if(!_initialized) {
+            _playbackThread.Start();
+            _initialized = true;
+        }
     }
 }
