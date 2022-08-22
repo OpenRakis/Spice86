@@ -7,11 +7,11 @@ using Spice86.Core.Backend.Audio;
 using System;
 
 internal static class Audio {
-    public static AudioPlayer? CreatePlayer(int sampleRate = 48000, int framesPerBuffer = 0) {
+    public static AudioPlayer? CreatePlayer(int sampleRate = 48000, int framesPerBuffer = 0, double? suggestedLatency = null) {
         if (OperatingSystem.IsBrowser()) {
             return null;
         }
-        return PortAudioPlayer.Create(sampleRate, framesPerBuffer);
+        return PortAudioPlayer.Create(sampleRate, framesPerBuffer, suggestedLatency);
     }
 
     public static void WriteFullBuffer(AudioPlayer player, Span<float> buffer) {
