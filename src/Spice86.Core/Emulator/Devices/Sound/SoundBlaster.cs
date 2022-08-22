@@ -188,7 +188,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     public IEnumerable<int> InputPorts => new int[] { Ports.DspReadData, Ports.DspWrite, Ports.DspReadBufferStatus, Ports.MixerAddress, Ports.MixerData };
 
     /// <summary>
-    /// Gets the hardware IRQ assigned to the device. IRQ = 7, see what is the interrupt number corresponding to it.
+    /// Gets the hardware IRQ assigned to the device.
     /// </summary>
     public int IRQ { get; }
 
