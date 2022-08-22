@@ -19,8 +19,8 @@ public class PortAudioPlayer : AudioPlayer {
         _engine = new PortAudioEngine(framesPerBuffer, options);
     }
 
-    public static PortAudioPlayer Create(int framesPerBuffer) {
-        return new PortAudioPlayer(framesPerBuffer, new AudioFormat(SampleRate: 48000, Channels: 2,
+    public static PortAudioPlayer Create(int sampleRate, int framesPerBuffer) {
+        return new PortAudioPlayer(framesPerBuffer, new AudioFormat(SampleRate: sampleRate, Channels: 2,
             SampleFormat: SampleFormat.IeeeFloat32));
     }
 
