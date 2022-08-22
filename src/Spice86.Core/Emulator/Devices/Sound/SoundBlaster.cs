@@ -248,7 +248,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         if (!Configuration.CreateAudioBackend) {
             return;
         }
-        using AudioPlayer? player = Audio.CreatePlayer(22050, 1024);
+        using AudioPlayer? player = Audio.CreatePlayer(22050, 2048);
         if (player is null) {
             return;
         }
