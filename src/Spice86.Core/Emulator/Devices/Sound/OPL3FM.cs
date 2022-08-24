@@ -91,7 +91,8 @@ public sealed class OPL3FM : DefaultIOPortHandler {
         if (_paused) {
             _endThread = false;
             _playbackThread = new Thread(GenerateWaveforms) {
-                Name = "FMSynthPlaybackThread"
+                Name = "FMSynthPlaybackThread",
+                Priority = ThreadPriority.AboveNormal
             };
             _playbackThread.Start();
             _paused = false;
