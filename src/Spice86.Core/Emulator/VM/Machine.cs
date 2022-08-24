@@ -282,15 +282,12 @@ public class Machine : IDisposable {
     private void RunLoop() {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
-            PerformDmaTransfers();
-            for(int i = 0; i < 10000; i++) {
-                PauseIfAskedTo();
-                if (RecordData) {
-                    MachineBreakpoints.CheckBreakPoint();
-                }
-                Cpu.ExecuteNextInstruction();
-                Timer.Tick();
+            PauseIfAskedTo();
+            if (RecordData) {
+                MachineBreakpoints.CheckBreakPoint();
             }
+            Cpu.ExecuteNextInstruction();
+            Timer.Tick();
         }
     }
 
