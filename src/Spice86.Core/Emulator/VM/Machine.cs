@@ -246,20 +246,25 @@ public class Machine : IDisposable {
         functionHandler.Ret(CallType.MACHINE);
     }
 
+    private readonly Stopwatch _dmaSleepWatch = new();
+
     private void DmaTransfersThreadMethod() {
+        _dmaSleepWatch.Start();
         while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                if(_exitDmaThread || _exitEmulationLoop || !Cpu.IsRunning || _disposed) {
-                    return;
-                }
+                DmaChannel dmaChannel = _dmaDeviceChannels[i];
                 if (Gui?.IsPaused == true || IsPaused) {
                     Gui?.WaitOne();
                 }
-                DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                dmaChannel.Transfer(Memory);
+                bool transferOcurred = dmaChannel.Transfer(Memory);
+                //This exists only so the UI responds on Linux...
+                if (!transferOcurred && _dmaSleepWatch.ElapsedMilliseconds >= 1000) {
+                    _dmaSleepWatch.Restart();
+                    _dmaManualResetEvent.WaitOne(1);
+                }
             }
-            _dmaManualResetEvent.WaitOne();
         }
+        _dmaSleepWatch.Stop();
     }
 
     public void PerformDmaTransfers() {
@@ -277,18 +282,12 @@ public class Machine : IDisposable {
     private void RunLoop() {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
-            PerformDmaTransfers();
-            for(int i = 0; i < 500; i++) {
-                if(!Cpu.IsRunning || _exitEmulationLoop || _disposed) {
-                    return;
-                }
-                PauseIfAskedTo();
-                if (RecordData) {
-                    MachineBreakpoints.CheckBreakPoint();
-                }
-                Cpu.ExecuteNextInstruction();
-                Timer.Tick();
+            PauseIfAskedTo();
+            if (RecordData) {
+                MachineBreakpoints.CheckBreakPoint();
             }
+            Cpu.ExecuteNextInstruction();
+            Timer.Tick();
         }
     }
 
