@@ -31,13 +31,13 @@ public sealed class OPL3FM : DefaultIOPortHandler {
 
     public OPL3FM(Machine machine, Configuration configuration) : base(machine, configuration) {
         if (configuration.CreateAudioBackend) {
-            _audioPlayer = Audio.CreatePlayer(48000, OperatingSystem.IsWindows() ? 3072 : 2048);
+            _audioPlayer = Audio.CreatePlayer(48000, OperatingSystem.IsWindows() ? 0 : 2048);
         }
         if (_audioPlayer is not null) {
             _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);
         }
         _playbackThread = new Thread(GenerateWaveforms) {
-            Name = "OPLAudio"
+            Name = "OPL3FMAudio"
         };
     }
 
