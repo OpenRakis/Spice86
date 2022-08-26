@@ -250,7 +250,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         }
         int framesPerBuffer = 2048;
         if (OperatingSystem.IsWindows()) {
-            framesPerBuffer = 3072;
+            framesPerBuffer = 0;
         }
         using AudioPlayer? player = Audio.CreatePlayer(22050, framesPerBuffer);
         if (player is null) {
