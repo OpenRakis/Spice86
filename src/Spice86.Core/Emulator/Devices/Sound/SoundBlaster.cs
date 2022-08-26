@@ -262,6 +262,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         player.BeginPlayback();
 
         while (!_endPlayback) {
+            //16ms
             _dsp.Read(buffer);
             int length;
             if (_dsp.Is16Bit && _dsp.IsStereo) {
@@ -271,6 +272,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             } else if (_dsp.IsStereo) {
                 length = LinearUpsampler.Resample8Stereo(_dsp.SampleRate, sampleRate, buffer, writeBuffer);
             } else {
+                //6ms
                 length = LinearUpsampler.Resample8Mono(_dsp.SampleRate, sampleRate, buffer, writeBuffer);
             }
 
@@ -337,43 +339,43 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
                 //else
                 //    vm.InterruptController.RaiseHardwareInterrupt(irq);
                 //System.Diagnostics.Debug.WriteLine("Single-cycle DMA");
-                _machine.PerformDmaTransfers();
+                //_machine.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, true);
                 //System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM4 with reference byte");
-                _machine.PerformDmaTransfers();
+                //_machine.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, false);
                 //System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM4");
-                _machine.PerformDmaTransfers();
+                //_machine.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, true);
                 //System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM2 with reference byte");
-                _machine.PerformDmaTransfers();
+                //_machine.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, false);
                 //System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM2");
-                _machine.PerformDmaTransfers();
+                //_machine.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, true);
                 //System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM3 with reference byte");
-                _machine.PerformDmaTransfers();
+                //_machine.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, false);
                 //System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM3");
-                _machine.PerformDmaTransfers();
+                //_machine.PerformDmaTransfers();
                 break;
 
             case Commands.AutoInitDmaOutput8:
