@@ -39,12 +39,8 @@ public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
-    private readonly ManualResetEvent _dmaManualResetEvent = new(false);
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<Machine>();
 
     private bool _disposed;
-    private bool _exitDmaThread;
-    private Thread? _dmaThread;
 
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
@@ -228,12 +224,6 @@ public class Machine : IDisposable {
         FunctionHandler functionHandler = Cpu.FunctionHandler;
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         try {
-            if (_dmaThread is null) {
-                _dmaThread = new Thread(DmaTransfersThreadMethod) {
-                    Name = "DMATransfersThread",
-                };
-                _dmaThread.Start();
-            }
             RunLoop();
         } catch (InvalidVMOperationException) {
             throw;
@@ -246,33 +236,6 @@ public class Machine : IDisposable {
         functionHandler.Ret(CallType.MACHINE);
     }
 
-    private readonly Stopwatch _dmaSleepWatch = new();
-
-    private void DmaTransfersThreadMethod() {
-        _dmaSleepWatch.Start();
-        while (!_exitDmaThread && !_exitEmulationLoop && Cpu.IsRunning && !_disposed) {
-            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                if (Gui?.IsPaused == true || IsPaused) {
-                    Gui?.WaitOne();
-                }
-                bool transferOcurred = dmaChannel.Transfer(Memory);
-                //This exists only so the UI responds on Linux...
-                if (!transferOcurred && _dmaSleepWatch.ElapsedMilliseconds >= 1000) {
-                    _dmaSleepWatch.Restart();
-                    _dmaManualResetEvent.WaitOne(1);
-                }
-            }
-        }
-        _dmaSleepWatch.Stop();
-    }
-
-    public void PerformDmaTransfers() {
-        if(!_disposed && !_exitDmaThread) {
-            _dmaManualResetEvent.Set();
-        }
-    }
-
     public bool IsPaused { get; private set; }
 
     private bool _exitEmulationLoop = false;
@@ -283,12 +246,27 @@ public class Machine : IDisposable {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
             PauseIfAskedTo();
-            if (RecordData) {
-                MachineBreakpoints.CheckBreakPoint();
+            if(_dmaDeviceChannels.Count > 0) {
+                // https://techgenix.com/direct-memory-access/
+                for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+                    DmaChannel dmaChannel = _dmaDeviceChannels[i];
+                    dmaChannel.Transfer(Memory);
+                    RunNextCpuInstructionAndTimerTick();
+                }
             }
-            Cpu.ExecuteNextInstruction();
-            Timer.Tick();
+            else {
+                RunNextCpuInstructionAndTimerTick();
+            }
         }
+    }
+
+    private void RunNextCpuInstructionAndTimerTick() {
+        PauseIfAskedTo();
+        if (RecordData) {
+            MachineBreakpoints.CheckBreakPoint();
+        }
+        Cpu.ExecuteNextInstruction();
+        Timer.Tick();
     }
 
     private void PauseIfAskedTo() {
@@ -315,12 +293,6 @@ public class Machine : IDisposable {
     protected virtual void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _exitDmaThread = true;
-                _dmaManualResetEvent.Set();
-                if (_dmaThread?.IsAlive == true) {
-                    _dmaThread.Join();
-                }
-                _dmaManualResetEvent.Dispose();
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 MachineBreakpoints.Dispose();
