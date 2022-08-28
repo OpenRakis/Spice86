@@ -73,6 +73,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     private int _pauseDuration;
     private volatile bool _pausePlayback;
     private BlasterState _state;
+    private bool _playbackStarted = false;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -95,7 +96,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             Name = "PCMAudio",
             Priority = ThreadPriority.AboveNormal
         };
-        _playbackThread.Start();
     }
 
     private void MachineResumed() {
@@ -136,6 +136,10 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     }
 
     public override void WriteByte(int port, byte value) {
+        if (!_playbackStarted) {
+            _playbackThread.Start();
+            _playbackStarted = true;
+        }
         switch (port) {
             case Ports.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
