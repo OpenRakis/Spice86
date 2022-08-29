@@ -111,7 +111,7 @@ public class Timer : DefaultIOPortHandler {
     public void Tick() {
         long cycles = _cpu.State.Cycles;
         if (_counters[0].ProcessActivation(cycles)) {
-            _pic.ProcessInterruptVector(0x8);
+            _machine.Cpu.ExternalInterrupt(0x8);
         }
 
         if (_vgaCounter.ProcessActivation(cycles)) {
