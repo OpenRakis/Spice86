@@ -60,31 +60,12 @@ public class Pic {
     /// </summary>
     /// <param name="irq">The IRQ Number, which will be internally translated to a vector number</param>
     /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
-    public void ProcessInterruptRequest(byte irq) {
+    public void InterruptRequest(byte irq) {
         SetInterruptRequestRegister(irq);
-        ProcessNextIrq();
-    }
-
-    private void SendIrqToCpu(byte irq) {
-        Cpu cpu = _machine.Cpu;
-        if (!cpu.State.InterruptFlag) {
-            return;
-        }
-
-        if (!_autoEoi) {
-            _interruptOngoing = true;
-        }
-        
-        _currentIrq = irq;
-        ClearInterruptRequestRegister(irq);
-        SetInServiceRegister(irq);
-        byte vectorNumber = (byte)(_baseInterruptVector + irq);
-        cpu.ExternalInterrupt(vectorNumber);
     }
 
     public void AcknwowledgeInterrupt() {
         ClearHighestInServiceIrq();
-        ProcessNextIrq();
     }
 
     private void ProcessICW1(byte value) {
@@ -136,8 +117,6 @@ public class Pic {
             _logger.Information("PIC COMMAND OCW1 {@Value}. Mask is {@Mask}", ConvertUtils.ToHex8(value),
                 ConvertUtils.ToBin8(value));
         }
-
-        ProcessNextIrq();
     }
 
     private void ProcessOCW2(byte value) {
@@ -162,8 +141,6 @@ public class Pic {
             } else {
                 ClearHighestInServiceIrq();
             }
-
-            ProcessNextIrq();
         }
     }
 
@@ -186,33 +163,46 @@ public class Pic {
         return maxIrqInService;
     }
 
-    private void ProcessNextIrq() {
-        byte enabledInterruptRequests = (byte)(_interruptRequestRegister & ~_interruptMaskRegister);
+    public bool HasPendingRequest() {
+        return EnabledInterruptRequests != 0;
+    }
+
+    private byte EnabledInterruptRequests => (byte)(_interruptRequestRegister & ~_interruptMaskRegister);
+
+    public byte? ComputeVectorNumber() {
+        byte enabledInterruptRequests = EnabledInterruptRequests;
         if (enabledInterruptRequests == 0) {
             // No requests
             _interruptOngoing = false;
-            return;
+            return null;
         }
 
         int? maxIrqToSearch = ComputeHighestPriorityToSearchRequests();
         if (maxIrqToSearch == null) {
-            return;
+            return null;
         }
 
 
         // search for higher priority Requests 
-        int? higherPriorityRequest = FindIrq((int)maxIrqToSearch, (irq) => {
+        byte? irq = FindIrq((int)maxIrqToSearch, (irq) => {
             int irqMask = GenerateIrqMask(irq);
             bool irqInService = (_inServiceRegister & irqMask) != 0;
             bool irqRequestExists = (enabledInterruptRequests & irqMask) != 0;
             return !(_specialMask && irqInService) && !_interruptOngoing && irqRequestExists;
         });
-        if (higherPriorityRequest == null) {
-            return;
+        if (irq == null) {
+            return null;
         }
 
         // Higher priority request found, servicing it
-        SendIrqToCpu((byte)higherPriorityRequest);
+        if (!_autoEoi) {
+            _interruptOngoing = true;
+        }
+
+        _currentIrq = (byte)irq;
+        ClearInterruptRequestRegister((byte)irq);
+        SetInServiceRegister((byte)irq);
+        return (byte)(_baseInterruptVector + irq);
     }
 
     private int GenerateIrqMask(int irq) {
