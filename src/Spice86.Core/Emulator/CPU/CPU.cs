@@ -98,11 +98,7 @@ public class Cpu {
     }
 
     public void ExternalInterrupt(byte vectorNumber) {
-        //  hack: do not let the timer overwrite keyboard.
-        if (ExternalInterruptVectorNumber is null or not 9) {
-            _machine.Pic.AcknwowledgeInterrupt();
-            ExternalInterruptVectorNumber = vectorNumber;
-        }
+        ExternalInterruptVectorNumber = vectorNumber;
     }
 
     public void FarRet(ushort numberOfBytesToPop) {

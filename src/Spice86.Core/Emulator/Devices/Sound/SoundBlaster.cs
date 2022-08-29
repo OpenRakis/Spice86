@@ -82,7 +82,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     /// <param name="irq">IRQ number for the Sound Blaster.</param>
     /// <param name="dma8">8-bit DMA channel for the Sound Blaster.</param>
     /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
-    public SoundBlaster(Machine machine, Configuration configuration, int irq = 7, int dma8 = 1, int dma16 = 5) : base(machine, configuration) {
+    public SoundBlaster(Machine machine, Configuration configuration, byte irq = 7, int dma8 = 1, int dma16 = 5) : base(machine, configuration) {
         _machine.Paused += MachinePaused;
         _machine.Resumed += MachineResumed;
         IRQ = irq;
@@ -194,7 +194,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     /// <summary>
     /// Gets the hardware IRQ assigned to the device.
     /// </summary>
-    public int IRQ { get; }
+    public byte IRQ { get; }
 
     public IEnumerable<int> OutputPorts => new int[] { Ports.DspReset, Ports.DspWrite, Ports.MixerAddress };
 
@@ -457,7 +457,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     /// </summary>
     private void RaiseInterrupt() {
         _mixer.InterruptStatusRegister = InterruptStatus.Dma8;
-        _machine.Pic.ProcessInterruptRequest(IRQ);
+        _machine.DualPic.ProcessInterruptRequest(IRQ);
         //System.Diagnostics.Debug.WriteLine("Sound Blaster IRQ");
     }
 

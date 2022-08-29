@@ -80,7 +80,7 @@ public class Machine : IDisposable {
 
     public PcSpeaker PcSpeaker { get; }
 
-    public Pic Pic { get; }
+    public DualPic DualPic { get; }
 
     public SoundBlaster SoundBlaster { get; }
 
@@ -129,11 +129,11 @@ public class Machine : IDisposable {
         DmaController = new DmaController(this, configuration);
         Register(DmaController);
 
-        Pic = new Pic(this, true, configuration);
-        Register(Pic);
+        DualPic = new DualPic(this, configuration);
+        Register(DualPic);
         VgaCard = new VgaCard(this, gui, configuration);
         Register(VgaCard);
-        Timer = new Timer(this, Pic, VgaCard, counterConfigurator, configuration);
+        Timer = new Timer(this, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
         Keyboard = new Keyboard(this, gui, keyScanCodeConverter, configuration);
         Register(Keyboard);
