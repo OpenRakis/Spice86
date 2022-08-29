@@ -34,7 +34,7 @@ public class Keyboard : DefaultIOPortHandler {
     }
 
     private void RaiseIrq() {
-        _machine.Pic.ProcessInterruptRequest(1);
+        _machine.DualPic.ProcessInterruptRequest(1);
     }
 
     private void OnKeyUp(object? sender, EventArgs e) {

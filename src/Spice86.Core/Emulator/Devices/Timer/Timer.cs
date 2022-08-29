@@ -30,15 +30,15 @@ public class Timer : DefaultIOPortHandler {
     public static readonly long StopwatchTicksPerMillisecond = Stopwatch.Frequency / 1000;
 
     private readonly Counter[] _counters = new Counter[3];
-    private readonly Pic _pic;
+    private readonly DualPic _dualPic;
 
     private readonly VgaCard _vgaCard;
 
     // Cheat: display at 60fps
     private readonly Counter _vgaCounter;
 
-    public Timer(Machine machine, Pic pic, VgaCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
-        _pic = pic;
+    public Timer(Machine machine, DualPic dualPic, VgaCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
+        _dualPic = dualPic;
         _vgaCard = vgaCard;
         _cpu = machine.Cpu;
         for (int i = 0; i < _counters.Length; i++) {
@@ -111,7 +111,7 @@ public class Timer : DefaultIOPortHandler {
     public void Tick() {
         long cycles = _cpu.State.Cycles;
         if (_counters[0].ProcessActivation(cycles)) {
-            _machine.Pic.ProcessInterruptRequest(0);
+            _dualPic.ProcessInterruptRequest(0);
         }
 
         if (_vgaCounter.ProcessActivation(cycles)) {
