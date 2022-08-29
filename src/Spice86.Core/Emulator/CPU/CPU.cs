@@ -2024,7 +2024,16 @@ public class Cpu {
     }
 
     private void HandleExternalInterrupt() {
-        if (ExternalInterruptVectorNumber == null || !State.InterruptFlag) {
+        if (!State.InterruptFlag) {
+            return;
+        }
+
+        if (ExternalInterruptVectorNumber == null) {
+            // Check the PIC in case this was not directly set by rewritten code
+            ExternalInterruptVectorNumber = _machine.DualPic.ComputeVectorNumber();
+        }
+
+        if (ExternalInterruptVectorNumber == null) {
             return;
         }
 

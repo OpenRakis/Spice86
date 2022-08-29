@@ -53,12 +53,28 @@ public class DualPic : DefaultIOPortHandler {
     /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
     public void ProcessInterruptRequest(byte irq) {
         if (irq < 8) {
-            _pic1.ProcessInterruptRequest(irq);
+            _pic1.InterruptRequest(irq);
         } else if (irq < 15) {
-            _pic2.ProcessInterruptRequest((byte)(irq - 8));
+            _pic2.InterruptRequest((byte)(irq - 8));
         } else {
             throw new UnhandledOperationException(_machine, $"IRQ {irq} not supported at the moment");
         }
+    }
+
+    public bool HasPendingRequest() {
+        return _pic1.HasPendingRequest() || _pic2.HasPendingRequest();
+    }
+
+    public byte? ComputeVectorNumber() {
+        if (_pic1.HasPendingRequest()) {
+            return _pic1.ComputeVectorNumber();
+        }
+
+        if (_pic2.HasPendingRequest()) {
+            return _pic2.ComputeVectorNumber();
+        }
+
+        return null;
     }
 
     public void AcknwowledgeInterrupt() {
