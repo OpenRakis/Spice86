@@ -399,6 +399,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         }
     }
 
+    /// <inheritdoc />
     public void WaitOne() {
             _okayToContinueEvent.WaitOne(Timeout.Infinite);
         }
