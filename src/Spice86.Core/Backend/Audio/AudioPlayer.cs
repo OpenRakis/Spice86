@@ -1,13 +1,12 @@
 ﻿namespace Spice86.Core.Backend.Audio;
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 /// <summary>
 /// Implements a background audio playback stream.
 /// </summary>
-public abstract class AudioPlayer : IDisposable {
+public abstract partial class AudioPlayer : IDisposable {
     private readonly InternalBufferWriter _writer;
     private CallbackRaiser? _callbackRaiser;
     private bool _disposed;
@@ -61,7 +60,6 @@ public abstract class AudioPlayer : IDisposable {
 
         _callbackRaiser = null;
         Playing = true;
-        Start(false);
     }
     /// <summary>
     /// Stops audio playback if it is currently playing.
@@ -73,7 +71,6 @@ public abstract class AudioPlayer : IDisposable {
         }
 
         if (Playing) {
-            Stop();
             Playing = false;
             _callbackRaiser = null;
         }
@@ -100,8 +97,6 @@ public abstract class AudioPlayer : IDisposable {
     protected virtual void Dispose(bool disposing) {
         _disposed = true;
     }
-    protected abstract void Start(bool useCallback);
-    protected abstract void Stop();
     protected abstract int WriteDataInternal(Span<byte> data);
 
     protected void RaiseCallback(Span<byte> buffer, out int samplesWritten) => RaiseCallbackInternal(buffer, out samplesWritten);
@@ -136,65 +131,6 @@ public abstract class AudioPlayer : IDisposable {
         };
 
         Playing = true;
-        Start(true);
-    }
-
-    private abstract class InternalBufferWriter {
-        public abstract int WriteData<TInput>(Span<TInput> data) where TInput : unmanaged;
-    }
-
-    private sealed class InternalBufferWriter<TOutput> : InternalBufferWriter
-        where TOutput : unmanaged {
-        private readonly AudioPlayer player;
-        private TOutput[]? conversionBuffer;
-
-        public InternalBufferWriter(AudioPlayer player) => this.player = player;
-
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override int WriteData<TInput>(Span<TInput> data) {
-            // if formats are the same no sample conversion is needed
-            if (typeof(TInput) == typeof(TOutput)) {
-                return player.WriteDataInternal(data.AsBytes()) / Unsafe.SizeOf<TOutput>();
-            }
-
-            int minBufferSize = data.Length;
-            if (conversionBuffer == null || conversionBuffer.Length < minBufferSize) {
-                Array.Resize(ref conversionBuffer, minBufferSize);
-            }
-
-            SampleConverter.InternalConvert<TInput, TOutput>(data, conversionBuffer);
-            return player.WriteDataInternal(conversionBuffer.AsSpan(0, data.Length).AsBytes()) / Unsafe.SizeOf<TOutput>();
-        }
-    }
-
-    private abstract class CallbackRaiser {
-        public abstract void RaiseCallback(Span<byte> buffer, out int samplesWritten);
-    }
-
-    private sealed class CallbackRaiser<TInput, TOutput> : CallbackRaiser
-        where TInput : unmanaged
-        where TOutput : unmanaged {
-        private readonly BufferNeededCallback<TInput> callback;
-        private TInput[]? conversionBuffer;
-
-        public CallbackRaiser(BufferNeededCallback<TInput> callback) {
-            this.callback = callback;
-        }
-
-        public override void RaiseCallback(Span<byte> buffer, out int samplesWritten) {
-            // if formats are the same no sample conversion is needed
-            if (typeof(TInput) == typeof(TOutput)) {
-                callback(buffer.Cast<byte, TInput>(), out samplesWritten);
-            } else {
-                int minBufferSize = buffer.Length / Unsafe.SizeOf<TOutput>();
-                if (conversionBuffer == null || conversionBuffer.Length < minBufferSize) {
-                    Array.Resize(ref conversionBuffer, minBufferSize);
-                }
-
-                callback(conversionBuffer.AsSpan(0, minBufferSize), out samplesWritten);
-                SampleConverter.InternalConvert(conversionBuffer.AsSpan(0, minBufferSize), buffer.Cast<byte, TOutput>());
-            }
-        }
     }
 }
 

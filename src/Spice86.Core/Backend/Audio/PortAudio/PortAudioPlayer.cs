@@ -3,7 +3,7 @@ using Bufdio.Engines;
 
 namespace Spice86.Core.Backend.Audio.PortAudio; 
 
-public class PortAudioPlayer : AudioPlayer {
+public sealed class PortAudioPlayer : AudioPlayer {
     private readonly IAudioEngine _engine;
     private bool _disposed;
     private PortAudioPlayer(int framesPerBuffer, AudioFormat format, double? suggestedLatency = null) : base(format) {
@@ -34,14 +34,6 @@ public class PortAudioPlayer : AudioPlayer {
                 _disposed = true;
             }
         }
-    }
-
-    protected override void Start(bool useCallback) {
-        //NOP
-    }
-
-    protected override void Stop() {
-        //NOP
     }
 
     protected override int WriteDataInternal(Span<byte> data) {
