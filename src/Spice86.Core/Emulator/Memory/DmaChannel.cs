@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.Devices.Timer;
 
 using System;
 using System.Diagnostics;
+using System.Reflection.Metadata.Ecma335;
 
 /// <summary>
 /// Contains information about a DMA channel.
@@ -183,13 +184,13 @@ public sealed class DmaChannel {
     /// <remarks>
     /// This method should only be called if the channel is active.
     /// </remarks>
-    internal bool Transfer(Memory memory) {
+    internal void Transfer(Memory memory) {
         if (!MustTransferData) {
-            return false;
+            return;
         }
         IDmaDevice8? device = Device;
         if (device is null) {
-            return false;
+            return;
         }
         uint memoryAddress = (uint)Page << 16 | Address;
         uint sourceOffset = (uint)Count + 1 - (uint)TransferBytesRemaining;
@@ -210,6 +211,5 @@ public sealed class DmaChannel {
             }
         }
         _transferTimer.Restart();
-        return true;
     }
 }
