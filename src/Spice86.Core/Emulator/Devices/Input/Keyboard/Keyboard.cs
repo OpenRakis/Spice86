@@ -19,8 +19,6 @@ public class Keyboard : DefaultIOPortHandler {
     private readonly IGui? _gui;
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
-    public bool IsHardwareQueueEmpty => LastKeyboardInput is null;
-
     public Keyboard(Machine machine, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) : base(machine, configuration) {
         _gui = gui;
         _keyScanCodeConverter = keyScanCodeConverter;
