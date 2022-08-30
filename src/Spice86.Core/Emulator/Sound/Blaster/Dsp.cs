@@ -162,6 +162,7 @@ internal sealed class Dsp {
             decodeRemainderOffset = remainder.Value - 1;
         }
     }
+
     /// <summary>
     /// Writes data from a DMA transfer.
     /// </summary>
@@ -169,7 +170,6 @@ internal sealed class Dsp {
     /// <returns>Number of bytes actually written.</returns>
     public int DmaWrite(ReadOnlySpan<byte> source) {
         int actualCount = waveBuffer.Write(source);
-
         if (AutoInitialize) {
             autoInitTotal += actualCount;
             if (autoInitTotal >= BlockTransferSize) {
