@@ -11,6 +11,9 @@ public interface IGui {
 
     public event EventHandler<EventArgs>? KeyDown;
 
+    /// <summary>
+    /// Blocks the current thread until the Gui's WaitHandle receives a signal.
+    /// </summary>
     void WaitOne();
 
     void RemoveBuffer(uint address);
@@ -20,7 +23,7 @@ public interface IGui {
     int MouseX { get; set; }
     int MouseY { get; set; }
 
-    void SetResolution(int videoWidth, int videoHeight, uint v);
+    void SetResolution(int videoWidth, int videoHeight, uint offset);
     void Draw(byte[] ram, Rgb[] rgbs);
 
     bool IsLeftButtonClicked { get; }
