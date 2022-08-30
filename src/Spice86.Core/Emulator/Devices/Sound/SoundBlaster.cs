@@ -252,7 +252,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         if (!Configuration.CreateAudioBackend) {
             return;
         }
-        using AudioPlayer? player = Audio.CreatePlayer(48000, 0);
+        using AudioPlayer? player = Audio.CreatePlayer(48000, 2048);
         if (player is null) {
             return;
         }
@@ -262,7 +262,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
         player.BeginPlayback();
 
         while (!_endPlayback) {
-            //16ms
             _dsp.Read(buffer);
             int length;
             if (_dsp.Is16Bit && _dsp.IsStereo) {
@@ -272,7 +271,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
             } else if (_dsp.IsStereo) {
                 length = LinearUpsampler.Resample8Stereo(_dsp.SampleRate, sampleRate, buffer, writeBuffer);
             } else {
-                //6ms
                 length = LinearUpsampler.Resample8Mono(_dsp.SampleRate, sampleRate, buffer, writeBuffer);
             }
 
