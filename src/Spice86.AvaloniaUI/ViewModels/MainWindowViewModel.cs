@@ -61,9 +61,8 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
 
     private bool _isMainWindowClosing = false;
 
-    public MainWindowViewModel()
-    {
-        if(App.MainWindow is not null) {
+    public MainWindowViewModel() {
+        if (App.MainWindow is not null) {
             App.MainWindow.Closing += (s, e) => _isMainWindowClosing = true;
         }
     }
@@ -240,7 +239,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     [RelayCommand]
     public void ResetTimeMultiplier() {
         if (_configuration is not null) {
-            TimeMultiplier = _configuration.TimeMultiplier;            
+            TimeMultiplier = _configuration.TimeMultiplier;
         }
     }
 
@@ -333,7 +332,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
             if (disposing) {
                 PlayCommand.Execute(null);
                 DisposeEmulator();
-                if(_emulatorThread?.IsAlive == true) {
+                _okayToContinueEvent.Set();
+                _okayToContinueEvent.Dispose();
+                if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
             }
@@ -347,7 +348,6 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         _paletteWindow?.Close();
         DisposeBuffers();
         _programExecutor?.Dispose();
-        _okayToContinueEvent.Dispose();
     }
 
     private static Configuration? GenerateConfiguration(string[] args) {
@@ -361,7 +361,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private async Task ShowEmulationErrorMessage(Exception e) {
         IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
             .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
-        if(!_disposedValue && !_isMainWindowClosing) {
+        if (!_disposedValue && !_isMainWindowClosing) {
             await errorMessage.ShowDialog(App.MainWindow);
         }
     }
@@ -369,8 +369,8 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private void RunMachine() {
         EmulatorErrorOccured += OnEmulatorErrorOccured;
         _emulatorThread = new Thread(MachineThread) {
-                Name = "Emulator"
-            };
+            Name = "Emulator"
+        };
         _emulatorThread.Start();
     }
 
@@ -403,6 +403,6 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
 
     /// <inheritdoc />
     public void WaitOne() {
-            _okayToContinueEvent.WaitOne(Timeout.Infinite);
-        }
+        _okayToContinueEvent.WaitOne(Timeout.Infinite);
+    }
 }
