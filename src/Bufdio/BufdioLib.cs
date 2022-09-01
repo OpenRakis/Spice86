@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+
 using Bufdio.Bindings.PortAudio;
 using Bufdio.Exceptions;
 using Bufdio.Utilities;
@@ -11,10 +12,8 @@ namespace Bufdio;
 /// Provides functionalities to retrieve, configure and manage current Bufdio environment
 /// that affects the whole library configuration.
 /// </summary>
-public static class BufdioLib
-{
-    internal static class Constants
-    {
+public static class BufdioLib {
+    internal static class Constants {
         public const PaBinding.PaSampleFormat PaSampleFormat = PaBinding.PaSampleFormat.paFloat32;
     }
 
@@ -31,10 +30,8 @@ public static class BufdioLib
     /// Gets default output device information that is used by the current system.
     /// </summary>
     /// <exception cref="BufdioException">Thrown if PortAudio is not initialized.</exception>
-    public static AudioDevice DefaultOutputDevice
-    {
-        get
-        {
+    public static AudioDevice DefaultOutputDevice {
+        get {
             Ensure.That<BufdioException>(IsPortAudioInitialized, "PortAudio is not initialized.");
             return _defaultOutputDevice;
         }
@@ -44,10 +41,8 @@ public static class BufdioLib
     /// Gets list of available audio output devices in the current system.
     /// Will throws <see cref="BufdioException"/> if PortAudio is not initialized.
     /// </summary>
-    public static IReadOnlyCollection<AudioDevice> OutputDevices
-    {
-        get
-        {
+    public static IReadOnlyCollection<AudioDevice> OutputDevices {
+        get {
             Ensure.That<BufdioException>(IsPortAudioInitialized, "PortAudio is not initialized.");
             return _outputDevices;
         }
@@ -62,16 +57,19 @@ public static class BufdioLib
     /// Path to port audio native libary, eg: portaudio.dll, libportaudio.so, libportaudio.dylib.
     /// </param>
     /// <exception cref="BufdioException">Thrown when output device is not available.</exception>
-    public static void InitializePortAudio(string? portAudioPath = default)
-    {
-        if (IsPortAudioInitialized)
-        {
-            return;
+    public static bool InitializePortAudio(string? portAudioPath = default) {
+        if (IsPortAudioInitialized) {
+            return false;
         }
 
         portAudioPath = string.IsNullOrEmpty(portAudioPath) ? GetPortAudioLibName() : portAudioPath;
 
-        PaBinding.InitializeBindings(new LibraryLoader(portAudioPath));
+        var loader = new LibraryLoader();
+        var loadedNativeLib = loader.Initialize(portAudioPath);
+        if (!loadedNativeLib) {
+            return false;
+        }
+        PaBinding.InitializeBindings(loader);
         PaBinding.Pa_Initialize();
 
         int deviceCount = PaBinding.Pa_GetDeviceCount();
@@ -81,35 +79,26 @@ public static class BufdioLib
         _defaultOutputDevice = defaultDevice.PaGetPaDeviceInfo().PaToAudioDevice(defaultDevice);
         _outputDevices = new List<AudioDevice>();
 
-        for (int i = 0; i < deviceCount; i++)
-        {
+        for (int i = 0; i < deviceCount; i++) {
             PaBinding.PaDeviceInfo deviceInfo = i.PaGetPaDeviceInfo();
 
-            if (deviceInfo.maxOutputChannels > 0)
-            {
+            if (deviceInfo.maxOutputChannels > 0) {
                 _outputDevices.Add(deviceInfo.PaToAudioDevice(i));
             }
         }
 
         IsPortAudioInitialized = true;
+        return true;
     }
 
-    private static string GetPortAudioLibName()
-    {
-        if (PlatformInfo.IsWindows)
-        {
+    private static string GetPortAudioLibName() {
+        if (PlatformInfo.IsWindows) {
             return "libportaudio-2.dll";
-        }
-        else if (PlatformInfo.IsLinux)
-        {
+        } else if (PlatformInfo.IsLinux) {
             return "libportaudio.so.2";
-        }
-        else if (PlatformInfo.IsOSX)
-        {
+        } else if (PlatformInfo.IsOSX) {
             return "libportaudio.2.dylib";
-        }
-        else
-        {
+        } else {
             throw new NotImplementedException();
         }
     }
