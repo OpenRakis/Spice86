@@ -414,6 +414,7 @@ Sound:
 - SoundBlaster PCM is supported.
 - MT-32 is supported, but not on macOS.
 - General Midi is supported, but only on Windows.
+On *nix systems, you'll need to have libportaudio installed.
 
 Compatibility list available [here](COMPATIBILITY.md).
 
