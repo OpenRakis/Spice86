@@ -1,11 +1,5 @@
 namespace Spice86.Tests;
 
-using Emulator;
-using Emulator.CPU;
-using Emulator.VM;
-using Emulator.Memory;
-using Emulator.VM.Breakpoint;
-
 using JetBrains.Annotations;
 
 using Serilog;
@@ -13,9 +7,13 @@ using Serilog;
 using System;
 using System.IO;
 
-using Utils;
-
 using Xunit;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Utils;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.VM;
 
 public class MachineTest {
 
@@ -95,13 +93,13 @@ public class MachineTest {
 
         // GetData
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
-            memory.GetData(5, 10);
+            memory.GetSpan(5, 10);
             // Should not trigger for this
-            memory.GetData(0, 5);
-            memory.GetData(6, 5);
+            memory.GetSpan(0, 5);
+            memory.GetSpan(6, 5);
         });
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
-            memory.GetData(0, 6);
+            memory.GetSpan(0, 6);
         });
 
         // LoadData

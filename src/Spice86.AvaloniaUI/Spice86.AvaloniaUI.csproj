@@ -1,0 +1,76 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<WarningsAsErrors>nullable</WarningsAsErrors>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<EnablePackageValidation>true</EnablePackageValidation>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
+	</PropertyGroup>
+
+	<!-- Properties geared towards NuGet -->
+	<PropertyGroup>
+		<PackageId>Spice86</PackageId>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<Version>2.6.0</Version>
+		<PackageReleaseNotes>Truly support -u and -d as being true by default.</PackageReleaseNotes>
+		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<Description>Reverse engineer and rewrite real mode dos programs</Description>
+		<PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
+		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+	</PropertyGroup>
+
+	<!-- Source Link configuration -->
+	<PropertyGroup>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
+		<PackageReference Include="MessageBox.Avalonia" Version="2.0.2" />
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.0.0" />
+		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+		<PackageReference Include="Avalonia" Version="0.10.18" />
+		<PackageReference Include="Avalonia.Desktop" Version="0.10.18" />
+		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.18" />
+	</ItemGroup>
+	<ItemGroup>
+		<AvaloniaResource Include="Icon\Spice86.ico" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
+		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
+		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="libs\PortAudio\win-x64\libportaudio.dll">
+			<Link>libportaudio.dll</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Condition="'$(Platform)' == 'x86'" Update="libs\PortAudio\win-x86\libportaudio.dll">
+			<Link>libportaudio.dll</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+</Project>

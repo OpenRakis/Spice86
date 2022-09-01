@@ -410,9 +410,11 @@ CD-ROM:
 - No MSCDEX support for now. Some games, like DUNE, can be copied entirely from the CD and run from the hard drive.
 
 Sound:
-- Adlib/SoundBlaster MIDI OPL is supported. Playback will only be heard on Windows right now. On other OSes, there will be no sound.
-- SoundBlaster PCM hangs the emulator at the moment. Don't use it.
-- MT-32 and General Midi are supported. Playback will only be heard on Windows right now. On other OSes, there will be no sound.
+- Adlib/SoundBlaster MIDI OPL is supported.
+- SoundBlaster PCM is supported.
+- MT-32 is supported, but not on macOS.
+- General Midi is supported, but only on Windows.
+On *nix systems, you'll need to have libportaudio installed.
 
 Compatibility list available [here](COMPATIBILITY.md).
 
@@ -420,7 +422,7 @@ Compatibility list available [here](COMPATIBILITY.md).
 
 - Install the .NET 6 SDK (once)
 - clone the repo
-- run this where Spice86.csproj is located:
+- run this where Spice86.sln is located:
 
 ```bash
    dotnet build
@@ -432,7 +434,7 @@ Compatibility list available [here](COMPATIBILITY.md).
    Spice86 -e <path to executable>
 ```
 
-or use this where Spice86.csproj is located:
+or use this where Spice86.AvaloniaUI.csproj is located:
 
 ```bash
    dotnet run -e <path to executable>
