@@ -246,17 +246,15 @@ public class Machine : IDisposable {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
             PauseIfAskedTo();
-            bool ranNextCpuInstruction = false;
-            // https://techgenix.com/direct-memory-access/
-            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                dmaChannel.Transfer(Memory);
-                if (dmaChannel.TransferMode == DmaTransferMode.SingleCycle) {
+            if(_dmaDeviceChannels.Count > 0) {
+                // https://techgenix.com/direct-memory-access/
+                for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+                    DmaChannel dmaChannel = _dmaDeviceChannels[i];
+                    dmaChannel.Transfer(Memory);
                     RunNextCpuInstructionAndTimerTick();
-                    ranNextCpuInstruction = true;
                 }
             }
-            if (!ranNextCpuInstruction) {
+            else {
                 RunNextCpuInstructionAndTimerTick();
             }
         }
