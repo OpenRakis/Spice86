@@ -15,7 +15,7 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.5.3</Version>
+		<Version>2.6</Version>
 		<PackageReleaseNotes>Truly support -u and -d as being true by default.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -58,19 +58,19 @@
 		<AvaloniaResource Include="Icon\Spice86.ico" />
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
-	  <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
-	  <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
+		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
+		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="libs\PortAudio\win-x64\libportaudio.dll">
-		  <Link>libportaudio.dll</Link>
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	  <None Condition="'$(Platform)' == 'x86'" Update="libs\PortAudio\win-x86\libportaudio.dll">
-		  <Link>libportaudio.dll</Link>
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
+		<None Update="libs\PortAudio\win-x64\libportaudio.dll">
+			<Link>libportaudio.dll</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Condition="'$(Platform)' == 'x86'" Update="libs\PortAudio\win-x86\libportaudio.dll">
+			<Link>libportaudio.dll</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 </Project>
