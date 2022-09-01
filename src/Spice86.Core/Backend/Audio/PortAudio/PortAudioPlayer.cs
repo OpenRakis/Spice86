@@ -6,6 +6,7 @@ namespace Spice86.Core.Backend.Audio.PortAudio;
 public sealed class PortAudioPlayer : AudioPlayer {
     private readonly IAudioEngine _engine;
     private bool _disposed;
+    private static bool _loadedNaxtiveLibrary;
     private PortAudioPlayer(int framesPerBuffer, AudioFormat format, double? suggestedLatency = null) : base(format) {
         AudioEngineOptions options = new AudioEngineOptions(2, format.SampleRate);
         if (suggestedLatency is not null) {
@@ -15,16 +16,17 @@ public sealed class PortAudioPlayer : AudioPlayer {
     }
 
     public static PortAudioPlayer? Create(int sampleRate, int framesPerBuffer, double? suggestedLatency = null) {
-        bool loadedNativeLibrary = false;
-        if (OperatingSystem.IsWindows()) {
-            string path = "libportaudio.dll";
-            loadedNativeLibrary = BufdioLib.InitializePortAudio(path);
-        } else {
-            //rely on system-provided libportaudio.
-            loadedNativeLibrary = BufdioLib.InitializePortAudio();
-        }
-        if (!loadedNativeLibrary) {
-            return null;
+        if (!_loadedNaxtiveLibrary && !BufdioLib.IsPortAudioInitialized) {
+            if (OperatingSystem.IsWindows()) {
+                string path = "libportaudio.dll";
+                _loadedNaxtiveLibrary = BufdioLib.InitializePortAudio(path);
+            } else {
+                //rely on system-provided libportaudio.
+                _loadedNaxtiveLibrary = BufdioLib.InitializePortAudio();
+            }
+            if (!_loadedNaxtiveLibrary) {
+                return null;
+            }
         }
         return new PortAudioPlayer(framesPerBuffer, new AudioFormat(SampleRate: sampleRate, Channels: 2,
             SampleFormat: SampleFormat.IeeeFloat32), suggestedLatency);
