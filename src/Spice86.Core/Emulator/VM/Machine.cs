@@ -39,6 +39,10 @@ public class Machine : IDisposable {
     private const int InterruptHandlersSegment = 0xF000;
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
+    private readonly Thread _dmaThread;
+    private bool _exitDmaLoop = false;
+    private bool _dmaThreadStarted = false;
+    private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private bool _disposed;
 
@@ -175,6 +179,27 @@ public class Machine : IDisposable {
         Register(DosInt21Handler);
         MouseInt33Handler = new MouseInt33Handler(this, gui);
         Register(MouseInt33Handler);
+        _dmaThread = new Thread(DmaLoop) {
+            Name = "DMAThread"
+        };
+    }
+
+    /// <summary>
+    /// https://techgenix.com/direct-memory-access/
+    /// </summary>
+    private void DmaLoop() {
+        while (Cpu.IsRunning && !_exitDmaLoop && !_exitEmulationLoop && !_disposed) {
+            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+                DmaChannel dmaChannel = _dmaDeviceChannels[i];
+                if (Gui?.IsPaused == true || IsPaused) {
+                    Gui?.WaitOne();
+                }
+                dmaChannel.Transfer(Memory);
+                if (!_exitDmaLoop) {
+                    _dmaResetEvent.WaitOne(1);
+                }
+            }
+        }
     }
 
     public string DumpCallStack() {
@@ -224,6 +249,10 @@ public class Machine : IDisposable {
         FunctionHandler functionHandler = Cpu.FunctionHandler;
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         try {
+            if (!_dmaThreadStarted) {
+                _dmaThread.Start();
+                _dmaThreadStarted = true;
+            }
             RunLoop();
         } catch (InvalidVMOperationException) {
             throw;
@@ -246,27 +275,18 @@ public class Machine : IDisposable {
         _exitEmulationLoop = false;
         while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
             PauseIfAskedTo();
-            if(_dmaDeviceChannels.Count > 0) {
-                // https://techgenix.com/direct-memory-access/
-                for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                    DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                    dmaChannel.Transfer(Memory);
-                    RunNextCpuInstructionAndTimerTick();
-                }
+            if (RecordData) {
+                MachineBreakpoints.CheckBreakPoint();
             }
-            else {
-                RunNextCpuInstructionAndTimerTick();
-            }
+            Cpu.ExecuteNextInstruction();
+            Timer.Tick();
         }
     }
 
-    private void RunNextCpuInstructionAndTimerTick() {
-        PauseIfAskedTo();
-        if (RecordData) {
-            MachineBreakpoints.CheckBreakPoint();
+    public void PerformDmaTransfers() {
+        if (!_disposed && !_exitDmaLoop) {
+            _dmaResetEvent.Set();
         }
-        Cpu.ExecuteNextInstruction();
-        Timer.Tick();
     }
 
     private void PauseIfAskedTo() {
@@ -293,6 +313,12 @@ public class Machine : IDisposable {
     protected virtual void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                _dmaResetEvent.Set();
+                _exitDmaLoop = true;
+                if (_dmaThread.IsAlive && _dmaThreadStarted) {
+                    _dmaThread.Join();
+                }
+                _dmaResetEvent.Dispose();
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 MachineBreakpoints.Dispose();
