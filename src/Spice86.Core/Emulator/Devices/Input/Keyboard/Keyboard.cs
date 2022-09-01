@@ -30,16 +30,16 @@ public class Keyboard : DefaultIOPortHandler {
 
     private void OnKeyDown(object? sender, EventArgs e) {
         LastKeyboardInput = new(e, true);
-        RaiseAndProcessKeyboardInterruptRequest();
+        RaiseIrq();
     }
 
-    private void RaiseAndProcessKeyboardInterruptRequest() {
-        _machine.Cpu.ExternalInterrupt(9);
+    private void RaiseIrq() {
+        _machine.Pic.ProcessInterruptRequest(1);
     }
 
     private void OnKeyUp(object? sender, EventArgs e) {
         LastKeyboardInput = new(e, false);
-        RaiseAndProcessKeyboardInterruptRequest();
+        RaiseIrq();
     }
 
     public KeyboardInput? LastKeyboardInput { get; private set; } = null;
