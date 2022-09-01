@@ -15,7 +15,7 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.6</Version>
+		<Version>2.6.0</Version>
 		<PackageReleaseNotes>Truly support -u and -d as being true by default.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
