@@ -309,13 +309,15 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     public void SetResolution(int width, int height, uint address) {
-        _isSettingResolution = true;
-        DisposeBuffers();
-        VideoBuffers = new();
-        Width = width;
-        Height = height;
-        AddBuffer(address, 1, width, height, true);
-        _isSettingResolution = false;
+        Dispatcher.UIThread.Post(() => {
+            _isSettingResolution = true;
+            DisposeBuffers();
+            VideoBuffers = new();
+            Width = width;
+            Height = height;
+            AddBuffer(address, 1, width, height, true);
+            _isSettingResolution = false;
+        }, DispatcherPriority.MaxValue);
     }
 
     private void DisposeBuffers() {

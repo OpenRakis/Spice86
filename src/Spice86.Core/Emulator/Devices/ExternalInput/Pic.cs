@@ -1,4 +1,8 @@
-﻿namespace Spice86.Core.Emulator.Devices.ExternalInput;
+﻿using Spice86.Core.Emulator.CPU;
+
+using System.Runtime.CompilerServices;
+
+namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Serilog;
 
@@ -9,9 +13,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
 using Spice86.Logging;
 
-using System;
 using System.Collections.Generic;
-using System.Threading;
 
 /// <summary>
 /// Emulates a PIC8259 Programmable Interrupt Controller.<br/>
@@ -21,176 +23,297 @@ using System.Threading;
 /// <li>https://k.lse.epita.fr/internals/8259a_controller.html</li>
 /// </ul>
 /// </summary>
-public class Pic : DefaultIOPortHandler {
+public class Pic {
     private static readonly ILogger _logger = new Serilogger().Logger.ForContext<Pic>();
 
-    private const int MasterPortA = 0x20;
+    private Machine _machine;
 
-    private const int MasterPortB = 0x21;
+    private bool _initialized;
 
-    private const int SlavePortA = 0xA0;
+    private byte _baseInterruptVector;
 
-    private const int SlavePortB = 0xA1;
+    private int _initializationCommandsExpected = 2;
 
-    private static readonly Dictionary<int, int> _vectorToIrq = new();
+    private int _currentInitializationCommand = 0;
 
-    private int _commandsToProcess = 2;
+    private bool _master;
 
-    private int _currentCommand = 0;
+    // 1 indicates the channel is masked (inhibited), 0 indicates the channel is enabled.
+    private byte _interruptMaskRegister = 0;
+    private byte _interruptRequestRegister = 0;
+    private byte _inServiceRegister = 0;
+    private byte _currentIrq = 0;
+    private byte _lowestPriorityIrq = 7;
+    private bool _specialMask = false;
+    private bool _polled = false;
+    private bool _interruptOngoing = false;
+    private bool _autoEoi = false;
+    private SelectedReadRegister _selectedReadRegister = SelectedReadRegister.InterruptRequestRegister;
 
-    private bool _initialized = false;
-
-    private byte _interruptMask = 0;
-
-    static Pic() {
-        // timer
-        _vectorToIrq.Add(8, 0);
-        // keyboard
-        _vectorToIrq.Add(9, 1);
-    }
-
-    public Pic(Machine machine, bool initialized, Configuration configuration) : base(machine, configuration) {
-        _initialized = initialized;
+    public Pic(Machine machine, bool master) {
+        _master = master;
+        _machine = machine;
     }
 
     /// <summary>
     /// Services an IRQ request
     /// </summary>
-    /// <param name="irq">The IRQ Number, which will be interally translated to a vector number</param>
+    /// <param name="irq">The IRQ Number, which will be internally translated to a vector number</param>
     /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
-    public void ProcessInterruptRequest(int irq) {
-        byte vectorNumber = irq switch {
-            0 => 0x8,
-            1 => 0x9,
-            2 => 0xA,
-            3 => 0xB,
-            4 => 0xC,
-            5 => 0xD,
-            6 => 0xE,
-            7 => 0xF,
-            8 => 0x70,
-            9 => 0x71,
-            10 => 0x72,
-            11 => 0x73,
-            12 => 0x74,
-            13 => 0x75,
-            14 => 0x76,
-            15 => 0x77,
-            _ => throw new UnrecoverableException("IRQ not supported at the moment")
-        };
-        ProcessInterruptVector(vectorNumber);
+    public void ProcessInterruptRequest(byte irq) {
+        SetInterruptRequestRegister(irq);
+        ProcessNextIrq();
+    }
+
+    private void SendIrqToCpu(byte irq) {
+        Cpu cpu = _machine.Cpu;
+        if (!cpu.State.InterruptFlag) {
+            return;
+        }
+
+        if (!_autoEoi) {
+            _interruptOngoing = true;
+        }
+        
+        _currentIrq = irq;
+        ClearInterruptRequestRegister(irq);
+        SetInServiceRegister(irq);
+        byte vectorNumber = (byte)(_baseInterruptVector + irq);
+        cpu.ExternalInterrupt(vectorNumber);
     }
 
     public void AcknwowledgeInterrupt() {
-        IsLastIrqAcknowledged = true;
-    }
-
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(MasterPortA, this);
-        ioPortDispatcher.AddIOPortHandler(MasterPortB, this);
-        ioPortDispatcher.AddIOPortHandler(SlavePortA, this);
-        ioPortDispatcher.AddIOPortHandler(SlavePortB, this);
-    }
-
-    public bool IrqMasked(int vectorNumber) {
-        if (_vectorToIrq.TryGetValue(vectorNumber, out int irqNumber) == false) {
-            return false;
-        }
-        int maskForVectorNumber = 1 << irqNumber;
-        return (maskForVectorNumber & _interruptMask) != 0;
-    }
-
-    public bool IsLastIrqAcknowledged { get; private set; } = true;
-
-    public override byte ReadByte(int port) {
-        return _interruptMask;
-    }
-
-    public override void WriteByte(int port, byte value) {
-        if (port == MasterPortA) {
-            ProcessPortACommand(value);
-            return;
-        } else if (port == MasterPortB) {
-            ProcessPortBCommand(value);
-            return;
-        }
-        base.WriteByte(port, value);
-    }
-
-    public void ProcessInterruptVector(byte vectorNumber) {
-        if (IrqMasked(vectorNumber)) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Cannot process interrupt {@ProcessInterrupt}, IRQ is masked.", ConvertUtils.ToHex8(vectorNumber));
-            }
-            return;
-        }
-
-        if (!IsLastIrqAcknowledged) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Cannot process interrupt {@ProcessInterrupt}, Last IRQ was not acknowledged.", ConvertUtils.ToHex8(vectorNumber));
-            }
-
-            return;
-        }
-
-        IsLastIrqAcknowledged = false;
-        _cpu.ExternalInterrupt(vectorNumber);
-    }
-
-    private static void ProcessICW2(byte value) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("MASTER PIC COMMAND ICW2 {@Value}. {@BaseOffsetInInterruptDescriptorTable}", ConvertUtils.ToHex8(value),
-                value);
-        }
-    }
-
-    private static void ProcessICW3(byte value) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("PIC COMMAND ICW3 {@Value}.", ConvertUtils.ToHex8(value));
-        }
-    }
-
-    private static void ProcessICW4(byte value) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("PIC COMMAND ICW4 {@Value}.", ConvertUtils.ToHex8(value));
-        }
+        ClearHighestInServiceIrq();
+        ProcessNextIrq();
     }
 
     private void ProcessICW1(byte value) {
-        bool icw4Present = (value & 0b1) == 1;
-        bool singleController = (value & 0b10) == 1;
-        bool levelTriggered = (value & 0b1000) == 1;
+        bool icw4Present = (value & 0b1) != 0;
+        bool singleController = (value & 0b10) != 0;
+        bool levelTriggered = (value & 0b1000) != 0;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("MASTER PIC COMMAND ICW1 {@Value}. {@Icw4Present}, {@SingleController}, {@LevelTriggered}",
+            _logger.Information(
+                "MASTER PIC COMMAND ICW1 {@Value}. {@Icw4Present}, {@SingleController}, {@LevelTriggered}",
                 ConvertUtils.ToHex8(value), icw4Present, singleController, levelTriggered);
         }
-        _commandsToProcess = icw4Present ? 4 : 3;
+
+        _initialized = false;
+        _currentInitializationCommand = 1;
+        _initializationCommandsExpected = icw4Present ? 4 : 3;
+    }
+
+    private void ProcessICW2(byte value) {
+        _baseInterruptVector = (byte)(value & 0b11111000);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("MASTER PIC COMMAND ICW2 {@Value}. {@BaseOffsetInInterruptDescriptorTable}",
+                ConvertUtils.ToHex8(value), value);
+        }
+    }
+
+    private void ProcessICW3(byte value) {
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("PIC COMMAND ICW3 {@Value}.", ConvertUtils.ToHex8(value));
+        }
+
+        if (_initializationCommandsExpected == 3) {
+            _initialized = true;
+        }
+    }
+
+    private void ProcessICW4(byte value) {
+        _autoEoi = (value & 0b10) != 0;
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("PIC COMMAND ICW4 {@Value}. Auto EOI is  {@AutoEoi}", ConvertUtils.ToHex8(value),
+                _autoEoi);
+        }
+
+        _initialized = true;
     }
 
     private void ProcessOCW1(byte value) {
-        _interruptMask = value;
+        _interruptMaskRegister = value;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("PIC COMMAND OCW1 {@Value}. Mask is {@Mask}", ConvertUtils.ToHex8(value), ConvertUtils.ToBin8(value));
+            _logger.Information("PIC COMMAND OCW1 {@Value}. Mask is {@Mask}", ConvertUtils.ToHex8(value),
+                ConvertUtils.ToBin8(value));
         }
+
+        ProcessNextIrq();
     }
 
     private void ProcessOCW2(byte value) {
-        int interruptLevel = value & 0b111;
-        bool sendEndOfInterruptCommand = (value & 0b100000) != 0;
-        IsLastIrqAcknowledged = sendEndOfInterruptCommand;
-        bool sendSpecificCommand = (value & 0b1000000) != 0;
-        bool rotatePriorities = (value & 0b10000000) != 0;
+        byte interruptLevel = (byte)(value & 0b111);
+        bool sendEndOfInterruptCommand = (value & 0b10_0000) != 0;
+        bool sendSpecificCommand = (value & 0b100_0000) != 0;
+        bool rotatePriorities = (value & 0b1000_0000) != 0;
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information(
                 "PIC COMMAND OCW2 {@Value}. {@InterruptLevel}, {@SendEndOfInterruptCommand}, {@SendSpecificCommand}, @{RotatePriorities}",
-                ConvertUtils.ToHex8(value), interruptLevel, sendEndOfInterruptCommand, sendSpecificCommand, rotatePriorities);
+                ConvertUtils.ToHex8(value), interruptLevel, sendEndOfInterruptCommand, sendSpecificCommand,
+                rotatePriorities);
+        }
+
+        if (rotatePriorities) {
+            _lowestPriorityIrq = interruptLevel;
+        }
+
+        if (sendEndOfInterruptCommand) {
+            if (sendSpecificCommand) {
+                ClearInServiceRegister(interruptLevel);
+            } else {
+                ClearHighestInServiceIrq();
+            }
+
+            ProcessNextIrq();
         }
     }
 
-    private void ProcessPortACommand(byte value) {
+    private int? ComputeHighestPriorityToSearchRequests() {
+        if (_specialMask) {
+            return HighestPriorityIrq;
+        }
+
+        int? maxIrqInService = FindHighestIrqInService();
+        if (maxIrqInService == HighestPriorityIrq) {
+            // Highest IRQ already in service
+            return null;
+        }
+
+        // No IRQ in service, will need to search for all IRQ up to the highest priority
+        if (maxIrqInService == null) {
+            return HighestPriorityIrq;
+        }
+
+        return maxIrqInService;
+    }
+
+    private void ProcessNextIrq() {
+        byte enabledInterruptRequests = (byte)(_interruptRequestRegister & ~_interruptMaskRegister);
+        if (enabledInterruptRequests == 0) {
+            // No requests
+            _interruptOngoing = false;
+            return;
+        }
+
+        int? maxIrqToSearch = ComputeHighestPriorityToSearchRequests();
+        if (maxIrqToSearch == null) {
+            return;
+        }
+
+
+        // search for higher priority Requests 
+        int? higherPriorityRequest = FindIrq((int)maxIrqToSearch, (irq) => {
+            int irqMask = GenerateIrqMask(irq);
+            bool irqInService = (_inServiceRegister & irqMask) != 0;
+            bool irqRequestExists = (enabledInterruptRequests & irqMask) != 0;
+            return !(_specialMask && irqInService) && !_interruptOngoing && irqRequestExists;
+        });
+        if (higherPriorityRequest == null) {
+            return;
+        }
+
+        // Higher priority request found, servicing it
+        SendIrqToCpu((byte)higherPriorityRequest);
+    }
+
+    private int GenerateIrqMask(int irq) {
+        return 1 << irq;
+    }
+
+    private byte HighestPriorityIrq => (byte)((_lowestPriorityIrq + 1) % 8);
+
+    private byte? FindIrq(int stopAt, Func<int, bool> irqFoundCondition) {
+        // Browse the irq space from the highest priority to the lowest.
+        byte irq = HighestPriorityIrq;
+        do {
+            if (irqFoundCondition.Invoke(irq)) {
+                return irq;
+            }
+
+            irq = (byte)((irq + 1) % 8);
+        } while (irq != stopAt);
+
+        return null;
+    }
+
+    private byte? FindHighestIrqInService() {
+        return FindIrq(HighestPriorityIrq, (irq) => {
+            return (_inServiceRegister & GenerateIrqMask(irq)) != 0;
+        });
+    }
+
+    private void ClearHighestInServiceIrq() {
+        int? highestIrqInService = FindHighestIrqInService();
+        if (highestIrqInService == null) {
+            return;
+        }
+
+        ClearInServiceRegister((int)highestIrqInService);
+    }
+
+
+    private void SetInServiceRegister(byte irq) {
+        if (!_autoEoi) {
+            _inServiceRegister = (byte)(_inServiceRegister | GenerateIrqMask(irq));
+        }
+    }
+
+    private void ClearInServiceRegister(int irq) {
+        _inServiceRegister = (byte)(_inServiceRegister & ~GenerateIrqMask(irq));
+    }
+
+    private void SetInterruptRequestRegister(byte irq) {
+        _interruptRequestRegister = (byte)(_interruptRequestRegister | GenerateIrqMask(irq));
+    }
+
+    private void ClearInterruptRequestRegister(byte irq) {
+        _interruptRequestRegister = (byte)(_interruptRequestRegister & ~GenerateIrqMask(irq));
+    }
+
+
+    private void ProcessOCW3(byte value) {
+        int specialMask = (value & 0b1100000) >> 5;
+        int poll = (value & 0b100) >> 2;
+        int readOperation = value & 0b11;
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information(
+                "PIC COMMAND OCW3 {@Value}. {@SpecialMask}, {@Poll}, @{ReadOperation}",
+                ConvertUtils.ToHex8(value), specialMask, poll, readOperation);
+        }
+
+        if (poll != 0) {
+            _polled = true;
+            return;
+        }
+
+        if (specialMask == 0b10) {
+            _specialMask = false;
+        } else if (specialMask == 0b11) {
+            _specialMask = true;
+        }
+
+        if (readOperation == 0b10) {
+            _selectedReadRegister = SelectedReadRegister.InterruptRequestRegister;
+        } else if (readOperation == 0b11) {
+            _selectedReadRegister = SelectedReadRegister.InServiceRegister;
+        }
+    }
+
+    public void ProcessCommandWrite(byte value) {
+        if ((value & 0b1_0000) != 0) {
+            ProcessICW1(value);
+        } else {
+            if ((value & 0b1_1000) == 0b1000) {
+                ProcessOCW3(value);
+            } else {
+                ProcessOCW2(value);
+            }
+        }
+    }
+
+    public void ProcessDataWrite(byte value) {
         if (!_initialized) {
             // Process initialization commands
-            switch (_currentCommand) {
+            switch (_currentInitializationCommand) {
                 case 1:
                     ProcessICW2(value);
                     break;
@@ -201,24 +324,43 @@ public class Pic : DefaultIOPortHandler {
                     ProcessICW4(value);
                     break;
                 default:
-                    throw new UnhandledOperationException(_machine, $"Invalid initialization command index {_currentCommand}, should never happen");
+                    throw new UnhandledOperationException(_machine,
+                        $"Invalid initialization command index {_currentInitializationCommand}, should never happen");
             }
-            _currentCommand = (_currentCommand + 1) % _commandsToProcess;
-            if (_currentCommand == 0) {
-                _commandsToProcess = 2;
-                _initialized = true;
-            }
-        } else {
-            ProcessOCW2(value);
-        }
-    }
 
-    private void ProcessPortBCommand(byte value) {
-        if (!_initialized) {
-            ProcessICW1(value);
-            _currentCommand = 1;
+            _currentInitializationCommand++;
         } else {
             ProcessOCW1(value);
         }
     }
+
+    private byte ReadPolledData() {
+        ClearHighestInServiceIrq();
+        _polled = false;
+        return _currentIrq;
+    }
+
+    public byte CommandRead() {
+        if (_polled) {
+            return ReadPolledData();
+        }
+
+        if (_selectedReadRegister == SelectedReadRegister.InServiceRegister) {
+            return _inServiceRegister;
+        }
+
+        return _interruptRequestRegister;
+    }
+
+    public byte DataRead() {
+        if (_polled) {
+            return ReadPolledData();
+        }
+
+        return _interruptMaskRegister;
+    }
+}
+
+enum SelectedReadRegister {
+    InServiceRegister, InterruptRequestRegister
 }
