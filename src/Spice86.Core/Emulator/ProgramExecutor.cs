@@ -27,7 +27,7 @@ using System.Diagnostics;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
-/// Currently only supports DOS exe files.
+/// Currently only supports DOS EXE and COM files.
 /// </summary>
 public class ProgramExecutor : IDisposable {
     private static readonly ILogger _logger = new Serilogger().Logger.ForContext<ProgramExecutor>();
