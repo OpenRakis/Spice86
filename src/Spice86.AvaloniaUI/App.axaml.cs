@@ -63,6 +63,6 @@ internal partial class App : Application {
             //No OS support for themes. Not worth crashing for. Not worth reporting.
         }
 #pragma warning restore ERP022 // Unobserved exception in generic exception handler
-        return false;
+        return true;
     }
 }
