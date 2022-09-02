@@ -44,7 +44,6 @@ public partial class PerformanceViewModel : ObservableObject {
                             .GetValueOrDefault(x.Address))
                                 .Average(x => x);
                     VideoBuffersLastFrameRenderTime = _mainViewModel.VideoBuffers.Average(x => x.LastFrameRenderTimeMs);
-
                 }
             }
             _lastUpdateTime = DateTimeOffset.Now;
@@ -66,5 +65,4 @@ public partial class PerformanceViewModel : ObservableObject {
 
     [ObservableProperty]
     private double _videoBuffersLastFrameRenderTime = 0;
-
 }
