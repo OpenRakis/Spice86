@@ -20,15 +20,24 @@ internal partial class MainWindow : Window {
 #endif
     }
 
+    private Image? _primaryDisplay = null;
+
+    public void SetPrimaryDisplayControl(Image image) {
+        if(_primaryDisplay != image) {
+            _primaryDisplay = image;
+        }
+    }
+
     protected override void OnKeyUp(KeyEventArgs e) {
-        base.OnKeyUp(e);
         if (DataContext is MainWindowViewModel vm) {
             vm.OnKeyUp(e);
         }
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
-        base.OnKeyDown(e);
+        if(_primaryDisplay is not null) {
+            FocusManager.Instance?.Focus(_primaryDisplay);
+        }
         if (DataContext is MainWindowViewModel vm) {
             vm.OnKeyDown(e);
         }

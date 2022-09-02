@@ -1,12 +1,10 @@
 namespace Spice86.AvaloniaUI.Views;
 using Avalonia.Controls;
-using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
 
 using Spice86.AvaloniaUI.ViewModels;
 
 using System;
-using System.Linq;
 
 internal partial class VideoBufferView : UserControl {
     public VideoBufferView() {
@@ -29,6 +27,7 @@ internal partial class VideoBufferView : UserControl {
         if (DataContext is VideoBufferViewModel vm) {
             _image = this.FindControl<Image>(nameof(Image));
             if (vm.IsPrimaryDisplay && _image is not null && App.MainWindow?.DataContext is MainWindowViewModel mainVm) {
+                App.MainWindow.SetPrimaryDisplayControl(_image);
                 _image.PointerMoved -= (s, e) => mainVm.OnMouseMoved(e, _image);
                 _image.PointerPressed -= (s, e) => mainVm.OnMouseClick(e, true);
                 _image.PointerReleased -= (s, e) => mainVm.OnMouseClick(e, false);
