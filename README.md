@@ -410,11 +410,14 @@ CD-ROM:
 - No MSCDEX support for now. Some games, like DUNE, can be copied entirely from the CD and run from the hard drive.
 
 Sound:
+
+On *nix systems, you'll need to have libportaudio installed.
+Without it, there will be no sound.
+
 - Adlib/SoundBlaster MIDI OPL is supported.
 - SoundBlaster PCM is supported.
-- MT-32 is supported, but not on macOS.
-- General Midi is supported, but only on Windows.
-On *nix systems, you'll need to have libportaudio installed.
+- MT-32 is supported, but not on macOS, as MUNT is missing in the MT-32 wrapper for that platform. (PRs welcome !)
+- General Midi is supported, but only on Windows (PRs welcome !).
 
 Compatibility list available [here](COMPATIBILITY.md).
 
