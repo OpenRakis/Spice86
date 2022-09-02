@@ -15,8 +15,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.6.0</Version>
-		<PackageReleaseNotes>Truly support -u and -d as being true by default.</PackageReleaseNotes>
+		<Version>2.6.1</Version>
+		<PackageReleaseNotes>xplat sound support</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
@@ -34,7 +34,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
-		<PackageReference Include="MessageBox.Avalonia" Version="2.2.0" />
+		<PackageReference Include="MessageBox.Avalonia" Version="1.7.1" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
 			<PrivateAssets>all</PrivateAssets>
