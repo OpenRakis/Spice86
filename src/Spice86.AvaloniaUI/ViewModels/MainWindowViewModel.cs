@@ -332,6 +332,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
             if (disposing) {
                 PlayCommand.Execute(null);
                 DisposeEmulator();
+                _performanceWindow?.Close();
+                _debuggerWindow?.Close();
+                _paletteWindow?.Close();
                 _okayToContinueEvent.Set();
                 _okayToContinueEvent.Dispose();
                 if (_emulatorThread?.IsAlive == true) {
@@ -343,9 +346,6 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     private void DisposeEmulator() {
-        _performanceWindow?.Close();
-        _debuggerWindow?.Close();
-        _paletteWindow?.Close();
         DisposeBuffers();
         _programExecutor?.Dispose();
     }
