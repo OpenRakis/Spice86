@@ -1,0 +1,37 @@
+name: "pre-release"
+
+on:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  pre-release:
+    name: "Pre Release"
+    runs-on: "ubuntu-latest"
+
+    steps:
+       - name: Setup .NET
+         uses: actions/setup-dotnet@v1
+         with:
+           dotnet-version: '6.0.x'
+
+       - name: Test with dotnet
+         working-directory: ./src/Spice86.Tests
+         run: dotnet test --configuration Release
+
+       - name: Build with dotnet
+         working-directory: ./src/Spice86.AvaloniaUI
+         run: |
+              dotnet build -c Release -r linux-x64 --self-contained true -p:PublishReadyToRun=true -o linux
+              dotnet build -c Release -r windows-x64 --self-contained true -p:PublishReadyToRun=true -o windows
+              dotnet build -c Release -r osx-x64 --self-contained true -p:PublishReadyToRun=true -o osx
+
+       - name: Publish GitHub Release
+         uses: "marvinpinto/action-automatic-releases@latest"
+         with:
+           repo_token: "${{ secrets.GITHUB_TOKEN }}"
+           automatic_release_tag: "latest"
+           prerelease: true
+           title: "Development Build"
+           files: ./src/Spice86.AvaloniaUI/bin/Release/*
