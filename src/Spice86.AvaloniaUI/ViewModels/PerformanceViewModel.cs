@@ -38,7 +38,7 @@ public partial class PerformanceViewModel : ObservableObject {
         if (DateTimeOffset.Now - _lastUpdateTime >= TimeSpan.FromSeconds(1)) {
             if (_lastUpdateTime != DateTimeOffset.MinValue) {
                 InstructionsPerSecond = _machine.Cpu.State.Cycles - InstructionsExecuted;
-                if(_mainViewModel is not null) {
+                if(_mainViewModel is not null && _mainViewModel.VideoBuffers.Count > 0) {
                     FramesPerSecond = _mainViewModel.VideoBuffers
                         .Select(x => x.FramesRendered - _framesRendered
                             .GetValueOrDefault(x.Address))
