@@ -158,7 +158,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 AllowMultiple = false,
                 Filters = new(){
                     new FileDialogFilter() {
-                        Extensions = {"exe", "com" },
+                        Extensions = {"exe", "com", "EXE", "COM" },
                         Name = "DOS Executables"
                     },
                     new FileDialogFilter() {
@@ -172,9 +172,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 _configuration.Exe = files[0];
                 _configuration.ExeArgs = "";
                 _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
-                Dispatcher.UIThread.Post(() => {
-                    DisposeEmulator();
-                }, DispatcherPriority.MaxValue);
+                Dispatcher.UIThread.Post(() => 
+                    DisposeEmulator()
+                , DispatcherPriority.MaxValue);
                 SetMainTitle();
                 _okayToContinueEvent = new(true);
                 IsPaused = pauseOnStart;
