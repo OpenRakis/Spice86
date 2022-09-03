@@ -23,7 +23,7 @@ internal partial class App : Application {
     }
 
     public override void OnFrameworkInitializationCompleted() {
-        if (IsInDarkMode() == false) {
+        if (!IsInDarkMode()) {
             Styles.RemoveAt(1);
         }
 
@@ -34,7 +34,6 @@ internal partial class App : Application {
                 DataContext = mainViewModel,
             };
             desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();
-
             desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
             MainWindow = (MainWindow)desktop.MainWindow;
         }

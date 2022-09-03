@@ -29,15 +29,20 @@ internal partial class MainWindow : Window {
     }
 
     protected override void OnKeyUp(KeyEventArgs e) {
+        FocusOnPrimaryVideoBuffer();
         if (DataContext is MainWindowViewModel vm) {
             vm.OnKeyUp(e);
         }
     }
 
-    protected override void OnKeyDown(KeyEventArgs e) {
-        if(_primaryDisplay is not null) {
+    private void FocusOnPrimaryVideoBuffer() {
+        if (_primaryDisplay is not null) {
             FocusManager.Instance?.Focus(_primaryDisplay);
         }
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e) {
+        FocusOnPrimaryVideoBuffer();
         if (DataContext is MainWindowViewModel vm) {
             vm.OnKeyDown(e);
         }
