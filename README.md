@@ -344,13 +344,13 @@ Spice86 --OverrideSupplierClassName="Cryogenic.DuneCdOverrideSupplier, Cryogenic
 
 If you only want to use the function names and not the overrides, put "-u false" on command line.
 
-If you build a project around this, just call Spice86 like this in your main:
+If you build a project around this, just call Spice86 like this in *Program.cs* :
 ```csharp
 public class Program
   // Put the SHA256 checksum of your target DOS program here.
   private const string SUPPORTED_EXE_CHECKSUM = "5F30AEB84D67CF2E053A83C09C2890F010F2E25EE877EBEC58EA15C5B30CFFF9";
 public static void Main(string[] args) {
-  Spice86.Program.RunWithOverrides<MyProgramOverrideSupplier>(args, SUPPORTED_EXE_CHECKSUM);
+  Spice86.AvaloniaUI.Program.RunWithOverrides<MyProgramOverrideSupplier>(args, SUPPORTED_EXE_CHECKSUM);
 }
 ```
 ### Generating overrides
