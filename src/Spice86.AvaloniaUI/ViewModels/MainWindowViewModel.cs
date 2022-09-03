@@ -367,7 +367,6 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     private void RunMachine() {
-        EmulatorErrorOccured += OnEmulatorErrorOccured;
         _emulatorThread = new Thread(MachineThread) {
             Name = "Emulator"
         };
@@ -397,7 +396,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "An error occurred during execution");
             }
+            EmulatorErrorOccured += OnEmulatorErrorOccured;
             EmulatorErrorOccured?.Invoke(e);
+            EmulatorErrorOccured -= OnEmulatorErrorOccured;
         }
     }
 
