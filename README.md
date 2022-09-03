@@ -261,7 +261,7 @@ This is where things start to get fun!
 You can provide your own C# code to override the program original assembly code.
 
 ### Defining overrides
-Spice86 can take in input an instance of spice86.emulator.function.OverrideSupplier that builds a mapping between the memory address of functions and their C# overrides.
+Spice86 can take in input an instance of Spice86.Core.Emulator.Function.IOverrideSupplier that builds a mapping between the memory address of functions and their C# overrides.
 
 For a complete example you can check the source code of [Cryogenic](https://github.com/OpenRakis/Cryogenic).
 
@@ -372,15 +372,15 @@ You can copy paste the stub to your code.
 
 ## Misc
 ### C Drive
-It is possible to provide a C: Drive for emulated DOS functions with the option **--cDrive**. Default is current folder. For some games you may need to set the C drive to the game folder.
+It is possible to provide a C: Drive for emulated DOS functions with the option **--CDrive**. Default is current folder. For some games you may need to set the C drive to the game folder.
 
 ### Emulated program arguments
-You can pass arguments (max 127 chars!) to the emulated program with the option **--exeArgs**. Default is empty.
+You can pass arguments (max 127 chars!) to the emulated program with the option **--ExeArgs**. Default is empty.
 
 ### Time
 The emulated Timer hardware of the PC (Intel 8259) supports measuring time from either:
 - The real elapsed time. Speed can be altered with parameter **--timeMultiplier**.
-- The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--instructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
+- The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--InstructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
 
 ### Screen refresh
 Screen is refreshed 30 times per second and each time a VGA retrace wait is detected (see VideoBiosServicesDispatcher::tick3DA).
