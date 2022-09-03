@@ -14,7 +14,7 @@ Release are available [on Nuget](https://www.nuget.org/packages/Spice86/).
 
 Pre-releases are also available [on the Release page](https://github.com/OpenRakis/Spice86/releases/tag/latest)
 
-NOTE: This is a port from the [original Spice86](https://github.com/kevinferrare/spice86).
+NOTE: This is a port, and a continuation from the [original Java Spice86](https://github.com/kevinferrare/spice86).
 
 It requires [.NET 6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) and runs on Windows, macOS, and Linux.
 
