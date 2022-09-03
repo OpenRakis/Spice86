@@ -7,8 +7,6 @@
     <Copyright>Luthfi Tri Atmaja</Copyright>
     <Description>A cross platform audio playback library for .NET based on PortAudio.</Description>
     <FileVersion>0.1.0</FileVersion>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <NoWarn>IDE0090</NoWarn>
     <PackageId>Bufdio</PackageId>
     <PackageProjectUrl>https://github.com/luthfiampas/Bufdio</PackageProjectUrl>
