@@ -73,9 +73,6 @@ public class MouseInt33Handler : InterruptHandler {
         Run(operation);
     }
 
-    private int _oldX = -1;
-    private int _oldY = -1;
-
     public void SetMouseCursorPosition() {
         if (_gui is null) {
             return;
@@ -84,17 +81,10 @@ public class MouseInt33Handler : InterruptHandler {
         ushort x = _state.CX;
         ushort y = _state.DX;
 
-        if (_oldX == _gui.MouseX && _oldY == _gui.MouseY) {
-            return;
-        }
-
-
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET MOUSE CURSOR POSITION {@MouseX}, {@MouseY}", x, y);
         }
 
-        _oldX = _gui.MouseX;
-        _oldY = _gui.MouseY;
         _gui.MouseX = x;
         _gui.MouseY = y;
     }
@@ -164,21 +154,22 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Translates values from the GUI into values for the emulated display area
     /// </summary>
     /// <param name="value">Raw value from the GUI</param>
     /// <param name="maxValue">Max of what that value can be</param>
     /// <param name="min">min expected by program</param>
     /// <param name="max">max expected by program</param>
-    /// <returns></returns>
+    /// <returns>Value within the emulated display surface area</returns>
     private static ushort RestrictValue(ushort value, ushort maxValue, ushort min, ushort max) {
         int range = max - min;
         ushort valueInRange = (ushort)(value * range / maxValue);
         if (valueInRange > max) {
-            return max;
+            return Math.Min(max, value);
         }
 
         if (valueInRange < min) {
-            return min;
+            return Math.Max(min, value);
         }
 
         return valueInRange;
