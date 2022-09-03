@@ -8,7 +8,7 @@ using Spice86.Logging;
 using System.Collections.Generic;
 
 public class DosMemoryManager {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<DosMemoryManager>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<DosMemoryManager>();
     private readonly Memory _memory;
     private ushort _pspSegment;
     private DosMemoryControlBlock? _start;

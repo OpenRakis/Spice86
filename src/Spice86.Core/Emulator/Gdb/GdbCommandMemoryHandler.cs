@@ -12,7 +12,7 @@ using Spice86.Core.Emulator.VM;
 using System.Diagnostics;
 
 public class GdbCommandMemoryHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<GdbCommandMemoryHandler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCommandMemoryHandler>();
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;

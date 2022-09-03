@@ -18,7 +18,7 @@ using System.Diagnostics;
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
 public class Timer : DefaultIOPortHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<Timer>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Timer>();
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;

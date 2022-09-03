@@ -12,7 +12,7 @@ using System.Diagnostics;
 using System.IO;
 
 public class GdbServer : IDisposable {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<GdbServer>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbServer>();
     private EventWaitHandle? _waitHandle;
     private readonly Configuration _configuration;
     private bool _disposedValue;

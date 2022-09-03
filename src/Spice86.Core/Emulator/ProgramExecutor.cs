@@ -30,7 +30,7 @@ using System.Diagnostics;
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
 public class ProgramExecutor : IDisposable {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<ProgramExecutor>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<ProgramExecutor>();
     private bool _disposedValue;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;

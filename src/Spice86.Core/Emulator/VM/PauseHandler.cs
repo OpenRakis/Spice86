@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Threading;
 
 public class PauseHandler : IDisposable {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<PauseHandler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<PauseHandler>();
 
     private volatile bool _paused;
 

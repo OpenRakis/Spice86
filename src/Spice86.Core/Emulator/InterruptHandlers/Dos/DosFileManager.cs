@@ -22,7 +22,7 @@ public class DosFileManager {
     public const ushort FileHandleOffset = 5;
     private const int MaxOpenFiles = 15;
     private static readonly Dictionary<byte, string> _fileOpenMode = new();
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<DosFileManager>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<DosFileManager>();
     private string? _currentDir;
 
     private string? _currentMatchingFileSearchFolder;

@@ -10,7 +10,7 @@ using System;
 using System.Linq;
 
 public class GdbCommandHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<GdbCommandHandler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCommandHandler>();
     private bool _isConnected = true;
     private readonly GdbCommandBreakpointHandler _gdbCommandBreakpointHandler;
     private readonly GdbCommandMemoryHandler _gdbCommandMemoryHandler;

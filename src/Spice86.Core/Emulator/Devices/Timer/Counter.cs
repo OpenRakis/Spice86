@@ -10,7 +10,7 @@ using Spice86.Logging;
 
 public class Counter {
     public const long HardwareFrequency = 1193182;
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<Counter>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Counter>();
     public CounterActivator Activator { get; protected set; }
     private readonly Machine _machine;
 

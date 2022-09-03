@@ -16,7 +16,7 @@ public abstract class ExecutableFileLoader {
     protected Cpu _cpu;
     protected Machine _machine;
     protected Memory _memory;
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<ExecutableFileLoader>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<ExecutableFileLoader>();
 
     protected ExecutableFileLoader(Machine machine) {
         _machine = machine;

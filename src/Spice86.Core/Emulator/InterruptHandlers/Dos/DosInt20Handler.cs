@@ -10,7 +10,7 @@ using Spice86.Logging;
 /// Reimplementation of int20
 /// </summary>
 public class DosInt20Handler : InterruptHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<DosInt20Handler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<DosInt20Handler>();
 
     public DosInt20Handler(Machine machine) : base(machine) {
     }

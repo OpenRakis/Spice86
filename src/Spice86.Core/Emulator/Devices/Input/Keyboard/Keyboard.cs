@@ -15,7 +15,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<Keyboard>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Keyboard>();
     private readonly IGui? _gui;
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 

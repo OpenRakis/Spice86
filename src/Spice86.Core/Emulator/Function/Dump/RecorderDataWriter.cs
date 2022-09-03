@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
 
 public class RecorderDataWriter : RecordedDataIoHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<RecorderDataWriter>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<RecorderDataWriter>();
 
     private readonly Machine _machine;
     private readonly Cpu _cpu;

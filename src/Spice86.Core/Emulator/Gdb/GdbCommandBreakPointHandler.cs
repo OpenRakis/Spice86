@@ -12,7 +12,7 @@ using System.Diagnostics;
 using System.IO;
 
 public class GdbCommandBreakpointHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<GdbCommandBreakpointHandler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCommandBreakpointHandler>();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
     private volatile bool _resumeEmulatorOnCommandEnd;

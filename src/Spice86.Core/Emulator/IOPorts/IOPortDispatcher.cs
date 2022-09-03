@@ -14,7 +14,7 @@ using Spice86.Logging;
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
 
-    private readonly ILogger _logger = new Serilogger().Logger.ForContext<IOPortDispatcher>();
+    private readonly ILogger _logger = Serilogger.Logger.ForContext<IOPortDispatcher>();
 
     public IOPortDispatcher(Machine machine, Configuration configuration) : base(machine, configuration) {
         _failOnUnhandledPort = configuration.FailOnUnhandledPort;

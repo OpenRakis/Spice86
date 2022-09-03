@@ -19,6 +19,7 @@ using Spice86.AvaloniaUI.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Logging;
 using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
@@ -36,7 +37,7 @@ using System.Threading;
 /// </ul>
 /// </summary>
 public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
-    private static readonly ILogger _logger = Program.Logger.ForContext<MainWindowViewModel>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposedValue;
     private Thread? _emulatorThread;

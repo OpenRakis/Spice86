@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 public class CSharpOverrideHelper {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<CSharpOverrideHelper>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<CSharpOverrideHelper>();
 
     public Cpu Cpu => Machine.Cpu;
 

@@ -15,7 +15,7 @@ using System.Net.Sockets;
 using System.Text;
 
 public class GdbIo : IDisposable {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<GdbIo>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbIo>();
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly List<byte> _rawCommand = new();
     private readonly Socket _serverSocket;

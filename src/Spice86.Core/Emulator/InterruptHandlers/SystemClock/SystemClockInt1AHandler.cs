@@ -13,7 +13,7 @@ using Spice86.Logging;
 /// Implementation of int1A.
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<SystemClockInt1AHandler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<SystemClockInt1AHandler>();
     private readonly TimerInt8Handler _timerHandler;
 
     public SystemClockInt1AHandler(Machine machine, TimerInt8Handler timerHandler) : base(machine) {

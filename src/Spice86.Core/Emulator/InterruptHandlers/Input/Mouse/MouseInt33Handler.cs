@@ -14,7 +14,7 @@ using Spice86.Shared.Interfaces;
 /// Re-implements int33.<br/>
 /// </summary>
 public class MouseInt33Handler : InterruptHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<MouseInt33Handler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<MouseInt33Handler>();
     private const ushort MOUSE_RANGE_X = 639;
     private const ushort MOUSE_RANGE_Y = 199;
     private readonly IGui? _gui;

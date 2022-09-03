@@ -21,7 +21,7 @@ using System.Reflection;
 /// Displays help when configuration could not be parsed.
 /// </summary>
 public class CommandLineParser {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<CommandLineParser>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<CommandLineParser>();
 
     public static Configuration? ParseCommandLine(string[] args) {
         ParserResult<Configuration>? result = Parser.Default.ParseArguments<Configuration>(args)

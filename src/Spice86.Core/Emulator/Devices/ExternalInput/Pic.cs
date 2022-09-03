@@ -24,7 +24,7 @@ using System.Collections.Generic;
 /// </ul>
 /// </summary>
 public class Pic {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<Pic>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Pic>();
 
     private Machine _machine;
 

@@ -14,7 +14,7 @@ using Spice86.Logging;
 /// PC speaker implementation.
 /// </summary>
 public class PcSpeaker : DefaultIOPortHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<PcSpeaker>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<PcSpeaker>();
     private const int PcSpeakerPortNumber = 0x61;
 
     private readonly InternalSpeaker _pcSpeaker;

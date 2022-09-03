@@ -5,7 +5,7 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Exceptions;
 
-public class Serilogger {
+public static class Serilogger {
     private const string LogFormat = "[{Timestamp:HH:mm:ss} {Level:u3} {Properties}] {Message:lj}{NewLine}{Exception}";
     public static LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
 
@@ -20,6 +20,6 @@ public class Serilogger {
         .CreateLogger();
     }
 
-    public ILogger Logger => _loggerInstance;
+    public static ILogger Logger => _loggerInstance;
 
 }

@@ -14,7 +14,7 @@ using System.Collections.Generic;
 using System.Text;
 
 public class FunctionHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<FunctionHandler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<FunctionHandler>();
 
     private readonly Stack<FunctionCall> _callerStack = new();
 

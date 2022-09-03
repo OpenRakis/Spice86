@@ -7,6 +7,7 @@ using Serilog.Core;
 using Serilog.Events;
 
 using Spice86.Core.Emulator;
+using Spice86.Logging;
 
 using System;
 using System.Linq;
@@ -15,15 +16,6 @@ using System.Linq;
 /// Spice86 Entry Point
 /// </summary>
 public class Program {
-    private const string LogFormat = "[{Timestamp:HH:mm:ss} {Level:u3} {Properties}] {Message:lj}{NewLine}{Exception}";
-    public static LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
-
-    public static ILogger Logger { get; } = new LoggerConfiguration()
-        .WriteTo.Console(outputTemplate: LogFormat)
-        .WriteTo.Debug(outputTemplate: LogFormat)
-        .MinimumLevel.ControlledBy(LogLevelSwitch)
-        .CreateLogger();
-
     /// <summary>
     /// Alternate Entry Point
     /// </summary>
@@ -43,7 +35,7 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
-        ((IDisposable)Logger).Dispose();
+        ((IDisposable)Serilogger.Logger).Dispose();
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

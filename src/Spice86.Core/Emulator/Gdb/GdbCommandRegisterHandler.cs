@@ -12,7 +12,7 @@ using System.Diagnostics;
 using System.Text;
 
 public class GdbCommandRegisterHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<GdbCommandRegisterHandler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCommandRegisterHandler>();
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;

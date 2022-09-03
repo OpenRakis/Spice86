@@ -26,7 +26,7 @@ using System.Text;
 /// Custom commands list can be seen with the monitor help command.
 /// </summary>
 public class GdbCustomCommandsHandler {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<GdbCustomCommandsHandler>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCustomCommandsHandler>();
     private readonly RecorderDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;

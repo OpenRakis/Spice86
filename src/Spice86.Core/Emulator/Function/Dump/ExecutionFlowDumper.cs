@@ -14,7 +14,7 @@ using System.Diagnostics;
 using System.IO;
 
 public class ExecutionFlowDumper {
-    private static readonly ILogger _logger = new Serilogger().Logger.ForContext<ExecutionFlowDumper>();
+    private static readonly ILogger _logger = Serilogger.Logger.ForContext<ExecutionFlowDumper>();
 
     public void Dump(ExecutionFlowRecorder executionFlowRecorder, string destinationFilePath) {
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);
