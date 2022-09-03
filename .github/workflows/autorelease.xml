@@ -24,7 +24,7 @@ jobs:
          working-directory: ./src/Spice86.AvaloniaUI
          run: |
               dotnet build -c Release -r linux-x64 --self-contained true -p:PublishReadyToRun=true -o linux
-              dotnet build -c Release -r windows-x64 --self-contained true -p:PublishReadyToRun=true -o windows
+              dotnet build -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -o windows
               dotnet build -c Release -r osx-x64 --self-contained true -p:PublishReadyToRun=true -o osx
 
        - name: Publish GitHub Release
