@@ -9,60 +9,53 @@ using System.IO;
 
 /// <summary> Addressable memory of the machine. </summary>
 public class Memory {
-    private readonly byte[] _physicalMemory;
-
     private readonly BreakPointHolder _readBreakPoints = new();
 
     private readonly BreakPointHolder _writeBreakPoints = new();
-    private readonly UInt8Indexer _uint8Indexer;
-    private readonly UInt16Indexer _uInt16Indexer;
-    private readonly UInt32Indexer _uInt32Indexer;
 
     // For breakpoints to access what is getting written
     public byte CurrentlyWritingByte { get; private set; } = 0;
 
     public Memory(uint size) {
-        _physicalMemory = new byte[size];
-        _uint8Indexer = new(this);
-        _uInt16Indexer = new(this);
-        _uInt32Indexer = new(this);
+        Ram = new byte[size];
+        UInt8 = new(this);
+        UInt16 = new(this);
+        UInt32 = new(this);
     }
 
     public void DumpToFile(string path) {
-        File.WriteAllBytes(path, _physicalMemory);
+        File.WriteAllBytes(path, Ram);
     }
 
     public Span<byte> GetSpan(int address, int length) {
         MonitorRangeReadAccess((uint)address, (uint)(address + length));
-        return _physicalMemory.AsSpan(address, length);
+        return Ram.AsSpan(address, length);
     }
 
     public byte[] GetData(uint address, uint length) {
         MonitorRangeReadAccess(address, address + length);
         byte[] res = new byte[length];
-        Array.Copy(_physicalMemory, address, res, 0, length);
+        Array.Copy(Ram, address, res, 0, length);
         return res;
     }
 
-    public byte[] Ram => _physicalMemory;
-    
-    public int Size => _physicalMemory.Length;
+    public byte[] Ram { get; }
 
+    public int Size => Ram.Length;
 
-
-    public UInt8Indexer UInt8 => _uint8Indexer;
-    public UInt16Indexer UInt16 => _uInt16Indexer;
-    public UInt32Indexer UInt32 => _uInt32Indexer;
+    public UInt8Indexer UInt8 { get; }
+    public UInt16Indexer UInt16 { get; }
+    public UInt32Indexer UInt32 { get; }
 
     public ushort GetUint16(uint address) {
-        ushort res = MemoryUtils.GetUint16(_physicalMemory, address);
+        ushort res = MemoryUtils.GetUint16(Ram, address);
         MonitorReadAccess(address);
         MonitorReadAccess(address + 1);
         return res;
     }
 
     public uint GetUint32(uint address) {
-        uint res = MemoryUtils.GetUint32(_physicalMemory, address);
+        uint res = MemoryUtils.GetUint32(Ram, address);
         MonitorReadAccess(address);
         MonitorReadAccess(address + 1);
         MonitorReadAccess(address + 2);
@@ -71,7 +64,7 @@ public class Memory {
     }
 
     public byte GetUint8(uint addr) {
-        byte res = MemoryUtils.GetUint8(_physicalMemory, addr);
+        byte res = MemoryUtils.GetUint8(Ram, addr);
         MonitorReadAccess(addr);
         return res;
     }
@@ -82,34 +75,34 @@ public class Memory {
 
     public void LoadData(uint address, byte[] data, int length) {
         MonitorRangeWriteAccess(address, (uint)(address + length));
-        Array.Copy(data, 0, _physicalMemory, address, length);
+        Array.Copy(data, 0, Ram, address, length);
     }
 
     public void MemCopy(uint sourceAddress, uint destinationAddress, uint length) {
         MonitorRangeReadAccess(sourceAddress, sourceAddress + length);
         MonitorRangeWriteAccess(destinationAddress, destinationAddress + length);
-        Array.Copy(_physicalMemory, sourceAddress, _physicalMemory, destinationAddress, length);
+        Array.Copy(Ram, sourceAddress, Ram, destinationAddress, length);
     }
 
     public void Memset(uint address, byte value, uint length) {
         MonitorRangeWriteAccess(address, address + length);
-        Array.Fill(_physicalMemory, value, (int)address, (int)length);
+        Array.Fill(Ram, value, (int)address, (int)length);
     }
 
     public uint? SearchValue(uint address, int len, IList<byte> value) {
         int end = (int)(address + len);
-        if (end >= _physicalMemory.Length) {
-            end = _physicalMemory.Length;
+        if (end >= Ram.Length) {
+            end = Ram.Length;
         }
 
         for (long i = address; i < end; i++) {
             long endValue = value.Count;
-            if (endValue + i >= _physicalMemory.Length) {
-                endValue = _physicalMemory.Length - i;
+            if (endValue + i >= Ram.Length) {
+                endValue = Ram.Length - i;
             }
 
             int j = 0;
-            while (j < endValue && _physicalMemory[i + j] == value[j]) {
+            while (j < endValue && Ram[i + j] == value[j]) {
                 j++;
             }
 
@@ -124,34 +117,34 @@ public class Memory {
     public void SetUint16(uint address, ushort value) {
         byte value0 = (byte)value;
         MonitorWriteAccess(address, value0);
-        _physicalMemory[address] = value0;
+        Ram[address] = value0;
 
         byte value1 = (byte)(value >> 8);
         MonitorWriteAccess(address + 1, value1);
-        _physicalMemory[address + 1] = value1;
+        Ram[address + 1] = value1;
     }
 
     public void SetUint32(uint address, uint value) {
         byte value0 = (byte)value;
         MonitorWriteAccess(address, value0);
-        _physicalMemory[address] = value0;
+        Ram[address] = value0;
 
         byte value1 = (byte)(value >> 8);
         MonitorWriteAccess(address + 1, value1);
-        _physicalMemory[address + 1] = value1;
+        Ram[address + 1] = value1;
 
         byte value2 = (byte)(value >> 16);
         MonitorWriteAccess(address + 2, value2);
-        _physicalMemory[address + 2] = value2;
+        Ram[address + 2] = value2;
 
         byte value3 = (byte)(value >> 24);
         MonitorWriteAccess(address + 3, value3);
-        _physicalMemory[address + 3] = value3;
+        Ram[address + 3] = value3;
     }
 
     public void SetUint8(uint address, byte value) {
         MonitorWriteAccess(address, value);
-        MemoryUtils.SetUint8(_physicalMemory, address, value);
+        MemoryUtils.SetUint8(Ram, address, value);
     }
 
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
