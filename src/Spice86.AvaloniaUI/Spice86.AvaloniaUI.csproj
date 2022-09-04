@@ -15,8 +15,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>2.6.2</Version>
-		<PackageReleaseNotes>xResolved crash on game change with Performance window opened. Resolved issue with keyboard driven mouse movements.</PackageReleaseNotes>
+		<Version>2.6.3</Version>
+		<PackageReleaseNotes>xResolved crash when the same video buffer was added twice.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
