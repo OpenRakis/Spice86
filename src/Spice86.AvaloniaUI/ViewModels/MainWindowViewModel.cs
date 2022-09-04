@@ -133,7 +133,13 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
         VideoBufferViewModel videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
-        Dispatcher.UIThread.Post(() => VideoBuffers.Add(videoBuffer));
+        Dispatcher.UIThread.Post(
+            () => {
+                if(!VideoBuffers.Any(x => x.Address == videoBuffer.Address)) {
+                    VideoBuffers.Add(videoBuffer);
+                }
+            }
+        );
     }
 
     public void Dispose() {
