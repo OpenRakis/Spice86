@@ -49,6 +49,8 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
 
     private ProgramExecutor? _programExecutor;
+
+    [ObservableProperty]
     private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
     private ManualResetEvent _okayToContinueEvent = new(true);
 
@@ -125,11 +127,6 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
 
     [ObservableProperty]
     private string? _mainTitle;
-
-    public AvaloniaList<VideoBufferViewModel> VideoBuffers {
-        get => _videoBuffers;
-        set => this.SetProperty(ref _videoBuffers, value);
-    }
 
     public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
         VideoBufferViewModel videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
@@ -300,7 +297,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
             IsLeftButtonClicked = click;
         }
 
-        if (@event.Pointer.IsPrimary == false) {
+        if (!@event.Pointer.IsPrimary) {
             IsRightButtonClicked = click;
         }
     }
