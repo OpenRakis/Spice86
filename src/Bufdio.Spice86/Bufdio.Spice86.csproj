@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Bufdio.Spice86</RootNamespace>
+    <AssemblyVersion>0.1</AssemblyVersion>
+    <Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal</Authors>
+    <Copyright>Luthfi Tri Atmaja</Copyright>
+    <Description>A cross platform audio playback library for .NET based on PortAudio, forked from the original Bufdio by Luthfi Tri Atmaja.</Description>
+    <FileVersion>0.1.0</FileVersion>
+    <NoWarn>IDE0090</NoWarn>
+    <TargetFramework>net6.0</TargetFramework>
+    <Version>0.1.0</Version>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+  </PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+</Project>

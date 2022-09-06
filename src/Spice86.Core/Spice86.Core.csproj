@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Version>2.6.1</Version>
+		<Version>2.6.4</Version>
 	</PropertyGroup>
 	<ItemGroup>
 		<Using Remove="System.Linq" />
@@ -42,8 +42,14 @@
 
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\Bufdio\Bufdio.csproj" />
-		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
-		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+		<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj">
+			<PrivateAssets>all</PrivateAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj">
+			<PrivateAssets>all</PrivateAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj">
+			<PrivateAssets>all</PrivateAssets>
+		</ProjectReference>
 	</ItemGroup>
 </Project>

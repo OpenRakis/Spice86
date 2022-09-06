@@ -1,0 +1,12 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Spice86.Views.PaletteWindow"
+		Icon="/Icon/Spice86.ico"
+		WindowStartupLocation="CenterOwner"
+		CanResize="False"
+        Title="Color Palette" Height="300" Width="300" ShowInTaskbar="False">
+	<UniformGrid Name="grid" Rows="16" Columns="16" />
+</Window>

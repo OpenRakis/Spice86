@@ -5,7 +5,7 @@ VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Core", "Spice86.Core\Spice86.Core.csproj", "{788FB1FF-ED6C-4DD1-8B06-161101F8D867}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.AvaloniaUI", "Spice86.AvaloniaUI\Spice86.AvaloniaUI.csproj", "{3501B19D-D7CF-4739-9F75-CD4A6D275C00}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86", "Spice86\Spice86.csproj", "{3501B19D-D7CF-4739-9F75-CD4A6D275C00}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Logging", "Spice86.Logging\Spice86.Logging.csproj", "{D064DFD4-954D-45EC-909A-7E2F2F08A68A}"
 EndProject
@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Shared", "Spice86.S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Tests", "Spice86.Tests\Spice86.Tests.csproj", "{CA85DD9F-9B91-47BE-A00E-36D1D1C29311}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bufdio", "Bufdio\Bufdio.csproj", "{7D5BE77E-870A-411B-8B05-E52AC9D784B4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bufdio.Spice86", "Bufdio.Spice86\Bufdio.Spice86.csproj", "{7D5BE77E-870A-411B-8B05-E52AC9D784B4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
