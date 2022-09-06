@@ -1,5 +1,5 @@
-using Bufdio;
-using Bufdio.Engines;
+using Bufdio.Spice86;
+using Bufdio.Spice86.Engines;
 
 namespace Spice86.Core.Backend.Audio.PortAudio;
 

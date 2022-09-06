@@ -352,7 +352,7 @@ public class Program
   // Put the SHA256 checksum of your target DOS program here.
   private const string SUPPORTED_EXE_CHECKSUM = "5F30AEB84D67CF2E053A83C09C2890F010F2E25EE877EBEC58EA15C5B30CFFF9";
 public static void Main(string[] args) {
-  Spice86.AvaloniaUI.Program.RunWithOverrides<MyProgramOverrideSupplier>(args, SUPPORTED_EXE_CHECKSUM);
+  Spice86.Program.RunWithOverrides<MyProgramOverrideSupplier>(args, SUPPORTED_EXE_CHECKSUM);
 }
 ```
 ### Generating overrides
@@ -439,7 +439,7 @@ Compatibility list available [here](COMPATIBILITY.md).
    Spice86 -e <path to executable>
 ```
 
-or use this where Spice86.AvaloniaUI.csproj is located:
+or use this where Spice86.csproj is located:
 
 ```bash
    dotnet run -e <path to executable>

@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Spice86.Views.DebuggerWindow"
+		xmlns:converters="using:Spice86.Converters"
+		xmlns:vm="using:Spice86.ViewModels"
+        Title="Debugger"
+		Icon="/Icon/Spice86.ico"
+		Height="600" Width="800" ShowInTaskbar="False">
+	<Design.DataContext>
+		<vm:DebuggerViewModel />
+	</Design.DataContext>
+	<ScrollViewer>
+		<Grid RowDefinitions="Auto,*">
+			<TextBlock Grid.Row="0" HorizontalAlignment="Center" Text="Pause the emulator to see updates here" IsVisible="{Binding !Machine.IsPaused}" />
+			<TabControl Grid.Row="1">
+				<TabItem Header="Summary">
+					<WrapPanel>
+						<DockPanel>
+							<Label DockPanel.Dock="Top" Content="CPU" />
+							<UniformGrid>
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.CS, StringFormat=CS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.IP, StringFormat=IP: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.AX, StringFormat=AX: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.BX, StringFormat=BX: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.CX, StringFormat=CX: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DX, StringFormat=DX: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SI, StringFormat=SI: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DI, StringFormat=DI: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.BP, StringFormat=BP: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SP, StringFormat=SP: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.SS, StringFormat=SS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.DS, StringFormat=DS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.ES, StringFormat=ES: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.FS, StringFormat=FS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.GS, StringFormat=GS: {0:X}}" />
+								<TextBlock Margin="5" Text="{Binding Machine.Cpu.State.Flags.FlagRegister, StringFormat=Flags: {0:X}}" />
+							</UniformGrid>
+						</DockPanel>
+					</WrapPanel>
+				</TabItem>
+				<TabItem Header="Memory">
+					<TextBlock Text="{Binding Memory}" />
+				</TabItem>
+			</TabControl>
+		</Grid>
+	</ScrollViewer>
+</Window>
