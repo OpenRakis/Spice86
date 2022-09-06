@@ -2,10 +2,6 @@
 
 using Avalonia;
 
-using Serilog;
-using Serilog.Core;
-using Serilog.Events;
-
 using Spice86.Core.Emulator;
 using Spice86.Logging;
 
