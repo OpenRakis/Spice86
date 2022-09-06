@@ -42,14 +42,8 @@
 
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj">
-			<PrivateAssets>all</PrivateAssets>
-		</ProjectReference>
-		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj">
-			<PrivateAssets>all</PrivateAssets>
-		</ProjectReference>
-		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj">
-			<PrivateAssets>all</PrivateAssets>
-		</ProjectReference>
+		<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
+		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj"/>
+		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
 	</ItemGroup>
 </Project>
