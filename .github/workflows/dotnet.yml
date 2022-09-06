@@ -30,10 +30,10 @@ jobs:
       run: dotnet build --configuration Release
 
     - name: Package NuGet
-      working-directory: ./src/Spice86.AvaloniaUI
-      run: dotnet pack --include-symbols --include-source --configuration Release
+      working-directory: ./src
+      run: dotnet pack --include-symbols --include-source --configuration Release -o .
 
     - name: Upload NuGet
-      working-directory: ./src/Spice86.AvaloniaUI/bin/Release
+      working-directory: ./src
       run: nuget push *.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}} -SkipDuplicate
 
