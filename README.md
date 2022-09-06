@@ -381,7 +381,7 @@ You can pass arguments (max 127 chars!) to the emulated program with the option 
 
 ### Time
 The emulated Timer hardware of the PC (Intel 8259) supports measuring time from either:
-- The real elapsed time. Speed can be altered with parameter **--timeMultiplier**.
+- The real elapsed time. Speed can be altered with parameter **--TimeMultiplier**.
 - The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--InstructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
 
 ### Screen refresh
