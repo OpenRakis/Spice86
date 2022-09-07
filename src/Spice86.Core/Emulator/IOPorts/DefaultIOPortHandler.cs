@@ -24,12 +24,12 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
         _failOnUnhandledPort = Configuration.FailOnUnhandledPort;
     }
 
-    public virtual byte ReadByte(int port) {
-        return OnUnandledIn(port);
-    }
-
     /// <summary> NOP for <see cref="DefaultIOPortHandler" /> </summary>
     public virtual void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    }
+
+    public virtual byte ReadByte(int port) {
+        return OnUnandledIn(port);
     }
 
     public virtual ushort ReadWord(int port) {
@@ -38,12 +38,23 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
         }
         return ushort.MaxValue;
     }
+    
+    public virtual uint ReadDWord(int port) {
+        if (_failOnUnhandledPort) {
+            throw new UnhandledIOPortException(_machine, port);
+        }
+        return uint.MaxValue;
+    }
 
     public virtual void WriteByte(int port, byte value) {
         OnUnhandledPort(port);
     }
 
     public virtual void WriteWord(int port, ushort value) {
+        OnUnhandledPort(port);
+    }
+    
+    public virtual void WriteDWord(int port, uint value) {
         OnUnhandledPort(port);
     }
 

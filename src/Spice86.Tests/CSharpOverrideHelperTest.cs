@@ -113,26 +113,26 @@ class SimpleCallsJumps : CSharpOverrideHelper {
 
     public Action far_calls_another_far_via_stack_0000_0100_00100(int loadOffset) {
         // Replace value on stack to call far_callee1_from_stack_3000_0200_10000 when returning, evil!!
-        Stack.Pop();
-        Stack.Pop();
-        Stack.Push(0);
-        Stack.Push(0x200);
+        Stack.Pop16();
+        Stack.Pop16();
+        Stack.Push16(0);
+        Stack.Push16(0x200);
         return FarRet();
     }
 
     public Action far_callee1_from_stack_0000_0200_00200(int loadOffset) {
         FarCalled1FromStack++;
         // Call of far_callee2_from_stack_3000_0300_10000 when returning. No need to replace value on stack as we were not called conventionally
-        Stack.Push(0);
-        Stack.Push(0x300);
+        Stack.Push16(0);
+        Stack.Push16(0x300);
         return FarRet();
     }
 
     public Action far_callee2_from_stack_0000_0300_00300(int loadOffset) {
         FarCalled2FromStack++;
         // Push back the values of the expected return address
-        Stack.Push(0x1000);
-        Stack.Push(0);
+        Stack.Push16(0x1000);
+        Stack.Push16(0);
         return FarRet();
     }
 }

@@ -24,6 +24,9 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         _ioPortHandlers.Add(port, ioPortHandler);
     }
 
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    }
+
     public override byte ReadByte(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
             _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte), entry.GetType(), port);
@@ -32,10 +35,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
         return base.ReadByte(port);
     }
-
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-    }
-
+    
     public override ushort ReadWord(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
             _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord), entry.GetType(), port);
@@ -43,6 +43,15 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         }
 
         return base.ReadWord(port);
+    }
+    
+    public override uint ReadDWord(int port) {
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadDWord), entry.GetType(), port);
+            return entry.ReadDWord(port);
+        }
+
+        return base.ReadDWord(port);
     }
 
     public override void WriteByte(int port, byte value) {
@@ -60,6 +69,15 @@ public class IOPortDispatcher : DefaultIOPortHandler {
             entry.WriteWord(port, value);
         } else {
             base.WriteWord(port, value);
+        }
+    }
+    
+    public override void WriteDWord(int port, uint value) {
+        if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
+            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteDWord), entry.GetType(), port, value);
+            entry.WriteDWord(port, value);
+        } else {
+            base.WriteDWord(port, value);
         }
     }
 }
