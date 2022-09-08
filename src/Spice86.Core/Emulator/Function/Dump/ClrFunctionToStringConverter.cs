@@ -12,12 +12,11 @@ using System.Linq;
 public abstract class ClrFunctionToStringConverter : FunctionInformationToStringConverter {
     private static readonly SegmentRegisters _segmentRegisters = new();
     public override string GetFileHeader(List<SegmentRegisterBasedAddress> allPotentialGlobals, HashSet<SegmentedAddress> whiteListOfSegmentForOffset) {
-
         // Take only addresses which have been accessed (and not only computed)
         List<SegmentRegisterBasedAddress> globals = allPotentialGlobals
             .Where(x => x.AddressOperations.Count > 0)
             .Where(y => whiteListOfSegmentForOffset
-                .All(z => IsOffsetEqualsAndSegmentDifferent(y, z) == false))
+                .All(z => !IsOffsetEqualsAndSegmentDifferent(y, z)))
             .ToList();
         int numberOfGlobals = globals.Count;
 
@@ -97,7 +96,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         }
 
         string segmentName = _segmentRegisters.GetRegName(segmentIndex);
-        string segmentNameCamel = segmentName.ToUpperInvariant();
+        string segmentNameCamel = $"{segmentName[0]}".ToUpperInvariant() + $"{segmentName[1..].ToLowerInvariant()}";
 
         // Generate accessors
         string globalsContent = GenerateGettersSettersForAddresses(globals);
@@ -113,7 +112,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
     private string GenerateGetterSetterForAddress(SegmentRegisterBasedAddress address) {
         Dictionary<AddressOperation, ISet<int>> addressOperations = address.AddressOperations;
-        if (addressOperations.Count > 0 == false) {
+        if (addressOperations.Count == 0) {
             // Nothing was ever read or written there
             return "";
         }
@@ -126,8 +125,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     }
 
     private static Dictionary<AddressOperation, ISet<int>> CompleteWithOppositeOperationsAndPointers(Dictionary<AddressOperation, ISet<int>> addressOperations) {
-
-        // Ensures that for each read there is a write, even with empty registers so that we can generate valid java
+        // Ensures that for each read there is a write, even with empty registers so that we can generate valid C#
         // properties
         Dictionary<AddressOperation, ISet<int>> res = new(addressOperations);
         foreach (AddressOperation operation in addressOperations.Keys) {
@@ -147,7 +145,7 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
 
     private string GenerateAddressOperationAsGetterOrSetter(AddressOperation addressOperation, IEnumerable<int> registerIndexes, SegmentRegisterBasedAddress address) {
         string comment = "// Operation not registered by running code";
-        if (!registerIndexes.Any() == false) {
+        if (registerIndexes.Any()) {
             IEnumerable<string> registersArray = registerIndexes
                 .Select(x => _segmentRegisters.GetRegName(x))
                 .OrderBy(x => x);
@@ -156,48 +154,43 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         }
 
         OperandSize operandSize = addressOperation.OperandSize;
-        string javaName = $"{operandSize.Name}_{ConvertUtils.ToCSharpString(address)}";
+        string csharpName = $"{operandSize.Name}_{ConvertUtils.ToCSharpString(address)}";
         string? name = address.Name;
-        if (string.IsNullOrWhiteSpace(name) == false) {
-            javaName += "_" + name;
+        if (!string.IsNullOrWhiteSpace(name)) {
+            csharpName += "_" + name;
         }
 
         string offset = ConvertUtils.ToHex16(address.Offset);
-        if (ValueOperation.READ.Equals(addressOperation.ValueOperation)) {
-            return GenerateGetter(comment, operandSize, javaName, offset);
+        if (ValueOperation.READ == addressOperation.ValueOperation) {
+            return GenerateGetter(comment, operandSize, csharpName, offset);
         }
-
 
         // WRITE
-        return GenerateSetter(comment, operandSize, javaName, offset);
+        return GenerateSetter(comment, operandSize, csharpName, offset);
     }
 
-    private string GenerateGetter(string comment, OperandSize operandSize, string javaName, string offset) {
+    private string GenerateGetter(string comment, OperandSize operandSize, string csharpName, string offset) {
         if (operandSize == OperandSize.Dword32Ptr) {
-
             // segmented address
-            return GeneratePointerGetter(comment, javaName, offset);
+            return GeneratePointerGetter(comment, csharpName, offset);
         }
 
         int bits = operandSize.Bits;
-        return GenerateNonPointerGetter(comment, javaName, offset, bits);
+        return GenerateNonPointerGetter(comment, csharpName, offset, bits);
     }
 
-    protected abstract string GeneratePointerGetter(string comment, string javaName, string offset);
-    protected abstract string GenerateNonPointerGetter(string comment, string javaName, string offset, int bits);
-    private string GenerateSetter(string comment, OperandSize operandSize, string javaName, string offset) {
-        if (operandSize == OperandSize.Dword32Ptr) {
-
-            // segmented address
-            return GeneratePointerSetter(comment, javaName, offset);
-        }
+    protected abstract string GeneratePointerGetter(string comment, string csharpName, string offset);
+    protected abstract string GenerateNonPointerGetter(string comment, string csharpName, string offset, int bits);
+    private string GenerateSetter(string comment, OperandSize operandSize, string csharpName, string offset) {
+        if (operandSize == OperandSize.Dword32Ptr) // segmented address
+            return GeneratePointerSetter(comment, csharpName, offset);
 
         int bits = operandSize.Bits;
-        return GenerateNonPointerSetter(comment, javaName, offset, bits);
+        return GenerateNonPointerSetter(comment, csharpName, offset, bits);
     }
 
-    protected abstract string GeneratePointerSetter(string comment, string javaName, string offset);
-    protected abstract string GenerateNonPointerSetter(string comment, string javaName, string offset, int bits);
+    protected abstract string GeneratePointerSetter(string comment, string csharpName, string offset);
+    protected abstract string GenerateNonPointerSetter(string comment, string csharpName, string offset, int bits);
     public override string GetFileFooter() {
         return "}";
     }
@@ -212,10 +205,9 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
             .Distinct()
             .ToList();
         if (returnTypes.Count != 1) {
-
             // Cannot generate code with either no return or mixed returns
             string reason = "Function has no return";
-            if (returnTypes.Count == 0 == false) {
+            if (returnTypes.Count != 0) {
                 reason = $"Function has different return types: {string.Join(",", returnTypes)}";
             }
 
@@ -227,16 +219,16 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
         CallType returnType = returnTypes[0];
         string? functionName = RemoveDotsFromFunctionName(functionInformation.Name);
         SegmentedAddress functionAddress = functionInformation.Address;
-        string functionNameInJava = ToCSharpName(functionInformation, false);
+        string functionNameInCSharp = ToCSharpName(functionInformation, false);
         string segment = ConvertUtils.ToHex16(functionAddress.Segment);
         string offset = ConvertUtils.ToHex16(functionAddress.Offset);
-        string retType = returnType.ToString().ToLowerInvariant();
-        return GenerateFunctionStub(callsAsComments, functionName, functionNameInJava, segment, offset, retType);
+        string retType = $"{returnType.ToString()[0]}".ToUpperInvariant() + $"{returnType.ToString()[1..]}".ToLowerInvariant();
+        return GenerateFunctionStub(callsAsComments, functionName, functionNameInCSharp, segment, offset, retType);
     }
 
     protected abstract string GenerateFunctionStub(string callsAsComments, string? functionName, string functionNameInJava, string segment, string offset, string retType);
     private string GetCallsAsComments(IEnumerable<FunctionInformation> calls) {
-        return JoinNewLine(calls.Select(x => $"// {ToCSharpName(x, true)}();"));
+        return JoinNewLine(calls.Select(x => $"// {ToCSharpName(x, true)}()"));
     }
 
     private static string GetNoStubReasonCommentForMethod(FunctionInformation functionInformation, string reason) {

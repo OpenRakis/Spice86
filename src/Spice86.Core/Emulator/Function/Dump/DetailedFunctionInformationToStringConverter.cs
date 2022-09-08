@@ -19,14 +19,20 @@ public class DetailedFunctionInformationToStringConverter : FunctionInformationT
         List<FunctionInformation> callers = GetCallers(functionInformation);
         IEnumerable<FunctionInformation> calls = GetCalls(functionInformation, allFunctions);
         long approximateSize = ApproximateSize(functionInformation);
-        string header = $"function {functionInformation}";
-        header += $" returns:{returns.Count}";
-        header += $" callers:{callers.Count}";
-        header += $" called: {functionInformation.CalledCount}";
-        header += $" calls:{calls.Count()}";
-        header += $" approximateSize:{approximateSize}";
+        StringBuilder header = new($"function {functionInformation}");
+        header
+            .Append(" returns:")
+            .Append(returns.Count)
+            .Append(" callers:")
+            .Append("callers.Count}")
+            .Append(" called: ")
+            .Append(functionInformation.CalledCount)
+            .Append(" calls:")
+            .Append(calls.Count())
+            .Append(" approximateSize:")
+            .Append(approximateSize);
         if (IsOverridable(calls)) {
-            header += " overridable";
+            header.Append(" overridable");
         }
 
         res.Append(header).Append('\n');
