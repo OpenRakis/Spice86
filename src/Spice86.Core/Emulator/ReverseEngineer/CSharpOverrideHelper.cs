@@ -78,6 +78,8 @@ public class CSharpOverrideHelper {
     public bool TrapFlag { get => State.TrapFlag; set => State.TrapFlag = value; }
     public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
     public uint FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
+    public ushort FlagRegister16 { get => State.Flags.FlagRegister16; set => State.Flags.FlagRegister = value; }
+
     public short Direction8 => State.Direction8;
     public short Direction16 => State.Direction16;
     public short Direction32 => State.Direction32;
@@ -313,6 +315,9 @@ public class CSharpOverrideHelper {
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
+    /// <summary>
+    /// Define functions for provided interrupt handlers, so that when overriden code generates an interrupt, it is executed.
+    /// </summary>
     public void SetProvidedInterruptHandlersAsOverridden() {
         CallbackHandler callbackHandler = Machine.CallbackHandler;
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackHandler.GetCallbackAddresses()) {
@@ -381,15 +386,17 @@ public class CSharpOverrideHelper {
     }
 
     public void CheckExternalEvents(ushort expectedReturnCs, ushort expectedReturnIp) {
+        if (!Cpu.IsRunning) {
+            Exit();
+        }
+        State.IncCycles();
         Machine.Timer.Tick();
         if (!InterruptFlag) {
             return;
         }
-        byte? vectorNumber = Cpu.ExternalInterruptVectorNumber;
+        byte? vectorNumber = Machine.DualPic.ComputeVectorNumber();
         if (vectorNumber != null) {
             InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);
-            // Reset it so that subsequent interrupts can happen
-            Cpu.ExternalInterruptVectorNumber = null;
         }
     }
 
@@ -399,8 +406,12 @@ public class CSharpOverrideHelper {
 
     public Action Hlt() {
         return () => {
-            _logger.Information("Program requested exit. Terminating now.");
-            Environment.Exit(0);
+            Exit();
         };
+    }
+
+    protected void Exit() {
+        _logger.Information("Program requested exit. Terminating now.");
+        Environment.Exit(0);
     }
 }
