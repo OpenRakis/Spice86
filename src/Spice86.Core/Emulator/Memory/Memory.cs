@@ -23,10 +23,6 @@ public class Memory {
         UInt32 = new(this);
     }
 
-    public void DumpToFile(string path) {
-        File.WriteAllBytes(path, Ram);
-    }
-
     public Span<byte> GetSpan(int address, int length) {
         MonitorRangeReadAccess((uint)address, (uint)(address + length));
         return Ram.AsSpan(address, length);
