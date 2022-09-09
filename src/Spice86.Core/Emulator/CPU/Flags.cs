@@ -26,12 +26,12 @@ public class Flags {
 
     // rflag mask to OR with flags, useful to compare values with dosbox which emulates
     private ushort _additionalFlagMask;
-    private ushort _flagRegister;
+    private uint _flagRegister;
     public Flags() {
         FlagRegister = 0;
     }
 
-    public static string DumpFlags(int flags) {
+    public static string DumpFlags(uint flags) {
         StringBuilder res = new StringBuilder();
         res.Append(GetFlag(flags, Overflow, 'O'));
         res.Append(GetFlag(flags, Direction, 'D'));
@@ -59,20 +59,21 @@ public class Flags {
         return (FlagRegister & mask) == mask;
     }
 
-    public ushort FlagRegister {
+    public ushort FlagRegister16 { get => (ushort)FlagRegister; }
+    public uint FlagRegister {
         get => _flagRegister;
         set {
             // Some flags are always 1 or 0 no matter what (8086)
-            ushort modifedValue = (ushort)((value | 0b10) & 0b0111111111010111);
+            uint modifedValue = ((value | 0b10) & 0b0111111111010111);
 
             // dosbox
             modifedValue |= _additionalFlagMask;
-            _flagRegister = ConvertUtils.Uint16(modifedValue);
+            _flagRegister = modifedValue;
         }
     }
 
     public override int GetHashCode() {
-        return FlagRegister;
+        return (int)FlagRegister;
     }
 
     public bool IsDOSBoxCompatible { get => _additionalFlagMask == 0b111000000000000; set { if (value) { _additionalFlagMask = 0b111000000000000; } else { _additionalFlagMask = 0; } } }
@@ -89,7 +90,7 @@ public class Flags {
         return DumpFlags(FlagRegister);
     }
 
-    private static char GetFlag(int flags, int mask, char representation) {
+    private static char GetFlag(uint flags, int mask, char representation) {
         if ((flags & mask) == 0) {
             return ' ';
         }

@@ -2,10 +2,9 @@
 
 public enum OperandSizeName {
     Byte8,
-
     Word16,
-
     Dword32,
-
-    Dword32Ptr
+    Qword64,
+    Dword32Ptr,
+    Dword48Ptr
 }

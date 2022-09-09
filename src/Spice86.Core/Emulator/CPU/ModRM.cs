@@ -30,7 +30,7 @@ public class ModRM {
             _staticAddressesRecorder.SetCurrentValue((int)segmentIndex, offset);
         }
 
-        ushort segment = _state.SegmentRegisters.GetRegister((int)segmentIndex);
+        ushort segment = _state.SegmentRegisters.GetRegister16((int)segmentIndex);
         return MemoryUtils.ToPhysicalAddress(segment, offset);
     }
 
@@ -42,15 +42,26 @@ public class ModRM {
 
     public ushort? MemoryOffset { get; private set; }
 
-    public ushort R16 { get => _state.Registers.GetRegister(RegisterIndex); set => _state.Registers.SetRegister(RegisterIndex, value); }
+    public uint R32 { get => _state.Registers.GetRegister32(RegisterIndex); set => _state.Registers.SetRegister32(RegisterIndex, value); }
+
+    public ushort R16 { get => _state.Registers.GetRegister16(RegisterIndex); set => _state.Registers.SetRegister16(RegisterIndex, value); }
 
     public byte R8 { get => _state.Registers.GetRegisterFromHighLowIndex8(RegisterIndex); set => _state.Registers.SetRegisterFromHighLowIndex8(RegisterIndex, value); }
 
     public int RegisterIndex { get; private set; }
 
+    public uint GetRm32() {
+        if (MemoryAddress == null) {
+            return _state.Registers.GetRegister32(_registerMemoryIndex);
+        }
+
+        _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32);
+        return _memory.GetUint32((uint)MemoryAddress);
+    }
+
     public ushort GetRm16() {
         if (MemoryAddress == null) {
-            return _state.Registers.GetRegister(_registerMemoryIndex);
+            return _state.Registers.GetRegister16(_registerMemoryIndex);
         }
 
         _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Word16);
@@ -66,7 +77,7 @@ public class ModRM {
         return _memory.GetUint8((uint)MemoryAddress);
     }
 
-    public ushort SegmentRegister { get => _state.SegmentRegisters.GetRegister(RegisterIndex); set => _state.SegmentRegisters.SetRegister(RegisterIndex, value); }
+    public ushort SegmentRegister { get => _state.SegmentRegisters.GetRegister16(RegisterIndex); set => _state.SegmentRegisters.SetRegister16(RegisterIndex, value); }
 
     public void Read() {
         byte modRM = _cpu.NextUint8();
@@ -95,9 +106,18 @@ public class ModRM {
         MemoryAddress = GetAddress(ComputeDefaultSegment(bpForRm6), (ushort)MemoryOffset, _registerMemoryIndex == 6);
     }
 
+    public void SetRm32(uint value) {
+        if (MemoryAddress == null) {
+            _state.Registers.SetRegister32(_registerMemoryIndex, value);
+        } else {
+            _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Dword32);
+            _memory.SetUint32((uint)MemoryAddress, value);
+        }
+    }
+
     public void SetRm16(ushort value) {
         if (MemoryAddress == null) {
-            _state.Registers.SetRegister(_registerMemoryIndex, value);
+            _state.Registers.SetRegister16(_registerMemoryIndex, value);
         } else {
             _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Word16);
             _memory.SetUint16((uint)MemoryAddress, value);

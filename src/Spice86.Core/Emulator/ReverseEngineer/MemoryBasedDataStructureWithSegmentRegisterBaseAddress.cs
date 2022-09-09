@@ -13,5 +13,5 @@ public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : MemoryBase
         _segmentRegisters = machine.Cpu.State.SegmentRegisters;
     }
 
-    public override uint BaseAddress => (uint)(_segmentRegisters.GetRegister(_segmentRegisterIndex) * 0x10);
+    public override uint BaseAddress => (uint)(_segmentRegisters.GetRegister16(_segmentRegisterIndex) * 0x10);
 }

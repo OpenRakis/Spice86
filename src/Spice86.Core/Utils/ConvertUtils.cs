@@ -1,4 +1,7 @@
-﻿namespace Spice86.Core.Utils;
+﻿using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
+
+namespace Spice86.Core.Utils;
 
 using Spice86.Core.Emulator.Memory;
 
@@ -122,6 +125,10 @@ public static class ConvertUtils {
         return $"0x{value:X}";
     }
 
+    public static string ToHex32(uint value) {
+        return $"0x{value:X}";
+    }
+
     public static string ToHex16(ushort value) {
         return $"0x{value:X}";
     }
@@ -135,6 +142,15 @@ public static class ConvertUtils {
 
     public static string ToHex8(byte value) {
         return $"0x{value:X}";
+    }
+    
+    public static string ToHex(OperandSizeName opSize, uint value) {
+        return opSize switch {
+            OperandSizeName.Byte8 => ToHex8((byte)value),
+            OperandSizeName.Word16 =>ToHex16((ushort)value),
+            OperandSizeName.Dword32 => ToHex32(value),
+            _ => $"Invalid opSize {opSize}"
+        };
     }
 
     public static string ToSegmentedAddressRepresentation(ushort segment, ushort offset) {

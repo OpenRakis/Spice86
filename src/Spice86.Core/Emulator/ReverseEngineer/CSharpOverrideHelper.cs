@@ -77,9 +77,10 @@ public class CSharpOverrideHelper {
     public bool SignFlag { get => State.SignFlag; set => State.SignFlag = value; }
     public bool TrapFlag { get => State.TrapFlag; set => State.TrapFlag = value; }
     public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
-    public ushort FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
-    public short Direction8 => (short)(DirectionFlag ? -1 : 1);
-    public short Direction16 => (short)(DirectionFlag ? -2 : 2);
+    public uint FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
+    public short Direction8 => State.Direction8;
+    public short Direction16 => State.Direction16;
+    public short Direction32 => State.Direction32;
     private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     public JumpDispatcher JumpDispatcher { get; set; }
@@ -200,7 +201,7 @@ public class CSharpOverrideHelper {
 
     public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
-            Stack.Push(expectedReturnIp);
+            Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
         });
@@ -208,8 +209,8 @@ public class CSharpOverrideHelper {
 
     public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
-            Stack.Push(expectedReturnCs);
-            Stack.Push(expectedReturnIp);
+            Stack.Push16(expectedReturnCs);
+            Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
         });
@@ -217,9 +218,9 @@ public class CSharpOverrideHelper {
 
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
-            Stack.Push(FlagRegister);
-            Stack.Push(expectedReturnCs);
-            Stack.Push(expectedReturnIp);
+            Stack.Push16(State.Flags.FlagRegister16);
+            Stack.Push16(expectedReturnCs);
+            Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
         });
@@ -330,7 +331,7 @@ public class CSharpOverrideHelper {
         ushort offset,
         ushort expectedSegment,
         ushort expectedOffset) {
-        uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.GetRegister(segmentRegisterIndex), offset);
+        uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.GetRegister16(segmentRegisterIndex), offset);
         ushort foundOffset = Memory.GetUint16(address);
         ushort foundSegment = Memory.GetUint16(address + 2);
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
