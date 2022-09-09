@@ -1997,13 +1997,15 @@ public class Spice86CodeGenerator extends GhidraScript {
     private static CodeToInject getCodeToInject(Map<Integer, String> codeSegmentVariables,
         Map<String, List<String>> codeToInject) {
       Map<SegmentedAddress, List<String>> codeToInjectReversed = new HashMap<>();
-      for (Map.Entry<String, List<String>> entry : codeToInject.entrySet()) {
-        String code = entry.getKey();
-        List<String> addressExpressions = entry.getValue();
-        for (String addressExpression : addressExpressions) {
-          SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, addressExpression);
-          List<String> codeList = codeToInjectReversed.computeIfAbsent(segmentedAddress, a -> new ArrayList());
-          codeList.add(code);
+      if (codeToInject != null) {
+        for (Map.Entry<String, List<String>> entry : codeToInject.entrySet()) {
+          String code = entry.getKey();
+          List<String> addressExpressions = entry.getValue();
+          for (String addressExpression : addressExpressions) {
+            SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, addressExpression);
+            List<String> codeList = codeToInjectReversed.computeIfAbsent(segmentedAddress, a -> new ArrayList());
+            codeList.add(code);
+          }
         }
       }
       return new CodeToInject(codeToInjectReversed);
@@ -2012,10 +2014,12 @@ public class Spice86CodeGenerator extends GhidraScript {
     private static Map<SegmentedAddress, String> resolveInstructionsToReplace(Map<Integer, String> codeSegmentVariables,
         Map<String, String> instructionsToReplace) {
       Map<SegmentedAddress, String> res = new HashMap<>();
-      for (Map.Entry<String, String> entry : instructionsToReplace.entrySet()) {
-        SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, entry.getKey());
-        String code = entry.getValue();
-        res.put(segmentedAddress, code);
+      if (instructionsToReplace != null) {
+        for (Map.Entry<String, String> entry : instructionsToReplace.entrySet()) {
+          SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, entry.getKey());
+          String code = entry.getValue();
+          res.put(segmentedAddress, code);
+        }
       }
       return res;
     }
@@ -2382,9 +2386,9 @@ public class Spice86CodeGenerator extends GhidraScript {
             0x1D, 0x1E, 0x1F, 0x21, 0x23, 0x25, 0x29, 0x2B, 0x2D, 0x31, 0x33, 0x35, 0x39, 0x3B, 0x3D, 0x40, 0x41, 0x42,
             0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54,
             0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x68, 0x69, 0x6B, 0x6D, 0x6F,
-            0x81, 0x83, 0x85, 0x87, 0x89, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x9C,
-            0x9D, 0xA1, 0xA3, 0xA9, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC1, 0xC7, 0xD1, 0xD3, 0xE5, 0xE7,
-            0xE8, 0xE9, 0xEA, 0xED, 0xEF, 0xF7, 0xFF));
+            0x81, 0x83, 0x85, 0x87, 0x89, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x9A,
+            0x9C, 0x9D, 0xA1, 0xA3, 0xA9, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC1, 0xC7, 0xD1, 0xD3, 0xE5,
+            0xE7, 0xE8, 0xE9, 0xEA, 0xED, 0xEF, 0xF7, 0xFF));
     private static final Set<Integer> PREFIXES_OPCODES =
         new HashSet<>(Arrays.asList(0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3));
     private static final Map<Integer, String> SEGMENT_OVERRIDES = new HashMap<>();
@@ -2642,6 +2646,7 @@ public class Spice86CodeGenerator extends GhidraScript {
     private boolean isParameterModified(Map<Integer, Set<Integer>> possibleInstructionByteValues, Integer parameter,
         Integer parameterBitLength, Integer parameterOffset) {
       if (parameter == null) {
+        // No parameter, nothing to check
         return false;
       }
       int physicalAddress = this.instructionSegmentedAddress.toPhysical();
