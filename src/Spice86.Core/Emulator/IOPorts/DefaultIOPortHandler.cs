@@ -38,7 +38,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
         }
         return ushort.MaxValue;
     }
-    
+
     public virtual uint ReadDWord(int port) {
         if (_failOnUnhandledPort) {
             throw new UnhandledIOPortException(_machine, port);
@@ -53,7 +53,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     public virtual void WriteWord(int port, ushort value) {
         OnUnhandledPort(port);
     }
-    
+
     public virtual void WriteDWord(int port, uint value) {
         OnUnhandledPort(port);
     }

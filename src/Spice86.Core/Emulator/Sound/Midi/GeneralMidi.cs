@@ -10,7 +10,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Virtual device which emulates general midi playback.
 /// </summary>
-public sealed class GeneralMidi {
+public sealed class GeneralMidi : IDisposable {
     private MidiDevice? _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
 
@@ -19,6 +19,8 @@ public sealed class GeneralMidi {
     private const byte ResetCommand = 0xFF;
     private const byte EnterUartModeCommand = 0x3F;
     private const byte CommandAcknowledge = 0xFE;
+
+    private bool _disposed = false;
 
     private Configuration Configuration { get; init; }
 
@@ -116,9 +118,21 @@ public sealed class GeneralMidi {
     public void Resume() {
         _midiMapper?.Resume();
     }
+
     public void Dispose() {
-        _midiMapper?.Dispose();
-        _midiMapper = null;
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if(!_disposed) {
+            if(disposing) {
+                _midiMapper?.Dispose();
+                _midiMapper = null;
+            }
+            _disposed = true;
+        }
     }
 
     [Flags]

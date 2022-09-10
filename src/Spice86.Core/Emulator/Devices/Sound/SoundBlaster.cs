@@ -20,9 +20,6 @@ using System.Threading;
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
 public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDisposable {
-
-    private readonly ILogger _logger = Log.Logger.ForContext<SoundBlaster>();
-
     private const int DSP_DATA_AVAILABLE_PORT_NUMBER = 0x22E;
     private const int DSP_READ_PORT_NUMBER = 0x22A;
     private const int DSP_RESET_PORT_NUMBER = 0x226;

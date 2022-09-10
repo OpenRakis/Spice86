@@ -10,11 +10,12 @@ using System;
 /// <summary>
 /// MPU401 (Midi) implementation.
 /// </summary>
-public class Midi : DefaultIOPortHandler {
+public class Midi : DefaultIOPortHandler, IDisposable {
     private const int Command = 0x331;
     private const int Data = 0x330;
 
     private readonly GeneralMidi _generalMidi;
+    private bool _disposed;
 
     public Midi(Machine machine, Configuration configuration) : base(machine, configuration) {
         _generalMidi = new GeneralMidi(configuration, configuration.Mt32RomsPath);
@@ -41,5 +42,20 @@ public class Midi : DefaultIOPortHandler {
 
     public override void WriteByte(int port, byte value) {
         _generalMidi.WriteByte(port, value);
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (!_disposed) {
+            if (disposing) {
+                _generalMidi.Dispose();
+            }
+            _disposed = true;
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

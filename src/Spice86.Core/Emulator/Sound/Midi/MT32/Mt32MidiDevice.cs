@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.Sound.Midi;
 using System;
 
 internal sealed class Mt32MidiDevice : MidiDevice {
-    private readonly Lazy<Mt32Player> _player;
+    private readonly Mt32Player _player;
     private bool _disposed;
 
     public Mt32MidiDevice(string romsPath, Configuration configuration) {
@@ -14,28 +14,24 @@ internal sealed class Mt32MidiDevice : MidiDevice {
             throw new ArgumentNullException(nameof(romsPath));
         }
 
-        _player = new Lazy<Mt32Player>(() => new(romsPath, configuration));
+        _player = new Mt32Player(romsPath, configuration);
     }
 
     public override void Pause() {
-        if (_player.IsValueCreated) {
-            _player.Value.Pause();
-        }
+        _player.Pause();
     }
 
     public override void Resume() {
-        if (_player.IsValueCreated) {
-            _player.Value.Resume();
-        }
+        _player.Resume();
     }
 
-    protected override void PlayShortMessage(uint message) => _player.Value.PlayShortMessage(message);
-    protected override void PlaySysex(ReadOnlySpan<byte> data) => _player.Value.PlaySysex(data);
+    protected override void PlayShortMessage(uint message) => _player.PlayShortMessage(message);
+    protected override void PlaySysex(ReadOnlySpan<byte> data) => _player.PlaySysex(data);
 
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
-            if (disposing && _player.IsValueCreated) {
-                _player.Value.Dispose();
+            if (disposing) {
+                _player.Dispose();
             }
 
             _disposed = true;
