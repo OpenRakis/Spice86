@@ -34,8 +34,10 @@ public class Timer : DefaultIOPortHandler {
 
     private readonly VgaCard _vgaCard;
 
-    // Cheat: display at 60fps
-    private readonly Counter _vgaCounter;
+    // screen refresh
+    private readonly Counter _vgaScreenRefreshCounter;
+    // retrace is in a separate counter because it needs to be controlled by the time multiplier unlike screen refresh
+    private readonly Counter _vgaRetraceCounter;
 
     public Timer(Machine machine, DualPic dualPic, VgaCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
         _dualPic = dualPic;
@@ -44,10 +46,12 @@ public class Timer : DefaultIOPortHandler {
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(machine, i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         }
-        _vgaCounter = new Counter(machine, 4, new TimeCounterActivator(1));
-
-        // 30fps
-        _vgaCounter.SetValue((int)(Counter.HardwareFrequency / 30));
+        // screen refresh is 60hz regardless of the configuration
+        _vgaScreenRefreshCounter = new Counter(machine, 4, new TimeCounterActivator(1));
+        _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
+        // retrace 60 times per seconds
+        _vgaRetraceCounter = new Counter(machine, 5, counterConfigurator.InstanciateCounterActivator(_cpu.State));
+        _vgaRetraceCounter.SetValue((int)(Counter.HardwareFrequency / 60));
     }
 
     public void SetTimeMultiplier(double multiplier) {
@@ -57,6 +61,7 @@ public class Timer : DefaultIOPortHandler {
         foreach (Counter counter in _counters) {
             counter.Activator.Multiplier = multiplier;
         }
+        _vgaRetraceCounter.Activator.Multiplier = multiplier;
     }
 
     public Counter GetCounter(int counterIndex) {
@@ -77,7 +82,6 @@ public class Timer : DefaultIOPortHandler {
             }
             return value;
         }
-
         return base.ReadByte(port);
     }
 
@@ -96,7 +100,8 @@ public class Timer : DefaultIOPortHandler {
                 _logger.Information("SETTING COUNTER {@Index} to partial value {@Value}. {@Counter}", counter.Index, value, counter);
             }
             return;
-        } else if (port == ModeCommandeRegister) {
+        } 
+        if (port == ModeCommandeRegister) {
             int counterIndex = value >> 6;
             Counter counter = GetCounter(counterIndex);
             counter.Configure(value);
@@ -114,7 +119,10 @@ public class Timer : DefaultIOPortHandler {
             _dualPic.ProcessInterruptRequest(0);
         }
 
-        if (_vgaCounter.ProcessActivation(cycles)) {
+        if (_vgaRetraceCounter.ProcessActivation(cycles)) {
+            _vgaCard.TickRetrace();
+        }
+        if (_vgaScreenRefreshCounter.ProcessActivation(cycles)) {
             _vgaCard.UpdateScreen();
         }
     }

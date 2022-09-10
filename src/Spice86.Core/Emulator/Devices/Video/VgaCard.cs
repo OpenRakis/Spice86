@@ -27,9 +27,21 @@ public class VgaCard : DefaultIOPortHandler {
 
     public const byte MODE_320_200_256 = 0x13;
 
+    
+    // Means the CRT is busy drawing a line, tells the program it should not draw
+    private const byte StatusRegisterRetraceInactive = 0;
+    // 4th bit is 1 when the CRT finished drawing and is returning to the beginning
+    // of the screen (retrace).
+    // Programs use this to know if it is safe to write to VRAM.
+    // They write to VRAM when this bit is set, but only after waiting for a 0
+    // first.
+    // This is to be sure to catch the start of the retrace to ensure having the
+    // whole duration of the retrace to write to VRAM.
+    // More info here: http://atrevida.comprenica.com/atrtut10.html
+    private const byte StatusRegisterRetraceActive = 0b1000;
+    
     private readonly IGui? _gui;
-    private byte _crtStatusRegister;
-    private bool _drawing = false;
+    private byte _crtStatusRegister = StatusRegisterRetraceActive;
 
     public VgaCard(Machine machine, IGui? gui, Configuration configuration) : base(machine, configuration) {
         _gui = gui;
@@ -51,11 +63,13 @@ public class VgaCard : DefaultIOPortHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("CHECKING RETRACE");
         }
-        TickRetrace();
-        return _crtStatusRegister;
+        byte res = _crtStatusRegister;
+        // Next time we will be called retrace will be active, and this until the retrace tick
+        _crtStatusRegister = StatusRegisterRetraceActive;
+        return res;
     }
 
-    public VgaDac VgaDac { get; private set; }
+    public VgaDac VgaDac { get; }
 
     public byte GetVgaReadIndex() {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
@@ -163,31 +177,9 @@ public class VgaCard : DefaultIOPortHandler {
         }
     }
 
-    /// <summary>
-    /// Draws to the screen
-    /// </summary>
-    /// <returns>true when in retrace</returns>
-    public bool TickRetrace() {
-        if (_drawing) {
-            //_logger.Information("CHECKING RETRACE: Updating screen");
-            // Means the CRT is busy drawing a line, tells the program it should not draw
-            UpdateScreen();
-            _crtStatusRegister = 0;
-            _drawing = false;
-        } else {
-            //_logger.Information("CHECKING RETRACE: Not updating screen");
-            // 4th bit is 1 when the CRT finished drawing and is returning to the beginning
-            // of the screen (retrace).
-            // Programs use this to know if it is safe to write to VRAM.
-            // They write to VRAM when this bit is set, but only after waiting for a 0
-            // first.
-            // This is to be sure to catch the start of the retrace to ensure having the
-            // whole duration of the retrace to write to VRAM.
-            // More info here: http://atrevida.comprenica.com/atrtut10.html
-            _drawing = true;
-            _crtStatusRegister = 0b1000;
-        }
-        return _drawing;
+    public void TickRetrace() {
+        // Inactive at tick time, but will become active once the code checks for it.
+        _crtStatusRegister = StatusRegisterRetraceInactive;
     }
 
     public void UpdateScreen() {
