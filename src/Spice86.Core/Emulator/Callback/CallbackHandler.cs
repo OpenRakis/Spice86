@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
 public class CallbackHandler : IndexBasedDispatcher {
+    private static readonly ushort CallbackSize = 4;
 
     // Map of all the callback addresses
     private readonly Dictionary<byte, SegmentedAddress> _callbackAddresses = new();
@@ -16,12 +17,12 @@ public class CallbackHandler : IndexBasedDispatcher {
     // Segment where to install the callbacks code in memory
     private readonly ushort _callbackHandlerSegment;
 
+    // offset in this segment so that new callbacks are written to a fresh location
+    private ushort _offset = 0;
+
     private readonly Machine _machine;
 
     private readonly Memory _memory;
-
-    // offset in this segment so that new callbacks are written to a fresh location
-    private ushort _offset = 0;
 
     public CallbackHandler(Machine machine, ushort interruptHandlerSegment) {
         _machine = machine;
@@ -41,6 +42,23 @@ public class CallbackHandler : IndexBasedDispatcher {
         foreach (ICallback callback in _dispatchTable.Values) {
             InstallCallbackInInterruptTable(callback);
         }
+    }
+
+    /// <summary>
+    /// Returns a copy of the RAM with all the callback instructions replaced by NOPs.
+    /// This is to make the RAM dumps loadable with ghidra.
+    /// </summary>
+    /// <returns></returns>
+    public byte[] NopCallbackInstructionInRamCopy() {
+        byte[] res = (byte[])_memory.Ram.Clone();
+        for(int i=0;i<_dispatchTable.Values.Count;i++) {
+            uint ramIndex = MemoryUtils.ToPhysicalAddress(_callbackHandlerSegment, (ushort)(i * CallbackSize));
+            for (int j = 0; j < CallbackSize - 1; j++) {
+                // NOP the callback except for the IRET
+                res[ramIndex + j] = 0x90;
+            }
+        }
+        return res;
     }
 
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
@@ -77,6 +95,6 @@ public class CallbackHandler : IndexBasedDispatcher {
         _memory.SetUint8(address + 3, 0xCF);
 
         // 4 bytes used
-        return 4;
+        return CallbackSize;
     }
 }

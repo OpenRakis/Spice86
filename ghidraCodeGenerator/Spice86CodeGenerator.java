@@ -175,7 +175,7 @@ public class Spice86CodeGenerator extends GhidraScript {
     }
 
     private String generateImports() {
-      return "using Spice86.Emulator.Function;\n\n";
+      return "";
     }
 
     private String generateClassDeclaration() {
@@ -189,8 +189,9 @@ public class Spice86CodeGenerator extends GhidraScript {
               + ") : base(functionInformations, machine) {\n";
       res += Utils.indent(generateSegmentConstructorAssignment(), 2);
       res += '\n';
-      res += "  // DefineGeneratedCodeOverrides();\n";
-      res += "  // DetectCodeRewrites();\n";
+      res += "  DefineGeneratedCodeOverrides();\n";
+      res += "  DetectCodeRewrites();\n";
+      res += "  SetProvidedInterruptHandlersAsOverridden();\n";
       res += "}\n\n";
       return res;
     }
@@ -782,8 +783,6 @@ public class Spice86CodeGenerator extends GhidraScript {
   }
 
   static class InstructionGenerator {
-    // Set to false to avoid incrementing the cycles at each instruction
-    private static final boolean GENERATE_COUNT_CYCLES = true;
     private final Log log;
     private final ParameterTranslator parameterTranslator;
     private final RegisterHandler registerHandler;
@@ -839,7 +838,7 @@ public class Spice86CodeGenerator extends GhidraScript {
       isFunctionReturn = isUnconditionalReturn(instructionString);
       isGoto = instructionString.contains("goto ") && !(instructionString.contains("if(") || instructionString.contains(
           "switch("));
-      instructionString = generateCodeToInject() + generateCycleInc() + instructionString;
+      instructionString = generateCodeToInject() + generateCheckExternalEventsBeforeInstruction() + instructionString;
       if (generateLabel) {
         String label = jumpCallTranslator.getLabel();
         // Label above instruction, injected code and cycle inc
@@ -874,8 +873,14 @@ public class Spice86CodeGenerator extends GhidraScript {
       return "";
     }
 
-    private String generateCycleInc() {
-      return GENERATE_COUNT_CYCLES ? "State.IncCycles();\n" : "";
+    private String generateCheckExternalEventsBeforeInstruction() {
+      if (parsedProgram.isGenerateCheckExternalEventsBeforeInstruction()) {
+        SegmentedAddress nextInstructionAddress = parsedInstruction.getNextInstructionSegmentedAddress();
+        String nextSegment = parsedProgram.getCodeSegmentVariables().get(nextInstructionAddress.getSegment());
+        String nextOffset = Utils.toHexWith0X(nextInstructionAddress.getOffset());
+        return "CheckExternalEvents(" + nextSegment + ", " + nextOffset + ");\n";
+      }
+      return "";
     }
 
     private boolean canUseNativeOperation() {
@@ -998,7 +1003,7 @@ public class Spice86CodeGenerator extends GhidraScript {
     private String generateOuts(String[] parameters, int bits) {
       String source = getSource(parameters, bits);
       String operation = "Cpu.Out" + bits + "(DX, " + source + ");";
-      return generateStringOperation(operation, false, true, bits);
+      return generateStringOperation(operation, true, false, bits);
     }
 
     private String generateScas(String[] parameters, int bits) {
@@ -1215,9 +1220,9 @@ public class Spice86CodeGenerator extends GhidraScript {
 
     private String generatePushA() {
       String spTempVar = parameterTranslator.generateTempVar("sp");
-      return "ushort " + spTempVar + " = SP;\n" + "Stack.Push(AX);\n" + "Stack.Push(CX);\n" + "Stack.Push(DX);\n"
-          + "Stack.Push(BX);\n" + "Stack.Push(" + spTempVar + ");\n" + "Stack.Push(BP);\n" + "Stack.Push(SI);\n"
-          + "Stack.Push(DI);";
+      return "ushort " + spTempVar + " = SP;\n" + "Stack.Push16(AX);\n" + "Stack.Push16(CX);\n" + "Stack.Push16(DX);\n"
+          + "Stack.Push16(BX);\n" + "Stack.Push16(" + spTempVar + ");\n" + "Stack.Push16(BP);\n" + "Stack.Push16(SI);\n"
+          + "Stack.Push16(DI);";
     }
 
     private String generateXchg(String[] params, Integer bits) {
@@ -1235,11 +1240,11 @@ public class Spice86CodeGenerator extends GhidraScript {
       if (bits != 16) {
         value = parameterTranslator.signExtendToUInt16(value);
       }
-      return "Stack.Push(" + value + ");";
+      return "Stack.Push16(" + value + ");";
     }
 
     private String generatePop(String[] params, Integer bits) {
-      return parameterTranslator.toSpice86Value(params[0], bits) + " = Stack.Pop();";
+      return parameterTranslator.toSpice86Value(params[0], bits) + " = Stack.Pop16();";
     }
 
     private String generateRetNear(String[] params) {
@@ -1371,7 +1376,7 @@ public class Spice86CodeGenerator extends GhidraScript {
         case "JS" -> generateConditionalJump("S", params, false);
         case "JP" -> generateConditionalJump("P", params, false);
         case "JZ" -> generateConditionalJump("Z", params, false);
-        case "LAHF" -> "AH = (byte)FlagRegister;";
+        case "LAHF" -> "AH = (byte)FlagRegister16;";
         case "LDS" -> generateLXS("DS", params);
         case "LEA" -> generateLea(params);
         case "LES" -> generateLXS("ES", params);
@@ -1392,26 +1397,26 @@ public class Spice86CodeGenerator extends GhidraScript {
         case "OUTSB", "OUTSW" -> generateOuts(params, parameter1Bits);
         case "POP" -> generatePop(params, parameter1Bits);
         case "POPA" -> """
-            DI = Stack.Pop();
-            SI = Stack.Pop();
-            BP =Stack.Pop();
+            DI = Stack.Pop16();
+            SI = Stack.Pop16();
+            BP =Stack.Pop16();
             // not restoring SP
-            Stack.Pop();
-            BX = Stack.Pop();
-            DX = Stack.Pop();
-            CX = Stack.Pop();
-            AX = Stack.Pop();""";
-        case "POPF" -> "FlagRegister = Stack.Pop();";
+            Stack.Pop16();
+            BX = Stack.Pop16();
+            DX = Stack.Pop16();
+            CX = Stack.Pop16();
+            AX = Stack.Pop16();""";
+        case "POPF" -> "FlagRegister16 = Stack.Pop16();";
         case "PUSH" -> generatePush(params, parameter1Bits);
         case "PUSHA" -> generatePushA();
-        case "PUSHF" -> "Stack.Push(FlagRegister);";
+        case "PUSHF" -> "Stack.Push16(FlagRegister16);";
         case "RCL" -> generateAssignmentWith2Parameters("Alu.Rcl", null, params);
         case "RCR" -> generateAssignmentWith2Parameters("Alu.Rcr", null, params);
         case "RET" -> generateRetNear(params);
         case "RETF" -> generateRetFar(params);
         case "ROL" -> generateAssignmentWith2Parameters("Alu.Rol", null, params);
         case "ROR" -> generateAssignmentWith2Parameters("Alu.Ror", null, params);
-        case "SAHF" -> "FlagRegister = AH;";
+        case "SAHF" -> "FlagRegister16 = AH;";
         case "SAR" -> generateAssignmentWith2Parameters("Alu.Sar", null, params);
         case "SBB" -> generateAssignmentWith2Parameters("Alu.Sbb", null, params);
         case "SCASB" -> generateScas(params, 8);
@@ -1924,6 +1929,7 @@ public class Spice86CodeGenerator extends GhidraScript {
     private ExecutionFlow executionFlow;
     // List of addresses where to inject code to check timer and other external interrupts
     private CodeToInject codeToInject;
+    private boolean generateCheckExternalEventsBeforeInstruction;
     private Map<SegmentedAddress, String> instructionsToReplace;
     private Map<Integer, ParsedFunction> instructionAddressToFunction = new HashMap<>();
     private Map<Integer, ParsedInstruction> instructionAddressToInstruction = new HashMap<>();
@@ -1945,6 +1951,7 @@ public class Spice86CodeGenerator extends GhidraScript {
       mapInstructions(log, functions, res);
 
       generateSegmentVariables(log, functions, res);
+      res.generateCheckExternalEventsBeforeInstruction = codeGeneratorConfig.isGenerateCheckExternalEventsBeforeInstruction();
       res.codeToInject = getCodeToInject(res.codeSegmentVariables, codeGeneratorConfig.getCodeToInject());
       res.instructionsToReplace =
           resolveInstructionsToReplace(res.codeSegmentVariables, codeGeneratorConfig.getInstructionsToReplace());
@@ -1997,13 +2004,15 @@ public class Spice86CodeGenerator extends GhidraScript {
     private static CodeToInject getCodeToInject(Map<Integer, String> codeSegmentVariables,
         Map<String, List<String>> codeToInject) {
       Map<SegmentedAddress, List<String>> codeToInjectReversed = new HashMap<>();
-      for (Map.Entry<String, List<String>> entry : codeToInject.entrySet()) {
-        String code = entry.getKey();
-        List<String> addressExpressions = entry.getValue();
-        for (String addressExpression : addressExpressions) {
-          SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, addressExpression);
-          List<String> codeList = codeToInjectReversed.computeIfAbsent(segmentedAddress, a -> new ArrayList());
-          codeList.add(code);
+      if (codeToInject != null) {
+        for (Map.Entry<String, List<String>> entry : codeToInject.entrySet()) {
+          String code = entry.getKey();
+          List<String> addressExpressions = entry.getValue();
+          for (String addressExpression : addressExpressions) {
+            SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, addressExpression);
+            List<String> codeList = codeToInjectReversed.computeIfAbsent(segmentedAddress, a -> new ArrayList());
+            codeList.add(code);
+          }
         }
       }
       return new CodeToInject(codeToInjectReversed);
@@ -2012,10 +2021,12 @@ public class Spice86CodeGenerator extends GhidraScript {
     private static Map<SegmentedAddress, String> resolveInstructionsToReplace(Map<Integer, String> codeSegmentVariables,
         Map<String, String> instructionsToReplace) {
       Map<SegmentedAddress, String> res = new HashMap<>();
-      for (Map.Entry<String, String> entry : instructionsToReplace.entrySet()) {
-        SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, entry.getKey());
-        String code = entry.getValue();
-        res.put(segmentedAddress, code);
+      if (instructionsToReplace != null) {
+        for (Map.Entry<String, String> entry : instructionsToReplace.entrySet()) {
+          SegmentedAddress segmentedAddress = toSegmentedAddress(codeSegmentVariables, entry.getKey());
+          String code = entry.getValue();
+          res.put(segmentedAddress, code);
+        }
       }
       return res;
     }
@@ -2116,6 +2127,10 @@ public class Spice86CodeGenerator extends GhidraScript {
 
     public ExecutionFlow getExecutionFlow() {
       return executionFlow;
+    }
+
+    public boolean isGenerateCheckExternalEventsBeforeInstruction() {
+      return generateCheckExternalEventsBeforeInstruction;
     }
 
     public CodeToInject getCodeToInject() {
@@ -2270,7 +2285,7 @@ public class Spice86CodeGenerator extends GhidraScript {
 
   static class CodeGeneratorConfig {
     @SerializedName("Namespace") private String namespace;
-    @SerializedName("GenerateIncCycle") private boolean generateIncCycle;
+    @SerializedName("GenerateCheckExternalEventsBeforeInstruction") private Boolean generateCheckExternalEventsBeforeInstruction;
     @SerializedName("CodeToInject") private Map<String, List<String>> codeToInject;
     @SerializedName("InstructionsToReplace") private Map<String, String> instructionsToReplace;
 
@@ -2278,8 +2293,8 @@ public class Spice86CodeGenerator extends GhidraScript {
       return namespace;
     }
 
-    public boolean isGenerateIncCycle() {
-      return generateIncCycle;
+    public boolean isGenerateCheckExternalEventsBeforeInstruction() {
+      return generateCheckExternalEventsBeforeInstruction == null ? true : generateCheckExternalEventsBeforeInstruction;
     }
 
     public Map<String, List<String>> getCodeToInject() {
@@ -2382,9 +2397,9 @@ public class Spice86CodeGenerator extends GhidraScript {
             0x1D, 0x1E, 0x1F, 0x21, 0x23, 0x25, 0x29, 0x2B, 0x2D, 0x31, 0x33, 0x35, 0x39, 0x3B, 0x3D, 0x40, 0x41, 0x42,
             0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54,
             0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x68, 0x69, 0x6B, 0x6D, 0x6F,
-            0x81, 0x83, 0x85, 0x87, 0x89, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x9C,
-            0x9D, 0xA1, 0xA3, 0xA9, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC1, 0xC7, 0xD1, 0xD3, 0xE5, 0xE7,
-            0xE8, 0xE9, 0xEA, 0xED, 0xEF, 0xF7, 0xFF));
+            0x81, 0x83, 0x85, 0x87, 0x89, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x9A,
+            0x9C, 0x9D, 0xA1, 0xA3, 0xA9, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC1, 0xC7, 0xD1, 0xD3, 0xE5,
+            0xE7, 0xE8, 0xE9, 0xEA, 0xED, 0xEF, 0xF7, 0xFF));
     private static final Set<Integer> PREFIXES_OPCODES =
         new HashSet<>(Arrays.asList(0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65, 0xF0, 0xF2, 0xF3));
     private static final Map<Integer, String> SEGMENT_OVERRIDES = new HashMap<>();
@@ -2625,8 +2640,7 @@ public class Spice86CodeGenerator extends GhidraScript {
     }
 
     private Set<Integer> completePossibleValues(Map<Integer, Set<Integer>> possibleInstructionByteValues,
-        Integer offset,
-        Integer defaultValue) {
+        Integer offset, Integer defaultValue) {
       if (offset == null || defaultValue == null) {
         return Collections.emptySet();
       }
@@ -2642,6 +2656,7 @@ public class Spice86CodeGenerator extends GhidraScript {
     private boolean isParameterModified(Map<Integer, Set<Integer>> possibleInstructionByteValues, Integer parameter,
         Integer parameterBitLength, Integer parameterOffset) {
       if (parameter == null) {
+        // No parameter, nothing to check
         return false;
       }
       int physicalAddress = this.instructionSegmentedAddress.toPhysical();
@@ -2887,7 +2902,8 @@ public class Spice86CodeGenerator extends GhidraScript {
         SegmentedAddress entrySegmentedAddress, List<ParsedInstruction> instructionsBeforeEntry,
         List<ParsedInstruction> instructionsAfterEntry) {
       AddressSetView body = function.getBody();
-      log.info("Body ranges " + body);
+      String name = function.getName();
+      log.info("Body ranges for " + name + ":" + body);
       // Functions can be split accross the exe, they are divided in ranges and typically the code will jump accross ranges.
       // Let's get a list of all the instructions of the function split between instructions that are before the entry and after the entry.
       for (AddressRange addressRange : body) {
@@ -2911,7 +2927,7 @@ public class Spice86CodeGenerator extends GhidraScript {
               ParsedInstruction.parseInstruction(log, instruction, instructionAddress);
           dispatchInstruction(parsedInstruction, entrySegmentedAddress, instructionsBeforeEntry,
               instructionsAfterEntry);
-          log.info("Dispatched instruction " + parsedInstruction);
+          log.info("Attached instruction to function " + name + ": " + parsedInstruction);
           nextAddress =
               parsedInstruction.getNextInstructionSegmentedAddress().toPhysical();
           log.info("Next address is " + Utils.toHexWith0X(nextAddress));
