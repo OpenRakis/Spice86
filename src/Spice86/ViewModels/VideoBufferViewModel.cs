@@ -206,7 +206,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
             _frameRenderTimeWatch.Stop();
             LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
         });
-        if(!_disposedValue && _exitDrawThread && _drawAction is not null) {
+        if(!_disposedValue && !_exitDrawThread && _drawAction is not null) {
             _manualResetEvent.Set();
             _manualResetEvent.Reset();
         }
