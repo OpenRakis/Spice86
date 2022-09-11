@@ -39,7 +39,7 @@ using System.Threading;
 public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
-    private bool _disposedValue;
+    private bool _disposed;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
     private PaletteWindow? _paletteWindow;
@@ -252,7 +252,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     public ReadOnlyCollection<Rgb> Palette => Array.AsReadOnly(_palette);
 
     public void Draw(byte[] memory, Rgb[] palette) {
-        if (_disposedValue || _isSettingResolution) {
+        if (_disposed || _isSettingResolution) {
             return;
         }
         _palette = palette;
@@ -332,7 +332,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     }
 
     protected virtual void Dispose(bool disposing) {
-        if (!_disposedValue) {
+        if (!_disposed) {
             if (disposing) {
                 PlayCommand.Execute(null);
                 DisposeEmulator();
@@ -340,12 +340,12 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 _debuggerWindow?.Close();
                 _paletteWindow?.Close();
                 _okayToContinueEvent.Set();
-                _okayToContinueEvent.Dispose();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
+                _okayToContinueEvent.Dispose();
             }
-            _disposedValue = true;
+            _disposed = true;
         }
     }
 
@@ -365,7 +365,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private async Task ShowEmulationErrorMessage(Exception e) {
         IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
             .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
-        if (!_disposedValue && !_isMainWindowClosing) {
+        if (!_disposed && !_isMainWindowClosing) {
             await errorMessage.ShowDialog(App.MainWindow);
         }
     }
@@ -392,7 +392,9 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 $"{nameof(_configuration)} cannot be null when trying to run the emulator machine.");
         }
         try {
-            _okayToContinueEvent.Set();
+            if(!_disposed) {
+                _okayToContinueEvent.Set();
+            }
             _programExecutor = new ProgramExecutor(this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _programExecutor.Run();

@@ -61,7 +61,7 @@ internal sealed class Mt32Player : IDisposable {
     private void RenderThreadMethod() {
         Span<float> buffer = stackalloc float[128];
         while(!_exitRenderThread) {
-            if(!_disposed && !_exitRenderThread) {
+            if(!_exitRenderThread) {
                 _fillBufferEvent.WaitOne(1);
             }
             buffer.Clear();

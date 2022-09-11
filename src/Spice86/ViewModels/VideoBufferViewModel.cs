@@ -206,7 +206,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
             _frameRenderTimeWatch.Stop();
             LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
         });
-        if(!_disposedValue && !_exitDrawThread && _drawAction is not null) {
+        if(!_exitDrawThread) {
             _manualResetEvent.Set();
             _manualResetEvent.Reset();
         }
@@ -226,7 +226,6 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     protected virtual void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
-                _drawAction = null;
                 _exitDrawThread = true;
                 _manualResetEvent.Set();
                 if (_drawThread?.IsAlive == true) {

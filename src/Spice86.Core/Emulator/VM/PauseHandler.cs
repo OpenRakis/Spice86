@@ -16,7 +16,7 @@ public class PauseHandler : IDisposable {
     private volatile bool _pauseEnded;
 
     private volatile bool _pauseRequested;
-    private bool disposedValue;
+    private bool _disposed;
     private readonly ManualResetEvent _manualResetEvent = new(true);
 
     public void RequestPause() {
@@ -27,14 +27,18 @@ public class PauseHandler : IDisposable {
     public void RequestPauseAndWait() {
         LogStatus($"{nameof(RequestPauseAndWait)} started");
         _pauseRequested = true;
-        _manualResetEvent.WaitOne(Timeout.Infinite);
+        if(!_disposed) {
+            _manualResetEvent.WaitOne(Timeout.Infinite);
+        }
         LogStatus($"{nameof(RequestPauseAndWait)} finished");
     }
 
     public void RequestResume() {
         LogStatus($"{nameof(RequestResume)} started");
         _pauseRequested = false;
-        _manualResetEvent.Set();
+        if(!_disposed) {
+            _manualResetEvent.Set();
+        }
         LogStatus($"{nameof(RequestResume)} finished");
     }
 
@@ -52,7 +56,9 @@ public class PauseHandler : IDisposable {
 
     private void Await() {
         try {
-            _manualResetEvent.WaitOne(TimeSpan.FromMilliseconds(1));
+            if(!_disposed) {
+                _manualResetEvent.WaitOne(1);
+            }
         } catch (AbandonedMutexException exception) {
             exception.Demystify();
             Thread.CurrentThread.Interrupt();
@@ -67,11 +73,11 @@ public class PauseHandler : IDisposable {
     }
 
     protected virtual void Dispose(bool disposing) {
-        if (!disposedValue) {
+        if (!_disposed) {
             if (disposing) {
                 _manualResetEvent.Dispose();
             }
-            disposedValue = true;
+            _disposed = true;
         }
     }
 
