@@ -13,9 +13,11 @@ using Spice86.Logging;
 /// <summary>
 /// PC speaker implementation.
 /// </summary>
-public class PcSpeaker : DefaultIOPortHandler {
+public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<PcSpeaker>();
     private const int PcSpeakerPortNumber = 0x61;
+
+    private bool _disposed = false;
 
     private readonly InternalSpeaker _pcSpeaker;
 
@@ -41,5 +43,20 @@ public class PcSpeaker : DefaultIOPortHandler {
         }
 
         _pcSpeaker.WriteByte(port, value);
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if(!_disposed){
+            if(disposing) {
+                _pcSpeaker.Dispose();
+            }
+            _disposed = true;
+        }
     }
 }

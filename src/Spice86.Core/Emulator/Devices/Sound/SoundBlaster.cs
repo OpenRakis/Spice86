@@ -19,7 +19,7 @@ using System.Threading;
 /// Sound blaster implementation. <br/>
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
-public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDisposable {
+public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDisposable {
     private const int DSP_DATA_AVAILABLE_PORT_NUMBER = 0x22E;
     private const int DSP_READ_PORT_NUMBER = 0x22A;
     private const int DSP_RESET_PORT_NUMBER = 0x226;
@@ -34,6 +34,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     private const int MIXER_REGISTER_PORT_NUMBER = 0x224;
     private const int RIGHT_SPEAKER_DATA_PORT_NUMBER = 0x223;
     private const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222;
+
+    private bool _disposed = false;
 
     private static readonly SortedList<byte, byte> commandLengths = new() {
         [Commands.SetTimeConstant] = 1,
@@ -196,11 +198,21 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDi
     public IEnumerable<int> OutputPorts => new int[] { Ports.DspReset, Ports.DspWrite, Ports.MixerAddress };
 
     public void Dispose() {
-        if (_playbackThread.IsAlive) {
-            _endPlayback = true;
-            _playbackThread.Join();
-        }
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if(!_disposed) {
+            if(disposing) {
+                _endPlayback = true;
+                if (_playbackThread.IsAlive) {
+                    _playbackThread.Join();
+                }
+            }
+            _disposed = true;
+        }
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {

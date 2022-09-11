@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
-public class MachineBreakpoints : IDisposable {
+public sealed class MachineBreakpoints : IDisposable {
     private readonly BreakPointHolder _cycleBreakPoints = new();
 
     private readonly BreakPointHolder _executionBreakPoints = new();
@@ -14,7 +14,7 @@ public class MachineBreakpoints : IDisposable {
     private readonly State _state;
 
     private BreakPoint? _machineStopBreakPoint;
-    private bool disposedValue;
+    private bool _disposed;
 
     public MachineBreakpoints(Machine machine) {
         _state = machine.Cpu.State;
@@ -63,12 +63,12 @@ public class MachineBreakpoints : IDisposable {
         }
     }
 
-    protected virtual void Dispose(bool disposing) {
-        if (!disposedValue) {
+    private void Dispose(bool disposing) {
+        if (!_disposed) {
             if (disposing) {
                 PauseHandler.Dispose();
             }
-            disposedValue = true;
+            _disposed = true;
         }
     }
 

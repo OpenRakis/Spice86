@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.Vga;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -321,6 +322,7 @@ public class Machine : IDisposable {
                 Midi.Dispose();
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
+                PcSpeaker.Dispose();
                 MachineBreakpoints.Dispose();
             }
             _disposed = true;

@@ -11,8 +11,7 @@ namespace Bufdio.Spice86.Engines;
 /// This class cannot be inherited.
 /// <para>Implements: <see cref="IAudioEngine"/>.</para>
 /// </summary>
-public sealed class PortAudioEngine : IAudioEngine
-{
+public sealed class PortAudioEngine : IAudioEngine {
     private const PaBinding.PaStreamFlags StreamFlags = PaBinding.PaStreamFlags.paNoFlag;
     private readonly AudioEngineOptions _options;
     private readonly IntPtr _stream;
@@ -26,12 +25,10 @@ public sealed class PortAudioEngine : IAudioEngine
     /// <exception cref="PortAudioException">
     /// Might be thrown when errors occured during PortAudio stream initialization.
     /// </exception>
-    public PortAudioEngine(int framesPerBuffer, AudioEngineOptions? options = default)
-    {
+    public PortAudioEngine(int framesPerBuffer, AudioEngineOptions? options = default) {
         _options = options ?? new AudioEngineOptions();
 
-        PaBinding.PaStreamParameters parameters = new PaBinding.PaStreamParameters
-        {
+        PaBinding.PaStreamParameters parameters = new PaBinding.PaStreamParameters {
             channelCount = _options.Channels,
             device = _options.Device.DeviceIndex,
             hostApiSpecificStreamInfo = IntPtr.Zero,
@@ -41,8 +38,7 @@ public sealed class PortAudioEngine : IAudioEngine
 
         IntPtr stream;
 
-        unsafe
-        {
+        unsafe {
             PaBinding.PaStreamParameters tempParameters;
             IntPtr parametersPtr = new IntPtr(&tempParameters);
             Marshal.StructureToPtr(parameters, parametersPtr, false);
@@ -66,29 +62,29 @@ public sealed class PortAudioEngine : IAudioEngine
     }
 
     /// <inheritdoc />
-    public void Send(Span<float> samples)
-    {
-        unsafe
-        {
-            fixed (float* buffer = samples)
-            {
+    public void Send(Span<float> samples) {
+        unsafe {
+            fixed (float* buffer = samples) {
                 int frames = samples.Length / _options.Channels;
                 PaBinding.Pa_WriteStream(_stream, (IntPtr)buffer, frames);
             }
         }
     }
 
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
     /// <inheritdoc />
-    public void Dispose()
-    {
-        if (_disposed || _stream == IntPtr.Zero)
-        {
-            return;
+    private void Dispose(bool disposing) {
+        if(!_disposed) {
+            if(disposing) {
+                PaBinding.Pa_AbortStream(_stream);
+                PaBinding.Pa_CloseStream(_stream);
+            }
+            _disposed = true;
         }
-
-        PaBinding.Pa_AbortStream(_stream);
-        PaBinding.Pa_CloseStream(_stream);
-
-        _disposed = true;
     }
 }

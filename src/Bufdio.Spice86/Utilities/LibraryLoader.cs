@@ -29,6 +29,8 @@ internal sealed class LibraryLoader : IDisposable {
     }
 
     public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 
@@ -36,7 +38,6 @@ internal sealed class LibraryLoader : IDisposable {
         if (_disposed) {
             if (disposing && _handle != IntPtr.Zero) {
                 NativeLibrary.Free(_handle);
-
             }
             _disposed = true;
         }

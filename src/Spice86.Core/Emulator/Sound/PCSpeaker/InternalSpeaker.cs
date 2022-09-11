@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 /// <summary>
 /// Emulates a PC speaker.
 /// </summary>
-public sealed class InternalSpeaker {
+public sealed class InternalSpeaker : IDisposable {
     /// <summary>
     /// Value into which the input frequency is divided to get the frequency in Hz.
     /// </summary>
@@ -29,6 +29,9 @@ public sealed class InternalSpeaker {
     private Task? _generateWaveformTask;
     private readonly CancellationTokenSource _cancelGenerateWaveform = new();
     private int _currentPeriod;
+
+    private bool _disposed = false;
+
     private Configuration Configuration { get; init; }
     /// <summary>
     /// Initializes a new instance of the InternalSpeaker class.
@@ -70,9 +73,20 @@ public sealed class InternalSpeaker {
     }
 
     public void Dispose() {
-        _frequencyRegister.ValueChanged -= FrequencyChanged;
-        lock (_threadStateLock) {
-            _cancelGenerateWaveform.Cancel();
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if(!_disposed) {
+            if(disposing) {
+                _frequencyRegister.ValueChanged -= FrequencyChanged;
+                lock (_threadStateLock) {
+                    _cancelGenerateWaveform.Cancel();
+                }
+            }
+            _disposed = true;
         }
     }
 

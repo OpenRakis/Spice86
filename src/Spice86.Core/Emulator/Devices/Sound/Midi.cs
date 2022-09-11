@@ -10,7 +10,7 @@ using System;
 /// <summary>
 /// MPU401 (Midi) implementation.
 /// </summary>
-public class Midi : DefaultIOPortHandler, IDisposable {
+public sealed class Midi : DefaultIOPortHandler, IDisposable {
     private const int Command = 0x331;
     private const int Data = 0x330;
 
@@ -44,7 +44,7 @@ public class Midi : DefaultIOPortHandler, IDisposable {
         _generalMidi.WriteByte(port, value);
     }
 
-    protected virtual void Dispose(bool disposing) {
+    private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
                 _generalMidi.Dispose();

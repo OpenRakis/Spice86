@@ -8,7 +8,7 @@ using Spice86.Logging;
 using System.Diagnostics;
 using System.Threading;
 
-public class PauseHandler : IDisposable {
+public sealed class PauseHandler : IDisposable {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<PauseHandler>();
 
     private volatile bool _paused;
@@ -72,7 +72,7 @@ public class PauseHandler : IDisposable {
         }
     }
 
-    protected virtual void Dispose(bool disposing) {
+    private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
                 _manualResetEvent.Dispose();

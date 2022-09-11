@@ -36,7 +36,7 @@ using System.Threading;
 /// <li>Communicates keyboard and mouse events to the emulator</li>
 /// </ul>
 /// </summary>
-public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
+public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<MainWindowViewModel>();
     private Configuration? _configuration;
     private bool _disposed;
@@ -139,12 +139,6 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         );
     }
 
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
     [RelayCommand]
     public Task DebugExecutableCommand() {
         return StartNewExecutable(true);
@@ -176,7 +170,7 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
                 _configuration.Exe = files[0];
                 _configuration.ExeArgs = "";
                 _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
-                Dispatcher.UIThread.Post(() => 
+                Dispatcher.UIThread.Post(() =>
                     DisposeEmulator()
                 , DispatcherPriority.MaxValue);
                 SetMainTitle();
@@ -331,7 +325,13 @@ public partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
         _videoBuffers.Clear();
     }
 
-    protected virtual void Dispose(bool disposing) {
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
                 PlayCommand.Execute(null);

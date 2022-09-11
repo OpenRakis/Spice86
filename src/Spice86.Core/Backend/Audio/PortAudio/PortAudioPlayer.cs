@@ -18,7 +18,7 @@ public sealed class PortAudioPlayer : AudioPlayer {
     public static PortAudioPlayer? Create(int sampleRate, int framesPerBuffer, double? suggestedLatency = null) {
         if (!_loadedNaxtiveLibrary && !BufdioLib.IsPortAudioInitialized) {
             if (OperatingSystem.IsWindows()) {
-                string path = "libportaudio.dll";
+                const string path = "libportaudio.dll";
                 _loadedNaxtiveLibrary = BufdioLib.InitializePortAudio(path);
             } else {
                 //rely on system-provided libportaudio.
@@ -36,8 +36,8 @@ public sealed class PortAudioPlayer : AudioPlayer {
         if (!_disposed) {
             if (disposing) {
                 _engine.Dispose();
-                _disposed = true;
             }
+            _disposed = true;
         }
     }
 

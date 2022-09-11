@@ -8,20 +8,19 @@ using Spice86.Logging;
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-public class GdbIo : IDisposable {
+public sealed class GdbIo : IDisposable {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbIo>();
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly List<byte> _rawCommand = new();
     private readonly Socket _serverSocket;
     private readonly Socket _socket;
     private readonly TcpListener _tcpListener;
-    private bool _disposedValue;
+    private bool _disposed;
     private readonly NetworkStream _stream;
 
     public GdbIo(int port) {
@@ -100,16 +99,15 @@ public class GdbIo : IDisposable {
         }
     }
 
-    protected void Dispose(bool disposing) {
-        if (!_disposedValue) {
+    private void Dispose(bool disposing) {
+        if (!_disposed) {
             if (disposing) {
                 // dispose managed state (managed objects)
                 _tcpListener.Stop();
                 _serverSocket.Close();
                 _socket.Close();
             }
-
-            _disposedValue = true;
+            _disposed = true;
         }
     }
 

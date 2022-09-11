@@ -29,7 +29,7 @@ using System.Diagnostics;
 /// Loads and executes a program following the given configuration in the emulator.<br/>
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
-public class ProgramExecutor : IDisposable {
+public sealed class ProgramExecutor : IDisposable {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<ProgramExecutor>();
     private bool _disposedValue;
     private readonly Configuration _configuration;
@@ -42,12 +42,6 @@ public class ProgramExecutor : IDisposable {
         _gdbServer = StartGdbServer();
     }
 
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
     public Machine Machine { get; private set; }
 
     public void Run() {
@@ -57,7 +51,13 @@ public class ProgramExecutor : IDisposable {
         }
     }
 
-    protected void Dispose(bool disposing) {
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
                 _gdbServer?.Dispose();

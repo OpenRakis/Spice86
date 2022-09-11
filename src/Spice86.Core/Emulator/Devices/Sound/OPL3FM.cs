@@ -13,7 +13,7 @@ using Ymf262Emu;
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.
 /// </summary>
-public sealed class OPL3FM : DefaultIOPortHandler {
+public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
@@ -28,6 +28,8 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     private byte _timer1Data;
     private byte _timer2Data;
     private byte _timerControlByte;
+
+    private bool _disposed = false;
 
     public OPL3FM(Machine machine, Configuration configuration) : base(machine, configuration) {
         if (configuration.CreateAudioBackend) {
@@ -47,14 +49,25 @@ public sealed class OPL3FM : DefaultIOPortHandler {
     }
 
     public void Dispose() {
-        if (!_paused) {
-            _endThread = true;
-            if (_playbackThread.IsAlive) {
-                _playbackThread.Join();
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if(!_disposed) {
+            if(disposing) {
+                if (!_paused) {
+                    _endThread = true;
+                    if (_playbackThread.IsAlive) {
+                        _playbackThread.Join();
+                    }
+                }
+                _audioPlayer?.Dispose();
+                _initialized = false;
             }
+            _disposed = true;
         }
-        _audioPlayer?.Dispose();
-        _initialized = false;
     }
 
     public void Pause() {
@@ -144,15 +157,15 @@ public sealed class OPL3FM : DefaultIOPortHandler {
             }
 
             _audioPlayer.BeginPlayback();
-            fillBuffer();
+            FillBuffer();
             while (!_endThread) {
                 Audio.WriteFullBuffer(_audioPlayer, playBuffer);
-                fillBuffer();
+                FillBuffer();
             }
 
             _audioPlayer.StopPlayback();
 
-            void fillBuffer() {
+            void FillBuffer() {
                 _synth?.GetData(buffer);
                 if (expandToStereo) {
                     ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());

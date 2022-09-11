@@ -11,11 +11,11 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 
-public class GdbServer : IDisposable {
+public sealed class GdbServer : IDisposable {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbServer>();
     private EventWaitHandle? _waitHandle;
     private readonly Configuration _configuration;
-    private bool _disposedValue;
+    private bool _disposed;
     private readonly Machine _machine;
     private bool _isRunning = true;
     private readonly Thread? _gdbServerThread;
@@ -38,12 +38,12 @@ public class GdbServer : IDisposable {
     }
 
     protected void Dispose(bool disposing) {
-        if (!_disposedValue) {
+        if (!_disposed) {
             if (disposing) {
                 _gdbServerThread?.Join();
                 _isRunning = false;
             }
-            _disposedValue = true;
+            _disposed = true;
         }
     }
 
