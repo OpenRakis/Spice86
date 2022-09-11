@@ -1,8 +1,4 @@
-﻿using System.Text;
-
-namespace Spice86.Core.Emulator.VM;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
@@ -25,12 +21,12 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.Vga;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 
 /// <summary>
 /// Emulates an IBM PC
