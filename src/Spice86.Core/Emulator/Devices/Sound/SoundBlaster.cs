@@ -286,7 +286,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
 
             if (_pausePlayback) {
-                player.StopPlayback();
                 while (_pausePlayback) {
                     Thread.Sleep(1);
                     if (_endPlayback) {

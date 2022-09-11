@@ -163,8 +163,6 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
                 FillBuffer();
             }
 
-            _audioPlayer.StopPlayback();
-
             void FillBuffer() {
                 _synth?.GetData(buffer);
                 if (expandToStereo) {
