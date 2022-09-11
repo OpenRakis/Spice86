@@ -268,7 +268,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         Span<byte> buffer = stackalloc byte[512];
         short[] writeBuffer = new short[65536 * 2];
         int sampleRate = player.Format.SampleRate;
-        player.BeginPlayback();
 
         while (!_endPlayback) {
             _dsp.Read(buffer);
@@ -292,7 +291,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                         return;
                     }
                 }
-                player.BeginPlayback();
             }
 
             if (_pauseDuration > 0) {

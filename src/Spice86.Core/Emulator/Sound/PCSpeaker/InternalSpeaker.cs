@@ -172,8 +172,6 @@ public sealed class InternalSpeaker : IDisposable {
             expandToStereo = true;
         }
 
-        player.BeginPlayback();
-
         int idleCount = 0;
 
         while (idleCount < 10000) {

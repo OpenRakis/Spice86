@@ -28,27 +28,6 @@ public abstract partial class AudioPlayer : IDisposable {
     /// Gets the playback audio format.
     /// </summary>
     public AudioFormat Format { get; }
-    /// <summary>
-    /// Gets a value indicating whether the player is active.
-    /// </summary>
-    public bool Playing { get; private set; }
-
-    /// <summary>
-    /// Begins playback of the background stream.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">The stream is already playing.</exception>
-    /// <exception cref="ObjectDisposedException">The <see cref="AudioPlayer"/> instance has been disposed.</exception>
-    public void BeginPlayback() {
-        if (_disposed) {
-            throw new ObjectDisposedException(nameof(AudioPlayer));
-        }
-
-        if (Playing) {
-            throw new InvalidOperationException("Playback has already started.");
-        }
-
-        Playing = true;
-    }
 
     /// <summary>
     /// Writes 32-bit IEEE floating point data to the output buffer.

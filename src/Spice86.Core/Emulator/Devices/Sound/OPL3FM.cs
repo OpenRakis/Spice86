@@ -156,7 +156,6 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
                 playBuffer = buffer;
             }
 
-            _audioPlayer.BeginPlayback();
             FillBuffer();
             while (!_endThread) {
                 Audio.WriteFullBuffer(_audioPlayer, playBuffer);
