@@ -73,7 +73,7 @@
 					</Menu>
 				</Grid>
 			</Grid>
-			<ItemsRepeater Items="{Binding VideoBuffers}">
+			<ItemsRepeater Items="{Binding VideoBuffers}" IsVisible="{Binding ShowVideo}">
 				<ItemsRepeater.ItemTemplate>
 					<DataTemplate DataType="{x:Type vm:VideoBufferViewModel}">
 						<local:VideoBufferView />

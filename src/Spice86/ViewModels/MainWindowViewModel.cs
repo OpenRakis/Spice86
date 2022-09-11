@@ -46,6 +46,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private PerformanceWindow? _performanceWindow;
     private DebuggerWindow? _debuggerWindow;
 
+    private bool _closeAppOnEmulatorExit = false;
+
     internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
 
     private ProgramExecutor? _programExecutor;
@@ -141,11 +143,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [RelayCommand]
     public Task DebugExecutableCommand() {
+        _closeAppOnEmulatorExit = false;
         return StartNewExecutable(true);
     }
 
     [RelayCommand]
     public Task StartExecutable() {
+        _closeAppOnEmulatorExit = false;
         return StartNewExecutable();
     }
 
@@ -180,6 +184,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 while (_emulatorThread?.IsAlive == true) {
                     Dispatcher.UIThread.RunJobs();
                 }
+                _closeAppOnEmulatorExit = false;
                 RunEmulator();
             }
         }
@@ -276,14 +281,20 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     public bool IsLeftButtonClicked { get; private set; }
 
     public bool IsRightButtonClicked { get; private set; }
-    public void OnMainWindowOpened(object? sender, EventArgs e) => RunEmulator();
+    public void OnMainWindowOpened(object? sender, EventArgs e) {
+        if(RunEmulator()) {
+            _closeAppOnEmulatorExit = true;
+        }
+    }
 
-    private void RunEmulator() {
+    private bool RunEmulator() {
         if (_configuration is not null &&
             !string.IsNullOrWhiteSpace(_configuration.Exe) &&
             !string.IsNullOrWhiteSpace(_configuration.CDrive)) {
             RunMachine();
+            return true;
         }
+        return false;
     }
 
     public void OnMouseClick(PointerEventArgs @event, bool click) {
@@ -371,6 +382,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private void RunMachine() {
+        ShowVideo = true;
         _emulatorThread = new Thread(MachineThread) {
             Name = "Emulator"
         };
@@ -385,6 +397,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private event Action<Exception>? EmulatorErrorOccured;
 
+    [ObservableProperty]
+    private bool _showVideo = true;
+
     private void MachineThread() {
         if (_configuration is null) {
             _logger.Error("No configuration available, cannot continue");
@@ -398,6 +413,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _programExecutor = new ProgramExecutor(this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _programExecutor.Run();
+            Dispatcher.UIThread.Post(() => ShowVideo = false);
+            if(_closeAppOnEmulatorExit) {
+                Dispatcher.UIThread.Post(() => App.MainWindow?.Close());
+            }
         } catch (Exception e) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "An error occurred during execution");
