@@ -15,8 +15,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>3.0.0</Version>
-		<PackageReleaseNotes>Breaking change: 32 bit CPU is partially implemented. Exposes a different API, too.</PackageReleaseNotes>
+		<Version>3.0.1</Version>
+		<PackageReleaseNotes>Fixed C# stubs generated along with an emulator dump.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
