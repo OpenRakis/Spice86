@@ -83,7 +83,7 @@ public class CSharpOverrideHelper {
     public short Direction8 => State.Direction8;
     public short Direction16 => State.Direction16;
     public short Direction32 => State.Direction32;
-    private readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
+    protected readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     public JumpDispatcher JumpDispatcher { get; set; }
 
