@@ -15,8 +15,8 @@
 	<PropertyGroup>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>3.0.1</Version>
-		<PackageReleaseNotes>Fixed C# stubs generated along with an emulator dump.</PackageReleaseNotes>
+		<Version>3.0.2</Version>
+		<PackageReleaseNotes>Fixed Spice86.* namespace not being usable via the Nuget package.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
@@ -59,13 +59,13 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj">
-			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>all</IncludeAssets>
 		</ProjectReference>
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj">
-			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>all</IncludeAssets>
 		</ProjectReference>
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj">
-			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>all</IncludeAssets>
 		</ProjectReference>
 	</ItemGroup>
 
