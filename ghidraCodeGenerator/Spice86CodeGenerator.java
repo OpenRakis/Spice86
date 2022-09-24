@@ -1226,12 +1226,9 @@ public class Spice86CodeGenerator extends GhidraScript {
     }
 
     private String generateXchg(String[] params, Integer bits) {
-      String tempVarName = parameterTranslator.generateTempVar();
       String var1 = parameterTranslator.toSpice86Value(params[0], bits);
       String var2 = parameterTranslator.toSpice86Value(params[1], bits);
-      String res = Utils.getType(bits) + " " + tempVarName + " = " + var1 + ";\n";
-      res += "" + var1 + " = " + var2 + ";\n";
-      res += "" + var2 + " = " + tempVarName + ";";
+      String res = "(" + var2 + ", " + var1 + ")" + " = " + "(" + var1 + ", " + var2 + ");";
       return res;
     }
 
