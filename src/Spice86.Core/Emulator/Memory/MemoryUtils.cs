@@ -5,7 +5,6 @@
 /// little-endian. <br />
 /// </summary>
 public static class MemoryUtils {
-
     public static ushort GetUint16(byte[] memory, uint address) {
         return (ushort)(memory[address] | memory[address + 1] << 8);
     }

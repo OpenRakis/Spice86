@@ -242,7 +242,7 @@ public class Cpu {
             case 0xB4:
                 _instructions16Or32.Lfs();
                 break;
-            case 0xB5: 
+            case 0xB5:
                 _instructions16Or32.Lgs();
                 break;
             default:
@@ -1130,7 +1130,8 @@ public class Cpu {
         ExternalInterruptVectorNumber = null;
     }
 
-    private void HandleInvalidOpcode(ushort opcode) => throw new InvalidOpCodeException(_machine, opcode, false);
+    private void HandleInvalidOpcode(ushort opcode) =>
+        throw new InvalidOpCodeException(_machine, opcode, false);
 
     private void HandleInvalidOpcodeBecausePrefix(byte opcode) =>
         throw new InvalidOpCodeException(_machine, opcode, true);

@@ -56,13 +56,13 @@ public class State {
     public ushort ES { get => SegmentRegisters.GetRegister16(SegmentRegisters.EsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.EsIndex, value); }
     public ushort FS { get => SegmentRegisters.GetRegister16(SegmentRegisters.FsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.FsIndex, value); }
     public ushort GS { get => SegmentRegisters.GetRegister16(SegmentRegisters.GsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.GsIndex, value); }
-    
+
     // Stack Segment
     public ushort SS { get => SegmentRegisters.GetRegister16(SegmentRegisters.SsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.SsIndex, value); }
-    
+
     // Instruction pointer
     public ushort IP { get; set; }
-    
+
     public Flags Flags { get; } = new();
 
     public bool OverflowFlag { get => Flags.GetFlag(Flags.Overflow); set => Flags.SetFlag(Flags.Overflow, value); }
@@ -78,10 +78,10 @@ public class State {
     public short Direction8 => (short)(DirectionFlag ? -1 : 1);
     public short Direction16 => (short)(DirectionFlag ? -2 : 2);
     public short Direction32 => (short)(DirectionFlag ? -4 : 4);
-    
+
     public bool? ContinueZeroFlagValue { get; set; }
     public int? SegmentOverrideIndex { get; set; }
-    
+
     public long Cycles { get; private set; }
     public uint IpPhysicalAddress => MemoryUtils.ToPhysicalAddress(CS, IP);
     public uint StackPhysicalAddress => MemoryUtils.ToPhysicalAddress(SS, SP);
@@ -89,7 +89,6 @@ public class State {
     public Registers Registers { get; } = new();
     public SegmentRegisters SegmentRegisters { get; } = new();
 
-    
     public void ClearPrefixes() {
         ContinueZeroFlagValue = null;
         SegmentOverrideIndex = null;
@@ -98,7 +97,7 @@ public class State {
     public void IncCycles() {
         Cycles++;
     }
-    
+
     public string DumpedRegFlags {
         get {
             StringBuilder res = new StringBuilder();

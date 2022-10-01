@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
+using System.Diagnostics;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -418,6 +419,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 Dispatcher.UIThread.Post(() => App.MainWindow?.Close());
             }
         } catch (Exception e) {
+            e.Demystify();
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error(e, "An error occurred during execution");
             }

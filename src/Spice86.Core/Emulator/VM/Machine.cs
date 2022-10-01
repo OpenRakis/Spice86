@@ -250,9 +250,16 @@ public class Machine : IDisposable {
                 _dmaThreadStarted = true;
             }
             RunLoop();
-        } catch (InvalidVMOperationException) {
+        } catch (InvalidVMOperationException e) {
+            e.Demystify();
+            if(System.Diagnostics.Debugger.IsAttached) {
+                System.Diagnostics.Debugger.Break();
+            }
             throw;
         } catch (Exception e) {
+            if(System.Diagnostics.Debugger.IsAttached) {
+                System.Diagnostics.Debugger.Break();
+            }
             e.Demystify();
             throw new InvalidVMOperationException(this, e);
         }

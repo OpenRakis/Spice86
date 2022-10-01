@@ -1,8 +1,6 @@
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
 
-using System.Net.Security;
-
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public class Instructions8 : Instructions {

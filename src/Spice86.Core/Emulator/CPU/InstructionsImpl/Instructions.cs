@@ -31,22 +31,21 @@ public abstract class Instructions {
         ModRM = modRm;
         StaticAddressesRecorder = staticAddressesRecorder;
     }
-
     // Add
     public abstract void AddRmReg();
     public abstract void AddRegRm();
     public abstract void AddAccImm();
-    
+
     // Or
     public abstract void OrRmReg();
     public abstract void OrRegRm();
     public abstract void OrAccImm();
-    
+
     // Adc
     public abstract void AdcRmReg();
     public abstract void AdcRegRm();
     public abstract void AdcAccImm();
-    
+
     // Sbb
     public abstract void SbbRmReg();
     public abstract void SbbRegRm();
@@ -61,27 +60,27 @@ public abstract class Instructions {
     public abstract void SubRmReg();
     public abstract void SubRegRm();
     public abstract void SubAccImm();
-    
+
     // Xor
     public abstract void XorRmReg();
     public abstract void XorRegRm();
     public abstract void XorAccImm();
-    
+
     // Cmp
     public abstract void CmpRmReg();
     public abstract void CmpRegRm();
     public abstract void CmpAccImm();
-    
+
     // MOVS
     public abstract void Movs();
-    
+
     // CMPS
     public abstract void Cmps();
 
     protected void AdvanceSI(short diff) {
         State.SI = (ushort)(State.SI + diff);
     }
-    
+
     protected void AdvanceDI(short diff) {
         State.DI = (ushort)(State.DI + diff);
     }
@@ -105,8 +104,6 @@ public abstract class Instructions {
     public abstract void Scas();
     public abstract void Ins();
     public abstract void Outs();
-
-    
     public abstract void XchgRm();
 
     // Mov
@@ -126,7 +123,7 @@ public abstract class Instructions {
     }
 
     public abstract void Grp2(Grp2CountSource countSource);
-    
+
     public void Grp3() {
         ModRM.Read();
         int groupIndex = ModRM.RegisterIndex;
@@ -164,15 +161,10 @@ public abstract class Instructions {
     protected abstract void Grp3IMulRmAcc();
     protected abstract void Grp3DivRmAcc();
     protected abstract void Grp3IdivRmAcc();
-    
     protected abstract void Grp45RmInc();
     protected abstract void Grp45RmDec();
-
     public abstract void InImm8();
-
     public abstract void OutImm8();
-    
     public abstract void InDx();
-
     public abstract void OutDx();
 }

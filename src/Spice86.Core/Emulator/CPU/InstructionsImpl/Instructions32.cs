@@ -15,7 +15,6 @@ public class Instructions32 : Instructions16Or32 {
         ModRM.SetRm32(Alu.Add32(ModRM.GetRm32(), ModRM.R32));
     }
 
-
     public override void AddRegRm() {
         // ADD rdw rmdw
         ModRM.Read();
