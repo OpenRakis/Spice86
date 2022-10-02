@@ -6,13 +6,32 @@
     <AssemblyVersion>0.1</AssemblyVersion>
     <Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal</Authors>
     <Copyright>Luthfi Tri Atmaja</Copyright>
-    <Description>A cross platform audio playback library for .NET based on PortAudio, forked from the original Bufdio by Luthfi Tri Atmaja.</Description>
+    <Description>Only for Spice86 usage. A cross platform audio playback library for .NET based on PortAudio, forked from the original Bufdio by Luthfi Tri Atmaja.</Description>
     <NoWarn>IDE0090</NoWarn>
     <TargetFramework>net6.0</TargetFramework>
     <Version>3.0.3</Version>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
   </PropertyGroup>
+  <!-- Properties geared towards NuGet -->
+	<PropertyGroup>
+		<NoWarn>CS1591</NoWarn>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<Version>3.0.3</Version>
+		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<Description>Reverse engineer and rewrite real mode dos programs</Description>
+		<PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
+		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+	</PropertyGroup>
+	<!-- Source Link configuration -->
+	<PropertyGroup>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
 			<PrivateAssets>all</PrivateAssets>

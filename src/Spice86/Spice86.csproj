@@ -13,6 +13,7 @@
 
 	<!-- Properties geared towards NuGet -->
 	<PropertyGroup>
+		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<Version>3.0.3</Version>
@@ -33,8 +34,6 @@
 		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
-		<PackageReference Include="MessageBox.Avalonia" Version="1.7.1" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
 			<PrivateAssets>all</PrivateAssets>
@@ -43,6 +42,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
+		<PackageReference Include="MessageBox.Avalonia" Version="1.7.1" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.0.0" />
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
 			<PrivateAssets>all</PrivateAssets>
