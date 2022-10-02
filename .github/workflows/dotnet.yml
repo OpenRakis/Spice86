@@ -31,5 +31,5 @@ jobs:
 
     - name: Upload NuGet
       working-directory: ./src
-      run: nuget push *.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}} -SkipDuplicate
+      run: nuget push *.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
