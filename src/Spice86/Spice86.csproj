@@ -16,7 +16,7 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>3.0.3</Version>
+		<Version>3.0.4</Version>
 		<PackageReleaseNotes>Really fixed Spice86.* namespace not being usable via the Nuget package.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

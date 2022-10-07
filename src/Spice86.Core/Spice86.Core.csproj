@@ -6,7 +6,6 @@
 		<Nullable>enable</Nullable>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Version>3.0.3</Version>
 	</PropertyGroup>
 	<ItemGroup>
 		<Using Remove="System.Linq" />
@@ -17,7 +16,7 @@
 	<PropertyGroup>
 		<NoWarn>CS1591</NoWarn>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>3.0.3</Version>
+		<Version>3.0.4</Version>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
@@ -26,7 +25,7 @@
 		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
-
+	
 	<!-- Source Link configuration -->
 	<PropertyGroup>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -40,6 +39,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
 		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
