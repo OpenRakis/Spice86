@@ -16,8 +16,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>3.0.4</Version>
-		<PackageReleaseNotes>Really fixed Spice86.* namespace not being usable via the Nuget package.</PackageReleaseNotes>
+		<Version>3.0.5</Version>
+		<PackageReleaseNotes>replace callback with actual INT instructions so that generated code can jump there and have the same behaviour as before.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>

@@ -8,7 +8,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 public class ViewLocator : IDataTemplate {
-
     public IControl Build(object data) {
         string? name = data.GetType().FullName!.Replace("ViewModel", "View");
         Type? type = Type.GetType(name);

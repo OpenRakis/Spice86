@@ -6,11 +6,10 @@ using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
 public class AvaloniaKeyScanCodeConverter : IKeyScanCodeConverter {
-    private static readonly ImmutableDictionary<Key, byte> _keyPressedScanCode;
-    private static readonly ImmutableDictionary<byte, byte> _scanCodeToAscii;
+    private static readonly Dictionary<Key, byte> _keyPressedScanCode;
+    private static readonly Dictionary<byte, byte> _scanCodeToAscii;
 
     static AvaloniaKeyScanCodeConverter() {
         // Some keys are not supported by AvaloniaUI so not putting them.
@@ -101,7 +100,7 @@ public class AvaloniaKeyScanCodeConverter : IKeyScanCodeConverter {
             {Key.Delete, 0x53},
             //{Key.D5, 0x4C}, ?
             {Key.Multiply, 0x37},
-        }.ToImmutableDictionary();
+        };
         _scanCodeToAscii = new Dictionary<byte, byte>()
         {
             {0x01, 0x1B},
@@ -160,7 +159,7 @@ public class AvaloniaKeyScanCodeConverter : IKeyScanCodeConverter {
             {0x4A, 0x2D},
             {0x4C, 0x35},
             {0x4E, 0x2B},
-        }.ToImmutableDictionary();
+        };
     }
 
     public byte? GetAsciiCode(byte scancode) {
