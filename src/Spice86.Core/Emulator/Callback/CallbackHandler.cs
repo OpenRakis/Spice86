@@ -51,12 +51,12 @@ public class CallbackHandler : IndexBasedDispatcher {
     /// <returns></returns>
     public byte[] NopCallbackInstructionInRamCopy() {
         byte[] res = (byte[])_memory.Ram.Clone();
-        for(int i=0;i<_dispatchTable.Values.Count;i++) {
-            uint ramIndex = MemoryUtils.ToPhysicalAddress(_callbackHandlerSegment, (ushort)(i * CallbackSize));
-            for (int j = 0; j < CallbackSize - 1; j++) {
-                // NOP the callback except for the IRET
-                res[ramIndex + j] = 0x90;
-            }
+        foreach (KeyValuePair<byte, SegmentedAddress> entry in _callbackAddresses) {
+            byte intNo = entry.Key;
+            uint address = entry.Value.ToPhysical();
+            res[address] = 0xCD; //INT
+            res[address + 1] = intNo;
+            res[address + 2] = 0x90; // NOP
         }
         return res;
     }
