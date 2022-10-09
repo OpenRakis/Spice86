@@ -99,7 +99,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    private void Pause() {
+    public void Pause() {
         if (_emulatorThread is not null) {
             _okayToContinueEvent.Reset();
             IsPaused = true;
@@ -107,7 +107,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    private void Play() {
+    public void Play() {
         if (_emulatorThread is not null) {
             _okayToContinueEvent.Set();
             IsPaused = false;

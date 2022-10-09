@@ -11,6 +11,10 @@ public interface IGui {
 
     public event EventHandler<EventArgs>? KeyDown;
 
+    public void Pause();
+
+    public void Play();
+
     /// <summary>
     /// Blocks the current thread until the Gui's WaitHandle receives a signal.
     /// </summary>
