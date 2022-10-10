@@ -24,6 +24,7 @@ public class ComLoader : ExecutableFileLoader {
         state.DS = _startSegment;
         state.ES = _startSegment;
         SetEntryPoint(_startSegment, ComOffset);
+        state.InterruptFlag = true;
         return com;
     }
 }

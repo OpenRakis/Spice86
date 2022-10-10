@@ -65,6 +65,8 @@ public class ExeLoader : ExecutableFileLoader {
         state.DS = pspSegment;
         state.ES = pspSegment;
 
+        state.InterruptFlag = true;
+
         // Finally, MS-DOS reads the initial CS and IP values from the program's file
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
