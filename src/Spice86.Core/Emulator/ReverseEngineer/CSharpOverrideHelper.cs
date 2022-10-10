@@ -67,7 +67,6 @@ public class CSharpOverrideHelper {
 
     public ushort IP { get => State.IP; set => State.IP = value; }
 
-
     public bool AuxiliaryFlag { get => State.AuxiliaryFlag; set => State.AuxiliaryFlag = value; }
     public bool CarryFlag { get => State.CarryFlag; set => State.CarryFlag = value; }
     public bool DirectionFlag { get => State.DirectionFlag; set => State.DirectionFlag = value; }
@@ -123,7 +122,7 @@ public class CSharpOverrideHelper {
             FunctionInformation? parsedFunctionInformation = GhidraSymbolsDumper.NameToFunctionInformation(methodName);
             if (parsedFunctionInformation == null) {
                 throw new UnrecoverableException("Cannot parse " + methodName +
-                                                 " into a spice86 function name as format is not correct.");
+                    " into a spice86 function name as format is not correct.");
             }
 
             functionName = parsedFunctionInformation.Name;
@@ -221,6 +220,7 @@ public class CSharpOverrideHelper {
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
             Stack.Push16(State.Flags.FlagRegister16);
+            InterruptFlag = false;
             Stack.Push16(expectedReturnCs);
             Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
@@ -259,8 +259,8 @@ public class CSharpOverrideHelper {
         ushort actualReturnIp = State.IP;
         uint actualStackAddress = State.StackPhysicalAddress;
         // Do not return to the caller until we are sure we are at the right place
-        while (actualReturnCs != expectedReturnCs ||
-               actualReturnIp != expectedReturnIp) {
+        while ( actualReturnCs != expectedReturnCs ||
+                actualReturnIp != expectedReturnIp) {
             SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
             SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
             string message =
