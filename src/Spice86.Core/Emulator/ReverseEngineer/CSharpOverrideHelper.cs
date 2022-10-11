@@ -109,7 +109,7 @@ public class CSharpOverrideHelper {
         string? name = null) {
         SegmentedAddress address = new(segment, offset);
         FunctionInformation? existing = GetFunctionAtAddress(failOnExisting, address);
-        if (existing != null && existing.HasOverride) {
+        if (existing?.HasOverride is true) {
             // Do not overwrite existing code with override
             return;
         }
@@ -233,7 +233,7 @@ public class CSharpOverrideHelper {
         ushort targetCS = Memory.GetUint16((ushort)(4 * vectorNumber + 2));
         SegmentedAddress target = new SegmentedAddress(targetCS, targetIP);
         Func<int, Action>? function = SearchFunctionOverride(target);
-        if (function == null) {
+        if (function is null) {
             throw FailAsUntested($"Could not find an override at address {target}");
         }
 
@@ -404,11 +404,7 @@ public class CSharpOverrideHelper {
         Machine.CallbackHandler.RunFromOverriden(vectorNumber);
     }
 
-    public Action Hlt() {
-        return () => {
-            Exit();
-        };
-    }
+    public Action Hlt() => () => Exit();
 
     protected void Exit() {
         _logger.Information("Program requested exit. Terminating now.");

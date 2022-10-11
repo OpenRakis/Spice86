@@ -167,9 +167,7 @@ public class VgaCard : DefaultIOPortHandler {
         if (mode == MODE_320_200_256) {
             const int videoHeight = 200;
             const int videoWidth = 320;
-            if (_gui != null) {
-                _gui.SetResolution(videoWidth, videoHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
-            }
+            _gui?.SetResolution(videoWidth, videoHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
         } else {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _logger.Error("UNSUPPORTED VIDEO MODE {@VideMode}", mode);
@@ -182,9 +180,5 @@ public class VgaCard : DefaultIOPortHandler {
         _crtStatusRegister = StatusRegisterRetraceInactive;
     }
 
-    public void UpdateScreen() {
-        if (_gui != null) {
-            _gui.Draw(_memory.Ram, VgaDac.Rgbs);
-        }
-    }
+    public void UpdateScreen() => _gui?.Draw(_memory.Ram, VgaDac.Rgbs);
 }
