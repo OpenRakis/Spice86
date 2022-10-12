@@ -23,7 +23,7 @@ public abstract class IndexBasedDispatcher {
     }
 
     private ICallback GetCallback(int index) {
-        if (_dispatchTable.TryGetValue(index, out ICallback? handler) == false) {
+        if (!_dispatchTable.TryGetValue(index, out ICallback? handler)) {
             throw GenerateUnhandledOperationException(index);
         }
         return handler;

@@ -252,12 +252,12 @@ public class Machine : IDisposable {
             RunLoop();
         } catch (InvalidVMOperationException e) {
             e.Demystify();
-            if(System.Diagnostics.Debugger.IsAttached) {
+            if(Debugger.IsAttached) {
                 System.Diagnostics.Debugger.Break();
             }
             throw;
         } catch (Exception e) {
-            if(System.Diagnostics.Debugger.IsAttached) {
+            if(Debugger.IsAttached) {
                 System.Diagnostics.Debugger.Break();
             }
             e.Demystify();

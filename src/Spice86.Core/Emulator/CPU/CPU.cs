@@ -36,7 +36,6 @@ public class Cpu {
     private readonly Machine _machine;
     private readonly Memory _memory;
     private readonly ModRM _modRM;
-    private readonly StaticAddressesRecorder _staticAddressesRecorder;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
     private readonly Instructions32 _instructions32;
@@ -67,17 +66,17 @@ public class Cpu {
         FunctionHandler = new FunctionHandler(machine, recordData);
         FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, recordData);
         FunctionHandlerInUse = FunctionHandler;
-        _staticAddressesRecorder = new StaticAddressesRecorder(State, recordData);
+        StaticAddressesRecorder = new StaticAddressesRecorder(State, recordData);
         _modRM = new ModRM(machine, this);
-        _instructions8 = new Instructions8(machine, Alu, this, _memory, _modRM, _staticAddressesRecorder);
-        _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM, _staticAddressesRecorder);
-        _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM, _staticAddressesRecorder);
+        _instructions8 = new Instructions8(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
+        _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
+        _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
         _instructions16Or32 = _instructions16;
     }
 
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
-        _staticAddressesRecorder.Reset();
+        StaticAddressesRecorder.Reset();
         byte opcode = ProcessPrefixes();
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
@@ -88,7 +87,7 @@ public class Cpu {
         // Reset to 16 bit operand size
         _instructions16Or32 = _instructions16;
         State.ClearPrefixes();
-        _staticAddressesRecorder.Commit();
+        StaticAddressesRecorder.Commit();
         State.IncCycles();
         HandleExternalInterrupt();
         State.IP = _internalIp;
@@ -123,7 +122,7 @@ public class Cpu {
 
     public State State { get; }
 
-    public StaticAddressesRecorder StaticAddressesRecorder => _staticAddressesRecorder;
+    public StaticAddressesRecorder StaticAddressesRecorder { get; }
 
     public void InterruptRet() {
         FunctionHandlerInUse.Ret(CallType.INTERRUPT);
@@ -173,13 +172,12 @@ public class Cpu {
 
         _memory.SetUint16(flagsAddress, (ushort)value);
     }
-    
+
     private static bool IsStringOpUpdatingFlags(int stringOpCode)
         => stringOpCode is 0xA6 // CMPSB
             or 0xA7 // CMPSW
             or 0xAE // SCASB
             or 0xAF;
-    
 
     public void Callback(ushort callbackIndex) {
         CallbackHandler?.Run(callbackIndex);
@@ -379,7 +377,7 @@ public class Cpu {
                 break;
             case 0x27:
                 Daa();
-                break; 
+                break;
             case 0x28:
                 _instructions8.SubRmReg();
                 break;
@@ -514,10 +512,10 @@ public class Cpu {
             case 0x69:
                 _instructions16Or32.ImulRmImm16Or32();
                 break;
-            case 0x6A: 
+            case 0x6A:
                 _instructions16Or32.PushImm8SignExtended();
                 break;
-            case 0x6B: 
+            case 0x6B:
                 _instructions16Or32.ImulRmImm8();
                 break;
             case 0x6C:
@@ -571,7 +569,7 @@ public class Cpu {
             case 0x86:
                 _instructions8.XchgRm();
                 break;
-            case 0x87: 
+            case 0x87:
                 _instructions16Or32.XchgRm();
                 break;
             case 0x88:
@@ -589,7 +587,7 @@ public class Cpu {
             case 0x8C:
                 _instructions16Or32.MovRmSreg();
                 break;
-            case 0x8D: 
+            case 0x8D:
                 _instructions16Or32.Lea();
                 break;
             case 0x8E:
@@ -724,7 +722,7 @@ public class Cpu {
             case 0xC4:
                 _instructions16Or32.Les();
                 break;
-            case 0xC5: 
+            case 0xC5:
                 _instructions16Or32.Lds();
                 break;
             case 0xC6:
@@ -917,7 +915,7 @@ public class Cpu {
             case 0xEC:
                 _instructions8.InDx();
                 break;
-            case 0xED: 
+            case 0xED:
                 _instructions16Or32.InDx();
                 break;
             case 0xEE:
@@ -1096,7 +1094,7 @@ public class Cpu {
     }
 
     private uint InternalIpPhysicalAddress => MemoryUtils.ToPhysicalAddress(State.CS, _internalIp);
-    
+
     private void HandleCall(CallType callType, ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
         ExecutionFlowRecorder.RegisterCall(State.CS, State.IP, targetCS, targetIP);
         State.CS = targetCS;
@@ -1255,14 +1253,14 @@ public class Cpu {
         }
         return 0;
     }
-    
+
     public ushort In16(int port) {
         if (IoPortDispatcher != null) {
             return IoPortDispatcher.ReadWord((ushort)port);
         }
         return 0;
     }
-    
+
     public uint In32(int port) {
         if (IoPortDispatcher != null) {
             return IoPortDispatcher.ReadDWord((ushort)port);
@@ -1273,7 +1271,7 @@ public class Cpu {
     public void Out8(int port, byte val) => IoPortDispatcher?.WriteByte((ushort)port, val);
 
     public void Out16(int port, ushort val) => IoPortDispatcher?.WriteWord((ushort)port, val);
-    
+
     public void Out32(int port, uint val) => IoPortDispatcher?.WriteDWord((ushort)port, val);
 
     private bool ProcessPrefix(int opcode) {
@@ -1312,7 +1310,7 @@ public class Cpu {
                 // REPNZ
                 State.ContinueZeroFlagValue = false;
                 break;
-            case 0xF3: 
+            case 0xF3:
                 // REPZ
                 State.ContinueZeroFlagValue = true;
                 break;

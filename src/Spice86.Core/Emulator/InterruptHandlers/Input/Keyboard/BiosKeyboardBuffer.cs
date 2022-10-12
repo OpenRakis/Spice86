@@ -39,6 +39,15 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
 
     public ushort HeadAddress { get => GetUint16(Head); set => SetUint16(Head, value); }
 
+    public ushort? GetKeyCodeStatus() {
+        ushort head = HeadAddress;
+        if (IsEmpty) {
+            return null;
+        }
+
+        return GetUint16(head);
+    }
+
     public ushort? GetKeyCode() {
         ushort head = HeadAddress;
         if (IsEmpty) {
