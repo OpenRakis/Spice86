@@ -3,7 +3,6 @@
 using Mt32emu;
 
 using Serilog;
-using Serilog.Core;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator;
@@ -19,6 +18,7 @@ internal sealed class Mt32Player : IDisposable {
     private readonly Mt32Context _context = new();
     private readonly AudioPlayer? _audioPlayer;
     private bool _disposed;
+    private bool _threadStarted;
 
     private readonly Thread? _renderThread;
 
@@ -55,7 +55,14 @@ internal sealed class Mt32Player : IDisposable {
         _renderThread = new Thread(RenderThreadMethod) {
             Name = "MT32Audio"
         };
-        _renderThread.Start();
+    }
+
+    private void StartThreadIfNeeded() {
+        if(!_disposed && !_exitRenderThread && !_threadStarted) {
+            _threadStarted = true;
+            _renderThread?.Start();
+
+        }
     }
 
     private void RenderThreadMethod() {
@@ -71,17 +78,23 @@ internal sealed class Mt32Player : IDisposable {
     }
 
     public void PlayShortMessage(uint message) {
-        _context.PlayMessage(message);
-        RaiseFillBufferEvent();
+        StartThreadIfNeeded();
+        if(!_disposed && !_exitRenderThread) {
+            _context.PlayMessage(message);
+            RaiseFillBufferEvent();
+        }
     }
 
     public void PlaySysex(ReadOnlySpan<byte> data) {
-        _context.PlaySysex(data);
-        RaiseFillBufferEvent();
+        StartThreadIfNeeded();
+        if (!_disposed && !_exitRenderThread) {
+            _context.PlaySysex(data);
+            RaiseFillBufferEvent();
+        }
     }
 
     private void RaiseFillBufferEvent() {
-        if(!_exitRenderThread && !_disposed) {
+        if(!_disposed && !_exitRenderThread) {
             _fillBufferEvent.Set();
         }
     }
