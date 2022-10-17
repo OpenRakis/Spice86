@@ -45,7 +45,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private bool _isSettingResolution = false;
     private PaletteWindow? _paletteWindow;
     private PerformanceWindow? _performanceWindow;
-    private DebuggerWindow? _debuggerWindow;
 
     private bool _closeAppOnEmulatorExit = false;
 
@@ -201,19 +200,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
-    [RelayCommand]
-    public void ShowDebugger() {
-        if (_debuggerWindow != null) {
-            _debuggerWindow.Activate();
-        } else if (_programExecutor is not null) {
-            _debuggerWindow = new DebuggerWindow() {
-                DataContext = new DebuggerViewModel(
-                    _programExecutor.Machine)
-            };
-            _debuggerWindow.Closed += (s, e) => _debuggerWindow = null;
-            _debuggerWindow.Show();
-        }
-    }
 
     [RelayCommand]
     public void ShowPerformance() {
@@ -349,7 +335,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 PlayCommand.Execute(null);
                 DisposeEmulator();
                 _performanceWindow?.Close();
-                _debuggerWindow?.Close();
                 _paletteWindow?.Close();
                 _okayToContinueEvent.Set();
                 if (_emulatorThread?.IsAlive == true) {
