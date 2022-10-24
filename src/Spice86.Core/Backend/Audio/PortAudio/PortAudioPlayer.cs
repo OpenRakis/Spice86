@@ -5,7 +5,6 @@ namespace Spice86.Core.Backend.Audio.PortAudio;
 
 public sealed class PortAudioPlayer : AudioPlayer {
     private readonly IAudioEngine _engine;
-    private bool _disposed;
     private static bool _loadedNativeLib;
 
     private PortAudioPlayer(int framesPerBuffer, AudioFormat format, double? suggestedLatency = null) : base(format) {
@@ -16,7 +15,7 @@ public sealed class PortAudioPlayer : AudioPlayer {
         _engine = new PortAudioEngine(framesPerBuffer, options);
     }
 
-    private static readonly object _lock = new object();
+    private static readonly object _lock = new();
 
     private static void LoadNativeLib() {
         lock(_lock) {

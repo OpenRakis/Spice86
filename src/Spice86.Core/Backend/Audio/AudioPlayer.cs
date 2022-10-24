@@ -7,7 +7,7 @@ using System;
 /// </summary>
 public abstract partial class AudioPlayer : IDisposable {
     private readonly InternalBufferWriter _writer;
-    private bool _disposed;
+    protected bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AudioPlayer"/> class.
