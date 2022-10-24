@@ -4,7 +4,7 @@
 /// Represents configuration class that can be passed to audio engine.
 /// This class cannot be inherited.
 /// </summary>
-public sealed class AudioEngineOptions
+public readonly record struct AudioEngineOptions
 {
     /// <summary>
     /// Initializes <see cref="AudioEngineOptions"/>.
@@ -65,26 +65,23 @@ public sealed class AudioEngineOptions
     /// Gets desired output device.
     /// See: <see cref="BufdioLib.OutputDevices"/> and <see cref="BufdioLib.DefaultOutputDevice"/>.
     /// </summary>
-    public AudioDevice Device { get; }
+    public AudioDevice Device { get; init; }
 
     /// <summary>
     /// Gets desired number of audio channels. This might fallback to maximum device output channels,
     /// see: <see cref="AudioDevice.MaxOutputChannels"/>.
     /// </summary>
-    public int Channels { get; }
+    public int Channels { get; init; }
 
     /// <summary>
     /// Gets desired audio sample rate.
     /// </summary>
-    public int SampleRate { get; }
+    public int SampleRate { get; init; }
 
     /// <summary>
     /// Gets desired output latency.
     /// </summary>
-    public double Latency { get; }
+    public double Latency { get; init; }
 
-    private static int FallbackChannelCount(AudioDevice device, int desiredChannel)
-    {
-        return desiredChannel > device.MaxOutputChannels ? device.MaxOutputChannels : desiredChannel;
-    }
+    private static int FallbackChannelCount(AudioDevice device, int desiredChannel) => desiredChannel > device.MaxOutputChannels ? device.MaxOutputChannels : desiredChannel;
 }
