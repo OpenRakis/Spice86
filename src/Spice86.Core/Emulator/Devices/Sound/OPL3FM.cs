@@ -4,11 +4,10 @@ using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.VM;
 
 using System;
-
-using Ymf262Emu;
 
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.
@@ -21,7 +20,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private readonly FmSynthesizer? _synth;
     private int _currentAddress;
     private volatile bool _endThread;
-    private Thread _playbackThread;
+    private readonly Thread _playbackThread;
     private bool _initialized;
     private bool _paused;
     private byte _statusByte;
@@ -152,18 +151,18 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
                 playBuffer = buffer;
             }
 
-            FillBuffer();
+            FillBuffer(buffer, playBuffer, expandToStereo);
             while (!_endThread) {
                 Audio.WriteFullBuffer(_audioPlayer, playBuffer);
-                FillBuffer();
+                FillBuffer(buffer, playBuffer, expandToStereo);
             }
+        }
+    }
 
-            void FillBuffer() {
-                _synth?.GetData(buffer);
-                if (expandToStereo) {
-                    ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
-                }
-            }
+    private void FillBuffer(float[]? buffer, float[] playBuffer, bool expandToStereo) {
+        _synth?.GetData(buffer);
+        if (expandToStereo) {
+            ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
         }
     }
 
