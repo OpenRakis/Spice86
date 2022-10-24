@@ -3,7 +3,7 @@
 /// <summary>
 /// A structure containing information about audio device capabilities.
 /// </summary>
-public readonly struct AudioDevice
+public readonly record struct AudioDevice
 {
     /// <summary>
     /// Initializes <see cref="AudioDevice"/> structure.
@@ -33,30 +33,30 @@ public readonly struct AudioDevice
     /// <summary>
     /// Gets audio device index.
     /// </summary>
-    public int DeviceIndex { get; }
+    public int DeviceIndex { get; init; }
 
     /// <summary>
     /// Gets audio device name.
     /// </summary>
-    public string Name { get; }
+    public string Name { get; init; }
 
     /// <summary>
     /// Gets maximum allowed output audio channels.
     /// </summary>
-    public int MaxOutputChannels { get; }
+    public int MaxOutputChannels { get; init; }
 
     /// <summary>
     /// Gets default low output latency (for interactive performance).
     /// </summary>
-    public double DefaultLowOutputLatency { get; }
+    public double DefaultLowOutputLatency { get; init; }
 
     /// <summary>
     /// Gets default high output latency (recommended for playing audio files).
     /// </summary>
-    public double DefaultHighOutputLatency { get; }
+    public double DefaultHighOutputLatency { get; init; }
 
     /// <summary>
     /// Gets default audio sample rate on this device.
     /// </summary>
-    public int DefaultSampleRate { get; }
+    public int DefaultSampleRate { get; init; }
 }
