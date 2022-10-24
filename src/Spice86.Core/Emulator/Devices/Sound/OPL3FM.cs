@@ -103,11 +103,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     public void Resume() {
         if (_paused) {
             _endThread = false;
-            _playbackThread = new Thread(GenerateWaveforms) {
-                Name = "FMSynthPlaybackThread",
-                Priority = ThreadPriority.AboveNormal
-            };
-            _playbackThread.Start();
+            StartPlaybackThread();
             _paused = false;
         }
     }
@@ -127,7 +123,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
                 }
             } else {
                 if (!_initialized) {
-                    Initialize();
+                    StartPlaybackThread();
                 }
 
                 _synth?.SetRegisterValue(0, _currentAddress, value);
@@ -171,10 +167,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         }
     }
 
-    /// <summary>
-    /// Performs sound initialization.
-    /// </summary>
-    private void Initialize() {
+    private void StartPlaybackThread() {
         if(!_endThread) {
             _playbackThread.Start();
             _initialized = true;
