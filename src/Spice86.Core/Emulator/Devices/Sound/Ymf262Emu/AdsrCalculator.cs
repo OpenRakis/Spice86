@@ -109,13 +109,13 @@ internal sealed class AdsrCalculator
         // percentageToX(0.9) + samplesToTheTop*xAttackIncrement = dBToX(-0.1875); ->
         // samplesToTheTop = (dBtoX(-0.1875) - percentageToX(0.9)) / xAttackIncrement); ->
         // period10to100InSamples = period10to90InSamples + samplesToTheTop; ->
-        int period10To100InSamples = (int)(period10To90InSamples + ((DecibelsToXN01875 - PercentageToX90) / _xAttackIncrement));
+        int period10To100InSamples = (int)(period10To90InSamples + ((DecibelsToXn01875 - PercentageToX90) / _xAttackIncrement));
         // Discover the minimum x that, through the attackIncrement value, keeps 
         // the 10%-90% period, and reaches 0 dB at the total period:
         _xMinimumInAttack = PercentageToX10 - ((period0To100InSamples - period10To100InSamples) * _xAttackIncrement);
     }
 
-    private static readonly double DecibelsToXN01875 = DecibelsToX(-0.1875);
+    private static readonly double DecibelsToXn01875 = DecibelsToX(-0.1875);
     private static readonly double PercentageToX10 = PercentageToX(0.1);
     private static readonly double PercentageToX90 = PercentageToX(0.9);
 

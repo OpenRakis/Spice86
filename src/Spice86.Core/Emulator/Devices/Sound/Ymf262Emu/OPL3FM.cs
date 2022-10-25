@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 
-using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
@@ -10,7 +10,7 @@ using System;
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.
 /// </summary>
-public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
+public class OPL3FM : DefaultIOPortHandler, IDisposable {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
@@ -26,6 +26,8 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private byte _timerControlByte;
 
     private bool _disposed;
+    
+    protected readonly double MsPerFrame = 0d;
 
     public SoundChannel SoundChannel => _soundChannel;
 
@@ -46,8 +48,8 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(0x388, this);
-        ioPortDispatcher.AddIOPortHandler(0x389, this);
+        ioPortDispatcher.AddIOPortHandler(OplConsts.FmMusicStatusPortNumber2, this);
+        ioPortDispatcher.AddIOPortHandler(OplConsts.FmMusicDataPortNumber2, this);
     }
 
     /// <inheritdoc />
@@ -64,7 +66,8 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
                 if (_playbackThread.IsAlive) {
                     _playbackThread.Join();
                 }
-                _initialized = false;
+
+                _initialized = true;
             }
             _disposed = true;
         }
@@ -112,7 +115,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
                 if (!_initialized) {
                     StartPlaybackThread();
                 }
-
+                
                 _synth?.SetRegisterValue(0, _currentAddress, value);
             }
         }
