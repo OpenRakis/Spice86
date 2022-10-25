@@ -141,28 +141,27 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// Generates and plays back output waveform data.
     /// </summary>
     private void GenerateWaveforms() {
-        float[]? buffer = new float[1024];
-        float[] playBuffer;
-        if (_audioPlayer is not null) {
-            bool expandToStereo = _audioPlayer.Format.Channels == 2;
-            if (expandToStereo) {
-                playBuffer = new float[buffer.Length * 2];
-            } else {
-                playBuffer = buffer;
-            }
-
-            FillBuffer(buffer, playBuffer, expandToStereo);
-            while (!_endThread) {
-                Audio.WriteFullBuffer(_audioPlayer, playBuffer);
-                FillBuffer(buffer, playBuffer, expandToStereo);
-            }
+        if (_audioPlayer is null) {
+            return;
         }
-    }
+        int length = 1024;
+        Span<float> buffer = stackalloc float[length];
+        bool expandToStereo = _audioPlayer.Format.Channels == 2;
+        if (expandToStereo) {
+            length *= 2;
+        }
+        Span<float> playBuffer = stackalloc float[length];
+        FillBuffer(buffer, playBuffer, expandToStereo);
+        while (!_endThread) {
+            Audio.WriteFullBuffer(_audioPlayer, playBuffer);
+            FillBuffer(buffer, playBuffer, expandToStereo);
+        }
+}
 
-    private void FillBuffer(float[]? buffer, float[] playBuffer, bool expandToStereo) {
+    private void FillBuffer(Span<float> buffer, Span<float> playBuffer, bool expandToStereo) {
         _synth?.GetData(buffer);
         if (expandToStereo) {
-            ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
+            ChannelAdapter.MonoToStereo(buffer, playBuffer);
         }
     }
 
