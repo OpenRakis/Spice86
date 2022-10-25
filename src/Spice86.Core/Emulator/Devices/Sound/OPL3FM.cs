@@ -48,8 +48,8 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(0x388, this);
-        ioPortDispatcher.AddIOPortHandler(0x389, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
     }
 
     /// <inheritdoc />

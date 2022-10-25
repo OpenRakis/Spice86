@@ -141,7 +141,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The Sound Blaster card.
     /// </summary>
-    public SoundBlaster SoundBlaster { get; }
+    public SoundBlaster? SoundBlaster { get; }
 
     /// <summary>
     /// INT15H handler.
@@ -211,7 +211,9 @@ public class Machine : IDisposable {
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
-    public OPL3FM OPL3FM { get; }
+    public OPL3FM? OPL3FM { get; }
+
+    public AdlibGold? AdlibGold { get; }
 
     /// <summary>
     /// The code invoked when emulation pauses.
@@ -277,11 +279,16 @@ public class Machine : IDisposable {
         Register(Joystick);
         PcSpeaker = new PcSpeaker(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
         Register(PcSpeaker);
-        OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        Register(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        Register(SoundBlaster);
-        SoundBlaster.AddEnvironmentVariable();
+        if (machineCreationOptions.Configuration.SynthMode == "g") {
+            AdlibGold = new AdlibGold(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+            Register(AdlibGold);
+        }
+        else {
+            OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+            Register(OPL3FM);
+            SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+            Register(SoundBlaster);
+        }
         GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(GravisUltraSound);
         MidiDevice = new Midi(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
@@ -536,8 +543,8 @@ public class Machine : IDisposable {
                 }
                 _dmaResetEvent.Dispose();
                 MidiDevice.Dispose();
-                SoundBlaster.Dispose();
-                OPL3FM.Dispose();
+                SoundBlaster?.Dispose();
+                OPL3FM?.Dispose();
                 PcSpeaker.Dispose();
                 MachineBreakpoints.Dispose();
             }
