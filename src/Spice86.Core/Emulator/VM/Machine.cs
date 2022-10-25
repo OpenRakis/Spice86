@@ -192,7 +192,12 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
-    public OPL3FM OPL3FM { get; }
+    public Opl3Fm OPL3FM { get; }
+
+    /// <summary>
+    /// The Adlib Gold card emulation.
+    /// </summary>
+    public AdlibGold? AdlibGold { get; }
 
     /// <summary>
     /// Initializes a new instance
@@ -247,7 +252,12 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         AudioPlayerFactory audioPlayerFactory = new AudioPlayerFactory(loggerService);
         PcSpeaker = new PcSpeaker(audioPlayerFactory, CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(audioPlayerFactory, CpuState, configuration.FailOnUnhandledPort, loggerService);
+
+        if(configuration.AdlibGold) {
+            AdlibGold = new(loggerService);
+        }
+
+        OPL3FM = new Opl3Fm(audioPlayerFactory, CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
         SoundBlaster = new SoundBlaster(audioPlayerFactory, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
@@ -265,7 +275,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
 
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom,  configuration.InitializeDOS is true);
+        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom, configuration.InitializeDOS is true);
         VideoInt10Handler = new VgaBios(Memory, Cpu, VgaFunctions, BiosDataArea, loggerService);
 
         TimerInt8Handler = new TimerInt8Handler(Memory, Cpu, DualPic, Timer, BiosDataArea, loggerService);

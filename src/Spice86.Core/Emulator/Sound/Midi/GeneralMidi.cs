@@ -86,8 +86,8 @@ public sealed class GeneralMidi : IDisposable {
     /// <summary>
     /// All the input ports usable with the device.
     /// </summary>
-    public IEnumerable<int> InputPorts => new int[] { DataPort, StatusPort };
-
+    public IEnumerable<int> InputPorts => new[] { DataPort, StatusPort };
+    
     /// <summary>
     /// Read a byte from a port. Either the Data port or the Status port.
     /// </summary>
@@ -122,8 +122,8 @@ public sealed class GeneralMidi : IDisposable {
     /// <summary>
     /// All the output ports usable with the device.
     /// </summary>
-    public IEnumerable<int> OutputPorts => new int[] { 0x330, 0x331 };
-
+    public IEnumerable<int> OutputPorts => new[] { 0x330, 0x331 };
+    
     /// <summary>
     /// Writes a byte to the specified port, either the DataPort or StatusPort.
     /// If the DataPort is specified, the byte is sent to the MIDI device through the MIDI mapper.

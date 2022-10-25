@@ -299,8 +299,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     }
 
     private void Dispose(bool disposing) {
-        if(!_disposed) {
-            if(disposing) {
+        if (!_disposed) {
+            if (disposing) {
                 _endPlayback = true;
                 if (_playbackThread.IsAlive) {
                     _playbackThread.Join();

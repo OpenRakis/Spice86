@@ -34,6 +34,7 @@ public class Pic : IHardwareInterruptController {
     private bool _specialMask = false;
     private bool _polled = false;
     private bool _autoEoi = false;
+
     private SelectedReadRegister _selectedReadRegister = SelectedReadRegister.InterruptRequestRegister;
     private readonly ReaderWriterLockSlim _readerWriterLock = new();
 
