@@ -90,7 +90,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     /// <summary>
     /// All the input ports usable with the device.
     /// </summary>
-    public IEnumerable<int> InputPorts => new int[] { DataPort, StatusPort };
+    public IEnumerable<int> InputPorts => new[] { DataPort, StatusPort };
     
     /// <summary>
     /// Read a byte from a port.
@@ -141,6 +141,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
         }
     }
 
+    
     /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(Data, this);
