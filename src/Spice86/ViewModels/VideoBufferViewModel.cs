@@ -2,18 +2,18 @@
 
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Views;
 using Spice86.Shared;
 using Spice86.Shared.Interfaces;
+using Spice86.Views;
 
 using System;
 using System.Diagnostics;
@@ -71,17 +71,20 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
 
     [RelayCommand]
     public async Task SaveBitmap() {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            SaveFileDialog picker = new SaveFileDialog {
-                DefaultExtension = "bmp",
-                InitialFileName = "screenshot.bmp",
-                Title = "Save Bitmap"
-            };
-            string? file = await picker.ShowAsync(desktop.MainWindow);
-            if (string.IsNullOrWhiteSpace(file) == false) {
-                _bitmap?.Save(file);
-            }
+        if (App.MainWindow is null ||
+            !App.MainWindow.StorageProvider.CanSave) {
+            return;
         }
+        IStorageProvider storageProvider = App.MainWindow.StorageProvider;
+        IStorageFile? file = await storageProvider.SaveFilePickerAsync(new() {
+            DefaultExtension = "bmp",
+            SuggestedFileName = "screenshot.bmp",
+            Title = "Save Bitmap"
+        });
+        if (file is null) {
+            return;
+        }
+        _bitmap?.Save(file.Name);
     }
 
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {

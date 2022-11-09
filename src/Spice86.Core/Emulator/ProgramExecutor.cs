@@ -77,8 +77,7 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         try {
-            using SHA256 mySHA256 = SHA256.Create();
-            byte[] actualHash = mySHA256.ComputeHash(file);
+            byte[] actualHash = SHA256.HashData(file);
 
             if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
                 string error = $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
