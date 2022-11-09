@@ -93,7 +93,6 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
 
     public uint Address { get; private set; }
 
-
     /// <summary>
     /// TODO : Get current DPI from Avalonia or Skia.
     /// It isn't DesktopScaling or RenderScaling as this returns 1 when Windows Desktop Scaling is set at 100%
@@ -112,7 +111,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     public bool ShowCursor {
         get => _showCursor;
         set {
-            this.SetProperty(ref _showCursor, value);
+            SetProperty(ref _showCursor, value);
             if (_showCursor) {
                 Cursor?.Dispose();
                 Cursor = Cursor.Default;
@@ -130,7 +129,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
 
     public double Scale {
         get => _scale;
-        set => this.SetProperty(ref _scale, Math.Max(value, 1));
+        set => SetProperty(ref _scale, Math.Max(value, 1));
     }
 
     [ObservableProperty]
@@ -219,7 +218,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
     private long _lastFrameRenderTimeMs;
 
     public override bool Equals(object? obj) {
-        return this == obj || (obj is VideoBufferViewModel other) && _index == other._index;
+        return this == obj || ((obj is VideoBufferViewModel other) && _index == other._index);
     }
 
     public override int GetHashCode() {

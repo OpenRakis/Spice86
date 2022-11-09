@@ -1,8 +1,7 @@
-﻿using Spice86.Core.Emulator.CPU;
+﻿namespace Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.CPU;
 
 using System.Runtime.CompilerServices;
-
-namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Serilog;
 
@@ -182,7 +181,6 @@ public class Pic {
             return null;
         }
 
-
         // search for higher priority Requests 
         byte? irq = FindIrq((int)maxIrqToSearch, (irq) => {
             int irqMask = GenerateIrqMask(irq);
@@ -240,7 +238,6 @@ public class Pic {
         ClearInServiceRegister((int)highestIrqInService);
     }
 
-
     private void SetInServiceRegister(byte irq) {
         if (!_autoEoi) {
             _inServiceRegister = (byte)(_inServiceRegister | GenerateIrqMask(irq));
@@ -258,7 +255,6 @@ public class Pic {
     private void ClearInterruptRequestRegister(byte irq) {
         _interruptRequestRegister = (byte)(_interruptRequestRegister & ~GenerateIrqMask(irq));
     }
-
 
     private void ProcessOCW3(byte value) {
         int specialMask = (value & 0b1100000) >> 5;

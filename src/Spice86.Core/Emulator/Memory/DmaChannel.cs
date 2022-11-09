@@ -20,7 +20,6 @@ public sealed class DmaChannel {
     private int _transferRate;
     private readonly Stopwatch _transferTimer = new();
 
-
     internal DmaChannel() {
     }
 

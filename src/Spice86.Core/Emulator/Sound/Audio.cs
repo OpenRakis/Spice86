@@ -1,6 +1,5 @@
-﻿using Spice86.Core.Backend.Audio.PortAudio;
-
-namespace Spice86.Core.Emulator.Sound;
+﻿namespace Spice86.Core.Emulator.Sound;
+using Spice86.Core.Backend.Audio.PortAudio;
 
 using Spice86.Core.Backend.Audio;
 

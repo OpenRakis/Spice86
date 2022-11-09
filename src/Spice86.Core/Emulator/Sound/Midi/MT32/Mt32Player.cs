@@ -61,7 +61,6 @@ internal sealed class Mt32Player : IDisposable {
         if(!_disposed && !_exitRenderThread && !_threadStarted) {
             _threadStarted = true;
             _renderThread?.Start();
-
         }
     }
 

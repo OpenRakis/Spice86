@@ -1,7 +1,7 @@
-﻿using System;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
+﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
+using System;
 
-namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
 
 internal sealed class BassDrum : Channel2
 {
@@ -13,8 +13,9 @@ internal sealed class BassDrum : Channel2
     public override void GetChannelOutput(Span<double> output)
     {
         // Bass Drum ignores first operator, when it is in series.
-        if (this.cnt == 1)
-            this.op1.ar = 0;
+        if (cnt == 1) {
+            op1.ar = 0;
+        }
 
         base.GetChannelOutput(output);
     }

@@ -1,7 +1,6 @@
-﻿using System;
+﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
+using System;
 using System.Runtime.CompilerServices;
-
-namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 
 internal static class Intrinsics {
     public static uint ExtractBits(uint value, byte start, byte length, uint mask) {

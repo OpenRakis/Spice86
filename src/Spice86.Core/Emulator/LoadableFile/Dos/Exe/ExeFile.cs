@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Text;
 
 public class ExeFile {
-
     public ExeFile(byte[] exe) {
         Signature = new string(Encoding.UTF8.GetChars(exe), 0, 2);
         ExtraBytes = MemoryUtils.GetUint16(exe, 0x02);
@@ -26,7 +25,7 @@ public class ExeFile {
         int relocationTableOffset = RelocTable;
         int numRelocationEntries = RelocItems;
         for (int i = 0; i < numRelocationEntries; i++) {
-            uint currentEntry = (uint)(relocationTableOffset + i * 4);
+            uint currentEntry = (uint)(relocationTableOffset + (i * 4));
             ushort offset = MemoryUtils.GetUint16(exe, currentEntry);
             ushort segment = MemoryUtils.GetUint16(exe, currentEntry + 2);
             RelocationTable.Add(new SegmentedAddress(segment, offset));

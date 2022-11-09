@@ -1,7 +1,6 @@
-﻿using System;
+﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
+using System;
 using System.Runtime.CompilerServices;
-
-namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
 
 /// <summary>
 /// Emulates an OPL channel.
@@ -33,23 +32,23 @@ internal abstract class Channel
     /// <param name="opl">FmSynthesizer instance which owns the channel.</param>
     public Channel(int baseAddress, FmSynthesizer opl)
     {
-        this.channelBaseAddress = baseAddress;
+        channelBaseAddress = baseAddress;
         this.opl = opl;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void GetFourChannelOutput(double channelOutput, Span<double> output)
     {
-        if (this.opl.IsOpl3Mode == 0)
+        if (opl.IsOpl3Mode == 0)
         {
             output.Fill(channelOutput);
         }
         else
         {
-            output[0] = (this.cha == 1) ? channelOutput : 0;
-            output[1] = (this.chb == 1) ? channelOutput : 0;
-            output[2] = (this.chc == 1) ? channelOutput : 0;
-            output[3] = (this.chd == 1) ? channelOutput : 0;
+            output[0] = (cha == 1) ? channelOutput : 0;
+            output[1] = (chb == 1) ? channelOutput : 0;
+            output[2] = (chc == 1) ? channelOutput : 0;
+            output[3] = (chd == 1) ? channelOutput : 0;
         }
     }
     /// <summary>
@@ -71,51 +70,52 @@ internal abstract class Channel
     public abstract void UpdateOperators();
     public void Update_2_KON1_BLOCK3_FNUMH2()
     {
-        int _2_kon1_block3_fnumh2 = this.opl.registers[this.channelBaseAddress + _2_KON1_BLOCK3_FNUMH2_Offset];
+        int _2_kon1_block3_fnumh2 = opl.registers[channelBaseAddress + _2_KON1_BLOCK3_FNUMH2_Offset];
 
         // Frequency Number (hi-register) and Block. These two registers, together with fnuml, 
         // sets the Channel´s base frequency;
-        this.block = (_2_kon1_block3_fnumh2 & 0x1C) >> 2;
-        this.fnumh = _2_kon1_block3_fnumh2 & 0x03;
-        this.UpdateOperators();
+        block = (_2_kon1_block3_fnumh2 & 0x1C) >> 2;
+        fnumh = _2_kon1_block3_fnumh2 & 0x03;
+        UpdateOperators();
 
         // Key On. If changed, calls Channel.keyOn() / keyOff().
         int newKon = (_2_kon1_block3_fnumh2 & 0x20) >> 5;
-        if (newKon != this.kon)
+        if (newKon != kon)
         {
-            if (newKon == 1)
-                this.KeyOn();
-            else
-                this.KeyOff();
+            if (newKon == 1) {
+                KeyOn();
+            } else {
+                KeyOff();
+            }
 
-            this.kon = newKon;
+            kon = newKon;
         }
     }
     public void Update_FNUML8()
     {
-        int fnuml8 = this.opl.registers[this.channelBaseAddress + FNUML8_Offset];
+        int fnuml8 = opl.registers[channelBaseAddress + FNUML8_Offset];
         // Frequency Number, low register.
-        this.fnuml = fnuml8 & 0xFF;
-        this.UpdateOperators();
+        fnuml = fnuml8 & 0xFF;
+        UpdateOperators();
     }
     public void Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1()
     {
-        int chd1_chc1_chb1_cha1_fb3_cnt1 = this.opl.registers[this.channelBaseAddress + CHD1_CHC1_CHB1_CHA1_FB3_CNT1_Offset];
-        this.chd = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x80) >> 7;
-        this.chc = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x40) >> 6;
-        this.chb = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x20) >> 5;
-        this.cha = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x10) >> 4;
-        this.fb = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x0E) >> 1;
-        this.cnt = chd1_chc1_chb1_cha1_fb3_cnt1 & 0x01;
-        this.UpdateOperators();
+        int chd1_chc1_chb1_cha1_fb3_cnt1 = opl.registers[channelBaseAddress + CHD1_CHC1_CHB1_CHA1_FB3_CNT1_Offset];
+        chd = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x80) >> 7;
+        chc = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x40) >> 6;
+        chb = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x20) >> 5;
+        cha = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x10) >> 4;
+        fb = (chd1_chc1_chb1_cha1_fb3_cnt1 & 0x0E) >> 1;
+        cnt = chd1_chc1_chb1_cha1_fb3_cnt1 & 0x01;
+        UpdateOperators();
     }
     /// <summary>
     /// Updates the state of the channel.
     /// </summary>
     public void UpdateChannel()
     {
-        this.Update_2_KON1_BLOCK3_FNUMH2();
-        this.Update_FNUML8();
-        this.Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
+        Update_2_KON1_BLOCK3_FNUMH2();
+        Update_FNUML8();
+        Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
     }
 }

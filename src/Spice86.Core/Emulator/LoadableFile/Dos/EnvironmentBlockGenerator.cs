@@ -6,7 +6,6 @@ public class EnvironmentBlockGenerator {
     private readonly Machine _machine;
     public EnvironmentBlockGenerator(Machine machine) => _machine = machine;
 
-
     /// <summary>
     /// Returns a byte array containing a process's environment block.
     /// </summary>

@@ -4,7 +4,6 @@ using System.Text.Json;
 
 /// <summary> Represents a range in memory. </summary>
 public class MemoryRange {
-
     public MemoryRange(uint startAddress, uint endAddress, string name) {
         StartAddress = startAddress;
         EndAddress = endAddress;

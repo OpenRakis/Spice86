@@ -11,7 +11,6 @@ using System.Text;
 /// Converts FunctionInformation to CSV
 /// </summary>
 public class CsvFunctionInformationToStringConverter : FunctionInformationToStringConverter {
-
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
         IEnumerable<FunctionInformation>? calls = GetCalls(functionInformation, allFunctions);
         return GenerateLine(ToCSharpName(functionInformation, true), Size(functionInformation.Returns), Size(functionInformation.UnalignedReturns), Size(GetCallers(functionInformation)), functionInformation.CalledCount.ToString(), Size(calls), ApproximateSize(functionInformation).ToString(), IsOverridable(calls).ToString(), functionInformation.HasOverride.ToString());

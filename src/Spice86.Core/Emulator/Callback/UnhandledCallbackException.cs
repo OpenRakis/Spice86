@@ -11,7 +11,6 @@ using System;
 /// </summary>
 [Serializable]
 public class UnhandledCallbackException : UnhandledOperationException {
-
     public UnhandledCallbackException(Machine machine, int callbackNumber) : base(machine, FormatMessage(callbackNumber)) {
     }
 

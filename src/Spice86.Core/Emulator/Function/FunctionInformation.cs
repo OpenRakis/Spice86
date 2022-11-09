@@ -73,9 +73,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     public ISet<FunctionInformation> Callers {
         get {
-            if (_callers == null) {
-                _callers = new HashSet<FunctionInformation>();
-            }
+            _callers ??= new HashSet<FunctionInformation>();
             return _callers;
         }
     }
@@ -88,18 +86,14 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
         get {
-            if (_returns == null) {
-                _returns = new();
-            }
+            _returns ??= new();
             return _returns;
         }
     }
 
     public Dictionary<FunctionReturn, ISet<SegmentedAddress>> UnalignedReturns {
         get {
-            if (_unalignedReturns == null) {
-                _unalignedReturns = new();
-            }
+            _unalignedReturns ??= new();
             return _unalignedReturns;
         }
     }

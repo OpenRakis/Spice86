@@ -1,8 +1,7 @@
+namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
-
-namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public abstract class Instructions16Or32 : Instructions {
     public Instructions16Or32(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm,
@@ -12,7 +11,6 @@ public abstract class Instructions16Or32 : Instructions {
 
     // Inc Reg
     public abstract void IncReg(int regIndex);
-
 
     // Dec Reg
     public abstract void DecReg(int regIndex);

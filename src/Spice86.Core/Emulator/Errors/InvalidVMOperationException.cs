@@ -11,7 +11,6 @@ using System;
 /// </summary>
 [Serializable]
 public class InvalidVMOperationException : Exception {
-
     public InvalidVMOperationException(Machine machine, string message) : base(GenerateStatusMessage(machine, message)) {
     }
 

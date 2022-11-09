@@ -1,6 +1,5 @@
-﻿using System;
-
-namespace Bufdio.Spice86.Engines;
+﻿namespace Bufdio.Spice86.Engines;
+using System;
 
 /// <summary>
 /// An interface to interact with output audio device.

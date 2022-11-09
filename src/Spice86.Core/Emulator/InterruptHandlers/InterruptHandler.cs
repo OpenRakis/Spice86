@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers;
 
-
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;

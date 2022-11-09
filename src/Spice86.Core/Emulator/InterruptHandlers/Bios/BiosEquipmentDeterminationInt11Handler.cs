@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.VM;
 /// Very basic implementation of int 11 that basically does nothing.
 /// </summary>
 public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
-
     public BiosEquipmentDeterminationInt11Handler(Machine machine) : base(machine) {
     }
 

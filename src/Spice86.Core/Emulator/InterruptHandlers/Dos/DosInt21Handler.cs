@@ -246,7 +246,7 @@ public class DosInt21Handler : InterruptHandler {
 
     public void GetInterruptVector() {
         byte vectorNumber = _state.AL;
-        ushort segment = _memory.GetUint16((uint)(4 * vectorNumber + 2));
+        ushort segment = _memory.GetUint16((uint)((4 * vectorNumber) + 2));
         ushort offset = _memory.GetUint16((uint)(4 * vectorNumber));
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("GET INTERRUPT VECTOR INT {@VectorInt}, got {@SegmentedAddress}", ConvertUtils.ToHex8(vectorNumber),
@@ -396,7 +396,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void SetInterruptVector(byte vectorNumber, ushort segment, ushort offset) {
-        _memory.SetUint16((ushort)(4 * vectorNumber + 2), segment);
+        _memory.SetUint16((ushort)((4 * vectorNumber) + 2), segment);
         _memory.SetUint16((ushort)(4 * vectorNumber), offset);
     }
 

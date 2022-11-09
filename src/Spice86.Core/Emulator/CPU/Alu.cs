@@ -1,7 +1,6 @@
-﻿using Spice86.Core.Emulator.Function;
+﻿namespace Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
-
-namespace Spice86.Core.Emulator.CPU;
 
 public class Alu {
     /**
@@ -350,7 +349,7 @@ public class Alu {
         uint carry = value >> 32 - count & 0x1;
         uint res = value << count;
         int mask = (1 << count - 1) - 1;
-        res = (uint)(res | value >> 33 - count & mask);
+        res = (uint)(res | (value >> 33 - count & mask));
         if (_state.CarryFlag) {
             res = (uint)(res | 1 << count - 1);
         }
@@ -370,7 +369,7 @@ public class Alu {
         int carry = value >> 16 - count & 0x1;
         ushort res = (ushort)(value << count);
         int mask = (1 << count - 1) - 1;
-        res = (ushort)(res | value >> 17 - count & mask);
+        res = (ushort)(res | (value >> 17 - count & mask));
         if (_state.CarryFlag) {
             res = (ushort)(res | 1 << count - 1);
         }
@@ -390,7 +389,7 @@ public class Alu {
         int carry = value >> 8 - count & 0x1;
         byte res = (byte)(value << count);
         int mask = (1 << count - 1) - 1;
-        res = (byte)(res | value >> 9 - count & mask);
+        res = (byte)(res | (value >> 9 - count & mask));
         if (_state.CarryFlag) {
             res = (byte)(res | 1 << count - 1);
         }
@@ -457,7 +456,6 @@ public class Alu {
         SetOverflowForRigthRotate8(res);
         return res;
     }
-
 
     public uint Rol32(uint value, byte count) {
         count = (byte) ((count & ShiftCountMask) % 32);
@@ -781,11 +779,11 @@ public class Alu {
     }
 
     private static uint BorrowBitsSub(uint value1, uint value2, uint dst) {
-        return value1 ^ value2 ^ dst ^ (value1 ^ dst) & (value1 ^ value2);
+        return value1 ^ value2 ^ dst ^ ((value1 ^ dst) & (value1 ^ value2));
     }
 
     private static uint CarryBitsAdd(uint value1, uint value2, uint dst) {
-        return value1 ^ value2 ^ dst ^ (value1 ^ dst) & ~(value1 ^ value2);
+        return value1 ^ value2 ^ dst ^ ((value1 ^ dst) & ~(value1 ^ value2));
     }
 
     private static bool IsParity(byte value) {

@@ -30,8 +30,8 @@ public class GhidraSymbolsDumper {
     private void DumpLabels(List<string> lines, ISet<SegmentedAddress> dumpedAddresses, ExecutionFlowRecorder executionFlowRecorder) {
         executionFlowRecorder.JumpsFromTo
             .SelectMany(x => x.Value)
-            .OrderBy(x => x)
             .Where(address => !dumpedAddresses.Contains(address))
+            .OrderBy(x => x)
             .Distinct()
             .OrderBy(x => x)
             .ToList()
@@ -39,7 +39,7 @@ public class GhidraSymbolsDumper {
     }
 
     private string DumpLabel(SegmentedAddress address) {
-        return ToGhidraSymbol($"spice86_label", address, "l");
+        return ToGhidraSymbol("spice86_label", address, "l");
     }
 
     private void DumpFunctionInformations(ICollection<string> lines, ISet<SegmentedAddress> dumpedAddresses, ICollection<FunctionInformation> functionInformations) {
@@ -73,7 +73,6 @@ public class GhidraSymbolsDumper {
             .OfType<FunctionInformation>()
             .Distinct()
             .ToDictionary(functionInformation => functionInformation.Address, functionInformation => functionInformation);
-
     }
 
     private FunctionInformation? ToFunctionInformation(string line) {

@@ -1,7 +1,6 @@
+namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
-
-namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public class Instructions32 : Instructions16Or32 {
     public Instructions32(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm,

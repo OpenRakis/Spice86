@@ -4,7 +4,6 @@ using System;
 
 [Serializable]
 public class UnrecoverableException : Exception {
-
     public UnrecoverableException() {
     }
 

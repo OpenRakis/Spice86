@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 
 internal static class DictionaryExtensions {
-
     /// <summary>
     /// Like <see cref="GetValueOrDefault"/> but adds the value to the dict if not found.<br/>
     /// </summary>

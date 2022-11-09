@@ -1,6 +1,5 @@
-﻿using Spice86.Core.Emulator.CPU.InstructionsImpl;
-
-namespace Spice86.Core.Emulator.CPU;
+﻿namespace Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 using Serilog;
 
@@ -997,7 +996,7 @@ public class Cpu {
     }
 
     public void Aad(byte v2) {
-        byte result = (byte)(State.AL + State.AH * v2);
+        byte result = (byte)(State.AL + (State.AH * v2));
         State.AL = result;
         State.AH = 0;
         State.Flags.FlagRegister = 0;
@@ -1115,10 +1114,8 @@ public class Cpu {
             return;
         }
 
-        if (ExternalInterruptVectorNumber == null) {
-            // Check the PIC in case this was not directly set by rewritten code
-            ExternalInterruptVectorNumber = _machine.DualPic.ComputeVectorNumber();
-        }
+        // Check the PIC in case this was not directly set by rewritten code
+        ExternalInterruptVectorNumber ??= _machine.DualPic.ComputeVectorNumber();
 
         if (ExternalInterruptVectorNumber == null) {
             return;
@@ -1146,7 +1143,7 @@ public class Cpu {
         }
 
         ushort targetIP = _memory.GetUint16((ushort)(4 * vectorNumber.Value));
-        ushort targetCS = _memory.GetUint16((ushort)(4 * vectorNumber.Value + 2));
+        ushort targetCS = _memory.GetUint16((ushort)((4 * vectorNumber.Value) + 2));
         if (ErrorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0) {
             throw new UnhandledOperationException(_machine,
                 $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");

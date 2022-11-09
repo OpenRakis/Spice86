@@ -1,6 +1,5 @@
-﻿using System;
-
-namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
+﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
+using System;
 
 /// <summary>
 /// Emulates the top cymbal OPL operator.
@@ -38,22 +37,23 @@ internal class TopCymbal : Operator
     }
     public double GetOperatorOutput(double modulator, double externalPhase)
     {
-        var envelopeInDB = this.envelopeGenerator.GetEnvelope(this.egt, this.am);
-        this.envelope = Math.Pow(10, envelopeInDB / 10.0);
+        double envelopeInDB = envelopeGenerator.GetEnvelope(egt, am);
+        envelope = Math.Pow(10, envelopeInDB / 10.0);
 
-        this.UpdatePhase();
+        UpdatePhase();
 
-        int waveIndex = this.ws & ((this.opl.IsOpl3Mode << 2) + 3);
+        int waveIndex = ws & ((opl.IsOpl3Mode << 2) + 3);
 
         // Empirically tested multiplied phase for the Top Cymbal:
-        var carrierPhase = 8 * this.phase % 1;
-        var modulatorPhase = externalPhase;
-        var modulatorOutput = this.GetOutput(NoModulator, modulatorPhase, waveIndex);
-        var carrierOutput = this.GetOutput(modulatorOutput, carrierPhase, waveIndex);
+        double carrierPhase = 8 * phase % 1;
+        double modulatorPhase = externalPhase;
+        double modulatorOutput = GetOutput(NoModulator, modulatorPhase, waveIndex);
+        double carrierOutput = GetOutput(modulatorOutput, carrierPhase, waveIndex);
 
-        int cycles = 4;
-        if ((carrierPhase * cycles) % cycles > 0.1)
+        const int cycles = 4;
+        if ((carrierPhase * cycles) % cycles > 0.1) {
             carrierOutput = 0;
+        }
 
         return carrierOutput * 2;
     }

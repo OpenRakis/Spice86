@@ -3,7 +3,6 @@
 using System;
 
 public class UnconditionalBreakPoint : BreakPoint {
-
     public UnconditionalBreakPoint(BreakPointType breakPointType, Action<BreakPoint> onReached, bool removeOnTrigger) : base(breakPointType, onReached, removeOnTrigger) {
     }
 

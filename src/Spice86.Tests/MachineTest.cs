@@ -16,7 +16,6 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.VM;
 
 public class MachineTest {
-
     static MachineTest() {
         Log.Logger = new LoggerConfiguration()
             .WriteTo.Console()
@@ -302,14 +301,14 @@ public class MachineTest {
     [AssertionMethod]
     private Machine TestOneBin(string binName) {
         byte[] expected = GetExpected(binName);
-        return this.TestOneBin(binName, expected);
+        return TestOneBin(binName, expected);
     }
 
     [AssertionMethod]
     private Machine TestOneBin(string binName, byte[] expected) {
         Machine machine = Execute(binName);
         Memory memory = machine.Memory;
-        CompareMemoryWithExpected(memory, expected, 0, expected.Length - 1);
+        CompareMemoryWithExpected(memory, expected, expected.Length - 1);
         return machine;
     }
 
@@ -330,7 +329,7 @@ public class MachineTest {
     }
 
     [AssertionMethod]
-    private void CompareMemoryWithExpected(Memory memory, byte[] expected, int start, int end) {
+    private void CompareMemoryWithExpected(Memory memory, byte[] expected, int end) {
         byte[] actual = memory.Ram;
         for (uint i = 0; i < end; i++) {
             byte actualByte = actual[i];

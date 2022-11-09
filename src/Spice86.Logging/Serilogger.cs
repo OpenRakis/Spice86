@@ -21,5 +21,4 @@ public static class Serilogger {
     }
 
     public static ILogger Logger => _loggerInstance;
-
 }

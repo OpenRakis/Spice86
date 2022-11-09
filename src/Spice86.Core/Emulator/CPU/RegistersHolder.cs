@@ -5,7 +5,6 @@ using Spice86.Core.Utils;
 using System;
 using System.Collections.Generic;
 public class RegistersHolder {
-
     // 3rd bit in register index means to access the high part
     private const int Register8IndexHighBitMask = 0b100;
 

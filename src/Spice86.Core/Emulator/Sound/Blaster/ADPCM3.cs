@@ -35,11 +35,11 @@ internal sealed class ADPCM3 : ADPCM2 {
 
             sample = source[sourceOffset + i] >> 3 & 0x07;
             current = DecodeSample(current, sample);
-            destination[i * 3 + 1] = current;
+            destination[(i * 3) + 1] = current;
 
             sample = source[sourceOffset + i] >> 6 & 0x03;
             current = base.DecodeSample(current, sample);
-            destination[i * 3 + 2] = current;
+            destination[(i * 3) + 2] = current;
         }
 
         Reference = current;

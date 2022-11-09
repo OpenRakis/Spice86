@@ -1,7 +1,7 @@
-﻿using System;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
+﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
+using System;
 
-namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
 
 /// <summary>
 /// Emulates a 2-operator rhythm OPL channel.
@@ -26,11 +26,11 @@ internal sealed class RhythmChannel : Channel2
     /// <returns>Array containing the channel's output values.</returns>
     public override void GetChannelOutput(Span<double> output)
     {
-        var op1Output = this.op1.GetOperatorOutput(Operator.NoModulator);
-        var op2Output = this.op2.GetOperatorOutput(Operator.NoModulator);
-        var channelOutput = (op1Output + op2Output) / 2;
+        double op1Output = op1.GetOperatorOutput(Operator.NoModulator);
+        double op2Output = op2.GetOperatorOutput(Operator.NoModulator);
+        double channelOutput = (op1Output + op2Output) / 2;
 
-        this.GetFourChannelOutput(channelOutput, output);
+        GetFourChannelOutput(channelOutput, output);
     }
     /// <summary>
     /// Activates channel output.

@@ -1,6 +1,5 @@
-﻿using System;
-
-namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
+﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
+using System;
 
 /// <summary>
 /// Placeholder OPL channel that generates no output.

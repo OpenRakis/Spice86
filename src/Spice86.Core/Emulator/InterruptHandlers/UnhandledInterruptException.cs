@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.VM;
 /// <summary> Signals that the operation for the given callback is not handled. </summary>
 [Serializable]
 public class UnhandledInterruptException : UnhandledOperationException {
-
     public UnhandledInterruptException(Machine machine, int callbackNumber, int operation) : base(machine, FormatMessage(callbackNumber, operation)) {
     }
 

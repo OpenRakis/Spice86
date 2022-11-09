@@ -1,10 +1,10 @@
-﻿using System;
+﻿namespace Bufdio.Spice86.Engines;
+using System;
 using System.Runtime.InteropServices;
+
 using Bufdio.Spice86.Bindings.PortAudio;
 using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities.Extensions;
-
-namespace Bufdio.Spice86.Engines;
 
 /// <summary>
 /// Interact with output audio device by using PortAudio library.
@@ -40,7 +40,7 @@ public sealed class PortAudioEngine : IAudioEngine {
 
         unsafe {
             PaBinding.PaStreamParameters tempParameters;
-            IntPtr parametersPtr = new IntPtr(&tempParameters);
+            IntPtr parametersPtr = new(&tempParameters);
             Marshal.StructureToPtr(parameters, parametersPtr, false);
 
             int code = PaBinding.Pa_OpenStream(

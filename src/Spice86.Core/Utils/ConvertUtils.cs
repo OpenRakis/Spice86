@@ -1,7 +1,6 @@
-﻿using Spice86.Core.Emulator.CPU;
+﻿namespace Spice86.Core.Utils;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
-
-namespace Spice86.Core.Utils;
 
 using Spice86.Core.Emulator.Memory;
 
@@ -25,7 +24,7 @@ public static class ConvertUtils {
     }
 
     public static uint BytesToInt32(byte[] data, int start) {
-        return Uint32(data[start] << 24 & 0xFF000000 | (uint)data[start + 1] << 16 & 0x00FF0000 | (uint)data[start + 2] << 8 & 0x0000FF00 | (uint)data[start + 3] & 0x000000FF);
+        return Uint32((data[start] << 24 & 0xFF000000) | ((uint)data[start + 1] << 16 & 0x00FF0000) | ((uint)data[start + 2] << 8 & 0x0000FF00) | ((uint)data[start + 3] & 0x000000FF));
     }
 
     public static byte[] HexToByteArray(string valueString) {
@@ -77,11 +76,11 @@ public static class ConvertUtils {
     }
 
     public static uint Swap32(uint value) {
-        return value >> 24 & 0x000000ff | value >> 8 & 0x0000ff00 | value << 8 & 0x00ff0000 | value << 24 & 0xff000000;
+        return (value >> 24 & 0x000000ff) | (value >> 8 & 0x0000ff00) | (value << 8 & 0x00ff0000) | (value << 24 & 0xff000000);
     }
 
     public static ushort ToAbsoluteOffset(uint physicalAddress) {
-        return (ushort)(physicalAddress - physicalAddress / SegmentSize * SegmentSize);
+        return (ushort)(physicalAddress - (physicalAddress / SegmentSize * SegmentSize));
     }
 
     public static ushort ToAbsoluteSegment(uint physicalAddress) {
@@ -186,11 +185,11 @@ public static class ConvertUtils {
     }
 
     public static ushort WriteLsb(ushort value, byte lsb) {
-        return (ushort)(value & 0xFF00 | lsb);
+        return (ushort)((value & 0xFF00) | lsb);
     }
 
     public static ushort WriteMsb(ushort value, byte msb) {
-        return (ushort)(value & 0x00FF | msb << 8 & 0xFF00);
+        return (ushort)((value & 0x00FF) | (msb << 8 & 0xFF00));
     }
 
     public static string ToSlashPath(string path) {

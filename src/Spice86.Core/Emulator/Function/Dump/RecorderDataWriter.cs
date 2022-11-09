@@ -48,7 +48,6 @@ public class RecorderDataWriter : RecordedDataIoHandler {
             new CSharpStubToStringConverter(), cpu.StaticAddressesRecorder, cpu.FunctionHandler);
     }
 
-
     public void DumpMemory(string suffix) {
         string path = GenerateDumpFileName($"MemoryDump{suffix}.bin");
         File.WriteAllBytes(path, _machine.CallbackHandler.NopCallbackInstructionInRamCopy());

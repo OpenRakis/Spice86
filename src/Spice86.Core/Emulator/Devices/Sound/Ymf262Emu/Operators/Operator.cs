@@ -1,6 +1,5 @@
-﻿using System;
-
-namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
+﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
+using System;
 
 /// <summary>
 /// Emulates a single OPL operator.
@@ -38,9 +37,9 @@ internal class Operator
     /// <param name="opl">FmSynthesizer instance which owns the operator.</param>
     public Operator(int baseAddress, FmSynthesizer opl)
     {
-        this.operatorBaseAddress = baseAddress;
+        operatorBaseAddress = baseAddress;
         this.opl = opl;
-        this.envelopeGenerator = new AdsrCalculator(opl);
+        envelopeGenerator = new AdsrCalculator(opl);
     }
 
     public void Update_AM1_VIB1_EGT1_KSR1_MULT4()
@@ -60,51 +59,51 @@ internal class Operator
         // This register is used in PhaseGenerator.setFrequency().
         mult = am1_vib1_egt1_ksr1_mult4 & 0x0F;
 
-        this.UpdateFrequency();
-        this.envelopeGenerator.SetActualAttackRate(ar, ksr, keyScaleNumber);
-        this.envelopeGenerator.SetActualDecayRate(dr, ksr, keyScaleNumber);
-        this.envelopeGenerator.SetActualReleaseRate(rr, ksr, keyScaleNumber);
+        UpdateFrequency();
+        envelopeGenerator.SetActualAttackRate(ar, ksr, keyScaleNumber);
+        envelopeGenerator.SetActualDecayRate(dr, ksr, keyScaleNumber);
+        envelopeGenerator.SetActualReleaseRate(rr, ksr, keyScaleNumber);
     }
     public void Update_KSL2_TL6()
     {
         int ksl2_tl6 = opl.registers[operatorBaseAddress + KSL2_TL6_Offset];
 
         // Key Scale Level. Sets the attenuation in accordance with the octave.
-        this.ksl = (ksl2_tl6 & 0xC0) >> 6;
+        ksl = (ksl2_tl6 & 0xC0) >> 6;
         // Total Level. Sets the overall damping for the envelope.
-        this.tl = ksl2_tl6 & 0x3F;
+        tl = ksl2_tl6 & 0x3F;
 
-        this.envelopeGenerator.SetAtennuation(f_number, block, ksl);
-        this.envelopeGenerator.TotalLevel = tl;
+        envelopeGenerator.SetAtennuation(f_number, block, ksl);
+        envelopeGenerator.TotalLevel = tl;
     }
     public void Update_AR4_DR4()
     {
         int ar4_dr4 = opl.registers[operatorBaseAddress + AR4_DR4_Offset];
 
         // Attack Rate.
-        this.ar = (ar4_dr4 & 0xF0) >> 4;
+        ar = (ar4_dr4 & 0xF0) >> 4;
         // Decay Rate.
-        this.dr = ar4_dr4 & 0x0F;
+        dr = ar4_dr4 & 0x0F;
 
-        this.envelopeGenerator.SetActualAttackRate(ar, ksr, keyScaleNumber);
-        this.envelopeGenerator.SetActualDecayRate(dr, ksr, keyScaleNumber);
+        envelopeGenerator.SetActualAttackRate(ar, ksr, keyScaleNumber);
+        envelopeGenerator.SetActualDecayRate(dr, ksr, keyScaleNumber);
     }
     public void Update_SL4_RR4()
     {
-        int sl4_rr4 = this.opl.registers[this.operatorBaseAddress + SL4_RR4_Offset];
+        int sl4_rr4 = opl.registers[operatorBaseAddress + SL4_RR4_Offset];
 
         // Sustain Level.
-        this.sl = (sl4_rr4 & 0xF0) >> 4;
+        sl = (sl4_rr4 & 0xF0) >> 4;
         // Release Rate.
-        this.rr = sl4_rr4 & 0x0F;
+        rr = sl4_rr4 & 0x0F;
 
-        this.envelopeGenerator.SustainLevel = sl;
-        this.envelopeGenerator.SetActualReleaseRate(rr, ksr, keyScaleNumber);
+        envelopeGenerator.SustainLevel = sl;
+        envelopeGenerator.SetActualReleaseRate(rr, ksr, keyScaleNumber);
     }
     public void Update_5_WS3()
     {
-        int _5_ws3 = this.opl.registers[this.operatorBaseAddress + _5_WS3_Offset];
-        this.ws = _5_ws3 & 0x07;
+        int _5_ws3 = opl.registers[operatorBaseAddress + _5_WS3_Offset];
+        ws = _5_ws3 & 0x07;
     }
     /// <summary>
     /// Returns the current output value of the operator.
@@ -113,18 +112,19 @@ internal class Operator
     /// <returns>Current output value of the operator.</returns>
     public virtual double GetOperatorOutput(double modulator)
     {
-        if (this.envelopeGenerator.State == AdsrState.Off)
+        if (envelopeGenerator.State == AdsrState.Off) {
             return 0;
+        }
 
-        double envelopeInDB = this.envelopeGenerator.GetEnvelope(this.egt, this.am);
-        this.envelope = Math.Pow(10, envelopeInDB / 10.0);
+        double envelopeInDB = envelopeGenerator.GetEnvelope(egt, am);
+        envelope = Math.Pow(10, envelopeInDB / 10.0);
 
         // If it is in OPL2 mode, use first four waveforms only:
-        this.ws &= (this.opl.IsOpl3Mode << 2) + 3;
+        ws &= (opl.IsOpl3Mode << 2) + 3;
 
-        this.UpdatePhase();
+        UpdatePhase();
 
-        var operatorOutput = this.GetOutput(modulator, this.phase, this.ws);
+        double operatorOutput = GetOutput(modulator, phase, ws);
         return operatorOutput;
     }
     public virtual double GetOutput(double modulator, double outputPhase, int waveform)
@@ -138,34 +138,34 @@ internal class Operator
         }
 
         int sampleIndex = (int)(outputPhase * Wavelength);
-        return GetWaveformValue(waveform, sampleIndex) * this.envelope;
+        return GetWaveformValue(waveform, sampleIndex) * envelope;
     }
     public virtual void KeyOn()
     {
-        if (this.ar > 0)
+        if (ar > 0)
         {
-            this.envelopeGenerator.KeyOn();
-            this.phase = 0;
+            envelopeGenerator.KeyOn();
+            phase = 0;
         }
         else
         {
-            this.envelopeGenerator.State = AdsrState.Off;
+            envelopeGenerator.State = AdsrState.Off;
         }
     }
     public virtual void KeyOff()
     {
-        this.envelopeGenerator.KeyOff();
+        envelopeGenerator.KeyOff();
     }
     public virtual void UpdateOperator(int ksn, int f_num, int blk)
     {
-        this.keyScaleNumber = ksn;
-        this.f_number = f_num;
-        this.block = blk;
-        this.Update_AM1_VIB1_EGT1_KSR1_MULT4();
-        this.Update_KSL2_TL6();
-        this.Update_AR4_DR4();
-        this.Update_SL4_RR4();
-        this.Update_5_WS3();
+        keyScaleNumber = ksn;
+        f_number = f_num;
+        block = blk;
+        Update_AM1_VIB1_EGT1_KSR1_MULT4();
+        Update_KSL2_TL6();
+        Update_AR4_DR4();
+        Update_SL4_RR4();
+        Update_5_WS3();
     }
 
     /// <summary>
@@ -173,12 +173,13 @@ internal class Operator
     /// </summary>
     protected void UpdatePhase()
     {
-        if (this.vib == 1)
-            this.phase += this.phaseIncrement * VibratoGenerator.GetValue(this.opl.dvb, this.opl.vibratoIndex);
-        else
-            this.phase += phaseIncrement;
+        if (vib == 1) {
+            phase += phaseIncrement * VibratoGenerator.GetValue(opl.dvb, opl.vibratoIndex);
+        } else {
+            phase += phaseIncrement;
+        }
 
-        this.phase %= 1;
+        phase %= 1;
     }
 
     /// <summary>
@@ -186,10 +187,10 @@ internal class Operator
     /// </summary>
     private void UpdateFrequency()
     {
-        var baseFrequency = this.f_number * Math.Pow(2, this.block - 1) * this.opl.SampleRate / Math.Pow(2, 19);
-        var operatorFrequency = baseFrequency * PhaseMultiplierTable[this.mult];
+        double baseFrequency = f_number * Math.Pow(2, block - 1) * opl.SampleRate / Math.Pow(2, 19);
+        double operatorFrequency = baseFrequency * PhaseMultiplierTable[mult];
 
-        this.phaseIncrement = operatorFrequency / this.opl.SampleRate;
+        phaseIncrement = operatorFrequency / opl.SampleRate;
     }
 
     private static double GetWaveformValue(int w, int i)
@@ -209,12 +210,13 @@ internal class Operator
                 return Math.Sin((i & 511) * thetaIncrement);
 
             case 3:
-                if (i < 256)
+                if (i < 256) {
                     return Math.Sin(i * thetaIncrement);
-                else if (i >= 512 && i < 768)
+                } else if (i is >= 512 and < 768) {
                     return Math.Sin((i - 512) * thetaIncrement);
-                else
+                } else {
                     return 0;
+                }
 
             case 4:
                 return i < 512 ? Math.Sin(i * 2 * thetaIncrement) : 0;
@@ -227,10 +229,11 @@ internal class Operator
 
             case 7:
             default:
-                if (i < 512)
+                if (i < 512) {
                     return Math.Pow(2, -(i * xFactor));
-                else
-                    return -Math.Pow(2, -(((i - 512) * xFactor) + 1 / 16d));
+                } else {
+                    return -Math.Pow(2, -(((i - 512) * xFactor) + (1 / 16d)));
+                }
         }
     }
 }

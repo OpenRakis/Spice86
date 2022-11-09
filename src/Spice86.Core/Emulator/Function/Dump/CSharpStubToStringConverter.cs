@@ -82,7 +82,7 @@ public class Stubs : CSharpOverrideHelper {{
     }
 
     protected override string GenerateNonPointerSetter(string comment, string cSharpName, string offset, int bits) {
-        var downCast = "(byte)";
+        string downCast = "(byte)";
         if(bits is 16) {
             downCast = "(ushort)";
         }

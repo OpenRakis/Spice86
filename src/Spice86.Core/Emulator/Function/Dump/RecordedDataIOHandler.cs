@@ -21,7 +21,6 @@ public abstract class RecordedDataIoHandler {
         return GenerateDumpFileName("GhidraSymbols.txt");
     }
 
-
     protected string GenerateDumpFileName(string suffix) {
         return $"{DumpDirectory}/spice86dump{suffix}";
     }

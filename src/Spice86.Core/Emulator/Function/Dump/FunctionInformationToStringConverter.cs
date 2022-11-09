@@ -13,7 +13,6 @@ using System.Text;
 /// Base class for FunctionInformation to String conversion. Each subclass could implement a custom format.
 /// </summary>
 public abstract class FunctionInformationToStringConverter {
-
     /// <summary>
     /// Called once per functionInformation.
     /// </summary>

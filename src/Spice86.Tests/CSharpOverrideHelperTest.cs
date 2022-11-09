@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using Xunit;
 
 public class CSharpOverrideHelperTest {
-    private ProgramExecutor createDummyProgramExecutor() {
+    private ProgramExecutor CreateDummyProgramExecutor() {
         ProgramExecutor res =  new MachineCreator().CreateProgramExecutorFromBinName("add");
         Machine machine = res.Machine;
         // Setup stack
@@ -23,21 +23,21 @@ public class CSharpOverrideHelperTest {
 
     [Fact]
     void TestJumpReturns() {
-        using ProgramExecutor programExecutor = createDummyProgramExecutor();
+        using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
         RecursiveJumps recursiveJumps =
             new RecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(), programExecutor.Machine);
-        recursiveJumps.jumpTarget1(0);
+        recursiveJumps.JumpTarget1(0);
         Assert.Equal(RecursiveJumps.MaxNumberOfJumps, recursiveJumps.NumberOfCallsTo1);
         Assert.Equal(RecursiveJumps.MaxNumberOfJumps, recursiveJumps.NumberOfCallsTo2);
     }
 
     [Fact]
-    void testSimpleCallsJumps() {
-        using ProgramExecutor programExecutor = createDummyProgramExecutor();
+    void TestSimpleCallsJumps() {
+        using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
         
         SimpleCallsJumps callsJumps = new SimpleCallsJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
             programExecutor.Machine);
-        callsJumps.entry_1000_0000_10000(0);
+        callsJumps.Entry_1000_0000_10000();
         Assert.Equal(1, callsJumps.NearCalled);
         Assert.Equal(1, callsJumps.FarCalled);
         Assert.Equal(1, callsJumps.FarCalled1FromStack);
@@ -55,10 +55,10 @@ class RecursiveJumps : CSharpOverrideHelper {
         functionInformations, machine) {
     }
 
-    public Action jumpTarget1(int loadOffset) {
+    public Action JumpTarget1(int loadOffset) {
         entrydispatcher:
         NumberOfCallsTo1++;
-        if (JumpDispatcher.Jump(jumpTarget2, 0)) {
+        if (JumpDispatcher.Jump(JumpTarget2, 0)) {
             loadOffset = JumpDispatcher.NextEntryAddress;
             goto entrydispatcher;
         }
@@ -66,14 +66,14 @@ class RecursiveJumps : CSharpOverrideHelper {
         return JumpDispatcher.JumpAsmReturn!;
     }
 
-    public Action jumpTarget2(int loadOffset) {
+    public Action JumpTarget2(int loadOffset) {
         entrydispatcher:
         NumberOfCallsTo2++;
         if (NumberOfCallsTo2 == MaxNumberOfJumps) {
             return NearRet();
         }
 
-        if (JumpDispatcher.Jump(jumpTarget1, 0)) {
+        if (JumpDispatcher.Jump(JumpTarget1, 0)) {
             loadOffset = JumpDispatcher.NextEntryAddress;
             goto entrydispatcher;
         }
@@ -90,28 +90,28 @@ class SimpleCallsJumps : CSharpOverrideHelper {
 
     public SimpleCallsJumps(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine) :
         base(functionInformations, machine) {
-        DefineFunction(0, 0x200, far_callee1_from_stack_0000_0200_00200);
-        DefineFunction(0, 0x300, far_callee2_from_stack_0000_0300_00300);
+        DefineFunction(0, 0x200, Far_callee1_from_stack_0000_0200_00200);
+        DefineFunction(0, 0x300, Far_callee2_from_stack_0000_0300_00300);
     }
 
-    public Action entry_1000_0000_10000(int loadOffset) {
-        NearCall(0x1000, 0, near_1000_0100_10100);
-        FarCall(0x1000, 0, far_2000_0100_20100);
-        FarCall(0x1000, 0, far_calls_another_far_via_stack_0000_0100_00100);
+    public Action Entry_1000_0000_10000() {
+        NearCall(0x1000, 0, Near_1000_0100_10100);
+        FarCall(0x1000, 0, Far_2000_0100_20100);
+        FarCall(0x1000, 0, Far_calls_another_far_via_stack_0000_0100_00100);
         return NearRet();
     }
 
-    public Action near_1000_0100_10100(int loadOffset) {
+    public Action Near_1000_0100_10100(int loadOffset) {
         NearCalled++;
         return NearRet();
     }
 
-    public Action far_2000_0100_20100(int loadOffset) {
+    public Action Far_2000_0100_20100(int loadOffset) {
         FarCalled++;
         return FarRet();
     }
 
-    public Action far_calls_another_far_via_stack_0000_0100_00100(int loadOffset) {
+    public Action Far_calls_another_far_via_stack_0000_0100_00100(int loadOffset) {
         // Replace value on stack to call far_callee1_from_stack_3000_0200_10000 when returning, evil!!
         Stack.Pop16();
         Stack.Pop16();
@@ -120,7 +120,7 @@ class SimpleCallsJumps : CSharpOverrideHelper {
         return FarRet();
     }
 
-    public Action far_callee1_from_stack_0000_0200_00200(int loadOffset) {
+    public Action Far_callee1_from_stack_0000_0200_00200(int loadOffset) {
         FarCalled1FromStack++;
         // Call of far_callee2_from_stack_3000_0300_10000 when returning. No need to replace value on stack as we were not called conventionally
         Stack.Push16(0);
@@ -128,7 +128,7 @@ class SimpleCallsJumps : CSharpOverrideHelper {
         return FarRet();
     }
 
-    public Action far_callee2_from_stack_0000_0300_00300(int loadOffset) {
+    public Action Far_callee2_from_stack_0000_0300_00300(int loadOffset) {
         FarCalled2FromStack++;
         // Push back the values of the expected return address
         Stack.Push16(0x1000);

@@ -188,11 +188,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     public double TimeMultiplier {
         get => _timeMultiplier;
         set {
-            this.SetProperty(ref _timeMultiplier, value);
+            SetProperty(ref _timeMultiplier, value);
             _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
         }
     }
-
 
     [RelayCommand]
     public void ShowPerformance() {
@@ -241,7 +240,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     public void Exit() {
-        this.Dispose();
+        Dispose();
     }
 
     public int Height { get; private set; }

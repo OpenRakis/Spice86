@@ -183,7 +183,9 @@ public abstract class ClrFunctionToStringConverter : FunctionInformationToString
     protected abstract string GenerateNonPointerGetter(string comment, string csharpName, string offset, int bits);
     private string GenerateSetter(string comment, OperandSize operandSize, string csharpName, string offset) {
         if (operandSize == OperandSize.Dword32Ptr) // segmented address
+{
             return GeneratePointerSetter(comment, csharpName, offset);
+        }
 
         int bits = operandSize.Bits;
         return GenerateNonPointerSetter(comment, csharpName, offset, bits);

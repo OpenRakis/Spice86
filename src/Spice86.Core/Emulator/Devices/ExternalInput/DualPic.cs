@@ -1,8 +1,7 @@
+namespace Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
-
-namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 public class DualPic : DefaultIOPortHandler {
     private const int MasterCommand = 0x20;
@@ -88,20 +87,14 @@ public class DualPic : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(SlaveData, this);
     }
 
-
     public override byte ReadByte(int port) {
-        switch (port) {
-            case MasterCommand:
-                return _pic1.CommandRead();
-            case MasterData:
-                return _pic1.DataRead();
-            case SlaveCommand:
-                return _pic2.CommandRead();
-            case SlaveData:
-                return _pic2.DataRead();
-            default:
-                return base.ReadByte(port);
-        }
+        return port switch {
+            MasterCommand => _pic1.CommandRead(),
+            MasterData => _pic1.DataRead(),
+            SlaveCommand => _pic2.CommandRead(),
+            SlaveData => _pic2.DataRead(),
+            _ => base.ReadByte(port),
+        };
     }
 
     public override ushort ReadWord(int port) {

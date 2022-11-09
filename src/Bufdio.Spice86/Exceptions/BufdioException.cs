@@ -1,6 +1,5 @@
-﻿using System;
-
-namespace Bufdio.Spice86.Exceptions;
+﻿namespace Bufdio.Spice86.Exceptions;
+using System;
 
 /// <summary>
 /// An exception that is thrown when an error occured during Bufdio-specific operations.

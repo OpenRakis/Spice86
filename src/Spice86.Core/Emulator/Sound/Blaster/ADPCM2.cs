@@ -44,7 +44,7 @@ internal class ADPCM2 : ADPCMDecoder {
             for (int j = 0; j < 4; j++) {
                 int sourceByte = source[sourceOffset + i] >> j & 0x03;
                 current = DecodeSample(current, sourceByte);
-                destination[i * 4 + j] = current;
+                destination[(i * 4) + j] = current;
             }
         }
 

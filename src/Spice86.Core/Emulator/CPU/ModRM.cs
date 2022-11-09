@@ -22,9 +22,7 @@ public class ModRM {
 
     public uint GetAddress(int defaultSegmentRegisterIndex, ushort offset, bool recordAddress) {
         int? segmentIndex = _state.SegmentOverrideIndex;
-        if (segmentIndex == null) {
-            segmentIndex = defaultSegmentRegisterIndex;
-        }
+        segmentIndex ??= defaultSegmentRegisterIndex;
 
         if (recordAddress) {
             _staticAddressesRecorder.SetCurrentValue((int)segmentIndex, offset);

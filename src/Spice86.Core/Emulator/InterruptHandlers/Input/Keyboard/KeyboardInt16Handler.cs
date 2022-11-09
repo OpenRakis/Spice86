@@ -24,9 +24,7 @@ public class KeyboardInt16Handler : InterruptHandler {
             _logger.Information("READ KEY STROKE");
         }
         ushort? keyCode = GetNextKeyCode();
-        if (keyCode == null) {
-            keyCode = 0;
-        }
+        keyCode ??= 0;
 
         // AH = keyboard scan code
         // AL = ASCII character or zero if special function key

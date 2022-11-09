@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.Errors;
 using System.Text;
 
 public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBasedDataStructure {
-
     protected MemoryBasedDataStructureWithBaseAddressProvider(Memory memory) : base(memory) {
     }
 

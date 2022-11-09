@@ -6,7 +6,6 @@ public enum ValueOperation {
 }
 
 public static class ValueOperationExtension {
-
     public static ValueOperation OppositeOperation(this ValueOperation instance) {
         if (instance == ValueOperation.READ) {
             return ValueOperation.WRITE;

@@ -8,7 +8,6 @@ using System;
 
 [Serializable]
 public class InvalidOpCodeException : InvalidVMOperationException {
-
     public InvalidOpCodeException(Machine machine, ushort opcode, bool prefixNotAllowed) : base(machine, GenerateMessage(opcode, prefixNotAllowed)) {
     }
 

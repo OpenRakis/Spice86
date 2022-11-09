@@ -1,12 +1,11 @@
-﻿using System;
+﻿namespace Bufdio.Spice86;
+using System;
 using System.Collections.Generic;
 
 using Bufdio.Spice86.Bindings.PortAudio;
 using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities;
 using Bufdio.Spice86.Utilities.Extensions;
-
-namespace Bufdio.Spice86;
 
 /// <summary>
 /// Provides functionalities to retrieve, configure and manage current Bufdio environment
@@ -65,7 +64,7 @@ public static class BufdioLib {
         portAudioPath = string.IsNullOrEmpty(portAudioPath) ? GetPortAudioLibName() : portAudioPath;
 
         var loader = new LibraryLoader();
-        var loadedNativeLib = loader.Initialize(portAudioPath);
+        bool loadedNativeLib = loader.Initialize(portAudioPath);
         if (!loadedNativeLib) {
             return false;
         }

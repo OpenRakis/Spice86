@@ -3,7 +3,6 @@
 using Spice86.Core.Emulator.Memory;
 
 public class MemoryBasedDataStructure {
-
     public MemoryBasedDataStructure(Memory memory) {
         Memory = memory;
     }

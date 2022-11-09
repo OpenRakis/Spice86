@@ -36,7 +36,7 @@ internal sealed class ADPCM4 : ADPCMDecoder {
 
             sample = source[sourceOffset + i] >> 4 & 0x0F;
             current = DecodeSample(current, sample);
-            destination[i * 2 + 1] = current;
+            destination[(i * 2) + 1] = current;
         }
 
         Reference = current;

@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 /// An adequate but not great audio resampler.
 /// </summary>
 internal static class LinearUpsampler {
-
     public static int Resample8Mono(int sourceRate, int destRate, ReadOnlySpan<byte> source, Span<short> dest) {
         double src2Dest = destRate / (double)sourceRate;
         double dest2Src = sourceRate / (double)destRate;
@@ -115,7 +114,7 @@ internal static class LinearUpsampler {
     }
 
 
-    private static short Interpolate(short a, short b, double factor) => (short)((b - a) * factor + a);
+    private static short Interpolate(short a, short b, double factor) => (short)(((b - a) * factor) + a);
 
     private static short Convert8To16(byte s) => (short)(s - 128 << 8);
 }

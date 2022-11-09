@@ -1,7 +1,6 @@
-﻿using System;
+﻿namespace Bufdio.Spice86.Utilities;
+using System;
 using System.Diagnostics;
-
-namespace Bufdio.Spice86.Utilities;
 
 [DebuggerStepThrough]
 internal static class Ensure

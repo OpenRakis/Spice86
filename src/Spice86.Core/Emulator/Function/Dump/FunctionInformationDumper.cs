@@ -11,7 +11,6 @@ using System.Linq;
 /// Dumps collected function informations to a file
 /// </summary>
 public class FunctionInformationDumper {
-
     public void DumpFunctionHandlers(string destinationFilePath, FunctionInformationToStringConverter converter, StaticAddressesRecorder staticAddressesRecorder, FunctionHandler functionHandler) {
         ICollection<FunctionInformation> functionInformations = functionHandler.FunctionInformations.Values;
 

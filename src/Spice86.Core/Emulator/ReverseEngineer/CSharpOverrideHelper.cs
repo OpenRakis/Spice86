@@ -230,7 +230,7 @@ public class CSharpOverrideHelper {
 
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, int vectorNumber) {
         ushort targetIP = Memory.GetUint16((ushort)(4 * vectorNumber));
-        ushort targetCS = Memory.GetUint16((ushort)(4 * vectorNumber + 2));
+        ushort targetCS = Memory.GetUint16((ushort)((4 * vectorNumber) + 2));
         SegmentedAddress target = new SegmentedAddress(targetCS, targetIP);
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function is null) {

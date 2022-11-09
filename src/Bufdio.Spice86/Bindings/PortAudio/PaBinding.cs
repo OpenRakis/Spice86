@@ -1,8 +1,7 @@
-﻿using System;
+﻿namespace Bufdio.Spice86.Bindings.PortAudio;
+using System;
 
 using Bufdio.Spice86.Utilities;
-
-namespace Bufdio.Spice86.Bindings.PortAudio;
 
 internal static partial class PaBinding
 {

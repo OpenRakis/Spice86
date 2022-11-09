@@ -57,7 +57,6 @@ public class Keyboard : DefaultIOPortHandler {
                 scancode = _keyScanCodeConverter?.GetKeyPressedScancode(lastKeyboardInput);
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                     _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
-
                 }
             } else {
                 scancode = _keyScanCodeConverter?.GetKeyReleasedScancode(lastKeyboardInput);

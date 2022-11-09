@@ -7,7 +7,6 @@ using System;
 
 [Serializable]
 public class InvalidCounterIndexException : InvalidVMOperationException {
-
     public InvalidCounterIndexException(Machine machine, int counterIndex) : base(machine, $"Invalid counter index {counterIndex}") {
     }
 }

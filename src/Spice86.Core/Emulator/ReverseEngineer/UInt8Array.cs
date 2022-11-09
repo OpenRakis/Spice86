@@ -3,7 +3,6 @@
 using Spice86.Core.Emulator.Memory;
 
 public class Uint8Array : MemoryBasedArray<byte> {
-
     public Uint8Array(Memory memory, uint baseAddress, int length) : base(memory, baseAddress, length) {
     }
 

@@ -43,7 +43,6 @@ public class AddressOperation : IComparable<AddressOperation> {
     public ValueOperation ValueOperation => _valueOperation;
 
     private class NaturalOrderComparator : IComparer<AddressOperation> {
-
         public int Compare(AddressOperation? x, AddressOperation? y) {
             int? resNullable = x?._operandSize.Name.CompareTo(y?._operandSize.Name);
 

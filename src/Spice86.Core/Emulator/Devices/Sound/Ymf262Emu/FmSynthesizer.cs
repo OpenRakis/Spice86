@@ -1,7 +1,6 @@
-﻿using System;
+﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
+using System;
 using System.Runtime.CompilerServices;
-
-namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 
 /// <summary>
 /// Emulates a YMF262 OPL3 device.
@@ -24,23 +23,23 @@ public sealed class FmSynthesizer
             throw new ArgumentOutOfRangeException(nameof(sampleRate));
         }
 
-        this.SampleRate = sampleRate;
+        SampleRate = sampleRate;
 
-        this.tremoloTableLength = (int)(sampleRate / TremoloFrequency);
-        this.tremoloIncrement0 = this.CalculateIncrement(tremoloDepth0, 0, 1 / (2 * TremoloFrequency));
-        this.tremoloIncrement1 = this.CalculateIncrement(tremoloDepth1, 0, 1 / (2 * TremoloFrequency));
+        tremoloTableLength = (int)(sampleRate / TremoloFrequency);
+        tremoloIncrement0 = CalculateIncrement(tremoloDepth0, 0, 1 / (2 * TremoloFrequency));
+        tremoloIncrement1 = CalculateIncrement(tremoloDepth1, 0, 1 / (2 * TremoloFrequency));
 
-        this.InitializeOperators();
-        this.InitializeChannels2op();
-        this.InitializeChannels4op();
-        this.InitializeChannels();
-        this.highHatOperator = new Operators.HighHat(this);
-        this.tomTomOperator = new Operators.Operator(0x12, this);
-        this.topCymbalOperator = new Operators.TopCymbal(this);
-        this.bassDrumChannel = new Channels.BassDrum(this);
-        this.snareDrumOperator = new Operators.SnareDrum(this);
-        this.highHatSnareDrumChannel = new Channels.RhythmChannel(7, this.highHatOperator, this.snareDrumOperator, this);
-        this.tomTomTopCymbalChannel = new Channels.RhythmChannel(8, this.tomTomOperator, this.topCymbalOperator, this);
+        InitializeOperators();
+        InitializeChannels2op();
+        InitializeChannels4op();
+        InitializeChannels();
+        highHatOperator = new Operators.HighHat(this);
+        tomTomOperator = new Operators.Operator(0x12, this);
+        topCymbalOperator = new Operators.TopCymbal(this);
+        bassDrumChannel = new Channels.BassDrum(this);
+        snareDrumOperator = new Operators.SnareDrum(this);
+        highHatSnareDrumChannel = new Channels.RhythmChannel(7, highHatOperator, snareDrumOperator, this);
+        tomTomTopCymbalChannel = new Channels.RhythmChannel(8, tomTomOperator, topCymbalOperator, this);
     }
 
     /// <summary>
@@ -54,8 +53,9 @@ public sealed class FmSynthesizer
     /// <param name="buffer">Buffer to fill with 16-bit waveform data.</param>
     public void GetData(Span<short> buffer)
     {
-        for (int i = 0; i < buffer.Length; i++)
-            buffer[i] = (short)(this.GetNextSample() * 32767);
+        for (int i = 0; i < buffer.Length; i++) {
+            buffer[i] = (short)(GetNextSample() * 32767);
+        }
     }
     /// <summary>
     /// Fills <paramref name="buffer"/> with 32-bit mono samples.
@@ -64,7 +64,7 @@ public sealed class FmSynthesizer
     public void GetData(Span<float> buffer)
     {
         for (int i = 0; i < buffer.Length; i++) {
-            buffer[i] = (float)this.GetNextSample();
+            buffer[i] = (float)GetNextSample();
         }
     }
 
@@ -82,10 +82,11 @@ public sealed class FmSynthesizer
         // starting at 0x00 and at 0x100.
         int registerAddress = (array << 8) | address;
         // If the address is out of the OPL3 memory map, returns.
-        if (registerAddress < 0 || registerAddress >= 0x200)
+        if (registerAddress is < 0 or >= 0x200) {
             return;
+        }
 
-        this.registers[registerAddress] = value;
+        registers[registerAddress] = value;
         switch (address & 0xE0)
         {
             // The first 3 bits masking gives the type of the register by using its base address:
@@ -103,14 +104,14 @@ public sealed class FmSynthesizer
                 if (array == 1)
                 {
                     if (address == 0x04) {
-                        this.Update_2_CONNECTIONSEL6();
+                        Update_2_CONNECTIONSEL6();
                     } else if (address == 0x05) {
-                        this.Update_7_NEW1();
+                        Update_7_NEW1();
                     }
                 }
                 else if (address == 0x08)
                 {
-                    this.Update_1_NTS1_6();
+                    Update_1_NTS1_6();
                 }
                 break;
 
@@ -118,8 +119,10 @@ public sealed class FmSynthesizer
                 // 0xBD is a control register for the entire OPL3:
                 if (address == 0xBD)
                 {
-                    if (array == 0)
-                        this.Update_DAM1_DVB1_RYT1_BD1_SD1_TOM1_TC1_HH1();
+                    if (array == 0) {
+                        Update_DAM1_DVB1_RYT1_BD1_SD1_TOM1_TC1_HH1();
+                    }
+
                     break;
                 }
                 // Registers for each channel are in A0-A8, B0-B8, C0-C8, in both register arrays.
@@ -128,52 +131,58 @@ public sealed class FmSynthesizer
                 {
                     // If the address is in the second register array, adds 9 to the channel number.
                     // The channel number is given by the last four bits, like in A0,...,A8.
-                    this.channels[array, address & 0x0F].Update_2_KON1_BLOCK3_FNUMH2();
+                    channels[array, address & 0x0F].Update_2_KON1_BLOCK3_FNUMH2();
                     break;
                 }
                 // 0xA0...0xA8 keeps fnum(l) for each channel.
-                if ((address & 0xF0) == 0xA0 && address <= 0xA8)
-                    this.channels[array, address & 0x0F].Update_FNUML8();
+                if ((address & 0xF0) == 0xA0 && address <= 0xA8) {
+                    channels[array, address & 0x0F].Update_FNUML8();
+                }
+
                 break;
             // 0xC0...0xC8 keeps cha,chb,chc,chd,fb,cnt for each channel:
             case 0xC0:
-                if (address <= 0xC8)
-                    this.channels[array, address & 0x0F].Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
+                if (address <= 0xC8) {
+                    channels[array, address & 0x0F].Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
+                }
+
                 break;
 
             // Registers for each of the 36 Operators:
             default:
                 int operatorOffset = address & 0x1F;
-                if (this.operators[array, operatorOffset] == null)
+                if (operators[array, operatorOffset] == null) {
                     break;
+                }
+
                 switch (address & 0xE0)
                 {
                     // 0x20...0x35 keeps am,vib,egt,ksr,mult for each operator:                
                     case 0x20:
-                        this.operators[array, operatorOffset].Update_AM1_VIB1_EGT1_KSR1_MULT4();
+                        operators[array, operatorOffset].Update_AM1_VIB1_EGT1_KSR1_MULT4();
                         break;
                     // 0x40...0x55 keeps ksl,tl for each operator: 
                     case 0x40:
-                        this.operators[array, operatorOffset].Update_KSL2_TL6();
+                        operators[array, operatorOffset].Update_KSL2_TL6();
                         break;
                     // 0x60...0x75 keeps ar,dr for each operator: 
                     case 0x60:
-                        this.operators[array, operatorOffset].Update_AR4_DR4();
+                        operators[array, operatorOffset].Update_AR4_DR4();
                         break;
                     // 0x80...0x95 keeps sl,rr for each operator:
                     case 0x80:
-                        this.operators[array, operatorOffset].Update_SL4_RR4();
+                        operators[array, operatorOffset].Update_SL4_RR4();
                         break;
                     // 0xE0...0xF5 keeps ws for each operator:
                     case 0xE0:
-                        this.operators[array, operatorOffset].Update_5_WS3();
+                        operators[array, operatorOffset].Update_5_WS3();
                         break;
                 }
                 break;
         }
     }
 
-    internal double CalculateIncrement(double begin, double end, double period) => (end - begin) / this.SampleRate * (1 / period);
+    internal double CalculateIncrement(double begin, double end, double period) => (end - begin) / SampleRate * (1 / period);
 
     private double GetNextSample()
     {
@@ -181,15 +190,15 @@ public sealed class FmSynthesizer
         {
             Span<double> channelOutput = stackalloc double[4];
 
-            var outputBuffer = stackalloc double[4] { 0, 0, 0, 0 };
+            double* outputBuffer = stackalloc double[4] { 0, 0, 0, 0 };
 
             // If IsOpl3Mode = 0, use OPL2 mode with 9 channels. If IsOpl3Mode = 1, use OPL3 18 channels;
-            for (int array = 0; array < (this.IsOpl3Mode + 1); array++)
+            for (int array = 0; array < (IsOpl3Mode + 1); array++)
             {
                 for (int channelNumber = 0; channelNumber < 9; channelNumber++)
                 {
                     // Reads output from each OPL3 channel, and accumulates it in the output buffer:
-                    this.channels[array, channelNumber].GetChannelOutput(channelOutput);
+                    channels[array, channelNumber].GetChannelOutput(channelOutput);
                     for (int i = 0; i < channelOutput.Length; i++) {
                         outputBuffer[i] += channelOutput[i];
                     }
@@ -209,15 +218,15 @@ public sealed class FmSynthesizer
 
             // Advances the OPL3-wide vibrato index, which is used by 
             // PhaseGenerator.getPhase() in each Operator.
-            this.vibratoIndex++;
-            if (this.vibratoIndex >= VibratoGenerator.Length) {
-                this.vibratoIndex = 0;
+            vibratoIndex++;
+            if (vibratoIndex >= VibratoGenerator.Length) {
+                vibratoIndex = 0;
             }
             // Advances the OPL3-wide tremolo index, which is used by 
             // EnvelopeGenerator.getEnvelope() in each Operator.
-            this.tremoloIndex++;
-            if (this.tremoloIndex >= this.tremoloTableLength) {
-                this.tremoloIndex = 0;
+            tremoloIndex++;
+            if (tremoloIndex >= tremoloTableLength) {
+                tremoloIndex = 0;
             }
 
             return (float)(output[0] + output[1] + output[2] + output[3]);
@@ -226,20 +235,21 @@ public sealed class FmSynthesizer
 
     internal double GetTremoloValue(int dam, int i)
     {
-        if (i < this.tremoloTableLength / 2)
+        if (i < tremoloTableLength / 2)
         {
             if (dam == 0) {
-                return tremoloDepth0 + (this.tremoloIncrement0 * i);
+                return tremoloDepth0 + (tremoloIncrement0 * i);
             } else {
-                return tremoloDepth1 + (this.tremoloIncrement1 * i);
+                return tremoloDepth1 + (tremoloIncrement1 * i);
             }
         }
         else
         {
-            if (dam == 0)
+            if (dam == 0) {
                 return -tremoloIncrement0 * i;
-            else
+            } else {
                 return -tremoloIncrement1 * i;
+            }
         }
     }
     private void InitializeOperators()
@@ -303,8 +313,9 @@ public sealed class FmSynthesizer
         // channels[] inits as a 2-op serial channel array:
         for (int array = 0; array < 2; array++)
         {
-            for (int i = 0; i < 9; i++)
+            for (int i = 0; i < 9; i++) {
                 channels[array, i] = channels2op[array, i];
+            }
         }
     }
     private void Update_1_NTS1_6()
@@ -347,28 +358,36 @@ public sealed class FmSynthesizer
         if (new_sd != sd)
         {
             sd = new_sd;
-            if (sd == 1) snareDrumOperator.KeyOn();
+            if (sd == 1) {
+                snareDrumOperator.KeyOn();
+            }
         }
 
         int new_tom = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x04) >> 2;
         if (new_tom != tom)
         {
             tom = new_tom;
-            if (tom == 1) tomTomOperator.KeyOn();
+            if (tom == 1) {
+                tomTomOperator.KeyOn();
+            }
         }
 
         int new_tc = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x02) >> 1;
         if (new_tc != tc)
         {
             tc = new_tc;
-            if (tc == 1) topCymbalOperator.KeyOn();
+            if (tc == 1) {
+                topCymbalOperator.KeyOn();
+            }
         }
 
         int new_hh = dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x01;
         if (new_hh != hh)
         {
             hh = new_hh;
-            if (hh == 1) highHatOperator.KeyOn();
+            if (hh == 1) {
+                highHatOperator.KeyOn();
+            }
         }
     }
     private void Update_7_NEW1()
@@ -415,7 +434,7 @@ public sealed class FmSynthesizer
             {
                 if (IsOpl3Mode == 1)
                 {
-                    int shift = array * 3 + i;
+                    int shift = (array * 3) + i;
                     int connectionBit = (connectionsel >> shift) & 0x01;
                     if (connectionBit == 1)
                     {

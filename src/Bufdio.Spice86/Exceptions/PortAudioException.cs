@@ -1,7 +1,7 @@
-﻿using System;
-using Bufdio.Spice86.Utilities.Extensions;
+﻿namespace Bufdio.Spice86.Exceptions;
+using System;
 
-namespace Bufdio.Spice86.Exceptions;
+using Bufdio.Spice86.Utilities.Extensions;
 
 /// <summary>
 /// An exception that is thrown when errors occured in internal PortAudio processes.

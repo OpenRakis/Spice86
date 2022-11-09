@@ -38,7 +38,7 @@ public sealed class GdbIo : IDisposable {
         _stream = new NetworkStream(_socket);
     }
 
-    public bool IsClientConnected => !(_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0 || !_socket.Connected);
+    public bool IsClientConnected => !((_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0) || !_socket.Connected);
 
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method

@@ -11,7 +11,6 @@ using System.Text;
 /// Converts FunctionInformation to custom human readable format with details
 /// </summary>
 public class DetailedFunctionInformationToStringConverter : FunctionInformationToStringConverter {
-
     public override string Convert(FunctionInformation functionInformation, IEnumerable<FunctionInformation> allFunctions) {
         StringBuilder res = new StringBuilder();
         Dictionary<FunctionReturn, ISet<SegmentedAddress>> returns = Sort(functionInformation.Returns);

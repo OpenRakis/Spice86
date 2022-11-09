@@ -76,7 +76,7 @@ public class CallbackHandler : IndexBasedDispatcher {
 
     private void InstallVectorInTable(byte vectorNumber, ushort segment, ushort offset) {
         // install the vector in the vector table
-        _memory.SetUint16((ushort)(4 * vectorNumber + 2), segment);
+        _memory.SetUint16((ushort)((4 * vectorNumber) + 2), segment);
         _memory.SetUint16((ushort)(4 * vectorNumber), offset);
     }
 

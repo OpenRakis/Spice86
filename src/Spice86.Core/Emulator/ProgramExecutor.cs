@@ -155,14 +155,11 @@ public sealed class ProgramExecutor : IDisposable {
             return null;
         }
         DirectoryInfo? parentDir = Directory.GetParent(exe);
-        if (parentDir == null) {
-            // Must be in the current directory
-            parentDir = new DirectoryInfo(Environment.CurrentDirectory);
-        }
+        // Must be in the current directory
+        parentDir ??= new DirectoryInfo(Environment.CurrentDirectory);
 
         string parent = Path.GetFullPath(parentDir.FullName);
-        parent = parent.Replace('\\', '/') + '/';
-        return parent;
+        return parent.Replace('\\', '/') + '/';
     }
 
     private void InitializeCpu() {
