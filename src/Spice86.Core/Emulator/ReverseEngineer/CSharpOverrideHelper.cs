@@ -408,6 +408,6 @@ public class CSharpOverrideHelper {
 
     protected void Exit() {
         _logger.Information("Program requested exit. Terminating now.");
-        Environment.Exit(0);
+        throw new HaltRequestedException();
     }
 }

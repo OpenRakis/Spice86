@@ -50,7 +50,14 @@ public class RecorderDataWriter : RecordedDataIoHandler {
 
     public void DumpMemory(string suffix) {
         string path = GenerateDumpFileName($"MemoryDump{suffix}.bin");
-        File.WriteAllBytes(path, _machine.CallbackHandler.NopCallbackInstructionInRamCopy());
+        File.WriteAllBytes(path, GenerateRelevantRam());
+    }
+
+    private byte[] GenerateRelevantRam() {
+        if (_machine.Configuration.InstallInterruptVector) {
+            return _machine.CallbackHandler.NopCallbackInstructionInRamCopy();
+        }
+        return _machine.Memory.Ram;
     }
 
     private void DumpExecutionFlow() {

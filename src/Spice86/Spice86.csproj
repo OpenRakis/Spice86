@@ -16,7 +16,7 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>3.0.8</Version>
+		<Version>3.0.9</Version>
 		<PackageReleaseNotes>Moved backed to AvaloniaUI v0.10.x.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

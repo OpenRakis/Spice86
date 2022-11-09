@@ -16,7 +16,7 @@
 	<PropertyGroup>
 		<NoWarn>CS1591</NoWarn>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>3.0.8</Version>
+		<Version>3.0.9</Version>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>

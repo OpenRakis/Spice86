@@ -249,21 +249,25 @@ public class Machine : IDisposable {
                 _dmaThread.Start();
                 _dmaThreadStarted = true;
             }
+
             RunLoop();
         } catch (InvalidVMOperationException e) {
             e.Demystify();
-            if(Debugger.IsAttached) {
+            if (Debugger.IsAttached) {
                 System.Diagnostics.Debugger.Break();
             }
+
             throw;
+        } catch (HaltRequestedException e) {
+            // Actually a signal generated code requested Exit
         } catch (Exception e) {
-            if(Debugger.IsAttached) {
+            if (Debugger.IsAttached) {
                 System.Diagnostics.Debugger.Break();
             }
+
             e.Demystify();
             throw new InvalidVMOperationException(this, e);
         }
-
         MachineBreakpoints.OnMachineStop();
         functionHandler.Ret(CallType.MACHINE);
     }
