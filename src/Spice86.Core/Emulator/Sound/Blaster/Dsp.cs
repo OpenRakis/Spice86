@@ -150,9 +150,7 @@ internal sealed class Dsp {
 
         if (blocks > 0 && decodeBuffer is not null) {
             InternalRead(decodeBuffer.AsSpan(0, blocks.Value));
-            if (decoder is not null) {
-                decoder.Decode(decodeBuffer, 0, blocks.Value, buffer[offset..]);
-            }
+            decoder?.Decode(decodeBuffer, 0, blocks.Value, buffer[offset..]);
         }
 
         int? remainder = length % decoder?.CompressionFactor;

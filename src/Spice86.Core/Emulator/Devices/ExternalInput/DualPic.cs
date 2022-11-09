@@ -21,8 +21,8 @@ public class DualPic : DefaultIOPortHandler {
 
     private const byte BaseInterruptVectorSlave = 0x70;
 
-    private Pic _pic1;
-    private Pic _pic2;
+    private readonly Pic _pic1;
+    private readonly Pic _pic2;
 
     public DualPic(Machine machine, Configuration configuration) : base(machine, configuration) {
         _pic1 = new Pic(machine, true);

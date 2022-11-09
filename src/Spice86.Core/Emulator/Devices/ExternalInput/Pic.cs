@@ -26,7 +26,7 @@ using System.Collections.Generic;
 public class Pic {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<Pic>();
 
-    private Machine _machine;
+    private readonly Machine _machine;
 
     private bool _initialized;
 
@@ -36,7 +36,7 @@ public class Pic {
 
     private int _currentInitializationCommand = 0;
 
-    private bool _master;
+    private readonly bool _master;
 
     // 1 indicates the channel is masked (inhibited), 0 indicates the channel is enabled.
     private byte _interruptMaskRegister = 0;
