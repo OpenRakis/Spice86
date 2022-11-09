@@ -3,7 +3,6 @@
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,21 +14,21 @@ using MessageBox.Avalonia.Enums;
 using Serilog;
 
 using Spice86;
+using Spice86.Keyboard;
+using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Keyboard;
 using Spice86.Logging;
 using Spice86.Shared;
 using Spice86.Shared.Interfaces;
-using Spice86.Views;
 
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Diagnostics;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -75,19 +74,26 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [RelayCommand]
     public async Task DumpEmulatorStateToFile() {
-        if (_programExecutor is null || _configuration is null || App.MainWindow is null ||
-            !App.MainWindow.StorageProvider.CanSave) {
+        if (_programExecutor is null || _configuration is null) {
             return;
         }
-
-        IStorageProvider ofd = App.MainWindow.StorageProvider;
-        FolderPickerOpenOptions options = new FolderPickerOpenOptions() {
-            AllowMultiple = false,
+        OpenFolderDialog ofd = new OpenFolderDialog() {
             Title = "Dump emulator state to directory...",
+            Directory = _configuration.RecordedDataDirectory
         };
-        IReadOnlyList<IStorageFolder> dir = await ofd.OpenFolderPickerAsync(options);
-        if (dir.Count > 0) {
-            new RecorderDataWriter(dir[0].Name, _programExecutor.Machine).DumpAll();
+        if (Directory.Exists(_configuration.RecordedDataDirectory)) {
+            ofd.Directory = _configuration.RecordedDataDirectory;
+        }
+        string? dir = _configuration.RecordedDataDirectory;
+        if (App.MainWindow is not null) {
+            dir = await ofd.ShowAsync(App.MainWindow);
+        }
+        if (string.IsNullOrWhiteSpace(dir)
+        && !string.IsNullOrWhiteSpace(_configuration.RecordedDataDirectory)) {
+            dir = _configuration.RecordedDataDirectory;
+        }
+        if (!string.IsNullOrWhiteSpace(dir)) {
+            new RecorderDataWriter(dir, _programExecutor.Machine).DumpAll();
         }
     }
 
@@ -148,38 +154,39 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private async Task StartNewExecutable(bool pauseOnStart = false) {
-        if (App.MainWindow is null ||
-            !App.MainWindow.StorageProvider.CanOpen) {
-            return;
-        }
-        IReadOnlyList<IStorageFile> files = await App.MainWindow.StorageProvider.OpenFilePickerAsync(new(){
-            Title = "Start Executable...",
-            AllowMultiple = false,
-            FileTypeFilter = new[]{
-                    new FilePickerFileType("DOS Executables") {
-                        Patterns = new string[] {"exe", "com", "EXE", "COM" },
+        if (App.MainWindow is not null) {
+            OpenFileDialog? ofd = new OpenFileDialog() {
+                Title = "Start Executable...",
+                AllowMultiple = false,
+                Filters = new(){
+                    new FileDialogFilter() {
+                        Extensions = {"exe", "com", "EXE", "COM" },
+                        Name = "DOS Executables"
                     },
-                    new FilePickerFileType("All Files") {
-                        Patterns = new string[] { "*" },
+                    new FileDialogFilter() {
+                        Extensions = { "*" },
+                        Name = "All Files"
                     }
                 }
-        });
-        if (files.Count > 0 && _configuration is not null) {
-            _configuration.Exe = files[0].Name;
-            _configuration.ExeArgs = "";
-            _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
-            Dispatcher.UIThread.Post(() =>
-                DisposeEmulator()
-            , DispatcherPriority.MaxValue);
-            SetMainTitle();
-            _okayToContinueEvent = new(true);
-            IsPaused = pauseOnStart;
-            _programExecutor?.Machine.ExitEmulationLoop();
-            while (_emulatorThread?.IsAlive == true) {
-                Dispatcher.UIThread.RunJobs();
+            };
+            string[]? files = await ofd.ShowAsync(App.MainWindow);
+            if (files?.Any() == true && _configuration is not null) {
+                _configuration.Exe = files[0];
+                _configuration.ExeArgs = "";
+                _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
+                Dispatcher.UIThread.Post(() =>
+                    DisposeEmulator()
+                , DispatcherPriority.MaxValue);
+                SetMainTitle();
+                _okayToContinueEvent = new(true);
+                IsPaused = pauseOnStart;
+                _programExecutor?.Machine.ExitEmulationLoop();
+                while (_emulatorThread?.IsAlive == true) {
+                    Dispatcher.UIThread.RunJobs();
+                }
+                _closeAppOnEmulatorExit = false;
+                RunEmulator();
             }
-            _closeAppOnEmulatorExit = false;
-            RunEmulator();
         }
     }
 
