@@ -31,9 +31,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private bool _disposed = false;
 
     public OPL3FM(Machine machine, Configuration configuration) : base(machine, configuration) {
-        if (configuration.CreateAudioBackend) {
-            _audioPlayer = Audio.CreatePlayer(48000, 2048);
-        }
+        _audioPlayer = Audio.CreatePlayer(48000, 2048);
         if (_audioPlayer is not null) {
             _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);
         }

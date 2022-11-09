@@ -55,11 +55,7 @@ public class Configuration {
     public bool? UseCodeOverride { get; set; }
 
     // Use this in the code
-    public bool UseCodeOverrideOption {
-        get {
-            return UseCodeOverride ?? true;
-        }
-    }
+    public bool UseCodeOverrideOption => UseCodeOverride ?? true;
 
     /// <summary>
     /// Only for <see cref="Devices.Timer.Timer"/>
@@ -78,9 +74,4 @@ public class Configuration {
 
     [Option('h', nameof(HeavyLogs), Default = false, Required = false, HelpText = "Enable verbose level logs")]
     public bool HeavyLogs { get; init; }
-
-    /// <summary>
-    /// Only supported on Windows right now. Disabled by unit tests.
-    /// </summary>²
-    public bool CreateAudioBackend { get; init; } = true;
 }

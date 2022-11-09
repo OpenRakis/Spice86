@@ -33,9 +33,6 @@ internal sealed class Mt32Player : IDisposable {
             throw new ArgumentNullException(nameof(romsPath));
         }
 
-        if (!configuration.CreateAudioBackend) {
-            return;
-        }
         _audioPlayer = Audio.CreatePlayer();
         if (_audioPlayer is null) {
             return;

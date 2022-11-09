@@ -155,9 +155,6 @@ public sealed class InternalSpeaker : IDisposable {
     /// Generates the PC speaker waveform.
     /// </summary>
     private async Task GenerateWaveformAsync() {
-        if (!Configuration.CreateAudioBackend) {
-            return;
-        }
         using AudioPlayer? player = Audio.CreatePlayer();
         if (player is null) {
             return;
