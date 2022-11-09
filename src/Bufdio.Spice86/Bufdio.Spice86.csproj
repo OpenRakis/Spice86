@@ -7,7 +7,7 @@
     <Copyright>Luthfi Tri Atmaja</Copyright>
     <Description>Only for Spice86 usage. A cross platform audio playback library for .NET based on PortAudio, forked from the original Bufdio by Luthfi Tri Atmaja.</Description>
     <NoWarn>IDE0090</NoWarn>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
   </PropertyGroup>

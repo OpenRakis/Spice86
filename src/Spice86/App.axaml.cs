@@ -2,6 +2,8 @@ namespace Spice86;
 
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Data.Core;
+using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 
 using Microsoft.Win32;
@@ -28,8 +30,12 @@ internal partial class App : Application {
         }
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+            // Line below is needed to remove Avalonia data validation.
+            // Without this line you will get duplicate validations from both Avalonia and CT
+            ExpressionObserver.DataValidators.RemoveAll(x => x is DataAnnotationsValidationPlugin);
+
             MainWindowViewModel mainViewModel = new MainWindowViewModel();
-            mainViewModel.SetConfiguration(desktop.Args);
+            mainViewModel.SetConfiguration(desktop.Args ?? Array.Empty<string>());
             desktop.MainWindow = new MainWindow {
                 DataContext = mainViewModel,
             };
