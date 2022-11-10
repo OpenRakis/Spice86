@@ -5,7 +5,7 @@ using CommandLine;
 using Spice86.Core.Emulator.Function;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
-public partial class Configuration {
+public class Configuration {
 
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]
     public string? CDrive { get; set; }
@@ -67,11 +67,11 @@ public partial class Configuration {
     [Option('p', nameof(ProgramEntryPointSegment), Default = 0x1000, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
     public int ProgramEntryPointSegment { get; init; }
 
-    [Option('w', nameof(WarningLogs), Default = false, Required = false, HelpText = "Enable error level logs")]
-    public bool WarningLogs { get; init; }
+    [Option('l', nameof(VerboseLogs), Default = false, Required = false, HelpText = "Enable verbose level logs")]
+    public bool VerboseLogs { get; init; }
 
-    [Option('l', nameof(Logs), Default = false, Required = false, HelpText = "Enable warning level logs")]
-    public bool Logs { get; set; }
+    [Option('w', nameof(WarningLogs), Default = false, Required = false, HelpText = "Enable warning level logs")]
+    public bool WarningLogs { get; set; }
 
     [Option('m', nameof(Mt32RomsPath), Default = null, Required = false, HelpText = "Zip file or directory containing the MT-32 ROM files")]
     public string? Mt32RomsPath { get; init; }

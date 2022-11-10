@@ -32,10 +32,10 @@ public class CommandLineParser {
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
-            if (initialConfig.Logs) {
+            if (initialConfig.WarningLogs) {
                 Serilogger.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
             }
-            if (initialConfig.WarningLogs) {
+            if (initialConfig.VerboseLogs) {
                 Serilogger.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
             }
             return initialConfig;
