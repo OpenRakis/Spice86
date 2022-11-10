@@ -57,8 +57,8 @@ com files and bios files are also supported.
   -t, --TimeMultiplier               (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.
   -d, --DumpDataOnExit               (Default: true) When true, records data at runtime and dumps them at exit time
   -h, --HeadlessMode                 (Default: false) Headless mode. If true, no GUI is shown.
-  -l, --Logs                         (Default: false) Enable warning level logs
-  -w, --WarningLogs                  (Default: false) Enable verbose level logs
+  -l, --VerboseLogs                  (Default: false) Enable verbose level logs
+  -w, --WarningLogs                  (Default: false) Enable warning level logs
   -d, --DumpDataOnExit               (Default: true) Records data at runtime and dumps them at exit time
 
   --help                             Display this help screen.
