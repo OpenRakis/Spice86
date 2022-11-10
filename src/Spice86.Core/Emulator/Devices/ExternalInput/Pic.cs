@@ -1,18 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.CPU;
-
-using System.Runtime.CompilerServices;
 
 using Serilog;
 
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
 using Spice86.Logging;
-
-using System.Collections.Generic;
 
 /// <summary>
 /// Emulates a PIC8259 Programmable Interrupt Controller.<br/>

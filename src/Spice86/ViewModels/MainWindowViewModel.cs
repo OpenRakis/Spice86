@@ -39,7 +39,7 @@ using System.Diagnostics;
 /// </summary>
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<MainWindowViewModel>();
-    private Configuration? _configuration;
+    private Configuration _configuration = new();
     private bool _disposed;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
@@ -114,12 +114,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     public void SetConfiguration(string[] args) {
-        Configuration? configuration = GenerateConfiguration(args);
-        _configuration = configuration;
-        if (configuration is null) {
-            Exit();
-            Environment.Exit(0);
-        }
+        _configuration = GenerateConfiguration(args);
         SetMainTitle();
     }
 
@@ -350,7 +345,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         _programExecutor?.Dispose();
     }
 
-    private static Configuration? GenerateConfiguration(string[] args) {
+    private static Configuration GenerateConfiguration(string[] args) {
         return CommandLineParser.ParseCommandLine(args);
     }
 
@@ -386,11 +381,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private bool _showVideo = true;
 
     private void MachineThread() {
-        if (_configuration is null) {
-            _logger.Error("No configuration available, cannot continue");
-            throw new InvalidOperationException(
-                $"{nameof(_configuration)} cannot be null when trying to run the emulator machine.");
-        }
         try {
             if(!_disposed) {
                 _okayToContinueEvent.Set();

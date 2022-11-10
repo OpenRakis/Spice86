@@ -11,6 +11,7 @@
 		<Using Remove="System.Linq" />
 		<Using Include="System.Buffers.Binary" />
 		<Using Include="CommunityToolkit.HighPerformance" />
+		<Using Include="Spice86.Core.CLI" />
 	</ItemGroup>
 	<!-- Properties geared towards NuGet -->
 	<PropertyGroup>

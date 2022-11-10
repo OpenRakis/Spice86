@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Diagnostics;
+using Spice86.Core.CLI;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -68,9 +69,7 @@ public sealed class ProgramExecutor : IDisposable {
     }
 
     private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
-        if (expectedHash is null) {
-            throw new ArgumentNullException(nameof(expectedHash));
-        }
+        ArgumentNullException.ThrowIfNull(expectedHash, nameof(expectedHash));
         if (expectedHash.Length == 0) {
             // No hash check
             return;
@@ -105,9 +104,6 @@ public sealed class ProgramExecutor : IDisposable {
     }
 
     private Machine CreateMachine(IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter) {
-        if (_configuration == null) {
-            throw new ArgumentNullException(nameof(_configuration));
-        }
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);

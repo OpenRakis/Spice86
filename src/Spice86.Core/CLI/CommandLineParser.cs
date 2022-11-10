@@ -14,6 +14,7 @@ using Spice86.Logging;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 /// <summary>
@@ -23,10 +24,10 @@ using System.Reflection;
 public class CommandLineParser {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<CommandLineParser>();
 
-    public static Configuration? ParseCommandLine(string[] args) {
-        ParserResult<Configuration>? result = Parser.Default.ParseArguments<Configuration>(args)
+    public static Configuration ParseCommandLine(string[] args) {
+        ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(args)
             .WithNotParsed((e) => _logger.Error("{@Errors}", e));
-        return result?.MapResult(initialConfig => {
+        return result.MapResult(initialConfig => {
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
@@ -34,11 +35,17 @@ public class CommandLineParser {
             if (initialConfig.Logs) {
                 Serilogger.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
             }
-            if (initialConfig.HeavyLogs) {
+            if (initialConfig.WarningLogs) {
                 Serilogger.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
             }
             return initialConfig;
-        }, error => null!);
+        }, error => {
+            var message = "Unparseable command line";
+            var exception = new UnreachableException(message);
+            exception.Data.Add("Error", error);
+            Environment.FailFast(message, exception);
+            throw exception;
+        });
     }
 
     private static string? ParseExePath(string? exePath) {

@@ -1,17 +1,25 @@
 ﻿namespace Spice86;
 
 using Avalonia;
+using Avalonia.Threading;
 
+using Serilog;
+
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
+using Spice86.Keyboard;
 using Spice86.Logging;
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 
 /// <summary>
 /// Spice86 Entry Point
 /// </summary>
 public class Program {
+    private static ILogger _logger = Serilogger.Logger.ForContext<Program>();
+
     /// <summary>
     /// Alternate Entry Point
     /// </summary>
@@ -30,7 +38,21 @@ public class Program {
     // yet and stuff might break.
     [STAThread]
     public static void Main(string[] args) {
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
+        Configuration configuration = CommandLineParser.ParseCommandLine(args);
+        if(!configuration.HeadlessMode) {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
+        }
+        else {
+            try {
+                ProgramExecutor programExecutor = new ProgramExecutor(null, null, configuration);
+                programExecutor.Run();
+            } catch (Exception e) {
+                e.Demystify();
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _logger.Error(e, "An error occurred during execution");
+                }
+            }
+        }
         ((IDisposable)Serilogger.Logger).Dispose();
     }
 

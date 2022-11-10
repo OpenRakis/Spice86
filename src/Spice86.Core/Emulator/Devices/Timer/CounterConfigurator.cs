@@ -2,6 +2,7 @@
 
 using Serilog;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Logging;
