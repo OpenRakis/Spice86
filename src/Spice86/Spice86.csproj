@@ -16,8 +16,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>3.0.10</Version>
-		<PackageReleaseNotes>Moved backed to AvaloniaUI v0.10.x.</PackageReleaseNotes>
+		<Version>3.0.11</Version>
+		<PackageReleaseNotes>InitializeDOS and HeadlessMode CLI switches. Also, handle exceptions from potentially overridden entry method.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
