@@ -110,7 +110,7 @@ public sealed class ProgramExecutor : IDisposable {
         Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
         InitializeCpu();
         InitializeDos(_configuration);
-        if (_configuration.InstallInterruptVector) {
+        if (_configuration.InitializeDOS is true) {
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
             Machine.InstallAllCallbacksInInterruptTable();

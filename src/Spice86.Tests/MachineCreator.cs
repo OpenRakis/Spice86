@@ -20,7 +20,7 @@ public class MachineCreator {
             Exe = binPath,
             // Don't expect any hash for the exe
             ExpectedChecksumValue = Array.Empty<byte>(),
-            InstallInterruptVector = false
+            InitializeDOS = false
         };
 
         ProgramExecutor programExecutor = new ProgramExecutor(null, null, configuration);

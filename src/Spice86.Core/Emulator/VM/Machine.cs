@@ -255,15 +255,16 @@ public class Machine : IDisposable {
         } catch (InvalidVMOperationException e) {
             e.Demystify();
             if (Debugger.IsAttached) {
-                System.Diagnostics.Debugger.Break();
+                Debugger.Break();
             }
 
             throw;
-        } catch (HaltRequestedException e) {
+        } catch (HaltRequestedException) {
             // Actually a signal generated code requested Exit
+            Dispose(disposing: true);
         } catch (Exception e) {
             if (Debugger.IsAttached) {
-                System.Diagnostics.Debugger.Break();
+                Debugger.Break();
             }
 
             e.Demystify();

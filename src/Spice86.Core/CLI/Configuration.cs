@@ -52,11 +52,11 @@ public class Configuration {
     [Option('r', nameof(RecordedDataDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to working directory")]
     public string RecordedDataDirectory { get; init; } = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER") ?? Environment.CurrentDirectory;
 
-    [Option('v', nameof(InstallInterruptVector), Default = true, Required = false, HelpText = "Install interrupt vector or not")]
-    public bool InstallInterruptVector { get; set; } = true;
+    [Option('v', nameof(InitializeDOS), Default = null, Required = false, HelpText = "Install DOS interrupt vectors or not")]
+    public bool? InitializeDOS { get; set; }
 
     /// <summary>
-    /// Only for <see cref="Spice86.Core.Emulator.Devices.Timer.Timer"/>
+    /// Only for <see cref="Emulator.Devices.Timer.Timer"/>
     /// </summary>
     [Option('i', nameof(InstructionsPerSecond), Required = false, HelpText = "<number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.")]
     public long? InstructionsPerSecond { get; set; }

@@ -54,7 +54,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
     private byte[] GenerateRelevantRam() {
-        if (_machine.Configuration.InstallInterruptVector) {
+        if (_machine.Configuration.InitializeDOS is true) {
             return _machine.CallbackHandler.NopCallbackInstructionInRamCopy();
         }
         return _machine.Memory.Ram;
