@@ -259,8 +259,98 @@ public static class Ym7128B {
     +0.794328234724281490,  // - 2 dB+
     +1.000000000000000000   // - 0 dB+
 });
+    private static ushort Tap(int index) => (ushort)(index * ((int)YM7128B_DatasheetSpecs.YM7128B_Buffer_Length - 1) / ((int)YM7128B_DatasheetSpecs.YM7128B_Tap_Value_Count - 1));
 
-    private static short Tap(int index) => (short)(index * ((int)YM7128B_DatasheetSpecs.YM7128B_Buffer_Length - 1) / ((int)YM7128B_DatasheetSpecs.YM7128B_Tap_Value_Count - 1));
+    static readonly ReadOnlyCollection<ushort> YM7128B_Tap_Table = Array.AsReadOnly(new ushort[]
+{
+    Tap( 0),  //   0.0 ms
+    Tap( 1),  //   3.2 ms
+    Tap( 2),  //   6.5 ms
+    Tap( 3),  //   9.7 ms
+    Tap( 4),  //  12.9 ms
+    Tap( 5),  //  16.1 ms
+    Tap( 6),  //  19.3 ms
+    Tap( 7),  //  22.6 ms
+    Tap( 8),  //  25.8 ms
+    Tap( 9),  //  29.0 ms
+    Tap(10),  //  32.3 ms
+    Tap(11),  //  35.5 ms
+    Tap(12),  //  38.7 ms
+    Tap(13),  //  41.9 ms
+    Tap(14),  //  45.2 ms
+    Tap(15),  //  48.4 ms
+    Tap(16),  //  51.6 ms
+    Tap(17),  //  54.9 ms
+    Tap(18),  //  58.1 ms
+    Tap(19),  //  61.3 ms
+    Tap(20),  //  64.5 ms
+    Tap(21),  //  67.8 ms
+    Tap(22),  //  71.0 ms
+    Tap(23),  //  74.2 ms
+    Tap(24),  //  77.4 ms
+    Tap(25),  //  80.7 ms
+    Tap(26),  //  83.9 ms
+    Tap(27),  //  87.1 ms
+    Tap(28),  //  90.4 ms
+    Tap(29),  //  93.6 ms
+    Tap(30),  //  96.8 ms
+    Tap(31)   // 100.0 ms
+});
+
+    private static double Kernel(double real) {
+        unchecked {
+            return (((short)real) * ((short)YM7128B_ImplementationSpecs.YM7128B_Fixed_Max) & ((short)YM7128B_ImplementationSpecs.YM7128B_Coeff_Mask));
+        }
+    }
+
+    static readonly ReadOnlyCollection<double> YM7128B_OversamplerFixed_Kernel = Array.AsReadOnly(new double[]
+{
+#if YM7128B_USE_MINPHASE
+    // minimum phase
+    Kernel(+0.073585247514714749),
+    Kernel(+0.269340051166713890),
+    Kernel(+0.442535202999738531),
+    KERNEL(+0.350129745841520346),
+    Kernel(+0.026195691646307945),
+    Kernel(-0.178423532471468610),
+    Kernel(-0.081176763571493171),
+    Kernel(+0.083194010466739091),
+    Kernel(+0.067960765530891545),
+    Kernel(-0.035840063980478287),
+    Kernel(-0.044393769145659796),
+    Kernel(+0.013156688603347873),
+    Kernel(+0.023451305043275420),
+    Kernel(-0.004374029821991059),
+    Kernel(-0.009480786001493536),
+    Kernel(+0.002700502551912207),
+    Kernel(+0.003347671274177581),
+    Kernel(-0.002391896275498628),
+    Kernel(+0.000483958628744376)
+#else
+    // linear phase
+    Kernel(+0.005969087803865891),
+    Kernel(-0.003826518613910499),
+    Kernel(-0.016623943725986926),
+    Kernel(+0.007053928712894589),
+    Kernel(+0.038895802111020034),
+    Kernel(-0.010501507751597486),
+    Kernel(-0.089238395139830201),
+    Kernel(+0.013171814880420758),
+    Kernel(+0.312314472963171053),
+    Kernel(+0.485820312497107776),
+    Kernel(+0.312314472963171053),
+    Kernel(+0.013171814880420758),
+    Kernel(-0.089238395139830201),
+    Kernel(-0.010501507751597486),
+    Kernel(+0.038895802111020034),
+    Kernel(+0.007053928712894589),
+    Kernel(-0.016623943725986926),
+    Kernel(-0.003826518613910499),
+    Kernel(+0.005969087803865891)
+#endif
+});
+
+
 
     private static short GainShort(double real) => (short)(real * (int)ImplementationSpecs.GainMax);
 
