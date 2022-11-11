@@ -5,7 +5,6 @@ using CommandLine;
 using Serilog;
 using Serilog.Events;
 
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Utils;
@@ -14,7 +13,6 @@ using Spice86.Logging;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 
 /// <summary>

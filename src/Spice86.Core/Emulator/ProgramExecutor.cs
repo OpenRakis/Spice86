@@ -109,7 +109,7 @@ public sealed class ProgramExecutor : IDisposable {
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
         Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
         InitializeCpu();
-        InitializeDos(_configuration);
+        InitializeDOS(_configuration);
         if (_configuration.InitializeDOS is true) {
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
@@ -165,7 +165,7 @@ public sealed class ProgramExecutor : IDisposable {
         state.Flags.IsDOSBoxCompatible = true;
     }
 
-    private void InitializeDos(Configuration configuration) {
+    private void InitializeDOS(Configuration configuration) {
         string? parentFolder = GetExeParentFolder(configuration);
         Dictionary<char, string> driveMap = new();
         string? cDrive = configuration.CDrive;
