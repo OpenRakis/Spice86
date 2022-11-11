@@ -244,13 +244,13 @@ public class Machine : IDisposable {
     public void Run() {
         State state = Cpu.State;
         FunctionHandler functionHandler = Cpu.FunctionHandler;
-        functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         try {
             if (!_dmaThreadStarted) {
                 _dmaThread.Start();
                 _dmaThreadStarted = true;
             }
-
+            // Entry could be overridden and could throw exceptions
+            functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
             RunLoop();
         } catch (InvalidVMOperationException e) {
             e.Demystify();
