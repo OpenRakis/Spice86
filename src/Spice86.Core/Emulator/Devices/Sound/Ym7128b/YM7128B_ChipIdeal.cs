@@ -21,7 +21,7 @@ public ref struct YM7128B_ChipIdeal
 
     public double[] Buffer_ { get; set; }
 
-    public ushort Length_ { get; set; }
+    public int Length_  => Buffer_.Length;
 
     public ushort Sample_Rate_ { get; set; }
 }
