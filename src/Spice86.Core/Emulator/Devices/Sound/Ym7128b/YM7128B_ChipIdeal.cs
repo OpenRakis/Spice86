@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 
-public ref struct YM7128B_ChipIdeal
+public struct YM7128B_ChipIdeal
 {
     public YM7128B_ChipIdeal() {
         Regs_ = new byte[(int)YM7128B_Reg.YM7128B_Reg_Count];
