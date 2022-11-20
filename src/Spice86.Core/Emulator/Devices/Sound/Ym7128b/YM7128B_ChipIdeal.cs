@@ -6,7 +6,7 @@ public struct YM7128B_ChipIdeal
         Regs_ = new byte[(int)YM7128B_Reg.YM7128B_Reg_Count];
         Gains_ = new double[(int)YM7128B_Reg.YM7128B_Reg_T0];
         Taps_ = new ushort[(int)YM7128B_DatasheetSpecs.YM7128B_Tap_Count];
-        Buffer_ = new double[Length_];
+        Buffer_ = Array.Empty<double>();
     }
 
     public byte[] Regs_ { get; set; }
