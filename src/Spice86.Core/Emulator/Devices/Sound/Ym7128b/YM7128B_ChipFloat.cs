@@ -18,5 +18,7 @@ public struct YM7128B_ChipFloat {
 
     public double[] Buffer_ { get; set; }
 
+    public int Length_ => Buffer_.Length;
+
     public YM7128B_OversamplerFloat[] Oversampler_ { get; set; }
 }
