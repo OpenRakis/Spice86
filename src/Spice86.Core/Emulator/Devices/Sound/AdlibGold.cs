@@ -5,6 +5,8 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
+using Dunet;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +36,14 @@ public class AdlibGold : DefaultIOPortHandler {
         SwitchFunctions,
     }
 
-    private enum StereoProcessorMode {
+    [Union]
+    private partial record StereoProcessorSwitchFunctions {
+        public byte Data { get; set; }
+        public byte Source_Selector { get; set; }
+        public byte Stereo_Mode { get; set; }
+    }
+
+    private enum StereoProcessorStereoMode {
         ForcedMono,
         LineStereo,
         PseudoStereo,
@@ -49,8 +58,18 @@ public class AdlibGold : DefaultIOPortHandler {
         Stereo1 = 6,
         Stereo2 = 7,
     }
+
+    private struct AudioFrame {
+        public double Left { get; set; }
+
+        public double Right { get; set; }
+    }
+
     private class StereoProcessor {
-        
+        private byte sample_rate = 0;
+        private AudioFrame gain = new();
+        private StereoProcessorSourceSelector source_selector = new();
+        private StereoProcessorStereoMode stereo_mode = new();
     }
 
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
