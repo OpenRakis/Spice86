@@ -2,6 +2,8 @@
 
 using Dunet;
 
+using Serilog;
+
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 using Spice86.Core.Emulator.IOPorts;
@@ -19,16 +21,22 @@ using System.Threading.Tasks;
 /// Adlib Gold implementation
 /// </summary>
 public class AdlibGold : DefaultIOPortHandler {
-    private YM7128B_ChipIdeal chip = new();
 
-    private struct ControlState {
-        public byte Sci { get; set; }
-        public byte A0 { get; set; }
-        public byte Addr { get; set; }
-        public byte Data { get; set; }
+    public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
     }
 
-    private ControlState control_state = new();
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
+    }
+
+    public override byte ReadByte(int port) {
+        return base.ReadByte(port);
+    }
+
+    public override void WriteByte(int port, byte value) {
+        base.WriteByte(port, value);
+    }
 
     private enum StereoProcessorControlReg {
         VolumeLeft,
@@ -40,6 +48,14 @@ public class AdlibGold : DefaultIOPortHandler {
 
     [Union]
     private partial record StereoProcessorSwitchFunctions {
+        public StereoProcessorSwitchFunctions(byte value) {
+            Data = value;
+            Source_Selector = value;
+            Stereo_Mode = value;
+        }
+
+        public StereoProcessorSwitchFunctions() { }
+
         public byte Data { get; set; }
         public byte Source_Selector { get; set; }
         public byte Stereo_Mode { get; set; }
@@ -77,8 +93,11 @@ public class AdlibGold : DefaultIOPortHandler {
         }
     }
 
+    /// <summary>
+    /// Philips Semiconductors TDA8425 hi-fi stereo audio processor emulation
+    /// </summary>
     private class StereoProcessor {
-        private byte sample_rate = 0;
+        private ushort sample_rate = 0;
         private AudioFrame gain = new();
         private StereoProcessorSourceSelector source_selector = new();
         private StereoProcessorStereoMode stereo_mode = new();
@@ -86,25 +105,145 @@ public class AdlibGold : DefaultIOPortHandler {
         // Stero low and high-shelf filters
         private readonly LowShelf[] lowshelf = new LowShelf[2];
         private readonly HighShelf[] highshelf = new HighShelf[2];
-        AllPass allpass = new();
+        readonly AllPass allpass = new();
+
+        private const int volume_0db_value = 60;
+
+        private const int shelf_filter_0db_value = 6;
+
+        private ILoggerService _loggerService;
+
+        public StereoProcessor(ushort _sample_rate, ILoggerService loggerService) {
+            _loggerService = loggerService;
+            sample_rate = _sample_rate;
+            if (sample_rate <= 0) {
+                throw new IndexOutOfRangeException(nameof(_sample_rate));
+            }
+
+            double allpass_freq = 400.0;
+            double q_factor = 1.7;
+            allpass.setup(sample_rate, allpass_freq, q_factor);
+            Reset();
+        }
+
+        public void Reset() {
+            ControlWrite(StereoProcessorControlReg.VolumeLeft, volume_0db_value);
+            ControlWrite(StereoProcessorControlReg.VolumeRight, volume_0db_value);
+            ControlWrite(StereoProcessorControlReg.Bass, shelf_filter_0db_value);
+            ControlWrite(StereoProcessorControlReg.Treble, shelf_filter_0db_value);
+            StereoProcessorSwitchFunctions sf = new();
+            sf.Source_Selector = (byte)StereoProcessorSourceSelector.Stereo1;
+            sf.Stereo_Mode = (byte)StereoProcessorStereoMode.LinearStereo;
+            ControlWrite(StereoProcessorControlReg.SwitchFunctions, sf.Data);
+        }
+
+        public void ControlWrite(
+            StereoProcessorControlReg reg,
+            byte data) {
+            double calc_volume_gain(int value) {
+                var min_gain_db = -128.0f;
+                var max_gain_db = 6.0f;
+                var step_db = 2.0f;
+
+                var val = (float)(value - volume_0db_value);
+                var gain_db = Math.Clamp(val * step_db, min_gain_db, max_gain_db);
+                return MathUtils.decibel_to_gain(gain_db);
+            };
+
+            double calc_filter_gain_db(int value) {
+                var min_gain_db = -12.0;
+                var max_gain_db = 15.0;
+                var step_db = 3.0;
+
+                var val = value - shelf_filter_0db_value;
+                return Math.Clamp(val * step_db, min_gain_db, max_gain_db);
+            };
+
+            var volume_control_width = 6;
+            var volume_control_mask = (1 << volume_control_width) - 1;
+
+            var filter_control_width = 4;
+            var filter_control_mask = (1 << filter_control_width) - 1;
+
+            switch (reg) {
+                case StereoProcessorControlReg.VolumeLeft: {
+                        var value = data & volume_control_mask;
+                        gain.Left = calc_volume_gain(value);
+                        _loggerService.Debug("ADLIBGOLD: Stereo: Final left volume set to {Left}.2fdB {Value}",
+                            gain.Left,
+                            value);
+                    }
+                    break;
+
+                case StereoProcessorControlReg.VolumeRight: {
+                        var value = data & volume_control_mask;
+                        gain.Right = calc_volume_gain(value);
+                        _loggerService.Debug("ADLIBGOLD: Stereo: Final right volume set to {Right}.2fdB {Value}",
+                            gain.Right,
+                            value);
+                    }
+                    break;
+
+                case StereoProcessorControlReg.Bass: {
+                        var value = data & filter_control_mask;
+                        var gain_db = calc_filter_gain_db(value);
+                        SetLowShelfGain(gain_db);
+
+                        _loggerService.Debug("ADLIBGOLD: Stereo: Bass gain set to {GainDb}.2fdB {Value}",
+                            gain_db,
+                            value);
+                    }
+                    break;
+
+                case StereoProcessorControlReg.Treble: {
+                        var value = data & filter_control_mask;
+                        // Additional treble boost to make the emulated sound more
+                        // closely resemble real hardware recordings.
+                        var extra_treble = 1;
+                        var gain_db = calc_filter_gain_db(value + extra_treble);
+                        SetHighShelfGain(gain_db);
+
+                        _loggerService.Debug("ADLIBGOLD: Stereo: Treble gain set to {GainDb}.2fdB {Value}",
+                            gain_db,
+                            value);
+                    }
+                    break;
+
+                case StereoProcessorControlReg.SwitchFunctions: {
+                        var sf = new StereoProcessorSwitchFunctions(data);
+                        source_selector =  (StereoProcessorSourceSelector)sf.Source_Selector;
+                        stereo_mode = (StereoProcessorStereoMode)sf.Stereo_Mode;
+                        _loggerService.Debug("ADLIBGOLD: Stereo: Source selector set to {SourceSelector}, stereo mode set to {StereoMode}",
+                            (int)(source_selector),
+                            (int)(stereo_mode));
+                    }
+                    break;
+            }
+        }
+
+        public void SetHighShelfGain(double gain_db) {
+            const double cutoff_freq = 2500.0;
+            const double slope = 0.5;
+            foreach (HighShelf f in highshelf) {
+                f.setup(sample_rate, cutoff_freq, gain_db, slope);
+            }
+        }
+
+        public void SetLowShelfGain(double gain_db) {
+            const double cutoff_freq = 400.0;
+            const double slope = 0.5;
+            foreach(LowShelf f in lowshelf) {
+                f.setup(sample_rate, cutoff_freq, gain_db, slope);
+            }
+        }
 
         public AudioFrame ProcessSourceSelection(AudioFrame frame) {
-            switch (source_selector) {
-                case StereoProcessorSourceSelector.SoundA1:
-                case StereoProcessorSourceSelector.SoundA2:
-                    return new(frame.Left, frame.Left);
-
-                case StereoProcessorSourceSelector.SoundB1:
-                case StereoProcessorSourceSelector.SoundB2:
-                    return new(frame.Right, frame.Right);
-
-                case StereoProcessorSourceSelector.Stereo1:
-                case StereoProcessorSourceSelector.Stereo2:
-                default:
-                    // Dune sends an invalid source selector value of 0 during the
-                    // intro; we'll just revert to stereo operation
-                    return frame;
-            }
+            return source_selector switch {
+                StereoProcessorSourceSelector.SoundA1 or StereoProcessorSourceSelector.SoundA2 => new(frame.Left, frame.Left),
+                StereoProcessorSourceSelector.SoundB1 or StereoProcessorSourceSelector.SoundB2 => new(frame.Right, frame.Right),
+                _ => frame,// Dune sends an invalid source selector value of 0 during the
+                           // intro; we'll just revert to stereo operation
+            };
         }
 
         public AudioFrame ProcessShelvingFilters(AudioFrame frame) {
@@ -150,19 +289,69 @@ public class AdlibGold : DefaultIOPortHandler {
         }
     }
 
-    public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    [Union]
+    private partial record SurroundControlReg {
+        public byte data { get; set; }
+        public byte din { get; set; }
+        public byte sci { get; set; }
+        public byte a0 { get; set; }
     }
 
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
-    }
+    private class SurroundProcessor {
+        private YM7128B_ChipIdeal chip = new();
 
-    public override byte ReadByte(int port) {
-        return base.ReadByte(port);
-    }
+        private ControlState control_state = new();
 
-    public override void WriteByte(int port, byte value) {
-        base.WriteByte(port, value);
+        private struct ControlState {
+            public byte sci { get; set; }
+            public byte a0 { get; set; }
+            public byte addr { get; set; }
+            public byte data { get; set; }
+        }
+
+        public SurroundProcessor(ushort sample_rate) {
+            if (sample_rate < 10) {
+                throw new ArgumentOutOfRangeException(nameof(sample_rate));
+            }
+
+            YM7128B.YM7128B_ChipIdeal_Setup(ref chip, sample_rate);
+            YM7128B.YM7128B_ChipIdeal_Reset(ref chip);
+            YM7128B.YM7128B_ChipIdeal_Start(ref chip);
+        }
+
+        public void ControlWrite(byte val) {
+            SurroundControlReg reg = new() {
+                data = val,
+                a0 = val,
+                din = val,
+                sci = val
+            };
+
+            // Change register data at the falling edge of 'a0' word clock
+            if (control_state.a0 == 1 && reg.a0 == 0) {
+                //		_logger.Debug("ADLIBGOLD: Surround: Write
+                // control register %d, data: %d",
+                // control_state.addr, control_state.data);
+
+                YM7128B.YM7128B_ChipIdeal_Write(ref chip, control_state.addr, control_state.data);
+            } else {
+                // Data is sent in serially through 'din' in MSB->LSB order,
+                // synchronised by the 'sci' bit clock. Data should be read on
+                // the rising edge of 'sci'.
+                if (control_state.sci == 0 && reg.sci == 1) {
+                    // The 'a0' word clock determines the type of the data.
+                    if (reg.a0 == 1) {
+                        // Data cycle
+                        control_state.data = (byte)((control_state.data << 1) | reg.din);
+                    } else {
+                        // Address cycle
+                        control_state.addr = (byte)((control_state.addr << 1) | reg.din);
+                    }
+                }
+            }
+
+            control_state.sci = reg.sci;
+            control_state.a0 = reg.a0;
+        }
     }
 }
