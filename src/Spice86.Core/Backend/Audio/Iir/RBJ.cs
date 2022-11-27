@@ -40,8 +40,8 @@ namespace Spice86.Core.Backend.Audio.Iir;
 public class RBJBase : Biquad {
     private DirectFormI _state = new();
 
-    public void filter(double s) {
-        _state.process1(s, this);
+    public double filter(double s) {
+        return _state.process1(s, this);
     }
 
     public DirectFormI getState() {
