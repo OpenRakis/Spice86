@@ -18,7 +18,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Adlib Gold implementation
+/// Adlib Gold implementation, translated from DOSBox Staging code
 /// </summary>
 public class AdlibGold : DefaultIOPortHandler {
 
