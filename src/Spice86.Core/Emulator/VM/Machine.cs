@@ -545,6 +545,7 @@ public class Machine : IDisposable {
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
+                AdlibGold.Dispose();
                 MachineBreakpoints.Dispose();
             }
             _disposed = true;

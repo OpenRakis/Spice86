@@ -4,9 +4,12 @@ using Dunet;
 
 using Serilog;
 
+using Spice86.Core.Backend.Audio;
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -21,21 +24,179 @@ using System.Threading.Tasks;
 /// Adlib Gold implementation, translated from DOSBox Staging code
 /// </summary>
 public class AdlibGold : DefaultIOPortHandler {
+    private const byte Timer1Mask = 0xC0;
+    private const byte Timer2Mask = 0xA0;
+
+    private readonly AudioPlayer? _audioPlayer;
+    private readonly FmSynthesizer? _synth;
+    private int _currentAddress;
+    private volatile bool _endThread;
+    private readonly Thread _playbackThread;
+    private bool _initialized;
+    private bool _paused;
+    private byte _statusByte;
+    private byte _timer1Data;
+    private byte _timer2Data;
+    private byte _timerControlByte;
+
+    private bool _disposed = false;
 
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+        _machine.Paused += MachinePaused;
+        _machine.Resumed += MachineResumed;
+        _audioPlayer = Audio.CreatePlayer(48000, 2048);
+        if (_audioPlayer is not null) {
+            _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);
+        }
+        _playbackThread = new Thread(GenerateWaveforms) {
+            Name = "OPLGOLDFMAudio"
+        };
+    }
+
+    private void MachineResumed() {
+        if (_initialized && !_paused && _playbackThread.IsAlive) {
+            _endThread = true;
+            _playbackThread.Join();
+            _paused = true;
+        }
+    }
+
+    private void MachinePaused() {
+        if (_paused) {
+            _endThread = false;
+            StartPlaybackThread();
+            _paused = false;
+        }
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
         ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if(!_disposed) {
+            if(disposing) {
+                if (!_paused) {
+                    _endThread = true;
+                    if (_playbackThread.IsAlive) {
+                        _playbackThread.Join();
+                    }
+                }
+                _audioPlayer?.Dispose();
+                _initialized = false;
+            }
+            _disposed = true;
+        }
+    }
+
+    public void Pause() {
+        if (_initialized && !_paused && _playbackThread.IsAlive) {
+            _endThread = true;
+            _playbackThread.Join();
+            _paused = true;
+        }
     }
 
     public override byte ReadByte(int port) {
-        return base.ReadByte(port);
+        if ((_timerControlByte & 0x01) != 0x00 && (_statusByte & Timer1Mask) == 0) {
+            _timer1Data++;
+            if (_timer1Data == 0) {
+                _statusByte |= Timer1Mask;
+            }
+        }
+
+        if ((_timerControlByte & 0x02) != 0x00 && (_statusByte & Timer2Mask) == 0) {
+            _timer2Data++;
+            if (_timer2Data == 0) {
+                _statusByte |= Timer2Mask;
+            }
+        }
+
+        return _statusByte;
+    }
+
+    public override ushort ReadWord(int port) {
+        return _statusByte;
+    }
+
+    public void Resume() {
+        if (_paused) {
+            _endThread = false;
+            StartPlaybackThread();
+            _paused = false;
+        }
     }
 
     public override void WriteByte(int port, byte value) {
-        base.WriteByte(port, value);
+        if (port == 0x388) {
+            _currentAddress = value;
+        } else if (port == 0x389) {
+            if (_currentAddress == 0x02) {
+                _timer1Data = value;
+            } else if (_currentAddress == 0x03) {
+                _timer2Data = value;
+            } else if (_currentAddress == 0x04) {
+                _timerControlByte = value;
+                if ((value & 0x80) == 0x80) {
+                    _statusByte = 0;
+                }
+            } else {
+                if (!_initialized) {
+                    StartPlaybackThread();
+                }
+
+                _synth?.SetRegisterValue(0, _currentAddress, value);
+            }
+        }
+    }
+
+    public override void WriteWord(int port, ushort value) {
+        if (port == 0x388) {
+            WriteByte(0x388, (byte)value);
+            WriteByte(0x389, (byte)(value >> 8));
+        }
+    }
+
+    /// <summary>
+    /// Generates and plays back output waveform data.
+    /// </summary>
+    private void GenerateWaveforms() {
+        if (_audioPlayer is null) {
+            return;
+        }
+        int length = 1024;
+        Span<float> buffer = stackalloc float[length];
+        bool expandToStereo = _audioPlayer.Format.Channels == 2;
+        if (expandToStereo) {
+            length *= 2;
+        }
+        Span<float> playBuffer = stackalloc float[length];
+        FillBuffer(buffer, playBuffer, expandToStereo);
+        while (!_endThread) {
+            Audio.WriteFullBuffer(_audioPlayer, playBuffer);
+            FillBuffer(buffer, playBuffer, expandToStereo);
+        }
+}
+
+    private void FillBuffer(Span<float> buffer, Span<float> playBuffer, bool expandToStereo) {
+        _synth?.GetData(buffer);
+        if (expandToStereo) {
+            ChannelAdapter.MonoToStereo(buffer, playBuffer);
+        }
+    }
+
+    private void StartPlaybackThread() {
+        if(!_endThread) {
+            _playbackThread.Start();
+            _initialized = true;
+        }
     }
 
     private enum StereoProcessorControlReg {
@@ -131,9 +292,10 @@ public class AdlibGold : DefaultIOPortHandler {
             ControlWrite(StereoProcessorControlReg.VolumeRight, volume_0db_value);
             ControlWrite(StereoProcessorControlReg.Bass, shelf_filter_0db_value);
             ControlWrite(StereoProcessorControlReg.Treble, shelf_filter_0db_value);
-            StereoProcessorSwitchFunctions sf = new();
-            sf.Source_Selector = (byte)StereoProcessorSourceSelector.Stereo1;
-            sf.Stereo_Mode = (byte)StereoProcessorStereoMode.LinearStereo;
+            StereoProcessorSwitchFunctions sf = new() {
+                Source_Selector = (byte)StereoProcessorSourceSelector.Stereo1,
+                Stereo_Mode = (byte)StereoProcessorStereoMode.LinearStereo
+            };
             ControlWrite(StereoProcessorControlReg.SwitchFunctions, sf.Data);
         }
 
@@ -141,9 +303,9 @@ public class AdlibGold : DefaultIOPortHandler {
             StereoProcessorControlReg reg,
             byte data) {
             double calc_volume_gain(int value) {
-                var min_gain_db = -128.0f;
-                var max_gain_db = 6.0f;
-                var step_db = 2.0f;
+                const float min_gain_db = -128.0f;
+                const float max_gain_db = 6.0f;
+                const float step_db = 2.0f;
 
                 var val = (float)(value - volume_0db_value);
                 var gain_db = Math.Clamp(val * step_db, min_gain_db, max_gain_db);
@@ -151,19 +313,19 @@ public class AdlibGold : DefaultIOPortHandler {
             };
 
             double calc_filter_gain_db(int value) {
-                var min_gain_db = -12.0;
-                var max_gain_db = 15.0;
-                var step_db = 3.0;
+                const double min_gain_db = -12.0;
+                const double max_gain_db = 15.0;
+                const double step_db = 3.0;
 
                 var val = value - shelf_filter_0db_value;
                 return Math.Clamp(val * step_db, min_gain_db, max_gain_db);
             };
 
-            var volume_control_width = 6;
-            var volume_control_mask = (1 << volume_control_width) - 1;
+            const int volume_control_width = 6;
+            const int volume_control_mask = (1 << volume_control_width) - 1;
 
-            var filter_control_width = 4;
-            var filter_control_mask = (1 << filter_control_width) - 1;
+            const int filter_control_width = 4;
+            const int filter_control_mask = (1 << filter_control_width) - 1;
 
             switch (reg) {
                 case StereoProcessorControlReg.VolumeLeft: {
@@ -199,7 +361,7 @@ public class AdlibGold : DefaultIOPortHandler {
                         var value = data & filter_control_mask;
                         // Additional treble boost to make the emulated sound more
                         // closely resemble real hardware recordings.
-                        var extra_treble = 1;
+                        const int extra_treble = 1;
                         var gain_db = calc_filter_gain_db(value + extra_treble);
                         SetHighShelfGain(gain_db);
 
