@@ -24,8 +24,15 @@ using System.Threading.Tasks;
 /// <summary>
 /// Adlib Gold implementation, translated from DOSBox Staging code
 /// </summary>
-public class AdlibGold : OPL3FM {
-    public AdlibGold(Machine machine, Configuration configuration) : base(machine, configuration) {
+public sealed class AdlibGold : OPL3FM {
+    private readonly StereoProcessor stereo_processor;
+    private readonly SurroundProcessor surround_processor;
+    private readonly ushort sample_rate = 0;
+
+    public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort _sample_rate) : base(machine, configuration, loggerService) {
+        sample_rate = _sample_rate;
+        stereo_processor = new(sample_rate, loggerService);
+        surround_processor = new(sample_rate);
     }
 
     private enum StereoProcessorControlReg {
@@ -39,9 +46,12 @@ public class AdlibGold : OPL3FM {
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
         ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
-        ioPortDispatcher.AddIOPortHandler(0x332, this);
+        // ioPortDispatcher.AddIOPortHandler(0x332, this);
     }
 
+    private void StereoControlWrite(byte reg, byte data) => stereo_processor.ControlWrite((StereoProcessorControlReg)reg, data);
+
+    private void SurroundControlWrite(byte data) => surround_processor.ControlWrite(data);
 
     public override byte ReadByte(int port) 
     {
