@@ -6,6 +6,7 @@ using Serilog;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Backend.Audio.Iir;
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.IOPorts;
@@ -23,180 +24,8 @@ using System.Threading.Tasks;
 /// <summary>
 /// Adlib Gold implementation, translated from DOSBox Staging code
 /// </summary>
-public class AdlibGold : DefaultIOPortHandler {
-    private const byte Timer1Mask = 0xC0;
-    private const byte Timer2Mask = 0xA0;
-
-    private readonly AudioPlayer? _audioPlayer;
-    private readonly FmSynthesizer? _synth;
-    private int _currentAddress;
-    private volatile bool _endThread;
-    private readonly Thread _playbackThread;
-    private bool _initialized;
-    private bool _paused;
-    private byte _statusByte;
-    private byte _timer1Data;
-    private byte _timer2Data;
-    private byte _timerControlByte;
-
-    private bool _disposed = false;
-
-    public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
-        _machine.Paused += MachinePaused;
-        _machine.Resumed += MachineResumed;
-        _audioPlayer = Audio.CreatePlayer(48000, 2048);
-        if (_audioPlayer is not null) {
-            _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);
-        }
-        _playbackThread = new Thread(GenerateWaveforms) {
-            Name = "OPLGOLDFMAudio"
-        };
-    }
-
-    private void MachineResumed() {
-        if (_initialized && !_paused && _playbackThread.IsAlive) {
-            _endThread = true;
-            _playbackThread.Join();
-            _paused = true;
-        }
-    }
-
-    private void MachinePaused() {
-        if (_paused) {
-            _endThread = false;
-            StartPlaybackThread();
-            _paused = false;
-        }
-    }
-
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
-    }
-
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    private void Dispose(bool disposing) {
-        if(!_disposed) {
-            if(disposing) {
-                if (!_paused) {
-                    _endThread = true;
-                    if (_playbackThread.IsAlive) {
-                        _playbackThread.Join();
-                    }
-                }
-                _audioPlayer?.Dispose();
-                _initialized = false;
-            }
-            _disposed = true;
-        }
-    }
-
-    public void Pause() {
-        if (_initialized && !_paused && _playbackThread.IsAlive) {
-            _endThread = true;
-            _playbackThread.Join();
-            _paused = true;
-        }
-    }
-
-    public override byte ReadByte(int port) {
-        if ((_timerControlByte & 0x01) != 0x00 && (_statusByte & Timer1Mask) == 0) {
-            _timer1Data++;
-            if (_timer1Data == 0) {
-                _statusByte |= Timer1Mask;
-            }
-        }
-
-        if ((_timerControlByte & 0x02) != 0x00 && (_statusByte & Timer2Mask) == 0) {
-            _timer2Data++;
-            if (_timer2Data == 0) {
-                _statusByte |= Timer2Mask;
-            }
-        }
-
-        return _statusByte;
-    }
-
-    public override ushort ReadWord(int port) {
-        return _statusByte;
-    }
-
-    public void Resume() {
-        if (_paused) {
-            _endThread = false;
-            StartPlaybackThread();
-            _paused = false;
-        }
-    }
-
-    public override void WriteByte(int port, byte value) {
-        if (port == 0x388) {
-            _currentAddress = value;
-        } else if (port == 0x389) {
-            if (_currentAddress == 0x02) {
-                _timer1Data = value;
-            } else if (_currentAddress == 0x03) {
-                _timer2Data = value;
-            } else if (_currentAddress == 0x04) {
-                _timerControlByte = value;
-                if ((value & 0x80) == 0x80) {
-                    _statusByte = 0;
-                }
-            } else {
-                if (!_initialized) {
-                    StartPlaybackThread();
-                }
-
-                _synth?.SetRegisterValue(0, _currentAddress, value);
-            }
-        }
-    }
-
-    public override void WriteWord(int port, ushort value) {
-        if (port == 0x388) {
-            WriteByte(0x388, (byte)value);
-            WriteByte(0x389, (byte)(value >> 8));
-        }
-    }
-
-    /// <summary>
-    /// Generates and plays back output waveform data.
-    /// </summary>
-    private void GenerateWaveforms() {
-        if (_audioPlayer is null) {
-            return;
-        }
-        int length = 1024;
-        Span<float> buffer = stackalloc float[length];
-        bool expandToStereo = _audioPlayer.Format.Channels == 2;
-        if (expandToStereo) {
-            length *= 2;
-        }
-        Span<float> playBuffer = stackalloc float[length];
-        FillBuffer(buffer, playBuffer, expandToStereo);
-        while (!_endThread) {
-            Audio.WriteFullBuffer(_audioPlayer, playBuffer);
-            FillBuffer(buffer, playBuffer, expandToStereo);
-        }
-}
-
-    private void FillBuffer(Span<float> buffer, Span<float> playBuffer, bool expandToStereo) {
-        _synth?.GetData(buffer);
-        if (expandToStereo) {
-            ChannelAdapter.MonoToStereo(buffer, playBuffer);
-        }
-    }
-
-    private void StartPlaybackThread() {
-        if(!_endThread) {
-            _playbackThread.Start();
-            _initialized = true;
-        }
+public class AdlibGold : OPL3FM {
+    public AdlibGold(Machine machine, Configuration configuration) : base(machine, configuration) {
     }
 
     private enum StereoProcessorControlReg {
@@ -239,7 +68,7 @@ public class AdlibGold : DefaultIOPortHandler {
     }
 
     private struct AudioFrame {
-        public AudioFrame(double left, double right) : this() {
+        public AudioFrame(double left, double right) {
             Left = left;
             Right = right;
         }
@@ -258,7 +87,7 @@ public class AdlibGold : DefaultIOPortHandler {
     /// Philips Semiconductors TDA8425 hi-fi stereo audio processor emulation
     /// </summary>
     private class StereoProcessor {
-        private ushort sample_rate = 0;
+        private readonly ushort sample_rate = 0;
         private AudioFrame gain = new();
         private StereoProcessorSourceSelector source_selector = new();
         private StereoProcessorStereoMode stereo_mode = new();
@@ -281,8 +110,8 @@ public class AdlibGold : DefaultIOPortHandler {
                 throw new IndexOutOfRangeException(nameof(_sample_rate));
             }
 
-            double allpass_freq = 400.0;
-            double q_factor = 1.7;
+            const double allpass_freq = 400.0;
+            const double q_factor = 1.7;
             allpass.setup(sample_rate, allpass_freq, q_factor);
             Reset();
         }
@@ -310,7 +139,7 @@ public class AdlibGold : DefaultIOPortHandler {
                 var val = (float)(value - volume_0db_value);
                 var gain_db = Math.Clamp(val * step_db, min_gain_db, max_gain_db);
                 return MathUtils.decibel_to_gain(gain_db);
-            };
+            }
 
             double calc_filter_gain_db(int value) {
                 const double min_gain_db = -12.0;
@@ -319,7 +148,7 @@ public class AdlibGold : DefaultIOPortHandler {
 
                 var val = value - shelf_filter_0db_value;
                 return Math.Clamp(val * step_db, min_gain_db, max_gain_db);
-            };
+            }
 
             const int volume_control_width = 6;
             const int volume_control_mask = (1 << volume_control_width) - 1;
@@ -459,6 +288,9 @@ public class AdlibGold : DefaultIOPortHandler {
         public byte a0 { get; set; }
     }
 
+    /// <summary>
+    /// Yamaha YM7128B Surround Processor emulation
+    /// </summary>
     private class SurroundProcessor {
         private YM7128B_ChipIdeal chip = new();
 
