@@ -36,6 +36,23 @@ public class AdlibGold : OPL3FM {
         SwitchFunctions,
     }
 
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
+        ioPortDispatcher.AddIOPortHandler(0x332, this);
+    }
+
+
+    public override byte ReadByte(int port) 
+    {
+        return base.ReadByte(port);
+    }
+
+    public override void WriteByte(int port, byte value)
+    {
+        base.WriteByte(port, value);
+    }
+
     [Union]
     private partial record StereoProcessorSwitchFunctions {
         public StereoProcessorSwitchFunctions(byte value) {
