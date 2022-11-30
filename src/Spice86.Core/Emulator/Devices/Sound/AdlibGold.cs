@@ -120,8 +120,8 @@ public sealed class AdlibGold : OPL3FM {
         private StereoProcessorStereoMode stereo_mode = new();
 
         // Stero low and high-shelf filters
-        private readonly LowShelf[] lowshelf = new LowShelf[2];
-        private readonly HighShelf[] highshelf = new HighShelf[2];
+        private readonly LowShelf[] lowshelf = new LowShelf[] { new(), new() };
+        private readonly HighShelf[] highshelf = new HighShelf[] { new(), new() };
         readonly AllPass allpass = new();
 
         private const int volume_0db_value = 60;
