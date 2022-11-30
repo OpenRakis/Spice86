@@ -279,7 +279,7 @@ public class Machine : IDisposable {
         Register(Joystick);
         PcSpeaker = new PcSpeaker(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
         Register(PcSpeaker);
-        AdlibGold = new AdlibGold(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        AdlibGold = new AdlibGold(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, 48000);
         OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         if (machineCreationOptions.Configuration.SynthMode == "g") {
@@ -545,7 +545,7 @@ public class Machine : IDisposable {
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
-                AdlibGold.Dispose();
+                AdlibGold?.Dispose();
                 MachineBreakpoints.Dispose();
             }
             _disposed = true;
