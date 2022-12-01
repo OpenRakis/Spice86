@@ -29,10 +29,13 @@ public sealed class AdlibGold : OPL3FM {
     private readonly SurroundProcessor surround_processor;
     private readonly ushort sample_rate = 0;
 
+    private Control ctrl;
+
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort _sample_rate) : base(machine, configuration, loggerService) {
         sample_rate = _sample_rate;
         stereo_processor = new(sample_rate, loggerService);
         surround_processor = new(sample_rate);
+        ctrl = new();
     }
 
     private enum StereoProcessorControlReg {
@@ -54,14 +57,64 @@ public sealed class AdlibGold : OPL3FM {
 
     private void SurroundControlWrite(byte data) => surround_processor.ControlWrite(data);
 
+    private const byte default_volume = 0xff;
+
+    private struct Control {
+        public Control() { }
+        public byte Index { get; set; }
+        public byte Lvol { get; set; } = default_volume;
+        public byte RVol { get; set; }
+
+        public bool IsActive { get; set; }
+        public bool UseMixer { get; set; }
+
+    }
+
     public override byte ReadByte(int port) 
     {
+        if(ctrl.IsActive) {
+            if(port == 0x38a) {
+                return 0; // Control status, not busy
+            }
+            else if(port == 0x38b) {
+                return AdlibGoldControlRead();
+            }
+        }
         return base.ReadByte(port);
+    }
+
+    private byte AdlibGoldControlRead() {
+        return ctrl.Index switch {
+            // Board Options
+            0x00 => 0x50, // 16-bit ISA, surround module, no telephone/CDROM
+            //0x00 => 0x70, // 16-bit ISA, surround module, no telephone/surround/CDROM
+            // Left FM volume
+            0x09 => ctrl.Lvol,
+            // Right FM volume
+            0x0a => ctrl.RVol,
+            // Audio Relocation
+            0x15 => 0x388 >> 3, // Cryo installer detection
+            _ => 0xff,
+        };
     }
 
     public override void WriteByte(int port, byte value)
     {
-        base.WriteByte(port, value);
+        if(port == 0x38A) {
+            if(value == 0xff) {
+                ctrl.IsActive = true;
+            }
+            else if (value == 0xfe) {
+                ctrl.IsActive = false;
+            }
+            else if (ctrl.IsActive) {
+                ctrl.Index = (byte)(value & 0xff);
+            }
+        }
+        else
+        {
+            base.WriteByte(port, value);
+        }
     }
 
     [Union]
