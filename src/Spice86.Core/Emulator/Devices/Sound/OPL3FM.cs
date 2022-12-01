@@ -17,10 +17,10 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
-    private readonly AudioPlayer? _audioPlayer;
+    protected readonly AudioPlayer? _audioPlayer;
     protected readonly FmSynthesizer? _synth;
     private int _currentAddress;
-    private volatile bool _endThread;
+    protected volatile bool _endThread;
     private readonly Thread _playbackThread;
     protected bool _initialized;
     private bool _paused;
@@ -42,9 +42,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
         if (_audioPlayer is not null) {
             _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);
         }
-        _playbackThread = new Thread(GenerateWaveforms) {
-            Name = "OPL3FMAudio"
-        };
+        _playbackThread = new Thread(RnderWaveFormOnPlaybackThread);
     }
 
     /// <inheritdoc />
@@ -113,10 +111,6 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
                     _statusByte = 0;
                 }
             } else {
-                if (!_initialized) {
-                    StartPlaybackThread();
-                }
-
                 _synth?.SetRegisterValue(0, _currentAddress, value);
             }
         }
@@ -133,7 +127,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Generates and plays back output waveform data.
     /// </summary>
-    private void GenerateWaveforms() {
+    protected virtual void RnderWaveFormOnPlaybackThread() {
         if (_audioPlayer is null) {
             return;
         }
@@ -158,8 +152,18 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
         }
     }
 
-    protected void StartPlaybackThread() {
+    public void StartPlayback(string threadName) {
+        if (!_initialized) {
+            StartPlaybackThread();
+        }
+
+    }
+
+    protected void StartPlaybackThread(string threadName = "") {
         if(!_endThread) {
+            if(!string.IsNullOrWhiteSpace(threadName)) {
+                _playbackThread.Name = threadName;
+            }
             _playbackThread.Start();
             _initialized = true;
         }

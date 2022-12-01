@@ -16,6 +16,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -28,6 +29,8 @@ public sealed class AdlibGold : OPL3FM {
     private readonly StereoProcessor stereo_processor;
     private readonly SurroundProcessor surround_processor;
     private readonly ushort sample_rate = 0;
+
+    private readonly Queue<AudioFrame> _fifo = new();
 
     private Control ctrl;
 
@@ -67,20 +70,32 @@ public sealed class AdlibGold : OPL3FM {
 
         public bool IsActive { get; set; }
         public bool UseMixer { get; set; }
-
     }
 
-    public override byte ReadByte(int port) 
-    {
-        if(ctrl.IsActive) {
-            if(port == 0x38a) {
+    public override byte ReadByte(int port) {
+        if (ctrl.IsActive) {
+            if (port == 0x38a) {
                 return 0; // Control status, not busy
-            }
-            else if(port == 0x38b) {
+            } else if (port == 0x38b) {
                 return AdlibGoldControlRead();
             }
         }
         return base.ReadByte(port);
+    }
+
+    protected override void RnderWaveFormOnPlaybackThread() {
+        if (_audioPlayer is null) {
+            return;
+        }
+        const int length = 2;
+        Span<float> buffer = stackalloc float[length];
+        while (!_endThread) {
+            if (_fifo.TryDequeue(out AudioFrame frame)) {
+                buffer[0] = frame.Left;
+                buffer[1] = frame.Right;
+                _audioPlayer?.WriteData(buffer);
+            }
+        }
     }
 
     private byte AdlibGoldControlRead() {
@@ -98,22 +113,49 @@ public sealed class AdlibGold : OPL3FM {
         };
     }
 
-    public override void WriteByte(int port, byte value)
-    {
-        if(port == 0x38A) {
-            if(value == 0xff) {
+    public override void WriteByte(int port, byte value) {
+        RenderUpToNow();
+
+        if (port == 0x38A) {
+            if (value == 0xff) {
                 ctrl.IsActive = true;
-            }
-            else if (value == 0xfe) {
+            } else if (value == 0xfe) {
                 ctrl.IsActive = false;
-            }
-            else if (ctrl.IsActive) {
+            } else if (ctrl.IsActive) {
                 ctrl.Index = (byte)(value & 0xff);
             }
-        }
-        else
-        {
+        } else {
             base.WriteByte(port, value);
+        }
+    }
+
+    private void RenderUpToNow() {
+        _fifo.Enqueue(RenderFrame());
+    }
+
+    private AudioFrame RenderFrame() {
+        short[] buf = new short[] { 0, 0 };
+        AudioFrame frame = new();
+        Process(buf, 1, ref frame);
+        return frame;
+    }
+
+    private void Process(short[] input, uint framesRemaining, ref AudioFrame output) {
+        var index = 0;
+        while (framesRemaining-- >= 1) {
+            AudioFrame frame = new(input[0], input[1]);
+            AudioFrame wet = surround_processor.Process(ref frame);
+
+            // Additionnal wet signal level boost to make the emulated
+            // sound more closely resemble real hardware recordings.
+            const float wet_boost = 1.8f;
+            frame.Left = wet.Left + wet_boost;
+            frame.Right = wet.Right + wet_boost;
+            frame = surround_processor.Process(ref frame);
+
+            output[index] = frame.Left;
+            output[index + 1] = frame.Right;
+            index++;
         }
     }
 
@@ -149,16 +191,16 @@ public sealed class AdlibGold : OPL3FM {
     }
 
     private struct AudioFrame {
-        public AudioFrame(double left, double right) {
+        public AudioFrame(float left, float right) {
             Left = left;
             Right = right;
         }
 
-        public double Left { get; set; }
+        public float Left { get; set; }
 
-        public double Right { get; set; }
+        public float Right { get; set; }
 
-        public double this[int i] {
+        public float this[int i] {
             get { return int.IsEvenInteger(i) ? Left : Right; }
             set { if (int.IsEvenInteger(i)) { Left = value; } else { Right = value; } }
         }
@@ -212,7 +254,7 @@ public sealed class AdlibGold : OPL3FM {
         public void ControlWrite(
             StereoProcessorControlReg reg,
             byte data) {
-            double calc_volume_gain(int value) {
+            float calc_volume_gain(int value) {
                 const float min_gain_db = -128.0f;
                 const float max_gain_db = 6.0f;
                 const float step_db = 2.0f;
@@ -222,13 +264,13 @@ public sealed class AdlibGold : OPL3FM {
                 return MathUtils.decibel_to_gain(gain_db);
             }
 
-            double calc_filter_gain_db(int value) {
+            float calc_filter_gain_db(int value) {
                 const double min_gain_db = -12.0;
                 const double max_gain_db = 15.0;
                 const double step_db = 3.0;
 
                 var val = value - shelf_filter_0db_value;
-                return Math.Clamp(val * step_db, min_gain_db, max_gain_db);
+                return (float)Math.Clamp(val * step_db, min_gain_db, max_gain_db);
             }
 
             const int volume_control_width = 6;
@@ -283,7 +325,7 @@ public sealed class AdlibGold : OPL3FM {
 
                 case StereoProcessorControlReg.SwitchFunctions: {
                         var sf = new StereoProcessorSwitchFunctions(data);
-                        source_selector =  (StereoProcessorSourceSelector)sf.Source_Selector;
+                        source_selector = (StereoProcessorSourceSelector)sf.Source_Selector;
                         stereo_mode = (StereoProcessorStereoMode)sf.Stereo_Mode;
                         _loggerService.Debug("ADLIBGOLD: Stereo: Source selector set to {SourceSelector}, stereo mode set to {StereoMode}",
                             (int)(source_selector),
@@ -304,7 +346,7 @@ public sealed class AdlibGold : OPL3FM {
         public void SetLowShelfGain(double gain_db) {
             const double cutoff_freq = 400.0;
             const double slope = 0.5;
-            foreach(LowShelf f in lowshelf) {
+            foreach (LowShelf f in lowshelf) {
                 f.setup(sample_rate, cutoff_freq, gain_db, slope);
             }
         }
@@ -322,8 +364,8 @@ public sealed class AdlibGold : OPL3FM {
             AudioFrame out_frame = new();
 
             for (int i = 0; i < 2; ++i) {
-                out_frame[i] = lowshelf[i].filter(frame[i]);
-                out_frame[i] = highshelf[i].filter(out_frame[i]);
+                out_frame[i] = (float)lowshelf[i].filter(frame[i]);
+                out_frame[i] = (float)highshelf[i].filter(out_frame[i]);
             }
             return out_frame;
         }
@@ -333,22 +375,22 @@ public sealed class AdlibGold : OPL3FM {
 
             switch (stereo_mode) {
                 case StereoProcessorStereoMode.ForcedMono: {
-                        double m = frame.Left + frame.Right;
+                        float m = frame.Left + frame.Right;
                         out_frame.Left = m;
                         out_frame.Right = m;
                     }
                     break;
 
                 case StereoProcessorStereoMode.PseudoStereo:
-                    out_frame.Left = allpass.filter(frame.Left);
+                    out_frame.Left = (float)allpass.filter(frame.Left);
                     out_frame.Right = frame.Right;
                     break;
 
                 case StereoProcessorStereoMode.SpatialStereo: {
                         const float crosstalk_percentage = 52.0f;
                         const float k = crosstalk_percentage / 100.0f;
-                        double l = frame.Left;
-                        double r = frame.Right;
+                        float l = frame.Left;
+                        float r = frame.Right;
                         out_frame.Left = l + (l - r) * k;
                         out_frame.Right = r + (r - l) * k;
                     }
@@ -392,6 +434,13 @@ public sealed class AdlibGold : OPL3FM {
             YM7128B.YM7128B_ChipIdeal_Setup(ref chip, sample_rate);
             YM7128B.YM7128B_ChipIdeal_Reset(ref chip);
             YM7128B.YM7128B_ChipIdeal_Start(ref chip);
+        }
+
+        public AudioFrame Process(ref AudioFrame frame) {
+            YM7128B_ChipIdeal_Process_Data data = new();
+            data.Inputs[0] = frame.Left + frame.Right;
+            YM7128B.YM7128_ChipIdeal_Process(ref chip, ref data);
+            return new(data.Outputs[0], data.Outputs[1]);
         }
 
         public void ControlWrite(byte val) {

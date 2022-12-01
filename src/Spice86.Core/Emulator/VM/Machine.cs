@@ -326,14 +326,13 @@ public class Machine : IDisposable {
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
         Dos.Initialize();
-        
+
         MouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui);
         Register(MouseInt33Handler);
-        
+
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-        
         if(machineCreationOptions.Configuration.Ems) {
             Ems = new(this, machineCreationOptions.LoggerService);
             Register(Ems);
@@ -348,6 +347,8 @@ public class Machine : IDisposable {
     /// <param name="callback">The callback implementation.</param>
     public void Register(ICallback callback) {
         CallbackHandler.AddCallback(callback);
+        OPL3FM.StartPlayback("SoundBlasterOPL3FMAudio");
+        AdlibGold?.StartPlayback("AdlibGoldOPL3FMAudio");
     }
 
     /// <summary>
