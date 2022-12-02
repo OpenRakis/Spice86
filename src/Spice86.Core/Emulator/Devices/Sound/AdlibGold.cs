@@ -95,6 +95,9 @@ public sealed class AdlibGold : OPL3FM {
                 buffer[1] = frame.Right;
                 _audioPlayer?.WriteData(buffer);
             }
+            else {
+                Thread.Sleep(1);
+            }
         }
     }
 
@@ -141,8 +144,7 @@ public sealed class AdlibGold : OPL3FM {
     }
 
     private void Process(short[] input, uint framesRemaining, ref AudioFrame output) {
-        var index = 0;
-        while (framesRemaining-- >= 1) {
+        for (var index = 0; framesRemaining-- > 0; index++) {
             AudioFrame frame = new(input[0], input[1]);
             AudioFrame wet = surround_processor.Process(ref frame);
 
@@ -155,7 +157,6 @@ public sealed class AdlibGold : OPL3FM {
 
             output[index] = frame.Left;
             output[index + 1] = frame.Right;
-            index++;
         }
     }
 
