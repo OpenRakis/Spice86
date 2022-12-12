@@ -36,7 +36,7 @@
 
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-public class OPL3Nuked {
+public static class OPL3Nuked {
     public const int OPL_WRITEBUF_SIZE = 1024;
     public const int OPL_WRITEBUF_DELAY = 2;
 }
@@ -93,10 +93,12 @@ public struct Opl3Chip {
 
 public struct Opl3Slot {
     public Opl3Channel Channel { get; set; }
+
+    public Opl3Chip Chip { get; set; }
     public short Out { get; set; }
     public short FbMod { get; set; }
     public short Mod { get; set; }
-    public short Prout { get; set; }
+    public short PrOut { get; set; }
     public ushort EgRout { get; set; }
     public ushort EgOut { get; set; }
     public byte EgInc { get; set; }
@@ -121,11 +123,10 @@ public struct Opl3Slot {
     public byte SlotNum { get; set; }
 }
 
-public struct Opl3Channel {
-
-    public Opl3Channel() {
-    }
+public class Opl3Channel {
     public Opl3Slot[] Slots { get; set; } = new Opl3Slot[2];
+    public Opl3Channel? Pair { get; set; }
+    public Opl3Chip? Chip { get; set; }
     public byte ChType { get; set; }
     public ushort FNum { get; set; }
     public byte Block { get; set; }
