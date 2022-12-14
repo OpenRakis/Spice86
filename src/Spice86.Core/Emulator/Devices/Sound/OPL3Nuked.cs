@@ -71,7 +71,7 @@ public static class OPL3Nuked {
     /// <summary>
     /// logsin table
     /// </summary>
-    private static readonly ReadOnlyCollection<int> LogSinRom = Array.AsReadOnly(new int[] {
+    private static readonly ReadOnlyCollection<ushort> LogSinRom = Array.AsReadOnly(new ushort[] {
         0x859, 0x6c3, 0x607, 0x58b, 0x52e, 0x4e4, 0x4a6, 0x471,
         0x443, 0x41a, 0x3f5, 0x3d3, 0x3b5, 0x398, 0x37e, 0x365,
         0x34e, 0x339, 0x324, 0x311, 0x2ff, 0x2ed, 0x2dc, 0x2cd,
@@ -109,7 +109,7 @@ public static class OPL3Nuked {
     /// <summary>
     /// Exp table
     /// </summary>
-    private static readonly ReadOnlyCollection<int> ExpRom = Array.AsReadOnly(new int[]{
+    private static readonly ReadOnlyCollection<uint> ExpRom = Array.AsReadOnly(new uint[]{
         0x7fa, 0x7f5, 0x7ef, 0x7ea, 0x7e4, 0x7df, 0x7da, 0x7d4,
         0x7cf, 0x7c9, 0x7c4, 0x7bf, 0x7b9, 0x7b4, 0x7ae, 0x7a9,
         0x7a4, 0x79f, 0x799, 0x794, 0x78f, 0x78a, 0x784, 0x77f,
@@ -159,6 +159,33 @@ public static class OPL3Nuked {
     private static int[] panpot_lut = new int[256]();
     private static byte panopt_lut_build = 0;
     #endif
+
+    /*
+    * Envelope generator
+    */
+    private static short OPL3EnvelopeCalcExp(int level) {
+        if(level > 0x1fff) {
+            level = 0x1fff;
+        }
+        return (short)((ExpRom[(int)(level & 0xff)] << 1) >> (level >> 8));
+    }
+
+    private static short OPL3EnvelopeCalcSin0(ushort phase, ushort envelope)
+    {
+        ushort output = 0;
+        ushort neg = 0;
+        phase &= 0x3ff;
+        if ((phase & 0x200) >= 1) {
+            neg = 0xffff;
+        }
+        if((phase & 0x100) >= 1) {
+            output = LogSinRom[(phase & 0xff) ^ 0xff];
+        }
+        else {
+            output = LogSinRom[phase & 0xff];
+        }
+        return (short)(OPL3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
+    }
 
     private enum EnvelopeGenNum {
         envelop_gen_num_attack,
