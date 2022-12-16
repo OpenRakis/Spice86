@@ -23,7 +23,9 @@ public abstract class ExecutableFileLoader {
         _cpu = machine.Cpu;
         _memory = machine.Memory;
     }
-
+    public abstract bool DosInitializationNeeded {
+        get;
+    }
     public abstract byte[] LoadFile(string file, string? arguments);
 
     protected byte[] ReadFile(string file) {

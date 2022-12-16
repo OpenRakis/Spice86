@@ -11,6 +11,8 @@ using Spice86.Core.Emulator.VM;
 public class BiosLoader : ExecutableFileLoader {
     private const ushort CodeOffset = 0xFFF0;
     private const ushort CodeSegment = 0xF000;
+    public override bool DosInitializationNeeded => false;
+
     public BiosLoader(Machine machine) : base(machine) {
     }
 

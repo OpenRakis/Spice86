@@ -1,17 +1,17 @@
-﻿namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
-
-using Serilog;
+﻿using Serilog;
+using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
 
+namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
+
 /// <summary>
 /// Loads a DOS 16 bits EXE file in memory.
 /// </summary>
-public class ExeLoader : ExecutableFileLoader {
+public class ExeLoader : DosFileLoader {
     private static readonly ILogger _logger = Serilogger.Logger.ForContext<ExeLoader>();
     private readonly ushort _startSegment;
 
@@ -21,11 +21,11 @@ public class ExeLoader : ExecutableFileLoader {
 
     public override byte[] LoadFile(string file, string? arguments) {
         byte[] exe = ReadFile(file);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Exe size: {@ExeSize}", exe.Length);
         }
         ExeFile exeFile = new ExeFile(exe);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Read header: {@ReadHeader}", exeFile);
         }
 
@@ -33,7 +33,7 @@ public class ExeLoader : ExecutableFileLoader {
         ushort pspSegment = (ushort)(_startSegment - 0x10);
         SetupCpuForExe(exeFile, _startSegment, pspSegment);
         new PspGenerator(_machine).GeneratePsp(pspSegment, arguments);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Initial CPU State: {@CpuState}", _cpu.State);
         }
         return exe;

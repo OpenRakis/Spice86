@@ -26,9 +26,6 @@ public class CommandLineParser {
         ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(args)
             .WithNotParsed((e) => _logger.Error("{@Errors}", e));
         return result.MapResult(initialConfig => {
-            if (initialConfig.InitializeDOS is null) {
-                initialConfig.InitializeDOS = true;
-            }
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
