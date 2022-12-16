@@ -1,11 +1,10 @@
-﻿namespace Spice86.Core.Emulator.LoadableFile.Dos.Com;
-
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.LoadableFile;
+﻿using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
-public class ComLoader : ExecutableFileLoader {
+namespace Spice86.Core.Emulator.LoadableFile.Dos.Com;
+
+public class ComLoader : DosFileLoader {
     private const ushort ComOffset = 0x100;
     private readonly ushort _startSegment;
 

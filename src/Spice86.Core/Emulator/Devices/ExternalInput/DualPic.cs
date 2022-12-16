@@ -45,6 +45,11 @@ public class DualPic : DefaultIOPortHandler {
         _pic2.ProcessDataWrite(DefaultIcw4);
     }
 
+    public void MaskAllInterrupts() {
+        _pic1.ProcessDataWrite(0xFF);
+        _pic2.ProcessDataWrite(0xFF);
+    }
+
     /// <summary>
     /// Services an IRQ request
     /// </summary>

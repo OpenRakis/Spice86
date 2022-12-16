@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Diagnostics;
+
 using Spice86.Core.CLI;
 
 /// <summary>
@@ -64,6 +65,7 @@ public sealed class ProgramExecutor : IDisposable {
                 _gdbServer?.Dispose();
                 Machine.Dispose();
             }
+
             _disposedValue = true;
         }
     }
@@ -79,7 +81,8 @@ public sealed class ProgramExecutor : IDisposable {
             byte[] actualHash = SHA256.HashData(file);
 
             if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
-                string error = $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
+                string error =
+                    $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
                 throw new UnrecoverableException(error);
             }
         } catch (UnauthorizedAccessException e) {
@@ -88,16 +91,20 @@ public sealed class ProgramExecutor : IDisposable {
         }
     }
 
-    private ExecutableFileLoader CreateExecutableFileLoader(string? fileName, int entryPointSegment) {
-        if (fileName == null) {
-            throw new ArgumentNullException(nameof(fileName));
+    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
+        string? executableFileName = configuration.Exe;
+        if (executableFileName is null) {
+            throw new ArgumentNullException(nameof(executableFileName));
         }
-        string lowerCaseFileName = fileName.ToLowerInvariant();
+
+        string lowerCaseFileName = executableFileName.ToLowerInvariant();
+        ushort entryPointSegment = (ushort)configuration.ProgramEntryPointSegment;
         if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(Machine, (ushort)entryPointSegment);
+            return new ExeLoader(Machine, entryPointSegment);
         }
+
         if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(Machine, (ushort)entryPointSegment);
+            return new ComLoader(Machine, entryPointSegment);
         }
 
         return new BiosLoader(Machine);
@@ -107,19 +114,31 @@ public sealed class ProgramExecutor : IDisposable {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
-        Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
+        Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder,
+            _configuration, RecordData);
         InitializeCpu();
-        InitializeDOS(_configuration);
+        ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
+        if (_configuration.InitializeDOS is null) {
+            _configuration.InitializeDOS = loader.DosInitializationNeeded;
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("InitializeDOS parameter not provided. Guessed value is: {@InitializeDOS}", _configuration.InitializeDOS);
+            }
+        }
+
         if (_configuration.InitializeDOS is true) {
+            InitializeDOS(_configuration);
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
             Machine.InstallAllCallbacksInInterruptTable();
             // Put HLT at the reset address
             Machine.Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
+        } else {
+            // Bios will take care of enabling interrupts (or not)
+            Machine.DualPic.MaskAllInterrupts();
         }
 
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
-        LoadFileToRun(_configuration);
+        LoadFileToRun(_configuration, loader);
         return Machine;
     }
 
@@ -128,16 +147,20 @@ public sealed class ProgramExecutor : IDisposable {
         if (gdbPort != null) {
             return new GdbServer(Machine, _configuration);
         }
+
         return null;
     }
 
-    private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
+    private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
+        IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Override supplied: {@OverideSupplier}", supplier);
             }
-            foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier.GenerateFunctionInformations(entryPointSegment, machine)) {
+
+            foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
+                         .GenerateFunctionInformations(entryPointSegment, machine)) {
                 res.Add(element.Key, element.Value);
             }
         }
@@ -150,6 +173,7 @@ public sealed class ProgramExecutor : IDisposable {
         if (exe == null) {
             return null;
         }
+
         DirectoryInfo? parentDir = Directory.GetParent(exe);
         // Must be in the current directory
         parentDir ??= new DirectoryInfo(Environment.CurrentDirectory);
@@ -172,39 +196,49 @@ public sealed class ProgramExecutor : IDisposable {
         if (string.IsNullOrWhiteSpace(cDrive)) {
             cDrive = parentFolder;
         }
+
         if (string.IsNullOrWhiteSpace(cDrive)) {
             throw new ArgumentNullException(nameof(cDrive));
         }
+
         cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
         if (string.IsNullOrWhiteSpace(parentFolder)) {
             throw new ArgumentNullException(nameof(parentFolder));
         }
+
         driveMap.Add('C', cDrive);
         Machine.DosInt21Handler.DosFileManager.SetDiskParameters(parentFolder, driveMap);
     }
 
-    private void InitializeFunctionHandlers(Configuration configuration, IDictionary<SegmentedAddress, FunctionInformation> functionInformations) {
+    private void InitializeFunctionHandlers(Configuration configuration,
+        IDictionary<SegmentedAddress, FunctionInformation> functionInformations) {
         if (configuration.OverrideSupplier != null) {
-            DictionaryUtils.AddAll(functionInformations, GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment, Machine));
+            DictionaryUtils.AddAll(functionInformations,
+                GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment,
+                    Machine));
         }
+
         if (functionInformations.Count == 0) {
             return;
         }
+
         Cpu cpu = Machine.Cpu;
         bool useCodeOverride = configuration.UseCodeOverrideOption;
         SetupFunctionHandler(cpu.FunctionHandler, functionInformations, useCodeOverride);
         SetupFunctionHandler(cpu.FunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
     }
 
-    private void LoadFileToRun(Configuration configuration) {
+    private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {
         string? executableFileName = configuration.Exe;
         if (executableFileName is null) {
             throw new ArgumentNullException(nameof(executableFileName));
         }
-        ExecutableFileLoader loader = CreateExecutableFileLoader(executableFileName, configuration.ProgramEntryPointSegment);
+
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName, loader.GetType());
+            _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName,
+                loader.GetType());
         }
+
         try {
             byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
@@ -218,11 +252,13 @@ public sealed class ProgramExecutor : IDisposable {
         if (_gdbServer?.GdbCommandHandler is null) {
             return false;
         }
+
         _gdbServer.GdbCommandHandler.Step();
         return true;
     }
 
-    private static void SetupFunctionHandler(FunctionHandler functionHandler, IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
+    private static void SetupFunctionHandler(FunctionHandler functionHandler,
+        IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.FunctionInformations = functionInformations;
         functionHandler.UseCodeOverride = useCodeOverride;
     }
