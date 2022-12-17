@@ -152,6 +152,17 @@ public static class OPL3Nuked {
         1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30
     });
 
+    /// <summary>
+    /// KSL Table
+    /// </summary>
+    private static readonly ReadOnlyCollection<byte> KslRom = Array.AsReadOnly(new byte[] {
+        0, 32, 40, 45, 48, 51, 53, 55, 56, 58, 59, 60, 61, 62, 63, 64
+    });
+
+    private static readonly ReadOnlyCollection<byte> KslShift = Array.AsReadOnly(new byte[] {
+        8, 1, 2, 0
+    });
+
 #if OPL_ENABLE_STEREOEXT
     /// <summary>
     /// stereo extension panning table
@@ -270,6 +281,27 @@ public static class OPL3Nuked {
         }
         output = (ushort)(phase << 3);
         return (short)(OPL3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
+    }
+
+    private static readonly ReadOnlyCollection<Func<ushort, ushort, short>> EnvelopeSin = Array.AsReadOnly(new Func<ushort, ushort, short>[]{
+        new ((x, y) => OPL3EnvelopeCalcSin0(x, y)),
+        new ((x, y) => OPL3EnvelopeCalcSin1(x, y)),
+        new ((x, y) => OPL3EnvelopeCalcSin2(x, y)),
+        new ((x, y) => OPL3EnvelopeCalcSin3(x, y)),
+        new ((x, y) => OPL3EnvelopeCalcSin4(x, y)),
+        new ((x, y) => OPL3EnvelopeCalcSin5(x, y)),
+        new ((x, y) => OPL3EnvelopeCalcSin6(x, y)),
+        new ((x, y) => OPL3EnvelopeCalcSin7(x, y)),
+    });
+
+    private static void OPL3EnvelopeUpdateKSL(ref Opl3Slot slot) {
+        short ksl = (short)((KslRom[slot.Channel.FNum >> 6] << 2)
+            - ((0x08 - slot.Channel.Block) << 5));
+        if (ksl < 0)
+        {
+            ksl = 0;
+        }
+        slot.EgKsl = (byte)ksl;
     }
 
     private enum EnvelopeGenNum {
