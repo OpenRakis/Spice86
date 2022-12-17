@@ -52,9 +52,7 @@ public class Program {
                     if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                         _logger.Error(e, "An error occurred during execution");
                     }
-                    if(configuration.HeadlessMode) {
-                        throw;
-                    }
+                    throw;
                 }
             }
         }
