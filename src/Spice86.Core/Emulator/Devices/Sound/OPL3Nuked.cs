@@ -228,12 +228,47 @@ public static class OPL3Nuked {
             neg = 0xffff;
         }
         if ((phase & 0x200) >= 1) {
+            output = 0x1000;
+        } else if ((phase & 0x80) >= 1) {
+            output = LogSinRom[((phase ^ 0xff) << 1) & 0xff];
+        } else {
+            output = LogSinRom[(phase << 1) & 0xff];
+        }
+        return (short)(OPL3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
+    }
+
+    private static short OPL3EnvelopeCalcSin5(ushort phase, ushort envelope) {
+        ushort output = 0;
+        phase &= 0x3ff;
+        if ((phase & 0x200) >= 1) {
         output = 0x1000;
         } else if ((phase & 0x80) >= 1) {
         output = LogSinRom[((phase ^ 0xff) << 1) & 0xff];
         } else {
         output = LogSinRom[(phase << 1) & 0xff];
         }
+        return OPL3EnvelopeCalcExp(output +(envelope << 3));
+    }
+
+    private static short OPL3EnvelopeCalcSin6(ushort phase, ushort envelope) {
+        ushort neg = 0;
+        phase &= 0x3ff;
+        if((phase & 0x200) >= 1) {
+            neg = 0xffff;
+        }
+        return (short)(OPL3EnvelopeCalcExp(envelope << 3) ^ neg);
+    }
+
+    private static short OPL3EnvelopeCalcSin7(ushort phase, ushort envelope) {
+        ushort output = 0;
+        ushort neg = 0;
+        phase &= 0x3ff;
+        if ((phase & 0x200) >= 1)
+        {
+            neg = 0xffff;
+            phase = (ushort)((phase & 0x1ff) ^ 0x1ff);
+        }
+        output = (ushort)(phase << 3);
         return (short)(OPL3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
     }
 
