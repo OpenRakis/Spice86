@@ -38,25 +38,29 @@ public class Program {
     // yet and stuff might break.
     [STAThread]
     public static void Main(string[] args) {
-        Configuration configuration = CommandLineParser.ParseCommandLine(args);
-        if(!configuration.HeadlessMode) {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
-        }
-        else {
-            try {
-                ProgramExecutor programExecutor = new ProgramExecutor(null, null, configuration);
-                programExecutor.Run();
-            } catch (Exception e) {
-                e.Demystify();
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _logger.Error(e, "An error occurred during execution");
-                }
-                if(configuration.HeadlessMode) {
-                    throw;
+        try {
+            Configuration configuration = CommandLineParser.ParseCommandLine(args);
+            if(!configuration.HeadlessMode) {
+                BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
+            }
+            else {
+                try {
+                    ProgramExecutor programExecutor = new ProgramExecutor(null, null, configuration);
+                    programExecutor.Run();
+                } catch (Exception e) {
+                    e.Demystify();
+                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                        _logger.Error(e, "An error occurred during execution");
+                    }
+                    if(configuration.HeadlessMode) {
+                        throw;
+                    }
                 }
             }
         }
-        ((IDisposable)Serilogger.Logger).Dispose();
+        finally {
+            ((IDisposable)Serilogger.Logger).Dispose();
+        }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.
