@@ -148,7 +148,7 @@ public static class OPL3Nuked {
     /// freq mult table multiplied by 2
     /// 1/2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15
     /// </summary>
-    private static readonly ReadOnlyCollection<int> mt = Array.AsReadOnly(new int[] {
+    private static readonly ReadOnlyCollection<int> Mt = Array.AsReadOnly(new int[] {
         1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30
     });
 
@@ -161,6 +161,28 @@ public static class OPL3Nuked {
 
     private static readonly ReadOnlyCollection<byte> KslShift = Array.AsReadOnly(new byte[] {
         8, 1, 2, 0
+    });
+
+    /// <summary>
+    /// envelope generator constants
+    /// </summary>
+    private static readonly ReadOnlyCollection<byte[]> EgIncStep = Array.AsReadOnly(new byte[][] {
+        new byte[]{ 0, 0, 0, 0 },
+        new byte[]{ 1, 0, 0, 0 },
+        new byte[]{ 1, 0, 1, 0 },
+        new byte[]{ 1, 1, 1, 0 }
+    });
+
+    /// <summary>
+    /// address decoding
+    /// </summary>
+    private static readonly ReadOnlyCollection<sbyte> AdSlot = Array.AsReadOnly(new sbyte[] {
+        0, 1, 2, 3, 4, 5, -1, -1, 6, 7, 8, 9, 10, 11, -1, -1,
+        12, 13, 14, 15, 16, 17, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+    });
+
+    private static readonly ReadOnlyCollection<byte> ChSlot = Array.AsReadOnly(new byte[] {
+        0, 1, 2, 6, 7, 8, 12, 13, 14, 18, 19, 20, 24, 25, 26, 30, 31, 32
     });
 
 #if OPL_ENABLE_STEREOEXT
@@ -252,19 +274,19 @@ public static class OPL3Nuked {
         ushort output = 0;
         phase &= 0x3ff;
         if ((phase & 0x200) >= 1) {
-        output = 0x1000;
+            output = 0x1000;
         } else if ((phase & 0x80) >= 1) {
-        output = LogSinRom[((phase ^ 0xff) << 1) & 0xff];
+            output = LogSinRom[((phase ^ 0xff) << 1) & 0xff];
         } else {
-        output = LogSinRom[(phase << 1) & 0xff];
+            output = LogSinRom[(phase << 1) & 0xff];
         }
-        return OPL3EnvelopeCalcExp(output +(envelope << 3));
+        return OPL3EnvelopeCalcExp(output + (envelope << 3));
     }
 
     private static short OPL3EnvelopeCalcSin6(ushort phase, ushort envelope) {
         ushort neg = 0;
         phase &= 0x3ff;
-        if((phase & 0x200) >= 1) {
+        if ((phase & 0x200) >= 1) {
             neg = 0xffff;
         }
         return (short)(OPL3EnvelopeCalcExp(envelope << 3) ^ neg);
@@ -274,8 +296,7 @@ public static class OPL3Nuked {
         ushort output = 0;
         ushort neg = 0;
         phase &= 0x3ff;
-        if ((phase & 0x200) >= 1)
-        {
+        if ((phase & 0x200) >= 1) {
             neg = 0xffff;
             phase = (ushort)((phase & 0x1ff) ^ 0x1ff);
         }
@@ -294,21 +315,139 @@ public static class OPL3Nuked {
         new ((x, y) => OPL3EnvelopeCalcSin7(x, y)),
     });
 
+    private enum EnvelopeGenNum {
+        envelope_gen_num_attack,
+        envelope_gen_num_decay,
+        envelope_gen_num_sustain,
+        envelope_gen_num_release,
+    }
+
     private static void OPL3EnvelopeUpdateKSL(ref Opl3Slot slot) {
         short ksl = (short)((KslRom[slot.Channel.FNum >> 6] << 2)
             - ((0x08 - slot.Channel.Block) << 5));
-        if (ksl < 0)
-        {
+        if (ksl < 0) {
             ksl = 0;
         }
         slot.EgKsl = (byte)ksl;
     }
 
-    private enum EnvelopeGenNum {
-        envelop_gen_num_attack,
-        envelop_gen_num_decay,
-        envelop_gen_num_sustain,
-        envelop_gen_num_release,
+    private static void OPL3EnvelopeCalc(ref Opl3Slot slot) {
+        byte nonzero;
+        byte rate;
+        byte rate_hi;
+        byte rate_lo;
+        byte reg_rate = 0;
+        byte ks;
+        byte eg_shift, shift;
+        ushort eg_rout;
+        short eg_inc;
+        byte eg_off;
+        byte reset = 0;
+        slot.EgOut = (ushort)(slot.EgRout + (slot.RegTl << 2)
+            + (slot.EgKsl >> KslShift[slot.RegKsl]) + slot.Trem);
+        if (slot.Key > 0 && slot.EgGen == (int)EnvelopeGenNum.envelope_gen_num_release) {
+            reset = 1;
+            reg_rate = slot.RegAr;
+        } else {
+            switch (slot.EgGen) {
+                case (byte)EnvelopeGenNum.envelope_gen_num_attack:
+                    reg_rate = slot.RegAr;
+                    break;
+                case (byte)EnvelopeGenNum.envelope_gen_num_decay:
+                    reg_rate = slot.RegDr;
+                    break;
+                case (byte)EnvelopeGenNum.envelope_gen_num_sustain:
+                    if (slot.RegType <= 0) {
+                        reg_rate = slot.RegRr;
+                    }
+                    break;
+                case (byte)EnvelopeGenNum.envelope_gen_num_release:
+                    reg_rate = slot.RegRr;
+                    break;
+            }
+        }
+        slot.PgReset = reset;
+        ks = (byte)(slot.Channel.Ksv >> ((slot.RegKsr ^ 1) << 1));
+        nonzero = (byte)(reg_rate != 0 ? 1 : 0);
+        rate = (byte)(ks + (reg_rate << 2));
+        rate_hi = (byte)(rate >> 2);
+        rate_lo = (byte)(rate & 0x03);
+        if ((rate_hi & 0x10) > 0) {
+            rate_hi = 0x0f;
+        }
+        eg_shift = (byte)(rate_hi + slot.Chip.EgAdd);
+        shift = 0;
+        if (nonzero > 0) {
+            if (rate_hi < 12) {
+                if (slot.Chip.EgState > 0) {
+                    switch (eg_shift) {
+                        case 12:
+                            shift = 1;
+                            break;
+                        case 13:
+                            shift = (byte)((rate_lo >> 1) & 0x01);
+                            break;
+                        case 14:
+                            shift = (byte)(rate_lo & 0x01);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            } else {
+                shift = (byte)((rate_hi & 0x03) + EgIncStep[rate_lo][slot.Chip.Timer & 0x03]);
+                if ((shift & 0x04) > 0) {
+                    shift = 0x03;
+                }
+                if (shift <= 0) {
+                    shift = slot.Chip.EgState;
+                }
+            }
+        }
+        eg_rout = slot.EgRout;
+        eg_inc = 0;
+        eg_off = 0;
+        /* Instant attack */
+        if (reset > 0 && rate_hi == 0x0f) {
+            eg_rout = 0x00;
+        }
+        /* Envelope off */
+        if ((slot.EgRout & 0x1f8) == 0x1f8) {
+            eg_off = 1;
+        }
+        if (slot.EgGen != (byte)EnvelopeGenNum.envelope_gen_num_attack && reset <= 0 && eg_off > 0) {
+            eg_rout = 0x1ff;
+        }
+        switch (slot.EgGen) {
+            case (byte)EnvelopeGenNum.envelope_gen_num_attack:
+                if (slot.EgRout <= 0) {
+                    slot.EgGen = (byte)EnvelopeGenNum.envelope_gen_num_decay;
+                } else if (slot.Key > 0 && shift > 0 && rate_hi != 0x0f) {
+                    eg_inc = (short)(~slot.EgRout >> (4 - shift));
+                }
+                break;
+            case (byte)EnvelopeGenNum.envelope_gen_num_decay:
+                if ((slot.EgRout >> 4) == slot.RegSl) {
+                    slot.EgGen = (byte)EnvelopeGenNum.envelope_gen_num_sustain;
+                } else if (eg_off <= 0 && reset <= 0 && shift > 0) {
+                    eg_inc = (short)(1 << (shift - 1));
+                }
+                break;
+            case (byte)EnvelopeGenNum.envelope_gen_num_sustain:
+            case (byte)EnvelopeGenNum.envelope_gen_num_release:
+                if (eg_off <= 0 && reset <= 0 && shift > 0) {
+                    eg_inc = (short)(1 << (shift - 1));
+                }
+                break;
+        }
+        slot.EgRout = (ushort)((eg_rout + eg_inc) & 0x1ff);
+        /* Key off */
+        if (reset > 0) {
+            slot.EgGen = (byte)EnvelopeGenNum.envelope_gen_num_attack;
+        }
+        if (slot.Key <= 0) {
+            slot.EgGen = (byte)EnvelopeGenNum.envelope_gen_num_release;
+        }
     }
 }
 
@@ -386,6 +525,8 @@ public struct Opl3Slot {
     public byte RegAr { get; set; }
     public byte RegDr { get; set; }
     public byte RegSl { get; set; }
+
+    public byte RegRr { get; set; }
     public byte RegWf { get; set; }
     public byte Key { get; set; }
     public uint PgReset { get; set; }
