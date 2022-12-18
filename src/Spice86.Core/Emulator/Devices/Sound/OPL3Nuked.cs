@@ -449,8 +449,15 @@ public static class OPL3Nuked {
             slot.EgGen = (byte)EnvelopeGenNum.envelope_gen_num_release;
         }
     }
-}
 
+    private static void OPL3EnvelopeKeyOn(ref Opl3Slot slot, byte type) {
+        slot.Key |= type;
+    }
+
+    private static void OPL3EnvelopeKeyOff(ref Opl3Slot slot, byte type) {
+        slot.Key &= (byte)~type;
+    }
+}
 public struct Opl3Chip {
     public Opl3Chip() {
     }
