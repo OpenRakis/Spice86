@@ -457,6 +457,88 @@ public static class OPL3Nuked {
     private static void OPL3EnvelopeKeyOff(ref Opl3Slot slot, byte type) {
         slot.Key &= (byte)~type;
     }
+
+    /*
+        Phase Generator
+    */
+
+    private static void OPL3PhaseGenerator(ref Opl3Slot slot) {
+        Opl3Chip chip;
+        ushort f_num;
+        uint basefreq;
+        byte rm_xor, n_bit;
+        uint noise;
+        ushort phase;
+
+        chip = slot.Chip;
+        f_num = slot.Channel.FNum;
+        if (slot.RegVib > 0) {
+            sbyte range;
+            byte vibpos;
+
+            range = (sbyte)((f_num >> 7) & 7);
+            vibpos = slot.Chip.VibPos;
+
+            if ((vibpos & 3) <= 0) {
+                range = 0;
+            } else if ((vibpos & 1) > 0) {
+                range >>= 1;
+            }
+            range >>= slot.Chip.VibShift;
+
+            if ((vibpos & 4) > 0) {
+                range = (sbyte)-range;
+            }
+            f_num = (ushort)(f_num + range);
+        }
+        basefreq = (uint)((f_num << slot.Channel.Block) >> 1);
+        phase = (ushort)(slot.PgPhase >> 9);
+        if (slot.PgReset > 0) {
+            slot.PgPhase = 0;
+        }
+        slot.PgPhase = (uint)(slot.PgPhase + (basefreq * Mt[slot.RegMult]) >> 1);
+        /* Rhythm mode */
+        noise = chip.Noise;
+        slot.PgPhaseOut = phase;
+        if (slot.SlotNum == 13) /* hh */
+        {
+            chip.RmHhBits2 = (byte)((phase >> 2) & 1);
+            chip.RmHhBits3 = (byte)((phase >> 3) & 1);
+            chip.RmHhBits7 = (byte)((phase >> 7) & 1);
+            chip.RmHhBits8 = (byte)((phase >> 8) & 1);
+        }
+        if (slot.SlotNum == 17 && (chip.Rhy & 0x20) > 0) /* tc */
+        {
+            chip.RmTcBits3 = (byte)((phase >> 3) & 1);
+            chip.RmTcBits5 = (byte)((phase >> 5) & 1);
+        }
+        if ((chip.Rhy & 0x20) > 0) {
+            rm_xor = (byte)((chip.RmHhBits2 ^ chip.RmHhBits7)
+                | (chip.RmHhBits3 ^ chip.RmTcBits5)
+                | (chip.RmTcBits3 ^ chip.RmTcBits5));
+            switch (slot.SlotNum) {
+                case 13: /* hh */
+                    slot.PgPhaseOut = (ushort)(rm_xor << 9);
+                    if ((rm_xor ^ (noise & 1)) > 0) {
+                        slot.PgPhaseOut |= 0xd0;
+                    } else {
+                        slot.PgPhaseOut |= 0x34;
+                    }
+                    break;
+                case 16: /* sd */
+                    slot.PgPhaseOut = (ushort)((chip.RmHhBits8 << 9)
+                        | ((chip.RmHhBits8 ^ (ushort)(noise & 1)) << 8));
+                    break;
+                case 17: /* tc */
+                    slot.PgPhaseOut = (ushort)((rm_xor << 9) | 0x80);
+                    break;
+                default:
+                    break;
+            }
+        }
+        n_bit = (byte)(((noise >> 14) ^ noise) & 0x01);
+        chip.Noise = (uint)(((ushort)(noise >> 1)) | ((ushort)(n_bit << 22)));
+    }
 }
 public struct Opl3Chip {
     public Opl3Chip() {
