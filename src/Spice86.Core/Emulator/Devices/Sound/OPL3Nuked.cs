@@ -539,6 +539,64 @@ public static class OPL3Nuked {
         n_bit = (byte)(((noise >> 14) ^ noise) & 0x01);
         chip.Noise = (uint)(((ushort)(noise >> 1)) | ((ushort)(n_bit << 22)));
     }
+
+    /*
+        Slot
+    */
+
+    private static void OPL3SlotWrite20(ref Opl3Slot slot, byte data) {
+        if (((data >> 7) & 0x01) > 0) {
+            slot.Trem = slot.Chip.Tremolo;
+        } else {
+            slot.Trem = (byte)slot.Chip.ZeroMod;
+        }
+        slot.RegVib = (byte)((data >> 6) & 0x01);
+        slot.RegType = (byte)((data >> 5) & 0x01);
+        slot.RegKsr = (byte)((data >> 4) & 0x01);
+        slot.RegMult = (byte)(data & 0x0f);
+    }
+
+    private static void OPL3SlotWrite40(ref Opl3Slot slot, byte data) {
+        slot.RegKsl = (byte)((data >> 6) & 0x03);
+        slot.RegTl = (byte)(data & 0x3f);
+        OPL3EnvelopeUpdateKSL(ref slot);
+    }
+
+    private static void OPL3SlotWrite60(ref Opl3Slot slot, byte data) {
+        slot.RegSl = (byte)((data >> 4) & 0x0f);
+        if (slot.RegSl == 0x0f) {
+            slot.RegSl = 0x1f;
+        }
+        slot.RegRr = (byte)(data & 0x0f);
+    }
+
+    private static void OPL3SlotWrite80(ref Opl3Slot slot, byte data) {
+        slot.RegSl = (byte)((data >> 4) & 0x0f);
+        if (slot.RegSl == 0x0f) {
+            slot.RegSl = 0x1f;
+        }
+        slot.RegRr = (byte)(data & 0x0f);
+    }
+
+    private static void OPL3SlotWriteE0(ref Opl3Slot slot, byte data) {
+        slot.RegWf = (byte)(data & 0x07);
+        if (slot.Chip.NewM == 0x00) {
+            slot.RegWf &= 0x03;
+        }
+    }
+
+    private static void OPL3SlotGenerate(Opl3Slot slot) {
+        slot.Out = EnvelopeSin[slot.RegWf]((ushort)(slot.PgPhaseOut + slot.Mod), slot.EgOut);
+    }
+
+    private static void OPL3SlotCalcFB(ref Opl3Slot slot) {
+        if (slot.Channel.Fb != 0x00) {
+            slot.FbMod = (short)((slot.PrOut + slot.Out) >> (0x09 - slot.Channel.Fb));
+        } else {
+            slot.FbMod = 0;
+        }
+        slot.PrOut = slot.Out;
+    }
 }
 public struct Opl3Chip {
     public Opl3Chip() {
