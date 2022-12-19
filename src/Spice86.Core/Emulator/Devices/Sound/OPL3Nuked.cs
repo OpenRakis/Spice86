@@ -597,6 +597,103 @@ public static class OPL3Nuked {
         }
         slot.PrOut = slot.Out;
     }
+
+    /*
+        Channel
+    */
+
+    private static void OPL3ChannelSetupAlg(Opl3Channel channel) {
+        ArgumentNullException.ThrowIfNull(channel);
+        ArgumentNullException.ThrowIfNull(channel.Pair);
+        if (channel.ChType == (byte)ChType.ch_drum) {
+            if (channel.ChNum is 7 or 8) {
+                channel.Slots[0].Mod = channel.Chip.ZeroMod;
+                channel.Slots[1].Mod = channel.Chip.ZeroMod;
+                return;
+            }
+            switch (channel.Alg & 0x01) {
+                case 0x00:
+                    channel.Slots[0].Mod = channel.Slots[0].FbMod;
+                    channel.Slots[1].Mod = channel.Slots[0].Out;
+                    break;
+                case 0x01:
+                    channel.Slots[0].Mod = channel.Slots[0].FbMod;
+                    channel.Slots[1].Mod = channel.Chip.ZeroMod;
+                    break;
+            }
+            return;
+        }
+        if ((channel.Alg & 0x08) > 0) {
+            return;
+        }
+        if ((channel.Alg & 0x04) > 0) {
+            channel.Pair.Out[0] = channel.Chip.ZeroMod;
+            channel.Pair.Out[1] = channel.Chip.ZeroMod;
+            channel.Pair.Out[2] = channel.Chip.ZeroMod;
+            channel.Pair.Out[3] = channel.Chip.ZeroMod;
+            switch (channel.Alg & 0x03) {
+                case 0x00:
+                    channel.Pair.Slots[0].Mod = channel.Pair.Slots[0].FbMod;
+                    channel.Pair.Slots[1].Mod = channel.Pair.Slots[0].Out;
+                    channel.Slots[0].Mod = channel.Pair.Slots[1].Out;
+                    channel.Slots[1].Mod = channel.Slots[0].Out;
+                    channel.Out[0] = channel.Slots[1].Out;
+                    channel.Out[1] = channel.Chip.ZeroMod;
+                    channel.Out[2] = channel.Chip.ZeroMod;
+                    channel.Out[3] = channel.Chip.ZeroMod;
+                    break;
+                case 0x01:
+                    channel.Pair.Slots[0].Mod = channel.Pair.Slots[0].FbMod;
+                    channel.Pair.Slots[1].Mod = channel.Pair.Slots[0].Out;
+                    channel.Slots[0].Mod = channel.Chip.ZeroMod;
+                    channel.Slots[1].Mod = channel.Slots[0].Out;
+                    channel.Out[0] = channel.Pair.Slots[1].Out;
+                    channel.Out[1] = channel.Slots[1].Out;
+                    channel.Out[2] = channel.Chip.ZeroMod;
+                    channel.Out[3] = channel.Chip.ZeroMod;
+                    break;
+                case 0x02:
+                    channel.Pair.Slots[0].Mod = channel.Pair.Slots[0].FbMod;
+                    channel.Pair.Slots[1].Mod = channel.Chip.ZeroMod;
+                    channel.Slots[0].Mod = channel.Pair.Slots[1].Out;
+                    channel.Slots[1].Mod = channel.Slots[0].Out;
+                    channel.Out[0] = channel.Pair.Slots[0].Out;
+                    channel.Out[1] = channel.Slots[1].Out;
+                    channel.Out[2] = channel.Chip.ZeroMod;
+                    channel.Out[3] = channel.Chip.ZeroMod;
+                    break;
+                case 0x03:
+                    channel.Pair.Slots[0].Mod = channel.Pair.Slots[0].FbMod;
+                    channel.Pair.Slots[1].Mod = channel.Chip.ZeroMod;
+                    channel.Slots[0].Mod = channel.Pair.Slots[1].Out;
+                    channel.Slots[1].Mod = channel.Chip.ZeroMod;
+                    channel.Out[0] = channel.Pair.Slots[0].Out;
+                    channel.Out[1] = channel.Slots[0].Out;
+                    channel.Out[2] = channel.Slots[1].Out;
+                    channel.Out[3] = channel.Chip.ZeroMod;
+                    break;
+            }
+        } else {
+            switch (channel.Alg & 0x01) {
+                case 0x00:
+                    channel.Slots[0].Mod = channel.Slots[0].FbMod;
+                    channel.Slots[1].Mod = channel.Slots[0].Out;
+                    channel.Out[0] = channel.Slots[1].Out;
+                    channel.Out[1] = channel.Chip.ZeroMod;
+                    channel.Out[2] = channel.Chip.ZeroMod;
+                    channel.Out[3] = channel.Chip.ZeroMod;
+                    break;
+                case 0x01:
+                    channel.Slots[0].Mod = channel.Slots[0].FbMod;
+                    channel.Slots[1].Mod = channel.Chip.ZeroMod;
+                    channel.Out[0] = channel.Slots[0].Out;
+                    channel.Out[1] = channel.Slots[1].Out;
+                    channel.Out[2] = channel.Chip.ZeroMod;
+                    channel.Out[3] = channel.Chip.ZeroMod;
+                    break;
+            }
+        }
+    }
 }
 public struct Opl3Chip {
     public Opl3Chip() {
@@ -685,7 +782,9 @@ public struct Opl3Slot {
 public class Opl3Channel {
     public Opl3Slot[] Slots { get; set; } = new Opl3Slot[2];
     public Opl3Channel? Pair { get; set; }
-    public Opl3Chip? Chip { get; set; }
+    public Opl3Chip Chip { get; set; }
+
+    public short[] Out { get; set; } = new short[4];
     public byte ChType { get; set; }
     public ushort FNum { get; set; }
     public byte Block { get; set; }
