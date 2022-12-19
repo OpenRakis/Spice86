@@ -765,6 +765,44 @@ public static class OPL3Nuked {
             }
         }
     }
+
+    private static void OPL3ChannelWriteA0(Opl3Channel channel, byte data) {
+        if (channel.Chip.NewM > 0 && channel.ChType == (byte)ChType.ch_4op2) {
+            return;
+        }
+        channel.FNum = (ushort)((channel.FNum & 0x300) | data);
+        channel.Ksv = (byte)((channel.Block << 1)
+                     | ((channel.FNum >> (0x09 - channel.Chip.Nts)) & 0x01));
+        OPL3EnvelopeUpdateKSL(ref channel.Slots[0]);
+        OPL3EnvelopeUpdateKSL(ref channel.Slots[1]);
+        if (channel.Pair is not null &&
+            channel.Chip.NewM > 0 && channel.ChType == (byte)ChType.ch_4op) {
+            channel.Pair.FNum = channel.FNum;
+            channel.Pair.Ksv = channel.Ksv;
+            OPL3EnvelopeUpdateKSL(ref channel.Pair.Slots[0]);
+            OPL3EnvelopeUpdateKSL(ref channel.Pair.Slots[1]);
+        }
+    }
+
+    private static void OPL3ChannelWriteB0(Opl3Channel channel, byte data) {
+        if (channel.Chip.NewM > 0 && channel.ChType == (byte)ChType.ch_4op2) {
+            return;
+        }
+        channel.FNum = (ushort)((channel.FNum & 0xff) | ((data & 0x03) << 8));
+        channel.Block = (byte)((data >> 2) & 0x07);
+        channel.Ksv = (byte)((channel.Block << 1)
+                     | ((channel.FNum >> (0x09 - channel.Chip.Nts)) & 0x01));
+        OPL3EnvelopeUpdateKSL(ref channel.Slots[0]);
+        OPL3EnvelopeUpdateKSL(ref channel.Slots[1]);
+        if (channel.Pair is not null &&
+            channel.Chip.NewM > 0 && channel.ChType == (byte)ChType.ch_4op) {
+            channel.Pair.FNum = channel.FNum;
+            channel.Pair.Block = channel.Block;
+            channel.Pair.Ksv = channel.Ksv;
+            OPL3EnvelopeUpdateKSL(ref channel.Pair.Slots[0]);
+            OPL3EnvelopeUpdateKSL(ref channel.Pair.Slots[1]);
+        }
+    }
 }
 public struct Opl3Chip {
     public Opl3Chip() {
