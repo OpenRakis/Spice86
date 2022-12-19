@@ -694,6 +694,77 @@ public static class OPL3Nuked {
             }
         }
     }
+
+    private static void OPL3ChannelUpdateRhytm(ref Opl3Chip chip, byte data) {
+        Opl3Channel channel6;
+        Opl3Channel channel7;
+        Opl3Channel channel8;
+        byte chnum;
+
+        chip.Rhy = (byte)(data & 0x3f);
+        if ((chip.Rhy & 0x20) > 0) {
+            channel6 = chip.Channel[6];
+            channel7 = chip.Channel[7];
+            channel8 = chip.Channel[8];
+            channel6.Out[0] = channel6.Slots[1].Out;
+            channel6.Out[1] = channel6.Slots[1].Out;
+            channel6.Out[2] = chip.ZeroMod;
+            channel6.Out[3] = chip.ZeroMod;
+            channel7.Out[0] = channel7.Slots[0].Out;
+            channel7.Out[1] = channel7.Slots[0].Out;
+            channel7.Out[2] = channel7.Slots[1].Out;
+            channel7.Out[3] = channel7.Slots[1].Out;
+            channel8.Out[0] = channel8.Slots[0].Out;
+            channel8.Out[1] = channel8.Slots[0].Out;
+            channel8.Out[2] = channel8.Slots[1].Out;
+            channel8.Out[3] = channel8.Slots[1].Out;
+            for (chnum = 6; chnum < 9; chnum++) {
+                chip.Channel[chnum].ChType = (byte)ChType.ch_drum;
+            }
+            OPL3ChannelSetupAlg(channel6);
+            OPL3ChannelSetupAlg(channel7);
+            OPL3ChannelSetupAlg(channel8);
+            /* hh */
+            if ((chip.Rhy & 0x01) > 0) {
+                OPL3EnvelopeKeyOn(ref channel7.Slots[0], (byte)EnvelopeKeyType.egk_drum);
+            } else {
+                OPL3EnvelopeKeyOff(ref channel7.Slots[0], (byte)EnvelopeKeyType.egk_drum);
+            }
+            /* tc */
+            if ((chip.Rhy & 0x02) > 0) {
+                OPL3EnvelopeKeyOn(ref channel8.Slots[1], (byte)EnvelopeKeyType.egk_drum);
+            } else {
+                OPL3EnvelopeKeyOff(ref channel8.Slots[1], (byte)EnvelopeKeyType.egk_drum);
+            }
+            /* tom */
+            if ((chip.Rhy & 0x04) > 0) {
+                OPL3EnvelopeKeyOn(ref channel8.Slots[0], (byte)EnvelopeKeyType.egk_drum);
+            } else {
+                OPL3EnvelopeKeyOff(ref channel8.Slots[0], (byte)EnvelopeKeyType.egk_drum);
+            }
+            /* sd */
+            if ((chip.Rhy & 0x08) > 0) {
+                OPL3EnvelopeKeyOn(ref channel7.Slots[1], (byte)EnvelopeKeyType.egk_drum);
+            } else {
+                OPL3EnvelopeKeyOff(ref channel7.Slots[1], (byte)EnvelopeKeyType.egk_drum);
+            }
+            /* bd */
+            if ((chip.Rhy & 0x10) > 0) {
+                OPL3EnvelopeKeyOn(ref channel6.Slots[0], (byte)EnvelopeKeyType.egk_drum);
+                OPL3EnvelopeKeyOn(ref channel6.Slots[1], (byte)EnvelopeKeyType.egk_drum);
+            } else {
+                OPL3EnvelopeKeyOff(ref channel6.Slots[0], (byte)EnvelopeKeyType.egk_drum);
+                OPL3EnvelopeKeyOff(ref channel6.Slots[1], (byte)EnvelopeKeyType.egk_drum);
+            }
+        } else {
+            for (chnum = 6; chnum < 9; chnum++) {
+                chip.Channel[chnum].ChType = (byte)ChType.ch_2op;
+                OPL3ChannelSetupAlg(chip.Channel[chnum]);
+                OPL3EnvelopeKeyOff(ref chip.Channel[chnum].Slots[0], (byte)EnvelopeKeyType.egk_drum);
+                OPL3EnvelopeKeyOff(ref chip.Channel[chnum].Slots[1], (byte)EnvelopeKeyType.egk_drum);
+            }
+        }
+    }
 }
 public struct Opl3Chip {
     public Opl3Chip() {
