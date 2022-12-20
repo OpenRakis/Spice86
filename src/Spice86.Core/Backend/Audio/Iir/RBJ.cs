@@ -38,13 +38,13 @@ namespace Spice86.Core.Backend.Audio.Iir;
  **/
 
 public class RBJBase : Biquad {
-    private DirectFormI _state = new();
+    private readonly DirectFormI _state = new();
 
-    public double filter(double s) {
-        return _state.process1(s, this);
+    public double Filter(double s) {
+        return _state.Process1(s, this);
     }
 
-    public DirectFormI getState() {
+    public DirectFormI GetState() {
         return _state;
     }
 }
@@ -52,10 +52,10 @@ public class RBJBase : Biquad {
 public class LowPass : RBJBase {
     private const double ONESQRT2 = 0.707106781;
 
-    public void setupN(
+    public void SetupN(
         double cutoffFrequency,
         double q = ONESQRT2) {
-        double w0 = 2 * MathSupplement.doublePi * cutoffFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * cutoffFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
         double AL = sn / (2 * q);
@@ -65,24 +65,24 @@ public class LowPass : RBJBase {
         double a0 = 1 + AL;
         double a1 = -2 * cs;
         double a2 = 1 - AL;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(
+    public void Setup(
         double sampleRate,
         double cutoffFrequency,
         double q = ONESQRT2) {
-        setupN(cutoffFrequency / sampleRate, q);
+        SetupN(cutoffFrequency / sampleRate, q);
     }
 }
 
 public class HighPass : RBJBase {
     private const double ONESQRT2 = 0.707106781;
 
-    public void setupN(
+    public void SetupN(
         double cutoffFrequency,
         double q = ONESQRT2) {
-        double w0 = 2 * MathSupplement.doublePi * cutoffFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * cutoffFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
         double AL = sn / (2 * q);
@@ -92,22 +92,22 @@ public class HighPass : RBJBase {
         double a0 = 1 + AL;
         double a1 = -2 * cs;
         double a2 = 1 - AL;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(
+    public void Setup(
         double sampleRate,
         double cutoffFrequency,
         double q = ONESQRT2) {
-        setupN(cutoffFrequency / sampleRate, q);
+        SetupN(cutoffFrequency / sampleRate, q);
     }
 }
 
 public class BandPass1 : RBJBase {
-    public void setupN(
+    public void SetupN(
         double centerFrequency,
         double bandWidth) {
-        double w0 = 2 * MathSupplement.doublePi * centerFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * centerFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
         double AL = sn / (2 * bandWidth);
@@ -117,22 +117,22 @@ public class BandPass1 : RBJBase {
         double a0 = 1 + AL;
         double a1 = -2 * cs;
         double a2 = 1 - AL;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(
+    public void Setup(
         double sampleRate,
         double centerFrequency,
         double bandWidth) {
-        setupN(centerFrequency / sampleRate, bandWidth);
+        SetupN(centerFrequency / sampleRate, bandWidth);
     }
 }
 
 public class BandPass2 : RBJBase {
-    public void setupN(
+    public void SetupN(
         double centerFrequency,
         double bandWidth) {
-        double w0 = 2 * MathSupplement.doublePi * centerFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * centerFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
         double AL = sn / (2 * bandWidth);
@@ -142,22 +142,22 @@ public class BandPass2 : RBJBase {
         double a0 = 1 + AL;
         double a1 = -2 * cs;
         double a2 = 1 - AL;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(
+    public void Setup(
         double sampleRate,
         double centerFrequency,
         double bandWidth) {
-        setupN(centerFrequency / sampleRate, bandWidth);
+        SetupN(centerFrequency / sampleRate, bandWidth);
     }
 }
 
 public class BandStop : RBJBase {
-    public void setupN(
+    public void SetupN(
         double centerFrequency,
         double bandWidth) {
-        double w0 = 2 * MathSupplement.doublePi * centerFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * centerFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
         double AL = sn / (2 * bandWidth);
@@ -167,49 +167,49 @@ public class BandStop : RBJBase {
         double a0 = 1 + AL;
         double a1 = -2 * cs;
         double a2 = 1 - AL;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(
+    public void Setup(
         double sampleRate,
         double centerFrequency,
         double bandWidth) {
-        setupN(centerFrequency / sampleRate, bandWidth);
+        SetupN(centerFrequency / sampleRate, bandWidth);
     }
 }
 
 public class IIRNotch : RBJBase {
-    public void setupN(
+    public void SetupN(
         double centerFrequency,
         double q_factor = 10) {
-        double w0 = 2 * MathSupplement.doublePi * centerFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * centerFrequency;
         double cs = Math.Cos(w0);
         double r = Math.Exp(-(w0 / 2) / q_factor);
-        double b0 = 1;
+        const double b0 = 1;
         double b1 = -2 * cs;
-        double b2 = 1;
-        double a0 = 1;
+        const double b2 = 1;
+        const double a0 = 1;
         double a1 = -2 * r * cs;
         double a2 = r * r;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(
+    public void Setup(
         double sampleRate,
         double centerFrequency,
         double q_factor = 10) {
-        setupN(centerFrequency / sampleRate, q_factor);
+        SetupN(centerFrequency / sampleRate, q_factor);
     }
 }
 
 
 public class LowShelf : RBJBase {
-    public void setupN(
+    public void SetupN(
         double cutoffFrequency,
         double gainDb,
         double shelfSlope = 1) {
         double A = Math.Pow(10, gainDb / 40);
-        double w0 = 2 * MathSupplement.doublePi * cutoffFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * cutoffFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
         double AL = sn / 2 * Math.Sqrt((A + 1 / A) * (1 / shelfSlope - 1) + 2);
@@ -220,25 +220,25 @@ public class LowShelf : RBJBase {
         double a0 = A + 1 + (A - 1) * cs + sq;
         double a1 = -2 * (A - 1 + (A + 1) * cs);
         double a2 = A + 1 + (A - 1) * cs - sq;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(double sampleRate,
+    public void Setup(double sampleRate,
         double cutoffFrequency,
         double gainDb,
         double shelfSlope = 1) {
-        setupN(cutoffFrequency / sampleRate, gainDb, shelfSlope);
+        SetupN(cutoffFrequency / sampleRate, gainDb, shelfSlope);
     }
 }
 
 
 public class HighShelf : RBJBase {
-    public void setupN(
+    public void SetupN(
         double cutoffFrequency,
         double gainDb,
         double shelfSlope = 1) {
         double A = Math.Pow(10, gainDb / 40);
-        double w0 = 2 * MathSupplement.doublePi * cutoffFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * cutoffFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
         double AL = sn / 2 * Math.Sqrt((A + 1 / A) * (1 / shelfSlope - 1) + 2);
@@ -249,27 +249,27 @@ public class HighShelf : RBJBase {
         double a0 = A + 1 - (A - 1) * cs + sq;
         double a1 = 2 * (A - 1 - (A + 1) * cs);
         double a2 = A + 1 - (A - 1) * cs - sq;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(double sampleRate,
+    public void Setup(double sampleRate,
         double cutoffFrequency,
         double gainDb,
         double shelfSlope = 1) {
-        setupN(cutoffFrequency / sampleRate, gainDb, shelfSlope);
+        SetupN(cutoffFrequency / sampleRate, gainDb, shelfSlope);
     }
 }
 
 public class BandShelf : RBJBase {
-    public void setupN(
+    public void SetupN(
         double centerFrequency,
         double gainDb,
         double bandWidth) {
         double A = Math.Pow(10, gainDb / 40);
-        double w0 = 2 * MathSupplement.doublePi * centerFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * centerFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
-        double AL = sn * Math.Sinh(MathSupplement.doubleLn2 / 2 * bandWidth * w0 / sn);
+        double AL = sn * Math.Sinh(MathSupplement.DoubleLn2 / 2 * bandWidth * w0 / sn);
         if (double.IsNaN(AL)) {
             throw new("No solution available for these parameters.\n");
         }
@@ -279,24 +279,24 @@ public class BandShelf : RBJBase {
         double a0 = 1 + AL / A;
         double a1 = -2 * cs;
         double a2 = 1 - AL / A;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(double sampleRate,
+    public void Setup(double sampleRate,
         double centerFrequency,
         double gainDb,
         double bandWidth) {
-        setupN(centerFrequency / sampleRate, gainDb, bandWidth);
+        SetupN(centerFrequency / sampleRate, gainDb, bandWidth);
     }
 }
 
 public class AllPass : RBJBase {
     private const double ONESQRT2 = 0.707106781;
 
-    public void setupN(
+    public void SetupN(
         double phaseFrequency,
         double q = ONESQRT2) {
-        double w0 = 2 * MathSupplement.doublePi * phaseFrequency;
+        double w0 = 2 * MathSupplement.DoublePi * phaseFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
         double AL = sn / (2 * q);
@@ -306,12 +306,12 @@ public class AllPass : RBJBase {
         double a0 = 1 + AL;
         double a1 = -2 * cs;
         double a2 = 1 - AL;
-        setCoefficients(a0, a1, a2, b0, b1, b2);
+        SetCoefficients(a0, a1, a2, b0, b1, b2);
     }
 
-    public void setup(double sampleRate,
+    public void Setup(double sampleRate,
         double phaseFrequency,
         double q = ONESQRT2) {
-        setupN(phaseFrequency / sampleRate, q);
+        SetupN(phaseFrequency / sampleRate, q);
     }
 }

@@ -31,22 +31,21 @@ namespace Spice86.Core.Backend.Audio.Iir;
  *         test for examples how to set the coefficients.
  */
 public class SOSCascade : Cascade {
-
     /**
 	 * Sets directly the coefficients of the chain of
 	 * 2nd order filters. The layout of the array is
 	 * excatly how the scipy python design functions
-	 * output the sos coeffcients: 
+	 * output the sos coeffcients:
          * [b0,b1,b2,a0,a1,a2],[b0,b1,b2,a0,a1,a2],...
 	 * The filter type can be either DirectFormAbstract.DIRECT_FORM_II
 	 * or DirectFormAbstract.DIRECT_FORM_I.
 	 * @param sosCoefficients SOS coefficients
 	 * @param directFormType Direct form type (I or II).
 	 **/
-    public void setup(
+    public void Setup(
         double[][] sosCoefficients,
         int directFormType) {
-        setSOScoeff(sosCoefficients, directFormType);
+        SetSOScoeff(sosCoefficients, directFormType);
     }
 
     /**
@@ -58,7 +57,7 @@ public class SOSCascade : Cascade {
 	 * The filter type is DIRECT_FORM_II.
 	 * @param sosCoefficients SOS coefficients
 	 **/
-    public void setup(double[][] sosCoefficients) {
-        setSOScoeff(sosCoefficients, DirectFormAbstract.DIRECT_FORM_II);
+    public void Setup(double[][] sosCoefficients) {
+        SetSOScoeff(sosCoefficients, DirectFormAbstract.DirectFormII);
     }
 }

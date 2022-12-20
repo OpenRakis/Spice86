@@ -18,7 +18,6 @@
  *  Copyright (c) 2016 by Bernd Porr
  */
 
-
 using System.Numerics;
 
 namespace Spice86.Core.Backend.Audio.Iir;
@@ -27,15 +26,14 @@ namespace Spice86.Core.Backend.Audio.Iir;
  * Transforms from an analogue lowpass filter to a digital lowpass filter
  */
 public class LowPassTransform {
+    private readonly double _f;
 
-    private double f;
-
-    private Complex transform(Complex c) {
+    private Complex Transform(Complex c) {
         if (Complex.IsInfinity(c))
             return new Complex(-1, 0);
 
         // frequency transform
-        c = Complex.Multiply(c, f);
+        c = Complex.Multiply(c, _f);
 
         var one = new Complex(1, 0);
 
@@ -44,7 +42,7 @@ public class LowPassTransform {
     }
 
     public LowPassTransform(double fc, LayoutBase digital, LayoutBase analog) {
-        digital.reset();
+        digital.Reset();
 
         if (fc < 0) {
             throw new ArithmeticException("Cutoff frequency cannot be negative.");
@@ -55,23 +53,22 @@ public class LowPassTransform {
         }
 
         // prewarp
-        f = Math.Tan(Math.PI * fc);
+        _f = Math.Tan(Math.PI * fc);
 
-        int numPoles = analog.getNumPoles();
+        int numPoles = analog.GetNumPoles();
         int pairs = numPoles / 2;
         for (int i = 0; i < pairs; ++i) {
-            PoleZeroPair pair = analog.getPair(i);
-            digital.addPoleZeroConjugatePairs(transform(pair.poles.first),
-                    transform(pair.zeros.first));
+            PoleZeroPair pair = analog.GetPair(i);
+            digital.AddPoleZeroConjugatePairs(Transform(pair.poles.First),
+                    Transform(pair.zeros.First));
         }
 
         if ((numPoles & 1) == 1) {
-            PoleZeroPair pair = analog.getPair(pairs);
-            digital.add(transform(pair.poles.first),
-                    transform(pair.zeros.first));
+            PoleZeroPair pair = analog.GetPair(pairs);
+            digital.Add(Transform(pair.poles.First),
+                    Transform(pair.zeros.First));
         }
 
-        digital.setNormal(analog.getNormalW(), analog.getNormalGain());
+        digital.SetNormal(analog.GetNormalW(), analog.GetNormalGain());
     }
-
 }

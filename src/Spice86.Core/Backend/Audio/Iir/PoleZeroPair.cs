@@ -23,12 +23,11 @@ using System.Numerics;
  */
 
 /**
- * 
+ *
  * It's written on the tin.
  *
  */
 public class PoleZeroPair {
-
     public ComplexPair poles;
     public ComplexPair zeros;
 
@@ -44,12 +43,12 @@ public class PoleZeroPair {
         zeros = new ComplexPair(z1, z2);
     }
 
-    public bool isSinglePole() {
-        return poles.second.Equals(new Complex(0, 0))
-                && zeros.second.Equals(new Complex(0, 0));
+    public bool IsSinglePole() {
+        return poles.Second.Equals(new Complex(0, 0))
+                && zeros.Second.Equals(new Complex(0, 0));
     }
 
-    public bool is_nan() {
-        return poles.is_nan() || zeros.is_nan();
+    public bool IsNaN() {
+        return poles.IsNan() || zeros.IsNan();
     }
 };

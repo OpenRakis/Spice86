@@ -23,71 +23,70 @@ using System.Numerics;
 namespace Spice86.Core.Backend.Audio.Iir;
 
 /**
- * 
+ *
  * Digital/analogue filter coefficient storage space organising the
  * storage as PoleZeroPairs so that we have as always a 2nd order filter
  *
  */
 public class LayoutBase {
-
-    private int m_numPoles;
-    private PoleZeroPair[] m_pair;
-    private double m_normalW;
-    private double m_normalGain;
+    private int _numPoles;
+    private readonly PoleZeroPair[] _pair;
+    private double _normalW;
+    private double _normalGain;
 
     public LayoutBase(PoleZeroPair[] pairs) {
-        m_numPoles = pairs.Length * 2;
-        m_pair = pairs;
+        _numPoles = pairs.Length * 2;
+        _pair = pairs;
     }
 
     public LayoutBase(int numPoles) {
-        m_numPoles = 0;
+        _numPoles = 0;
         if (numPoles % 2 == 1) {
-            m_pair = new PoleZeroPair[numPoles / 2 + 1];
+            _pair = new PoleZeroPair[numPoles / 2 + 1];
         } else {
-            m_pair = new PoleZeroPair[numPoles / 2];
+            _pair = new PoleZeroPair[numPoles / 2];
         }
     }
 
-    public void reset() {
-        m_numPoles = 0;
+    public void Reset() {
+        _numPoles = 0;
     }
 
-    public int getNumPoles() {
-        return m_numPoles;
+    public int GetNumPoles() {
+        return _numPoles;
     }
 
-    public void add(Complex pole, Complex zero) {
-        m_pair[m_numPoles / 2] = new PoleZeroPair(pole, zero);
-        ++m_numPoles;
+    public void Add(Complex pole, Complex zero) {
+        _pair[_numPoles / 2] = new PoleZeroPair(pole, zero);
+        ++_numPoles;
     }
 
-    public void addPoleZeroConjugatePairs(Complex pole, Complex zero) {
-        m_pair[m_numPoles / 2] = new PoleZeroPair(pole, zero, Complex.Conjugate(pole),
+    public void AddPoleZeroConjugatePairs(Complex pole, Complex zero) {
+        _pair[_numPoles / 2] = new PoleZeroPair(pole, zero, Complex.Conjugate(pole),
                 Complex.Conjugate(zero));
-        m_numPoles += 2;
+        _numPoles += 2;
     }
 
-    public void add(ComplexPair poles, ComplexPair zeros) {
-        m_pair[m_numPoles / 2] = new PoleZeroPair(poles.first, zeros.first,
-                poles.second, zeros.second);
-        m_numPoles += 2;
+    public void Add(ComplexPair poles, ComplexPair zeros) {
+        _pair[_numPoles / 2] = new PoleZeroPair(poles.First, zeros.First,
+                poles.Second, zeros.Second);
+        _numPoles += 2;
     }
 
-    public PoleZeroPair getPair(int pairIndex) {
-        return m_pair[pairIndex];
+    public PoleZeroPair GetPair(int pairIndex) {
+        return _pair[pairIndex];
     }
 
-    public double getNormalW() {
-        return m_normalW;
+    public double GetNormalW() {
+        return _normalW;
     }
 
-    public double getNormalGain() {
-        return m_normalGain;
+    public double GetNormalGain() {
+        return _normalGain;
     }
 
-    public void setNormal(double w, double g) {
-        m_normalW = w;
-        m_normalGain = g;
+    public void SetNormal(double w, double g) {
+        _normalW = w;
+        _normalGain = g;
     }
 };

@@ -26,8 +26,6 @@ namespace Spice86.Core.Backend.Audio.Iir;
  * PoleZeroPair with gain factor
  */
 public class BiquadPoleState : PoleZeroPair {
-
-
     public BiquadPoleState(Complex p, Complex z) : base(p, z) {
     }
 
@@ -35,5 +33,5 @@ public class BiquadPoleState : PoleZeroPair {
         Complex p2, Complex z2) : base(p1, z1, p2, z2) {
     }
 
-    public double gain { get; set; }
+    public double Gain { get; set; }
 }

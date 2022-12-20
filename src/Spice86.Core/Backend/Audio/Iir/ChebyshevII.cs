@@ -29,60 +29,56 @@ namespace Spice86.Core.Backend.Audio.Iir;
  * or stopband filters. For example: chebyshevII.bandPass(2,250,50,5,0.5);
  */
 public class ChebyshevII : Cascade {
-
     class AnalogLowPass : LayoutBase {
+        private readonly int _nPoles;
 
-        private int nPoles;
-
-        // ------------------------------------------------------------------------------
-
-        public AnalogLowPass(int _nPoles) : base(_nPoles) {
-            nPoles = _nPoles;
+        public AnalogLowPass(int nPoles) : base(nPoles) {
+            _nPoles = nPoles;
         }
 
-        public void design(double stopBandDb) {
-            reset();
+        public void Design(double stopBandDb) {
+            Reset();
 
-            double eps = Math.Sqrt(1.0 / (Math.Exp(stopBandDb * 0.1 * MathSupplement.doubleLn10) - 1));
-            double v0 = MathSupplement.asinh(1 / eps) / nPoles;
-            double sinh_v0 = -Math.Sinh(v0);
-            double cosh_v0 = Math.Cosh(v0);
-            double fn = Math.PI / (2 * nPoles);
+            double eps = Math.Sqrt(1.0 / (Math.Exp(stopBandDb * 0.1 * MathSupplement.DoubleLn10) - 1));
+            double v0 = MathSupplement.Asinh(1 / eps) / _nPoles;
+            double sinhV0 = -Math.Sinh(v0);
+            double coshV0 = Math.Cosh(v0);
+            double fn = Math.PI / (2 * _nPoles);
 
             int k = 1;
-            for (int i = nPoles / 2; --i >= 0; k += 2) {
-                double a = sinh_v0 * Math.Cos((k - nPoles) * fn);
-                double b = cosh_v0 * Math.Sin((k - nPoles) * fn);
+            for (int i = _nPoles / 2; --i >= 0; k += 2) {
+                double a = sinhV0 * Math.Cos((k - _nPoles) * fn);
+                double b = coshV0 * Math.Sin((k - _nPoles) * fn);
                 double d2 = a * a + b * b;
                 double im = 1 / Math.Cos(k * fn);
                 var pole = new Complex(a / d2, b / d2);
                 var zero = new Complex(0.0, im);
-                addPoleZeroConjugatePairs(pole, zero);
+                AddPoleZeroConjugatePairs(pole, zero);
             }
 
-            if ((nPoles & 1) == 1) {
-                add(new Complex(1 / sinh_v0, 0), new Complex(double.PositiveInfinity, 0));
+            if ((_nPoles & 1) == 1) {
+                Add(new Complex(1 / sinhV0, 0), new Complex(double.PositiveInfinity, 0));
             }
-            setNormal(0, 1);
+            SetNormal(0, 1);
         }
     }
 
-    private void setupLowPass(int order, double sampleRate, double cutoffFrequency, double rippleDb,
+    private void SetupLowPass(int order, double sampleRate, double cutoffFrequency, double rippleDb,
             int directFormType) {
 
-        var m_analogProto = new AnalogLowPass(order);
-        m_analogProto.design(rippleDb);
+        var analogProto = new AnalogLowPass(order);
+        analogProto.Design(rippleDb);
 
-        var m_digitalProto = new LayoutBase(order);
+        var digitalProto = new LayoutBase(order);
 
-        new LowPassTransform(cutoffFrequency / sampleRate, m_digitalProto, m_analogProto);
+        new LowPassTransform(cutoffFrequency / sampleRate, digitalProto, analogProto);
 
-        setLayout(m_digitalProto, directFormType);
+        SetLayout(digitalProto, directFormType);
     }
 
     /**
 	 * ChebyshevI Lowpass filter with default toplogy
-	 * 
+	 *
 	 * @param order
 	 *            The order of the filter
 	 * @param sampleRate
@@ -92,13 +88,13 @@ public class ChebyshevII : Cascade {
 	 * @param rippleDb
 	 *            passband ripple in decibel sensible value: 1dB
 	 */
-    public void lowPass(int order, double sampleRate, double cutoffFrequency, double rippleDb) {
-        setupLowPass(order, sampleRate, cutoffFrequency, rippleDb, DirectFormAbstract.DIRECT_FORM_II);
+    public void LowPass(int order, double sampleRate, double cutoffFrequency, double rippleDb) {
+        SetupLowPass(order, sampleRate, cutoffFrequency, rippleDb, DirectFormAbstract.DirectFormII);
     }
 
     /**
 	 * ChebyshevI Lowpass filter with custom topology
-	 * 
+	 *
 	 * @param order
 	 *            The order of the filter
 	 * @param sampleRate
@@ -111,26 +107,26 @@ public class ChebyshevII : Cascade {
 	 *            The filter topology. This is either
 	 *            DirectFormAbstract.DIRECT_FORM_I or DIRECT_FORM_II
 	 */
-    public void lowPass(int order, double sampleRate, double cutoffFrequency, double rippleDb, int directFormType) {
-        setupLowPass(order, sampleRate, cutoffFrequency, rippleDb, directFormType);
+    public void LowPass(int order, double sampleRate, double cutoffFrequency, double rippleDb, int directFormType) {
+        SetupLowPass(order, sampleRate, cutoffFrequency, rippleDb, directFormType);
     }
 
-    private void setupHighPass(int order, double sampleRate, double cutoffFrequency, double rippleDb,
+    private void SetupHighPass(int order, double sampleRate, double cutoffFrequency, double rippleDb,
             int directFormType) {
 
-        var m_analogProto = new AnalogLowPass(order);
-        m_analogProto.design(rippleDb);
+        var analogProto = new AnalogLowPass(order);
+        analogProto.Design(rippleDb);
 
-        var m_digitalProto = new LayoutBase(order);
+        var digitalProto = new LayoutBase(order);
 
-        new HighPassTransform(cutoffFrequency / sampleRate, m_digitalProto, m_analogProto);
+        new HighPassTransform(cutoffFrequency / sampleRate, digitalProto, analogProto);
 
-        setLayout(m_digitalProto, directFormType);
+        SetLayout(digitalProto, directFormType);
     }
 
     /**
 	 * ChebyshevI Highpass filter with default topology
-	 * 
+	 *
 	 * @param order
 	 *            The order of the filter
 	 * @param sampleRate
@@ -140,13 +136,13 @@ public class ChebyshevII : Cascade {
 	 * @param rippleDb
 	 *            passband ripple in decibel sensible value: 1dB
 	 */
-    public void highPass(int order, double sampleRate, double cutoffFrequency, double rippleDb) {
-        setupHighPass(order, sampleRate, cutoffFrequency, rippleDb, DirectFormAbstract.DIRECT_FORM_II);
+    public void HighPass(int order, double sampleRate, double cutoffFrequency, double rippleDb) {
+        SetupHighPass(order, sampleRate, cutoffFrequency, rippleDb, DirectFormAbstract.DirectFormII);
     }
 
     /**
 	 * ChebyshevI Lowpass filter and custom filter topology
-	 * 
+	 *
 	 * @param order
 	 *            The order of the filter
 	 * @param sampleRate
@@ -159,21 +155,21 @@ public class ChebyshevII : Cascade {
 	 *            The filter topology. This is either
 	 *            DirectFormAbstract.DIRECT_FORM_I or DIRECT_FORM_II
 	 */
-    public void highPass(int order, double sampleRate, double cutoffFrequency, double rippleDb, int directFormType) {
-        setupHighPass(order, sampleRate, cutoffFrequency, rippleDb, directFormType);
+    public void HighPass(int order, double sampleRate, double cutoffFrequency, double rippleDb, int directFormType) {
+        SetupHighPass(order, sampleRate, cutoffFrequency, rippleDb, directFormType);
     }
 
-    private void setupBandStop(int order, double sampleRate, double centerFrequency, double widthFrequency,
+    private void SetupBandStop(int order, double sampleRate, double centerFrequency, double widthFrequency,
             double rippleDb, int directFormType) {
 
-        var m_analogProto = new AnalogLowPass(order);
-        m_analogProto.design(rippleDb);
+        var analogProto = new AnalogLowPass(order);
+        analogProto.Design(rippleDb);
 
-        var m_digitalProto = new LayoutBase(order * 2);
+        var digitalProto = new LayoutBase(order * 2);
 
-        new BandStopTransform(centerFrequency / sampleRate, widthFrequency / sampleRate, m_digitalProto, m_analogProto);
+        new BandStopTransform(centerFrequency / sampleRate, widthFrequency / sampleRate, digitalProto, analogProto);
 
-        setLayout(m_digitalProto, directFormType);
+        SetLayout(digitalProto, directFormType);
     }
 
     /**
@@ -190,8 +186,8 @@ public class ChebyshevII : Cascade {
 	 * @param rippleDb
 	 *            passband ripple in decibel sensible value: 1dB
 	 */
-    public void bandStop(int order, double sampleRate, double centerFrequency, double widthFrequency, double rippleDb) {
-        setupBandStop(order, sampleRate, centerFrequency, widthFrequency, rippleDb, DirectFormAbstract.DIRECT_FORM_II);
+    public void BandStop(int order, double sampleRate, double centerFrequency, double widthFrequency, double rippleDb) {
+        SetupBandStop(order, sampleRate, centerFrequency, widthFrequency, rippleDb, DirectFormAbstract.DirectFormII);
     }
 
     /**
@@ -210,28 +206,27 @@ public class ChebyshevII : Cascade {
 	 * @param directFormType
 	 *            The filter topology
 	 */
-    public void bandStop(int order, double sampleRate, double centerFrequency, double widthFrequency, double rippleDb,
+    public void BandStop(int order, double sampleRate, double centerFrequency, double widthFrequency, double rippleDb,
             int directFormType) {
-        setupBandStop(order, sampleRate, centerFrequency, widthFrequency, rippleDb, directFormType);
+        SetupBandStop(order, sampleRate, centerFrequency, widthFrequency, rippleDb, directFormType);
     }
 
-    private void setupBandPass(int order, double sampleRate, double centerFrequency, double widthFrequency,
+    private void SetupBandPass(int order, double sampleRate, double centerFrequency, double widthFrequency,
             double rippleDb, int directFormType) {
 
-        var m_analogProto = new AnalogLowPass(order);
-        m_analogProto.design(rippleDb);
+        var analogProto = new AnalogLowPass(order);
+        analogProto.Design(rippleDb);
 
-        var m_digitalProto = new LayoutBase(order * 2);
+        var digitalProto = new LayoutBase(order * 2);
 
-        new BandPassTransform(centerFrequency / sampleRate, widthFrequency / sampleRate, m_digitalProto, m_analogProto);
+        new BandPassTransform(centerFrequency / sampleRate, widthFrequency / sampleRate, digitalProto, analogProto);
 
-        setLayout(m_digitalProto, directFormType);
-
+        SetLayout(digitalProto, directFormType);
     }
 
     /**
 	 * Bandpass filter with default topology
-	 * 
+	 *
 	 * @param order
 	 *            Filter order
 	 * @param sampleRate
@@ -243,8 +238,8 @@ public class ChebyshevII : Cascade {
 	 * @param rippleDb
 	 *            passband ripple in decibel sensible value: 1dB
 	 */
-    public void bandPass(int order, double sampleRate, double centerFrequency, double widthFrequency, double rippleDb) {
-        setupBandPass(order, sampleRate, centerFrequency, widthFrequency, rippleDb, DirectFormAbstract.DIRECT_FORM_II);
+    public void BandPass(int order, double sampleRate, double centerFrequency, double widthFrequency, double rippleDb) {
+        SetupBandPass(order, sampleRate, centerFrequency, widthFrequency, rippleDb, DirectFormAbstract.DirectFormII);
     }
 
     /**
@@ -263,9 +258,9 @@ public class ChebyshevII : Cascade {
 	 * @param directFormType
 	 *            The filter topology (see DirectFormAbstract)
 	 */
-    public void bandPass(int order, double sampleRate, double centerFrequency, double widthFrequency, double rippleDb,
+    public void BandPass(int order, double sampleRate, double centerFrequency, double widthFrequency, double rippleDb,
             int directFormType) {
-        setupBandPass(order, sampleRate, centerFrequency, widthFrequency, rippleDb, directFormType);
+        SetupBandPass(order, sampleRate, centerFrequency, widthFrequency, rippleDb, directFormType);
     }
 
 }

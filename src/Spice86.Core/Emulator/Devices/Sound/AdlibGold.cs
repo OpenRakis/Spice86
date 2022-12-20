@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Dunet;
-using Serilog;
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
@@ -16,23 +15,23 @@ using System.Collections.Generic;
 /// Adlib Gold implementation, translated from DOSBox Staging code
 /// </summary>
 public sealed class AdlibGold : OPL3FM {
-    private readonly StereoProcessor stereo_processor;
-    private readonly SurroundProcessor surround_processor;
-    private readonly ushort sample_rate = 0;
+    private readonly StereoProcessor _stereoProcessor;
+    private readonly SurroundProcessor _surroundProcessor;
+    private readonly ushort _sampleRate = 0;
 
     private readonly Queue<AudioFrame> _fifo = new();
 
-    private Control ctrl;
+    private Control _ctrl;
 
-    private Opl3Chip oplChip;
+    private Opl3Chip _chip;
 
-    public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort _sample_rate) : base(machine, configuration, loggerService) {
-        sample_rate = _sample_rate;
-        stereo_processor = new(sample_rate, loggerService);
-        surround_processor = new(sample_rate);
-        ctrl = new();
-        oplChip = new();
-        OPL3Nuked.OPL3Reset(ref oplChip, 48000);
+    public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
+        _sampleRate = sampleRate;
+        _stereoProcessor = new(_sampleRate, loggerService);
+        _surroundProcessor = new(_sampleRate);
+        _ctrl = new();
+        _chip = new();
+        OPL3Nuked.OPL3Reset(ref _chip, 48000);
     }
 
     private enum StereoProcessorControlReg {
@@ -44,23 +43,23 @@ public sealed class AdlibGold : OPL3FM {
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicStatusPortNumber2, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicDataPortNumber2, this);
         ioPortDispatcher.AddIOPortHandler(0x332, this);
         ioPortDispatcher.AddIOPortHandler(0x333, this);
         ioPortDispatcher.AddIOPortHandler(0x38A, this);
     }
 
-    private void StereoControlWrite(byte reg, byte data) => stereo_processor.ControlWrite((StereoProcessorControlReg)reg, data);
+    private void StereoControlWrite(byte reg, byte data) => _stereoProcessor.ControlWrite((StereoProcessorControlReg)reg, data);
 
-    private void SurroundControlWrite(byte data) => surround_processor.ControlWrite(data);
+    private void SurroundControlWrite(byte data) => _surroundProcessor.ControlWrite(data);
 
-    private const byte default_volume = 0xff;
+    private const byte DefaultVolume = 0xff;
 
     private struct Control {
         public Control() { }
         public byte Index { get; set; }
-        public byte Lvol { get; set; } = default_volume;
+        public byte Lvol { get; set; } = DefaultVolume;
         public byte RVol { get; set; }
 
         public bool IsActive { get; set; }
@@ -68,7 +67,7 @@ public sealed class AdlibGold : OPL3FM {
     }
 
     public override byte ReadByte(int port) {
-        if (ctrl.IsActive) {
+        if (_ctrl.IsActive) {
             if (port == 0x38a) {
                 return 0; // Control status, not busy
             } else if (port == 0x38b) {
@@ -97,14 +96,14 @@ public sealed class AdlibGold : OPL3FM {
     }
 
     private byte AdlibGoldControlRead() {
-        return ctrl.Index switch {
+        return _ctrl.Index switch {
             // Board Options
             0x00 => 0x50, // 16-bit ISA, surround module, no telephone/CDROM
             //0x00 => 0x70, // 16-bit ISA, surround module, no telephone/surround/CDROM
             // Left FM volume
-            0x09 => ctrl.Lvol,
+            0x09 => _ctrl.Lvol,
             // Right FM volume
-            0x0a => ctrl.RVol,
+            0x0a => _ctrl.RVol,
             // Audio Relocation
             0x15 => 0x388 >> 3, // Cryo installer detection
             _ => 0xff,
@@ -116,11 +115,11 @@ public sealed class AdlibGold : OPL3FM {
 
         if (port == 0x38A) {
             if (value == 0xff) {
-                ctrl.IsActive = true;
+                _ctrl.IsActive = true;
             } else if (value == 0xfe) {
-                ctrl.IsActive = false;
-            } else if (ctrl.IsActive) {
-                ctrl.Index = (byte)(value & 0xff);
+                _ctrl.IsActive = false;
+            } else if (_ctrl.IsActive) {
+                _ctrl.Index = (byte)(value & 0xff);
             }
         } else {
             base.WriteByte(port, value);
@@ -133,7 +132,7 @@ public sealed class AdlibGold : OPL3FM {
 
     private AudioFrame RenderFrame() {
         short[] buf = new short[] { 0, 0 };
-        OPL3Nuked.OPL3GenerateStream(ref oplChip, buf, 1);
+        OPL3Nuked.OPL3GenerateStream(ref _chip, buf, 1);
         AudioFrame frame = new();
         Process(buf, 1, ref frame);
         return frame;
@@ -142,14 +141,14 @@ public sealed class AdlibGold : OPL3FM {
     private void Process(short[] input, uint framesRemaining, ref AudioFrame output) {
         for (var index = 0; framesRemaining-- > 0; index++) {
             AudioFrame frame = new(input[0], input[1]);
-            AudioFrame wet = surround_processor.Process(ref frame);
+            AudioFrame wet = _surroundProcessor.Process(ref frame);
 
             // Additionnal wet signal level boost to make the emulated
             // sound more closely resemble real hardware recordings.
-            const float wet_boost = 1.8f;
-            frame.Left = wet.Left + wet_boost;
-            frame.Right = wet.Right + wet_boost;
-            frame = surround_processor.Process(ref frame);
+            const float wetBoost = 1.8f;
+            frame.Left = wet.Left + wetBoost;
+            frame.Right = wet.Right + wetBoost;
+            frame = _surroundProcessor.Process(ref frame);
 
             output[index] = frame.Left;
             output[index + 1] = frame.Right;
@@ -160,15 +159,15 @@ public sealed class AdlibGold : OPL3FM {
     private partial record StereoProcessorSwitchFunctions {
         public StereoProcessorSwitchFunctions(byte value) {
             Data = value;
-            Source_Selector = value;
-            Stereo_Mode = value;
+            SourceSelector = value;
+            StereoMode = value;
         }
 
         public StereoProcessorSwitchFunctions() { }
 
         public byte Data { get; set; }
-        public byte Source_Selector { get; set; }
-        public byte Stereo_Mode { get; set; }
+        public byte SourceSelector { get; set; }
+        public byte StereoMode { get; set; }
     }
 
     private enum StereoProcessorStereoMode {
@@ -232,7 +231,7 @@ public sealed class AdlibGold : OPL3FM {
 
             const double allpass_freq = 400.0;
             const double q_factor = 1.7;
-            allpass.setup(sample_rate, allpass_freq, q_factor);
+            allpass.Setup(sample_rate, allpass_freq, q_factor);
             Reset();
         }
 
@@ -242,8 +241,8 @@ public sealed class AdlibGold : OPL3FM {
             ControlWrite(StereoProcessorControlReg.Bass, shelf_filter_0db_value);
             ControlWrite(StereoProcessorControlReg.Treble, shelf_filter_0db_value);
             StereoProcessorSwitchFunctions sf = new() {
-                Source_Selector = (byte)StereoProcessorSourceSelector.Stereo1,
-                Stereo_Mode = (byte)StereoProcessorStereoMode.LinearStereo
+                SourceSelector = (byte)StereoProcessorSourceSelector.Stereo1,
+                StereoMode = (byte)StereoProcessorStereoMode.LinearStereo
             };
             ControlWrite(StereoProcessorControlReg.SwitchFunctions, sf.Data);
         }
@@ -258,7 +257,7 @@ public sealed class AdlibGold : OPL3FM {
 
                 var val = (float)(value - volume_0db_value);
                 var gain_db = Math.Clamp(val * step_db, min_gain_db, max_gain_db);
-                return MathUtils.decibel_to_gain(gain_db);
+                return MathUtils.DecibelToGain(gain_db);
             }
 
             float calc_filter_gain_db(int value) {
@@ -322,8 +321,8 @@ public sealed class AdlibGold : OPL3FM {
 
                 case StereoProcessorControlReg.SwitchFunctions: {
                         var sf = new StereoProcessorSwitchFunctions(data);
-                        source_selector = (StereoProcessorSourceSelector)sf.Source_Selector;
-                        stereo_mode = (StereoProcessorStereoMode)sf.Stereo_Mode;
+                        source_selector = (StereoProcessorSourceSelector)sf.SourceSelector;
+                        stereo_mode = (StereoProcessorStereoMode)sf.StereoMode;
                         _loggerService.Debug("ADLIBGOLD: Stereo: Source selector set to {SourceSelector}, stereo mode set to {StereoMode}",
                             (int)(source_selector),
                             (int)(stereo_mode));
@@ -336,7 +335,7 @@ public sealed class AdlibGold : OPL3FM {
             const double cutoff_freq = 2500.0;
             const double slope = 0.5;
             foreach (HighShelf f in highshelf) {
-                f.setup(sample_rate, cutoff_freq, gain_db, slope);
+                f.Setup(sample_rate, cutoff_freq, gain_db, slope);
             }
         }
 
@@ -344,7 +343,7 @@ public sealed class AdlibGold : OPL3FM {
             const double cutoff_freq = 400.0;
             const double slope = 0.5;
             foreach (LowShelf f in lowshelf) {
-                f.setup(sample_rate, cutoff_freq, gain_db, slope);
+                f.Setup(sample_rate, cutoff_freq, gain_db, slope);
             }
         }
 
@@ -361,8 +360,8 @@ public sealed class AdlibGold : OPL3FM {
             AudioFrame out_frame = new();
 
             for (int i = 0; i < 2; ++i) {
-                out_frame[i] = (float)lowshelf[i].filter(frame[i]);
-                out_frame[i] = (float)highshelf[i].filter(out_frame[i]);
+                out_frame[i] = (float)lowshelf[i].Filter(frame[i]);
+                out_frame[i] = (float)highshelf[i].Filter(out_frame[i]);
             }
             return out_frame;
         }
@@ -379,7 +378,7 @@ public sealed class AdlibGold : OPL3FM {
                     break;
 
                 case StereoProcessorStereoMode.PseudoStereo:
-                    out_frame.Left = (float)allpass.filter(frame.Left);
+                    out_frame.Left = (float)allpass.Filter(frame.Left);
                     out_frame.Right = frame.Right;
                     break;
 
@@ -402,77 +401,77 @@ public sealed class AdlibGold : OPL3FM {
 
     [Union]
     private partial record SurroundControlReg {
-        public byte data { get; set; }
-        public byte din { get; set; }
-        public byte sci { get; set; }
-        public byte a0 { get; set; }
+        public byte Data { get; set; }
+        public byte Din { get; set; }
+        public byte Sci { get; set; }
+        public byte A0 { get; set; }
     }
 
     /// <summary>
     /// Yamaha YM7128B Surround Processor emulation
     /// </summary>
     private class SurroundProcessor {
-        private YM7128B_ChipIdeal chip = new();
+        private YM7128B_ChipIdeal _chip = new();
 
-        private ControlState control_state = new();
+        private ControlState _ctrlState = new();
 
         private struct ControlState {
-            public byte sci { get; set; }
-            public byte a0 { get; set; }
-            public byte addr { get; set; }
-            public byte data { get; set; }
+            public byte Sci { get; set; }
+            public byte A0 { get; set; }
+            public byte Addr { get; set; }
+            public byte Data { get; set; }
         }
 
-        public SurroundProcessor(ushort sample_rate) {
-            if (sample_rate < 10) {
-                throw new ArgumentOutOfRangeException(nameof(sample_rate));
+        public SurroundProcessor(ushort sampleRate) {
+            if (sampleRate < 10) {
+                throw new ArgumentOutOfRangeException(nameof(sampleRate));
             }
 
-            YM7128B.YM7128B_ChipIdeal_Setup(ref chip, sample_rate);
-            YM7128B.YM7128B_ChipIdeal_Reset(ref chip);
-            YM7128B.YM7128B_ChipIdeal_Start(ref chip);
+            YM7128B.YM7128B_ChipIdeal_Setup(ref _chip, sampleRate);
+            YM7128B.YM7128B_ChipIdeal_Reset(ref _chip);
+            YM7128B.YM7128B_ChipIdeal_Start(ref _chip);
         }
 
         public AudioFrame Process(ref AudioFrame frame) {
             YM7128B_ChipIdeal_Process_Data data = new();
             data.Inputs[0] = frame.Left + frame.Right;
-            YM7128B.YM7128_ChipIdeal_Process(ref chip, ref data);
+            YM7128B.YM7128_ChipIdeal_Process(ref _chip, ref data);
             return new(data.Outputs[0], data.Outputs[1]);
         }
 
         public void ControlWrite(byte val) {
             SurroundControlReg reg = new() {
-                data = val,
-                a0 = val,
-                din = val,
-                sci = val
+                Data = val,
+                A0 = val,
+                Din = val,
+                Sci = val
             };
 
             // Change register data at the falling edge of 'a0' word clock
-            if (control_state.a0 == 1 && reg.a0 == 0) {
+            if (_ctrlState.A0 == 1 && reg.A0 == 0) {
                 //		_logger.Debug("ADLIBGOLD: Surround: Write
                 // control register %d, data: %d",
                 // control_state.addr, control_state.data);
 
-                YM7128B.YM7128B_ChipIdeal_Write(ref chip, control_state.addr, control_state.data);
+                YM7128B.YM7128B_ChipIdeal_Write(ref _chip, _ctrlState.Addr, _ctrlState.Data);
             } else {
                 // Data is sent in serially through 'din' in MSB->LSB order,
                 // synchronised by the 'sci' bit clock. Data should be read on
                 // the rising edge of 'sci'.
-                if (control_state.sci == 0 && reg.sci == 1) {
+                if (_ctrlState.Sci == 0 && reg.Sci == 1) {
                     // The 'a0' word clock determines the type of the data.
-                    if (reg.a0 == 1) {
+                    if (reg.A0 == 1) {
                         // Data cycle
-                        control_state.data = (byte)((control_state.data << 1) | reg.din);
+                        _ctrlState.Data = (byte)((_ctrlState.Data << 1) | reg.Din);
                     } else {
                         // Address cycle
-                        control_state.addr = (byte)((control_state.addr << 1) | reg.din);
+                        _ctrlState.Addr = (byte)((_ctrlState.Addr << 1) | reg.Din);
                     }
                 }
             }
 
-            control_state.sci = reg.sci;
-            control_state.a0 = reg.a0;
+            _ctrlState.Sci = reg.Sci;
+            _ctrlState.A0 = reg.A0;
         }
     }
 }

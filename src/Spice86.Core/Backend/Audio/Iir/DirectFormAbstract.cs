@@ -26,15 +26,14 @@ namespace Spice86.Core.Backend.Audio.Iir;
  * Direct form I or II is derived from it
  */
 public abstract class DirectFormAbstract {
-
     public DirectFormAbstract() {
-        reset();
+        Reset();
     }
 
-    public abstract void reset();
+    public abstract void Reset();
 
-    public abstract double process1(double x, Biquad s);
+    public abstract double Process1(double x, Biquad s);
 
-    public const int DIRECT_FORM_I = 0;
-    public const int DIRECT_FORM_II = 1;
+    public const int DirectFormI = 0;
+    public const int DirectFormII = 1;
 }

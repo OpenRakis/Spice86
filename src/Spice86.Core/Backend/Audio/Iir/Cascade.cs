@@ -24,69 +24,68 @@ using System.Numerics;
 namespace Spice86.Core.Backend.Audio.Iir;
 
 /**
- * 
+ *
  * The mother of all filters. It contains the coefficients of all
  * filter stages as a sequence of 2nd order filters and the states
  * of the 2nd order filters which also imply if it's direct form I or II
  *
  */
 public class Cascade {
-
     // coefficients
-    private Biquad[] m_biquads;
+    private Biquad[] _biquads;
 
     // the states of the filters
-    private DirectFormAbstract[] m_states;
+    private DirectFormAbstract[] _states;
 
     // number of biquads in the system
-    private int m_numBiquads;
+    private int _numBiquads;
 
-    private int numPoles;
+    private int _numPoles;
 
-    public int getNumBiquads() {
-        return m_numBiquads;
+    public int GetNumBiquads() {
+        return _numBiquads;
     }
 
-    public Biquad getBiquad(int index) {
-        return m_biquads[index];
+    public Biquad GetBiquad(int index) {
+        return _biquads[index];
     }
 
     public Cascade() {
-        m_numBiquads = 0;
-        m_biquads = Array.Empty<Biquad>();
-        m_states = Array.Empty<DirectFormAbstract>();
+        _numBiquads = 0;
+        _biquads = Array.Empty<Biquad>();
+        _states = Array.Empty<DirectFormAbstract>();
     }
 
-    public void reset() {
-        for (int i = 0; i < m_numBiquads; i++)
-            m_states[i].reset();
+    public void Reset() {
+        for (int i = 0; i < _numBiquads; i++)
+            _states[i].Reset();
     }
 
-    public double filter(double x) {
+    public double Filter(double x) {
         double res = x;
-        for (int i = 0; i < m_numBiquads; i++) {
-            if (m_states[i] != null) {
-                res = m_states[i].process1(res, m_biquads[i]);
+        for (int i = 0; i < _numBiquads; i++) {
+            if (_states[i] != null) {
+                res = _states[i].Process1(res, _biquads[i]);
             }
         }
         return res;
     }
 
-    public Complex response(double normalizedFrequency) {
+    public Complex Response(double normalizedFrequency) {
         double w = 2 * Math.PI * normalizedFrequency;
-        Complex czn1 = ComplexUtils.polar2Complex(1.0, -w);
-        Complex czn2 = ComplexUtils.polar2Complex(1.0, -2 * w);
+        Complex czn1 = ComplexUtils.PolarToComplex(1.0, -w);
+        Complex czn2 = ComplexUtils.PolarToComplex(1.0, -2 * w);
         var ch = new Complex(1, 0);
         var cbot = new Complex(1, 0);
 
-        for (int i = 0; i < m_numBiquads; i++) {
-            Biquad stage = m_biquads[i];
+        for (int i = 0; i < _numBiquads; i++) {
+            Biquad stage = _biquads[i];
             var cb = new Complex(1, 0);
-            var ct = new Complex(stage.getB0() / stage.getA0(), 0);
-            ct = MathSupplement.addmul(ct, stage.getB1() / stage.getA0(), czn1);
-            ct = MathSupplement.addmul(ct, stage.getB2() / stage.getA0(), czn2);
-            cb = MathSupplement.addmul(cb, stage.getA1() / stage.getA0(), czn1);
-            cb = MathSupplement.addmul(cb, stage.getA2() / stage.getA0(), czn2);
+            var ct = new Complex(stage.GetB0() / stage.GetA0(), 0);
+            ct = MathSupplement.AddMul(ct, stage.GetB1() / stage.GetA0(), czn1);
+            ct = MathSupplement.AddMul(ct, stage.GetB2() / stage.GetA0(), czn2);
+            cb = MathSupplement.AddMul(cb, stage.GetA1() / stage.GetA0(), czn1);
+            cb = MathSupplement.AddMul(cb, stage.GetA2() / stage.GetA0(), czn2);
             ch = Complex.Multiply(ch, ct);
             cbot = Complex.Multiply(cbot, cb);
         }
@@ -94,54 +93,54 @@ public class Cascade {
         return Complex.Divide(ch, cbot);
     }
 
-    public void applyScale(double scale) {
+    public void ApplyScale(double scale) {
         // For higher order filters it might be helpful
         // to spread this factor between all the stages.
-        if (m_biquads.Length > 0) {
-            m_biquads[0].applyScale(scale);
+        if (_biquads.Length > 0) {
+            _biquads[0].ApplyScale(scale);
         }
     }
 
-    private void createStates(int filterTypes) {
+    private void CreateStates(int filterTypes) {
         switch (filterTypes) {
-            case DirectFormAbstract.DIRECT_FORM_I:
-                m_states = new DirectFormI[m_numBiquads];
-                for (int i = 0; i < m_numBiquads; i++) {
-                    m_states[i] = new DirectFormI();
+            case DirectFormAbstract.DirectFormI:
+                _states = new DirectFormI[_numBiquads];
+                for (int i = 0; i < _numBiquads; i++) {
+                    _states[i] = new DirectFormI();
                 }
                 break;
-            case DirectFormAbstract.DIRECT_FORM_II:
+            case DirectFormAbstract.DirectFormII:
             default:
-                m_states = new DirectFormII[m_numBiquads];
-                for (int i = 0; i < m_numBiquads; i++) {
-                    m_states[i] = new DirectFormII();
+                _states = new DirectFormII[_numBiquads];
+                for (int i = 0; i < _numBiquads; i++) {
+                    _states[i] = new DirectFormII();
                 }
                 break;
         }
     }
 
-    public void setLayout(LayoutBase proto, int filterTypes) {
-        numPoles = proto.getNumPoles();
-        m_numBiquads = (numPoles + 1) / 2;
-        m_biquads = new Biquad[m_numBiquads];
-        createStates(filterTypes);
-        for (int i = 0; i < m_numBiquads; ++i) {
-            PoleZeroPair p = proto.getPair(i);
-            m_biquads[i] = new Biquad();
-            m_biquads[i].setPoleZeroPair(p);
+    public void SetLayout(LayoutBase proto, int filterTypes) {
+        _numPoles = proto.GetNumPoles();
+        _numBiquads = (_numPoles + 1) / 2;
+        _biquads = new Biquad[_numBiquads];
+        CreateStates(filterTypes);
+        for (int i = 0; i < _numBiquads; ++i) {
+            PoleZeroPair p = proto.GetPair(i);
+            _biquads[i] = new Biquad();
+            _biquads[i].SetPoleZeroPair(p);
         }
-        applyScale(proto.getNormalGain()
-                / Complex.Abs(response(proto.getNormalW() / (2 * Math.PI))));
+        ApplyScale(proto.GetNormalGain()
+                / Complex.Abs(Response(proto.GetNormalW() / (2 * Math.PI))));
     }
 
-    public void setSOScoeff(double[][] sosCoefficients,
+    public void SetSOScoeff(double[][] sosCoefficients,
                 int stateTypes) {
-        m_numBiquads = sosCoefficients.Length;
-        m_biquads = new Biquad[m_numBiquads];
-        createStates(stateTypes);
-        for (int i = 0; i < m_numBiquads; ++i) {
-            m_biquads[i] = new Biquad();
-            m_biquads[i].setCoefficients(
+        _numBiquads = sosCoefficients.Length;
+        _biquads = new Biquad[_numBiquads];
+        CreateStates(stateTypes);
+        for (int i = 0; i < _numBiquads; ++i) {
+            _biquads[i] = new Biquad();
+            _biquads[i].SetCoefficients(
                 sosCoefficients[i][3],
                 sosCoefficients[i][4],
                 sosCoefficients[i][5],
@@ -150,8 +149,6 @@ public class Cascade {
                 sosCoefficients[i][2]
             );
         }
-        applyScale(1);
+        ApplyScale(1);
     }
-
-
 };

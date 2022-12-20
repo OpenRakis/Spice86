@@ -21,7 +21,7 @@
 namespace Spice86.Core.Backend.Audio.Iir;
 
 /**
- * 
+ *
  * Implementation of a Direct Form II filter with its states. The coefficients
  * are supplied from the outside.
  *
@@ -29,22 +29,22 @@ namespace Spice86.Core.Backend.Audio.Iir;
 
 public class DirectFormII : DirectFormAbstract {
     public DirectFormII() {
-        reset();
+        Reset();
     }
 
-    public override void reset() {
-        m_v1 = 0;
-        m_v2 = 0;
+    public override void Reset() {
+        _v1 = 0;
+        _v2 = 0;
     }
 
-    public override double process1(double x,
+    public override double Process1(double x,
                     Biquad s) {
         if (s != null) {
-            double w = x - s.m_a1 * m_v1 - s.m_a2 * m_v2;
-            double res = s.m_b0 * w + s.m_b1 * m_v1 + s.m_b2 * m_v2;
+            double w = x - s.A1 * _v1 - s.A2 * _v2;
+            double res = s.B0 * w + s.B1 * _v1 + s.B2 * _v2;
 
-            m_v2 = m_v1;
-            m_v1 = w;
+            _v2 = _v1;
+            _v1 = w;
 
             return res;
         } else {
@@ -52,6 +52,6 @@ public class DirectFormII : DirectFormAbstract {
         }
     }
 
-    double m_v1; // v[-1]
-    double m_v2; // v[-2]
+    double _v1; // v[-1]
+    double _v2; // v[-2]
 }

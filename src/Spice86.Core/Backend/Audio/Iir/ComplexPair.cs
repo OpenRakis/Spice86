@@ -29,41 +29,40 @@ namespace Spice86.Core.Backend.Audio.Iir;
  *
  */
 public class ComplexPair {
+    public Complex First { get; }
+    public Complex Second { get; }
 
-    public Complex first;
-    public Complex second;
-
-    public ComplexPair(Complex c1,
-                 Complex c2) {
-        first = c1;
-        second = c2;
+    public ComplexPair(Complex c1, Complex c2) {
+        First = c1;
+        Second = c2;
     }
 
     public ComplexPair(Complex c1) {
-        first = c1;
-        second = new Complex(0, 0);
+        First = c1;
+        Second = new Complex(0, 0);
     }
 
-    public bool isConjugate() {
-        return second.Equals(Complex.Conjugate(first));
+    public bool IsConjugate() {
+        return Second.Equals(Complex.Conjugate(First));
     }
 
-    public bool isReal() {
-        return first.Imaginary == 0 && second.Imaginary == 0;
+    public bool IsReal() {
+        return First.Imaginary == 0 && Second.Imaginary == 0;
     }
 
     // Returns true if this is either a conjugate pair,
     // or a pair of reals where neither is zero.
-    public bool isMatchedPair() {
-        if (first.Imaginary != 0)
-            return second.Equals(Complex.Conjugate(first));
-        else
-            return second.Imaginary == 0 &&
-                    second.Real != 0 &&
-                    first.Real != 0;
+    public bool IsMatchedPair() {
+        if (First.Imaginary != 0) {
+            return Second.Equals(Complex.Conjugate(First));
+        } else {
+            return Second.Imaginary == 0 &&
+                Second.Real != 0 &&
+                First.Real != 0;
+        }
     }
 
-    public bool is_nan() {
-        return Complex.IsNaN(first) || Complex.IsNaN(second);
+    public bool IsNan() {
+        return Complex.IsNaN(First) || Complex.IsNaN(Second);
     }
 };

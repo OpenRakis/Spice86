@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
@@ -47,8 +46,8 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_STATUS_PORT_NUMBER_2, this);
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FM_MUSIC_DATA_PORT_NUMBER_2, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicStatusPortNumber2, this);
+        ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicDataPortNumber2, this);
     }
 
     /// <inheritdoc />

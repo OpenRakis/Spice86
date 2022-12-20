@@ -26,17 +26,16 @@ namespace Spice86.Core.Backend.Audio.Iir;
  * Transforms from an analogue bandpass filter to a digital bandstop filter
  */
 public class BandPassTransform {
-
-    private double wc2;
-    private double wc;
-    private double a, b;
-    private double a2, b2;
-    private double ab, ab_2;
+    private readonly double _wc2;
+    private readonly double _wc;
+    private readonly double _a, _b;
+    private readonly double _a2, _b2;
+    private readonly double _ab, _ab2;
 
     public BandPassTransform(double fc, double fw, LayoutBase digital,
             LayoutBase analog) {
 
-        digital.reset();
+        digital.Reset();
 
         if (fc < 0) {
             throw new ArithmeticException("Cutoff frequency cannot be negative.");
@@ -49,47 +48,47 @@ public class BandPassTransform {
         double ww = 2 * Math.PI * fw;
 
         // pre-calcs
-        wc2 = 2 * Math.PI * fc - ww / 2;
-        wc = wc2 + ww;
+        _wc2 = (2 * Math.PI * fc) - ww / 2;
+        _wc = _wc2 + ww;
 
         // what is this crap?
-        if (wc2 < 1e-8)
-            wc2 = 1e-8;
-        if (wc > Math.PI - 1e-8)
-            wc = Math.PI - 1e-8;
+        if (_wc2 < 1e-8)
+            _wc2 = 1e-8;
+        if (_wc > Math.PI - 1e-8)
+            _wc = Math.PI - 1e-8;
 
-        a = Math.Cos((wc + wc2) * 0.5) / Math.Cos((wc - wc2) * 0.5);
-        b = 1 / Math.Tan((wc - wc2) * 0.5);
-        a2 = a * a;
-        b2 = b * b;
-        ab = a * b;
-        ab_2 = 2 * ab;
+        _a = Math.Cos((_wc + _wc2) * 0.5) / Math.Cos((_wc - _wc2) * 0.5);
+        _b = 1 / Math.Tan((_wc - _wc2) * 0.5);
+        _a2 = _a * _a;
+        _b2 = _b * _b;
+        _ab = _a * _b;
+        _ab2 = 2 * _ab;
 
-        int numPoles = analog.getNumPoles();
+        int numPoles = analog.GetNumPoles();
         int pairs = numPoles / 2;
         for (int i = 0; i < pairs; ++i) {
-            PoleZeroPair pair = analog.getPair(i);
-            ComplexPair p1 = transform(pair.poles.first);
-            ComplexPair z1 = transform(pair.zeros.first);
+            PoleZeroPair pair = analog.GetPair(i);
+            ComplexPair p1 = Transform(pair.poles.First);
+            ComplexPair z1 = Transform(pair.zeros.First);
 
-            digital.addPoleZeroConjugatePairs(p1.first, z1.first);
-            digital.addPoleZeroConjugatePairs(p1.second, z1.second);
+            digital.AddPoleZeroConjugatePairs(p1.First, z1.First);
+            digital.AddPoleZeroConjugatePairs(p1.Second, z1.Second);
         }
 
         if ((numPoles & 1) == 1) {
-            ComplexPair poles = transform(analog.getPair(pairs).poles.first);
-            ComplexPair zeros = transform(analog.getPair(pairs).zeros.first);
+            ComplexPair poles = Transform(analog.GetPair(pairs).poles.First);
+            ComplexPair zeros = Transform(analog.GetPair(pairs).zeros.First);
 
-            digital.add(poles, zeros);
+            digital.Add(poles, zeros);
         }
 
-        double wn = analog.getNormalW();
-        digital.setNormal(
-                2 * Math.Atan(Math.Sqrt(Math.Tan((wc + wn) * 0.5)
-                        * Math.Tan((wc2 + wn) * 0.5))), analog.getNormalGain());
+        double wn = analog.GetNormalW();
+        digital.SetNormal(
+                2 * Math.Atan(Math.Sqrt(Math.Tan((_wc + wn) * 0.5)
+                        * Math.Tan((_wc2 + wn) * 0.5))), analog.GetNormalGain());
     }
 
-    private ComplexPair transform(Complex c) {
+    private ComplexPair Transform(Complex c) {
         if (Complex.IsInfinity(c)) {
             return new ComplexPair(new Complex(-1, 0), new Complex(1, 0));
         }
@@ -97,21 +96,21 @@ public class BandPassTransform {
         c = new Complex(1, 0).Add(c).Divide(new Complex(1, 0).Subtract(c)); // bilinear
 
         var v = new Complex(0, 0);
-        v = MathSupplement.addmul(v, 4 * (b2 * (a2 - 1) + 1), c);
-        v = v.Add(8 * (b2 * (a2 - 1) - 1));
+        v = MathSupplement.AddMul(v, 4 * (_b2 * (_a2 - 1) + 1), c);
+        v = v.Add(8 * (_b2 * (_a2 - 1) - 1));
         v = v.Multiply(c);
-        v = v.Add(4 * (b2 * (a2 - 1) + 1));
+        v = v.Add(4 * (_b2 * (_a2 - 1) + 1));
         v = v.Sqrt();
 
         Complex u = v.Multiply(-1);
-        u = MathSupplement.addmul(u, ab_2, c);
-        u = u.Add(ab_2);
+        u = MathSupplement.AddMul(u, _ab2, c);
+        u = u.Add(_ab2);
 
-        v = MathSupplement.addmul(v, ab_2, c);
-        v = v.Add(ab_2);
+        v = MathSupplement.AddMul(v, _ab2, c);
+        v = v.Add(_ab2);
 
         var d = new Complex(0, 0);
-        d = MathSupplement.addmul(d, 2 * (b - 1), c).Add(2 * (1 + b));
+        d = MathSupplement.AddMul(d, 2 * (_b - 1), c).Add(2 * (1 + _b));
 
         return new ComplexPair(u.Divide(d), v.Divide(d));
     }

@@ -23,49 +23,49 @@ using System.Numerics;
 namespace Spice86.Core.Backend.Audio.Iir;
 
 /**
- * 
+ *
  * Useful math functions which come back over and over again
  *
  */
-public class MathSupplement {
-    public const double doublePi = 3.1415926535897932384626433832795028841971;
-    public const double doublePi_2 = 1.5707963267948966192313216916397514420986;
-    public const double doubleLn2 = 0.69314718055994530941723212145818;
-    public const double doubleLn10 = 2.3025850929940456840179914546844;
+public static class MathSupplement {
+    public const double DoublePi = 3.1415926535897932384626433832795028841971;
+    public const double DoublePi2 = 1.5707963267948966192313216916397514420986;
+    public const double DoubleLn2 = 0.69314718055994530941723212145818;
+    public const double DoubleLn10 = 2.3025850929940456840179914546844;
 
-    public static Complex solve_quadratic_1(double a, double b, double c) {
+    public static Complex SolveQuadratic1(double a, double b, double c) {
         return new Complex(-b, 0).Add(new Complex(b * b - 4 * a * c, 0)).Sqrt()
                 .Divide(2.0 * a);
     }
 
-    public static Complex solve_quadratic_2(double a, double b, double c) {
+    public static Complex SolveQuadratic2(double a, double b, double c) {
         return new Complex(-b, 0).Subtract(new Complex(b * b - 4 * a * c, 0))
                 .Sqrt().Divide(2.0 * a);
     }
 
-    public static Complex adjust_imag(Complex c) {
+    public static Complex AdjustImage(Complex c) {
         if (Math.Abs(c.Imaginary) < 1e-30)
             return new Complex(c.Real, 0);
         else
             return c;
     }
 
-    public static Complex addmul(Complex c, double v, Complex c1) {
+    public static Complex AddMul(Complex c, double v, Complex c1) {
         return new Complex(c.Real + v * c1.Real, c.Imaginary + v
                 * c1.Imaginary);
     }
 
-    public static Complex recip(Complex c) {
+    public static Complex Recip(Complex c) {
         double n = 1.0 / (Complex.Abs(c) * Complex.Abs(c));
 
         return new Complex(n * c.Real, n * c.Imaginary);
     }
 
-    public static double asinh(double x) {
+    public static double Asinh(double x) {
         return Math.Log(x + Math.Sqrt(x * x + 1));
     }
 
-    public static double acosh(double x) {
+    public static double Acosh(double x) {
         return Math.Log(x + Math.Sqrt(x * x - 1));
     }
 }
