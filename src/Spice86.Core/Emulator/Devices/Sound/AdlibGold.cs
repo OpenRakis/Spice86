@@ -34,11 +34,15 @@ public sealed class AdlibGold : OPL3FM {
 
     private Control ctrl;
 
+    private Opl3Chip oplChip;
+
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort _sample_rate) : base(machine, configuration, loggerService) {
         sample_rate = _sample_rate;
         stereo_processor = new(sample_rate, loggerService);
         surround_processor = new(sample_rate);
         ctrl = new();
+        oplChip = new();
+        OPL3Nuked.OPL3Reset(ref oplChip, 48000);
     }
 
     private enum StereoProcessorControlReg {
@@ -138,6 +142,7 @@ public sealed class AdlibGold : OPL3FM {
 
     private AudioFrame RenderFrame() {
         short[] buf = new short[] { 0, 0 };
+        OPL3Nuked.OPL3GenerateStream(ref oplChip, buf, 1);
         AudioFrame frame = new();
         Process(buf, 1, ref frame);
         return frame;
