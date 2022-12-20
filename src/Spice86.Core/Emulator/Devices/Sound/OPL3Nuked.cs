@@ -30,7 +30,10 @@
  * version: 1.8
  */
 
+/* Quirk: Some FM channels are output one sample later on the left side than the right. */
+#define OPL_QUIRK_CHANNELSAMPLEDELAY
 // Enables Stereo Extensions (see Opl3Channel struct for example)
+//#undef OPL_QUIRK_CHANNELSAMPLEDELAY
 //#define OPL_ENABLE_STEREOEXT
 
 using System;
@@ -830,23 +833,23 @@ public static class OPL3Nuked {
             channel.Cha = channel.Chb = unchecked((ushort)~0);
         }
 #if OPL_ENABLE_STEREOEXT
-    if (!channel.Chip.StereoExt > 0)
-    {
-        channel.LeftPan = channel.Cha << 16;
-        channel.RightPan = channel.Chb << 16;
-    }
+        if (!channel.Chip.StereoExt > 0)
+        {
+            channel.LeftPan = channel.Cha << 16;
+            channel.RightPan = channel.Chb << 16;
+        }
 #endif
     }
 
 #if OPL_ENABLE_STEREOEXT
- private static void OPL3ChannelWriteD0(Opl3Channel channel, byte data)
- {
-     if (channel.Chip.StereoExt > 0)
-     {
-         channel.LeftPan = panpot_lut[data ^ 0xff];
-         channel.RightPan = panpot_lut[data];
-     }
- }
+    private static void OPL3ChannelWriteD0(Opl3Channel channel, byte data)
+    {
+        if (channel.Chip.StereoExt > 0)
+        {
+            channel.LeftPan = panpot_lut[data ^ 0xff];
+            channel.RightPan = panpot_lut[data];
+        }
+    }
 #endif
 
     private static void OPL3ChannelKeyOn(Opl3Channel channel) {
@@ -929,7 +932,7 @@ public static class OPL3Nuked {
         buf[1] = OPL3ClipSample(chip.MixBuff[1]);
 
 #if OPL_QUIRK_CHANNELSAMPLEDELAY
-    for (ii = 0; ii < 15; ii++)
+        for (ii = 0; ii < 15; ii++)
 #else
         for (ii = 0; ii < 36; ii++)
 #endif
@@ -951,19 +954,19 @@ public static class OPL3Nuked {
         chip.MixBuff[0] = mix;
 
 #if OPL_QUIRK_CHANNELSAMPLEDELAY
-    for (ii = 15; ii < 18; ii++)
-    {
-        OPL3ProcessSlot(chip.Slot[ii]);
-    }
+        for (ii = 15; ii < 18; ii++)
+        {
+            OPL3ProcessSlot(ref chip.Slot[ii]);
+        }
 #endif
 
         buf[0] = OPL3ClipSample(chip.MixBuff[0]);
 
 #if OPL_QUIRK_CHANNELSAMPLEDELAY
-    for (ii = 18; ii < 33; ii++)
-    {
-        OPL3ProcessSlot(chip.Slot[ii]);
-    }
+        for (ii = 18; ii < 33; ii++)
+        {
+            OPL3ProcessSlot(ref chip.Slot[ii]);
+        }
 #endif
 
         mix = 0;
@@ -982,7 +985,7 @@ public static class OPL3Nuked {
 #if OPL_QUIRK_CHANNELSAMPLEDELAY
     for (ii = 33; ii < 36; ii++)
     {
-        OPL3ProcessSlot(chip.Slot[ii]);
+        OPL3ProcessSlot(ref chip.Slot[ii]);
     }
 #endif
 
@@ -1036,7 +1039,7 @@ public static class OPL3Nuked {
         chip.WritebufSampleCnt++;
     }
 
-    public static void OPL3GenerateResampled(ref Opl3Chip chip, short[] buf, ref uint bufOffset) {
+    public static void OPL3GenerateResampled(ref Opl3Chip chip, short[] buf, uint bufOffset) {
         while (chip.SampleCnt >= chip.RateRatio) {
             chip.OldSamples[0] = chip.Samples[0];
             chip.OldSamples[1] = chip.Samples[1];
@@ -1146,7 +1149,7 @@ public static class OPL3Nuked {
                         case 0x05:
                             chip.NewM = (byte)(v & 0x01);
 #if OPL_ENABLE_STEREOEXT
-                    chip.stereoext = (v >> 1) & 0x01;
+                    chip.StereoExt = (v >> 1) & 0x01;
 #endif
                             break;
                     }
@@ -1256,7 +1259,7 @@ public static class OPL3Nuked {
         uint i;
         uint sndOffset = 0;
         for (i = 0; i < numsamples; i++) {
-            OPL3GenerateResampled(ref chip, sndptr, ref sndOffset);
+            OPL3GenerateResampled(ref chip, sndptr, sndOffset);
             sndOffset += 2;
         }
     }
