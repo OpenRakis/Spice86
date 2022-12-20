@@ -607,6 +607,7 @@ public static class OPL3Nuked {
 
     private static void OPL3ChannelSetupAlg(Opl3Channel channel) {
         ArgumentNullException.ThrowIfNull(channel);
+        channel.Pair ??= new();
         ArgumentNullException.ThrowIfNull(channel.Pair);
         if (channel.ChType == (byte)ChType.ch_drum) {
             if (channel.ChNum is 7 or 8) {
@@ -1266,6 +1267,9 @@ public static class OPL3Nuked {
 }
 public struct Opl3Chip {
     public Opl3Chip() {
+        for(int i = 0; i < Channel.Length; i++) {
+            Channel[i] = new();
+        }
     }
     public Opl3Channel[] Channel { get; set; } = new Opl3Channel[18];
     public Opl3Slot[] Slot { get; set; } = new Opl3Slot[36];
