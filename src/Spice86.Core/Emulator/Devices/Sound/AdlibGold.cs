@@ -1,26 +1,16 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Dunet;
-
 using Serilog;
-
-using Spice86.Core.Backend.Audio;
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Adlib Gold implementation, translated from DOSBox Staging code
