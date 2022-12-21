@@ -25,6 +25,10 @@ public sealed class AdlibGold : OPL3FM {
 
     private Opl3Chip _chip;
 
+    private double _lastRenderedMs = 0;
+
+    private bool _firstRender = true;
+
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
         _sampleRate = sampleRate;
         _stereoProcessor = new(_sampleRate, loggerService);
@@ -77,6 +81,10 @@ public sealed class AdlibGold : OPL3FM {
         return base.ReadByte(port);
     }
 
+    public override ushort ReadWord(int port) {
+        return _statusByte;
+    }
+
     protected override void RnderWaveFormOnPlaybackThread() {
         if (_audioPlayer is null) {
             return;
@@ -126,8 +134,26 @@ public sealed class AdlibGold : OPL3FM {
         }
     }
 
+    public override void WriteWord(int port, ushort value) {
+        if (port == 0x388) {
+            WriteByte(0x388, (byte)value);
+            WriteByte(0x389, (byte)(value >> 8));
+        }
+    }
+
     private void RenderUpToNow() {
-        _fifo.Enqueue(RenderFrame());
+        TimeSpan now = _machine.DualPic.Ticks;
+
+        if(_firstRender) {
+            _firstRender = false;
+            _lastRenderedMs = now.Milliseconds;
+            return;
+        }
+
+        while (_lastRenderedMs < now.Milliseconds) {
+            _lastRenderedMs += MsPerFrame;
+            _fifo.Enqueue(RenderFrame());
+        }
     }
 
     private AudioFrame RenderFrame() {
@@ -146,8 +172,8 @@ public sealed class AdlibGold : OPL3FM {
             // Additionnal wet signal level boost to make the emulated
             // sound more closely resemble real hardware recordings.
             const float wetBoost = 1.8f;
-            frame.Left = wet.Left + wetBoost;
-            frame.Right = wet.Right + wetBoost;
+            frame.Left = wet.Left * wetBoost;
+            frame.Right = wet.Right * wetBoost;
             frame = _surroundProcessor.Process(ref frame);
 
             output[index] = frame.Left;

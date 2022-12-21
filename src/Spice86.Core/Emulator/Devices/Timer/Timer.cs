@@ -108,6 +108,7 @@ public class Timer : DefaultIOPortHandler {
     }
 
     public void Tick() {
+        _dualPic.RefreshTicks();
         long cycles = _cpu.State.Cycles;
         if (_counters[0].ProcessActivation(cycles)) {
             _dualPic.ProcessInterruptRequest(0);
