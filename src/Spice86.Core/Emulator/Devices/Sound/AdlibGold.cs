@@ -49,9 +49,6 @@ public sealed class AdlibGold : OPL3FM {
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicStatusPortNumber2, this);
         ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicDataPortNumber2, this);
-        ioPortDispatcher.AddIOPortHandler(0x332, this);
-        ioPortDispatcher.AddIOPortHandler(0x333, this);
-        ioPortDispatcher.AddIOPortHandler(0x38A, this);
     }
 
     private void StereoControlWrite(byte reg, byte data) => _stereoProcessor.ControlWrite((StereoProcessorControlReg)reg, data);
