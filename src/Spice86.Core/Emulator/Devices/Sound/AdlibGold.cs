@@ -1,11 +1,15 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Dunet;
+
+using Serilog;
+
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -29,7 +33,27 @@ public sealed class AdlibGold : OPL3FM {
 
     private bool _firstRender = true;
 
+    /// <summary>
+    /// Last selected address in the chip for the different modes
+    /// </summary>
+    [Union]
+    private partial record Reg {
+        public ushort Normal { get; set; }
+        public byte[] Dual { get; set; } = new byte[2];
+    }
+
+    private byte _newm = 0;
+
+    private Reg _reg = new();
+
+    private enum Mode {
+        Opl2, DualOpl2, Opl3, Opl3Gold
+    }
+
+    private Mode _mode;
+
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
+        _mode = Mode.Opl3Gold;
         _sampleRate = sampleRate;
         _stereoProcessor = new(_sampleRate, loggerService);
         _surroundProcessor = new(_sampleRate);
@@ -63,7 +87,7 @@ public sealed class AdlibGold : OPL3FM {
     private struct Control {
         public Control() { }
         public byte Index { get; set; }
-        public byte Lvol { get; set; } = DefaultVolume;
+        public byte LVol { get; set; } = DefaultVolume;
         public byte RVol { get; set; }
 
         public bool IsActive { get; set; }
@@ -71,11 +95,13 @@ public sealed class AdlibGold : OPL3FM {
     }
 
     public override byte ReadByte(int port) {
-        if (_ctrl.IsActive) {
-            if (port == 0x38a) {
-                return 0; // Control status, not busy
-            } else if (port == 0x38b) {
-                return AdlibGoldControlRead();
+        if(_mode == Mode.Opl3Gold) {
+            if (_ctrl.IsActive) {
+                if (port == 0x38a) {
+                    return 0; // Control status, not busy
+                } else if (port == 0x38b) {
+                    return AdlibGoldControlRead();
+                }
             }
         }
         return base.ReadByte(port);
@@ -96,10 +122,52 @@ public sealed class AdlibGold : OPL3FM {
                 buffer[0] = frame.Left;
                 buffer[1] = frame.Right;
                 _audioPlayer?.WriteData(buffer);
-            }
-            else {
+            } else {
                 Thread.Sleep(1);
             }
+        }
+    }
+
+    private void AdlibGoldControlWrite(byte val) {
+        switch (_ctrl.Index) {
+            case 0x04:
+                StereoControlWrite((byte)StereoProcessorControlReg.VolumeLeft, val);
+                break;
+            case 0x05:
+                StereoControlWrite((byte)StereoProcessorControlReg.VolumeRight,
+                                               val);
+                break;
+            case 0x06:
+                StereoControlWrite((byte)StereoProcessorControlReg.Bass, val);
+                break;
+            case 0x07:
+                StereoControlWrite((byte)StereoProcessorControlReg.Treble, val);
+                break;
+
+            case 0x08:
+                StereoControlWrite((byte)StereoProcessorControlReg.SwitchFunctions,
+                                               val);
+                break;
+
+            case 0x09: // Left FM Volume
+                _ctrl.LVol = val;
+                goto setvol;
+            case 0x0a: // Right FM Volume
+                _ctrl.RVol = val;
+            setvol:
+                if (_ctrl.UseMixer) {
+                    // Dune CD version uses 32 volume steps in an apparent
+                    // mistake, should be 128
+                    // Spice86: mixer_channel is not implemented at the moment...
+                    // channel->SetAppVolume(
+                    //         static_cast<float>(ctrl.lvol & 0x1f) / 31.0f,
+                    //         static_cast<float>(ctrl.rvol & 0x1f) / 31.0f);
+                }
+                break;
+
+            case 0x18: // Surround
+                SurroundControlWrite(val);
+                break;
         }
     }
 
@@ -109,7 +177,7 @@ public sealed class AdlibGold : OPL3FM {
             0x00 => 0x50, // 16-bit ISA, surround module, no telephone/CDROM
             //0x00 => 0x70, // 16-bit ISA, surround module, no telephone/surround/CDROM
             // Left FM volume
-            0x09 => _ctrl.Lvol,
+            0x09 => _ctrl.LVol,
             // Right FM volume
             0x0a => _ctrl.RVol,
             // Audio Relocation
@@ -121,17 +189,86 @@ public sealed class AdlibGold : OPL3FM {
     public override void WriteByte(int port, byte value) {
         RenderUpToNow();
 
-        if (port == 0x38A) {
-            if (value == 0xff) {
-                _ctrl.IsActive = true;
-            } else if (value == 0xfe) {
-                _ctrl.IsActive = false;
-            } else if (_ctrl.IsActive) {
-                _ctrl.Index = (byte)(value & 0xff);
+        if ((port & 1) > 0) {
+            switch (_mode) {
+                case Mode.Opl3Gold:
+                    if (port == 0x38b) {
+                        if (_ctrl.IsActive) {
+                            AdlibGoldControlWrite(value);
+                            break;
+                        }
+                    }
+                    //if (!_chip[0].Write(_reg.Normal, val)) {
+                    //     WriteReg(_reg.Normal, val);
+                    //     CacheWrite(_reg.Normal, val);
+                    // }
+                    break;
+                case Mode.Opl2:
+                case Mode.Opl3:
+                    // if (!_chip[0].Write(_reg.Normal, val)) {
+                    //     WriteReg(_reg.Normal, val);
+                    //     CacheWrite(_reg.Normal, val);
+                    // }
+                    break;
+                case Mode.DualOpl2:
+                    // Not a 0x??8 port, then write to a specific port
+                    if ((port & 0x8) <= 0) {
+                        byte index = (byte)((port & 2) >> 1);
+                        // DualWrite(index, reg.dual[index], val);
+                    } else {
+                        // Write to both ports
+                        // DualWrite(0, reg.dual[0], val);
+                        // DualWrite(1, reg.dual[1], val);
+                    }
+                    break;
             }
         } else {
-            base.WriteByte(port, value);
+            // Ask the handler to write the address
+            // Make sure to clip them in the right range
+            switch (_mode) {
+                case Mode.Opl2:
+                    _reg.Normal = (ushort)(WriteAddr((ushort)port, value) & 0xff);
+                    break;
+                case Mode.Opl3Gold:
+                    if (port is 0x38a or 0x332) {
+                        if (value == 0xff) {
+                            _ctrl.IsActive = true;
+                            break;
+                        } else if (value == 0xfe) {
+                            _ctrl.IsActive = false;
+                            break;
+                        } else if (_ctrl.IsActive) {
+                            _ctrl.Index = (byte)(value & 0xff);
+                            break;
+                        }
+                    }
+                    break;
+                case Mode.Opl3:
+                    _reg.Normal = (ushort)(WriteAddr((ushort)port, value) & 0x1ff);
+                    break;
+                case Mode.DualOpl2:
+                    // Not a 0x?88 port, when write to a specific side
+                    if ((port & 0x8) <= 0) {
+                        byte index = (byte)((port & 2) >> 1);
+                        _reg.Dual[index] = (byte)(value & 0xff);
+                    } else {
+                        _reg.Dual[0] = (byte)(value & 0xff);
+                        _reg.Dual[1] = (byte)(value & 0xff);
+                    }
+                    break;
+                default:
+                    // TODO CMS and None must be removed as they're not real OPL modes
+                    break;
+            }
         }
+    }
+
+    private ushort WriteAddr(ushort port, byte value) {
+        ushort addr = value;
+        if ((port & 2) > 0 && (addr == 0x05 || _newm > 0)) {
+            addr |= 0x100;
+        }
+        return addr;
     }
 
     public override void WriteWord(int port, ushort value) {
@@ -144,17 +281,19 @@ public sealed class AdlibGold : OPL3FM {
     private void RenderUpToNow() {
         TimeSpan now = _machine.DualPic.Ticks;
 
-        if(_firstRender) {
+        if (_firstRender) {
             _firstRender = false;
             _lastRenderedMs = now.Milliseconds;
             return;
         }
 
-        _fifo.EnsureCapacity(1024);
-
-        while (_lastRenderedMs < now.Milliseconds) {
-            _lastRenderedMs += MsPerFrame;
-            _fifo.Enqueue(RenderFrame());
+        for (int i = 0; i < 100; i++) {
+            if (_lastRenderedMs < now.Milliseconds) {
+                _lastRenderedMs += MsPerFrame;
+                _fifo.Enqueue(RenderFrame());
+            } else {
+                break;
+            }
         }
     }
 
