@@ -206,40 +206,40 @@ public sealed class AdlibGold : OPL3FM {
     /// Philips Semiconductors TDA8425 hi-fi stereo audio processor emulation
     /// </summary>
     private class StereoProcessor {
-        private readonly ushort sample_rate = 0;
-        private AudioFrame gain = new();
-        private StereoProcessorSourceSelector source_selector = new();
-        private StereoProcessorStereoMode stereo_mode = new();
+        private readonly ushort _sampleRate = 0;
+        private AudioFrame _gain = new();
+        private StereoProcessorSourceSelector _sourceSelector = new();
+        private StereoProcessorStereoMode _stereoMode = new();
 
         // Stero low and high-shelf filters
-        private readonly LowShelf[] lowshelf = new LowShelf[] { new(), new() };
-        private readonly HighShelf[] highshelf = new HighShelf[] { new(), new() };
-        readonly AllPass allpass = new();
+        private readonly LowShelf[] _lowShelf = new LowShelf[] { new(), new() };
+        private readonly HighShelf[] _highShelf = new HighShelf[] { new(), new() };
+        readonly AllPass _allPass = new();
 
-        private const int volume_0db_value = 60;
+        private const int Volume0DbValue = 60;
 
-        private const int shelf_filter_0db_value = 6;
+        private const int ShelfFilter0DbValue = 6;
 
         private ILoggerService _loggerService;
 
-        public StereoProcessor(ushort _sample_rate, ILoggerService loggerService) {
+        public StereoProcessor(ushort sampleRate, ILoggerService loggerService) {
             _loggerService = loggerService;
-            sample_rate = _sample_rate;
-            if (sample_rate <= 0) {
-                throw new IndexOutOfRangeException(nameof(_sample_rate));
+            _sampleRate = sampleRate;
+            if (_sampleRate <= 0) {
+                throw new IndexOutOfRangeException(nameof(_sampleRate));
             }
 
-            const double allpass_freq = 400.0;
-            const double q_factor = 1.7;
-            allpass.Setup(sample_rate, allpass_freq, q_factor);
+            const double AllPassFrequency = 400.0;
+            const double QFactor = 1.7;
+            _allPass.Setup(_sampleRate, AllPassFrequency, QFactor);
             Reset();
         }
 
         public void Reset() {
-            ControlWrite(StereoProcessorControlReg.VolumeLeft, volume_0db_value);
-            ControlWrite(StereoProcessorControlReg.VolumeRight, volume_0db_value);
-            ControlWrite(StereoProcessorControlReg.Bass, shelf_filter_0db_value);
-            ControlWrite(StereoProcessorControlReg.Treble, shelf_filter_0db_value);
+            ControlWrite(StereoProcessorControlReg.VolumeLeft, Volume0DbValue);
+            ControlWrite(StereoProcessorControlReg.VolumeRight, Volume0DbValue);
+            ControlWrite(StereoProcessorControlReg.Bass, ShelfFilter0DbValue);
+            ControlWrite(StereoProcessorControlReg.Treble, ShelfFilter0DbValue);
             StereoProcessorSwitchFunctions sf = new() {
                 SourceSelector = (byte)StereoProcessorSourceSelector.Stereo1,
                 StereoMode = (byte)StereoProcessorStereoMode.LinearStereo
@@ -250,105 +250,105 @@ public sealed class AdlibGold : OPL3FM {
         public void ControlWrite(
             StereoProcessorControlReg reg,
             byte data) {
-            float calc_volume_gain(int value) {
-                const float min_gain_db = -128.0f;
-                const float max_gain_db = 6.0f;
-                const float step_db = 2.0f;
+            float CalcVolumeGain(int value) {
+                const float MinGainDb = -128.0f;
+                const float MaxGainDb = 6.0f;
+                const float StepDb = 2.0f;
 
-                var val = (float)(value - volume_0db_value);
-                var gain_db = Math.Clamp(val * step_db, min_gain_db, max_gain_db);
-                return MathUtils.DecibelToGain(gain_db);
+                float val = (float)(value - Volume0DbValue);
+                float gainDb = Math.Clamp(val * StepDb, MinGainDb, MaxGainDb);
+                return MathUtils.DecibelToGain(gainDb);
             }
 
-            float calc_filter_gain_db(int value) {
-                const double min_gain_db = -12.0;
-                const double max_gain_db = 15.0;
-                const double step_db = 3.0;
+            float CalcFilterGainDb(int value) {
+                const double MainGainDb = -12.0;
+                const double MaxGainDb = 15.0;
+                const double StepDb = 3.0;
 
-                var val = value - shelf_filter_0db_value;
-                return (float)Math.Clamp(val * step_db, min_gain_db, max_gain_db);
+                int val = value - ShelfFilter0DbValue;
+                return (float)Math.Clamp(val * StepDb, MainGainDb, MaxGainDb);
             }
 
-            const int volume_control_width = 6;
-            const int volume_control_mask = (1 << volume_control_width) - 1;
+            const int VolumeControlWidth = 6;
+            const int volumeControlMask = (1 << VolumeControlWidth) - 1;
 
             const int filter_control_width = 4;
-            const int filter_control_mask = (1 << filter_control_width) - 1;
+            const int filterControlMask = (1 << filter_control_width) - 1;
 
             switch (reg) {
                 case StereoProcessorControlReg.VolumeLeft: {
-                        var value = data & volume_control_mask;
-                        gain.Left = calc_volume_gain(value);
+                        var value = data & volumeControlMask;
+                        _gain.Left = CalcVolumeGain(value);
                         _loggerService.Debug("ADLIBGOLD: Stereo: Final left volume set to {Left}.2fdB {Value}",
-                            gain.Left,
+                            _gain.Left,
                             value);
                     }
                     break;
 
                 case StereoProcessorControlReg.VolumeRight: {
-                        var value = data & volume_control_mask;
-                        gain.Right = calc_volume_gain(value);
+                        var value = data & volumeControlMask;
+                        _gain.Right = CalcVolumeGain(value);
                         _loggerService.Debug("ADLIBGOLD: Stereo: Final right volume set to {Right}.2fdB {Value}",
-                            gain.Right,
+                            _gain.Right,
                             value);
                     }
                     break;
 
                 case StereoProcessorControlReg.Bass: {
-                        var value = data & filter_control_mask;
-                        var gain_db = calc_filter_gain_db(value);
-                        SetLowShelfGain(gain_db);
+                        var value = data & filterControlMask;
+                        var gainDb = CalcFilterGainDb(value);
+                        SetLowShelfGain(gainDb);
 
                         _loggerService.Debug("ADLIBGOLD: Stereo: Bass gain set to {GainDb}.2fdB {Value}",
-                            gain_db,
+                            gainDb,
                             value);
                     }
                     break;
 
                 case StereoProcessorControlReg.Treble: {
-                        var value = data & filter_control_mask;
+                        var value = data & filterControlMask;
                         // Additional treble boost to make the emulated sound more
                         // closely resemble real hardware recordings.
-                        const int extra_treble = 1;
-                        var gain_db = calc_filter_gain_db(value + extra_treble);
-                        SetHighShelfGain(gain_db);
+                        const int extraTreble = 1;
+                        var gainDb = CalcFilterGainDb(value + extraTreble);
+                        SetHighShelfGain(gainDb);
 
                         _loggerService.Debug("ADLIBGOLD: Stereo: Treble gain set to {GainDb}.2fdB {Value}",
-                            gain_db,
+                            gainDb,
                             value);
                     }
                     break;
 
                 case StereoProcessorControlReg.SwitchFunctions: {
                         var sf = new StereoProcessorSwitchFunctions(data);
-                        source_selector = (StereoProcessorSourceSelector)sf.SourceSelector;
-                        stereo_mode = (StereoProcessorStereoMode)sf.StereoMode;
+                        _sourceSelector = (StereoProcessorSourceSelector)sf.SourceSelector;
+                        _stereoMode = (StereoProcessorStereoMode)sf.StereoMode;
                         _loggerService.Debug("ADLIBGOLD: Stereo: Source selector set to {SourceSelector}, stereo mode set to {StereoMode}",
-                            (int)(source_selector),
-                            (int)(stereo_mode));
+                            (int)(_sourceSelector),
+                            (int)(_stereoMode));
                     }
                     break;
             }
         }
 
-        public void SetHighShelfGain(double gain_db) {
-            const double cutoff_freq = 2500.0;
+        public void SetHighShelfGain(double gainDb) {
+            const double cutOffFrequency = 2500.0;
             const double slope = 0.5;
-            foreach (HighShelf f in highshelf) {
-                f.Setup(sample_rate, cutoff_freq, gain_db, slope);
+            foreach (HighShelf f in _highShelf) {
+                f.Setup(_sampleRate, cutOffFrequency, gainDb, slope);
             }
         }
 
-        public void SetLowShelfGain(double gain_db) {
+        public void SetLowShelfGain(double gainDb) {
             const double cutoff_freq = 400.0;
             const double slope = 0.5;
-            foreach (LowShelf f in lowshelf) {
-                f.Setup(sample_rate, cutoff_freq, gain_db, slope);
+            foreach (LowShelf f in _lowShelf) {
+                f.Setup(_sampleRate, cutoff_freq, gainDb, slope);
             }
         }
 
         public AudioFrame ProcessSourceSelection(AudioFrame frame) {
-            return source_selector switch {
+            return _sourceSelector switch {
                 StereoProcessorSourceSelector.SoundA1 or StereoProcessorSourceSelector.SoundA2 => new(frame.Left, frame.Left),
                 StereoProcessorSourceSelector.SoundB1 or StereoProcessorSourceSelector.SoundB2 => new(frame.Right, frame.Right),
                 _ => frame,// Dune sends an invalid source selector value of 0 during the
@@ -360,8 +360,8 @@ public sealed class AdlibGold : OPL3FM {
             AudioFrame out_frame = new();
 
             for (int i = 0; i < 2; ++i) {
-                out_frame[i] = (float)lowshelf[i].Filter(frame[i]);
-                out_frame[i] = (float)highshelf[i].Filter(out_frame[i]);
+                out_frame[i] = (float)_lowShelf[i].Filter(frame[i]);
+                out_frame[i] = (float)_highShelf[i].Filter(out_frame[i]);
             }
             return out_frame;
         }
@@ -369,7 +369,7 @@ public sealed class AdlibGold : OPL3FM {
         public AudioFrame ProcessStereoProcessing(AudioFrame frame) {
             AudioFrame out_frame = new();
 
-            switch (stereo_mode) {
+            switch (_stereoMode) {
                 case StereoProcessorStereoMode.ForcedMono: {
                         float m = frame.Left + frame.Right;
                         out_frame.Left = m;
@@ -378,7 +378,7 @@ public sealed class AdlibGold : OPL3FM {
                     break;
 
                 case StereoProcessorStereoMode.PseudoStereo:
-                    out_frame.Left = (float)allpass.Filter(frame.Left);
+                    out_frame.Left = (float)_allPass.Filter(frame.Left);
                     out_frame.Right = frame.Right;
                     break;
 
