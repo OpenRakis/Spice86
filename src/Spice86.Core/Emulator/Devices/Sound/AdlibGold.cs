@@ -411,7 +411,7 @@ public sealed class AdlibGold : OPL3FM {
     /// Yamaha YM7128B Surround Processor emulation
     /// </summary>
     private class SurroundProcessor {
-        private YM7128B_ChipIdeal _chip = new();
+        private ChipIdeal _chip = new();
 
         private ControlState _ctrlState = new();
 
@@ -427,15 +427,15 @@ public sealed class AdlibGold : OPL3FM {
                 throw new ArgumentOutOfRangeException(nameof(sampleRate));
             }
 
-            YM7128B.YM7128B_ChipIdeal_Setup(ref _chip, sampleRate);
-            YM7128B.YM7128B_ChipIdeal_Reset(ref _chip);
-            YM7128B.YM7128B_ChipIdeal_Start(ref _chip);
+            YM7128B.ChipIdealSetup(ref _chip, sampleRate);
+            YM7128B.ChipIdealReset(ref _chip);
+            YM7128B.ChipIdealStart(ref _chip);
         }
 
         public AudioFrame Process(ref AudioFrame frame) {
-            YM7128B_ChipIdeal_Process_Data data = new();
+            ChipIdealProcessData data = new();
             data.Inputs[0] = frame.Left + frame.Right;
-            YM7128B.YM7128_ChipIdeal_Process(ref _chip, ref data);
+            YM7128B.ChipIdealProcess(ref _chip, ref data);
             return new(data.Outputs[0], data.Outputs[1]);
         }
 
@@ -453,7 +453,7 @@ public sealed class AdlibGold : OPL3FM {
                 // control register %d, data: %d",
                 // control_state.addr, control_state.data);
 
-                YM7128B.YM7128B_ChipIdeal_Write(ref _chip, _ctrlState.Addr, _ctrlState.Data);
+                YM7128B.ChipIdealWrite(ref _chip, _ctrlState.Addr, _ctrlState.Data);
             } else {
                 // Data is sent in serially through 'din' in MSB->LSB order,
                 // synchronised by the 'sci' bit clock. Data should be read on
