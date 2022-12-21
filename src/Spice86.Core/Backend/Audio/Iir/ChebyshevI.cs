@@ -30,9 +30,7 @@ namespace Spice86.Core.Backend.Audio.Iir;
  */
 public class ChebyshevI : Cascade {
     class AnalogLowPass : LayoutBase {
-        private int _nPoles;
-
-        // ------------------------------------------------------------------------------
+        private readonly int _nPoles;
 
         public AnalogLowPass(int nPoles) : base(nPoles) {
             _nPoles = nPoles;

@@ -17,10 +17,6 @@
  *  Copyright (c) 2009 by Vinnie Falco
  *  Copyright (c) 2016 by Bernd Porr
  */
-
-using System.ComponentModel;
-using System.Numerics;
-
 namespace Spice86.Core.Backend.Audio.Iir;
 
 /**
@@ -291,11 +287,11 @@ public class BandShelf : RBJBase {
 }
 
 public class AllPass : RBJBase {
-    private const double ONESQRT2 = 0.707106781;
+    private const double OneSqrtTwo = 0.707106781;
 
     public void SetupN(
         double phaseFrequency,
-        double q = ONESQRT2) {
+        double q = OneSqrtTwo) {
         double w0 = 2 * MathSupplement.DoublePi * phaseFrequency;
         double cs = Math.Cos(w0);
         double sn = Math.Sin(w0);
@@ -311,7 +307,7 @@ public class AllPass : RBJBase {
 
     public void Setup(double sampleRate,
         double phaseFrequency,
-        double q = ONESQRT2) {
+        double q = OneSqrtTwo) {
         SetupN(phaseFrequency / sampleRate, q);
     }
 }

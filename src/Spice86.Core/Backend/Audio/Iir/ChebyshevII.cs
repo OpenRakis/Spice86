@@ -244,7 +244,7 @@ public class ChebyshevII : Cascade {
 
     /**
 	 * Bandpass filter with custom topology
-	 * 
+	 *
 	 * @param order
 	 *            Filter order
 	 * @param sampleRate
@@ -262,5 +262,4 @@ public class ChebyshevII : Cascade {
             int directFormType) {
         SetupBandPass(order, sampleRate, centerFrequency, widthFrequency, rippleDb, directFormType);
     }
-
 }

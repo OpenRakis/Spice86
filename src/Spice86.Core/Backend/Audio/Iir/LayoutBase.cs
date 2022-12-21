@@ -52,9 +52,7 @@ public class LayoutBase {
         _numPoles = 0;
     }
 
-    public int GetNumPoles() {
-        return _numPoles;
-    }
+    public int NumPoles  => _numPoles;
 
     public void Add(Complex pole, Complex zero) {
         _pair[_numPoles / 2] = new PoleZeroPair(pole, zero);
@@ -77,13 +75,9 @@ public class LayoutBase {
         return _pair[pairIndex];
     }
 
-    public double GetNormalW() {
-        return _normalW;
-    }
+    public double NormalW => _normalW;
 
-    public double GetNormalGain() {
-        return _normalGain;
-    }
+    public double NormalGain => _normalGain;
 
     public void SetNormal(double w, double g) {
         _normalW = w;

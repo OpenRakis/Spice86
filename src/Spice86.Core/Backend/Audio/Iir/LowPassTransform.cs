@@ -55,7 +55,7 @@ public class LowPassTransform {
         // prewarp
         _f = Math.Tan(Math.PI * fc);
 
-        int numPoles = analog.GetNumPoles();
+        int numPoles = analog.NumPoles;
         int pairs = numPoles / 2;
         for (int i = 0; i < pairs; ++i) {
             PoleZeroPair pair = analog.GetPair(i);
@@ -69,6 +69,6 @@ public class LowPassTransform {
                     Transform(pair.zeros.First));
         }
 
-        digital.SetNormal(analog.GetNormalW(), analog.GetNormalGain());
+        digital.SetNormal(analog.NormalW, analog.NormalGain);
     }
 }

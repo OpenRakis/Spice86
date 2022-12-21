@@ -81,11 +81,11 @@ public class Cascade {
         for (int i = 0; i < _numBiquads; i++) {
             Biquad stage = _biquads[i];
             var cb = new Complex(1, 0);
-            var ct = new Complex(stage.GetB0() / stage.GetA0(), 0);
-            ct = MathSupplement.AddMul(ct, stage.GetB1() / stage.GetA0(), czn1);
-            ct = MathSupplement.AddMul(ct, stage.GetB2() / stage.GetA0(), czn2);
-            cb = MathSupplement.AddMul(cb, stage.GetA1() / stage.GetA0(), czn1);
-            cb = MathSupplement.AddMul(cb, stage.GetA2() / stage.GetA0(), czn2);
+            var ct = new Complex(stage.GetB0 / stage.GetA0, 0);
+            ct = MathSupplement.AddMul(ct, stage.GetB1 / stage.GetA0, czn1);
+            ct = MathSupplement.AddMul(ct, stage.GetB2 / stage.GetA0, czn2);
+            cb = MathSupplement.AddMul(cb, stage.GetA1 / stage.GetA0, czn1);
+            cb = MathSupplement.AddMul(cb, stage.GetA2 / stage.GetA0, czn2);
             ch = Complex.Multiply(ch, ct);
             cbot = Complex.Multiply(cbot, cb);
         }
@@ -120,7 +120,7 @@ public class Cascade {
     }
 
     public void SetLayout(LayoutBase proto, int filterTypes) {
-        _numPoles = proto.GetNumPoles();
+        _numPoles = proto.NumPoles;
         _numBiquads = (_numPoles + 1) / 2;
         _biquads = new Biquad[_numBiquads];
         CreateStates(filterTypes);
@@ -129,12 +129,11 @@ public class Cascade {
             _biquads[i] = new Biquad();
             _biquads[i].SetPoleZeroPair(p);
         }
-        ApplyScale(proto.GetNormalGain()
-                / Complex.Abs(Response(proto.GetNormalW() / (2 * Math.PI))));
+        ApplyScale(proto.NormalGain
+                / Complex.Abs(Response(proto.NormalW / (2 * Math.PI))));
     }
 
-    public void SetSOScoeff(double[][] sosCoefficients,
-                int stateTypes) {
+    public void SetSOScoeff(double[][] sosCoefficients, int stateTypes) {
         _numBiquads = sosCoefficients.Length;
         _biquads = new Biquad[_numBiquads];
         CreateStates(stateTypes);

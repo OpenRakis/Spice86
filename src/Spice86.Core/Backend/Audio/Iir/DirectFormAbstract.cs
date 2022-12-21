@@ -26,7 +26,7 @@ namespace Spice86.Core.Backend.Audio.Iir;
  * Direct form I or II is derived from it
  */
 public abstract class DirectFormAbstract {
-    public DirectFormAbstract() {
+    protected DirectFormAbstract() {
         Reset();
     }
 

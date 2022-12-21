@@ -56,15 +56,15 @@ public class Butterworth : Cascade {
     private void SetupLowPass(int order, double sampleRate,
             double cutoffFrequency, int directFormType) {
 
-        var m_analogProto = new AnalogLowPass(order);
-        m_analogProto.Design();
+        var analogProto = new AnalogLowPass(order);
+        analogProto.Design();
 
-        var m_digitalProto = new LayoutBase(order);
+        var digitalProto = new LayoutBase(order);
 
-        new LowPassTransform(cutoffFrequency / sampleRate, m_digitalProto,
-                m_analogProto);
+        new LowPassTransform(cutoffFrequency / sampleRate, digitalProto,
+                analogProto);
 
-        SetLayout(m_digitalProto, directFormType);
+        SetLayout(digitalProto, directFormType);
     }
 
     /**

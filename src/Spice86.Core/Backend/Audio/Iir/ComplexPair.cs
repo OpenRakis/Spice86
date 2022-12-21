@@ -62,7 +62,7 @@ public class ComplexPair {
         }
     }
 
-    public bool IsNan() {
+    public bool IsNaN() {
         return Complex.IsNaN(First) || Complex.IsNaN(Second);
     }
 };

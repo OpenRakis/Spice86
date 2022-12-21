@@ -43,7 +43,7 @@ public class HighPassTransform {
         // prewarp
         f = 1.0d / Math.Tan(Math.PI * fc);
 
-        int numPoles = analog.GetNumPoles();
+        int numPoles = analog.NumPoles;
         int pairs = numPoles / 2;
         for (int i = 0; i < pairs; ++i) {
             PoleZeroPair pair = analog.GetPair(i);
@@ -57,7 +57,7 @@ public class HighPassTransform {
                     Transform(pair.zeros.First));
         }
 
-        digital.SetNormal(Math.PI - analog.GetNormalW(), analog.GetNormalGain());
+        digital.SetNormal(Math.PI - analog.NormalW, analog.NormalGain);
     }
 
     private Complex Transform(Complex c) {

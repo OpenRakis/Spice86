@@ -65,7 +65,7 @@ public class BandStopTransform {
         _a2 = _a * _a;
         _b2 = _b * _b;
 
-        int numPoles = analog.GetNumPoles();
+        int numPoles = analog.NumPoles;
         int pairs = numPoles / 2;
         for (int i = 0; i < pairs; i++) {
             PoleZeroPair pair = analog.GetPair(i);
@@ -83,9 +83,9 @@ public class BandStopTransform {
         }
 
         if (fc < 0.25)
-            digital.SetNormal(Math.PI, analog.GetNormalGain());
+            digital.SetNormal(Math.PI, analog.NormalGain);
         else
-            digital.SetNormal(0, analog.GetNormalGain());
+            digital.SetNormal(0, analog.NormalGain);
     }
 
     private ComplexPair Transform(Complex c) {

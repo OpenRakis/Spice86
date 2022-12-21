@@ -3,7 +3,6 @@ using System.Numerics;
 namespace Spice86.Core.Backend.Audio.Iir;
 
 public static class ComplexUtils {
-
     public static Complex PolarToComplex(double r, double theta) {
         if (r < 0.0) {
             throw new ArgumentException(r.ToString(), nameof(r));

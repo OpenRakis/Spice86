@@ -33,37 +33,25 @@ public class Biquad {
     public double B2 { get; set; }
     public double B0 { get; set; }
 
-    public double GetA0() {
-        return A0;
-    }
+    public double GetA0 => A0;
 
-    public double GetA1() {
-        return A1 * A0;
-    }
+    public double GetA1 => A1 * A0;
 
-    public double GetA2() {
-        return A2 * A0;
-    }
+    public double GetA2 => A2 * A0;
 
-    public double GetB0() {
-        return B0 * A0;
-    }
+    public double GetB0 => B0 * A0;
 
-    public double GetB1() {
-        return B1 * A0;
-    }
+    public double GetB1 => B1 * A0;
 
-    public double GetB2() {
-        return B2 * A0;
-    }
+    public double GetB2 => B2 * A0;
 
     public Complex Response(double normalizedFrequency) {
-        double a0 = GetA0();
-        double a1 = GetA1();
-        double a2 = GetA2();
-        double b0 = GetB0();
-        double b1 = GetB1();
-        double b2 = GetB2();
+        double a0 = GetA0;
+        double a1 = GetA1;
+        double a2 = GetA2;
+        double b0 = GetB0;
+        double b1 = GetB1;
+        double b2 = GetB2;
 
         double w = 2 * Math.PI * normalizedFrequency;
         Complex czn1 = ComplexUtils.PolarToComplex(1.0, -w);

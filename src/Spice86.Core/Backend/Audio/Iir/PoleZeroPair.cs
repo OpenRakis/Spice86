@@ -49,6 +49,6 @@ public class PoleZeroPair {
     }
 
     public bool IsNaN() {
-        return poles.IsNan() || zeros.IsNan();
+        return poles.IsNaN() || zeros.IsNaN();
     }
 };

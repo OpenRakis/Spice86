@@ -64,7 +64,7 @@ public class BandPassTransform {
         _ab = _a * _b;
         _ab2 = 2 * _ab;
 
-        int numPoles = analog.GetNumPoles();
+        int numPoles = analog.NumPoles;
         int pairs = numPoles / 2;
         for (int i = 0; i < pairs; ++i) {
             PoleZeroPair pair = analog.GetPair(i);
@@ -82,10 +82,10 @@ public class BandPassTransform {
             digital.Add(poles, zeros);
         }
 
-        double wn = analog.GetNormalW();
+        double wn = analog.NormalW;
         digital.SetNormal(
                 2 * Math.Atan(Math.Sqrt(Math.Tan((_wc + wn) * 0.5)
-                        * Math.Tan((_wc2 + wn) * 0.5))), analog.GetNormalGain());
+                        * Math.Tan((_wc2 + wn) * 0.5))), analog.NormalGain);
     }
 
     private ComplexPair Transform(Complex c) {
