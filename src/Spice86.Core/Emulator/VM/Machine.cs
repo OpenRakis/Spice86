@@ -348,7 +348,7 @@ public class Machine : IDisposable {
     public void Register(ICallback callback) {
         CallbackHandler.AddCallback(callback);
         OPL3FM.StartPlayback("SoundBlasterOPL3FMAudio");
-        AdlibGold?.StartPlayback("AdlibGoldOPL3FMAudio");
+        //AdlibGold?.StartPlayback("AdlibGoldOPL3FMAudio");
     }
 
     /// <summary>

@@ -37,7 +37,6 @@
 //#define OPL_ENABLE_STEREOEXT
 
 using System.Collections.ObjectModel;
-
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 public static class OPL3Nuked {

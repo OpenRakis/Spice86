@@ -4,10 +4,12 @@ using Dunet;
 
 using Serilog;
 
+using Spice86.Core.Backend.Audio;
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.VM;
 
 using Spice86.Shared.Interfaces;
@@ -18,20 +20,30 @@ using System.Collections.Generic;
 /// <summary>
 /// Adlib Gold implementation, translated from DOSBox Staging code
 /// </summary>
-public sealed class AdlibGold : OPL3FM {
+public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
     private readonly StereoProcessor _stereoProcessor;
     private readonly SurroundProcessor _surroundProcessor;
+    private readonly AudioPlayer? _audioPlayer;
     private readonly ushort _sampleRate = 0;
+
+    private bool _endThread = false;
+
+    private bool _initialized = false;
+
+    private readonly bool _paused = false;
 
     private readonly Queue<AudioFrame> _fifo = new();
 
     private Control _ctrl;
 
-    private Opl3Chip _chip;
+    private ChipIdeal _chip;
 
     private double _lastRenderedMs = 0;
 
     private bool _firstRender = true;
+
+    private const double MillisInSecond = 1000d;
+    private readonly double MsPerFrame = 0d;
 
     /// <summary>
     /// Last selected address in the chip for the different modes
@@ -46,20 +58,42 @@ public sealed class AdlibGold : OPL3FM {
 
     private Reg _reg = new();
 
-    private enum Mode {
-        Opl2, DualOpl2, Opl3, Opl3Gold
-    }
-
     private Mode _mode;
 
+    private readonly Thread _playbackThread;
+
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
-        _mode = Mode.Opl3Gold;
         _sampleRate = sampleRate;
         _stereoProcessor = new(_sampleRate, loggerService);
         _surroundProcessor = new(_sampleRate);
-        _ctrl = new();
-        _chip = new();
-        OPL3Nuked.OPL3Reset(ref _chip, 48000);
+        _audioPlayer = Audio.CreatePlayer(48000, 2048);
+        MsPerFrame = MillisInSecond / 48000;
+        _playbackThread = new Thread(RnderWaveFormOnPlaybackThread);
+    }
+
+    private bool _disposed = false;
+
+
+     public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if(!_disposed) {
+            if(disposing) {
+                if (!_paused) {
+                    _endThread = true;
+                    if (_playbackThread.IsAlive) {
+                        _playbackThread.Join();
+                    }
+                }
+                _audioPlayer?.Dispose();
+                _initialized = false;
+            }
+            _disposed = true;
+        }
     }
 
     private enum StereoProcessorControlReg {
@@ -107,11 +141,7 @@ public sealed class AdlibGold : OPL3FM {
         return base.ReadByte(port);
     }
 
-    public override ushort ReadWord(int port) {
-        return _statusByte;
-    }
-
-    protected override void RnderWaveFormOnPlaybackThread() {
+    private void RnderWaveFormOnPlaybackThread() {
         if (_audioPlayer is null) {
             return;
         }
@@ -299,7 +329,7 @@ public sealed class AdlibGold : OPL3FM {
 
     private AudioFrame RenderFrame() {
         short[] buf = new short[] { 0, 0 };
-        OPL3Nuked.OPL3GenerateStream(ref _chip, buf, 1);
+        // OPL3Nuked.OPL3GenerateStream(ref _chip, buf, 1);
         AudioFrame frame = new();
         Process(buf, 1, ref frame);
         return frame;
