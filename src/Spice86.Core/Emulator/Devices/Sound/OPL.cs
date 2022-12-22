@@ -1,46 +1,102 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-    public enum Mode {
-        Opl2, DualOpl2, Opl3, Opl3Gold
-    }
+public enum Mode {
+    Opl2, DualOpl2, Opl3, Opl3Gold
+}
 
 public class OPLTimer {
 
-    public OPLTimer(short micros) {
-        _clockInterval = micros * 0.001;
-    }
 
     /// <summary>
     /// Rounded down start time
     /// </summary>
-    private readonly double _start = 0.0;
+    private double _start = 0.0;
 
     /// <summary>
     /// Time when you overflow
     /// </summary>
-    private readonly double _trigger = 0.0;
+    private double _trigger = 0.0;
 
     /// <summary>
     /// Clock Interval in Milliseconds
     /// </summary>
     private readonly double _clockInterval = 0.0;
 
-    
+
     /// <summary>
     /// Cycle interval
     /// </summary>
-    private readonly double _counterInterval = 0.0;
+    private double _counterInterval = 0.0;
 
-    private readonly bool _enabled = false;
-    private readonly bool _overflow = false;
-    private readonly bool _masked = false;
+    private byte _counter = 0;
+
+
+    private bool _enabled = false;
+    private bool _overflow = false;
+    private bool _masked = false;
+    public OPLTimer(short micros) {
+        _clockInterval = micros * 0.001;
+        SetCounter(0);
+    }
+
+    public void SetCounter(byte val) {
+        _counter = val;
+        // Interval for next cycle
+        _counterInterval = (256 - _counter) * _clockInterval;
+    }
+
+    public void Reset() {
+        // On a reset make sure the start is in sync with the next cycle
+        _overflow = false;
+    }
+
+    public void SetMask(bool set) {
+        _masked = set;
+        if (_masked) {
+            _overflow = false;
+        }
+    }
+
+    public void Stop() {
+        _enabled = false;
+    }
+
+    public void Start(double time) {
+        // Only properly start when not running before
+        if (!_enabled) {
+            _enabled = true;
+            _overflow = false;
+            // Sync start to the last clock interval
+            double clockMod = Math.IEEERemainder(time, _clockInterval);
+
+            _start = time - clockMod;
+            // Overflow trigger
+            _trigger = _start + _counterInterval;
+        }
+    }
+
+    public bool Update(double time) {
+        if (_enabled && (time >= _trigger)) {
+            // How far into the next cycle
+            double deltaTime = time - _trigger;
+            // Sync start to last cycle
+            double counter_mod = Math.IEEERemainder(deltaTime, _counterInterval);
+
+            _start = time - counter_mod;
+            _trigger = _start + _counterInterval;
+            // Only set the overflow flag when not masked
+            if (!_masked)
+                _overflow = true;
+        }
+        return _overflow;
+    }
 }
 
 public class Chip {
     public Chip() {
         Timer0 = new(80);
         Timer1 = new(320);
-     }
+    }
 
     /// <summary>
     /// Last selected register
