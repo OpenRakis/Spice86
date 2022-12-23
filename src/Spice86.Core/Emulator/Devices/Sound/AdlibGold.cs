@@ -32,34 +32,6 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
 
     private readonly bool _paused = false;
 
-    private readonly Queue<AudioFrame> _fifo = new();
-
-    private Control _ctrl;
-
-    private ChipIdeal _chip;
-
-    private double _lastRenderedMs = 0;
-
-    private bool _firstRender = true;
-
-    private const double MillisInSecond = 1000d;
-    private readonly double MsPerFrame = 0d;
-
-    /// <summary>
-    /// Last selected address in the chip for the different modes
-    /// </summary>
-    [Union]
-    private partial record Reg {
-        public ushort Normal { get; set; }
-        public byte[] Dual { get; set; } = new byte[2];
-    }
-
-    private byte _newm = 0;
-
-    private Reg _reg = new();
-
-    private Mode _mode;
-
     private readonly Thread _playbackThread;
 
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
@@ -67,7 +39,6 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         _stereoProcessor = new(_sampleRate, loggerService);
         _surroundProcessor = new(_sampleRate);
         _audioPlayer = Audio.CreatePlayer(48000, 2048);
-        MsPerFrame = MillisInSecond / 48000;
         _playbackThread = new Thread(RnderWaveFormOnPlaybackThread);
     }
 
@@ -112,32 +83,11 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         ioPortDispatcher.AddIOPortHandler(0x38A, this);
     }
 
-    private void StereoControlWrite(byte reg, byte data) => _stereoProcessor.ControlWrite((StereoProcessorControlReg)reg, data);
+    public void StereoControlWrite(byte reg, byte data) => _stereoProcessor.ControlWrite((StereoProcessorControlReg)reg, data);
 
-    private void SurroundControlWrite(byte data) => _surroundProcessor.ControlWrite(data);
-
-    private const byte DefaultVolume = 0xff;
-
-    private struct Control {
-        public Control() { }
-        public byte Index { get; set; }
-        public byte LVol { get; set; } = DefaultVolume;
-        public byte RVol { get; set; }
-
-        public bool IsActive { get; set; }
-        public bool UseMixer { get; set; }
-    }
+    public void SurroundControlWrite(byte data) => _surroundProcessor.ControlWrite(data);
 
     public override byte ReadByte(int port) {
-        if(_mode == Mode.Opl3Gold) {
-            if (_ctrl.IsActive) {
-                if (port == 0x38a) {
-                    return 0; // Control status, not busy
-                } else if (port == 0x38b) {
-                    return AdlibGoldControlRead();
-                }
-            }
-        }
         return base.ReadByte(port);
     }
 
@@ -148,191 +98,22 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         const int length = 2;
         Span<float> buffer = stackalloc float[length];
         while (!_endThread) {
-            if (_fifo.TryDequeue(out AudioFrame frame)) {
-                buffer[0] = frame.Left;
-                buffer[1] = frame.Right;
-                _audioPlayer?.WriteData(buffer);
-            } else {
+            // if (_fifo.TryDequeue(out AudioFrame frame)) {
+            //     buffer[0] = frame.Left;
+            //     buffer[1] = frame.Right;
+            //     _audioPlayer?.WriteData(buffer);
+            // } else {
                 Thread.Sleep(1);
-            }
+            // }
         }
-    }
-
-    private void AdlibGoldControlWrite(byte val) {
-        switch (_ctrl.Index) {
-            case 0x04:
-                StereoControlWrite((byte)StereoProcessorControlReg.VolumeLeft, val);
-                break;
-            case 0x05:
-                StereoControlWrite((byte)StereoProcessorControlReg.VolumeRight,
-                                               val);
-                break;
-            case 0x06:
-                StereoControlWrite((byte)StereoProcessorControlReg.Bass, val);
-                break;
-            case 0x07:
-                StereoControlWrite((byte)StereoProcessorControlReg.Treble, val);
-                break;
-
-            case 0x08:
-                StereoControlWrite((byte)StereoProcessorControlReg.SwitchFunctions,
-                                               val);
-                break;
-
-            case 0x09: // Left FM Volume
-                _ctrl.LVol = val;
-                goto setvol;
-            case 0x0a: // Right FM Volume
-                _ctrl.RVol = val;
-            setvol:
-                if (_ctrl.UseMixer) {
-                    // Dune CD version uses 32 volume steps in an apparent
-                    // mistake, should be 128
-                    // Spice86: mixer_channel is not implemented at the moment...
-                    // channel->SetAppVolume(
-                    //         static_cast<float>(ctrl.lvol & 0x1f) / 31.0f,
-                    //         static_cast<float>(ctrl.rvol & 0x1f) / 31.0f);
-                }
-                break;
-
-            case 0x18: // Surround
-                SurroundControlWrite(val);
-                break;
-        }
-    }
-
-    private byte AdlibGoldControlRead() {
-        return _ctrl.Index switch {
-            // Board Options
-            0x00 => 0x50, // 16-bit ISA, surround module, no telephone/CDROM
-            //0x00 => 0x70, // 16-bit ISA, surround module, no telephone/surround/CDROM
-            // Left FM volume
-            0x09 => _ctrl.LVol,
-            // Right FM volume
-            0x0a => _ctrl.RVol,
-            // Audio Relocation
-            0x15 => 0x388 >> 3, // Cryo installer detection
-            _ => 0xff,
-        };
     }
 
     public override void WriteByte(int port, byte value) {
-        RenderUpToNow();
-
-        if ((port & 1) > 0) {
-            switch (_mode) {
-                case Mode.Opl3Gold:
-                    if (port == 0x38b) {
-                        if (_ctrl.IsActive) {
-                            AdlibGoldControlWrite(value);
-                            break;
-                        }
-                    }
-                    //if (!_chip[0].Write(_reg.Normal, val)) {
-                    //     WriteReg(_reg.Normal, val);
-                    //     CacheWrite(_reg.Normal, val);
-                    // }
-                    break;
-                case Mode.Opl2:
-                case Mode.Opl3:
-                    // if (!_chip[0].Write(_reg.Normal, val)) {
-                    //     WriteReg(_reg.Normal, val);
-                    //     CacheWrite(_reg.Normal, val);
-                    // }
-                    break;
-                case Mode.DualOpl2:
-                    // Not a 0x??8 port, then write to a specific port
-                    if ((port & 0x8) <= 0) {
-                        byte index = (byte)((port & 2) >> 1);
-                        // DualWrite(index, reg.dual[index], val);
-                    } else {
-                        // Write to both ports
-                        // DualWrite(0, reg.dual[0], val);
-                        // DualWrite(1, reg.dual[1], val);
-                    }
-                    break;
-            }
-        } else {
-            // Ask the handler to write the address
-            // Make sure to clip them in the right range
-            switch (_mode) {
-                case Mode.Opl2:
-                    _reg.Normal = (ushort)(WriteAddr((ushort)port, value) & 0xff);
-                    break;
-                case Mode.Opl3Gold:
-                    if (port is 0x38a or 0x332) {
-                        if (value == 0xff) {
-                            _ctrl.IsActive = true;
-                            break;
-                        } else if (value == 0xfe) {
-                            _ctrl.IsActive = false;
-                            break;
-                        } else if (_ctrl.IsActive) {
-                            _ctrl.Index = (byte)(value & 0xff);
-                            break;
-                        }
-                    }
-                    break;
-                case Mode.Opl3:
-                    _reg.Normal = (ushort)(WriteAddr((ushort)port, value) & 0x1ff);
-                    break;
-                case Mode.DualOpl2:
-                    // Not a 0x?88 port, when write to a specific side
-                    if ((port & 0x8) <= 0) {
-                        byte index = (byte)((port & 2) >> 1);
-                        _reg.Dual[index] = (byte)(value & 0xff);
-                    } else {
-                        _reg.Dual[0] = (byte)(value & 0xff);
-                        _reg.Dual[1] = (byte)(value & 0xff);
-                    }
-                    break;
-                default:
-                    // TODO CMS and None must be removed as they're not real OPL modes
-                    break;
-            }
-        }
-    }
-
-    private ushort WriteAddr(ushort port, byte value) {
-        ushort addr = value;
-        if ((port & 2) > 0 && (addr == 0x05 || _newm > 0)) {
-            addr |= 0x100;
-        }
-        return addr;
+        base.WriteByte(port, value);
     }
 
     public override void WriteWord(int port, ushort value) {
-        if (port == 0x388) {
-            WriteByte(0x388, (byte)value);
-            WriteByte(0x389, (byte)(value >> 8));
-        }
-    }
-
-    private void RenderUpToNow() {
-        TimeSpan now = _machine.DualPic.Ticks;
-
-        if (_firstRender) {
-            _firstRender = false;
-            _lastRenderedMs = now.Milliseconds;
-            return;
-        }
-
-        for (int i = 0; i < 100; i++) {
-            if (_lastRenderedMs < now.Milliseconds) {
-                _lastRenderedMs += MsPerFrame;
-                _fifo.Enqueue(RenderFrame());
-            } else {
-                break;
-            }
-        }
-    }
-
-    private AudioFrame RenderFrame() {
-        short[] buf = new short[] { 0, 0 };
-        // OPL3Nuked.OPL3GenerateStream(ref _chip, buf, 1);
-        AudioFrame frame = new();
-        Process(buf, 1, ref frame);
-        return frame;
+        base.WriteWord(port, value);
     }
 
     private void Process(short[] input, uint framesRemaining, ref AudioFrame output) {

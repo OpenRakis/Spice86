@@ -4,9 +4,17 @@ public enum Mode {
     Opl2, DualOpl2, Opl3, Opl3Gold
 }
 
+    public struct Control {
+        public Control() { }
+        public byte Index { get; set; }
+        public byte LVol { get; set; } = OPL.DefaultVolume;
+        public byte RVol { get; set; }
+
+        public bool IsActive { get; set; }
+        public bool UseMixer { get; set; }
+    }
+
 public class OPLTimer {
-
-
     /// <summary>
     /// Rounded down start time
     /// </summary>
@@ -22,14 +30,12 @@ public class OPLTimer {
     /// </summary>
     private readonly double _clockInterval = 0.0;
 
-
     /// <summary>
     /// Cycle interval
     /// </summary>
     private double _counterInterval = 0.0;
 
     private byte _counter = 0;
-
 
     private bool _enabled = false;
     private bool _overflow = false;
@@ -120,6 +126,8 @@ public class Chip {
 }
 
 public class OPL {
+    public const byte DefaultVolume = 0xff;
+
     public MixerChannel Channel { get; private set; } = new();
 
     /// <summary>
@@ -128,6 +136,5 @@ public class OPL {
     public byte[] Cache { get; private set; } = new byte[512];
 
     public OPL(OplMode mode) {
-
     }
 }
