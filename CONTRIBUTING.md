@@ -68,9 +68,9 @@ $ dotnet test
 
 ## How to Contribute
 
-This project works already quite for rewriting games such as DUNE, but it is still in early development.
+This project works already quite well for rewriting games such as DUNE, but it is still in early development.
 
-As such, there is a lot of code that needs to be written, especially for emulating additionnal hardware and interrupts.
+As such, there is a lot of code that needs to be written, especially for emulating additionnal hardware, CPU instructions, and interrupts.
 
 ### Bug Reports
 
