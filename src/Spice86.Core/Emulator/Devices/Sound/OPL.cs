@@ -4,15 +4,15 @@ public enum Mode {
     Opl2, DualOpl2, Opl3, Opl3Gold
 }
 
-    public struct Control {
-        public Control() { }
-        public byte Index { get; set; }
-        public byte LVol { get; set; } = OPL.DefaultVolume;
-        public byte RVol { get; set; }
+public struct Control {
+    public Control() { }
+    public byte Index { get; set; }
+    public byte LVol { get; set; } = OPL.DefaultVolume;
+    public byte RVol { get; set; }
 
-        public bool IsActive { get; set; }
-        public bool UseMixer { get; set; }
-    }
+    public bool IsActive { get; set; }
+    public bool UseMixer { get; set; }
+}
 
 public class OPLTimer {
     /// <summary>
@@ -73,7 +73,7 @@ public class OPLTimer {
             _enabled = true;
             _overflow = false;
             // Sync start to the last clock interval
-            double clockMod = Math.IEEERemainder(time, _clockInterval);
+            double clockMod = time % _clockInterval;
 
             _start = time - clockMod;
             // Overflow trigger
@@ -86,7 +86,7 @@ public class OPLTimer {
             // How far into the next cycle
             double deltaTime = time - _trigger;
             // Sync start to last cycle
-            double counter_mod = Math.IEEERemainder(deltaTime, _counterInterval);
+            double counter_mod = deltaTime % _counterInterval;
 
             _start = time - counter_mod;
             _trigger = _start + _counterInterval;
@@ -113,7 +113,7 @@ public class Chip {
     /// <summary>
     /// Check for it being a write to the timer
     /// </summary>
-    public bool Write(ushort addr, byte val) {
+    public bool Write(ushort reg, byte val) {
         return false;
     }
 
