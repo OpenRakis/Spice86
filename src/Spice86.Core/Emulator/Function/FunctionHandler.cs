@@ -1,4 +1,7 @@
-﻿namespace Spice86.Core.Emulator.Function;
+﻿using Spice86.Core.DI;
+using Spice86.Core.Emulator.Function.Dump;
+
+namespace Spice86.Core.Emulator.Function;
 
 using Serilog;
 
@@ -14,7 +17,7 @@ using System.Collections.Generic;
 using System.Text;
 
 public class FunctionHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<FunctionHandler>();
+    private readonly ILogger _logger;
 
     private readonly Stack<FunctionCall> _callerStack = new();
 
@@ -22,7 +25,8 @@ public class FunctionHandler {
 
     private readonly Machine _machine;
 
-    public FunctionHandler(Machine machine, bool recordData) {
+    public FunctionHandler(Machine machine, ILogger logger, bool recordData) {
+        _logger = logger;
         _machine = machine;
         _recordData = recordData;
     }

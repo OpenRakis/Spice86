@@ -10,6 +10,7 @@ using Spice86.ViewModels;
 using System;
 using System.Runtime.Versioning;
 using Spice86.Views;
+using Spice86.Core.DI;
 
 internal partial class App : Application {
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
@@ -28,7 +29,8 @@ internal partial class App : Application {
         }
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            MainWindowViewModel mainViewModel = new MainWindowViewModel();
+            MainWindowViewModel mainViewModel = new MainWindowViewModel(
+                new ServiceProvider().GetLoggerForContext<MainWindowViewModel>());
             mainViewModel.SetConfiguration(desktop.Args);
             desktop.MainWindow = new MainWindow {
                 DataContext = mainViewModel,

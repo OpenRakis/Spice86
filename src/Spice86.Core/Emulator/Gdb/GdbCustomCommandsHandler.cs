@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
@@ -26,18 +28,20 @@ using System.Text;
 /// Custom commands list can be seen with the monitor help command.
 /// </summary>
 public class GdbCustomCommandsHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCustomCommandsHandler>();
+    private readonly ILogger _logger;
     private readonly RecorderDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
-    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, Action<BreakPoint> onBreakpointReached,
+    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, ILogger logger, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
+        _logger = logger;
         _gdbIo = gdbIo;
         _machine = machine;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecorderDataWriter(recordedDataDirectory, machine);
+        _recordedDataWriter = new RecorderDataWriter(recordedDataDirectory, machine,
+            new ServiceProvider().GetLoggerForContext<RecorderDataWriter>());
     }
 
     public virtual string HandleCustomCommands(string command) {

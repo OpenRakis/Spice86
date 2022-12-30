@@ -5,7 +5,6 @@ using Serilog;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
-using Spice86.Logging;
 
 /// <summary>
 /// Emulates a PIC8259 Programmable Interrupt Controller.<br/>
@@ -16,7 +15,7 @@ using Spice86.Logging;
 /// </ul>
 /// </summary>
 public class Pic {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Pic>();
+    private readonly ILogger _logger;
 
     private readonly Machine _machine;
 
@@ -42,7 +41,8 @@ public class Pic {
     private bool _autoEoi = false;
     private SelectedReadRegister _selectedReadRegister = SelectedReadRegister.InterruptRequestRegister;
 
-    public Pic(Machine machine, bool master) {
+    public Pic(Machine machine, ILogger logger, bool master) {
+        _logger = logger;
         _master = master;
         _machine = machine;
     }

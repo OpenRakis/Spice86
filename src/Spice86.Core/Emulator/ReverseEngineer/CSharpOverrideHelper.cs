@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.ReverseEngineer;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.ReverseEngineer;
 
 using Function.Dump;
 
@@ -19,7 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 public class CSharpOverrideHelper {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<CSharpOverrideHelper>();
+    private readonly ILogger _logger;
 
     public Cpu Cpu => Machine.Cpu;
 
@@ -89,7 +91,8 @@ public class CSharpOverrideHelper {
     public bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
 
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine) {
+        Machine machine, ILogger logger) {
+        _logger = logger;
         _functionInformations = functionInformations;
         Machine = machine;
         JumpDispatcher = new();

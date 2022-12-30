@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi.MT32;
 
-using Spice86.Core.Emulator;
+using Spice86.Core.DI;
 using Spice86.Core.Emulator.Sound.Midi;
 
 using System;
@@ -14,7 +14,10 @@ internal sealed class Mt32MidiDevice : MidiDevice {
             throw new ArgumentNullException(nameof(romsPath));
         }
 
-        _player = new Mt32Player(romsPath, configuration);
+        _player = new Mt32Player(
+            romsPath,
+            new ServiceProvider().GetLoggerForContext<Mt32Player>(),
+            configuration);
     }
 
     public override void Pause() {

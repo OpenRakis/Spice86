@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
@@ -14,7 +16,7 @@ using System.Net.Sockets;
 using System.Text;
 
 public sealed class GdbIo : IDisposable {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbIo>();
+    private readonly ILogger _logger;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly List<byte> _rawCommand = new();
     private readonly Socket _serverSocket;
@@ -23,7 +25,8 @@ public sealed class GdbIo : IDisposable {
     private bool _disposed;
     private readonly NetworkStream _stream;
 
-    public GdbIo(int port) {
+    public GdbIo(int port, ILogger logger) {
+        _logger = logger;
         IPHostEntry host = Dns.GetHostEntry("localhost");
         IPAddress ip = new IPAddress(host.AddressList.First().GetAddressBytes());
         _tcpListener = new TcpListener(ip, port);

@@ -3,13 +3,16 @@
 using Serilog;
 
 using Spice86.Core.Emulator.Errors;
-using Spice86.Logging;
 
 using System.Diagnostics;
 using System.Threading;
 
 public sealed class PauseHandler : IDisposable {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<PauseHandler>();
+    private readonly ILogger _logger;
+
+    public PauseHandler(ILogger logger) {
+        _logger = logger;
+    }
 
     private volatile bool _paused;
 

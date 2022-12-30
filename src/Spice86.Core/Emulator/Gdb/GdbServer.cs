@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
@@ -12,7 +14,7 @@ using System.Diagnostics;
 using System.IO;
 
 public sealed class GdbServer : IDisposable {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbServer>();
+    private readonly ILogger _logger;
     private EventWaitHandle? _waitHandle;
     private readonly Configuration _configuration;
     private bool _disposed;
@@ -20,7 +22,8 @@ public sealed class GdbServer : IDisposable {
     private bool _isRunning = true;
     private readonly Thread? _gdbServerThread;
 
-    public GdbServer(Machine machine, Configuration configuration) {
+    public GdbServer(Machine machine, ILogger logger, Configuration configuration) {
+        _logger = logger;
         _machine = machine;
         _configuration = configuration;
         if (configuration.GdbPort is not null) {
@@ -50,7 +53,10 @@ public sealed class GdbServer : IDisposable {
     public GdbCommandHandler? GdbCommandHandler { get; private set; }
 
     private void AcceptOneConnection(GdbIo gdbIo) {
-        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo, _machine, _configuration);
+        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo,
+            _machine,
+            new ServiceProvider().GetLoggerForContext<GdbCommandHandler>(),
+            _configuration);
         gdbCommandHandler.PauseEmulator();
         _waitHandle?.Set();
         GdbCommandHandler = gdbCommandHandler;
@@ -74,7 +80,8 @@ public sealed class GdbServer : IDisposable {
         try {
             while (_isRunning) {
                 try {
-                    using GdbIo gdbIo = new GdbIo(port);
+                    using GdbIo gdbIo = new GdbIo(port,
+                        new ServiceProvider().GetLoggerForContext<GdbIo>());
                     AcceptOneConnection(gdbIo);
                 } catch (IOException e) {
                     e.Demystify();

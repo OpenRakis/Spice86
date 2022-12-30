@@ -5,19 +5,19 @@ using Serilog;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Crude implementation of Int9
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
-    private readonly ILogger _logger = Serilogger.Logger.ForContext<BiosKeyboardInt9Handler>();
+    private readonly ILogger _logger;
 
     private readonly Keyboard _keyboard;
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
-    public BiosKeyboardInt9Handler(Machine machine, IKeyScanCodeConverter? keyScanCodeConverter) : base(machine) {
+    public BiosKeyboardInt9Handler(Machine machine, ILogger logger, IKeyScanCodeConverter? keyScanCodeConverter) : base(machine) {
+        _logger = logger;
         _keyboard = machine.Keyboard;
         _keyScanCodeConverter = keyScanCodeConverter;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);

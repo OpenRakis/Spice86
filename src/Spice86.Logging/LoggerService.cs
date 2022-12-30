@@ -5,14 +5,12 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Exceptions;
 
-public static class Serilogger {
+public class LoggerService : ILoggerService {
     private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3} {Properties:j}] {Message:lj}{NewLine}{Exception}";
-    public static LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
+    public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
 
-    private static readonly ILogger _loggerInstance;
-
-    static Serilogger() {
-        _loggerInstance = new LoggerConfiguration()
+    public LoggerService() {
+        Logger = new LoggerConfiguration()
         .Enrich.WithExceptionDetails()
         .WriteTo.Console(outputTemplate: LogFormat)
         .WriteTo.Debug(outputTemplate: LogFormat)
@@ -20,5 +18,5 @@ public static class Serilogger {
         .CreateLogger();
     }
 
-    public static ILogger Logger => _loggerInstance;
+    public ILogger Logger { get; }
 }

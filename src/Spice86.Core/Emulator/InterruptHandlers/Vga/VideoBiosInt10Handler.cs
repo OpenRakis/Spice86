@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Vga;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Vga;
 
 using Serilog;
 
@@ -15,12 +17,13 @@ public class VideoBiosInt10Handler : InterruptHandler {
     public const int BiosVideoMode = 0x49;
     public static readonly uint BIOS_VIDEO_MODE_ADDRESS = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, BiosVideoMode);
     public static readonly uint CRT_IO_PORT_ADDRESS_IN_RAM = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, MemoryMap.BiosDataAreaOffsetCrtIoPort);
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<VideoBiosInt10Handler>();
+    private readonly ILogger _logger;
     private readonly byte _currentDisplayPage = 0;
     private readonly byte _numberOfScreenColumns = 80;
     private readonly VgaCard _vgaCard;
 
-    public VideoBiosInt10Handler(Machine machine, VgaCard vgaCard) : base(machine) {
+    public VideoBiosInt10Handler(Machine machine, ILogger logger, VgaCard vgaCard) : base(machine) {
+        _logger = logger;
         _vgaCard = vgaCard;
         FillDispatchTable();
     }

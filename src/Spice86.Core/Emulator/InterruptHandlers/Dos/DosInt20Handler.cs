@@ -1,4 +1,7 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿using Spice86.Core.DI;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
 
@@ -10,9 +13,10 @@ using Spice86.Logging;
 /// Reimplementation of int20
 /// </summary>
 public class DosInt20Handler : InterruptHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<DosInt20Handler>();
+    private readonly ILogger _logger;
 
-    public DosInt20Handler(Machine machine) : base(machine) {
+    public DosInt20Handler(Machine machine, ILogger logger) : base(machine) {
+        _logger = logger;
     }
 
     public override byte Index => 0x20;

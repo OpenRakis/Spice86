@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Devices.Video;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Devices.Video;
 
 using Serilog;
 using Spice86.Logging;
@@ -13,7 +15,7 @@ using Spice86.Core.Emulator.VM;
 /// Implementation of VGA card, currently only supports mode 0x13.<br/>
 /// </summary>
 public class VgaCard : DefaultIOPortHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<VgaCard>();
+    private readonly ILogger _logger;
 
     public const ushort CRT_IO_PORT = 0x03D4;
     // http://www.osdever.net/FreeVGA/vga/extreg.htm#3xAR
@@ -43,7 +45,8 @@ public class VgaCard : DefaultIOPortHandler {
     private readonly IGui? _gui;
     private byte _crtStatusRegister = StatusRegisterRetraceActive;
 
-    public VgaCard(Machine machine, IGui? gui, Configuration configuration) : base(machine, configuration) {
+    public VgaCard(Machine machine, ILogger logger, IGui? gui, Configuration configuration) : base(machine, configuration) {
+        _logger = logger;
         _gui = gui;
         VgaDac = new VgaDac(machine);
     }

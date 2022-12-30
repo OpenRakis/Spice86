@@ -3,16 +3,15 @@
 using Serilog;
 
 using Spice86.Core.CLI;
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Logging;
 
 public class CounterConfigurator {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<CounterConfigurator>();
+    private readonly ILogger _logger;
     private const long DefaultInstructionsPerSecond = 1000000L;
     private readonly Configuration _configuration;
 
-    public CounterConfigurator(Configuration configuration) {
+    public CounterConfigurator(Configuration configuration, ILogger logger) {
+        _logger = logger;
         _configuration = configuration;
     }
 

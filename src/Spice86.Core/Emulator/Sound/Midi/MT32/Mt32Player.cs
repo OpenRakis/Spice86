@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Sound.Midi.MT32;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Sound.Midi.MT32;
 
 using Mt32emu;
 
@@ -26,9 +28,10 @@ internal sealed class Mt32Player : IDisposable {
 
     private readonly ManualResetEvent _fillBufferEvent = new(false);
 
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Mt32Player>();
+    private readonly ILogger _logger;
 
-    public Mt32Player(string romsPath, Configuration configuration) {
+    public Mt32Player(string romsPath, ILogger logger, Configuration configuration) {
+        _logger = logger;
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }

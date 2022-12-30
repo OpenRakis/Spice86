@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
 
@@ -8,7 +10,6 @@ using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
-using Spice86.Logging;
 
 using System;
 using System.IO;
@@ -18,7 +19,7 @@ using System.Text;
 /// Reimplementation of int21
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<DosInt21Handler>();
+    private readonly ILogger _logger;
 
     private readonly Encoding _cp850CharSet;
 
@@ -33,11 +34,14 @@ public class DosInt21Handler : InterruptHandler {
 
     public DosFileManager DosFileManager => _dosFileManager;
 
-    public DosInt21Handler(Machine machine) : base(machine) {
+    public DosInt21Handler(Machine machine, ILogger logger) : base(machine) {
+        _logger = logger;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
-        _dosMemoryManager = new DosMemoryManager(machine.Memory);
-        _dosFileManager = new DosFileManager(_memory);
+        _dosMemoryManager = new DosMemoryManager(machine.Memory,
+            new ServiceProvider().GetLoggerForContext<DosMemoryManager>());
+        _dosFileManager = new DosFileManager(_memory,
+            new ServiceProvider().GetLoggerForContext<DosFileManager>());
         FillDispatchTable();
     }
 

@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
 
@@ -8,12 +10,13 @@ using Spice86.Logging;
 using System.Collections.Generic;
 
 public class DosMemoryManager {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<DosMemoryManager>();
+    private readonly ILogger _logger;
     private readonly Memory _memory;
     private ushort _pspSegment;
     private DosMemoryControlBlock? _start;
 
-    public DosMemoryManager(Memory memory) {
+    public DosMemoryManager(Memory memory, ILogger logger) {
+        _logger = logger;
         _memory = memory;
     }
 

@@ -1,3 +1,5 @@
+using Spice86.Core.DI;
+
 namespace Spice86.Core.Emulator.Function.Dump;
 
 using CPU;
@@ -5,15 +7,15 @@ using CPU;
 using Serilog;
 
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
 
 public class RecorderDataWriter : RecordedDataIoHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<RecorderDataWriter>();
+    private readonly ILogger _logger;
 
     private readonly Machine _machine;
     private readonly Cpu _cpu;
 
-    public RecorderDataWriter(string dumpDirectory, Machine machine) : base(dumpDirectory) {
+    public RecorderDataWriter(string dumpDirectory, Machine machine, ILogger logger) : base(dumpDirectory) {
+        _logger = logger;
         _machine = machine;
         _cpu = machine.Cpu;
     }
@@ -61,6 +63,6 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
     private void DumpExecutionFlow() {
-        new ExecutionFlowDumper().Dump(_machine.Cpu.ExecutionFlowRecorder, GetExecutionFlowFile());
+        new ExecutionFlowDumper(new ServiceProvider().GetLoggerForContext<ExecutionFlowDumper>()).Dump(_machine.Cpu.ExecutionFlowRecorder, GetExecutionFlowFile());
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.IOPorts;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.IOPorts;
 
 using System.Collections.Generic;
 
@@ -14,9 +16,10 @@ using Spice86.Logging;
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
 
-    private readonly ILogger _logger = Serilogger.Logger.ForContext<IOPortDispatcher>();
+    private readonly ILogger _logger;
 
-    public IOPortDispatcher(Machine machine, Configuration configuration) : base(machine, configuration) {
+    public IOPortDispatcher(Machine machine, ILogger logger, Configuration configuration) : base(machine, configuration) {
+        _logger = logger;
         _failOnUnhandledPort = configuration.FailOnUnhandledPort;
     }
 

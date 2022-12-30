@@ -1,6 +1,7 @@
 ﻿using Serilog;
 using Serilog.Events;
 
+using Spice86.Core.DI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -12,10 +13,11 @@ namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 /// Loads a DOS 16 bits EXE file in memory.
 /// </summary>
 public class ExeLoader : DosFileLoader {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<ExeLoader>();
+    private readonly ILogger _logger;
     private readonly ushort _startSegment;
 
-    public ExeLoader(Machine machine, ushort startSegment) : base(machine) {
+    public ExeLoader(Machine machine, ILogger logger, ushort startSegment) : base(machine) {
+        _logger = logger;
         _startSegment = startSegment;
     }
 

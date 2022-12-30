@@ -1,10 +1,10 @@
 namespace Spice86.Tests;
 
 using Spice86.Core.CLI;
+using Spice86.Core.DI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Interfaces;
 
 using System;
 
@@ -23,7 +23,9 @@ public class MachineCreator {
             InitializeDOS = false
         };
 
-        ProgramExecutor programExecutor = new ProgramExecutor(null, null, configuration);
+        ProgramExecutor programExecutor = new ProgramExecutor(
+            new ServiceProvider().GetLoggerForContext<ProgramExecutor>(),
+            null, null, configuration);;
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
         // Disabling custom IO handling
