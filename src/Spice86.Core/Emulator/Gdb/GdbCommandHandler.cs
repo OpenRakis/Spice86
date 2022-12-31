@@ -1,16 +1,16 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
 
 using System;
 using System.Linq;
 
 public class GdbCommandHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCommandHandler>();
+    private readonly ILogger _logger;
     private bool _isConnected = true;
     private readonly GdbCommandBreakpointHandler _gdbCommandBreakpointHandler;
     private readonly GdbCommandMemoryHandler _gdbCommandMemoryHandler;
@@ -19,13 +19,19 @@ public class GdbCommandHandler {
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
 
-    public GdbCommandHandler(GdbIo gdbIo, Machine machine, Configuration configuration) {
+    public GdbCommandHandler(GdbIo gdbIo, Machine machine, ILogger logger, Configuration configuration) {
+        _logger = logger;
         _gdbIo = gdbIo;
         _machine = machine;
-        _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine);
-        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine);
-        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine);
-        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine, _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
+        _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine,
+            new ServiceProvider().GetLoggerForContext<GdbCommandMemoryHandler>());
+        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine,
+            new ServiceProvider().GetLoggerForContext<GdbCommandMemoryHandler>());
+        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine,
+            new ServiceProvider().GetLoggerForContext<GdbCommandBreakpointHandler>());
+        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine,
+            new ServiceProvider().GetLoggerForContext<GdbCustomCommandsHandler>(),
+            _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }
 
     public bool IsConnected => _isConnected;

@@ -1,16 +1,15 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.InstructionsImpl;
-
 using Serilog;
 
+using Spice86.Core.DI;
 using Spice86.Core.Emulator.Callback;
+using Spice86.Core.Emulator.CPU.InstructionsImpl;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
-using Spice86.Core.Emulator.Errors;
-using Spice86.Logging;
 
 using System.Collections.Generic;
 
@@ -27,7 +26,7 @@ public class Cpu {
     // Extract regIndex from opcode
     private const int RegIndexMask = 0b111;
 
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Cpu>();
+    private readonly ILogger _logger;
 
     private static readonly HashSet<int> _stringOpCodes = new()
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
@@ -55,15 +54,16 @@ public class Cpu {
 
     public ExecutionFlowRecorder ExecutionFlowRecorder { get; }
 
-    public Cpu(Machine machine, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+    public Cpu(Machine machine, ILogger logger, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+        _logger = logger;
         _machine = machine;
         _memory = machine.Memory;
         State = new State();
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);
         ExecutionFlowRecorder = executionFlowRecorder;
-        FunctionHandler = new FunctionHandler(machine, recordData);
-        FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, recordData);
+        FunctionHandler = new FunctionHandler(machine, new ServiceProvider().GetLoggerForContext<FunctionHandler>(), recordData);
+        FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, new ServiceProvider().GetLoggerForContext<FunctionHandler>(), recordData);
         FunctionHandlerInUse = FunctionHandler;
         StaticAddressesRecorder = new StaticAddressesRecorder(State, recordData);
         _modRM = new ModRM(machine, this);

@@ -1,4 +1,6 @@
-﻿namespace Spice86.ViewModels;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -38,7 +40,7 @@ using System.Diagnostics;
 /// </ul>
 /// </summary>
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<MainWindowViewModel>();
+    private readonly ILogger _logger;
     private Configuration _configuration = new();
     private bool _disposed;
     private Thread? _emulatorThread;
@@ -66,7 +68,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private bool _isMainWindowClosing = false;
 
-    public MainWindowViewModel() {
+    public MainWindowViewModel(ILogger logger) {
+        _logger = logger;
         if (App.MainWindow is not null) {
             App.MainWindow.Closing += (s, e) => _isMainWindowClosing = true;
         }
@@ -93,7 +96,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             dir = _configuration.RecordedDataDirectory;
         }
         if (!string.IsNullOrWhiteSpace(dir)) {
-            new RecorderDataWriter(dir, _programExecutor.Machine).DumpAll();
+            new RecorderDataWriter(dir, _programExecutor.Machine,
+                new ServiceProvider().GetLoggerForContext<RecorderDataWriter>())
+                    .DumpAll();
         }
     }
 
@@ -346,7 +351,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private static Configuration GenerateConfiguration(string[] args) {
-        return CommandLineParser.ParseCommandLine(args);
+        return new CommandLineParser(new ServiceProvider().GetService<ILoggerService>())
+            .ParseCommandLine(args);
     }
 
     private IEnumerable<VideoBufferViewModel> SortedBuffers() {
@@ -385,7 +391,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             if(!_disposed) {
                 _okayToContinueEvent.Set();
             }
-            _programExecutor = new ProgramExecutor(this, new AvaloniaKeyScanCodeConverter(), _configuration);
+            _programExecutor = new ProgramExecutor(
+                new ServiceProvider().GetLoggerForContext<ProgramExecutor>(),
+                this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _programExecutor.Run();
             Dispatcher.UIThread.Post(() => ShowVideo = false);

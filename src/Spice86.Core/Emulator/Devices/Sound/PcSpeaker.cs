@@ -2,26 +2,24 @@
 
 using Serilog;
 
-using Spice86.Core.Emulator;
-
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
-using Spice86.Logging;
 
 /// <summary>
 /// PC speaker implementation.
 /// </summary>
 public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<PcSpeaker>();
+    private readonly ILogger _logger;
     private const int PcSpeakerPortNumber = 0x61;
 
     private bool _disposed = false;
 
     private readonly InternalSpeaker _pcSpeaker;
 
-    public PcSpeaker(Machine machine, Configuration configuration) : base(machine, configuration) {
+    public PcSpeaker(Machine machine, ILogger logger, Configuration configuration) : base(machine, configuration) {
+        _logger = logger;
         _pcSpeaker = new(configuration);
     }
 

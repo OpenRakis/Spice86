@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
 
@@ -22,7 +24,7 @@ public class DosFileManager {
     public const ushort FileHandleOffset = 5;
     private const int MaxOpenFiles = 15;
     private static readonly Dictionary<byte, string> _fileOpenMode = new();
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<DosFileManager>();
+    private readonly ILogger _logger;
     private string? _currentDir;
 
     private string? _currentMatchingFileSearchFolder;
@@ -47,7 +49,8 @@ public class DosFileManager {
         _fileOpenMode.Add(0x02, "rw");
     }
 
-    public DosFileManager(Memory memory) {
+    public DosFileManager(Memory memory, ILogger logger) {
+        _logger = logger;
         _memory = memory;
     }
 

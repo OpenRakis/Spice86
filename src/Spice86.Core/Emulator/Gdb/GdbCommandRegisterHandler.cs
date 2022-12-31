@@ -5,19 +5,19 @@ using Serilog;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
-using Spice86.Logging;
 
 using System;
 using System.Diagnostics;
 using System.Text;
 
 public class GdbCommandRegisterHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCommandRegisterHandler>();
+    private readonly ILogger _logger;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
 
-    public GdbCommandRegisterHandler(GdbIo gdbIo, Machine machine) {
+    public GdbCommandRegisterHandler(GdbIo gdbIo, Machine machine, ILogger logger) {
+        _logger = logger;
         _gdbIo = gdbIo;
         _machine = machine;
     }

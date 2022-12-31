@@ -1,13 +1,13 @@
-﻿namespace Spice86;
+﻿using Spice86.Core.DI;
+
+namespace Spice86;
 
 using Avalonia;
-using Avalonia.Threading;
 
 using Serilog;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
-using Spice86.Keyboard;
 using Spice86.Logging;
 
 using System;
@@ -18,7 +18,11 @@ using System.Linq;
 /// Spice86 Entry Point
 /// </summary>
 public class Program {
-    private static ILogger _logger = Serilogger.Logger.ForContext<Program>();
+    private static readonly ILogger _logger;
+
+    static Program() {
+        _logger = new ServiceProvider().GetLoggerForContext<Program>();
+    }
 
     /// <summary>
     /// Alternate Entry Point
@@ -39,13 +43,17 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         try {
-            Configuration configuration = CommandLineParser.ParseCommandLine(args);
+            Configuration configuration = new CommandLineParser(
+                new ServiceProvider().GetService<ILoggerService>())
+                    .ParseCommandLine(args);
             if(!configuration.HeadlessMode) {
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
             }
             else {
                 try {
-                    ProgramExecutor programExecutor = new ProgramExecutor(null, null, configuration);
+                    ProgramExecutor programExecutor = new ProgramExecutor(
+                        new ServiceProvider().GetLoggerForContext<ProgramExecutor>(),
+                        null, null, configuration);
                     programExecutor.Run();
                 } catch (Exception e) {
                     e.Demystify();
@@ -57,7 +65,7 @@ public class Program {
             }
         }
         finally {
-            ((IDisposable)Serilogger.Logger).Dispose();
+            ((IDisposable)_logger).Dispose();
         }
     }
 

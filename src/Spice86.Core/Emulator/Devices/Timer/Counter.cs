@@ -2,15 +2,13 @@
 
 using Serilog;
 
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
 
-using Spice86.Core.Emulator.Errors;
-using Spice86.Logging;
-
 public class Counter {
     public const long HardwareFrequency = 1193182;
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Counter>();
+    private readonly ILogger _logger;
     public CounterActivator Activator { get; protected set; }
     private readonly Machine _machine;
 
@@ -18,7 +16,8 @@ public class Counter {
 
     private bool _firstByteWritten;
 
-    public Counter(Machine machine, int index, CounterActivator activator) {
+    public Counter(Machine machine, ILogger logger, int index, CounterActivator activator) {
+        _logger = logger;
         _machine = machine;
         Index = index;
         Activator = activator;

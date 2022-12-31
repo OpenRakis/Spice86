@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator;
 
 using Function.Dump;
 
@@ -32,13 +34,14 @@ using Spice86.Core.CLI;
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
 public sealed class ProgramExecutor : IDisposable {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<ProgramExecutor>();
+    private readonly ILogger _logger;
     private bool _disposedValue;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
 
-    public ProgramExecutor(IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) {
+    public ProgramExecutor(ILogger logger, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) {
+        _logger = logger;
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         Machine = CreateMachine(gui, keyScanCodeConverter);
         _gdbServer = StartGdbServer();
@@ -49,7 +52,9 @@ public sealed class ProgramExecutor : IDisposable {
     public void Run() {
         Machine.Run();
         if (RecordData) {
-            new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine).DumpAll();
+            new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine,
+                new ServiceProvider().GetLoggerForContext<RecorderDataWriter>())
+                .DumpAll();
         }
     }
 
@@ -100,7 +105,10 @@ public sealed class ProgramExecutor : IDisposable {
         string lowerCaseFileName = executableFileName.ToLowerInvariant();
         ushort entryPointSegment = (ushort)configuration.ProgramEntryPointSegment;
         if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(Machine, entryPointSegment);
+            return new ExeLoader(
+                Machine,
+                new ServiceProvider().GetLoggerForContext<ExeLoader>(),
+                entryPointSegment);
         }
 
         if (lowerCaseFileName.EndsWith(".com")) {
@@ -111,7 +119,7 @@ public sealed class ProgramExecutor : IDisposable {
     }
 
     private Machine CreateMachine(IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter) {
-        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration);
+        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, new ServiceProvider().GetLoggerForContext<CounterConfigurator>());
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
         Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder,
@@ -145,13 +153,15 @@ public sealed class ProgramExecutor : IDisposable {
     private GdbServer? StartGdbServer() {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
-            return new GdbServer(Machine, _configuration);
+            return new GdbServer(Machine,
+                new ServiceProvider().GetLoggerForContext<GdbServer>(),
+                _configuration);
         }
 
         return null;
     }
 
-    private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
+    private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
         IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {

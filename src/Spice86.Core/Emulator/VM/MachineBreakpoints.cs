@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using Spice86.Core.DI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -26,7 +27,8 @@ public sealed class MachineBreakpoints : IDisposable {
         PauseHandler.WaitIfPaused();
     }
 
-    public PauseHandler PauseHandler { get; } = new();
+    public PauseHandler PauseHandler { get; } = new(
+        new ServiceProvider().GetLoggerForContext<PauseHandler>());
 
     public void OnMachineStop() {
         if (_machineStopBreakPoint is not null) {

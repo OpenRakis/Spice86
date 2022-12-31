@@ -1,4 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.ExternalInput;
+
+using Spice86.Core.DI;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
@@ -24,8 +26,8 @@ public class DualPic : DefaultIOPortHandler {
     private readonly Pic _pic2;
 
     public DualPic(Machine machine, Configuration configuration) : base(machine, configuration) {
-        _pic1 = new Pic(machine, true);
-        _pic2 = new Pic(machine, false);
+        _pic1 = new Pic(machine, new ServiceProvider().GetLoggerForContext<Pic>(), true);
+        _pic2 = new Pic(machine, new ServiceProvider().GetLoggerForContext<Pic>(), false);
         Initialize();
     }
 

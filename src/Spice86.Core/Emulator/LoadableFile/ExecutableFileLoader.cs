@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.LoadableFile;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.LoadableFile;
 
 using Serilog;
 
@@ -16,9 +18,10 @@ public abstract class ExecutableFileLoader {
     protected Cpu _cpu;
     protected Machine _machine;
     protected Memory _memory;
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<ExecutableFileLoader>();
+    private readonly ILogger _logger;
 
-    protected ExecutableFileLoader(Machine machine) {
+    protected ExecutableFileLoader(Machine machine, ILogger logger) {
+        _logger = logger;
         _machine = machine;
         _cpu = machine.Cpu;
         _memory = machine.Memory;

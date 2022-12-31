@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.CLI;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.CLI;
 
 using CommandLine;
 
@@ -20,9 +22,15 @@ using System.Reflection;
 /// Displays help when configuration could not be parsed.
 /// </summary>
 public class CommandLineParser {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<CommandLineParser>();
+    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
-    public static Configuration ParseCommandLine(string[] args) {
+    public CommandLineParser(ILoggerService loggerService) {
+        _loggerService = loggerService;
+        _logger = loggerService.Logger.ForContext<CommandLineParser>();
+    }
+
+    public Configuration ParseCommandLine(string[] args) {
         ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(args)
             .WithNotParsed((e) => _logger.Error("{@Errors}", e));
         return result.MapResult(initialConfig => {
@@ -31,10 +39,10 @@ public class CommandLineParser {
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
             if (initialConfig.WarningLogs) {
-                Serilogger.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
+                _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
             }
             if (initialConfig.VerboseLogs) {
-                Serilogger.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+                _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
             }
             return initialConfig;
         }, error => {

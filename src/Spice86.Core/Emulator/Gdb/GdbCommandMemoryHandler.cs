@@ -2,22 +2,23 @@
 
 using Serilog;
 
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Utils;
+
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Spice86.Logging;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Utils;
-using Spice86.Core.Emulator.VM;
 using System.Diagnostics;
+using System.Text;
 
 public class GdbCommandMemoryHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCommandMemoryHandler>();
+    private readonly ILogger _logger;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
 
-    public GdbCommandMemoryHandler(GdbIo gdbIo, Machine machine) {
+    public GdbCommandMemoryHandler(GdbIo gdbIo, Machine machine, ILogger logger) {
+        _logger = logger;
         _gdbIo = gdbIo;
         _machine = machine;
     }

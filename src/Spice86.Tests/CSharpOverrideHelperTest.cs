@@ -1,5 +1,6 @@
 namespace Spice86.Tests;
 
+using Spice86.Core.DI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
@@ -52,7 +53,8 @@ class RecursiveJumps : CSharpOverrideHelper {
 
     public RecursiveJumps(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine) : base(
-        functionInformations, machine) {
+        functionInformations, machine,
+        new ServiceProvider().GetLoggerForContext<CSharpOverrideHelper>()) {
     }
 
     public Action JumpTarget1(int loadOffset) {
@@ -89,7 +91,8 @@ class SimpleCallsJumps : CSharpOverrideHelper {
     public int FarCalled2FromStack { get; set; }
 
     public SimpleCallsJumps(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine) :
-        base(functionInformations, machine) {
+        base(functionInformations, machine,
+        new ServiceProvider().GetLoggerForContext<CSharpOverrideHelper>()) {
         DefineFunction(0, 0x200, Far_callee1_from_stack_0000_0200_00200);
         DefineFunction(0, 0x300, Far_callee2_from_stack_0000_0300_00300);
     }

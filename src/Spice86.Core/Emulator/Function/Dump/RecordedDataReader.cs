@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.Function.Dump;
 
 using Memory;
 
-using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.DI;
 using Spice86.Core.Emulator.Function;
 
 public class RecordedDataReader : RecordedDataIoHandler {
@@ -12,7 +12,9 @@ public class RecordedDataReader : RecordedDataIoHandler {
 
     public ExecutionFlowRecorder ReadExecutionFlowRecorderFromFileOrCreate(bool recordData) {
         ExecutionFlowRecorder executionFlowRecorder =
-            new ExecutionFlowDumper().ReadFromFileOrCreate(GetExecutionFlowFile());
+            new ExecutionFlowDumper(
+                new ServiceProvider().GetLoggerForContext<ExecutionFlowDumper>())
+                    .ReadFromFileOrCreate(GetExecutionFlowFile());
         executionFlowRecorder.RecordData = recordData;
         return executionFlowRecorder;
     }

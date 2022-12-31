@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Function.Dump;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Function.Dump;
 
 using Errors;
 
@@ -14,7 +16,11 @@ using System.Diagnostics;
 using System.IO;
 
 public class ExecutionFlowDumper {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<ExecutionFlowDumper>();
+    private readonly ILogger _logger;
+
+    public ExecutionFlowDumper(ILogger logger) {
+        _logger = logger;
+    }
 
     public void Dump(ExecutionFlowRecorder executionFlowRecorder, string destinationFilePath) {
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);

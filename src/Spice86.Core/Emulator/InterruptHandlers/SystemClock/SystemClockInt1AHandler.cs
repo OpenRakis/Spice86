@@ -2,21 +2,20 @@
 
 using Serilog;
 
+using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.VM;
-
-using Spice86.Core.Emulator.Callback;
-using Spice86.Logging;
 
 /// <summary>
 /// Implementation of int1A.
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<SystemClockInt1AHandler>();
+    private readonly ILogger _logger;
     private readonly TimerInt8Handler _timerHandler;
 
-    public SystemClockInt1AHandler(Machine machine, TimerInt8Handler timerHandler) : base(machine) {
+    public SystemClockInt1AHandler(Machine machine, ILogger logger, TimerInt8Handler timerHandler) : base(machine) {
+        _logger = logger;
         _timerHandler = timerHandler;
         _dispatchTable.Add(0x00, new Callback(0x00, SetSystemClockCounter));
         _dispatchTable.Add(0x01, new Callback(0x01, GetSystemClockCounter));

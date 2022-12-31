@@ -1,4 +1,7 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
+﻿using Spice86.Core.DI;
+using Spice86.Core.Emulator.Gdb;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
 using Serilog;
 
@@ -14,7 +17,7 @@ using Spice86.Shared.Interfaces;
 /// Re-implements int33.<br/>
 /// </summary>
 public class MouseInt33Handler : InterruptHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<MouseInt33Handler>();
+    private readonly ILogger _logger;
     private const ushort MOUSE_RANGE_X = 639;
     private const ushort MOUSE_RANGE_Y = 199;
     private readonly IGui? _gui;
@@ -26,7 +29,8 @@ public class MouseInt33Handler : InterruptHandler {
     private ushort _userCallbackOffset;
     private ushort _userCallbackSegment;
 
-    public MouseInt33Handler(Machine machine, IGui? gui) : base(machine) {
+    public MouseInt33Handler(Machine machine, ILogger logger, IGui? gui) : base(machine) {
+        _logger = logger;
         _gui = gui;
         _dispatchTable.Add(0x00, new Callback(0x00, MouseInstalledFlag));
         _dispatchTable.Add(0x03, new Callback(0x03, GetMousePositionAndStatus));

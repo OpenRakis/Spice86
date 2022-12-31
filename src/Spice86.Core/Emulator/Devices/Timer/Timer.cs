@@ -1,9 +1,12 @@
-﻿namespace Spice86.Core.Emulator.Devices.Timer;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Devices.Timer;
 
 using Serilog;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
@@ -18,7 +21,7 @@ using System.Diagnostics;
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
 public class Timer : DefaultIOPortHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Timer>();
+    private readonly ILogger _logger;
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
@@ -39,18 +42,24 @@ public class Timer : DefaultIOPortHandler {
     // retrace is in a separate counter because it needs to be controlled by the time multiplier unlike screen refresh
     private readonly Counter _vgaRetraceCounter;
 
-    public Timer(Machine machine, DualPic dualPic, VgaCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
+    public Timer(Machine machine, ILogger logger, DualPic dualPic, VgaCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
+        _logger = logger;
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         _cpu = machine.Cpu;
         for (int i = 0; i < _counters.Length; i++) {
-            _counters[i] = new Counter(machine, i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
+            _counters[i] = new Counter(machine,
+                new ServiceProvider().GetLoggerForContext<Counter>(),
+                i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         }
         // screen refresh is 60hz regardless of the configuration
-        _vgaScreenRefreshCounter = new Counter(machine, 4, new TimeCounterActivator(1));
+        _vgaScreenRefreshCounter = new Counter(machine,
+            new ServiceProvider().GetLoggerForContext<Counter>(), 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
         // retrace 60 times per seconds
-        _vgaRetraceCounter = new Counter(machine, 5, counterConfigurator.InstanciateCounterActivator(_cpu.State));
+        _vgaRetraceCounter = new Counter(machine,
+            new ServiceProvider().GetLoggerForContext<Counter>(),
+            5, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         _vgaRetraceCounter.SetValue((int)(Counter.HardwareFrequency / 60));
     }
 

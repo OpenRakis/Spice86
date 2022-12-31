@@ -1,12 +1,11 @@
-﻿namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
+﻿using Spice86.Core.DI;
+
+namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Serilog;
 
-using Spice86.Core.Emulator;
-
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
 using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
@@ -15,11 +14,13 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<Keyboard>();
+    private readonly ILogger _logger;
     private readonly IGui? _gui;
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
-    public Keyboard(Machine machine, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) : base(machine, configuration) {
+    public Keyboard(Machine machine, ILogger logger, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) : base(machine, configuration) {
+        ServiceProvider serviceProvider = new ServiceProvider();
+        _logger = logger;
         _gui = gui;
         _keyScanCodeConverter = keyScanCodeConverter;
         if (_gui is not null) {

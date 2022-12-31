@@ -1,4 +1,7 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Core.DI;
+using Spice86.Core.Emulator.Function;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
@@ -12,12 +15,13 @@ using System.Diagnostics;
 using System.IO;
 
 public class GdbCommandBreakpointHandler {
-    private static readonly ILogger _logger = Serilogger.Logger.ForContext<GdbCommandBreakpointHandler>();
+    private readonly ILogger _logger;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
     private volatile bool _resumeEmulatorOnCommandEnd;
 
-    public GdbCommandBreakpointHandler(GdbIo gdbIo, Machine machine) {
+    public GdbCommandBreakpointHandler(GdbIo gdbIo, Machine machine, ILogger logger) {
+        _logger = logger;
         _gdbIo = gdbIo;
         _machine = machine;
     }
