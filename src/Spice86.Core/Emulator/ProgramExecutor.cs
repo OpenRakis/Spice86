@@ -204,15 +204,10 @@ public sealed class ProgramExecutor : IDisposable {
         if (string.IsNullOrWhiteSpace(cDrive)) {
             cDrive = parentFolder;
         }
-
-        if (string.IsNullOrWhiteSpace(cDrive)) {
-            throw new ArgumentNullException(nameof(cDrive));
-        }
+        ArgumentException.ThrowIfNullOrEmpty(cDrive);
 
         cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
-        if (string.IsNullOrWhiteSpace(parentFolder)) {
-            throw new ArgumentNullException(nameof(parentFolder));
-        }
+        ArgumentException.ThrowIfNullOrEmpty(parentFolder);
 
         driveMap.Add('C', cDrive);
         Machine.DosInt21Handler.DosFileManager.SetDiskParameters(parentFolder, driveMap);
