@@ -238,9 +238,7 @@ public sealed class ProgramExecutor : IDisposable {
 
     private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {
         string? executableFileName = configuration.Exe;
-        if (executableFileName is null) {
-            throw new ArgumentNullException(nameof(executableFileName));
-        }
+        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName,
