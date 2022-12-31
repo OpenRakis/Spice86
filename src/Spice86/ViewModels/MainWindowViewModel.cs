@@ -246,10 +246,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
-    public void Exit() {
-        Dispose();
-    }
-
     public int Height { get; private set; }
 
     public int MouseX { get; set; }
