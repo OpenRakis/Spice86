@@ -19,6 +19,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
+/// <inheritdoc />
 public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
 

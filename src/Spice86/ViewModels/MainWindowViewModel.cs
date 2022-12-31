@@ -32,13 +32,7 @@ using System.Linq;
 using System.Threading;
 using System.Diagnostics;
 
-/// <summary>
-/// GUI of the emulator.<br/>
-/// <ul>
-/// <li>Displays the content of the video ram (when the emulator requests it)</li>
-/// <li>Communicates keyboard and mouse events to the emulator</li>
-/// </ul>
-/// </summary>
+/// <inheritdoc />
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private readonly ILogger _logger;
     private Configuration _configuration = new();
