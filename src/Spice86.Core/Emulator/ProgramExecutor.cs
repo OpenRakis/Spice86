@@ -18,7 +18,6 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.LoadableFile.Dos.Com;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 using System;
