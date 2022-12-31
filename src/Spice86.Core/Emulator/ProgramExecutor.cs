@@ -98,9 +98,7 @@ public sealed class ProgramExecutor : IDisposable {
 
     private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
         string? executableFileName = configuration.Exe;
-        if (executableFileName is null) {
-            throw new ArgumentNullException(nameof(executableFileName));
-        }
+        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         string lowerCaseFileName = executableFileName.ToLowerInvariant();
         ushort entryPointSegment = (ushort)configuration.ProgramEntryPointSegment;
