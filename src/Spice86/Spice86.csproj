@@ -16,7 +16,7 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>3.0.12</version>
+		<version>3.0.13</version>
 		<PackageReleaseNotes>InitializeDOS and HeadlessMode CLI switches. Also, handle exceptions from potentially overridden entry method.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
