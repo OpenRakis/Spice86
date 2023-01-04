@@ -151,7 +151,7 @@ public class Alu {
         return res;
     }
 
-    public static uint? Div32(ulong value1, uint value2) {
+    public uint? Div32(ulong value1, uint value2) {
         if (value2 == 0) {
             return null;
         }
@@ -164,7 +164,7 @@ public class Alu {
         return (uint)res;
     }
 
-    public static ushort? Div16(uint value1, ushort value2) {
+    public ushort? Div16(uint value1, ushort value2) {
         if (value2 == 0) {
             return null;
         }
@@ -177,7 +177,7 @@ public class Alu {
         return (ushort)res;
     }
 
-    public static byte? Div8(ushort value1, byte value2) {
+    public byte? Div8(ushort value1, byte value2) {
         if (value2 == 0) {
             return null;
         }
@@ -190,7 +190,7 @@ public class Alu {
         return (byte)res;
     }
     
-    public static int? Idiv32(long value1, int value2) {
+    public int? Idiv32(long value1, int value2) {
         if (value2 == 0) {
             return null;
         }
@@ -205,7 +205,7 @@ public class Alu {
         return (int)res;
     }
 
-    public static short? Idiv16(int value1, short value2) {
+    public short? Idiv16(int value1, short value2) {
         if (value2 == 0) {
             return null;
         }
@@ -220,7 +220,7 @@ public class Alu {
         return (short)res;
     }
 
-    public static sbyte? Idiv8(short value1, sbyte value2) {
+    public sbyte? Idiv8(short value1, sbyte value2) {
         if (value2 == 0) {
             return null;
         }
