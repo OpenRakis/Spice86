@@ -8,6 +8,9 @@ using Serilog;
 
 using Spice86.Core.Emulator.VM;
 
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 public class RecorderDataWriter : RecordedDataIoHandler {
     private readonly ILogger _logger;
 
@@ -22,6 +25,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
 
     public void DumpAll() {
         _logger.Information("Dumping all data to {DumpDirectory}", DumpDirectory);
+        DumpCpuRegisters("");
         DumpMemory("");
         DumpGhidraSymbols();
         DumpExecutionFlow();
@@ -48,6 +52,11 @@ public class RecorderDataWriter : RecordedDataIoHandler {
         Cpu cpu = _machine.Cpu;
         new FunctionInformationDumper().DumpFunctionHandlers(GenerateDumpFileName("CSharpStub.cs"),
             new CSharpStubToStringConverter(), cpu.StaticAddressesRecorder, cpu.FunctionHandler);
+    }
+
+    public void DumpCpuRegisters(string suffix) {
+        string path = GenerateDumpFileName($"CpuRegisters{suffix}.json");
+        File.WriteAllText(path, JsonSerializer.Serialize(_cpu.State));
     }
 
     public void DumpMemory(string suffix) {
