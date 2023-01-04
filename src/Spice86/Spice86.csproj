@@ -16,8 +16,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>3.0.13</version>
-		<PackageReleaseNotes>InitializeDOS and HeadlessMode CLI switches. Also, handle exceptions from potentially overridden entry method.</PackageReleaseNotes>
+		<version>3.0.14</version>
+		<PackageReleaseNotes>Dumps also dump CPU state (Registers and Flags and such)</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
