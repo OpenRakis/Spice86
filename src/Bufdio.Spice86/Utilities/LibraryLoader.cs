@@ -10,7 +10,7 @@ internal sealed class LibraryLoader : IDisposable {
     }
 
     public bool Initialize(string libraryName) {
-        Ensure.NotNull(libraryName, nameof(libraryName));
+        ArgumentException.ThrowIfNullOrEmpty(libraryName);
         if (!NativeLibrary.TryLoad(libraryName, out _handle)) {
             return false;
         }

@@ -14,12 +14,4 @@ internal static class Ensure
                 : (TException)Activator.CreateInstance(typeof(TException), message)!;
         }
     }
-
-    public static void NotNull<T>(T argument, string name) where T : class
-    {
-        if (argument == null)
-        {
-            throw new ArgumentNullException(name);
-        }
-    }
 }
