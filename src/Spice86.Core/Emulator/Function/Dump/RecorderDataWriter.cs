@@ -9,7 +9,6 @@ using Serilog;
 using Spice86.Core.Emulator.VM;
 
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 public class RecorderDataWriter : RecordedDataIoHandler {
     private readonly ILogger _logger;
