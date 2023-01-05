@@ -42,30 +42,25 @@ public class Program {
     // yet and stuff might break.
     [STAThread]
     public static void Main(string[] args) {
-        try {
-            Configuration configuration = new CommandLineParser(
-                new ServiceProvider().GetService<ILoggerService>())
-                    .ParseCommandLine(args);
-            if(!configuration.HeadlessMode) {
-                BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
-            }
-            else {
-                try {
-                    ProgramExecutor programExecutor = new ProgramExecutor(
-                        new ServiceProvider().GetLoggerForContext<ProgramExecutor>(),
-                        null, null, configuration);
-                    programExecutor.Run();
-                } catch (Exception e) {
-                    e.Demystify();
-                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                        _logger.Error(e, "An error occurred during execution");
-                    }
-                    throw;
-                }
-            }
+        Configuration configuration = new CommandLineParser(
+            new ServiceProvider().GetService<ILoggerService>())
+                .ParseCommandLine(args);
+        if(!configuration.HeadlessMode) {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
         }
-        finally {
-            ((IDisposable)_logger).Dispose();
+        else {
+            try {
+                ProgramExecutor programExecutor = new ProgramExecutor(
+                    new ServiceProvider().GetLoggerForContext<ProgramExecutor>(),
+                    null, null, configuration);
+                programExecutor.Run();
+            } catch (Exception e) {
+                e.Demystify();
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _logger.Error(e, "An error occurred during execution");
+                }
+                throw;
+            }
         }
     }
 
