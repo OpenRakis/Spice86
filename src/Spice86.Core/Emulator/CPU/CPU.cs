@@ -711,8 +711,8 @@ public class Cpu {
                 _instructions16Or32.Grp2(Grp2CountSource.NextUint8);
                 break;
             case 0xC2:
-                // RET imm8 (numberOfBytesToPop)
-                NearRet(NextUint8());
+                // RET imm16 (numberOfBytesToPop)
+                NearRet(NextUint16());
                 break;
             case 0xC3:
                 // RET
@@ -735,8 +735,8 @@ public class Cpu {
                 HandleInvalidOpcode(opcode);
                 break;
             case 0xCA:
-                // RETF and pop imm8 (numberOfBytesToPop)
-                FarRet(NextUint8());
+                // RETF and pop imm16 (numberOfBytesToPop)
+                FarRet(NextUint16());
                 break;
             case 0xCB:
                 // RETF
