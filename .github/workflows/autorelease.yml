@@ -22,7 +22,7 @@ jobs:
          uses: montudor/action-zip@v1
 
        - name: Test with dotnet
-         working-directory: ./src/Spice86.Tests
+         working-directory: ./tests/Spice86.Tests
          run: dotnet test --configuration Release
 
        - name: Build with dotnet
