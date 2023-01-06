@@ -15,6 +15,7 @@ Here is a list of old games I tested with what worked and what didn't:
 | Another World | :see_no_evil: Crashes | Fails with unimplemented int 15.6 (Which is weird) | 2021/09/26 |
 | Arachnophobia | :see_no_evil: Crashes | Int 10.11 operation "GET INT 1F pointer" not implemented. | 2021/09/26 |
 | Arkanoid 2 : Revenge of Doh | :see_no_evil: Crashes | Timer latch read mode not implemented. | 2021/09/26 |
+| Betrayal at Krondor | :see_no_evil: Crashes | Unimplemented opcodes Leave, Movsx, Shld. FBOV OVL overlay not handled. | 2023/01/06 |
 | Cryo Dune | :sunglasses: Fully playable | | 2021/09/26 |
 | Double dragon 3 | :see_no_evil: Crashes | Int 10.3 (text mode) not implemented. | 2021/09/26 |
 | Dragon's Lair | :see_no_evil: Crashes | Terminates without displaying anything and without error. | 2021/09/26 |
