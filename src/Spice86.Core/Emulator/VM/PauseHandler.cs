@@ -60,7 +60,7 @@ public sealed class PauseHandler : IDisposable {
     private void Await() {
         try {
             if(!_disposed) {
-                _manualResetEvent.WaitOne(1);
+                _manualResetEvent.WaitOne(Timeout.Infinite);
             }
         } catch (AbandonedMutexException exception) {
             exception.Demystify();
