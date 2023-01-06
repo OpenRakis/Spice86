@@ -98,32 +98,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [RelayCommand]
     public void Pause() {
-        if(_emulatorThread is null) {
-            return;
+        if (_emulatorThread is not null) {
+            _okayToContinueEvent.Reset();
+            IsPaused = true;
         }
-        if(_emulatorThread.ThreadState != System.Threading.ThreadState.Running) {
-            return;
-        }
-        if(IsPaused) {
-            return;
-        }
-        _okayToContinueEvent.Reset();
-        IsPaused = true;
     }
 
     [RelayCommand]
     public void Play() {
-        if(_emulatorThread is null) {
-            return;
+        if (_emulatorThread is not null) {
+            _okayToContinueEvent.Set();
+            IsPaused = false;
         }
-        if(_emulatorThread.ThreadState != System.Threading.ThreadState.WaitSleepJoin) {
-            return;
-        }
-        if (!IsPaused) {
-            return;
-        }
-        _okayToContinueEvent.Set();
-        IsPaused = false;
     }
 
     public void SetConfiguration(string[] args) {
