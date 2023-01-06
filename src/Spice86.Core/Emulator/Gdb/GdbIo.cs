@@ -1,12 +1,8 @@
-﻿using Spice86.Core.DI;
-
-namespace Spice86.Core.Emulator.Gdb;
+﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
 using Spice86.Core.Utils;
-
-using Spice86.Logging;
 
 using System;
 using System.Collections.Generic;

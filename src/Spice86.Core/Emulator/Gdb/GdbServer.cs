@@ -1,17 +1,11 @@
-﻿using Spice86.Core.DI;
-
-namespace Spice86.Core.Emulator.Gdb;
+﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
-using Spice86.Core.Emulator;
+using Spice86.Core.DI;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
 
-using System;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 
 public sealed class GdbServer : IDisposable {
     private readonly ILogger _logger;
