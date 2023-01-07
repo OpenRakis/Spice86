@@ -18,6 +18,7 @@
  *  Copyright (c) 2016 by Bernd Porr
  */
 
+
 using System.Numerics;
 
 namespace Spice86.Core.Backend.Audio.Iir;

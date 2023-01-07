@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Logging", "Spice86.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Shared", "Spice86.Shared\Spice86.Shared.csproj", "{75B2746C-8AB0-4824-BA41-0E1E010F28A9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Tests", "..\tests\Spice86.Tests\Spice86.Tests.csproj", "{CA85DD9F-9B91-47BE-A00E-36D1D1C29311}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Tests", "Spice86.Tests\Spice86.Tests.csproj", "{CA85DD9F-9B91-47BE-A00E-36D1D1C29311}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bufdio.Spice86", "Bufdio.Spice86\Bufdio.Spice86.csproj", "{7D5BE77E-870A-411B-8B05-E52AC9D784B4}"
 EndProject
