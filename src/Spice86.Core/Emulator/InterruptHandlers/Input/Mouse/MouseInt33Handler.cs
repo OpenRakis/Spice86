@@ -33,6 +33,8 @@ public class MouseInt33Handler : InterruptHandler {
         _logger = logger;
         _gui = gui;
         _dispatchTable.Add(0x00, new Callback(0x00, MouseInstalledFlag));
+        _dispatchTable.Add(0x01, new Callback(0x01, ShowMouseCursor));
+        _dispatchTable.Add(0x02, new Callback(0x02, HideMouseCursor));
         _dispatchTable.Add(0x03, new Callback(0x03, GetMousePositionAndStatus));
         _dispatchTable.Add(0x04, new Callback(0x04, SetMouseCursorPosition));
         _dispatchTable.Add(0x07, new Callback(0x07, SetMouseHorizontalMinMaxPosition));
@@ -155,6 +157,20 @@ public class MouseInt33Handler : InterruptHandler {
         _userCallbackMask = newUserCallbackMask;
         _userCallbackOffset = newUserCallbackOffset;
         _userCallbackSegment = newUserCallbackSegment;
+    }
+
+    public void ShowMouseCursor() {
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("SHOW MOUSE CURSOR (unimplemented!)");
+        }
+        // @TODO: show mouse cursor
+    }
+
+    public void HideMouseCursor() {
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _logger.Information("HIDE MOUSE CURSOR (unimplemented!)");
+        }
+        // @TODO: hide mouse cursor
     }
 
     /// <summary>
