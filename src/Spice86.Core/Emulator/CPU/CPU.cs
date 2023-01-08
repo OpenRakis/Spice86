@@ -228,6 +228,16 @@ public class Cpu {
                 // POP FS
                 State.FS = Stack.Pop16();
                 break;
+            case 0xA4:
+                // SHLD r/m16, r16, imm8
+                // SHLD r/m32, r32, imm8
+                _instructions16Or32.Shld(Grp2CountSource.NextUint8);
+                break;
+            case 0xA5:
+                // SHLD r/m16, r16, CL
+                // SHLD r/m32, r32, CL
+                _instructions16Or32.Shld(Grp2CountSource.CL);
+                break;
             case 0xA8:
                 // PUSH GS
                 Stack.Push16(State.GS);
@@ -241,6 +251,24 @@ public class Cpu {
                 break;
             case 0xB5:
                 _instructions16Or32.Lgs();
+                break;
+            case 0xB6:
+                // MOVZX r16, r/m8
+                // MOVZX r32, r/m8
+                _instructions16Or32.MovzxByte();
+                break;
+            case 0xB7:
+                // MOVZX r32, r/m16
+                _instructions32.Movzx();
+                break;
+            case 0xBE:
+                // MOVSX r16, r/m8
+                // MOVSX r32, r/m8
+                _instructions16Or32.MovsxByte();
+                break;
+            case 0xBF:
+                // MOVSX r32, r/m16
+                _instructions32.Movsx();
                 break;
             default:
                 HandleInvalidOpcode(subcode);
@@ -731,8 +759,10 @@ public class Cpu {
                 _instructions16Or32.MovRmImm();
                 break;
             case 0xC8: //ENTER
-            case 0xC9: //LEAVE
                 HandleInvalidOpcode(opcode);
+                break;
+            case 0xC9: //LEAVE
+                _instructions16Or32.Leave();
                 break;
             case 0xCA:
                 // RETF and pop imm16 (numberOfBytesToPop)

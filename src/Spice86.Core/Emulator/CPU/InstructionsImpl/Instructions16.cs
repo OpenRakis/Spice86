@@ -525,4 +525,29 @@ public class Instructions16 : Instructions16Or32 {
         // OUT DX AX
         Cpu.Out16(State.DX, State.AX);
     }
+
+    public override void Leave() {
+        State.SP = State.BP;
+        State.BP = Stack.Pop16();
+    }
+
+    public override void Shld(Grp2CountSource countSource) {
+        ModRM.Read();
+        byte count = ComputeGrp2Count(countSource);
+
+        ushort source = ModRM.R16;
+        ushort destination = ModRM.GetRm16();
+        ushort value = Alu.Shld16(destination, source, count);
+        ModRM.SetRm16(value);
+    }
+
+    public override void MovzxByte() {
+        ModRM.Read();
+        ModRM.R16 = ModRM.GetRm8();
+    }
+
+    public override void MovsxByte() {
+        ModRM.Read();
+        ModRM.R16 = (ushort)(sbyte)ModRM.GetRm8();
+    }
 }
