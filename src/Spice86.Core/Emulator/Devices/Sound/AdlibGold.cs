@@ -37,6 +37,7 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
         _sampleRate = sampleRate;
         _stereoProcessor = new(_sampleRate, loggerService);
+        _stereoProcessor = new(_sampleRate, loggerService);
         _surroundProcessor = new(_sampleRate);
         _audioPlayer = Audio.CreatePlayer(48000, 2048);
         _playbackThread = new Thread(RnderWaveFormOnPlaybackThread);
