@@ -1,18 +1,23 @@
+using Dunet;
+
+using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
+using Spice86.Core.Emulator.VM;
+
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 public enum Mode {
     Opl2, DualOpl2, Opl3, Opl3Gold
 }
 
-    public struct Control {
-        public Control() { }
-        public byte Index { get; set; }
-        public byte LVol { get; set; } = OPL.DefaultVolume;
-        public byte RVol { get; set; }
+public struct Control {
+    public Control() { }
+    public byte Index { get; set; }
+    public byte LVol { get; set; } = OPL.DefaultVolume;
+    public byte RVol { get; set; }
 
-        public bool IsActive { get; set; }
-        public bool UseMixer { get; set; }
-    }
+    public bool IsActive { get; set; }
+    public bool UseMixer { get; set; }
+}
 
 public class OPLTimer {
     /// <summary>
@@ -99,7 +104,9 @@ public class OPLTimer {
 }
 
 public class Chip {
-    public Chip() {
+    private Machine _machine;
+    public Chip(Machine machine) {
+        _machine = machine;
         Timer0 = new(80);
         Timer1 = new(320);
     }
@@ -113,7 +120,39 @@ public class Chip {
     /// <summary>
     /// Check for it being a write to the timer
     /// </summary>
-    public bool Write(ushort addr, byte val) {
+    public bool Write(ushort reg, byte val) {
+        // if(reg == 0x02 || reg == 0x03 || reg == 0x04)
+        // LOG(LOG_MISC,LOG_ERROR)("write adlib timer %X %X",reg,val);
+        switch (reg) {
+            case 0x02:
+                Timer0.Update(_machine.DualPic.Ticks.TotalMilliseconds);
+                Timer0.SetCounter(val);
+                return true;
+            case 0x03:
+                Timer1.Update(_machine.DualPic.Ticks.TotalMilliseconds);
+                Timer1.SetCounter(val);
+                return true;
+            case 0x04:
+                // Reset overflow in both timers
+                if ((val & 0x80) > 0) {
+                    Timer0.Reset();
+                    Timer1.Reset();
+                } else {
+                    double time = _machine.DualPic.Ticks.TotalMilliseconds;
+                    if ((val & 0x1) > 0)
+                        Timer0.Start(time);
+                    else
+                        Timer0.Stop();
+                    if ((val & 0x2) > 0)
+                        Timer1.Start(time);
+                    else {
+                        Timer1.Stop();
+                    }
+                    Timer0.SetMask((val & 0x40) > 0);
+                    Timer1.SetMask((val & 0x20) > 0);
+                }
+                return true;
+        }
         return false;
     }
 
@@ -121,7 +160,19 @@ public class Chip {
     /// Read the current timer state, will use current double
     /// </summary>
     public byte Read() {
-        return 0;
+        TimeSpan time = _machine.DualPic.Ticks;
+        byte ret = 0;
+
+        // Overflow won't be set if a channel is masked
+        if (Timer0.Update(time.TotalMilliseconds)) {
+            ret |= 0x40;
+            ret |= 0x80;
+        }
+        if (Timer1.Update(time.TotalMilliseconds)) {
+            ret |= 0x20;
+            ret |= 0x80;
+        }
+        return ret;
     }
 }
 
@@ -135,6 +186,99 @@ public class OPL {
     /// </summary>
     public byte[] Cache { get; private set; } = new byte[512];
 
-    public OPL(OplMode mode) {
+    private Queue<AudioFrame> _fifo = new();
+
+    private Mode _mode;
+
+    private Chip[] _chip = new Chip[2];
+
+    private Opl3Chip _oplChip = new();
+
+    private byte _mem;
+
+    private AdlibGold _adlibGold;
+
+    // Playback related
+    private double _lastRenderedMs = 0.0;
+    private double _msPerFrame = 0.0;
+
+    // Last selected address in the chip for the different modes
+
+    private const int _defaultVolume = 0xff;
+
+
+    [Union]
+    private partial record Reg {
+        public byte Normal { get; set; }
+        public byte[] Dual { get; set; } = new byte[2];
+    }
+
+    private Reg _reg = new();
+
+    private Control _ctrl = new();
+
+    public OPL(AdlibGold adlibGold, OplMode mode) {
+        _adlibGold = adlibGold;
+    }
+
+    private void AdlibGoldControlWrite(byte val) {
+        switch (_ctrl.Index) {
+            case 0x04:
+                _adlibGold.StereoControlWrite((byte)StereoProcessorControlReg.VolumeLeft,
+                                               val);
+                break;
+            case 0x05:
+                _adlibGold.StereoControlWrite((byte)StereoProcessorControlReg.VolumeRight,
+                                               val);
+                break;
+            case 0x06:
+                _adlibGold.StereoControlWrite((byte)StereoProcessorControlReg.Bass, val);
+                break;
+            case 0x07:
+                _adlibGold.StereoControlWrite((byte)StereoProcessorControlReg.Treble, val);
+                break;
+
+            case 0x08:
+                _adlibGold.StereoControlWrite((byte)StereoProcessorControlReg.SwitchFunctions,
+                                               val);
+                break;
+
+            case 0x09: // Left FM Volume
+                _ctrl.LVol = val;
+                goto setvol;
+            case 0x0a: // Right FM Volume
+                _ctrl.RVol = val;
+            setvol:
+                if (_ctrl.UseMixer) {
+                    // Dune CD version uses 32 volume steps in an apparent
+                    // mistake, should be 128
+                    //Channel.SetAppVolume(
+                    //        (_ctrl.LVol & 0x1f) / 31.0f,
+                    //        (_ctrl.RVol & 0x1f) / 31.0f);
+                }
+                break;
+
+            case 0x18: // Surround
+                _adlibGold.SurroundControlWrite(val);
+                break;
+        }
+    }
+
+    private byte AdlibGoldControlRead() {
+        switch (_ctrl.Index) {
+            case 0x00: // Board Options
+                return 0x50; // 16-bit ISA, surround module, no
+                             // telephone/CDROM
+                             // return 0x70; // 16-bit ISA, no
+                             // telephone/surround/CD-ROM
+
+            case 0x09: // Left FM Volume
+                return _ctrl.LVol;
+            case 0x0a: // Right FM Volume
+                return _ctrl.RVol;
+            case 0x15: // Audio Relocation
+                return 0x388 >> 3; // Cryo installer detection
+        }
+        return 0xff;
     }
 }

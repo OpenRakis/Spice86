@@ -2,8 +2,6 @@
 
 using Dunet;
 
-using Serilog;
-
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.CLI;
@@ -15,7 +13,6 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Collections.Generic;
 
 /// <summary>
 /// Adlib Gold implementation, translated from DOSBox Staging code
@@ -36,7 +33,6 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
 
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
         _sampleRate = sampleRate;
-        _stereoProcessor = new(_sampleRate, loggerService);
         _stereoProcessor = new(_sampleRate, loggerService);
         _surroundProcessor = new(_sampleRate);
         _audioPlayer = Audio.CreatePlayer(48000, 2048);
@@ -66,14 +62,6 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
             }
             _disposed = true;
         }
-    }
-
-    private enum StereoProcessorControlReg {
-        VolumeLeft,
-        VolumeRight,
-        Bass,
-        Treble,
-        SwitchFunctions,
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
@@ -163,22 +151,6 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         SoundB2 = 5,
         Stereo1 = 6,
         Stereo2 = 7,
-    }
-
-    private struct AudioFrame {
-        public AudioFrame(float left, float right) {
-            Left = left;
-            Right = right;
-        }
-
-        public float Left { get; set; }
-
-        public float Right { get; set; }
-
-        public float this[int i] {
-            get { return int.IsEvenInteger(i) ? Left : Right; }
-            set { if (int.IsEvenInteger(i)) { Left = value; } else { Right = value; } }
-        }
     }
 
     /// <summary>
