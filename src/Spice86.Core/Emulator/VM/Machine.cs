@@ -59,6 +59,8 @@ public class Machine : IDisposable {
     public DosInt20Handler DosInt20Handler { get; }
 
     public DosInt21Handler DosInt21Handler { get; }
+    
+    public DosInt2fHandler DosInt2fHandler { get; }
 
     public GravisUltraSound GravisUltraSound { get; }
 
@@ -190,6 +192,8 @@ public class Machine : IDisposable {
         Register(DosInt20Handler);
         DosInt21Handler = new DosInt21Handler(this, serviceProvider.GetLoggerForContext<DosInt21Handler>());
         Register(DosInt21Handler);
+        DosInt2fHandler = new DosInt2fHandler(this, serviceProvider.GetLoggerForContext<DosInt2fHandler>());
+        Register(DosInt2fHandler);
         MouseInt33Handler = new MouseInt33Handler(this, serviceProvider.GetLoggerForContext<MouseInt33Handler>(), gui);
         Register(MouseInt33Handler);
         _dmaThread = new Thread(DmaLoop) {
