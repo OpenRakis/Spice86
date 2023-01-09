@@ -42,6 +42,7 @@ com files and bios files are also supported.
 ## More command line options
 
 ```
+  -k  --Kilobytes                    The amount of main emulator memory, in kilobytes. Defaults to 1 MB
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
   -c, --CDrive                       Path to C drive, default is exe parent
   -r, --RecordedDataDirectory        Directory to dump data to when not specified otherwise. Working directory if blank
