@@ -76,5 +76,5 @@ public class Configuration {
     public string? Mt32RomsPath { get; init; }
 
     [Option('k', nameof(Kilobytes), Default = 1000, Required = false, HelpText = "The amount of main memory, in kilobytes")]
-    public int Kilobytes { get; init; }
+    public int Kilobytes { get; init; } = 1000;
 }
