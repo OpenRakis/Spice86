@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.Function;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public class Configuration {
-
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]
     public string? CDrive { get; set; }
 
@@ -75,4 +74,7 @@ public class Configuration {
 
     [Option('m', nameof(Mt32RomsPath), Default = null, Required = false, HelpText = "Zip file or directory containing the MT-32 ROM files")]
     public string? Mt32RomsPath { get; init; }
+
+    [Option('k', nameof(Kilobytes), Default = 1000, Required = false, HelpText = "The amount of main memory, in kilobytes")]
+    public int Kilobytes { get; init; }
 }

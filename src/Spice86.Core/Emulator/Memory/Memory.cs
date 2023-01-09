@@ -5,7 +5,6 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 /// <summary> Addressable memory of the machine. </summary>
 public class Memory {
@@ -16,8 +15,8 @@ public class Memory {
     // For breakpoints to access what is getting written
     public byte CurrentlyWritingByte { get; private set; } = 0;
 
-    public Memory(uint size) {
-        Ram = new byte[size];
+    public Memory(uint sizeInKb) {
+        Ram = new byte[sizeInKb * 10000];
         UInt8 = new(this);
         UInt16 = new(this);
         UInt32 = new(this);

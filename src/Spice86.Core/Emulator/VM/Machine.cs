@@ -118,8 +118,7 @@ public class Machine : IDisposable {
         RecordData = recordData;
         var serviceProvider = new ServiceProvider();
 
-        // A full 1MB of addressable memory :)
-        Memory = new Memory(0x100000);
+        Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes);
         Cpu = new Cpu(this, new ServiceProvider().GetLoggerForContext<Cpu>(), executionFlowRecorder, recordData);
 
         // Breakpoints
