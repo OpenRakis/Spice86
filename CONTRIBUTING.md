@@ -70,7 +70,7 @@ $ dotnet test
 
 This project works already quite well for rewriting games such as DUNE, but it is still in early development.
 
-As such, there is a lot of code that needs to be written, especially for emulating additionnal hardware, CPU instructions, and interrupts.
+As such, there is a lot of code that needs to be written, especially for emulating additionnal hardware, Memory features, CPU instructions, DOS services, and interrupts.
 
 ### Bug Reports
 
