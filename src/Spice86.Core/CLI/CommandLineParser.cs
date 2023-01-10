@@ -1,6 +1,4 @@
-﻿using Spice86.Core.DI;
-
-namespace Spice86.Core.CLI;
+﻿namespace Spice86.Core.CLI;
 
 using CommandLine;
 
