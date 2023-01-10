@@ -843,4 +843,39 @@ public class Alu {
     private void SetZeroFlag(ulong value) {
         _state.ZeroFlag = value == 0;
     }
+
+    public ushort Shld16(ushort destination, ushort source, byte count) {
+        count &= ShiftCountMask;
+        if (count == 0) {
+            return destination;
+        }
+
+        if (count > 16) {
+            // Undefined. We shift the source in again.
+            return (ushort)(source << (count - 16));
+        }
+
+        ushort msbBefore = (ushort)(destination & MsbMask16);
+        _state.CarryFlag = (destination >> (16 - count) & 1) != 0;
+        ushort res = (ushort)((destination << count) | (source >> (16 - count)));
+        UpdateFlags16(res);
+        ushort msb = (ushort)(res & MsbMask16);
+        _state.OverflowFlag = msb != msbBefore;
+        return res;
+    }
+
+    public uint Shld32(uint destination, uint source, byte count) {
+        count &= ShiftCountMask;
+        if (count == 0) {
+            return destination;
+        }
+
+        uint msbBefore = destination & MsbMask32;
+        _state.CarryFlag = (destination >> (32 - count) & 1) != 0;
+        uint res = (destination << count) | (source >> (32 - count));
+        UpdateFlags32(res);
+        uint msb = res & MsbMask32;
+        _state.OverflowFlag = msb != msbBefore;
+        return res;
+    }
 }

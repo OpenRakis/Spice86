@@ -515,4 +515,38 @@ public class Instructions32 : Instructions16Or32 {
         // OUT DX EAX
         Cpu.Out32(State.DX, State.EAX);
     }
+
+    public override void Leave() {
+        State.ESP = State.EBP;
+        State.EBP = Stack.Pop32();
+    }
+
+    public override void Shld(Grp2CountSource countSource) {
+        ModRM.Read();
+        byte count = ComputeGrp2Count(countSource);
+        uint source = ModRM.R32;
+        uint destination = ModRM.GetRm32();
+        uint value = Alu.Shld32(destination, source, count);
+        ModRM.SetRm32(value);
+    }
+
+    public void Movsx() {
+        ModRM.Read();
+        ModRM.R32 = (uint)(short)ModRM.GetRm16();
+    }
+
+    public void Movzx() {
+        ModRM.Read();
+        ModRM.R32 = ModRM.GetRm16();
+    }
+
+    public override void MovzxByte() {
+        ModRM.Read();
+        ModRM.R32 = ModRM.GetRm8();
+    }
+
+    public override void MovsxByte() {
+        ModRM.Read();
+        ModRM.R32 = (uint)(sbyte)ModRM.GetRm8();
+    }
 }

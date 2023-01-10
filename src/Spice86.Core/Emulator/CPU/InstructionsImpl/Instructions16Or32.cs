@@ -164,4 +164,12 @@ public abstract class Instructions16Or32 : Instructions {
     public void Lgs() {
         State.GS = DoLxsAndReturnSegmentValue();
     }
+
+    public abstract void Leave();
+    
+    public abstract void Shld(Grp2CountSource countSource);
+    
+    public abstract void MovzxByte();
+    
+    public abstract void MovsxByte();
 }
