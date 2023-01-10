@@ -18,7 +18,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
-using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.InterruptHandlers.Vga;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -96,6 +96,12 @@ public class Machine : IDisposable {
 
     public DmaController DmaController { get; }
 
+    
+    private readonly ExpandedMemoryManager emm;
+    private readonly ExtendedMemoryManager xmm;
+
+    internal ExtendedMemoryManager ExtendedMemory => this.xmm;
+
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
@@ -118,6 +124,10 @@ public class Machine : IDisposable {
         Memory = new Memory(ram);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
+
+        xmm = new(this);
+        emm = new(this);
+        Memory.Ems = emm;
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
@@ -163,7 +173,7 @@ public class Machine : IDisposable {
             loggerService,
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, (IVgaInterrupts)VgaCard);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, loggerService, (IVgaInterrupts)VgaCard);
         Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);
