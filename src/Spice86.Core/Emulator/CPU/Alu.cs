@@ -850,12 +850,17 @@ public class Alu {
             return destination;
         }
 
-        ushort msbBefore = (ushort) ((destination << (count - 1)) & MsbMask16);
-        _state.CarryFlag = msbBefore != 0;
-        ushort res = (ushort)((destination << count) + source);
+        if (count > 16) {
+            // Undefined. We shift the source in again.
+            return (ushort)(source << (count - 16));
+        }
+
+        ushort msbBefore = (ushort)(destination & MsbMask16);
+        _state.CarryFlag = (destination >> (16 - count) & 1) != 0;
+        ushort res = (ushort)((destination << count) | (source >> (16 - count)));
         UpdateFlags16(res);
-        ushort msb = (ushort) (res & MsbMask16);
-        _state.OverflowFlag = (msb ^ msbBefore) != 0;
+        ushort msb = (ushort)(res & MsbMask16);
+        _state.OverflowFlag = msb != msbBefore;
         return res;
     }
 
@@ -865,12 +870,12 @@ public class Alu {
             return destination;
         }
 
-        uint msbBefore = (destination << (count - 1)) & MsbMask32;
-        _state.CarryFlag = msbBefore != 0;
-        uint res = (destination << count) + source;
+        uint msbBefore = destination & MsbMask32;
+        _state.CarryFlag = (destination >> (32 - count) & 1) != 0;
+        uint res = (destination << count) | (source >> (32 - count));
         UpdateFlags32(res);
         uint msb = res & MsbMask32;
-        _state.OverflowFlag = (msb ^ msbBefore) != 0;
+        _state.OverflowFlag = msb != msbBefore;
         return res;
     }
 }
