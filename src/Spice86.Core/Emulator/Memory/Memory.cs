@@ -16,7 +16,7 @@ public class Memory {
     public byte CurrentlyWritingByte { get; private set; } = 0;
 
     public Memory(uint sizeInKb) {
-        Ram = new byte[sizeInKb * 10000];
+        Ram = new byte[sizeInKb * 1024];
         UInt8 = new(this);
         UInt16 = new(this);
         UInt32 = new(this);
