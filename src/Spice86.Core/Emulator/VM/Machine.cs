@@ -97,6 +97,12 @@ public class Machine : IDisposable {
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
     public DmaController DmaController { get; }
 
+    
+    private readonly ExpandedMemoryManager emm;
+    private readonly ExtendedMemoryManager xmm;
+
+    internal ExtendedMemoryManager ExtendedMemory => this.xmm;
+
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
@@ -115,9 +121,13 @@ public class Machine : IDisposable {
         Gui = gui;
         RecordData = recordData;
 
-        Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes);
+        Memory = new Memory(this, sizeInKb: (uint)Configuration.Kilobytes);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
+
+        xmm = new(this);
+        emm = new(this);
+        Memory.Ems = emm;
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
