@@ -9,23 +9,18 @@ using System.Diagnostics;
 
 public sealed class GdbServer : IDisposable {
     private readonly ILogger _logger;
-    private EventWaitHandle? _waitHandle;
+    private EventWaitHandle? _waitFirstConnectionHandle;
     private readonly Configuration _configuration;
     private bool _disposed;
     private readonly Machine _machine;
     private bool _isRunning = true;
-    private readonly Thread? _gdbServerThread;
+    private Thread? _gdbServerThread;
+    private GdbIo? _gdbIo;
 
     public GdbServer(Machine machine, ILogger logger, Configuration configuration) {
         _logger = logger;
         _machine = machine;
         _configuration = configuration;
-        if (configuration.GdbPort is not null) {
-            _gdbServerThread = new(RunServer) {
-                Name = "GdbServer"
-            };
-            Start();
-        }
     }
 
     public void Dispose() {
@@ -37,6 +32,12 @@ public sealed class GdbServer : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                // Prevent it from restarting when the connection is killed
+                _isRunning = false;
+                _gdbIo?.Dispose();
+                // Release lock if called before the first connection to gdb server has been done
+                _waitFirstConnectionHandle?.Set();
+                _waitFirstConnectionHandle?.Dispose();
                 _gdbServerThread?.Join();
                 _isRunning = false;
             }
@@ -47,12 +48,13 @@ public sealed class GdbServer : IDisposable {
     public GdbCommandHandler? GdbCommandHandler { get; private set; }
 
     private void AcceptOneConnection(GdbIo gdbIo) {
+        gdbIo.WaitForConnection();
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo,
             _machine,
             new ServiceProvider().GetLoggerForContext<GdbCommandHandler>(),
             _configuration);
         gdbCommandHandler.PauseEmulator();
-        _waitHandle?.Set();
+        OnConnect();
         GdbCommandHandler = gdbCommandHandler;
         while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
             string command = gdbIo.ReadCommand();
@@ -76,10 +78,17 @@ public sealed class GdbServer : IDisposable {
                 try {
                     using GdbIo gdbIo = new GdbIo(port,
                         new ServiceProvider().GetLoggerForContext<GdbIo>());
+                    // Make GdbIo available for Dispose
+                    _gdbIo = gdbIo;
                     AcceptOneConnection(gdbIo);
+                    _gdbIo = null;
                 } catch (IOException e) {
                     e.Demystify();
-                    _logger.Error(e, "Error in the GDB server, restarting it...");
+                    if (_isRunning) {
+                        _logger.Error(e, "Error in the GDB server, restarting it...");
+                    } else {
+                        _logger.Information("GDB Server connection closed and server is not running. Terminating it.");
+                    }
                 }
             }
         } catch (Exception e) {
@@ -94,11 +103,26 @@ public sealed class GdbServer : IDisposable {
         }
     }
 
-    private void Start() {
+    public void StartServerAndWait() {
+        if (_configuration.GdbPort is not null) {
+            StartServerThread();
+        }
+    }
+
+    private void StartServerThread() {
+        _waitFirstConnectionHandle = new AutoResetEvent(false);
+        _gdbServerThread = new(RunServer) {
+            Name = "GdbServer"
+        };
         _gdbServerThread?.Start();
-        // wait for thread to start
-        _waitHandle = new AutoResetEvent(false);
-        _waitHandle.WaitOne(Timeout.Infinite);
-        _waitHandle.Dispose();
+        // wait for thread to start and the initial connection to be made
+        _waitFirstConnectionHandle.WaitOne();
+        // Remove the handle so that no wait
+        _waitFirstConnectionHandle.Dispose();
+        _waitFirstConnectionHandle = null;
+    }
+
+    private void OnConnect() {
+        _waitFirstConnectionHandle?.Set();
     }
 }

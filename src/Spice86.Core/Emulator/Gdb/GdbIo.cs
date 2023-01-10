@@ -15,29 +15,30 @@ public sealed class GdbIo : IDisposable {
     private readonly ILogger _logger;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly List<byte> _rawCommand = new();
-    private readonly Socket _serverSocket;
-    private readonly Socket _socket;
+    private Socket? _socket;
     private readonly TcpListener _tcpListener;
     private bool _disposed;
-    private readonly NetworkStream _stream;
+    private NetworkStream? _stream;
 
     public GdbIo(int port, ILogger logger) {
         _logger = logger;
         IPHostEntry host = Dns.GetHostEntry("localhost");
         IPAddress ip = new IPAddress(host.AddressList.First().GetAddressBytes());
         _tcpListener = new TcpListener(ip, port);
+    }
+
+    public void WaitForConnection() {
         _tcpListener.Start();
-        _serverSocket = _tcpListener.Server;
         _socket = _tcpListener.AcceptSocket();
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            int port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
             _logger.Information("GDB Server listening on port {@Port}", port);
             _logger.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
         }
-
         _stream = new NetworkStream(_socket);
     }
 
-    public bool IsClientConnected => !((_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0) || !_socket.Connected);
+    public bool IsClientConnected => !(_socket is null || !_socket.Connected || (_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0));
 
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -69,6 +70,9 @@ public sealed class GdbIo : IDisposable {
 
     public string ReadCommand() {
         _rawCommand.Clear();
+        if (_stream is null) {
+            throw new InvalidOperationException("No network stream to read from. Was WaitForConnection called before this?");
+        }
         int chr = _stream.ReadByte();
         StringBuilder resBuilder = new StringBuilder();
         while (chr >= 0) {
@@ -90,11 +94,18 @@ public sealed class GdbIo : IDisposable {
     }
 
     public void SendResponse(string? data) {
+        if (!IsClientConnected) {
+            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _logger.Information("Cannot send response, client is not connected anymore.");
+            }
+            // Happens when the emulator thread reaches a breakpoint but the client is gone
+            return;
+        }
         if (data != null) {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("Sending response {@ResponseData}", data);
             }
-            _stream.Write(Encoding.UTF8.GetBytes(data));
+            _stream?.Write(Encoding.UTF8.GetBytes(data));
         }
     }
 
@@ -103,8 +114,8 @@ public sealed class GdbIo : IDisposable {
             if (disposing) {
                 // dispose managed state (managed objects)
                 _tcpListener.Stop();
-                _serverSocket.Close();
-                _socket.Close();
+                _socket?.Close();
+                _stream?.Close();
             }
             _disposed = true;
         }

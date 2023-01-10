@@ -43,12 +43,13 @@ public sealed class ProgramExecutor : IDisposable {
         _logger = logger;
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         Machine = CreateMachine(gui, keyScanCodeConverter);
-        _gdbServer = StartGdbServer();
+        _gdbServer = CreateGdbServer();
     }
 
     public Machine Machine { get; private set; }
 
     public void Run() {
+        _gdbServer?.StartServerAndWait();
         Machine.Run();
         if (RecordData) {
             new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine,
@@ -147,7 +148,7 @@ public sealed class ProgramExecutor : IDisposable {
         return Machine;
     }
 
-    private GdbServer? StartGdbServer() {
+    private GdbServer? CreateGdbServer() {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
             return new GdbServer(Machine,

@@ -1,18 +1,13 @@
-﻿using Spice86.Core.DI;
-using Spice86.Core.Emulator.Function;
-
-namespace Spice86.Core.Emulator.Gdb;
-
-using Serilog;
+﻿using Serilog;
+using Serilog.Events;
 
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Utils;
-using Spice86.Logging;
 
-using System;
 using System.Diagnostics;
-using System.IO;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 public class GdbCommandBreakpointHandler {
     private readonly ILogger _logger;
@@ -29,7 +24,7 @@ public class GdbCommandBreakpointHandler {
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
         }
         return _gdbIo.GenerateResponse("OK");
@@ -46,8 +41,14 @@ public class GdbCommandBreakpointHandler {
     public bool ResumeEmulatorOnCommandEnd { get => _resumeEmulatorOnCommandEnd; set => _resumeEmulatorOnCommandEnd = value; }
 
     public void OnBreakPointReached(BreakPoint breakPoint) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint reached!\n{@BreakPoint}", breakPoint);
+        }
+        if (!_gdbIo.IsClientConnected) {
+            if (_logger.IsEnabled(LogEventLevel.Information)) {
+                _logger.Information("Breakpoint reached but client is not connected. Nothing to do.\n{@BreakPoint}", breakPoint);
+            }
+            return;
         }
         _machine.MachineBreakpoints.PauseHandler.RequestPause();
         _resumeEmulatorOnCommandEnd = false;
@@ -55,7 +56,7 @@ public class GdbCommandBreakpointHandler {
             _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
         } catch (IOException e) {
             e.Demystify();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_logger.IsEnabled(LogEventLevel.Error)) {
                 _logger.Error(e, "IOException while sending breakpoint info");
             }
         }
@@ -76,7 +77,7 @@ public class GdbCommandBreakpointHandler {
                 _ => null
             };
             if (breakPointType == null) {
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                if (_logger.IsEnabled(LogEventLevel.Error)) {
                     _logger.Error("Cannot parse breakpoint type {@Type} for command {@Command}", type, command);
                 }
                 return null;
@@ -84,7 +85,7 @@ public class GdbCommandBreakpointHandler {
             return new AddressBreakPoint((BreakPointType)breakPointType, address, OnBreakPointReached, false);
         } catch (FormatException nfe) {
             nfe.Demystify();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_logger.IsEnabled(LogEventLevel.Error)) {
                 _logger.Error(nfe, "Cannot parse breakpoint {@Command}", command);
             }
             return null;
@@ -97,7 +98,7 @@ public class GdbCommandBreakpointHandler {
             return _gdbIo.GenerateResponse("");
         }
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, false);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint removed!\n{@BreakPoint}", breakPoint);
         }
         return _gdbIo.GenerateResponse("OK");
@@ -109,7 +110,7 @@ public class GdbCommandBreakpointHandler {
         // will pause the CPU at the next instruction unconditionally
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, OnBreakPointReached, true);
         _machine.MachineBreakpoints.ToggleBreakPoint(stepBreakPoint, true);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Breakpoint added for step!\n{@StepBreakPoint}", stepBreakPoint);
         }
 
