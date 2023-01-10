@@ -4,6 +4,8 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -95,7 +97,24 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// Reports extended memory size in AX.
     /// </summary>
     public void GetExtendedMemorySize() {
-        State.AX = 0;
+        State.AX = (ushort) (Memory.A20Gate.IsEnabled ? 0 : ExtendedMemoryManager.XmsMemorySize);
+    }
+
+    /// <summary>
+    /// Legacy BIOS function to copy extended memory.
+    /// <remarks>TODO: Must refactor this with the usage of a MemoryBasedDataStructure</remarks>
+    /// <remarks>TODO: This is supposed to be overriden by the XMS driver, if present.</remarks>
+    /// </summary>
+    public void CopyExtendedMemory() {
+        bool enabled = _a20Gate.IsEnabled;
+        _a20Gate.IsEnabled = true;
+        uint bytes = State.ECX;
+        uint data = State.ESI;
+        long source = Memory.UInt32[data + 0x12] & 0x00FFFFFF + Memory.UInt8[data + 0x16] << 24;
+        long dest = Memory.UInt32[data + 0x1A] & 0x00FFFFFF + Memory.UInt8[data + 0x1E] << 24;
+        State.EAX = (State.EAX & 0xFFFF) | (State.EAX & 0xFFFF0000);
+        Memory.MemCopy((uint)source, (uint)dest, bytes);
+        _a20Gate.IsEnabled = enabled;
     }
 
     /// <summary>
