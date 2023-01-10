@@ -75,6 +75,6 @@ public class Configuration {
     [Option('m', nameof(Mt32RomsPath), Default = null, Required = false, HelpText = "Zip file or directory containing the MT-32 ROM files")]
     public string? Mt32RomsPath { get; init; }
 
-    [Option('k', nameof(Kilobytes), Default = 1024, Required = false, HelpText = "The amount of main memory, in kilobytes")]
-    public int Kilobytes { get; init; } = 1024;
+    [Option('k', nameof(Kilobytes), Default = 8192, Required = false, HelpText = "The amount of main memory, in kilobytes")]
+    public int Kilobytes { get; init; } = 8192;
 }
