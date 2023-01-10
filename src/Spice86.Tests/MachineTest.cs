@@ -1,5 +1,7 @@
 namespace Spice86.Tests;
 
+using FluentAssertions;
+
 using JetBrains.Annotations;
 
 using Serilog;
@@ -308,7 +310,7 @@ public class MachineTest {
     private Machine TestOneBin(string binName, byte[] expected) {
         Machine machine = Execute(binName);
         Memory memory = machine.Memory;
-        CompareMemoryWithExpected(memory, expected, expected.Length - 1);
+        CompareMemoryWithExpected(memory, expected, 0, expected.Length - 1);
         return machine;
     }
 
@@ -329,36 +331,13 @@ public class MachineTest {
     }
 
     [AssertionMethod]
-    private void CompareMemoryWithExpected(Memory memory, byte[] expected, int end) {
+    private void CompareMemoryWithExpected(Memory memory, byte[] expected, int start, int end) {
         byte[] actual = memory.Ram;
-        for (uint i = 0; i < end; i++) {
-            byte actualByte = actual[i];
-            byte expectedByte = expected[i];
-            if (actualByte != expectedByte) {
-                uint wordIndex = i;
-                if (wordIndex % 2 == 1) {
-                    wordIndex--;
-                }
-                ushort actualWord = MemoryUtils.GetUint16(actual, wordIndex);
-                ushort expectedWord = MemoryUtils.GetUint16(expected, wordIndex);
-                Assert.True(false, "Byte value differs at " + CreateMessageByteDiffer(i, expectedByte, actualByte) + ". If words, "
-                    + CreateMessageWordDiffer(wordIndex, expectedWord, actualWord));
-            }
-        }
-    }
-
-    private string CreateMessageByteDiffer(uint address, byte expected, byte actual) {
-        return "address " + ConvertUtils.ToHex(address) + " Expected " + HexValueWithFlagsB(expected) + " but got "
-            + HexValueWithFlagsB(actual);
+        actual[start..end].Should().BeEquivalentTo(expected[start..end]);
     }
 
     private string HexValueWithFlagsB(byte value) {
         return ConvertUtils.ToHex8(value) + " (if flags=" + Flags.DumpFlags(value) + ")";
-    }
-
-    private string CreateMessageWordDiffer(uint address, ushort expected, ushort actual) {
-        return "address " + ConvertUtils.ToHex(address) + " Expected " + HexValueWithFlagsW(expected) + " but got "
-            + HexValueWithFlagsW(actual);
     }
 
     private string HexValueWithFlagsW(ushort value) {
