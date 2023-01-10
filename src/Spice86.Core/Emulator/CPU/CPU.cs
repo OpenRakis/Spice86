@@ -75,6 +75,7 @@ public class Cpu {
 
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
+        ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
         StaticAddressesRecorder.Reset();
         byte opcode = ProcessPrefixes();
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
@@ -144,18 +145,25 @@ public class Cpu {
 
     public uint NextUint32() {
         uint res = _memory.GetUint32(InternalIpPhysicalAddress);
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+2));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+3));
         _internalIp += 4;
         return res;
     }
 
     public ushort NextUint16() {
         ushort res = _memory.GetUint16(InternalIpPhysicalAddress);
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
         _internalIp += 2;
         return res;
     }
 
     public byte NextUint8() {
         byte res = _memory.GetUint8(InternalIpPhysicalAddress);
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
         _internalIp++;
         return res;
     }

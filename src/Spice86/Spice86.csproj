@@ -16,7 +16,7 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>3.0.17</version>
+		<version>3.0.18</version>
 		<PackageReleaseNotes>Emulator main memory amount is now configurable</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

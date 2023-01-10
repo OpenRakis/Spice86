@@ -14,14 +14,13 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Utils;
-using Spice86.Logging;
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 public class CSharpOverrideHelper {
-    private readonly ILogger _logger;
+    protected readonly ILogger _logger;
 
     public Cpu Cpu => Machine.Cpu;
 
@@ -88,7 +87,10 @@ public class CSharpOverrideHelper {
 
     public JumpDispatcher JumpDispatcher { get; set; }
 
-    public bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
+    public bool IsRegisterExecutableCodeModificationEnabled {
+        get => Machine.Cpu.ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled;
+        set => Machine.Cpu.ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled = value;
+    }
 
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILogger logger) {
@@ -350,21 +352,7 @@ public class CSharpOverrideHelper {
 
     public void DefineExecutableArea(uint startAddress, uint endAddress) {
         for (uint address = startAddress; address <= endAddress; address++) {
-            // For closure
-            uint addressCopy = address;
-            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, address, _ => {
-                if (!IsRegisterExecutableCodeModificationEnabled) {
-                    return;
-                }
-
-                byte oldValue = Memory.UInt8[addressCopy];
-                byte newValue = Memory.CurrentlyWritingByte;
-                if (oldValue != newValue) {
-                    Machine.Cpu.ExecutionFlowRecorder.RegisterExecutableCodeModification(
-                        new SegmentedAddress(State.CS, State.IP), addressCopy, oldValue, newValue);
-                }
-            }, false);
-            Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            Cpu.ExecutionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Machine, address);
         }
     }
 

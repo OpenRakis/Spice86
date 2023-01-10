@@ -1,4 +1,10 @@
-﻿namespace Spice86.Core.Emulator.Function;
+﻿using Newtonsoft.Json;
+
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
+
+namespace Spice86.Core.Emulator.Function;
 
 using Memory;
 
@@ -12,6 +18,14 @@ public class ExecutionFlowRecorder {
     private readonly ISet<ulong> _jumpsEncountered = new HashSet<ulong>();
     public IDictionary<uint, ISet<SegmentedAddress>> RetsFromTo { get; }
     private readonly ISet<ulong> _retsEncountered = new HashSet<ulong>();
+    public IDictionary<uint, ISet<SegmentedAddress>> UnalignedRetsFromTo { get; }
+    private readonly ISet<ulong> _unalignedRetsEncountered = new HashSet<ulong>();
+    public ISet<SegmentedAddress> ExecutedInstructions { get; }
+    private readonly ISet<uint> _instructionsEncountered = new HashSet<uint>();
+    private readonly ISet<uint> _executableCodeAreasEncountered = new HashSet<uint>();
+
+    [JsonIgnore]
+    public bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
 
     // modified byte address -> dictionary of modifying instructions with for each instruction a set of the possible changes the instruction did
     public IDictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>> ExecutableAddressWrittenBy { get; }
@@ -21,6 +35,8 @@ public class ExecutionFlowRecorder {
         CallsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         JumpsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         RetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
+        UnalignedRetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
+        ExecutedInstructions = new HashSet<SegmentedAddress>();
         ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>>();
     }
 
@@ -36,7 +52,67 @@ public class ExecutionFlowRecorder {
         RegisterAddressJump(RetsFromTo, _retsEncountered, fromCS, fromIP, toCS, toIP);
     }
 
-    public void RegisterExecutableCodeModification(SegmentedAddress instructionAddress, uint modifiedAddress, byte oldValue, byte newValue) {
+    public void RegisterUnalignedReturn(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
+        RegisterAddressJump(UnalignedRetsFromTo, _unalignedRetsEncountered, fromCS, fromIP, toCS, toIP);
+    }
+    
+    public void RegisterExecutedInstruction(ushort cs, ushort ip) {
+        if (!AddSegmentedAddressInCache(_instructionsEncountered, cs, ip)) {
+            return;
+        }
+        
+        ExecutedInstructions.Add(new SegmentedAddress(cs, ip));
+    }
+
+    /// <summary>
+    /// Add the segmented address in the cache.
+    /// </summary>
+    /// <param name="cache"></param>
+    /// <param name="segment"></param>
+    /// <param name="offset"></param>
+    /// <returns>true when the address was added, false if it was already there</returns>
+    private static bool AddSegmentedAddressInCache(ISet<uint> cache, ushort segment, ushort offset) {
+        return cache.Add(MemoryUtils.ToPhysicalAddress(segment, offset));
+    }
+
+    public void RegisterExecutableByte(Machine machine, ushort cs, ushort ip) {
+        // Note: this is not enough, instructions modified before they are discovered are not counted as rewritten.
+        // If we saved the coverage to reload it each time, we would get a different picture of the rewritten code but that would come with other issues.
+        // Code modified before being ever executed is arguably not self modifying code. 
+        uint address = MemoryUtils.ToPhysicalAddress(cs, ip);
+        RegisterExecutableByteModificationBreakPoint(machine, address);
+    }
+
+    /// <summary>
+    /// Creates a memory write breakpoint on the given executable address.
+    /// When triggered will fill ExecutableAddressWrittenBy appropriately:
+    ///  - key of the map is the address being modified
+    ///  - value is a dictionary of instruction addresses that modified it, with for each instruction a list of the before and after values.
+    /// </summary>
+    /// <param name="machine"></param>
+    /// <param name="physicalAddress"></param>
+    public void RegisterExecutableByteModificationBreakPoint(Machine machine, uint physicalAddress) {
+        if (!_executableCodeAreasEncountered.Add(physicalAddress)) {
+            return;
+        }
+
+        AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, physicalAddress, _ => {
+            if (!IsRegisterExecutableCodeModificationEnabled) {
+                return;
+            }
+
+            byte oldValue = machine.Memory.UInt8[physicalAddress];
+            byte newValue = machine.Memory.CurrentlyWritingByte;
+            if (oldValue != newValue) {
+                State state = machine.Cpu.State;
+                RegisterExecutableByteModification(
+                    new SegmentedAddress(state.CS, state.IP), physicalAddress, oldValue, newValue);
+            }
+        }, false);
+        machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+    }
+
+    private void RegisterExecutableByteModification(SegmentedAddress instructionAddress, uint modifiedAddress, byte oldValue, byte newValue) {
         uint instructionAddressPhysical = instructionAddress.ToPhysical();
         if (instructionAddressPhysical == 0) {
             // Probably Exe load
