@@ -60,7 +60,6 @@ com files and bios files are also supported.
   -h, --HeadlessMode                 (Default: false) Headless mode. If true, no GUI is shown.
   -l, --VerboseLogs                  (Default: false) Enable verbose level logs
   -w, --WarningLogs                  (Default: false) Enable warning level logs
-  -d, --DumpDataOnExit               (Default: true) Records data at runtime and dumps them at exit time
   -i, --InitializeDOS                (Default: true) Install DOS interrupt vectors or not.
 
   --help                             Display this help screen.
