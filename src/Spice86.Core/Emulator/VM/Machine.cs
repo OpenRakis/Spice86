@@ -142,6 +142,7 @@ public class Machine : IDisposable {
             Xms = new(this);
         }
         if(configuration.Ems) {
+            Xms ??= new(this);
             Ems = new(this);
         }
         
