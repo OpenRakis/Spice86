@@ -7,30 +7,28 @@ using System.Linq;
 /// <summary>
 /// Simple memory allocator for reserving regions of conventional memory.
 /// </summary>
-internal sealed class MetaAllocator
-{
-    private readonly LinkedList<Allocation> allocations = new LinkedList<Allocation>();
+public class MetaAllocator {
+    private readonly LinkedList<Allocation> allocations = new();
 
     public MetaAllocator() => this.Clear();
 
     /// <summary>
     /// Clears all allocations and resets the allocator to its initial state.
     /// </summary>
-    public void Clear()
-    {
+    public void Clear() {
         this.allocations.Clear();
         this.allocations.AddLast(new Allocation(0, Memory.ConvMemorySize >> 4, false));
     }
+
     /// <summary>
     /// Reserves a new block of memory.
     /// </summary>
     /// <param name="minimumSegment">Minimum requested segment to return.</param>
     /// <param name="bytes">Number of bytes requested.</param>
     /// <returns>Starting segment of the requested block of memory.</returns>
-    public ushort Allocate(ushort minimumSegment, int bytes)
-    {
+    public ushort Allocate(ushort minimumSegment, int bytes) {
         if (bytes <= 0) {
-            throw new ArgumentOutOfRangeException("bytes");
+            throw new ArgumentOutOfRangeException(nameof(bytes));
         }
 
         uint paragraphs = (uint)(bytes >> 4);
@@ -39,17 +37,13 @@ internal sealed class MetaAllocator
         }
 
         Allocation freeBlock;
-        try
-        {
-            freeBlock = this.allocations.Where(a => !a.IsUsed && InRange(a, minimumSegment, paragraphs)).First();
-        }
-        catch (InvalidOperationException ex)
-        {
+        try {
+            freeBlock = this.allocations.First(a => !a.IsUsed && InRange(a, minimumSegment, paragraphs));
+        } catch (InvalidOperationException ex) {
             throw new InvalidOperationException("Not enough conventional memory.", ex);
         }
 
-        if (freeBlock.Length == paragraphs)
-        {
+        if (freeBlock.Length == paragraphs) {
             freeBlock.IsUsed = true;
             return freeBlock.Segment;
         }
@@ -78,8 +72,7 @@ internal sealed class MetaAllocator
     /// Returns the size of the largest free block of memory.
     /// </summary>
     /// <returns>Size in bytes of the largest free block of memory.</returns>
-    public uint GetLargestFreeBlockSize()
-    {
+    public uint GetLargestFreeBlockSize() {
         return this.allocations.Where(a => !a.IsUsed).Max(a => a.Length) << 4;
     }
 
@@ -90,8 +83,7 @@ internal sealed class MetaAllocator
     /// <param name="segment">Minimum requested segment address.</param>
     /// <param name="length">Requested allocation length.</param>
     /// <returns>True if allocation is acceptable; otherwise false.</returns>
-    private static bool InRange(Allocation a, ushort segment, uint length)
-    {
+    private static bool InRange(Allocation a, ushort segment, uint length) {
         if (a.Segment + a.Length >= segment + length) {
             return true;
         }
@@ -106,8 +98,7 @@ internal sealed class MetaAllocator
     /// <summary>
     /// Describes a conventional memory allocation.
     /// </summary>
-    private sealed class Allocation : IEquatable<Allocation>
-    {
+    private sealed class Allocation : IEquatable<Allocation> {
         /// <summary>
         /// The starting segment of the allocation.
         /// </summary>
@@ -127,16 +118,14 @@ internal sealed class MetaAllocator
         /// <param name="segment">The starging segment of the allocation.</param>
         /// <param name="length">The length of the allocation in 16-byte paragraphs.</param>
         /// <param name="isUsed">Indicates whether the allocation is in use or a free block.</param>
-        public Allocation(ushort segment, uint length, bool isUsed)
-        {
+        public Allocation(ushort segment, uint length, bool isUsed) {
             this.Segment = segment;
             this.Length = length;
             this.IsUsed = isUsed;
         }
 
-        public bool Equals(Allocation? other)
-        {
-            if (other == null) {
+        public bool Equals(Allocation? other) {
+            if (other is null) {
                 return false;
             }
 
