@@ -49,7 +49,9 @@ public class Memory {
     /// <summary>
     /// Gets or sets the EMS handler.
     /// </summary>
-    public ExpandedMemoryManager? Ems { get; internal set; }
+    private ExpandedMemoryManager? Ems { get; set; }
+
+    public void SetExpandedMemoryManager(ExpandedMemoryManager ems) => Ems = ems;
 
     private readonly Machine _machine;
 
