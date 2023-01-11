@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.Devices;
-
 using System;
 
 /// <summary>
@@ -20,6 +18,7 @@ public interface IDmaDevice16 {
     /// <param name="count">Number of 16-bit words to write.</param>
     /// <returns>Number of 16-bit words actually written to the device.</returns>
     int WriteWords(IntPtr source, int count);
+
     /// <summary>
     /// Invoked when a transfer is completed in single-cycle mode.
     /// </summary>
