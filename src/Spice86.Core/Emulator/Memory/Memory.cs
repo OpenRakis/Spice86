@@ -83,6 +83,49 @@ public class Memory {
         return new(allocation, length);
     }
 
+    private ushort _nextHandlerOffset = 4096;
+
+    /// <summary>
+    /// Segment for interrupt/callback proxies.
+    /// </summary>
+    private const ushort HandlerSegment = 0xF100;
+
+    /// <summary>
+    /// Writes a new callback handler and returns its address.
+    /// </summary>
+    /// <param name="id">Unique ID of the callback handler.</param>
+    /// <param name="hookable">Value indicating whether the callback is hookable.</param>
+    /// <returns>Address of the callback handler.</returns>
+    internal SegmentedAddress AddCallbackHandler(byte id, bool hookable) {
+        IntPtr ptr = GetPointer(HandlerSegment, _nextHandlerOffset);
+        int length = 4;
+        unsafe {
+            byte* writePtr = (byte*)ptr.ToPointer();
+            if (hookable) {
+                writePtr[0] = 0xE9; // JMP iw
+                writePtr[1] = 3; // jump past the 3 nops
+                writePtr[2] = 0;
+                writePtr[3] = 0x90;
+                writePtr[4] = 0x90;
+                writePtr[5] = 0x90;
+
+                writePtr += 6;
+                length += 6;
+            }
+
+            writePtr[0] = 0x0F;
+            writePtr[1] = 0x56;
+            writePtr[2] = id;
+            writePtr[3] = 0xCB; // RETF
+        }
+
+        var address = new SegmentedAddress(HandlerSegment, _nextHandlerOffset);
+        _nextHandlerOffset += (ushort)length;
+
+        return address;
+    }
+
+
     /// <summary>
     /// Writes a string to memory as a null-terminated ANSI byte array.
     /// </summary>
