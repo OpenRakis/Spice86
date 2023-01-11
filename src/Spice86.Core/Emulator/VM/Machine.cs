@@ -127,13 +127,11 @@ public class Machine : IDisposable {
         Memory = new Memory(this, sizeInKb: (uint)Configuration.Kilobytes);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
-        if(configuration.Xms && configuration.Ems) {
-            throw new UnrecoverableException("Cannot have XMS and EMS at the same time");
-        }
         if(configuration.Xms) {
             Xms = new(this);
         }
         if(configuration.Ems) {
+            Xms ??= new(this);
             Ems = new(this);
         }
 
