@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Memory; 
+﻿namespace Spice86.Core.Emulator.Memory;
 
 using System;
 using System.Collections.Generic;

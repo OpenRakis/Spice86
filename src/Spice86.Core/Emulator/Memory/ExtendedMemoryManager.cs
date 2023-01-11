@@ -13,8 +13,7 @@ using System.Numerics;
 /// <summary>
 /// Provides DOS applications with XMS memory.
 /// </summary>
-internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider
-{
+internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     private SegmentedAddress callbackAddress;
     private int a20EnableCount;
     private readonly LinkedList<XmsBlock> xms = new();
@@ -23,7 +22,7 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     public ExtendedMemoryManager(Machine machine) : base(machine) {
         //TODO: Initialize this in Machine on startup, along with other
         // IDeviceCallbackProvider devices.
-        callbackAddress = new(0,0);
+        callbackAddress = new(0, 0);
         _machine = machine;
         this.InitializeMemoryMap();
     }
@@ -54,14 +53,12 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     IEnumerable<int> OutputPorts => new int[] { 0x92 };
     public override byte Index => 0x43;
     public bool IsHookable => true;
-    public SegmentedAddress CallbackAddress
-    {
+    public SegmentedAddress CallbackAddress {
         set => this.callbackAddress = value;
     }
 
     public override void Run() {
-        switch (_machine.Cpu.State.AL)
-        {
+        switch (_machine.Cpu.State.AL) {
             case XmsHandlerFunctions.InstallationCheck:
                 _machine.Cpu.State.AL = 0x80;
                 break;
@@ -75,10 +72,8 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
                 throw new NotImplementedException($"XMS interrupt handler function {_machine.Cpu.State.AL:X2}h not implemented.");
         }
     }
-    public void InvokeCallback()
-    {
-        switch (_machine.Cpu.State.AH)
-        {
+    public void InvokeCallback() {
+        switch (_machine.Cpu.State.AH) {
             case XmsFunctions.GetVersionNumber:
                 _machine.Cpu.State.AX = 0x0300; // Return version 3.00
                 _machine.Cpu.State.BX = 0; // Internal version
@@ -190,8 +185,7 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <param name="length">Number of bytes to allocate.</param>
     /// <param name="handle">If successful, contains the allocation handle.</param>
     /// <returns>Zero on success. Nonzero indicates error code.</returns>
-    public byte TryAllocate(uint length, out short handle)
-    {
+    public byte TryAllocate(uint length, out short handle) {
         handle = (short)this.GetNextHandle();
         if (handle == 0) {
             return 0xA1; // All handles are used.
@@ -220,7 +214,7 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
         }
 
         LinkedListNode<XmsBlock>? freeNode = this.xms.Find(smallestFreeBlock.Value);
-        if(freeNode is not null) {
+        if (freeNode is not null) {
             XmsBlock[] newNodes = freeNode.Value.Allocate(handle, length);
             this.xms.Replace((XmsBlock)smallestFreeBlock, newNodes);
         }
@@ -234,12 +228,9 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <param name="handle">Handle of block to search for.</param>
     /// <param name="block">On success, contains information about the block.</param>
     /// <returns>True if handle was found; otherwise false.</returns>
-    public bool TryGetBlock(int handle, out XmsBlock block)
-    {
-        foreach (XmsBlock b in this.xms)
-        {
-            if (b.IsUsed && b.Handle == handle)
-            {
+    public bool TryGetBlock(int handle, out XmsBlock block) {
+        foreach (XmsBlock b in this.xms) {
+            if (b.IsUsed && b.Handle == handle) {
                 block = b;
                 return true;
             }
@@ -252,8 +243,7 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <summary>
     /// Increments the A20 enable count.
     /// </summary>
-    private void EnableLocalA20()
-    {
+    private void EnableLocalA20() {
         if (this.a20EnableCount == 0) {
             this._machine.Memory.EnableA20 = true;
         }
@@ -263,8 +253,7 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <summary>
     /// Decrements the A20 enable count.
     /// </summary>
-    private void DisableLocalA20()
-    {
+    private void DisableLocalA20() {
         if (this.a20EnableCount == 1) {
             this._machine.Memory.EnableA20 = false;
         }
@@ -277,8 +266,7 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// Initializes the internal memory map.
     /// </summary>
     /// <exception cref="InvalidOperationException">If xms is already initialized</exception>
-    private void InitializeMemoryMap()
-    {
+    private void InitializeMemoryMap() {
         if (this.xms.Count != 0) {
             throw new InvalidOperationException();
         }
@@ -295,8 +283,7 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// Returns the next available handle for an allocation on success; returns 0 if no handles are available.
     /// </summary>
     /// <returns>New handle if available; otherwise returns null.</returns>
-    private int GetNextHandle()
-    {
+    private int GetNextHandle() {
         for (int i = 1; i <= MaxHandles; i++) {
             if (!this.handles.ContainsKey(i)) {
                 return i;
@@ -309,15 +296,12 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// Attempts to merge a free block with the following block if possible.
     /// </summary>
     /// <param name="firstBlock">Free block to merge.</param>
-    private void MergeFreeBlocks(XmsBlock firstBlock)
-    {
+    private void MergeFreeBlocks(XmsBlock firstBlock) {
         LinkedListNode<XmsBlock>? firstNode = this.xms.Find(firstBlock);
 
-        if (firstNode?.Next != null)
-        {
+        if (firstNode?.Next != null) {
             LinkedListNode<XmsBlock> nextNode = firstNode.Next;
-            if (!nextNode.Value.IsUsed)
-            {
+            if (!nextNode.Value.IsUsed) {
                 XmsBlock newBlock = firstBlock.Join(nextNode.Value);
                 this.xms.Remove(nextNode);
                 this.xms.Replace(firstBlock, newBlock);
@@ -328,16 +312,12 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// Allocates a new block of memory.
     /// </summary>
     /// <param name="kbytes">Number of kilobytes requested.</param>
-    private void AllocateBlock(uint kbytes)
-    {
+    private void AllocateBlock(uint kbytes) {
         byte res = this.TryAllocate(kbytes * 1024u, out short handle);
-        if (res == 0)
-        {
+        if (res == 0) {
             _machine.Cpu.State.AX = 1; // Success.
             _machine.Cpu.State.DX = (ushort)handle;
-        }
-        else
-        {
+        } else {
             _machine.Cpu.State.AX = 0; // Didn't work.
             _machine.Cpu.State.BL = res;
         }
@@ -345,26 +325,22 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <summary>
     /// Frees a block of memory.
     /// </summary>
-    private void FreeBlock()
-    {
+    private void FreeBlock() {
         int handle = (ushort)_machine.Cpu.State.DX;
 
-        if (!this.handles.TryGetValue(handle, out int lockCount))
-        {
+        if (!this.handles.TryGetValue(handle, out int lockCount)) {
             _machine.Cpu.State.AX = 0; // Didn't work.
             _machine.Cpu.State.BL = 0xA2; // Invalid handle.
             return;
         }
 
-        if (lockCount > 0)
-        {
+        if (lockCount > 0) {
             _machine.Cpu.State.AX = 0; // Didn't work.
             _machine.Cpu.State.BL = 0xAB; // Handle is locked.
             return;
         }
 
-        if (this.TryGetBlock(handle, out XmsBlock block))
-        {
+        if (this.TryGetBlock(handle, out XmsBlock block)) {
             XmsBlock freeBlock = block.Free();
             this.xms.Replace(block, freeBlock);
             this.MergeFreeBlocks(freeBlock);
@@ -376,12 +352,10 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <summary>
     /// Locks a block of memory.
     /// </summary>
-    private void LockBlock()
-    {
+    private void LockBlock() {
         int handle = (ushort)_machine.Cpu.State.DX;
 
-        if (!this.handles.TryGetValue(handle, out int lockCount))
-        {
+        if (!this.handles.TryGetValue(handle, out int lockCount)) {
             _machine.Cpu.State.AX = 0; // Didn't work.
             _machine.Cpu.State.BL = 0xA2; // Invalid handle.
             return;
@@ -399,19 +373,16 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <summary>
     /// Unlocks a block of memory.
     /// </summary>
-    private void UnlockBlock()
-    {
+    private void UnlockBlock() {
         int handle = (ushort)_machine.Cpu.State.DX;
 
-        if (!this.handles.TryGetValue(handle, out int lockCount))
-        {
+        if (!this.handles.TryGetValue(handle, out int lockCount)) {
             _machine.Cpu.State.AX = 0; // Didn't work.
             _machine.Cpu.State.BL = 0xA2; // Invalid handle.
             return;
         }
 
-        if (lockCount < 1)
-        {
+        if (lockCount < 1) {
             _machine.Cpu.State.AX = 0;
             _machine.Cpu.State.BL = 0xAA; // Handle is not locked.
             return;
@@ -424,12 +395,10 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <summary>
     /// Returns information about an XMS handle.
     /// </summary>
-    private void GetHandleInformation()
-    {
+    private void GetHandleInformation() {
         int handle = (ushort)_machine.Cpu.State.DX;
 
-        if (!this.handles.TryGetValue(handle, out int lockCount))
-        {
+        if (!this.handles.TryGetValue(handle, out int lockCount)) {
             _machine.Cpu.State.AX = 0; // Didn't work.
             _machine.Cpu.State.BL = 0xA2; // Invalid handle.
             return;
@@ -449,59 +418,48 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <summary>
     /// Copies a block of memory.
     /// </summary>
-    private void MoveMemoryBlock()
-    {
+    private void MoveMemoryBlock() {
         bool a20State = this._machine.Memory.EnableA20;
         this._machine.Memory.EnableA20 = true;
 
         XmsMoveData moveData;
-        unsafe
-        {
+        unsafe {
             moveData = *(XmsMoveData*)this._machine.Memory.GetPointer(this._machine.Cpu.State.DS, this._machine.Cpu.State.SI);
         }
 
         IntPtr srcPtr = IntPtr.Zero;
         IntPtr destPtr = IntPtr.Zero;
 
-        if (moveData.SourceHandle == 0)
-        {
+        if (moveData.SourceHandle == 0) {
             SegmentedAddress srcAddress = moveData.SourceAddress;
             srcPtr = this._machine.Memory.GetPointer(srcAddress.Segment, srcAddress.Offset);
-        }
-        else
-        {
+        } else {
             if (this.TryGetBlock(moveData.SourceHandle, out XmsBlock srcBlock)) {
                 srcPtr = this._machine.Memory.GetPointer((int)(XmsBaseAddress + (srcBlock).Offset + moveData.SourceOffset));
             }
         }
 
-        if (moveData.DestHandle == 0)
-        {
+        if (moveData.DestHandle == 0) {
             SegmentedAddress destAddress = moveData.DestAddress;
             destPtr = this._machine.Memory.GetPointer(destAddress.Segment, destAddress.Offset);
-        }
-        else
-        {
+        } else {
             if (this.TryGetBlock(moveData.DestHandle, out XmsBlock destBlock)) {
                 destPtr = this._machine.Memory.GetPointer((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset));
             }
         }
 
-        if (srcPtr == IntPtr.Zero)
-        {
+        if (srcPtr == IntPtr.Zero) {
             _machine.Cpu.State.BL = 0xA3; // Invalid source handle.
             _machine.Cpu.State.AX = 0; // Didn't work.
             return;
         }
-        if (destPtr == IntPtr.Zero)
-        {
+        if (destPtr == IntPtr.Zero) {
             _machine.Cpu.State.BL = 0xA5; // Invalid destination handle.
             _machine.Cpu.State.AX = 0; // Didn't work.
             return;
         }
 
-        unsafe
-        {
+        unsafe {
             byte* src = (byte*)srcPtr.ToPointer();
             byte* dest = (byte*)destPtr.ToPointer();
 
@@ -516,8 +474,7 @@ internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackP
     /// <summary>
     /// Queries free memory using 32-bit registers.
     /// </summary>
-    private void QueryAnyFreeExtendedMemory()
-    {
+    private void QueryAnyFreeExtendedMemory() {
         this._machine.Cpu.State.EAX = (uint)(this.LargestFreeBlock / 1024u);
         this._machine.Cpu.State.ECX = (uint)(this._machine.Memory.MemorySize - 1);
         this._machine.Cpu.State.EDX = (uint)(this.TotalFreeMemory / 1024);

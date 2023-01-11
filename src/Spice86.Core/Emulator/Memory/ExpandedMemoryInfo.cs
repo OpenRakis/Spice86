@@ -3,8 +3,7 @@
 /// <summary>
 /// Contains information about expanded memory usage.
 /// </summary>
-public sealed class ExpandedMemoryInfo
-{
+public sealed class ExpandedMemoryInfo {
     /// <summary>
     /// Size of expanded memory in pages.
     /// </summary>

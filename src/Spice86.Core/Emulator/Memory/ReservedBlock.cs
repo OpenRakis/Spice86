@@ -4,14 +4,12 @@
 /// Describes a reserved block of conventional memory.
 /// </summary>
 public sealed class ReservedBlock : IEquatable<ReservedBlock> {
-    internal ReservedBlock(ushort segment, uint length)
-    {
+    internal ReservedBlock(ushort segment, uint length) {
         this.Segment = segment;
         this.Length = length;
     }
 
-    public static bool operator ==(ReservedBlock blockA, ReservedBlock blockB)
-    {
+    public static bool operator ==(ReservedBlock blockA, ReservedBlock blockB) {
         if (ReferenceEquals(blockA, blockB)) {
             return true;
         }
@@ -22,8 +20,7 @@ public sealed class ReservedBlock : IEquatable<ReservedBlock> {
 
         return blockA.Equals(blockB);
     }
-    public static bool operator !=(ReservedBlock blockA, ReservedBlock blockB)
-    {
+    public static bool operator !=(ReservedBlock blockA, ReservedBlock blockB) {
         if (ReferenceEquals(blockA, blockB)) {
             return false;
         }
@@ -49,8 +46,7 @@ public sealed class ReservedBlock : IEquatable<ReservedBlock> {
     /// </summary>
     /// <param name="other">Other block to test.</param>
     /// <returns>True if blocks are equal; otherwise false.</returns>
-    public bool Equals(ReservedBlock? other)
-    {
+    public bool Equals(ReservedBlock? other) {
         if (other is null) {
             return false;
         }
@@ -60,7 +56,7 @@ public sealed class ReservedBlock : IEquatable<ReservedBlock> {
     /// <summary>
     /// Tests for value equality with another object.
     /// </summary>
-    /// <param name="other">Other object to test.</param>
+    /// <param name="obj">Other object to test.</param>
     /// <returns>True if objects are equal; otherwise false.</returns>
     public override bool Equals(object? obj) => this.Equals(obj as ReservedBlock);
     /// <summary>

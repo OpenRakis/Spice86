@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 /// In-memory structure with information about an XMS move request.
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-internal struct XmsMoveData {
+public struct XmsMoveData {
     /// <summary>
     /// Number of bytes to move.
     /// </summary>
