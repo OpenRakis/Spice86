@@ -17,9 +17,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 
-/// <summary>
-/// TODO : Fix it !
-/// </summary>
 public class DosFileManager {
     public const ushort FileHandleOffset = 5;
     private const int MaxOpenFiles = 15;
