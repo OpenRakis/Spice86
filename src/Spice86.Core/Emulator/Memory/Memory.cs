@@ -21,7 +21,7 @@ public class Memory {
     private const int VramAddress = 0xA000 << 4;
 
     /// <summary>
-    /// The highest address which is mapped to <see cref="VgaCard"/>.
+    /// The highest address which is mapped in the class VgaCard
     /// </summary>
     /// <remarks>
     /// Video RAM mapping is technically up to 0xBFFF0 normally.
@@ -122,7 +122,6 @@ public class Memory {
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }
-
 
     /// <summary>
     /// Reads an ANSI string from emulated memory with a specified length.
