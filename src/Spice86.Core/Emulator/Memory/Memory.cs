@@ -46,13 +46,6 @@ public class Memory {
     // For breakpoints to access what is getting written
     public byte CurrentlyWritingByte { get; private set; } = 0;
 
-    /// <summary>
-    /// Gets or sets the EMS handler.
-    /// </summary>
-    private ExpandedMemoryManager? Ems { get; set; }
-
-    public void SetExpandedMemoryManager(ExpandedMemoryManager ems) => Ems = ems;
-
     private readonly Machine _machine;
 
     public Memory(Machine machine, uint sizeInKb) {
@@ -254,9 +247,9 @@ public class Memory {
 
         unsafe
         {
-            if (this.Ems != null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
+            if (_machine.Ems is not null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
             {
-                return Unsafe.ReadUnaligned<T>(this.RawView + this.Ems.GetMappedAddress(address));
+                return Unsafe.ReadUnaligned<T>(this.RawView + _machine.Ems.GetMappedAddress(address));
             }
             else
             {
@@ -271,9 +264,9 @@ public class Memory {
 
         unsafe
         {
-            if (this.Ems != null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
+            if (_machine.Ems != null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
             {
-                Unsafe.WriteUnaligned(this.RawView + this.Ems.GetMappedAddress(address), value);
+                Unsafe.WriteUnaligned(this.RawView + _machine.Ems.GetMappedAddress(address), value);
             }
             else
             {
