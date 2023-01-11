@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// Represents a block of XMS memory.
 /// </summary>
-internal readonly struct XmsBlock : IEquatable<XmsBlock> {
+public readonly struct XmsBlock : IEquatable<XmsBlock> {
     public XmsBlock(int handle, uint offset, uint length, bool used) {
         Handle = handle;
         Offset = offset;
@@ -77,7 +77,7 @@ internal readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// <param name="other">Other unused block to merge with.</param>
     /// <returns>Merged block of memory.</returns>
     public XmsBlock Join(XmsBlock other) {
-        if (IsUsed | other.IsUsed) {
+        if (IsUsed || other.IsUsed) {
             throw new InvalidOperationException();
         }
 
@@ -86,5 +86,13 @@ internal readonly struct XmsBlock : IEquatable<XmsBlock> {
         }
 
         return new XmsBlock(0, Offset, Length + other.Length, false);
+    }
+
+    public static bool operator ==(XmsBlock left, XmsBlock right) {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(XmsBlock left, XmsBlock right) {
+        return !(left == right);
     }
 }
