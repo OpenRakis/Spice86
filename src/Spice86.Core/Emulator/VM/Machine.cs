@@ -5,6 +5,7 @@ using Spice86.Core.DI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -110,7 +111,10 @@ public class Machine : IDisposable {
     /// Gets the current DOS environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
+
     public OPL3FM OPL3FM { get; }
+
+    public SortedList<uint, IDeviceCallbackProvider> DeviceCallbackProviders { get; } = new();
 
     public event Action? Paused;
 
@@ -212,6 +216,45 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
+        if(Xms is not null) {
+            Register((IDeviceCallbackProvider)Xms);
+            Register((ICallback)Xms);
+        }
+        if(Ems is not null) {
+            Register(Ems);
+        }
+    }
+
+    
+    public void Register(IDeviceCallbackProvider callbackProvider) {
+        int id = DeviceCallbackProviders.Count;
+        callbackProvider.CallbackAddress = this.Memory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
+        DeviceCallbackProviders.Add((uint)id, callbackProvider);
+
+        Span<byte> machineCode = stackalloc byte[3];
+        machineCode[0] = 0x0F;
+        machineCode[1] = 0x56;
+        machineCode[2] = (byte)id;
+        callbackProvider.SetRaiseCallbackInstruction(machineCode);
+    }
+
+    public void Register(IIOPortHandler ioPortHandler) {
+        ioPortHandler.InitPortHandlers(IoPortDispatcher);
+
+        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
+            return;
+        }
+
+        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
+            throw new ArgumentException("Invalid DMA channel on DMA device.");
+        }
+
+        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
+        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+    }
+
+    public void Register(ICallback callback) {
+        CallbackHandler.AddCallback(callback);
     }
 
     /// <summary>
@@ -253,25 +296,6 @@ public class Machine : IDisposable {
 
     public string PeekReturn(CallType returnCallType) {
         return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
-    }
-
-    public void Register(IIOPortHandler ioPortHandler) {
-        ioPortHandler.InitPortHandlers(IoPortDispatcher);
-
-        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
-            return;
-        }
-
-        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
-            throw new ArgumentException("Invalid DMA channel on DMA device.");
-        }
-
-        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    public void Register(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
     }
 
     public void Run() {
