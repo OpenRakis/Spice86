@@ -77,4 +77,10 @@ public class Configuration {
 
     [Option('k', nameof(Kilobytes), Default = 8192, Required = false, HelpText = "The amount of main memory, in kilobytes")]
     public int Kilobytes { get; init; } = 8192;
+
+    [Option(nameof(Ems), Default = false, Required = false, HelpText = "Enable EMS")]
+    public bool Ems { get; init; }
+
+    [Option(nameof(Xms), Default = false, Required = false, HelpText = "Enable XMS")]
+    public bool Xms { get; init; }
 }

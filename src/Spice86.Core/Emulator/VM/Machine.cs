@@ -99,11 +99,12 @@ public class Machine : IDisposable {
     public VgaCard VgaCard { get; }
 
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
+
     public DmaController DmaController { get; }
 
-    public ExtendedMemoryManager ExtendedMemory { get; }
+    public ExtendedMemoryManager? Xms { get; }
 
-    public ExpandedMemoryManager ExpandedMemory { get; }
+    public ExpandedMemoryManager? Ems { get; }
 
     /// <summary>
     /// Gets the current DOS environment variables.
@@ -126,10 +127,12 @@ public class Machine : IDisposable {
 
         Memory = new Memory(this, sizeInKb: (uint)Configuration.Kilobytes);
         Cpu = new Cpu(this, new ServiceProvider().GetLoggerForContext<Cpu>(), executionFlowRecorder, recordData);
-
-        ExtendedMemory = new(this);
-        ExpandedMemory = new(this);
-        Memory.SetExpandedMemoryManager(ExpandedMemory);
+        if(configuration.Xms) {
+            Xms = new(this);
+        }
+        if(configuration.Ems) {
+            Ems = new(this);
+        }
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this);

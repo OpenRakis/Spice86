@@ -8,25 +8,24 @@ using System.Linq;
 /// Represents a handle for allocated EMS memory.
 /// </summary>
 internal sealed class EmsHandle {
-    private readonly List<ushort> pages;
     private readonly int[] savedPageMap = new int[] { -1, -1, -1, -1 };
     private static readonly string nullHandleName = new((char)0, 8);
 
     public EmsHandle() {
-        pages = new List<ushort>();
+        LogicalPages = new List<ushort>();
     }
     public EmsHandle(IEnumerable<ushort> pages) {
-        this.pages = pages.ToList();
+        this.LogicalPages = pages.ToList();
     }
 
     /// <summary>
     /// Gets the number of pages currently allocated to the handle.
     /// </summary>
-    public int PagesAllocated => pages.Count;
+    public int PagesAllocated => LogicalPages.Count;
     /// <summary>
     /// Gets the logical pages allocated to the handle.
     /// </summary>
-    public List<ushort> LogicalPages => pages;
+    public List<ushort> LogicalPages { get; }
     /// <summary>
     /// Gets or sets the handle name.
     /// </summary>
