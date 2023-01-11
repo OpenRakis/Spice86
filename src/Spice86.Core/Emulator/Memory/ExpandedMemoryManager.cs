@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
 
@@ -12,7 +11,7 @@ using System.Linq;
 /// <summary>
 /// Provides DOS applications with EMS memory.
 /// </summary>
-public sealed class ExpandedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
+public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Size of each EMS page in bytes.
     /// </summary>
@@ -72,10 +71,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IDeviceCallbackPro
     }
 
     public override byte Index => 0x67;
-
-    public bool IsHookable => throw new NotImplementedException();
-
-    public SegmentedAddress CallbackAddress { set => throw new NotImplementedException(); }
 
     public override void Run() {
         switch (_machine.Cpu.State.AH) {
@@ -778,9 +773,5 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IDeviceCallbackPro
         }
 
         return overlap ? (byte)0x92 : (byte)0;
-    }
-
-    public void InvokeCallback() {
-        throw new NotImplementedException();
     }
 }
