@@ -2,10 +2,8 @@
 /// <summary>
 /// Contains information about extended memory usage.
 /// </summary>
-public sealed class ExtendedMemoryInfo
-{
-    internal ExtendedMemoryInfo(int bytesAllocated, int totalBytes)
-    {
+public sealed class ExtendedMemoryInfo {
+    internal ExtendedMemoryInfo(int bytesAllocated, int totalBytes) {
         this.BytesAllocated = bytesAllocated;
         this.TotalBytes = totalBytes;
     }

@@ -39,14 +39,17 @@ public sealed class DmaChannel {
             }
         }
     }
+
     /// <summary>
     /// Gets a value indicating whether the channel is masked (disabled).
     /// </summary>
     public bool IsMasked { get; internal set; }
+
     /// <summary>
     /// Gets the current DMA transfer mode of the channel.
     /// </summary>
     public DmaTransferMode TransferMode { get; internal set; }
+
     /// <summary>
     /// Gets the DMA transfer memory page.
     /// </summary>
@@ -54,18 +57,22 @@ public sealed class DmaChannel {
         get;
         internal set;
     }
+
     /// <summary>
     /// Gets the DMA transfer memory address.
     /// </summary>
     public ushort Address { get; internal set; }
+
     /// <summary>
     /// Gets the number of bytes to transfer.
     /// </summary>
     public ushort Count { get; internal set; }
+
     public int TransferBytesRemaining {
         get => _bytesRemaining;
         internal set => _bytesRemaining = value;
     }
+
     /// <summary>
     /// Gets or sets the desired transfer rate in bytes/second.
     /// </summary>
@@ -95,6 +102,7 @@ public sealed class DmaChannel {
     /// Gets or sets the period between DMA transfers in stopwatch ticks.
     /// </summary>
     private long TransferPeriod { get; set; }
+
     /// <summary>
     /// Gets or sets the size of each DMA transfer chunk.
     /// </summary>
@@ -123,6 +131,7 @@ public sealed class DmaChannel {
             _addressByteRead = !_addressByteRead;
         }
     }
+
     /// <summary>
     /// Writes the next byte of the memory address.
     /// </summary>
@@ -138,6 +147,7 @@ public sealed class DmaChannel {
             _addressByteWritten = !_addressByteWritten;
         }
     }
+
     /// <summary>
     /// Returns the next byte of the memory address.
     /// </summary>
@@ -155,6 +165,7 @@ public sealed class DmaChannel {
             _countByteRead = !_countByteRead;
         }
     }
+
     /// <summary>
     /// Writes the next byte of the memory address.
     /// </summary>
