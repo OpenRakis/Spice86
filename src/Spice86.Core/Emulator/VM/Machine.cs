@@ -213,7 +213,8 @@ public class Machine : IDisposable {
             Register((ICallback)Xms);
         }
         if(Ems is not null) {
-            Register(Ems);
+            Register((IDeviceCallbackProvider)Ems);
+            Register((ICallback)Ems);
         }
     }
 
