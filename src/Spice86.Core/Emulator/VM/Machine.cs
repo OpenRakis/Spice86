@@ -98,11 +98,9 @@ public class Machine : IDisposable {
 
     public DmaController DmaController { get; }
 
-    
-    private readonly ExpandedMemoryManager emm;
-    private readonly ExtendedMemoryManager xmm;
+    public ExtendedMemoryManager ExtendedMemory { get; }
 
-    internal ExtendedMemoryManager ExtendedMemory => this.xmm;
+    public ExpandedMemoryManager ExpandedMemory { get; }
 
     /// <summary>
     /// Gets the current DOS environment variables.
@@ -128,9 +126,9 @@ public class Machine : IDisposable {
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
-        xmm = new(this);
-        emm = new(this);
-        Memory.Ems = emm;
+        ExtendedMemory = new(this);
+        ExpandedMemory = new(this);
+        Memory.SetExpandedMemoryManager(ExpandedMemory);
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
