@@ -8,12 +8,11 @@ using Spice86.Core.Emulator.VM;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 
 /// <summary>
 /// Provides DOS applications with XMS memory.
 /// </summary>
-internal sealed class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
+public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     private SegmentedAddress callbackAddress;
     private int a20EnableCount;
     private readonly LinkedList<XmsBlock> xms = new();
