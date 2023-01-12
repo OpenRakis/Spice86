@@ -20,7 +20,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 
 /// <inheritdoc />
-public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel>, IDisposable {
+public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel>, IDisposable {
     private bool _disposedValue;
 
     private Thread? _drawThread;
@@ -223,7 +223,7 @@ public partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewMo
         return _index;
     }
 
-    protected virtual void Dispose(bool disposing) {
+    private void Dispose(bool disposing) {
         if (!_disposedValue) {
             if (disposing) {
                 _exitDrawThread = true;
