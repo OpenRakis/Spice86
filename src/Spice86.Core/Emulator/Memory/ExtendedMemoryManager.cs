@@ -2,6 +2,7 @@
 
 using Spice86.Core;
 using Spice86.Core.Emulator.Devices;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
 
@@ -262,10 +263,10 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Initializes the internal memory map.
     /// </summary>
-    /// <exception cref="InvalidOperationException">If xms is already initialized</exception>
+    /// <exception cref="UnrecoverableException">If xms is already initialized</exception>
     private void InitializeMemoryMap() {
         if (this.xms.Count != 0) {
-            throw new InvalidOperationException();
+            throw new UnrecoverableException($"XMS already initialized, in {nameof(InitializeMemoryMap)}");
         }
 
         uint memoryAvailable = (uint)_machine.Memory.MemorySize - XmsBaseAddress;
