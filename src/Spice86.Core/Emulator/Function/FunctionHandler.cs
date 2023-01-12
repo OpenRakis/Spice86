@@ -25,6 +25,7 @@ public class FunctionHandler {
 
     private readonly Machine _machine;
 
+    private uint StackPhysicalAddress => _machine.Cpu.State.StackPhysicalAddress;
     public FunctionHandler(Machine machine, ILogger logger, bool recordData) {
         _logger = logger;
         _machine = machine;
@@ -142,7 +143,7 @@ public class FunctionHandler {
     private bool AddReturn(CallType returnCallType, FunctionCall currentFunctionCall, FunctionInformation? currentFunctionInformation) {
         FunctionReturn currentFunctionReturn = GenerateCurrentFunctionReturn(returnCallType);
         SegmentedAddress? actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
-        bool returnAddressAlignedWithCallStack = IsReturnAddressAlignedWithCallStack(currentFunctionCall, actualReturnAddress, currentFunctionReturn);
+        bool returnAddressAlignedWithCallStack = HandleUnalignedReturns(currentFunctionCall, actualReturnAddress, currentFunctionReturn);
         if (currentFunctionInformation != null && !UseOverride(currentFunctionInformation)) {
             SegmentedAddress? addressToRecord = actualReturnAddress;
             if (!currentFunctionCall.IsRecordReturn) {
@@ -194,44 +195,49 @@ public class FunctionHandler {
         return null;
     }
 
-    private uint StackPhysicalAddress => _machine.Cpu.State.StackPhysicalAddress;
-
-    private bool IsReturnAddressAlignedWithCallStack(FunctionCall currentFunctionCall, SegmentedAddress? actualReturnAddress, FunctionReturn currentFunctionReturn) {
+    private bool HandleUnalignedReturns(FunctionCall currentFunctionCall, SegmentedAddress? actualReturnAddress, FunctionReturn currentFunctionReturn) {
         SegmentedAddress? expectedReturnAddress = currentFunctionCall.ExpectedReturnAddress;
 
         // Null check necessary for machine stop call, in this case it won't be equals to what is in
         // the stack but it's expected.
-        if (actualReturnAddress != null && !actualReturnAddress.Equals(expectedReturnAddress)) {
-            FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information) && currentFunctionInformation != null
-                && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {
-                CallType callType = currentFunctionCall.CallType;
-                SegmentedAddress stackAddressAfterCall = currentFunctionCall.StackAddressAfterCall;
-                SegmentedAddress? returnAddressOnCallTimeStack = PeekReturnAddressOnMachineStack(callType, stackAddressAfterCall.ToPhysical());
-                SegmentedAddress currentStackAddress = CurrentStackAddress;
-                string additionalInformation = Environment.NewLine;
-                if (!currentStackAddress.Equals(stackAddressAfterCall)) {
-                    int delta = (int)Math.Abs(currentStackAddress.ToPhysical() - (long)stackAddressAfterCall.ToPhysical());
-                    additionalInformation +=
-                        $"Stack is not pointing at the same address as it was at call time. Delta is {delta} bytes{Environment.NewLine}";
-                }
-                if (!Equals(expectedReturnAddress, returnAddressOnCallTimeStack)) {
-                    additionalInformation += "Return address on stack was modified";
-                }
-                _logger.Information(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
-                        Current function {@CurrentFunctionInformation} return {@CurrentFunctionReturn} will not go to the expected place:
-                        - At {@CallType} call time, return was supposed to be {@ExpectedReturnAddress} stored at SS:SP {@StackAddressAfterCall}. Value there is now {@ReturnAddressOnCallTimeStack}
-                        - On the stack it is now {@ActualReturnAddress} stored at SS:SP {@CurrentStackAddress}
-                        {@AdditionalInformation}
-                    ",
-                    currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
-                    callType.ToString(), expectedReturnAddress?.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
-                    actualReturnAddress.ToString(), currentStackAddress.ToString(),
-                    additionalInformation);
-            }
-            return false;
+        if (actualReturnAddress == null || actualReturnAddress.Equals(expectedReturnAddress)) {
+            // Everything is normal
+            return true;
         }
-        return true;
+        
+        Cpu cpu  = _machine.Cpu;
+        State state = cpu.State;
+        // Record the unexpected behaviour. Generated code will see this as well.
+        cpu.ExecutionFlowRecorder.RegisterUnalignedReturn(state.CS, state.IP, actualReturnAddress.Segment,
+            actualReturnAddress.Offset);
+        FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information) && currentFunctionInformation != null
+            && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {
+            CallType callType = currentFunctionCall.CallType;
+            SegmentedAddress stackAddressAfterCall = currentFunctionCall.StackAddressAfterCall;
+            SegmentedAddress? returnAddressOnCallTimeStack = PeekReturnAddressOnMachineStack(callType, stackAddressAfterCall.ToPhysical());
+            SegmentedAddress currentStackAddress = CurrentStackAddress;
+            string additionalInformation = Environment.NewLine;
+            if (!currentStackAddress.Equals(stackAddressAfterCall)) {
+                int delta = (int)Math.Abs(currentStackAddress.ToPhysical() - (long)stackAddressAfterCall.ToPhysical());
+                additionalInformation +=
+                    $"Stack is not pointing at the same address as it was at call time. Delta is {delta} bytes{Environment.NewLine}";
+            }
+            if (!Equals(expectedReturnAddress, returnAddressOnCallTimeStack)) {
+                additionalInformation += "Return address on stack was modified";
+            }
+            _logger.Information(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
+                    Current function {@CurrentFunctionInformation} return {@CurrentFunctionReturn} will not go to the expected place:
+                    - At {@CallType} call time, return was supposed to be {@ExpectedReturnAddress} stored at SS:SP {@StackAddressAfterCall}. Value there is now {@ReturnAddressOnCallTimeStack}
+                    - On the stack it is now {@ActualReturnAddress} stored at SS:SP {@CurrentStackAddress}
+                    {@AdditionalInformation}
+                ",
+                currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
+                callType.ToString(), expectedReturnAddress?.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
+                actualReturnAddress.ToString(), currentStackAddress.ToString(),
+                additionalInformation);
+        }
+        return false;
     }
 
     private bool UseOverride(FunctionInformation? functionInformation) {

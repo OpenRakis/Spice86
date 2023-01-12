@@ -25,7 +25,10 @@ Spice86 is a tool that helps you do so with a methodic divide and conquer approa
 
 General process:
 - You start by emulating the program in the Spice86 emulator.
-- This emulator allows you to gradually reimplement the assembly code with your C# methods
+- At the end of each run, the emulator dumps some runtime data (memory dump and execution flow)
+- You load those data into [ghidra](https://github.com/NationalSecurityAgency/ghidra) via the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin)
+- The plugin converts the assembly instructions in the memory dump to C# that can be loaded into spice86 and used either partially or completely instead of the assembly code.
+- This allows you to gradually reimplement the assembly code with your C# methods
 - This is helpful because:
   - Small sequences of assembly can be statically analyzed and are generally easy to translate to a higher level language.
   - You work all the time with a fully working version of the program so it is relatively easy to catch mistakes early.
@@ -36,8 +39,12 @@ This is a .NET program, you run it with the regular command line or dotnet run. 
 ```
 Spice86 -e file.exe
 ```
-
 com files and bios files are also supported.
+
+## Dumping data
+It is recommended to set SPICE86_DUMPS_FOLDER environment variable pointing to where the emulator should dump the runtime data.
+If the variable is set or if --RecordedDataDirectory parameter is passed, the emulator will dump a bunch of information about the run there. If nothing is set, data will be dumped in the current directory.
+If there are already data there the emulator will load them first and complete them, you don't need to start from zero each time!
 
 ## More command line options
 
@@ -69,7 +76,7 @@ com files and bios files are also supported.
 ## Dynamic analysis
 Spice86 speaks the [GDB](https://www.gnu.org/software/gdb/) remote protocol:
 - it supports most of the commands you need to debug.
-- it also provides custom GDB commands to do dynamic analysis. This is where the magic happens.
+- it also provides custom GDB commands to do dynamic analysis.
 
 ### Connecting
 You need to specify a port for the GDB server to start when launching Spice86:
@@ -118,65 +125,14 @@ The list of custom commands can be displayed like this:
 (gdb) monitor help
 ```
 
-#### Dump everything
+#### Dump information about current run
 ```
 (gdb) monitor dumpall
 ```
-Dumps everything described below in one shot. Files are created in the current execution folder.
-
-#### Dump the memory to a file
-```
-(gdb) monitor dumpmemory path/to/dump.bin
-```
-
-DOS programs can rewrite some of their instructions / load additional modules in memory. It's a good idea to get a memory dump to see the actual assembly being executed.
-
-#### Dump the functions
-```
-(gdb) monitor dumpfunctions path/to/functions.txt
-```
-
-This will dump dynamic information about the functions that have been encountered in the program you are reverse engineering. For each function:
-- Their address (both in segmented and physical addressing)
-- Their name if you provided an override (more about that later)
-- The addresses of the returns that have been reached and their type (NEAR / FAR / INTERRUPT / MACHINE)
-- The addresses of the returns that did not make the RET instruction point to the expected caller (some programs use RET as jump ...)
-- The list of functions that calls it
-- The list of functions it calls
-
-Example:
-```
-function unknown_0x2538_0x151_0x254D1 returns:3 callers:1 called: 4 calls:3 approximateSize:11482
- - ret: FAR 0x2538:0x26AF/0x27A2F
- - ret: FAR 0x2538:0x2D41/0x280C1
- - ret: FAR 0x2538:0x2E2B/0x281AB
- - caller: unknown_0x1ED_0xC108_0xDFD8
- - call: vgaDriver.loadPalette_0x2538_0xB68_0x25EE8 overriden
- - call: vgaDriver.waitForRetraceInTransitions_0x2538_0x2572_0x278F2 overriden
- - call: unknown_0x2538_0x2596_0x27916
-```
-
-Here you can see that:
-- The generated name unknown_0x2538_0x151_0x254D1 can be copy pasted directly in C# to start overriding it.
-- The physical address of the function is 0x254D1 in RAM (2538:0151 segmented)
-- It spawns 11482 bytes (estimated distance between the entry point and the returns)
-- Emulator encounterd several returns and it is called by one caller only
-- It calls 3 other methods and 2 are overriden already
-
-You can also dump the functions as CSV for import and processing in a spreadsheet:
-
-```
-(gdb) monitor dumpfunctionscsv path/to/functions.txt
-```
-#### Generate C# code
-```
-#csharp
-(gdb) monitor dumpCSharpStubs path/to/stub.cs
-```
-
-This will generate C# source code with:
-- The function calls and how to override them
-- Accessors for global variables (memory bytes accessed via hardcoded address)
+Dumps everything described below in one shot. Files are created in the dump folder as explained [here](## Dumping data)
+Several files are produced:
+ - spice86dumpMemoryDump.bin: Snapshot of the real mode address space. Contains the instructions that are actually loaded and executed. They may differ from the exe you are running because DOS programs can rewrite some of their instructions / load additional modules in memory.
+ - spice86dumpExecutionFlow.json: Contains information used by the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) to make sense of the memory dump, like addresses of the functions, the labels, the instructions that have been executed ...
 
 #### Special breakpoints
 Break after x emulated CPU Cycles:
@@ -391,12 +347,12 @@ Screen is refreshed 30 times per second and each time a VGA retrace wait is dete
 
 ### Emulator features
 CPU:
-- Only 16 bits instructions are supported, memory size is 1MB
+- Only 16 bits instructions are fully supported, memory size is 1MB
 - The only supported addressing mode is real mode. 286/386 Protected mode and the related instructions are not implemented.
 - Instruction set is (hopefully!) fully implemented for 8086, and validated via automated tests.
 - For 80186, BOUND, ENTER and LEAVE instructions are missing.
 - For 80286, instructions related to protected mode are not implemented
-- For 80386, protected mode and 32 bits instructions are not implemented. FS and GS registers are supported.
+- For 80386, protected mode is not implemented. Some 32 bits instructions are implemented but not validated via integration tests for now.
 - No FPU instruction implemented apart those used for FPU detection.
 
 Graphics:
@@ -427,7 +383,7 @@ Compatibility list available [here](COMPATIBILITY.md).
 
 ### How to build on your machine
 
-- Install the .NET 6 SDK (once)
+- Install the .NET 7 SDK (once)
 - clone the repo
 - run this where Spice86.sln is located:
 

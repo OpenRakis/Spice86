@@ -1,9 +1,9 @@
-﻿namespace Spice86.Core.Emulator.CPU;
-
-using Spice86.Core.Emulator.Memory;
+﻿using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Utils;
 
 using System.Text;
+
+namespace Spice86.Core.Emulator.CPU;
 
 public class State {
     // Accumulator
@@ -88,7 +88,7 @@ public class State {
 
     public Registers Registers { get; } = new();
     public SegmentRegisters SegmentRegisters { get; } = new();
-
+    
     public void ClearPrefixes() {
         ContinueZeroFlagValue = null;
         SegmentOverrideIndex = null;
