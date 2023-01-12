@@ -289,7 +289,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     public void RemoveBuffer(uint address) {
-        VideoBuffers.Remove(VideoBuffers.First(x => x.Address == address));
+        VideoBufferViewModel videoBuffer = VideoBuffers.First(x => x.Address == address);
+        videoBuffer.Dispose();
+        VideoBuffers.Remove(videoBuffer);
     }
 
     public void SetResolution(int width, int height, uint address) {
