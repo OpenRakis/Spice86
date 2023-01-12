@@ -457,6 +457,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x4C, new Callback(0x4C, QuitWithExitCode));
         _dispatchTable.Add(0x4E, new Callback(0x4E, () => FindFirstMatchingFile(true)));
         _dispatchTable.Add(0x4F, new Callback(0x4F, () => FindNextMatchingFile(true)));
+        _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
     }
 
