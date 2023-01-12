@@ -1,9 +1,8 @@
-﻿using Spice86.Core.DI;
-
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
 
+using Spice86.Core.DI;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
@@ -439,7 +438,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x30, new Callback(0x30, GetDosVersion));
         _dispatchTable.Add(0x33, new Callback(0x33, GetSetControlBreak));
         _dispatchTable.Add(0x35, new Callback(0x35, GetInterruptVector));
-        _dispatchTable.Add(0x36, new Callback(0x36, () => GetFreeDiskSpace()));
+        _dispatchTable.Add(0x36, new Callback(0x36, GetFreeDiskSpace));
         _dispatchTable.Add(0x3B, new Callback(0x3B, () => ChangeCurrentDirectory(true)));
         _dispatchTable.Add(0x3C, new Callback(0x3C, () => CreateFileUsingHandle(true)));
         _dispatchTable.Add(0x3D, new Callback(0x3D, () => OpenFile(true)));
