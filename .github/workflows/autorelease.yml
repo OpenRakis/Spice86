@@ -29,12 +29,12 @@ jobs:
          working-directory: ./src/Spice86
          run: |
               dotnet restore
-              dotnet publish --no-restore -c Release -r linux-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Release/linux
-              dotnet publish --no-restore -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Release/windows
-              dotnet publish --no-restore -c Release -r osx-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Release/macos
-              dotnet publish --no-restore -c Debug -r linux-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Debug/linux
-              dotnet publish --no-restore -c Debug -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Debug/windows
-              dotnet publish --no-restore -c Debug -r osx-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Debug/macos
+              dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Release/linux
+              dotnet publish -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Release/windows
+              dotnet publish -c Release -r osx-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Release/macos
+              dotnet publish -c Debug -r linux-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Debug/linux
+              dotnet publish -c Debug -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Debug/windows
+              dotnet publish -c Debug -r osx-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o Debug/macos
 
        - name: Zip output
          run: zip -qq -r devbuild.zip Release
