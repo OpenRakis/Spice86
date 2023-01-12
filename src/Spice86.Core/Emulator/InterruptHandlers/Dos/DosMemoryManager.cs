@@ -1,11 +1,8 @@
-﻿using Spice86.Core.DI;
-
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
 
 using Spice86.Core.Emulator.Memory;
-using Spice86.Logging;
 
 using System.Collections.Generic;
 
