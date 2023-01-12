@@ -44,17 +44,6 @@ jobs:
          run: zip -qq -r ReleaseBuild.zip Release
          working-directory: ./src/Spice86/bin
 
-       - name: Publish GitHub Debug
-         uses: "marvinpinto/action-automatic-releases@latest"
-         with:
-           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-           automatic_release_tag: "latest"
-           prerelease: true
-           title: "Development Build"
-           files: |
-             ./src/Spice86/bin/DebugBuild.zip
-
-
        - name: Publish GitHub Release
          uses: "marvinpinto/action-automatic-releases@latest"
          with:
@@ -63,4 +52,5 @@ jobs:
            prerelease: true
            title: "Development Build"
            files: |
+             ./src/Spice86/bin/DebugBuild.zip
              ./src/Spice86/bin/ReleaseBuild.zip
