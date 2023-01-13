@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.Callback;
 
 using System.Collections.Generic;
 
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
