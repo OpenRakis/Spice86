@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
 public class CallbackHandler : IndexBasedDispatcher {
-    private static readonly ushort CallbackSize = 4;
+    private const ushort CallbackSize = 4;
 
     // Map of all the callback addresses
     private readonly Dictionary<byte, SegmentedAddress> _callbackAddresses = new();
