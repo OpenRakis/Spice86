@@ -1,5 +1,8 @@
 ﻿namespace Spice86.Shared.Interfaces;
 
+using Spice86.Shared;
+using Spice86.Shared.Video;
+
 using System.Collections.Generic;
 
 /// <summary>
@@ -94,10 +97,8 @@ public interface IGui {
     /// <summary>
     /// On video mode change: Set Resolution of the video source for the GUI to display
     /// </summary>
-    /// <param name="videoWidth">The width in pixels</param>
-    /// <param name="videoHeight">The hight in pixels</param>
-    /// <param name="offset">The start address in memory of the data to display on screen. Usually 0xA000</param>
-    void SetResolution(int videoWidth, int videoHeight, uint offset);
+    /// <param name="videoMode">The video mode. Width, Height, main memory mapping physical address, etc...</param>
+    void SetVideoMode(VideoModeBase videoMode);
 
     /// <summary>
     /// Indicates whether the LMB is down.

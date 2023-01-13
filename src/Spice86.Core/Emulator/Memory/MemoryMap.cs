@@ -31,7 +31,7 @@ public static class MemoryMap {
 
     public const int GraphicVideoMemorylength = 65535;
 
-    public const int GraphicVideoMemorySegment = 0xA000;
+    public const int VgaGraphicVideoMemorySegment = 0xA000;
 
     public const int InterruptVectorLength = 1024;
 
