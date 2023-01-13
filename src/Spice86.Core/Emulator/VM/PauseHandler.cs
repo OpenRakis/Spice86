@@ -3,6 +3,7 @@
 using Serilog;
 
 using Spice86.Core.Emulator.Errors;
+using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 using System.Threading;
@@ -10,8 +11,11 @@ using System.Threading;
 public sealed class PauseHandler : IDisposable {
     private readonly ILogger _logger;
 
-    public PauseHandler(ILogger logger) {
+    private readonly IGui? _gui;
+
+    public PauseHandler(ILogger logger, IGui? gui) {
         _logger = logger;
+        _gui = gui;
     }
 
     private volatile bool _paused;
@@ -41,6 +45,9 @@ public sealed class PauseHandler : IDisposable {
         _pauseRequested = false;
         if(!_disposed) {
             _manualResetEvent.Set();
+            if(_gui is not null && _gui.IsPaused) {
+                _gui.Play();
+            }
         }
         LogStatus($"{nameof(RequestResume)} finished");
     }

@@ -4,6 +4,7 @@ using Spice86.Core.DI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Interfaces;
 
 public sealed class MachineBreakpoints : IDisposable {
     private readonly BreakPointHolder _cycleBreakPoints = new();
@@ -20,6 +21,9 @@ public sealed class MachineBreakpoints : IDisposable {
     public MachineBreakpoints(Machine machine) {
         _state = machine.Cpu.State;
         _memory = machine.Memory;
+        PauseHandler = new(
+            new ServiceProvider().GetLoggerForContext<PauseHandler>(),
+            machine.Gui);
     }
 
     public void CheckBreakPoint() {
@@ -27,8 +31,7 @@ public sealed class MachineBreakpoints : IDisposable {
         PauseHandler.WaitIfPaused();
     }
 
-    public PauseHandler PauseHandler { get; } = new(
-        new ServiceProvider().GetLoggerForContext<PauseHandler>());
+    public PauseHandler PauseHandler { get; }
 
     public void OnMachineStop() {
         if (_machineStopBreakPoint is not null) {
