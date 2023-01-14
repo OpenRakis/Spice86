@@ -98,12 +98,12 @@ public interface IGui {
     bool IsRightButtonClicked { get; }
 
     /// <summary>
-    /// Width of the MainWindow, in pixels.
+    /// Width of the primary video buffer from the emulator's point of view, in pixels.
     /// </summary>
     int Width { get; }
 
     /// <summary>
-    /// Height of the MainWindow, in pixels.
+    /// Height of the primary video buffer from the emulator's point of view, in pixels.
     /// </summary>
     int Height { get; }
 }
