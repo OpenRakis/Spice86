@@ -34,4 +34,8 @@ public class Rgb {
     public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
     }
+
+    public static implicit operator uint(Rgb v) {
+        return (uint)v.R + v.G + v.B;
+    }
 }
