@@ -6,9 +6,9 @@ namespace Spice86.Shared.Video;
 public abstract class VideoModeBase {
     /// <summary>
     /// The value sent in the AL register. <be/>
-    /// For example, 0x13 for VGA, 320x200.
+    /// For example, 0x13 for VGA, 320x200. Byte value.
     /// </summary>
-    public byte Id { get; protected set; }
+    public VideoModeIdentifier Id { get; protected set; }
 
     public int Width { get; protected set; }
     public int Height { get; protected set; }
