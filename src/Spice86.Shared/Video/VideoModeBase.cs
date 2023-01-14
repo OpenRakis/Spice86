@@ -13,6 +13,9 @@ public abstract class VideoModeBase {
     public int Width { get; protected set; }
     public int Height { get; protected set; }
 
+    /// <summary>
+    /// https://en.wikipedia.org/wiki/Planar_(computer_graphics)
+    /// </summary>
     public bool IsPlanar { get; protected set; }
 
     /// <summary>

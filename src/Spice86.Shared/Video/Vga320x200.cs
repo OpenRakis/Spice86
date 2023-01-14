@@ -5,7 +5,7 @@ public class Vga320x200 : VideoModeBase {
         Id = VideoModeIdentifier.Vga320x200;
         Width = 320;
         Height = 200;
-        IsPlanar = true;
+        IsPlanar = false;
         PhysicalAddress = 0x000A0000;
     }
 }
