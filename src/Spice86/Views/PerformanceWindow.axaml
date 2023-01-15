@@ -10,7 +10,7 @@
 		Icon="/Icon/Spice86.ico"
 		CanResize="True"
 		WindowStartupLocation="CenterOwner"
-		Title="Performance" MinWidth="640" MinHeight="400" Height="640" Width="400" ShowInTaskbar="False">
+		Title="Performance" MinWidth="640" MinHeight="400" Width="640" Height="400" ShowInTaskbar="False">
 	<Design.DataContext>
 		<vm:PerformanceViewModel />
 	</Design.DataContext>
@@ -41,8 +41,10 @@
 			<WrapPanel>
 				<StackPanel Orientation="Vertical">
 					<oxy:Plot Title="CPU" Subtitle="Last 10 minutes"
-			          MinHeight="300"
-					  MinWidth="400"
+					  Width="{Binding $parent[StackPanel].Bounds.Width}"
+					  Height="{Binding $parent[StackPanel].Bounds.Height}"
+					  MinWidth="600"
+					  MinHeight="300"
 			          PlotMargins="50 0 0 0"
 			          PlotAreaBorderColor="#999999">
 						<oxy:AreaSeries 
