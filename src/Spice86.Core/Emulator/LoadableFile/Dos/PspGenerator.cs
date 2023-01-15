@@ -22,7 +22,7 @@ public class PspGenerator {
         memory.SetUint16(pspAddress, 0xCD20); // INT20h
 
         // last free segment, dosbox seems to put it just before VRAM.
-        const ushort lastFreeSegment = MemoryMap.VgaGraphicVideoMemorySegment - 1;
+        const ushort lastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
         memory.SetUint16(pspAddress + LAST_FREE_SEGMENT_OFFSET, lastFreeSegment);
         memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
         _machine.Dos.MemoryManager.Init(pspSegment, lastFreeSegment);

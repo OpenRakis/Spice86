@@ -4,15 +4,6 @@
 /// RGB representation of a color.
 /// </summary>
 public class Rgb {
-    public Rgb() {
-    }
-
-    public Rgb(byte r, byte g, byte b) {
-        R = r;
-        G = g;
-        B = b;
-    }
-
     public byte R { get; set; }
 
     public byte G { get; set; }
@@ -33,9 +24,5 @@ public class Rgb {
 
     public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
-    }
-
-    public static implicit operator uint(Rgb v) {
-        return (uint)v.R + v.G + v.B;
     }
 }
