@@ -4,6 +4,8 @@ namespace Spice86;
 
 using Avalonia;
 
+using OxyPlot.Avalonia;
+
 using Serilog;
 
 using Spice86.Core.CLI;
@@ -46,6 +48,7 @@ public class Program {
             new ServiceProvider().GetService<ILoggerService>())
                 .ParseCommandLine(args);
         if(!configuration.HeadlessMode) {
+            OxyPlotModule.EnsureLoaded();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
         }
         else {

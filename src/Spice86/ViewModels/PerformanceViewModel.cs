@@ -1,10 +1,17 @@
-﻿namespace Spice86.ViewModels;
+﻿using Avalonia.Collections;
+
+namespace Spice86.ViewModels;
+
 using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using OxyPlot;
+using OxyPlot.Avalonia;
+
 using Spice86.Core.Emulator.VM;
+using Spice86.Models;
 
 using System;
 using System.Linq;
@@ -14,8 +21,21 @@ public partial class PerformanceViewModel : ObservableObject {
     private readonly MainWindowViewModel? _mainViewModel;
     private readonly Machine? _machine;
 
+    private Dictionary<uint, long> _framesRendered = new();
+
+    private DateTimeOffset _lastUpdateTime;
+
+    [ObservableProperty]
+    private AvaloniaList<Measurement> _cpuHistoryDataPoints = new();
+
+    private const int CpuHistoryTimeSpanInMinutes = 10;
+
+    private DateTimeOffset _cpuHistoryFirstUpdate;
+
+    private DateTimeOffset _cpuHistoryLastUpdate;
+
     public PerformanceViewModel() {
-        if (Design.IsDesignMode == false) {
+        if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
     }
@@ -27,10 +47,6 @@ public partial class PerformanceViewModel : ObservableObject {
         _timer.Start();
     }
 
-    private Dictionary<uint, long> _framesRendered = new();
-
-    private DateTimeOffset _lastUpdateTime;
-
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
         if (_machine is null) {
             return;
@@ -38,7 +54,7 @@ public partial class PerformanceViewModel : ObservableObject {
         if (DateTimeOffset.Now - _lastUpdateTime >= TimeSpan.FromSeconds(1)) {
             if (_lastUpdateTime != DateTimeOffset.MinValue) {
                 InstructionsPerSecond = _machine.Cpu.State.Cycles - InstructionsExecuted;
-                if(_mainViewModel is not null && _mainViewModel.VideoBuffers.Count > 0) {
+                if(_mainViewModel?.VideoBuffers.Count > 0) {
                     FramesPerSecond = _mainViewModel.VideoBuffers
                         .Select(x => x.FramesRendered - _framesRendered
                             .GetValueOrDefault(x.Address))
@@ -49,9 +65,36 @@ public partial class PerformanceViewModel : ObservableObject {
             _lastUpdateTime = DateTimeOffset.Now;
         }
         InstructionsExecuted = _machine.Cpu.State.Cycles;
+        UpdateCpuHistory(_lastUpdateTime);
         if(_mainViewModel is not null) {
             _framesRendered = new(_mainViewModel.VideoBuffers.Select(x => new KeyValuePair<uint, long>(x.Address, x.FramesRendered)));
         }
+    }
+
+    private void UpdateCpuHistory(DateTimeOffset timeOfUpdate) {
+        if(_mainViewModel?.IsPaused is true ||
+            InstructionsPerSecond <= 0) {
+            return;
+        }
+
+        if(_cpuHistoryDataPoints.Count is 0) {
+            _cpuHistoryFirstUpdate = timeOfUpdate;
+        }
+
+        TimeSpan cpuHistoryTimeSpan = _cpuHistoryLastUpdate - _cpuHistoryFirstUpdate;
+        if(cpuHistoryTimeSpan > TimeSpan.FromMinutes(CpuHistoryTimeSpanInMinutes)) {
+            _cpuHistoryDataPoints.Clear();
+        }
+
+        _cpuHistoryDataPoints.Add(new Measurement()
+        {
+            Time = _cpuHistoryDataPoints.Count + 1,
+            Value = InstructionsPerSecond
+        });
+
+        _cpuHistoryLastUpdate = timeOfUpdate;
+        // Notify AvaloniaUI to make the added points show up.
+        OnPropertyChanged(nameof(CpuHistoryDataPoints));
     }
 
     [ObservableProperty]

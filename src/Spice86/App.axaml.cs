@@ -28,17 +28,20 @@ internal partial class App : Application {
             Styles.RemoveAt(1);
         }
 
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            MainWindowViewModel mainViewModel = new MainWindowViewModel(
-                new ServiceProvider().GetLoggerForContext<MainWindowViewModel>());
-            mainViewModel.SetConfiguration(desktop.Args);
-            desktop.MainWindow = new MainWindow {
-                DataContext = mainViewModel,
-            };
-            desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();
-            desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
-            MainWindow = (MainWindow)desktop.MainWindow;
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            throw new PlatformNotSupportedException("Spice86 needs the desktop Linux/Mac/Windows platform in order to run.");
         }
+
+        MainWindowViewModel mainViewModel = new MainWindowViewModel(
+            new ServiceProvider().GetLoggerForContext<MainWindowViewModel>());
+        mainViewModel.SetConfiguration(desktop.Args);
+        desktop.MainWindow = new MainWindow {
+            DataContext = mainViewModel,
+        };
+        desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();
+        desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
+        MainWindow = (MainWindow)desktop.MainWindow;
         base.OnFrameworkInitializationCompleted();
     }
 

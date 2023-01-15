@@ -6,5 +6,7 @@
     <Application.Styles>
         <FluentTheme Mode="Light" />
         <FluentTheme Mode="Dark" />
+        <!-- Add the line below to get OxyPlot UI theme applied. -->
+        <StyleInclude Source="resm:OxyPlot.Avalonia.Themes.Default.xaml?assembly=OxyPlot.Avalonia"/>
     </Application.Styles>
 </Application>

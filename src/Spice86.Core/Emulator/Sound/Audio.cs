@@ -7,9 +7,6 @@ using System;
 
 internal static class Audio {
     public static AudioPlayer? CreatePlayer(int sampleRate = 48000, int framesPerBuffer = 0, double? suggestedLatency = null) {
-        if (OperatingSystem.IsBrowser()) {
-            return null;
-        }
         return PortAudioPlayer.Create(sampleRate, framesPerBuffer, suggestedLatency);
     }
 
