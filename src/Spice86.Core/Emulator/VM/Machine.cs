@@ -59,7 +59,7 @@ public class Machine : IDisposable {
     public DosInt20Handler DosInt20Handler { get; }
 
     public DosInt21Handler DosInt21Handler { get; }
-    
+
     public DosInt2fHandler DosInt2fHandler { get; }
 
     public GravisUltraSound GravisUltraSound { get; }
@@ -208,7 +208,7 @@ public class Machine : IDisposable {
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
                 if (Gui?.IsPaused == true || IsPaused) {
-                    Gui?.WaitOne();
+                    Gui?.WaitForContinue();
                 }
                 dmaChannel.Transfer(Memory);
                 if (!_exitDmaLoop) {
@@ -318,12 +318,16 @@ public class Machine : IDisposable {
     }
 
     private void PauseIfAskedTo() {
+        if(Gui?.PauseEmulatorOnStart == true) {
+            Gui?.PauseEmulationOnStart();
+            Gui?.WaitForContinue();
+        }
         if (Gui?.IsPaused == true) {
             IsPaused = true;
             Paused?.Invoke();
             if (!_programExecutor.Step()) {
                 Gui.IsPaused = true;
-                Gui?.WaitOne();
+                Gui?.WaitForContinue();
             }
             Resumed?.Invoke();
             IsPaused = false;

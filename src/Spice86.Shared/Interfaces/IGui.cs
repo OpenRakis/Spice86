@@ -39,9 +39,19 @@ public interface IGui {
     public void Play();
 
     /// <summary>
+    /// Whether the GUI wants to pause the emulation on startup
+    /// </summary>
+    bool PauseEmulatorOnStart { get; }
+
+    /// <summary>
+    /// For when the GUI wants to pause the emulation on startup, the emulator calls this to pause the thread.
+    /// </summary>
+    void PauseEmulationOnStart();
+
+    /// <summary>
     /// Blocks the current thread until the GUI's WaitHandle receives a signal.
     /// </summary>
-    void WaitOne();
+    void WaitForContinue();
 
     /// <summary>
     /// Removes a videobuffer from the GUI.

@@ -44,6 +44,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private bool _closeAppOnEmulatorExit = false;
 
+    public bool PauseEmulatorOnStart { get; private set; } = false;
+
     internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
 
     private ProgramExecutor? _programExecutor;
@@ -67,6 +69,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         if (App.MainWindow is not null) {
             App.MainWindow.Closing += (s, e) => _isMainWindowClosing = true;
         }
+    }
+
+    public void PauseEmulationOnStart() {
+        Pause();
+        PauseEmulatorOnStart = false;
     }
 
     [RelayCommand]
@@ -136,18 +143,19 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    public Task DebugExecutableCommand() {
+    public async Task DebugExecutableCommand() {
         _closeAppOnEmulatorExit = false;
-        return StartNewExecutable(true);
+        await StartNewExecutable();
+        PauseEmulatorOnStart = true;
     }
 
     [RelayCommand]
-    public Task StartExecutable() {
+    public async Task StartExecutable() {
         _closeAppOnEmulatorExit = false;
-        return StartNewExecutable();
+        await StartNewExecutable();
     }
 
-    private async Task StartNewExecutable(bool pauseOnStart = false) {
+    private async Task StartNewExecutable() {
         if (App.MainWindow is not null) {
             OpenFileDialog? ofd = new OpenFileDialog() {
                 Title = "Start Executable...",
@@ -172,7 +180,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 Dispatcher.UIThread.Post(() => DisposeEmulator(), DispatcherPriority.MaxValue);
                 SetMainTitle();
                 _okayToContinueEvent = new(true);
-                IsPaused = pauseOnStart;
                 _programExecutor?.Machine.ExitEmulationLoop();
                 while (_emulatorThread?.IsAlive == true) {
                     Dispatcher.UIThread.RunJobs();
@@ -403,7 +410,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     /// <inheritdoc />
-    public void WaitOne() {
+    public void WaitForContinue() {
         _okayToContinueEvent.WaitOne(Timeout.Infinite);
     }
 }
