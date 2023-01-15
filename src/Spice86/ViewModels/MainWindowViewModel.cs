@@ -168,9 +168,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 _configuration.Exe = files[0];
                 _configuration.ExeArgs = "";
                 _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
-                Dispatcher.UIThread.Post(() =>
-                    DisposeEmulator()
-                , DispatcherPriority.MaxValue);
+                Play();
+                Dispatcher.UIThread.Post(() => DisposeEmulator(), DispatcherPriority.MaxValue);
                 SetMainTitle();
                 _okayToContinueEvent = new(true);
                 IsPaused = pauseOnStart;
