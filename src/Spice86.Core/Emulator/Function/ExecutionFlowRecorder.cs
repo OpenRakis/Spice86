@@ -95,7 +95,6 @@ public class ExecutionFlowRecorder {
         if (!_executableCodeAreasEncountered.Add(physicalAddress)) {
             return;
         }
-
         AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, physicalAddress, _ => {
             if (!IsRegisterExecutableCodeModificationEnabled) {
                 return;
