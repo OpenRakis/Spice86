@@ -356,6 +356,7 @@ public class Machine : IDisposable {
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 MachineBreakpoints.Dispose();
+                Cpu.Dispose();
             }
             _disposed = true;
         }

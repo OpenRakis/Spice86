@@ -22,7 +22,21 @@ using System.Collections.Generic;
 /// https://www.felixcloutier.com/x86/ </li><li> Pure 8086 instructions:
 /// https://jbwyatt.com/253/emu/8086_instruction_set.html </li></ul>
 /// </summary>
-public class Cpu {
+public class Cpu : IDisposable {
+    private bool _disposed;
+
+    private bool _exitRecorderThread;
+
+    private Thread _recorderThread;
+
+    private bool _recorderThreadStarted;
+
+    private Action? _currentRecorderAction;
+
+    private volatile bool _currentRecorderActionNeedsToBeRun;
+
+    private Queue<Action> _recorderThreadActionsQueue = new();
+
     // Extract regIndex from opcode
     private const int RegIndexMask = 0b111;
 
@@ -71,11 +85,36 @@ public class Cpu {
         _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
         _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
         _instructions16Or32 = _instructions16;
+        _recorderThread = new(ExecutionFlowRecorderTheead);
+    }
+
+    private void ExecutionFlowRecorderTheead() {
+        while(!_exitRecorderThread) {
+            if(_currentRecorderActionNeedsToBeRun) {
+                _currentRecorderAction?.Invoke();
+                _currentRecorderActionNeedsToBeRun = false;
+            }
+            else {
+                Thread.Sleep(1);
+            }
+        }
+    }
+
+    private void ExecuteOnExecutionFlowRecorderThread(Action action) {
+        _currentRecorderAction = action;
+        if(!_recorderThreadStarted) {
+            _recorderThreadStarted = true;
+            _recorderThread.Start();
+        }
+        else {
+            _currentRecorderActionNeedsToBeRun = true;
+        }
     }
 
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
-        ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
+        ExecuteOnExecutionFlowRecorderThread(() =>
+            ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp));
         StaticAddressesRecorder.Reset();
         byte opcode = ProcessPrefixes();
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
@@ -101,7 +140,8 @@ public class Cpu {
         FunctionHandlerInUse.Ret(CallType.FAR);
         _internalIp = Stack.Pop16();
         ushort cs = Stack.Pop16();
-        ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, cs, _internalIp);
+        ExecuteOnExecutionFlowRecorderThread(() =>
+            ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, cs, _internalIp));
         State.CS = cs;
         State.SP = (ushort)(numberOfBytesToPop + State.SP);
         // Set it here for overriden code calling this
@@ -137,7 +177,8 @@ public class Cpu {
     public void NearRet(int numberOfBytesToPop) {
         FunctionHandlerInUse.Ret(CallType.NEAR);
         _internalIp = Stack.Pop16();
-        ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, State.CS, _internalIp);
+        ExecuteOnExecutionFlowRecorderThread(() =>
+            ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, State.CS, _internalIp));
         State.SP = (ushort)(numberOfBytesToPop + State.SP);
         // Set it here for overriden code calling this
         State.IP = _internalIp;
@@ -145,25 +186,30 @@ public class Cpu {
 
     public uint NextUint32() {
         uint res = _memory.GetUint32(InternalIpPhysicalAddress);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+2));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+3));
+        ExecuteOnExecutionFlowRecorderThread(() => {
+            ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
+            ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
+            ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+2));
+            ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+3));
+        });
         _internalIp += 4;
         return res;
     }
 
     public ushort NextUint16() {
         ushort res = _memory.GetUint16(InternalIpPhysicalAddress);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
+        ExecuteOnExecutionFlowRecorderThread(() => {
+            ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
+            ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
+        });
         _internalIp += 2;
         return res;
     }
 
     public byte NextUint8() {
         byte res = _memory.GetUint8(InternalIpPhysicalAddress);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
+        ExecuteOnExecutionFlowRecorderThread(() =>
+            ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp));
         _internalIp++;
         return res;
     }
@@ -891,7 +937,8 @@ public class Cpu {
                     State.CX = cx;
                     if (cx != 0 && State.ZeroFlag == zeroFlag) {
                         ushort targetIp = (ushort)(_internalIp + address);
-                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                        ExecuteOnExecutionFlowRecorderThread(() =>
+                            ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp));
                         _internalIp = targetIp;
                     }
 
@@ -904,7 +951,8 @@ public class Cpu {
                     State.CX = cx;
                     if (cx != 0) {
                         ushort targetIp = (ushort)(_internalIp + address);
-                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                        ExecuteOnExecutionFlowRecorderThread(() =>
+                            ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp));
                         _internalIp = targetIp;
                     }
 
@@ -1133,7 +1181,8 @@ public class Cpu {
     private uint InternalIpPhysicalAddress => MemoryUtils.ToPhysicalAddress(State.CS, _internalIp);
 
     private void HandleCall(CallType callType, ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
-        ExecutionFlowRecorder.RegisterCall(State.CS, State.IP, targetCS, targetIP);
+        ExecuteOnExecutionFlowRecorderThread(() =>
+            ExecutionFlowRecorder.RegisterCall(State.CS, State.IP, targetCS, targetIP));
         State.CS = targetCS;
         // Setting it here as well for eventual overrides
         State.IP = targetIP;
@@ -1170,7 +1219,8 @@ public class Cpu {
         throw new InvalidOpCodeException(_machine, opcode, true);
 
     private void HandleJump(ushort cs, ushort ip) {
-        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, cs, ip);
+        ExecuteOnExecutionFlowRecorderThread(() =>
+            ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, cs, ip));
         _internalIp = ip;
         State.CS = cs;
     }
@@ -1382,5 +1432,22 @@ public class Cpu {
             }
         }
         State.CX = cx;
+    }
+
+    public void Dispose() {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if(disposing) {
+            if(!_disposed) {
+                _exitRecorderThread = true;
+                if(_recorderThread.IsAlive) {
+                    _recorderThread.Join();
+                }
+            }
+            _disposed = true;
+        }
     }
 }
