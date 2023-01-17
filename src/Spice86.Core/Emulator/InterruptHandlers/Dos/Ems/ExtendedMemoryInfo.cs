@@ -1,4 +1,5 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+
 /// <summary>
 /// Contains information about extended memory usage.
 /// </summary>

@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 internal static class EmsFunctions {
     public const byte GetStatus = 0x40;
