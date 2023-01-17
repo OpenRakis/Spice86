@@ -12,10 +12,12 @@ public sealed class ExtendedMemoryInfo {
     /// Gets the number of XMS bytes currently allocated.
     /// </summary>
     public int BytesAllocated { get; }
+
     /// <summary>
     /// Gets the number of XMS bytes currently free.
     /// </summary>
     public int BytesFree => this.TotalBytes - this.BytesAllocated;
+
     /// <summary>
     /// Gets the total number of XMS bytes.
     /// </summary>
