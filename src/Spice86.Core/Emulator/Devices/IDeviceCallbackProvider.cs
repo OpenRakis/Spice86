@@ -19,11 +19,6 @@ public interface IDeviceCallbackProvider
     SegmentedAddress CallbackAddress { set; }
 
     /// <summary>
-    /// Performs the callback action.
-    /// </summary>
-    void InvokeCallback();
-
-    /// <summary>
     /// Notifies the handler what machine code can be used to invoke itself. Default interface member.
     /// </summary>
     /// <param name="machineCode">Machine code sequence used to invoke the handler.</param>
