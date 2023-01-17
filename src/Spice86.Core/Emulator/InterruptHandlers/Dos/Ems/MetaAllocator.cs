@@ -1,8 +1,8 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
+
+using Spice86.Core.Emulator.Memory;
 
 /// <summary>
 /// Simple memory allocator for reserving regions of conventional memory.
@@ -10,14 +10,14 @@ using System.Linq;
 public class MetaAllocator {
     private readonly LinkedList<Allocation> allocations = new();
 
-    public MetaAllocator() => this.Clear();
+    public MetaAllocator() => Clear();
 
     /// <summary>
     /// Clears all allocations and resets the allocator to its initial state.
     /// </summary>
     public void Clear() {
-        this.allocations.Clear();
-        this.allocations.AddLast(new Allocation(0, Memory.ConvMemorySize >> 4, false));
+        allocations.Clear();
+        allocations.AddLast(new Allocation(0, Memory.ConvMemorySize >> 4, false));
     }
 
     /// <summary>
@@ -32,13 +32,13 @@ public class MetaAllocator {
         }
 
         uint paragraphs = (uint)(bytes >> 4);
-        if ((bytes % 16) != 0) {
+        if (bytes % 16 != 0) {
             paragraphs++;
         }
 
         Allocation freeBlock;
         try {
-            freeBlock = this.allocations.First(a => !a.IsUsed && InRange(a, minimumSegment, paragraphs));
+            freeBlock = allocations.First(a => !a.IsUsed && InRange(a, minimumSegment, paragraphs));
         } catch (InvalidOperationException ex) {
             throw new InvalidOperationException("Not enough conventional memory.", ex);
         }
@@ -50,7 +50,7 @@ public class MetaAllocator {
 
         ushort providedSegment = Math.Max(minimumSegment, freeBlock.Segment);
 
-        var newFreeBlockA = new Allocation(freeBlock.Segment, (uint)providedSegment - (uint)freeBlock.Segment, false);
+        var newFreeBlockA = new Allocation(freeBlock.Segment, providedSegment - (uint)freeBlock.Segment, false);
         var newUsedBlock = new Allocation(providedSegment, paragraphs, true);
         var newFreeBlockB = new Allocation((ushort)(providedSegment + paragraphs), freeBlock.Length - newFreeBlockA.Length - paragraphs, false);
 
@@ -64,7 +64,7 @@ public class MetaAllocator {
             newBlocks.Add(newFreeBlockB);
         }
 
-        this.allocations.Replace(freeBlock, newBlocks.ToArray());
+        allocations.Replace(freeBlock, newBlocks.ToArray());
 
         return newUsedBlock.Segment;
     }
@@ -74,7 +74,7 @@ public class MetaAllocator {
     /// </summary>
     /// <returns>Size in bytes of the largest free block of memory.</returns>
     public uint GetLargestFreeBlockSize() {
-        return this.allocations.Where(a => !a.IsUsed).Max(a => a.Length) << 4;
+        return allocations.Where(a => !a.IsUsed).Max(a => a.Length) << 4;
     }
 
     /// <summary>

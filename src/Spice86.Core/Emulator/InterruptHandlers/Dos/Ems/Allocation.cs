@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Memory;
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using System;
 
@@ -28,9 +28,9 @@ public class Allocation : IEquatable<Allocation> {
     /// <param name="length">The length of the allocation in 16-byte paragraphs.</param>
     /// <param name="isUsed">Indicates whether the allocation is in use or a free block.</param>
     public Allocation(ushort segment, uint length, bool isUsed) {
-        this.Segment = segment;
-        this.Length = length;
-        this.IsUsed = isUsed;
+        Segment = segment;
+        Length = length;
+        IsUsed = isUsed;
     }
 
     public bool Equals(Allocation? other) {
@@ -38,12 +38,12 @@ public class Allocation : IEquatable<Allocation> {
             return false;
         }
 
-        return this.Segment == other.Segment && this.IsUsed == other.IsUsed && this.Length == other.Length;
+        return Segment == other.Segment && IsUsed == other.IsUsed && Length == other.Length;
     }
 
     public override bool Equals(object? obj) => Equals(obj as Allocation);
 
-    public override int GetHashCode() => this.Segment;
+    public override int GetHashCode() => Segment;
 
-    public override string ToString() => $"{this.Segment:X4}: {this.Length}";
+    public override string ToString() => $"{Segment:X4}: {Length}";
 }
