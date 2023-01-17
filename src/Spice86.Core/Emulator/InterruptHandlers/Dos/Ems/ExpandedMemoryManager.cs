@@ -43,14 +43,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _machine.Memory.SetString(0xF100, 0x000A, "EMMXXXX0");
         _machine.Memory.Reserve(PageFrameSegment, PageSize * MaximumPhysicalPages);
 
-        if (_machine.Xms?.TryAllocate(PageSize * MaximumLogicalPages, out short handle) != 0) {
-            throw new InvalidOperationException("Could not allocate memory for EMS paging.");
-        }
-
-        if (_machine.Xms?.TryGetBlock(handle, out XmsBlock block) is true) {
-            xmsBaseAddress = ExtendedMemoryManager.XmsBaseAddress + block.Offset;
-        }
-
         for (int i = 0; i < 24; i++) {
             pageOwners[i] = SystemHandle;
         }
