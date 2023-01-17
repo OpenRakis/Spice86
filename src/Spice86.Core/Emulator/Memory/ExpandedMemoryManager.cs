@@ -516,8 +516,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Copies a block of memory.
     /// </summary>
     private void Move() {
-#warning make sure works with new paging system
-
         int length = (int)_machine.Memory.GetUint32(_machine.Cpu.State.DS, _machine.Cpu.State.SI);
 
         byte sourceType = _machine.Memory.GetByte(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 4u);
