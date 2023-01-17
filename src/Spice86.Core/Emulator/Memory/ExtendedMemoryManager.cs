@@ -28,7 +28,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Specifies the starting physical address of XMS.
     /// </summary>
-    public const uint XmsBaseAddress = Memory.ConvMemorySize + 65536 + 0x4000 + 1024 * 1024;
+    public const uint XmsBaseAddress = Memory.ConvMemorySize + 65536 + 0x4000 + (1024 * 1024);
+
     /// <summary>
     /// Total number of handles available at once.
     /// </summary>
@@ -48,9 +49,13 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     public int ExtendedMemorySize => this._machine.Memory.MemorySize - (int)XmsBaseAddress;
 
     IEnumerable<int> InputPorts => new int[] { 0x92 };
+
     IEnumerable<int> OutputPorts => new int[] { 0x92 };
+
     public override byte Index => 0x43;
+
     public bool IsHookable => true;
+
     public SegmentedAddress CallbackAddress {
         set => this.callbackAddress = value;
     }
@@ -70,6 +75,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
                 throw new NotImplementedException($"XMS interrupt handler function {_machine.Cpu.State.AL:X2}h not implemented.");
         }
     }
+
     public void InvokeCallback() {
         switch (_machine.Cpu.State.AH) {
             case XmsFunctions.GetVersionNumber:
@@ -220,6 +226,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         this.handles.Add(handle, 0);
         return 0;
     }
+
     /// <summary>
     /// Returns the block with the specified handle if found; otherwise returns null.
     /// </summary>
@@ -248,6 +255,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
         this.a20EnableCount++;
     }
+
     /// <summary>
     /// Decrements the A20 enable count.
     /// </summary>
@@ -260,6 +268,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
             this.a20EnableCount--;
         }
     }
+
     /// <summary>
     /// Initializes the internal memory map.
     /// </summary>
@@ -272,11 +281,13 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         uint memoryAvailable = (uint)_machine.Memory.MemorySize - XmsBaseAddress;
         this.xms.AddFirst(new XmsBlock(0, 0, memoryAvailable, false));
     }
+
     /// <summary>
     /// Returns all of the free blocks in the map sorted by size in ascending order.
     /// </summary>
     /// <returns>Sorted list of free blocks in the map.</returns>
     private IEnumerable<XmsBlock> GetFreeBlocks() => xms.Where(static x => !x.IsUsed).OrderBy(static x => x.Length);
+
     /// <summary>
     /// Returns the next available handle for an allocation on success; returns 0 if no handles are available.
     /// </summary>
@@ -290,6 +301,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
         return 0;
     }
+
     /// <summary>
     /// Attempts to merge a free block with the following block if possible.
     /// </summary>
@@ -306,6 +318,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
             }
         }
     }
+
     /// <summary>
     /// Allocates a new block of memory.
     /// </summary>
@@ -320,6 +333,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
             _machine.Cpu.State.BL = res;
         }
     }
+
     /// <summary>
     /// Frees a block of memory.
     /// </summary>
@@ -347,6 +361,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         this.handles.Remove(handle);
         _machine.Cpu.State.AX = 1; // Success.
     }
+
     /// <summary>
     /// Locks a block of memory.
     /// </summary>
@@ -368,6 +383,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         _machine.Cpu.State.DX = (ushort)(fullAddress >> 16);
         _machine.Cpu.State.BX = (ushort)(fullAddress & 0xFFFFu);
     }
+
     /// <summary>
     /// Unlocks a block of memory.
     /// </summary>
@@ -390,6 +406,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
         _machine.Cpu.State.AX = 1; // Success.
     }
+
     /// <summary>
     /// Returns information about an XMS handle.
     /// </summary>
@@ -413,6 +430,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
         _machine.Cpu.State.AX = 1; // Success.
     }
+
     /// <summary>
     /// Copies a block of memory.
     /// </summary>
@@ -469,6 +487,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         _machine.Cpu.State.AX = 1; // Success.
         this._machine.Memory.EnableA20 = a20State;
     }
+
     /// <summary>
     /// Queries free memory using 32-bit registers.
     /// </summary>
