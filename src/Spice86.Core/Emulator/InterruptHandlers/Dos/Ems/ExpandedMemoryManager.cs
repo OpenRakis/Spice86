@@ -1,13 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
+using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
-using System;
-using System.Buffers;
-using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
@@ -63,6 +61,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private void FillDispatchTable() {
         //TODO: Replace Run with C# methods referenced here.
+        _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
     }
 
     /// <summary>
@@ -82,13 +81,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public override byte Index => 0x67;
 
+    public void GetStatus() {
+        // Return good status in AH.
+        _state.AH = 0;
+    }
+
     public override void Run() {
         switch (_machine.Cpu.State.AH) {
-            case EmsFunctions.GetStatus:
-                // Return good status in AH.
-                _machine.Cpu.State.AH = 0;
-                break;
-
             case EmsFunctions.GetPageFrameAddress:
                 // Return page frame segment in BX.
                 _machine.Cpu.State.BX = unchecked(PageFrameSegment);
