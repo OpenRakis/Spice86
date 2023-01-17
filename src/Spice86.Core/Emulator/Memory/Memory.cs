@@ -12,7 +12,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
-/// <summary> Addressable memory of the machine. </summary>
+/// <summary> Addressable memory of the machine.
+/// TODO: Remove redundant code.
+/// TODO: Remove unsafe code.
+/// </summary>
 public class Memory {
     private readonly uint _addressMask = 0x000FFFFFu;
 

@@ -2,7 +2,6 @@
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
@@ -79,21 +78,21 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     public override void Run() {
-        switch (_machine.Cpu.State.AH) {
+        switch (_state.AH) {
             case EmsFunctions.GetPageFrameAddress:
                 // Return page frame segment in BX.
-                _machine.Cpu.State.BX = unchecked(PageFrameSegment);
+                _state.BX = unchecked(PageFrameSegment);
                 // Set good status.
-                _machine.Cpu.State.AH = 0;
+                _state.AH = 0;
                 break;
 
             case EmsFunctions.GetUnallocatedPageCount:
                 // Return number of pages available in BX.
-                _machine.Cpu.State.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
+                _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
                 // Return total number of pages in DX.
-                _machine.Cpu.State.DX = MaximumLogicalPages;
+                _state.DX = MaximumLogicalPages;
                 // Set good status.
-                _machine.Cpu.State.AH = 0;
+                _state.AH = 0;
                 break;
 
             case EmsFunctions.AllocatePages:
@@ -114,16 +113,16 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
             case EmsFunctions.GetVersion:
                 // Return EMS version 4.0.
-                _machine.Cpu.State.AL = 0x40;
+                _state.AL = 0x40;
                 // Return good status.
-                _machine.Cpu.State.AH = 0;
+                _state.AH = 0;
                 break;
 
             case EmsFunctions.GetHandleCount:
                 // Return the number of EMM handles (plus 1 for the OS handle).
-                _machine.Cpu.State.BX = (ushort)(handles.Count + 1);
+                _state.BX = (ushort)(handles.Count + 1);
                 // Return good status.
-                _machine.Cpu.State.AH = 0;
+                _state.AH = 0;
                 break;
 
             case EmsFunctions.GetHandlePages:
@@ -139,7 +138,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
 
             case EmsFunctions.AdvancedMap:
-                switch (_machine.Cpu.State.AL) {
+                switch (_state.AL) {
                     case EmsFunctions.AdvancedMap_MapUnmapPages:
                         MapUnmapMultiplePages();
                         break;
@@ -150,7 +149,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
 
             case EmsFunctions.HandleName:
-                switch (_machine.Cpu.State.AL) {
+                switch (_state.AL) {
                     case EmsFunctions.HandleName_Get:
                         GetHandleName();
                         break;
@@ -165,14 +164,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
 
             case EmsFunctions.GetHardwareInformation:
-                switch (_machine.Cpu.State.AL) {
+                switch (_state.AL) {
                     case EmsFunctions.GetHardwareInformation_UnallocatedRawPages:
                         // Return number of pages available in BX.
-                        _machine.Cpu.State.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
+                        _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
                         // Return total number of pages in DX.
-                        _machine.Cpu.State.DX = MaximumLogicalPages;
+                        _state.DX = MaximumLogicalPages;
                         // Set good status.
-                        _machine.Cpu.State.AH = 0;
+                        _state.AH = 0;
                         break;
 
                     default:
@@ -181,23 +180,23 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
 
             case EmsFunctions.MoveExchange:
-                switch (_machine.Cpu.State.AL) {
+                switch (_state.AL) {
                     case EmsFunctions.MoveExchange_Move:
                         Move();
                         break;
 
                     default:
-                        throw new NotImplementedException($"EMM function 57{_machine.Cpu.State.AL:X2}h not implemented.");
+                        throw new NotImplementedException($"EMM function 57{_state.AL:X2}h not implemented.");
                 }
                 break;
 
             case EmsFunctions.VCPI:
-                System.Diagnostics.Debug.WriteLine($"VCPI function {_machine.Cpu.State.AL:X2}h not implemented.");
+                System.Diagnostics.Debug.WriteLine($"VCPI function {_state.AL:X2}h not implemented.");
                 break;
 
             default:
-                System.Diagnostics.Debug.WriteLine($"EMM function {_machine.Cpu.State.AH:X2}h not implemented.");
-                _machine.Cpu.State.AH = 0x84;
+                System.Diagnostics.Debug.WriteLine($"EMM function {_state.AH:X2}h not implemented.");
+                _state.AH = 0x84;
                 break;
         }
     }
@@ -206,10 +205,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Allocates pages for a new handle.
     /// </summary>
     private void AllocatePages() {
-        uint pagesRequested = _machine.Cpu.State.BX;
+        uint pagesRequested = _state.BX;
         if (pagesRequested == 0) {
             // Return "attempted to allocate zero pages" code.
-            _machine.Cpu.State.AH = 0x89;
+            _state.AH = 0x89;
             return;
         }
 
@@ -219,26 +218,26 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             int handle = CreateHandle((int)pagesRequested + 1);
             if (handle != 0) {
                 // Return handle in DX.
-                _machine.Cpu.State.DX = (ushort)handle;
+                _state.DX = (ushort)handle;
                 // Return good status.
-                _machine.Cpu.State.AH = 0;
+                _state.AH = 0;
             } else {
                 // Return "all handles in use" code.
-                _machine.Cpu.State.AH = 0x85;
+                _state.AH = 0x85;
             }
         } else {
             // Return "not enough available pages" code.
-            _machine.Cpu.State.AH = 0x87;
+            _state.AH = 0x87;
         }
     }
     /// <summary>
     /// Reallocates pages for a handle.
     /// </summary>
     private void ReallocatePages() {
-        int pagesRequested = _machine.Cpu.State.BX;
+        int pagesRequested = _state.BX;
 
         if (pagesRequested < MaximumLogicalPages) {
-            int handle = _machine.Cpu.State.DX;
+            int handle = _state.DX;
             if (handles.TryGetValue(handle, out EmsHandle? emsHandle)) {
                 if (pagesRequested < emsHandle.PagesAllocated) {
                     for (int i = emsHandle.LogicalPages.Count - 1; i >= emsHandle.LogicalPages.Count - pagesRequested; i--) {
@@ -255,14 +254,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 }
 
                 // Return good status.
-                _machine.Cpu.State.AH = 0;
+                _state.AH = 0;
             } else {
                 // Return "couldn't find specified handle" code.
-                _machine.Cpu.State.AH = 0x83;
+                _state.AH = 0x83;
             }
         } else {
             // Return "not enough available pages" code.
-            _machine.Cpu.State.AH = 0x87;
+            _state.AH = 0x87;
         }
     }
     /// <summary>
@@ -290,7 +289,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Deallocates a handle and all of its pages.
     /// </summary>
     private void DeallocatePages() {
-        int handle = _machine.Cpu.State.DX;
+        int handle = _state.DX;
         if (handles.Remove(handle)) {
             for (int i = 0; i < pageOwners.Length; i++) {
                 if (pageOwners[i] == handle) {
@@ -299,36 +298,36 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
 
             // Return good status.
-            _machine.Cpu.State.AH = 0;
+            _state.AH = 0;
         } else {
             // Return "couldn't find specified handle" code.
-            _machine.Cpu.State.AH = 0x83;
+            _state.AH = 0x83;
         }
     }
     /// <summary>
     /// Maps or unmaps a physical page.
     /// </summary>
     private void MapUnmapHandlePage() {
-        int physicalPage = _machine.Cpu.State.AL;
+        int physicalPage = _state.AL;
         if (physicalPage < 0 || physicalPage >= MaximumPhysicalPages) {
             // Return "physical page out of range" code.
-            _machine.Cpu.State.AH = 0x8B;
+            _state.AH = 0x8B;
             return;
         }
 
-        int handleIndex = _machine.Cpu.State.DX;
+        int handleIndex = _state.DX;
         if (!handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return "couldn't find specified handle" code.
-            _machine.Cpu.State.AH = 0x83;
+            _state.AH = 0x83;
             return;
         }
 
-        int logicalPageIndex = _machine.Cpu.State.BX;
+        int logicalPageIndex = _state.BX;
 
         if (logicalPageIndex != 0xFFFF) {
             if (logicalPageIndex < 0 || logicalPageIndex >= handle.LogicalPages.Count) {
                 // Return "logical page out of range" code.
-                _machine.Cpu.State.AH = 0x8A;
+                _state.AH = 0x8A;
                 return;
             }
 
@@ -338,7 +337,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         // Return good status.
-        _machine.Cpu.State.AH = 0;
+        _state.AH = 0;
     }
     /// <summary>
     /// Copies data from a logical page to a physical page.
@@ -385,45 +384,45 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Gets the number of pages allocated to a handle.
     /// </summary>
     private void GetHandlePages() {
-        int handleIndex = _machine.Cpu.State.DX;
+        int handleIndex = _state.DX;
         if (handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return the number of pages allocated in BX.
-            _machine.Cpu.State.BX = (ushort)handle.PagesAllocated;
+            _state.BX = (ushort)handle.PagesAllocated;
             // Return good status.
-            _machine.Cpu.State.AH = 0;
+            _state.AH = 0;
         } else {
             // Return "couldn't find specified handle" code.
-            _machine.Cpu.State.AH = 0x83;
+            _state.AH = 0x83;
         }
     }
     /// <summary>
     /// Gets the name of a handle.
     /// </summary>
     private void GetHandleName() {
-        int handleIndex = _machine.Cpu.State.DX;
+        int handleIndex = _state.DX;
         if (handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Write the handle name to ES:DI.
-            _machine.Memory.SetString(_machine.Cpu.State.ES, _machine.Cpu.State.DI, handle.Name);
+            _machine.Memory.SetString(_state.ES, _state.DI, handle.Name);
             // Return good status.
-            _machine.Cpu.State.AH = 0;
+            _state.AH = 0;
         } else {
             // Return "couldn't find specified handle" code.
-            _machine.Cpu.State.AH = 0x83;
+            _state.AH = 0x83;
         }
     }
     /// <summary>
     /// Set the name of a handle.
     /// </summary>
     private void SetHandleName() {
-        int handleIndex = _machine.Cpu.State.DX;
+        int handleIndex = _state.DX;
         if (handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Read the handle name from DS:SI.
-            handle.Name = _machine.Memory.GetString(_machine.Cpu.State.DS, _machine.Cpu.State.SI, 8);
+            handle.Name = _machine.Memory.GetString(_state.DS, _state.SI, 8);
             // Return good status.
-            _machine.Cpu.State.AH = 0;
+            _state.AH = 0;
         } else {
             // Return "couldn't find specified handle" code.
-            _machine.Cpu.State.AH = 0x83;
+            _state.AH = 0x83;
         }
     }
 
@@ -431,36 +430,36 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Maps or unmaps multiple pages.
     /// </summary>
     private void MapUnmapMultiplePages() {
-        int handleIndex = _machine.Cpu.State.DX;
+        int handleIndex = _state.DX;
         if (!handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return "couldn't find specified handle" code.
-            _machine.Cpu.State.AH = 0x83;
+            _state.AH = 0x83;
             return;
         }
 
-        int pageCount = _machine.Cpu.State.CX;
+        int pageCount = _state.CX;
         if (pageCount < 0 || pageCount > MaximumPhysicalPages) {
             // Return "physical page count out of range" code.
-            _machine.Cpu.State.AH = 0x8B;
+            _state.AH = 0x8B;
             return;
         }
 
-        uint arraySegment = _machine.Cpu.State.DS;
-        uint arrayOffset = _machine.Cpu.State.SI;
+        uint arraySegment = _state.DS;
+        uint arrayOffset = _state.SI;
         for (int i = 0; i < pageCount; i++) {
             ushort logicalPageIndex = _machine.Memory.GetUint16(arraySegment, arrayOffset);
             ushort physicalPageIndex = _machine.Memory.GetUint16(arraySegment, arrayOffset + 2u);
 
             if (physicalPageIndex < 0 || physicalPageIndex >= MaximumPhysicalPages) {
                 // Return "physical page out of range" code.
-                _machine.Cpu.State.AH = 0x8B;
+                _state.AH = 0x8B;
                 return;
             }
 
             if (logicalPageIndex != 0xFFFF) {
                 if (logicalPageIndex < 0 || logicalPageIndex >= handle.LogicalPages.Count) {
                     // Return "logical page out of range" code.
-                    _machine.Cpu.State.AH = 0x8A;
+                    _state.AH = 0x8A;
                     return;
                 }
 
@@ -473,32 +472,32 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         // Return good status.
-        _machine.Cpu.State.AH = 0;
+        _state.AH = 0;
     }
     /// <summary>
     /// Saves the current state of page map registers for a handle.
     /// </summary>
     private void SavePageMap() {
-        int handleIndex = _machine.Cpu.State.DX;
+        int handleIndex = _state.DX;
         if (!handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return "couldn't find specified handle" code.
-            _machine.Cpu.State.AH = 0x83;
+            _state.AH = 0x83;
             return;
         }
 
         mappedPages.CopyTo(handle.SavedPageMap);
 
         // Return good status.
-        _machine.Cpu.State.AH = 0;
+        _state.AH = 0;
     }
     /// <summary>
     /// Restores the state of page map registers for a handle.
     /// </summary>
     private void RestorePageMap() {
-        int handleIndex = _machine.Cpu.State.DX;
+        int handleIndex = _state.DX;
         if (!handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return "couldn't find specified handle" code.
-            _machine.Cpu.State.AH = 0x83;
+            _state.AH = 0x83;
             return;
         }
 
@@ -511,52 +510,52 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         // Return good status.
-        _machine.Cpu.State.AH = 0;
+        _state.AH = 0;
     }
     /// <summary>
     /// Copies a block of memory.
     /// </summary>
     private void Move() {
-        int length = (int)_machine.Memory.GetUint32(_machine.Cpu.State.DS, _machine.Cpu.State.SI);
+        int length = (int)_machine.Memory.GetUint32(_state.DS, _state.SI);
 
-        byte sourceType = _machine.Memory.GetByte(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 4u);
-        int sourceHandleIndex = _machine.Memory.GetUint16(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 5u);
-        int sourceOffset = _machine.Memory.GetUint16(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 7u);
-        int sourcePage = _machine.Memory.GetUint16(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 9u);
+        byte sourceType = _machine.Memory.GetByte(_state.DS, _state.SI + 4u);
+        int sourceHandleIndex = _machine.Memory.GetUint16(_state.DS, _state.SI + 5u);
+        int sourceOffset = _machine.Memory.GetUint16(_state.DS, _state.SI + 7u);
+        int sourcePage = _machine.Memory.GetUint16(_state.DS, _state.SI + 9u);
 
-        byte destType = _machine.Memory.GetByte(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 11u);
-        int destHandleIndex = _machine.Memory.GetUint16(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 12u);
-        int destOffset = _machine.Memory.GetUint16(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 14u);
-        int destPage = _machine.Memory.GetUint16(_machine.Cpu.State.DS, _machine.Cpu.State.SI + 16u);
+        byte destType = _machine.Memory.GetByte(_state.DS, _state.SI + 11u);
+        int destHandleIndex = _machine.Memory.GetUint16(_state.DS, _state.SI + 12u);
+        int destOffset = _machine.Memory.GetUint16(_state.DS, _state.SI + 14u);
+        int destPage = _machine.Memory.GetUint16(_state.DS, _state.SI + 16u);
 
         SyncToEms();
 
         if (sourceType == 0 && destType == 0) {
-            _machine.Cpu.State.AH = ConvToConv((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
+            _state.AH = ConvToConv((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
         } else if (sourceType != 0 && destType == 0) {
             if (!handles.TryGetValue(sourceHandleIndex, out _)) {
                 // Return "couldn't find specified handle" code.
-                _machine.Cpu.State.AH = 0x83;
+                _state.AH = 0x83;
                 return;
             }
 
-            _machine.Cpu.State.AH = EmsToConv(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
+            _state.AH = EmsToConv(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
         } else if (sourceType == 0 && destType != 0) {
             if (!handles.TryGetValue(destHandleIndex, out _)) {
                 // Return "couldn't find specified handle" code.
-                _machine.Cpu.State.AH = 0x83;
+                _state.AH = 0x83;
                 return;
             }
 
-            _machine.Cpu.State.AH = ConvToEms((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
+            _state.AH = ConvToEms((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
         } else {
             if (!handles.TryGetValue(sourceHandleIndex, out EmsHandle? sourceHandle) || !handles.TryGetValue(destHandleIndex, out EmsHandle? destHandle)) {
                 // Return "couldn't find specified handle" code.
-                _machine.Cpu.State.AH = 0x83;
+                _state.AH = 0x83;
                 return;
             }
 
-            _machine.Cpu.State.AH = EmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
+            _state.AH = EmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
         }
 
         SyncFromEms();
