@@ -2,6 +2,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 using Spice86.Core;
+using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
@@ -15,6 +16,7 @@ using System.Linq;
 /// <summary>
 /// Provides DOS applications with XMS memory.
 /// TODO: Remove dependency on main memory.
+/// TODO: Remove unsafe code
 /// </summary>
 public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     private SegmentedAddress callbackAddress;
@@ -61,88 +63,104 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     }
 
     private void FillDispatchTable() {
-        //TODO: Replace InvokeCallback with C# methods referenced here.
+        _dispatchTable.Add(0x00, new Callback(0x00, GetVersionNumber));
+        //TODO: Replace InvokeCallback and Run with C# methods referenced here.
     }
 
     public override void Run() {
-        switch (_machine.Cpu.State.AL) {
+        byte operation = _state.AH;
+        Run(operation);
+        /// FIXME: This InterruptHandler can also run depending on AL's value, not AH.
+        /// But probably not at the same time. Maybe Run should return a bool to indicate it did something or not ?
+        byte operationOnAL = _state.AL;
+        Run(operationOnAL);
+    }
+
+    /// <summary>
+    /// FIXME: This InterruptHandler can also run depending on AL's value, not AH.
+    /// </summary>
+    public void RunOnnAL() {
+        switch (_state.AL) {
             case XmsHandlerFunctions.InstallationCheck:
-                _machine.Cpu.State.AL = 0x80;
+                _state.AL = 0x80;
                 break;
 
             case XmsHandlerFunctions.GetCallbackAddress:
-                _machine.Cpu.State.BX = callbackAddress.Offset;
-                _machine.Cpu.State.ES = callbackAddress.Segment;
+                _state.BX = callbackAddress.Offset;
+                _state.ES = callbackAddress.Segment;
                 break;
 
             default:
-                throw new NotImplementedException($"XMS interrupt handler function {_machine.Cpu.State.AL:X2}h not implemented.");
+                throw new NotImplementedException($"XMS interrupt handler function {_state.AL:X2}h not implemented.");
         }
     }
 
-    public void InvokeCallback() {
-        switch (_machine.Cpu.State.AH) {
+    public void GetVersionNumber() {
+        _state.AX = 0x0300; // Return version 3.00
+        _state.BX = 0; // Internal version
+        _state.DX = 1; // HMA exists
+    }
+
+    public void RunOnAH() {
+        switch (_state.AH) {
             case XmsFunctions.GetVersionNumber:
-                _machine.Cpu.State.AX = 0x0300; // Return version 3.00
-                _machine.Cpu.State.BX = 0; // Internal version
-                _machine.Cpu.State.DX = 1; // HMA exists
                 break;
 
             case XmsFunctions.RequestHighMemoryArea:
-                _machine.Cpu.State.AX = 0; // Didn't work
-                _machine.Cpu.State.BL = 0x91; // HMA already in use
+                _state.AX = 0; // Didn't work
+                _state.BL = 0x91; // HMA already in use
                 break;
 
             case XmsFunctions.ReleaseHighMemoryArea:
-                _machine.Cpu.State.AX = 0; // Didn't work
-                _machine.Cpu.State.BL = 0x93; // HMA not allocated
+                _state.AX = 0; // Didn't work
+                _state.BL = 0x93; // HMA not allocated
                 break;
 
             case XmsFunctions.GlobalEnableA20:
                 _machine.Memory.EnableA20 = true;
-                _machine.Cpu.State.AX = 1; // Success
+                _state.AX = 1; // Success
                 break;
 
             case XmsFunctions.GlobalDisableA20:
                 _machine.Memory.EnableA20 = false;
-                _machine.Cpu.State.AX = 1; // Success
+                _state.AX = 1; // Success
                 break;
 
             case XmsFunctions.LocalEnableA20:
                 EnableLocalA20();
-                _machine.Cpu.State.AX = 1; // Success
+                _state.AX = 1; // Success
                 break;
 
             case XmsFunctions.LocalDisableA20:
                 DisableLocalA20();
-                _machine.Cpu.State.AX = 1; // Success
+                _state.AX = 1; // Success
                 break;
 
             case XmsFunctions.QueryA20:
-                _machine.Cpu.State.AX = (ushort)(a20EnableCount > 0 ? (short)1 : (short)0);
+                _state.AX = (ushort)(a20EnableCount > 0 ? (short)1 : (short)0);
                 break;
 
             case XmsFunctions.QueryFreeExtendedMemory:
                 if (LargestFreeBlock <= ushort.MaxValue * 1024u) {
-                    _machine.Cpu.State.AX = (ushort)(LargestFreeBlock / 1024u);
+                    _state.AX = (ushort)(LargestFreeBlock / 1024u);
                 } else {
-                    _machine.Cpu.State.AX = unchecked(ushort.MaxValue);
+                    _state.AX = unchecked(ushort.MaxValue);
                 }
 
                 if (TotalFreeMemory <= ushort.MaxValue * 1024u) {
-                    _machine.Cpu.State.DX = (ushort)(TotalFreeMemory / 1024);
+                    _state.DX = (ushort)(TotalFreeMemory / 1024);
                 } else {
-                    _machine.Cpu.State.DX = unchecked(ushort.MaxValue);
+                    _state.DX = unchecked(ushort.MaxValue);
                 }
 
-                if (_machine.Cpu.State.AX == 0 && _machine.Cpu.State.DX == 0) {
-                    _machine.Cpu.State.BL = 0xA0;
+                if (_state.AX == 0 && _state.DX == 0) {
+                    _state.BL = 0xA0;
                 }
 
                 break;
 
             case XmsFunctions.AllocateExtendedMemoryBlock:
-                AllocateBlock(_machine.Cpu.State.DX);
+                AllocateBlock(_state.DX);
                 break;
 
             case XmsFunctions.FreeExtendedMemoryBlock:
@@ -166,8 +184,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
                 break;
 
             case XmsFunctions.RequestUpperMemoryBlock:
-                _machine.Cpu.State.BL = 0xB1; // No UMB's available.
-                _machine.Cpu.State.AX = 0; // Didn't work.
+                _state.BL = 0xB1; // No UMB's available.
+                _state.AX = 0; // Didn't work.
                 break;
 
             case XmsFunctions.QueryAnyFreeExtendedMemory:
@@ -175,11 +193,11 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
                 break;
 
             case XmsFunctions.AllocateAnyExtendedMemory:
-                AllocateBlock(_machine.Cpu.State.EDX);
+                AllocateBlock(_state.EDX);
                 break;
 
             default:
-                throw new NotImplementedException($"XMS function {_machine.Cpu.State.AH:X2}h not implemented.");
+                throw new NotImplementedException($"XMS function {_state.AH:X2}h not implemented.");
         }
     }
     byte ReadByte(int port) => _machine.Memory.EnableA20 ? (byte)0x02 : (byte)0x00;
@@ -330,11 +348,11 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     private void AllocateBlock(uint kbytes) {
         byte res = TryAllocate(kbytes * 1024u, out short handle);
         if (res == 0) {
-            _machine.Cpu.State.AX = 1; // Success.
-            _machine.Cpu.State.DX = (ushort)handle;
+            _state.AX = 1; // Success.
+            _state.DX = (ushort)handle;
         } else {
-            _machine.Cpu.State.AX = 0; // Didn't work.
-            _machine.Cpu.State.BL = res;
+            _state.AX = 0; // Didn't work.
+            _state.BL = res;
         }
     }
 
@@ -342,17 +360,17 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// Frees a block of memory.
     /// </summary>
     private void FreeBlock() {
-        int handle = _machine.Cpu.State.DX;
+        int handle = _state.DX;
 
         if (!handles.TryGetValue(handle, out int lockCount)) {
-            _machine.Cpu.State.AX = 0; // Didn't work.
-            _machine.Cpu.State.BL = 0xA2; // Invalid handle.
+            _state.AX = 0; // Didn't work.
+            _state.BL = 0xA2; // Invalid handle.
             return;
         }
 
         if (lockCount > 0) {
-            _machine.Cpu.State.AX = 0; // Didn't work.
-            _machine.Cpu.State.BL = 0xAB; // Handle is locked.
+            _state.AX = 0; // Didn't work.
+            _state.BL = 0xAB; // Handle is locked.
             return;
         }
 
@@ -363,18 +381,18 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         }
 
         handles.Remove(handle);
-        _machine.Cpu.State.AX = 1; // Success.
+        _state.AX = 1; // Success.
     }
 
     /// <summary>
     /// Locks a block of memory.
     /// </summary>
     private void LockBlock() {
-        int handle = _machine.Cpu.State.DX;
+        int handle = _state.DX;
 
         if (!handles.TryGetValue(handle, out int lockCount)) {
-            _machine.Cpu.State.AX = 0; // Didn't work.
-            _machine.Cpu.State.BL = 0xA2; // Invalid handle.
+            _state.AX = 0; // Didn't work.
+            _state.BL = 0xA2; // Invalid handle.
             return;
         }
 
@@ -383,56 +401,56 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         _ = TryGetBlock(handle, out XmsBlock block);
         uint fullAddress = XmsBaseAddress + block.Offset;
 
-        _machine.Cpu.State.AX = 1; // Success.
-        _machine.Cpu.State.DX = (ushort)(fullAddress >> 16);
-        _machine.Cpu.State.BX = (ushort)(fullAddress & 0xFFFFu);
+        _state.AX = 1; // Success.
+        _state.DX = (ushort)(fullAddress >> 16);
+        _state.BX = (ushort)(fullAddress & 0xFFFFu);
     }
 
     /// <summary>
     /// Unlocks a block of memory.
     /// </summary>
     private void UnlockBlock() {
-        int handle = _machine.Cpu.State.DX;
+        int handle = _state.DX;
 
         if (!handles.TryGetValue(handle, out int lockCount)) {
-            _machine.Cpu.State.AX = 0; // Didn't work.
-            _machine.Cpu.State.BL = 0xA2; // Invalid handle.
+            _state.AX = 0; // Didn't work.
+            _state.BL = 0xA2; // Invalid handle.
             return;
         }
 
         if (lockCount < 1) {
-            _machine.Cpu.State.AX = 0;
-            _machine.Cpu.State.BL = 0xAA; // Handle is not locked.
+            _state.AX = 0;
+            _state.BL = 0xAA; // Handle is not locked.
             return;
         }
 
         handles[handle] = lockCount - 1;
 
-        _machine.Cpu.State.AX = 1; // Success.
+        _state.AX = 1; // Success.
     }
 
     /// <summary>
     /// Returns information about an XMS handle.
     /// </summary>
     private void GetHandleInformation() {
-        int handle = _machine.Cpu.State.DX;
+        int handle = _state.DX;
 
         if (!handles.TryGetValue(handle, out int lockCount)) {
-            _machine.Cpu.State.AX = 0; // Didn't work.
-            _machine.Cpu.State.BL = 0xA2; // Invalid handle.
+            _state.AX = 0; // Didn't work.
+            _state.BL = 0xA2; // Invalid handle.
             return;
         }
 
-        _machine.Cpu.State.BH = (byte)lockCount;
-        _machine.Cpu.State.BL = (byte)(MaxHandles - handles.Count);
+        _state.BH = (byte)lockCount;
+        _state.BL = (byte)(MaxHandles - handles.Count);
 
         if (!TryGetBlock(handle, out XmsBlock block)) {
-            _machine.Cpu.State.DX = 0;
+            _state.DX = 0;
         } else {
-            _machine.Cpu.State.DX = (ushort)(block.Length / 1024u);
+            _state.DX = (ushort)(block.Length / 1024u);
         }
 
-        _machine.Cpu.State.AX = 1; // Success.
+        _state.AX = 1; // Success.
     }
 
     /// <summary>
@@ -444,7 +462,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
         XmsMoveData moveData;
         unsafe {
-            moveData = *(XmsMoveData*)_machine.Memory.GetPointer(_machine.Cpu.State.DS, _machine.Cpu.State.SI);
+            moveData = *(XmsMoveData*)_machine.Memory.GetPointer(_state.DS, _state.SI);
         }
 
         IntPtr srcPtr = IntPtr.Zero;
@@ -469,13 +487,13 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         }
 
         if (srcPtr == IntPtr.Zero) {
-            _machine.Cpu.State.BL = 0xA3; // Invalid source handle.
-            _machine.Cpu.State.AX = 0; // Didn't work.
+            _state.BL = 0xA3; // Invalid source handle.
+            _state.AX = 0; // Didn't work.
             return;
         }
         if (destPtr == IntPtr.Zero) {
-            _machine.Cpu.State.BL = 0xA5; // Invalid destination handle.
-            _machine.Cpu.State.AX = 0; // Didn't work.
+            _state.BL = 0xA5; // Invalid destination handle.
+            _state.AX = 0; // Didn't work.
             return;
         }
 
@@ -488,7 +506,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
             }
         }
 
-        _machine.Cpu.State.AX = 1; // Success.
+        _state.AX = 1; // Success.
         _machine.Memory.EnableA20 = a20State;
     }
 
@@ -496,14 +514,14 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// Queries free memory using 32-bit registers.
     /// </summary>
     private void QueryAnyFreeExtendedMemory() {
-        _machine.Cpu.State.EAX = LargestFreeBlock / 1024u;
-        _machine.Cpu.State.ECX = (uint)(_machine.Memory.MemorySize - 1);
-        _machine.Cpu.State.EDX = (uint)(TotalFreeMemory / 1024);
+        _state.EAX = LargestFreeBlock / 1024u;
+        _state.ECX = (uint)(_machine.Memory.MemorySize - 1);
+        _state.EDX = (uint)(TotalFreeMemory / 1024);
 
-        if (_machine.Cpu.State.EAX == 0) {
-            _machine.Cpu.State.BL = 0xA0;
+        if (_state.EAX == 0) {
+            _state.BL = 0xA0;
         } else {
-            _machine.Cpu.State.BL = 0;
+            _state.BL = 0;
         }
     }
 }
