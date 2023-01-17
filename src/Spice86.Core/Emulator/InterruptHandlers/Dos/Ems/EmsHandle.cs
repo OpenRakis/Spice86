@@ -1,7 +1,5 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
@@ -17,7 +15,7 @@ internal sealed class EmsHandle {
     }
 
     public EmsHandle(IEnumerable<ushort> pages) {
-        this.LogicalPages = pages.ToList();
+        LogicalPages = pages.ToList();
     }
 
     /// <summary>

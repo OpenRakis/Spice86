@@ -1,6 +1,8 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 using System.Runtime.InteropServices;
+
+using Spice86.Core.Emulator.Memory;
 
 /// <summary>
 /// In-memory structure with information about an XMS move request.
