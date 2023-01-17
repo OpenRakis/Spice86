@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 internal static class XmsFunctions {
     public const byte GetVersionNumber = 0x00;
