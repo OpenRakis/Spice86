@@ -139,7 +139,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
             case EmsFunctions.AdvancedMap:
                 switch (_machine.Cpu.State.AL) {
-                    case EmsFunctions.AdvancedMap_MapUnmapPages:
+                    case EmsFunctions.HandleName_Get:
                         MapUnmapMultiplePages();
                         break;
 
