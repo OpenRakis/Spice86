@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
@@ -124,7 +125,6 @@ public class Memory {
 
         return address;
     }
-
 
     /// <summary>
     /// Writes a string to memory as a null-terminated ANSI byte array.
