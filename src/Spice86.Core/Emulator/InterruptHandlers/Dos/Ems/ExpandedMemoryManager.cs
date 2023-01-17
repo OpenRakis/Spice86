@@ -12,16 +12,19 @@ using System.Linq;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
+/// TODO: Remove dependency on Xms, and main memory.
 /// </summary>
 public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Size of each EMS page in bytes.
     /// </summary>
     public const int PageSize = 16384;
+
     /// <summary>
     /// Maximum number of mappable pages.
     /// </summary>
     public const int MaximumPhysicalPages = 4;
+
     /// <summary>
     /// Maximum number of logical pages.
     /// </summary>
@@ -55,6 +58,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         handles[SystemHandle] = new EmsHandle(Enumerable.Range(0, 24).Select(i => (ushort)i));
+        FillDispatchTable();
+    }
+
+    private void FillDispatchTable() {
+        //TODO: Replace Run with C# methods referenced here.
     }
 
     /// <summary>
