@@ -11,18 +11,22 @@ public struct XmsMoveData {
     /// Number of bytes to move.
     /// </summary>
     public uint Length;
+
     /// <summary>
     /// Handle of source block; zero if moving from segment:offset pair.
     /// </summary>
     public ushort SourceHandle;
+
     /// <summary>
     /// Source offset as a 32-bit value or a segment:offset pair.
     /// </summary>
     public uint SourceOffset;
+
     /// <summary>
     /// Handle of destination block; zero if moving to segment:offset pair.
     /// </summary>
     public ushort DestHandle;
+
     /// <summary>
     /// Destination offset as a 32-bit value or a segment:offset pair.
     /// </summary>
@@ -32,6 +36,7 @@ public struct XmsMoveData {
     /// Gets the source address as a segment:offset value.
     /// </summary>
     public SegmentedAddress SourceAddress => new((ushort)(SourceOffset >> 16), (ushort)SourceOffset);
+
     /// <summary>
     /// Gets the destination address as a segment:offset value.
     /// </summary>

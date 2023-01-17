@@ -20,6 +20,7 @@ public sealed class ReservedBlock : IEquatable<ReservedBlock> {
 
         return blockA.Equals(blockB);
     }
+
     public static bool operator !=(ReservedBlock blockA, ReservedBlock blockB) {
         if (ReferenceEquals(blockA, blockB)) {
             return false;
@@ -36,6 +37,7 @@ public sealed class ReservedBlock : IEquatable<ReservedBlock> {
     /// Gets the segment address of the reserved block.
     /// </summary>
     public ushort Segment { get; }
+
     /// <summary>
     /// Gets the length of the reserved block in bytes.
     /// </summary>
@@ -50,20 +52,22 @@ public sealed class ReservedBlock : IEquatable<ReservedBlock> {
         if (other is null) {
             return false;
         }
-
         return this.Segment == other.Segment && this.Length == other.Length;
     }
+
     /// <summary>
     /// Tests for value equality with another object.
     /// </summary>
     /// <param name="obj">Other object to test.</param>
     /// <returns>True if objects are equal; otherwise false.</returns>
     public override bool Equals(object? obj) => this.Equals(obj as ReservedBlock);
+
     /// <summary>
     /// Returns a hash code for the block.
     /// </summary>
     /// <returns>Hash code for the block.</returns>
     public override int GetHashCode() => this.Segment;
+
     /// <summary>
     /// Returns a string representation of the block.
     /// </summary>
