@@ -14,6 +14,7 @@ using System.Linq;
 
 /// <summary>
 /// Provides DOS applications with XMS memory.
+/// TODO: Remove dependency on main memory.
 /// </summary>
 public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     private SegmentedAddress callbackAddress;
@@ -25,6 +26,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         callbackAddress = new(0, 0);
         _machine = machine;
         InitializeMemoryMap();
+        FillDispatchTable();
     }
 
     /// <summary>
@@ -50,16 +52,16 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// </summary>
     public int ExtendedMemorySize => _machine.Memory.MemorySize - (int)XmsBaseAddress;
 
-    IEnumerable<int> InputPorts => new int[] { 0x92 };
-
-    IEnumerable<int> OutputPorts => new int[] { 0x92 };
-
     public override byte Index => 0x43;
 
     public bool IsHookable => true;
 
     public SegmentedAddress CallbackAddress {
         set => callbackAddress = value;
+    }
+
+    private void FillDispatchTable() {
+        //TODO: Replace InvokeCallback with C# methods referenced here.
     }
 
     public override void Run() {
