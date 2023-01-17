@@ -1,5 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Memory;
-
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 /// <summary>
 /// Contains information about expanded memory usage.
 /// </summary>
@@ -14,7 +13,7 @@ public sealed class ExpandedMemoryInfo {
     /// </summary>
     public const int TotalBytes = TotalPages * ExpandedMemoryManager.PageSize;
 
-    internal ExpandedMemoryInfo(int allocatedPages) => this.PagesAllocated = allocatedPages;
+    internal ExpandedMemoryInfo(int allocatedPages) => PagesAllocated = allocatedPages;
 
     /// <summary>
     /// Gets the number of pages allocated.
@@ -24,15 +23,15 @@ public sealed class ExpandedMemoryInfo {
     /// <summary>
     /// Gets the number of bytes allocated.
     /// </summary>
-    public int BytesAllocated => this.PagesAllocated * ExpandedMemoryManager.PageSize;
+    public int BytesAllocated => PagesAllocated * ExpandedMemoryManager.PageSize;
 
     /// <summary>
     /// Gets the number of free pages.
     /// </summary>
-    public int PagesFree => Math.Max(TotalPages - this.PagesAllocated, 0);
+    public int PagesFree => Math.Max(TotalPages - PagesAllocated, 0);
 
     /// <summary>
     /// Gets the number of free bytes.
     /// </summary>
-    public int BytesFree => Math.Max(TotalBytes - this.BytesAllocated, 0);
+    public int BytesFree => Math.Max(TotalBytes - BytesAllocated, 0);
 }

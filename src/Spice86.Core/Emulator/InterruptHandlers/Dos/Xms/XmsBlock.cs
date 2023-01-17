@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 using System;
 
@@ -91,7 +91,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
         }
 
         if (Offset + Length != other.Offset) {
-            throw new ArgumentException($"{nameof(other)} was not joinable",nameof(other));
+            throw new ArgumentException($"{nameof(other)} was not joinable", nameof(other));
         }
 
         return new XmsBlock(0, Offset, Length + other.Length, false);
