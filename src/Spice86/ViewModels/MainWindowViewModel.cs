@@ -317,7 +317,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             VideoBufferViewModel buffer = VideoBuffers[i];
             buffer.Dispose();
         }
-        _videoBuffers.Clear();
+        VideoBuffers.Clear();
     }
 
     public void Dispose() {

@@ -7,9 +7,6 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using OxyPlot;
-using OxyPlot.Avalonia;
-
 using Spice86.Core.Emulator.VM;
 using Spice86.Models;
 
@@ -77,18 +74,18 @@ public partial class PerformanceViewModel : ObservableObject {
             return;
         }
 
-        if(_cpuHistoryDataPoints.Count is 0) {
+        if(CpuHistoryDataPoints.Count is 0) {
             _cpuHistoryFirstUpdate = timeOfUpdate;
         }
 
         TimeSpan cpuHistoryTimeSpan = _cpuHistoryLastUpdate - _cpuHistoryFirstUpdate;
         if(cpuHistoryTimeSpan > TimeSpan.FromMinutes(CpuHistoryTimeSpanInMinutes)) {
-            _cpuHistoryDataPoints.Clear();
+            CpuHistoryDataPoints.Clear();
         }
 
-        _cpuHistoryDataPoints.Add(new Measurement()
+        CpuHistoryDataPoints.Add(new Measurement()
         {
-            Time = _cpuHistoryDataPoints.Count + 1,
+            Time = CpuHistoryDataPoints.Count + 1,
             Value = InstructionsPerSecond
         });
 

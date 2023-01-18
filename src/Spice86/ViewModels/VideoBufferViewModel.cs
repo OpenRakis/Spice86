@@ -80,7 +80,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
             };
             string? file = await picker.ShowAsync(desktop.MainWindow);
             if (string.IsNullOrWhiteSpace(file) == false) {
-                _bitmap?.Save(file);
+                Bitmap?.Save(file);
             }
         }
     }
