@@ -64,20 +64,32 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
     private void FillDispatchTable() {
         _dispatchTable.Add(0x00, new Callback(0x00, GetVersionNumber));
-        //TODO: Replace InvokeCallback and Run with C# methods referenced here.
+        _dispatchTable.Add(0x01, new Callback(0x01, RequestHighMemoryArea));
+        _dispatchTable.Add(0x02, new Callback(0x02, ReleaseHighMemoryArea));
+        _dispatchTable.Add(0x03, new Callback(0x03, GlobalEnableA20));
+        _dispatchTable.Add(0x04, new Callback(0x04, GlobalDisableA20));
+        _dispatchTable.Add(0x05, new Callback(0x05, EnableLocalA20));
+        _dispatchTable.Add(0x06, new Callback(0x06, DisableLocalA20));
+        _dispatchTable.Add(0x07, new Callback(0x07, QueryA20));
+        _dispatchTable.Add(0x08, new Callback(0x08, QueryFreeExtendedMemory));
+        _dispatchTable.Add(0x09, new Callback(0x09, AllocateExtendedMemoryBlock));
+        _dispatchTable.Add(0x10, new Callback(0x10, RequestUpperMemoryBlock));
+        _dispatchTable.Add(0x0A, new Callback(0x0A, FreeExtendedMemoryBlock));
+        _dispatchTable.Add(0x0B, new Callback(0x0B, MoveExtendedMemoryBlock));
+        _dispatchTable.Add(0x0C, new Callback(0x0C, LockExtendedMemoryBlock));
+        _dispatchTable.Add(0x0D, new Callback(0x0D, UnlockExtendedMemoryBlock));
+        _dispatchTable.Add(0x0E, new Callback(0x0E, GetHandleInformation));
+        _dispatchTable.Add(0x88, new Callback(0x88, QueryAnyFreeExtendedMemory));
+        _dispatchTable.Add(0x89, new Callback(0x89, () => AllocateAnyExtendedMemory(_state.EDX)));
     }
 
     public override void Run() {
         byte operation = _state.AH;
         Run(operation);
-        /// FIXME: This InterruptHandler can also run depending on AL's value, not AH.
-        /// But probably not at the same time. Maybe Run should return a bool to indicate it did something or not ?
-        byte operationOnAL = _state.AL;
-        Run(operationOnAL);
     }
 
     /// <summary>
-    /// FIXME: This InterruptHandler can also run depending on AL's value, not AH.
+    /// FIXME: Make this code used.
     /// </summary>
     public void RunOnnAL() {
         switch (_state.AL) {
@@ -101,109 +113,64 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         _state.DX = 1; // HMA exists
     }
 
-    public void RunOnAH() {
-        switch (_state.AH) {
-            case XmsFunctions.GetVersionNumber:
-                break;
+    public void RequestHighMemoryArea() {
+        _state.AX = 0; // Didn't work
+        _state.BL = 0x91; // HMA already in use
+    }
 
-            case XmsFunctions.RequestHighMemoryArea:
-                _state.AX = 0; // Didn't work
-                _state.BL = 0x91; // HMA already in use
-                break;
+    public void ReleaseHighMemoryArea() {
+        _state.AX = 0; // Didn't work
+        _state.BL = 0x93; // HMA not allocated
+    }
 
-            case XmsFunctions.ReleaseHighMemoryArea:
-                _state.AX = 0; // Didn't work
-                _state.BL = 0x93; // HMA not allocated
-                break;
+    public void QueryFreeExtendedMemory() {
+        if (LargestFreeBlock <= ushort.MaxValue * 1024u) {
+            _state.AX = (ushort)(LargestFreeBlock / 1024u);
+        } else {
+            _state.AX = unchecked(ushort.MaxValue);
+        }
 
-            case XmsFunctions.GlobalEnableA20:
-                _machine.Memory.EnableA20 = true;
-                _state.AX = 1; // Success
-                break;
+        if (TotalFreeMemory <= ushort.MaxValue * 1024u) {
+            _state.DX = (ushort)(TotalFreeMemory / 1024);
+        } else {
+            _state.DX = unchecked(ushort.MaxValue);
+        }
 
-            case XmsFunctions.GlobalDisableA20:
-                _machine.Memory.EnableA20 = false;
-                _state.AX = 1; // Success
-                break;
-
-            case XmsFunctions.LocalEnableA20:
-                EnableLocalA20();
-                _state.AX = 1; // Success
-                break;
-
-            case XmsFunctions.LocalDisableA20:
-                DisableLocalA20();
-                _state.AX = 1; // Success
-                break;
-
-            case XmsFunctions.QueryA20:
-                _state.AX = (ushort)(a20EnableCount > 0 ? (short)1 : (short)0);
-                break;
-
-            case XmsFunctions.QueryFreeExtendedMemory:
-                if (LargestFreeBlock <= ushort.MaxValue * 1024u) {
-                    _state.AX = (ushort)(LargestFreeBlock / 1024u);
-                } else {
-                    _state.AX = unchecked(ushort.MaxValue);
-                }
-
-                if (TotalFreeMemory <= ushort.MaxValue * 1024u) {
-                    _state.DX = (ushort)(TotalFreeMemory / 1024);
-                } else {
-                    _state.DX = unchecked(ushort.MaxValue);
-                }
-
-                if (_state.AX == 0 && _state.DX == 0) {
-                    _state.BL = 0xA0;
-                }
-
-                break;
-
-            case XmsFunctions.AllocateExtendedMemoryBlock:
-                AllocateBlock(_state.DX);
-                break;
-
-            case XmsFunctions.FreeExtendedMemoryBlock:
-                FreeBlock();
-                break;
-
-            case XmsFunctions.LockExtendedMemoryBlock:
-                LockBlock();
-                break;
-
-            case XmsFunctions.UnlockExtendedMemoryBlock:
-                UnlockBlock();
-                break;
-
-            case XmsFunctions.GetHandleInformation:
-                GetHandleInformation();
-                break;
-
-            case XmsFunctions.MoveExtendedMemoryBlock:
-                MoveMemoryBlock();
-                break;
-
-            case XmsFunctions.RequestUpperMemoryBlock:
-                _state.BL = 0xB1; // No UMB's available.
-                _state.AX = 0; // Didn't work.
-                break;
-
-            case XmsFunctions.QueryAnyFreeExtendedMemory:
-                QueryAnyFreeExtendedMemory();
-                break;
-
-            case XmsFunctions.AllocateAnyExtendedMemory:
-                AllocateBlock(_state.EDX);
-                break;
-
-            default:
-                throw new NotImplementedException($"XMS function {_state.AH:X2}h not implemented.");
+        if (_state.AX == 0 && _state.DX == 0) {
+            _state.BL = 0xA0;
         }
     }
-    byte ReadByte(int port) => _machine.Memory.EnableA20 ? (byte)0x02 : (byte)0x00;
-    ushort ReadWord(int port) => throw new NotSupportedException();
-    void WriteByte(int port, byte value) => _machine.Memory.EnableA20 = (value & 0x02) != 0;
-    void WriteWord(int port, ushort value) => throw new NotSupportedException();
+
+    public void AllocateExtendedMemoryBlock() {
+        AllocateAnyExtendedMemory(_state.DX);
+    }
+
+    public void RequestUpperMemoryBlock() {
+        _state.BL = 0xB1; // No UMB's available.
+        _state.AX = 0; // Didn't work.
+    }
+
+    public void GlobalDisableA20() {
+        _machine.Memory.EnableA20 = false;
+        _state.AX = 1; // Success
+    }
+
+    public void GlobalEnableA20() {
+        _machine.Memory.EnableA20 = true;
+        _state.AX = 1; // Success
+    }
+
+    public void QueryA20() {
+        _state.AX = (ushort)(a20EnableCount > 0 ? (short)1 : (short)0);
+    }
+
+    public byte ReadByte(int port) => _machine.Memory.EnableA20 ? (byte)0x02 : (byte)0x00;
+
+    public ushort ReadWord(int port) => throw new NotSupportedException();
+
+    public void WriteByte(int port, byte value) => _machine.Memory.EnableA20 = (value & 0x02) != 0;
+
+    public void WriteWord(int port, ushort value) => throw new NotSupportedException();
 
     /// <summary>
     /// Attempts to allocate a block of extended memory.
@@ -270,18 +237,18 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Increments the A20 enable count.
     /// </summary>
-    private void EnableLocalA20() {
+    public void EnableLocalA20() {
         if (a20EnableCount == 0) {
             _machine.Memory.EnableA20 = true;
         }
-
         a20EnableCount++;
+        _state.AX = 1; // Success
     }
 
     /// <summary>
     /// Decrements the A20 enable count.
     /// </summary>
-    private void DisableLocalA20() {
+    public void DisableLocalA20() {
         if (a20EnableCount == 1) {
             _machine.Memory.EnableA20 = false;
         }
@@ -289,13 +256,14 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         if (a20EnableCount > 0) {
             a20EnableCount--;
         }
+        _state.AX = 1; // Success
     }
 
     /// <summary>
     /// Initializes the internal memory map.
     /// </summary>
     /// <exception cref="UnrecoverableException">If xms is already initialized</exception>
-    private void InitializeMemoryMap() {
+    public void InitializeMemoryMap() {
         if (xms.Count != 0) {
             throw new UnrecoverableException($"XMS already initialized, in {nameof(InitializeMemoryMap)}");
         }
@@ -308,13 +276,13 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// Returns all of the free blocks in the map sorted by size in ascending order.
     /// </summary>
     /// <returns>Sorted list of free blocks in the map.</returns>
-    private IEnumerable<XmsBlock> GetFreeBlocks() => xms.Where(static x => !x.IsUsed).OrderBy(static x => x.Length);
+    public IEnumerable<XmsBlock> GetFreeBlocks() => xms.Where(static x => !x.IsUsed).OrderBy(static x => x.Length);
 
     /// <summary>
     /// Returns the next available handle for an allocation on success; returns 0 if no handles are available.
     /// </summary>
     /// <returns>New handle if available; otherwise returns null.</returns>
-    private int GetNextHandle() {
+    public int GetNextHandle() {
         for (int i = 1; i <= MaxHandles; i++) {
             if (!handles.ContainsKey(i)) {
                 return i;
@@ -328,7 +296,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// Attempts to merge a free block with the following block if possible.
     /// </summary>
     /// <param name="firstBlock">Free block to merge.</param>
-    private void MergeFreeBlocks(XmsBlock firstBlock) {
+    public void MergeFreeBlocks(XmsBlock firstBlock) {
         LinkedListNode<XmsBlock>? firstNode = xms.Find(firstBlock);
 
         if (firstNode?.Next != null) {
@@ -345,7 +313,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// Allocates a new block of memory.
     /// </summary>
     /// <param name="kbytes">Number of kilobytes requested.</param>
-    private void AllocateBlock(uint kbytes) {
+    public void AllocateAnyExtendedMemory(uint kbytes) {
         byte res = TryAllocate(kbytes * 1024u, out short handle);
         if (res == 0) {
             _state.AX = 1; // Success.
@@ -359,7 +327,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Frees a block of memory.
     /// </summary>
-    private void FreeBlock() {
+    public void FreeExtendedMemoryBlock() {
         int handle = _state.DX;
 
         if (!handles.TryGetValue(handle, out int lockCount)) {
@@ -387,7 +355,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Locks a block of memory.
     /// </summary>
-    private void LockBlock() {
+    public void LockExtendedMemoryBlock() {
         int handle = _state.DX;
 
         if (!handles.TryGetValue(handle, out int lockCount)) {
@@ -409,7 +377,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Unlocks a block of memory.
     /// </summary>
-    private void UnlockBlock() {
+    public void UnlockExtendedMemoryBlock() {
         int handle = _state.DX;
 
         if (!handles.TryGetValue(handle, out int lockCount)) {
@@ -432,7 +400,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Returns information about an XMS handle.
     /// </summary>
-    private void GetHandleInformation() {
+    public void GetHandleInformation() {
         int handle = _state.DX;
 
         if (!handles.TryGetValue(handle, out int lockCount)) {
@@ -456,7 +424,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Copies a block of memory.
     /// </summary>
-    private void MoveMemoryBlock() {
+    public void MoveExtendedMemoryBlock() {
         bool a20State = _machine.Memory.EnableA20;
         _machine.Memory.EnableA20 = true;
 
@@ -513,7 +481,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Queries free memory using 32-bit registers.
     /// </summary>
-    private void QueryAnyFreeExtendedMemory() {
+    public void QueryAnyFreeExtendedMemory() {
         _state.EAX = LargestFreeBlock / 1024u;
         _state.ECX = (uint)(_machine.Memory.MemorySize - 1);
         _state.EDX = (uint)(TotalFreeMemory / 1024);
