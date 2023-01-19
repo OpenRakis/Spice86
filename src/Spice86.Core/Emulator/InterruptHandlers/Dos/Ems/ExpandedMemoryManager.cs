@@ -185,7 +185,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Allocates pages for a new handle.
     /// </summary>
-    private void AllocatePages() {
+    public void AllocatePages() {
         uint pagesRequested = _state.BX;
         if (pagesRequested == 0) {
             // Return "attempted to allocate zero pages" code.
@@ -211,10 +211,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = 0x87;
         }
     }
+
     /// <summary>
     /// Reallocates pages for a handle.
     /// </summary>
-    private void ReallocatePages() {
+    public void ReallocatePages() {
         int pagesRequested = _state.BX;
 
         if (pagesRequested < MaximumLogicalPages) {
@@ -245,6 +246,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = 0x87;
         }
     }
+
     /// <summary>
     /// Attempts to create a new EMS handle.
     /// </summary>
@@ -266,10 +268,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         return 0;
     }
+
     /// <summary>
     /// Deallocates a handle and all of its pages.
     /// </summary>
-    private void DeallocatePages() {
+    public void DeallocatePages() {
         int handle = _state.DX;
         if (handles.Remove(handle)) {
             for (int i = 0; i < pageOwners.Length; i++) {
@@ -285,10 +288,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = 0x83;
         }
     }
+
     /// <summary>
     /// Maps or unmaps a physical page.
     /// </summary>
-    private void MapUnmapHandlePage() {
+    public void MapUnmapHandlePage() {
         int physicalPage = _state.AL;
         if (physicalPage < 0 || physicalPage >= MaximumPhysicalPages) {
             // Return "physical page out of range" code.
@@ -320,6 +324,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         // Return good status.
         _state.AH = 0;
     }
+
     /// <summary>
     /// Copies data from a logical page to a physical page.
     /// </summary>
@@ -337,6 +342,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         //xms.CopyTo(pageFrame);
         mappedPages[physicalPageIndex] = logicalPage;
     }
+
     /// <summary>
     /// Copies data from a physical page to a logical page.
     /// </summary>
@@ -350,6 +356,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             mappedPages[physicalPageIndex] = -1;
         }
     }
+
     /// <summary>
     /// Unmaps a specific logical page if it is currently mapped.
     /// </summary>
@@ -361,6 +368,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
         }
     }
+
     /// <summary>
     /// Gets the number of pages allocated to a handle.
     /// </summary>
@@ -376,6 +384,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = 0x83;
         }
     }
+
     /// <summary>
     /// Gets the name of a handle.
     /// </summary>
@@ -391,6 +400,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = 0x83;
         }
     }
+
     /// <summary>
     /// Set the name of a handle.
     /// </summary>
@@ -458,7 +468,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Saves the current state of page map registers for a handle.
     /// </summary>
-    private void SavePageMap() {
+    public void SavePageMap() {
         int handleIndex = _state.DX;
         if (!handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return "couldn't find specified handle" code.
@@ -474,7 +484,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Restores the state of page map registers for a handle.
     /// </summary>
-    private void RestorePageMap() {
+    public void RestorePageMap() {
         int handleIndex = _state.DX;
         if (!handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return "couldn't find specified handle" code.
