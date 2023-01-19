@@ -372,7 +372,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Gets the number of pages allocated to a handle.
     /// </summary>
-    private void GetHandlePages() {
+    public void GetHandlePages() {
         int handleIndex = _state.DX;
         if (handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return the number of pages allocated in BX.
