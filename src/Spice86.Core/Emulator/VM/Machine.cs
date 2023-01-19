@@ -17,7 +17,6 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
@@ -110,8 +109,6 @@ public class Machine : IDisposable {
 
     public ExtendedMemoryManager? Xms { get; }
 
-    public ExpandedMemoryManager? Ems { get; }
-
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
@@ -137,17 +134,10 @@ public class Machine : IDisposable {
         Memory = new Memory(this, sizeInKb: (uint)Configuration.Kilobytes);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, serviceProvider.GetService<ILoggerService>(), executionFlowRecorder, recordData);
-        if(configuration.Xms && configuration.Ems) {
-            throw new UnrecoverableException("Cannot have XMS and EMS at the same time");
-        }
         if(configuration.Xms) {
             Xms = new(this);
         }
-        if(configuration.Ems) {
-            Xms ??= new(this);
-            Ems = new(this);
-        }
-        
+
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this);
 
@@ -225,9 +215,6 @@ public class Machine : IDisposable {
         if(Xms is not null) {
             Register((IDeviceCallbackProvider)Xms);
             Register((ICallback)Xms);
-        }
-        if(Ems is not null) {
-            Register(Ems);
         }
     }
 

@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
@@ -45,8 +44,6 @@ public class Memory {
 
     private readonly BreakPointHolder _writeBreakPoints = new();
 
-    private readonly MetaAllocator _metaAllocator = new();
-
     // For breakpoints to access what is getting written
     public byte CurrentlyWritingByte { get; private set; } = 0;
 
@@ -58,12 +55,6 @@ public class Memory {
         }
         this.MemorySize = (int)sizeInKb * 1024;
 
-        // Reserve room for the real-mode interrupt table.
-        this.Reserve(0x0000, 256 * 4);
-
-        // Reserve VGA video RAM window.
-        this.Reserve(0xA000, VramUpperBound - VramAddress + 16u);
-
         _machine = machine;
         Ram = new byte[sizeInKb * 1024];
         unsafe {
@@ -74,17 +65,6 @@ public class Memory {
         UInt8 = new(this);
         UInt16 = new(this);
         UInt32 = new(this);
-    }
-
-    /// <summary>
-    /// Reserves a block of conventional memory.
-    /// </summary>
-    /// <param name="minimumSegment">Minimum segment of requested memory block.</param>
-    /// <param name="length">Size of memory block in bytes.</param>
-    /// <returns>Information about the reserved block of memory.</returns>
-    public ReservedBlock Reserve(ushort minimumSegment, uint length) {
-        ushort allocation = _metaAllocator.Allocate(minimumSegment, (int)length);
-        return new(allocation, length);
     }
 
     private ushort _nextHandlerOffset = 4096;
@@ -293,14 +273,7 @@ public class Memory {
 
         unsafe
         {
-            if (_machine.Ems is not null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
-            {
-                return Unsafe.ReadUnaligned<T>(this.RawView + _machine.Ems.GetMappedAddress(address));
-            }
-            else
-            {
-                return Unsafe.ReadUnaligned<T>(this.RawView + fullAddress);
-            }
+            return Unsafe.ReadUnaligned<T>(this.RawView + fullAddress);
         }
     }
 
@@ -310,14 +283,7 @@ public class Memory {
 
         unsafe
         {
-            if (_machine.Ems != null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
-            {
-                Unsafe.WriteUnaligned(this.RawView + _machine.Ems.GetMappedAddress(address), value);
-            }
-            else
-            {
-                Unsafe.WriteUnaligned(this.RawView + fullAddress, value);
-            }
+            Unsafe.WriteUnaligned(this.RawView + fullAddress, value);
         }
     }
 
