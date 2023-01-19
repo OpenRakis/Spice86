@@ -17,7 +17,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -101,8 +100,6 @@ public class Machine : IDisposable {
 
     public DmaController DmaController { get; }
 
-    public ExtendedMemoryManager? Xms { get; }
-
     public ExpandedMemoryManager? Ems { get; }
 
     /// <summary>
@@ -111,8 +108,6 @@ public class Machine : IDisposable {
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
 
     public OPL3FM OPL3FM { get; }
-
-    public SortedList<uint, IDeviceCallbackProvider> DeviceCallbackProviders { get; } = new();
 
     public event Action? Paused;
 
@@ -129,11 +124,7 @@ public class Machine : IDisposable {
         Memory = new Memory(this, sizeInKb: (uint)Configuration.Kilobytes);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
-        if(configuration.Xms) {
-            Xms = new(this);
-        }
         if(configuration.Ems) {
-            Xms ??= new(this);
             Ems = new(this);
         }
 
@@ -210,26 +201,9 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-        if(Xms is not null) {
-            Register((IDeviceCallbackProvider)Xms);
-            Register((ICallback)Xms);
-        }
         if(Ems is not null) {
             Register(Ems);
         }
-    }
-
-    
-    public void Register(IDeviceCallbackProvider callbackProvider) {
-        int id = DeviceCallbackProviders.Count;
-        callbackProvider.CallbackAddress = this.Memory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
-        DeviceCallbackProviders.Add((uint)id, callbackProvider);
-
-        Span<byte> machineCode = stackalloc byte[3];
-        machineCode[0] = 0x0F;
-        machineCode[1] = 0x56;
-        machineCode[2] = (byte)id;
-        callbackProvider.SetRaiseCallbackInstruction(machineCode);
     }
 
     public void Register(IIOPortHandler ioPortHandler) {
