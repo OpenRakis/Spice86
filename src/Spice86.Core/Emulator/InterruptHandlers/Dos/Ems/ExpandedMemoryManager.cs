@@ -9,7 +9,7 @@ using System.Linq;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
-/// TODO: Remove dependency on Xms, and main memory.
+/// TODO: Remove dependencies to Memory class.
 /// </summary>
 public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
