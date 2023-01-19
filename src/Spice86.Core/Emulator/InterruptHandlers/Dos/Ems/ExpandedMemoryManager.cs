@@ -49,9 +49,33 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void FillDispatchTable() {
-        //TODO: Replace Run with C# methods referenced here.
         _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
         _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameAddress));
+        _dispatchTable.Add(0x42, new Callback(0x42, GetUnallocatedPageCount));
+        _dispatchTable.Add(0x43, new Callback(0x43, AllocatePages));
+        _dispatchTable.Add(0x44, new Callback(0x44, MapUnmapHandlePage));
+        _dispatchTable.Add(0x45, new Callback(0x45, DeallocatePages));
+        _dispatchTable.Add(0x46, new Callback(0x46, GetVersion));
+        _dispatchTable.Add(0x47, new Callback(0x47, SavePageMap));
+        _dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
+        _dispatchTable.Add(0x4B, new Callback(0x4B, GetHandleCount));
+        _dispatchTable.Add(0x4C, new Callback(0x4C, GetHandlePages));
+        _dispatchTable.Add(0x50, new Callback(0x50, AdvancedMap));
+        _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
+        _dispatchTable.Add(0x53, new Callback(0x53, HandleName));
+        _dispatchTable.Add(0x57, new Callback(0x57, MoveExchange));
+        _dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
+    }
+
+    public void AdvancedMap() {
+        switch (_state.AL) {
+            case EmsFunctions.AdvancedMap_MapUnmapPages:
+                MapUnmapMultiplePages();
+                break;
+
+            default:
+                throw new InvalidOperationException();
+        }
     }
 
     public void GetPageFrameAddress() {
@@ -61,123 +85,78 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.AH = 0;
     }
 
-    private void RemoveMe() {
-        switch (_state.AH) {
-            case EmsFunctions.GetPageFrameAddress:
+    public void GetUnallocatedPageCount() {
+        // Return number of pages available in BX.
+        _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
+        // Return total number of pages in DX.
+        _state.DX = MaximumLogicalPages;
+        // Set good status.
+        _state.AH = 0;
+    }
+
+    public void GetVersion() {
+        // Return EMS version 4.0.
+        _state.AL = 0x40;
+        // Return good status.
+        _state.AH = 0;
+    }
+
+    public void GetHardwareInformation() {
+        switch (_state.AL) {
+        case EmsFunctions.GetHardwareInformation_UnallocatedRawPages:
+            // Return number of pages available in BX.
+            _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
+            // Return total number of pages in DX.
+            _state.DX = MaximumLogicalPages;
+            // Set good status.
+            _state.AH = 0;
+            break;
+
+        default:
+            throw new InvalidOperationException();
+        }
+    }
+
+    public void GetHandleCount() {
+        // Return the number of EMM handles (plus 1 for the OS handle).
+        _state.BX = (ushort)(handles.Count + 1);
+        // Return good status.
+        _state.AH = 0;
+    }
+
+    public void AdvanceMap() {
+        switch (_state.AL) {
+            case EmsFunctions.AdvancedMap_MapUnmapPages:
+                MapUnmapMultiplePages();
+                break;
+            default:
+                throw new InvalidOperationException();
+        }
+    }
+
+    public void HandleName() {
+        switch (_state.AL) {
+            case EmsFunctions.HandleName_Get:
+                GetHandleName();
                 break;
 
-            case EmsFunctions.GetUnallocatedPageCount:
-                // Return number of pages available in BX.
-                _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
-                // Return total number of pages in DX.
-                _state.DX = MaximumLogicalPages;
-                // Set good status.
-                _state.AH = 0;
-                break;
-
-            case EmsFunctions.AllocatePages:
-                AllocatePages();
-                break;
-
-            case EmsFunctions.ReallocatePages:
-                ReallocatePages();
-                break;
-
-            case EmsFunctions.MapUnmapHandlePage:
-                MapUnmapHandlePage();
-                break;
-
-            case EmsFunctions.DeallocatePages:
-                DeallocatePages();
-                break;
-
-            case EmsFunctions.GetVersion:
-                // Return EMS version 4.0.
-                _state.AL = 0x40;
-                // Return good status.
-                _state.AH = 0;
-                break;
-
-            case EmsFunctions.GetHandleCount:
-                // Return the number of EMM handles (plus 1 for the OS handle).
-                _state.BX = (ushort)(handles.Count + 1);
-                // Return good status.
-                _state.AH = 0;
-                break;
-
-            case EmsFunctions.GetHandlePages:
-                GetHandlePages();
-                break;
-
-            case EmsFunctions.SavePageMap:
-                SavePageMap();
-                break;
-
-            case EmsFunctions.RestorePageMap:
-                RestorePageMap();
-                break;
-
-            case EmsFunctions.AdvancedMap:
-                switch (_state.AL) {
-                    case EmsFunctions.AdvancedMap_MapUnmapPages:
-                        MapUnmapMultiplePages();
-                        break;
-
-                    default:
-                        throw new InvalidOperationException();
-                }
-                break;
-
-            case EmsFunctions.HandleName:
-                switch (_state.AL) {
-                    case EmsFunctions.HandleName_Get:
-                        GetHandleName();
-                        break;
-
-                    case EmsFunctions.HandleName_Set:
-                        SetHandleName();
-                        break;
-
-                    default:
-                        throw new InvalidOperationException();
-                }
-                break;
-
-            case EmsFunctions.GetHardwareInformation:
-                switch (_state.AL) {
-                    case EmsFunctions.GetHardwareInformation_UnallocatedRawPages:
-                        // Return number of pages available in BX.
-                        _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
-                        // Return total number of pages in DX.
-                        _state.DX = MaximumLogicalPages;
-                        // Set good status.
-                        _state.AH = 0;
-                        break;
-
-                    default:
-                        throw new InvalidOperationException();
-                }
-                break;
-
-            case EmsFunctions.MoveExchange:
-                switch (_state.AL) {
-                    case EmsFunctions.MoveExchange_Move:
-                        Move();
-                        break;
-
-                    default:
-                        throw new NotImplementedException($"EMM function 57{_state.AL:X2}h not implemented.");
-                }
-                break;
-
-            case EmsFunctions.VCPI:
-                System.Diagnostics.Debug.WriteLine($"VCPI function {_state.AL:X2}h not implemented.");
+            case EmsFunctions.HandleName_Set:
+                SetHandleName();
                 break;
 
             default:
-                System.Diagnostics.Debug.WriteLine($"EMM function {_state.AH:X2}h not implemented.");
-                _state.AH = 0x84;
+                throw new InvalidOperationException();
+        }
+    }
+
+    public void MoveExchange() {
+        switch (_state.AL) {
+            case EmsFunctions.MoveExchange_Move:
+                Move();
                 break;
+
+            default:
+                throw new NotImplementedException($"EMM function 57{_state.AL:X2}h not implemented.");
         }
     }
 
