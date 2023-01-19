@@ -35,8 +35,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private readonly short[] pageOwners = new short[MaximumLogicalPages];
     private readonly SortedList<int, EmsHandle> handles = new();
     private readonly int[] mappedPages = new int[MaximumPhysicalPages] { -1, -1, -1, -1 };
-    private readonly uint xmsBaseAddress;
-
     public ExpandedMemoryManager(Machine machine) : base(machine) {
         pageOwners.AsSpan().Fill(-1);
         _machine.Memory.SetString(0xF100, 0x000A, "EMMXXXX0");
@@ -53,37 +51,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private void FillDispatchTable() {
         //TODO: Replace Run with C# methods referenced here.
         _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
+        _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameAddress));
     }
 
-    /// <summary>
-    /// Gets the total number of allocated EMS pages.
-    /// </summary>
-    public int AllocatedPages => handles.Values.Sum(p => p.PagesAllocated);
-
-    public uint GetMappedAddress(uint fullAddress) {
-        uint physicalPage = (fullAddress - (PageFrameSegment << 4)) / PageSize;
-        int logicalPage = mappedPages[physicalPage];
-        if (logicalPage != -1) {
-            return xmsBaseAddress + (uint)logicalPage * PageSize | fullAddress % PageSize;
-        } else {
-            return fullAddress;
-        }
-    }
-
-    public override byte Index => 0x67;
-
-    public void GetStatus() {
-        // Return good status in AH.
+    public void GetPageFrameAddress() {
+        // Return page frame segment in BX.
+        _state.BX = unchecked(PageFrameSegment);
+        // Set good status.
         _state.AH = 0;
     }
 
-    public override void Run() {
+    private void RemoveMe() {
         switch (_state.AH) {
             case EmsFunctions.GetPageFrameAddress:
-                // Return page frame segment in BX.
-                _state.BX = unchecked(PageFrameSegment);
-                // Set good status.
-                _state.AH = 0;
                 break;
 
             case EmsFunctions.GetUnallocatedPageCount:
@@ -199,6 +179,28 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 _state.AH = 0x84;
                 break;
         }
+    }
+
+    /// <summary>
+    /// Gets the total number of allocated EMS pages.
+    /// </summary>
+    public int AllocatedPages => handles.Values.Sum(p => p.PagesAllocated);
+
+    public uint GetMappedAddress(uint fullAddress) {
+        uint physicalPage = (fullAddress - (PageFrameSegment << 4)) / PageSize;
+        return fullAddress;
+    }
+
+    public override byte Index => 0x67;
+
+    public void GetStatus() {
+        // Return good status in AH.
+        _state.AH = 0;
+    }
+
+    public override void Run() {
+        byte operation = _state.AH;
+        Run(operation);
     }
 
     /// <summary>
@@ -531,7 +533,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         SyncToEms();
 
         if (sourceType == 0 && destType == 0) {
-            _state.AH = ConvToConv((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
+            _state.AH = ConventionalMemoryConventionalMemory((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
         } else if (sourceType != 0 && destType == 0) {
             if (!handles.TryGetValue(sourceHandleIndex, out _)) {
                 // Return "couldn't find specified handle" code.
@@ -539,7 +541,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return;
             }
 
-            _state.AH = EmsToConv(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
+            _state.AH = EmsToConventionalMemory(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
         } else if (sourceType == 0 && destType != 0) {
             if (!handles.TryGetValue(destHandleIndex, out _)) {
                 // Return "couldn't find specified handle" code.
@@ -586,7 +588,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private Span<byte> GetMappedPage(int physicalPageIndex) => _machine.Memory.Span.Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
-    private Span<byte> GetLogicalPage(int logicalPageIndex) => _machine.Memory.Span.Slice((int)xmsBaseAddress + logicalPageIndex * PageSize, PageSize);
+    private Span<byte> GetLogicalPage(int logicalPageIndex) => _machine.Memory.Span.Slice(logicalPageIndex * PageSize, PageSize);
     private ushort GetNextFreePage(short handle) {
         for (int i = 0; i < pageOwners.Length; i++) {
             if (pageOwners[i] == -1) {
@@ -598,7 +600,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return 0;
     }
 
-    private byte ConvToConv(uint sourceAddress, uint destAddress, int length) {
+    private byte ConventionalMemoryConventionalMemory(uint sourceAddress, uint destAddress, int length) {
         if (length < 0) {
             throw new ArgumentOutOfRangeException(nameof(length));
         }
@@ -627,7 +629,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         return overlap ? (byte)0x92 : (byte)0;
     }
-    private byte EmsToConv(int sourcePage, int sourcePageOffset, uint destAddress, int length) {
+    private byte EmsToConventionalMemory(int sourcePage, int sourcePageOffset, uint destAddress, int length) {
         if (length < 0) {
             throw new ArgumentOutOfRangeException(nameof(length));
         }
