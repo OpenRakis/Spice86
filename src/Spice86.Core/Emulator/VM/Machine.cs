@@ -109,6 +109,9 @@ public class Machine : IDisposable {
 
     public ExtendedMemoryManager? Xms { get; }
 
+    public XmsVirtualDevice XmsVirtualDevice { get; }
+
+
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
@@ -153,6 +156,9 @@ public class Machine : IDisposable {
 
         DualPic = new DualPic(this, configuration);
         Register(DualPic);
+        VgaCard = new VgaCard(this, serviceProvider.GetService<ILoggerService>(), gui, configuration);
+        XmsVirtualDevice = new(this, configuration);
+        Register(XmsVirtualDevice);
         VgaCard = new VgaCard(this, serviceProvider.GetService<ILoggerService>(), gui, configuration);
         Register(VgaCard);
         Timer = new Timer(this, serviceProvider.GetService<ILoggerService>(), DualPic, VgaCard, counterConfigurator, configuration);
