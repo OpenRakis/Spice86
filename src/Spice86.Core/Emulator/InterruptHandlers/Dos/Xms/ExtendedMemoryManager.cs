@@ -80,7 +80,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         _dispatchTable.Add(0x0E, new Callback(0x0E, GetHandleInformation));
         _dispatchTable.Add(0x88, new Callback(0x88, QueryAnyFreeExtendedMemory));
         _dispatchTable.Add(0x89, new Callback(0x89, () => AllocateAnyExtendedMemory(_state.EDX)));
-        _dispatchTable.Add(0xFF, new Callback(0xFF, RunXmsInterruptCallback));
+        _dispatchTable.Add(0x2F, new Callback(0x2F, RunXmsInterruptCallback));
     }
 
     public override void Run() {

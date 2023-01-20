@@ -111,7 +111,6 @@ public class Machine : IDisposable {
 
     public XmsVirtualDevice XmsVirtualDevice { get; }
 
-
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
@@ -224,7 +223,6 @@ public class Machine : IDisposable {
         }
     }
 
-    
     public void Register(IDeviceCallbackProvider callbackProvider) {
         int id = DeviceCallbackProviders.Count;
         callbackProvider.CallbackAddress = this.Memory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
@@ -238,9 +236,9 @@ public class Machine : IDisposable {
         // 0000:0005 90                              NOP
         // 0000:0006 90                              NOP
         // 0000:0007 90                              NOP
-        // 0000:0008 CDFF                            INT FF
+        // 0000:0008 CDFF                            INT 2F
         // 0000:000A CB                              RETF
-        Span<byte> machineCode = stackalloc byte[12];
+        Span<byte> machineCode = stackalloc byte[13];
         machineCode[0] = 0xEB;
         machineCode[2] = 0x06;
         machineCode[3] = 0x90;
@@ -250,7 +248,7 @@ public class Machine : IDisposable {
         machineCode[7] = 0x90;
         machineCode[8] = 0x90;
         machineCode[9] = 0xCD;
-        machineCode[10] = 0xFF;
+        machineCode[10] = 0x2F;
         machineCode[11] = 0xCB;
         machineCode[12] = (byte)id;
         callbackProvider.SetRaiseCallbackInstruction(machineCode);
