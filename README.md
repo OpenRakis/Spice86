@@ -441,3 +441,11 @@ Stunts:
 ![](doc/stunts_crash.PNG)
 
 ![](doc/stunts_skid.PNG)
+
+### Credits
+
+Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Most notably the SoundBlaster, MT-32, and General MIDI devices.
+
+Also, this project uses JetBrains Rider licenses, thanks to JetBrains' [Open Source Community Support](https://www.jetbrains.com/community/opensource/#support).
+
+![](jetbrainsrider.svg)
