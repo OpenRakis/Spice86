@@ -1,5 +1,4 @@
-﻿
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 using Spice86.Core;
 using Spice86.Core.Emulator.Callback;
@@ -19,17 +18,19 @@ using System.Linq;
 /// TODO: Remove unsafe code
 /// </summary>
 public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
-    private SegmentedAddress callbackAddress;
-    private int a20EnableCount;
-    private readonly LinkedList<XmsBlock> xms = new();
-    private readonly SortedList<int, int> handles = new();
+    private SegmentedAddress _callbackAddress;
+    private int _a20EnableCount;
+    private readonly LinkedList<XmsBlock> _xmsBlocksLinkedList = new();
+    private readonly SortedList<int, int> _xmsHandles = new();
 
     public ExtendedMemoryManager(Machine machine) : base(machine) {
-        callbackAddress = new(0, 0);
+        _callbackAddress = new(0, 0);
         _machine = machine;
         InitializeMemoryMap();
         FillDispatchTable();
     }
+
+    public bool IsHookable => true;
 
     /// <summary>
     /// Specifies the starting physical address of XMS.
@@ -56,10 +57,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
     public override byte Index => 0x43;
 
-    public bool IsHookable => true;
-
     public SegmentedAddress CallbackAddress {
-        set => callbackAddress = value;
+        set => _callbackAddress = value;
     }
 
     private void FillDispatchTable() {
@@ -98,8 +97,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
                 break;
 
             case XmsHandlerFunctions.GetCallbackAddress:
-                _state.BX = callbackAddress.Offset;
-                _state.ES = callbackAddress.Segment;
+                _state.BX = _callbackAddress.Offset;
+                _state.ES = _callbackAddress.Segment;
                 break;
 
             default:
@@ -161,16 +160,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     }
 
     public void QueryA20() {
-        _state.AX = (ushort)(a20EnableCount > 0 ? (short)1 : (short)0);
+        _state.AX = (ushort)(_a20EnableCount > 0 ? (short)1 : (short)0);
     }
-
-    public byte ReadByte(int port) => _machine.Memory.EnableA20 ? (byte)0x02 : (byte)0x00;
-
-    public ushort ReadWord(int port) => throw new NotSupportedException();
-
-    public void WriteByte(int port, byte value) => _machine.Memory.EnableA20 = (value & 0x02) != 0;
-
-    public void WriteWord(int port, ushort value) => throw new NotSupportedException();
 
     /// <summary>
     /// Attempts to allocate a block of extended memory.
@@ -193,7 +184,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
         // Zero-length allocations are allowed.
         if (length == 0) {
-            handles.Add(handle, 0);
+            _xmsHandles.Add(handle, 0);
             return 0;
         }
 
@@ -206,13 +197,13 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
             return 0xA0; // Not enough free memory.
         }
 
-        LinkedListNode<XmsBlock>? freeNode = xms.Find(smallestFreeBlock.Value);
+        LinkedListNode<XmsBlock>? freeNode = _xmsBlocksLinkedList.Find(smallestFreeBlock.Value);
         if (freeNode is not null) {
             XmsBlock[] newNodes = freeNode.Value.Allocate(handle, length);
-            xms.Replace((XmsBlock)smallestFreeBlock, newNodes);
+            _xmsBlocksLinkedList.Replace((XmsBlock)smallestFreeBlock, newNodes);
         }
 
-        handles.Add(handle, 0);
+        _xmsHandles.Add(handle, 0);
         return 0;
     }
 
@@ -223,7 +214,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <param name="block">On success, contains information about the block.</param>
     /// <returns>True if handle was found; otherwise false.</returns>
     public bool TryGetBlock(int handle, out XmsBlock block) {
-        foreach (XmsBlock b in xms) {
+        foreach (XmsBlock b in _xmsBlocksLinkedList) {
             if (b.IsUsed && b.Handle == handle) {
                 block = b;
                 return true;
@@ -238,10 +229,10 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// Increments the A20 enable count.
     /// </summary>
     public void EnableLocalA20() {
-        if (a20EnableCount == 0) {
+        if (_a20EnableCount == 0) {
             _machine.Memory.EnableA20 = true;
         }
-        a20EnableCount++;
+        _a20EnableCount++;
         _state.AX = 1; // Success
     }
 
@@ -249,12 +240,12 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// Decrements the A20 enable count.
     /// </summary>
     public void DisableLocalA20() {
-        if (a20EnableCount == 1) {
+        if (_a20EnableCount == 1) {
             _machine.Memory.EnableA20 = false;
         }
 
-        if (a20EnableCount > 0) {
-            a20EnableCount--;
+        if (_a20EnableCount > 0) {
+            _a20EnableCount--;
         }
         _state.AX = 1; // Success
     }
@@ -264,19 +255,19 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// </summary>
     /// <exception cref="UnrecoverableException">If xms is already initialized</exception>
     public void InitializeMemoryMap() {
-        if (xms.Count != 0) {
+        if (_xmsBlocksLinkedList.Count != 0) {
             throw new UnrecoverableException($"XMS already initialized, in {nameof(InitializeMemoryMap)}");
         }
 
         uint memoryAvailable = (uint)_machine.Memory.MemorySize - XmsBaseAddress;
-        xms.AddFirst(new XmsBlock(0, 0, memoryAvailable, false));
+        _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, memoryAvailable, false));
     }
 
     /// <summary>
     /// Returns all of the free blocks in the map sorted by size in ascending order.
     /// </summary>
     /// <returns>Sorted list of free blocks in the map.</returns>
-    public IEnumerable<XmsBlock> GetFreeBlocks() => xms.Where(static x => !x.IsUsed).OrderBy(static x => x.Length);
+    public IEnumerable<XmsBlock> GetFreeBlocks() => _xmsBlocksLinkedList.Where(static x => !x.IsUsed).OrderBy(static x => x.Length);
 
     /// <summary>
     /// Returns the next available handle for an allocation on success; returns 0 if no handles are available.
@@ -284,7 +275,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <returns>New handle if available; otherwise returns null.</returns>
     public int GetNextHandle() {
         for (int i = 1; i <= MaxHandles; i++) {
-            if (!handles.ContainsKey(i)) {
+            if (!_xmsHandles.ContainsKey(i)) {
                 return i;
             }
         }
@@ -297,14 +288,14 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// </summary>
     /// <param name="firstBlock">Free block to merge.</param>
     public void MergeFreeBlocks(XmsBlock firstBlock) {
-        LinkedListNode<XmsBlock>? firstNode = xms.Find(firstBlock);
+        LinkedListNode<XmsBlock>? firstNode = _xmsBlocksLinkedList.Find(firstBlock);
 
         if (firstNode?.Next != null) {
             LinkedListNode<XmsBlock> nextNode = firstNode.Next;
             if (!nextNode.Value.IsUsed) {
                 XmsBlock newBlock = firstBlock.Join(nextNode.Value);
-                xms.Remove(nextNode);
-                xms.Replace(firstBlock, newBlock);
+                _xmsBlocksLinkedList.Remove(nextNode);
+                _xmsBlocksLinkedList.Replace(firstBlock, newBlock);
             }
         }
     }
@@ -330,7 +321,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     public void FreeExtendedMemoryBlock() {
         int handle = _state.DX;
 
-        if (!handles.TryGetValue(handle, out int lockCount)) {
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
             _state.AX = 0; // Didn't work.
             _state.BL = 0xA2; // Invalid handle.
             return;
@@ -344,11 +335,11 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
         if (TryGetBlock(handle, out XmsBlock block)) {
             XmsBlock freeBlock = block.Free();
-            xms.Replace(block, freeBlock);
+            _xmsBlocksLinkedList.Replace(block, freeBlock);
             MergeFreeBlocks(freeBlock);
         }
 
-        handles.Remove(handle);
+        _xmsHandles.Remove(handle);
         _state.AX = 1; // Success.
     }
 
@@ -358,13 +349,13 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     public void LockExtendedMemoryBlock() {
         int handle = _state.DX;
 
-        if (!handles.TryGetValue(handle, out int lockCount)) {
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
             _state.AX = 0; // Didn't work.
             _state.BL = 0xA2; // Invalid handle.
             return;
         }
 
-        handles[handle] = lockCount + 1;
+        _xmsHandles[handle] = lockCount + 1;
 
         _ = TryGetBlock(handle, out XmsBlock block);
         uint fullAddress = XmsBaseAddress + block.Offset;
@@ -380,7 +371,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     public void UnlockExtendedMemoryBlock() {
         int handle = _state.DX;
 
-        if (!handles.TryGetValue(handle, out int lockCount)) {
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
             _state.AX = 0; // Didn't work.
             _state.BL = 0xA2; // Invalid handle.
             return;
@@ -392,7 +383,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
             return;
         }
 
-        handles[handle] = lockCount - 1;
+        _xmsHandles[handle] = lockCount - 1;
 
         _state.AX = 1; // Success.
     }
@@ -403,14 +394,14 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     public void GetHandleInformation() {
         int handle = _state.DX;
 
-        if (!handles.TryGetValue(handle, out int lockCount)) {
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
             _state.AX = 0; // Didn't work.
             _state.BL = 0xA2; // Invalid handle.
             return;
         }
 
         _state.BH = (byte)lockCount;
-        _state.BL = (byte)(MaxHandles - handles.Count);
+        _state.BL = (byte)(MaxHandles - _xmsHandles.Count);
 
         if (!TryGetBlock(handle, out XmsBlock block)) {
             _state.DX = 0;
