@@ -80,6 +80,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         _dispatchTable.Add(0x0E, new Callback(0x0E, GetHandleInformation));
         _dispatchTable.Add(0x88, new Callback(0x88, QueryAnyFreeExtendedMemory));
         _dispatchTable.Add(0x89, new Callback(0x89, () => AllocateAnyExtendedMemory(_state.EDX)));
+        _dispatchTable.Add(0xFF, new Callback(0xFF, RunXmsInterruptCallback));
     }
 
     public override void Run() {
@@ -87,10 +88,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         Run(operation);
     }
 
-    /// <summary>
-    /// FIXME: Make this code used.
-    /// </summary>
-    public void RunOnnAL() {
+    public void RunXmsInterruptCallback() {
         switch (_state.AL) {
             case XmsHandlerFunctions.InstallationCheck:
                 _state.AL = 0x80;
