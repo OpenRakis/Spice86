@@ -25,4 +25,11 @@ public interface IDeviceCallbackProvider
     void SetRaiseCallbackInstruction(ReadOnlySpan<byte> machineCode)
     {
     }
+
+    /// <summary>
+    /// Calls the handler's final init code after it has been registered by the Machine. Default interface member.
+    /// </summary>
+    void FinishDeviceInitialization()
+    {
+    }
 }

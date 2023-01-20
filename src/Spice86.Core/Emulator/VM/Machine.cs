@@ -201,8 +201,8 @@ public class Machine : IDisposable {
             Name = "DMAThread"
         };
         if(Xms is not null) {
-            Register((IDeviceCallbackProvider)Xms);
             Register((ICallback)Xms);
+            Register((IDeviceCallbackProvider)Xms);
         }
     }
 
@@ -236,6 +236,7 @@ public class Machine : IDisposable {
         machineCode[11] = 0xCB;
         machineCode[12] = (byte)id;
         callbackProvider.SetRaiseCallbackInstruction(machineCode);
+        callbackProvider.FinishDeviceInitialization();
     }
 
     public void Register(IIOPortHandler ioPortHandler) {
