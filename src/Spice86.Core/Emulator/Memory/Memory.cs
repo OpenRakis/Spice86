@@ -97,8 +97,8 @@ public class Memory {
                 length += 6;
             }
 
-            writePtr[0] = 0x0F;
-            writePtr[1] = 0x56;
+            writePtr[0] = 0xFE;
+            writePtr[1] = 0x38;
             writePtr[2] = id;
             writePtr[3] = 0xCB; // RETF
         }
