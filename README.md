@@ -404,33 +404,20 @@ or use this where Spice86.csproj is located:
 ```
 
 
-### Ghidra code generation scripts
+### Ghidra plugin
 
 This uses Ghidra and Java 17.
 
-This is a collection of scripts to be used within Ghidra in order to generate C# code for Spice86 overrides.
-
-Scripts in the ghidraCodeGenerator directory that are not mentionned below are only experiments.
-
 Before using it, define an environnement variable named SPICE86_DUMPS_FOLDER pointing to a folder where the Spice86 dumps are located.
-They are generated on close if the -d CLI option is used.
+They are generated on exit.
 
-General procedure to use them, in order:
+General procedure, in order:
 
 1.Ghidra's own script 'ImportSymbolScript.py' (input used is "spice86dumpGhidraSymbols.txt")
 
 2.Ghidra's Auto-Analyze (only enable 'Dissasemble Entry Points')
 
-3.Spice86ReferenceGenerator.java
-
-4.Spice86TentativeFunctionRenamer.java (renames fun_ into not_observerd_cs_ip)
-
-5.Spice86FunctionsSanitizer.java (may be used several times in a row.)
-
-6.Spice86OrphanedInstructionsScanner.java (this gives you the ranges where instructions are not attached to functions in the console output. You must attach them manually to functions)
-
-7.CodeGenerator.java (ghidrascriptout.txt will be its log file)
-
+3.Now, you can use the plugin.
 
 Remember: if Ghidra displays SUBROUTINES, use the 'f' key to convert them into functions. The code generator only works with functions.
 
