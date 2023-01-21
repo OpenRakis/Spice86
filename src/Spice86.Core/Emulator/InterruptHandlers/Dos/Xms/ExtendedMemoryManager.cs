@@ -151,12 +151,12 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     }
 
     public void GlobalDisableA20() {
-        _machine.Memory.EnableA20 = false;
+        _machine.Memory.IsA20Enabled = false;
         _state.AX = 1; // Success
     }
 
     public void GlobalEnableA20() {
-        _machine.Memory.EnableA20 = true;
+        _machine.Memory.IsA20Enabled = true;
         _state.AX = 1; // Success
     }
 
@@ -231,7 +231,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// </summary>
     public void EnableLocalA20() {
         if (_a20EnableCount == 0) {
-            _machine.Memory.EnableA20 = true;
+            _machine.Memory.IsA20Enabled = true;
         }
         _a20EnableCount++;
         _state.AX = 1; // Success
@@ -242,7 +242,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// </summary>
     public void DisableLocalA20() {
         if (_a20EnableCount == 1) {
-            _machine.Memory.EnableA20 = false;
+            _machine.Memory.IsA20Enabled = false;
         }
 
         if (_a20EnableCount > 0) {
@@ -417,8 +417,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// Copies a block of memory.
     /// </summary>
     public void MoveExtendedMemoryBlock() {
-        bool a20State = _machine.Memory.EnableA20;
-        _machine.Memory.EnableA20 = true;
+        bool a20State = _machine.Memory.IsA20Enabled;
+        _machine.Memory.IsA20Enabled = true;
 
         XmsMoveData moveData;
         unsafe {
@@ -467,7 +467,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         }
 
         _state.AX = 1; // Success.
-        _machine.Memory.EnableA20 = a20State;
+        _machine.Memory.IsA20Enabled = a20State;
     }
 
     /// <summary>

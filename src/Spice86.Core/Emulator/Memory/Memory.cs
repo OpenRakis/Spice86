@@ -36,7 +36,7 @@ public class Memory {
     /// </summary>
     public const uint ConvMemorySize = 1024 * 1024;
 
-    public bool EnableA20 { get; internal set; }
+    public bool IsA20Enabled { get; internal set; }
 
     public int MemorySize { get; init; }
 
@@ -65,6 +65,10 @@ public class Memory {
         UInt8 = new(this);
         UInt16 = new(this);
         UInt32 = new(this);
+    }
+
+    public void EnableOrDisableA20Gate(bool enable) {
+        IsA20Enabled = enable;
     }
 
     private ushort _nextHandlerOffset = 4096;
