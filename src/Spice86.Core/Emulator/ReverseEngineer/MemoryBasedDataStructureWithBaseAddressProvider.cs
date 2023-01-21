@@ -36,7 +36,7 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         StringBuilder res = new();
         uint physicalStart = (uint)(BaseAddress + start);
         for (int i = 0; i < maxLength; i++) {
-            char character = (char)GetUint8(physicalStart, i);
+            char character = Convert.ToChar(GetUint8(physicalStart, i));
             if (character == 0) {
                 break;
             }
@@ -59,9 +59,9 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         SetUint8(BaseAddress, offset, value);
     }
 
-    public void SetZeroTerminatedString(int start, string value, int maxLenght) {
-        if (value.Length + 1 > maxLenght) {
-            throw new UnrecoverableException($"String {value} is more than {maxLenght} cannot write it at offset {start}");
+    public void SetZeroTerminatedString(int start, string value, int maxLength) {
+        if (value.Length + 1 > maxLength) {
+            throw new UnrecoverableException($"String {value} is more than {maxLength} cannot write it at offset {start}");
         }
 
         uint physicalStart = (uint)(BaseAddress + start);
