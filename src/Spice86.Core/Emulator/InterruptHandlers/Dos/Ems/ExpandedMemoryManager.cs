@@ -350,9 +350,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private void UnmapPage(int physicalPageIndex) {
         int currentPage = mappedPages[physicalPageIndex];
         if (currentPage != -1) {
-            var pageFrame = this.GetMappedPage(physicalPageIndex);
-            var xms = this.GetLogicalPage(currentPage);
-            pageFrame.CopyTo(xms);
+            //var pageFrame = this.GetMappedPage(physicalPageIndex);
+            //var xms = this.GetLogicalPage(currentPage);
+            //pageFrame.CopyTo(xms);
             mappedPages[physicalPageIndex] = -1;
         }
     }
