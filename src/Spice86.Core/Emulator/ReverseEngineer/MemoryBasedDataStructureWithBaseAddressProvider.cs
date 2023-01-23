@@ -36,11 +36,11 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         StringBuilder res = new();
         uint physicalStart = (uint)(BaseAddress + start);
         for (int i = 0; i < maxLength; i++) {
-            char character = Convert.ToChar(GetUint8(physicalStart, i));
-            if (character == 0) {
+            byte characterByte = GetUint8(physicalStart, i);
+            if (characterByte == 0) {
                 break;
             }
-
+            char character = Convert.ToChar(characterByte);
             res.Append(character);
         }
 
