@@ -38,7 +38,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public ExpandedMemoryManager(Machine machine) : base(machine) {
         pageOwners.AsSpan().Fill(-1);
         _machine.Memory.SetString(0xF100, 0x000A, "EMMXXXX0");
-        _machine.Memory.Reserve(PageFrameSegment, PageSize * MaximumPhysicalPages);
 
         for (int i = 0; i < 24; i++) {
             pageOwners[i] = SystemHandle;
