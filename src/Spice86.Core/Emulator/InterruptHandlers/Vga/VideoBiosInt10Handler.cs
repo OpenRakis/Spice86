@@ -45,24 +45,13 @@ public class VideoBiosInt10Handler : InterruptHandler {
             _loggerService.Information("GET/SET PALETTE REGISTERS {@Operation}", ConvertUtils.ToHex8(op));
         }
 
-        switch (op) {
-            case 0x02:
-                SetSinglePaletteRegister();
-                break;
-            case 0x12:
-                SetBlockOfDacColorRegisters();
-                break;
-
-            case 0x17:
-                GetBlockOfDacColorRegisters();
-                break;
-
-            default: throw new UnhandledOperationException(_machine, $"Unhandled operation for get/set palette registers op={ConvertUtils.ToHex8(op)}");
+        if (op == 0x12) {
+            SetBlockOfDacColorRegisters();
+        } else if (op == 0x17) {
+            GetBlockOfDacColorRegisters();
+        } else {
+            throw new UnhandledOperationException(_machine, $"Unhandled operation for get/set palette registers op={ConvertUtils.ToHex8(op)}");
         }
-    }
-
-    public void SetSinglePaletteRegister() {
-        // TODO
     }
 
     public byte VideoModeValue {
@@ -217,7 +206,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
         _state.AH = 0x00;
     }
 
-    public void VideoSubsystemConfiguration() {
+    private void VideoSubsystemConfiguration() {
         byte op = _state.BL;
         switch (op) {
             case 0x0:
