@@ -45,8 +45,6 @@ public class Memory {
 
     private readonly BreakPointHolder _writeBreakPoints = new();
 
-    private readonly MetaAllocator _metaAllocator = new();
-
     // For breakpoints to access what is getting written
     public byte CurrentlyWritingByte { get; private set; } = 0;
 
@@ -58,12 +56,6 @@ public class Memory {
         }
         this.MemorySize = (int)sizeInKb * 1024;
 
-        // Reserve room for the real-mode interrupt table.
-        this.Reserve(0x0000, 256 * 4);
-
-        // Reserve VGA video RAM window.
-        this.Reserve(0xA000, VramUpperBound - VramAddress + 16u);
-
         _machine = machine;
         Ram = new byte[sizeInKb * 1024];
         unsafe {
@@ -74,18 +66,6 @@ public class Memory {
         UInt8 = new(this);
         UInt16 = new(this);
         UInt32 = new(this);
-    }
-
-    /// <summary>
-    /// TODO: is this method is really needed...?
-    /// Reserves a block of conventional memory.
-    /// </summary>
-    /// <param name="minimumSegment">Minimum segment of requested memory block.</param>
-    /// <param name="length">Size of memory block in bytes.</param>
-    /// <returns>Information about the reserved block of memory.</returns>
-    public ReservedBlock Reserve(ushort minimumSegment, uint length) {
-        ushort allocation = _metaAllocator.Allocate(minimumSegment, (int)length);
-        return new(allocation, length);
     }
 
     /// <summary>
