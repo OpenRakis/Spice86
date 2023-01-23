@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using Spice86.Core.Emulator.Callback;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -32,12 +33,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private const int LastHandle = 254;
     private const int SystemHandle = 0;
 
+    private byte[] XmsRam { get; init; } = new byte[8 * 1024 * 1024];
+
     private readonly short[] pageOwners = new short[MaximumLogicalPages];
     private readonly SortedList<int, EmsHandle> handles = new();
     private readonly int[] mappedPages = new int[MaximumPhysicalPages] { -1, -1, -1, -1 };
     public ExpandedMemoryManager(Machine machine) : base(machine) {
         pageOwners.AsSpan().Fill(-1);
-        _machine.Memory.SetString(0xF100, 0x000A, "EMMXXXX0");
+        //_machine.Memory.SetString(0xF100, 0x000A, "EMMXXXX0");
 
         for (int i = 0; i < 24; i++) {
             pageOwners[i] = SystemHandle;
@@ -73,7 +76,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
 
             default:
-                throw new InvalidOperationException();
+                throw new UnrecoverableException();
         }
     }
 
@@ -112,7 +115,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             break;
 
         default:
-            throw new InvalidOperationException();
+            throw new UnrecoverableException();
         }
     }
 
@@ -129,7 +132,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 MapUnmapMultiplePages();
                 break;
             default:
-                throw new InvalidOperationException();
+                throw new UnrecoverableException();
         }
     }
 
@@ -144,7 +147,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
 
             default:
-                throw new InvalidOperationException();
+                throw new UnrecoverableException();
         }
     }
 
@@ -164,6 +167,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public int AllocatedPages => handles.Values.Sum(p => p.PagesAllocated);
 
+    /// <summary>
+    /// TODO: fix this!
+    /// </summary>
+    /// <param name="fullAddress"></param>
+    /// <returns></returns>
     public uint GetMappedAddress(uint fullAddress) {
         uint physicalPage = (fullAddress - (PageFrameSegment << 4)) / PageSize;
         return fullAddress;
@@ -391,7 +399,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int handleIndex = _state.DX;
         if (handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Write the handle name to ES:DI.
-            _machine.Memory.SetString(_state.ES, _state.DI, handle.Name);
+            //_machine.Memory.SetString(_state.ES, _state.DI, handle.Name);
             // Return good status.
             _state.AH = 0;
         } else {
@@ -407,7 +415,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int handleIndex = _state.DX;
         if (handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Read the handle name from DS:SI.
-            handle.Name = _machine.Memory.GetString(_state.DS, _state.SI, 8);
+            //handle.Name = _machine.Memory.GetString(_state.DS, _state.SI, 8);
             // Return good status.
             _state.AH = 0;
         } else {
@@ -437,8 +445,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         uint arraySegment = _state.DS;
         uint arrayOffset = _state.SI;
         for (int i = 0; i < pageCount; i++) {
-            ushort logicalPageIndex = _machine.Memory.GetUint16(arraySegment, arrayOffset);
-            ushort physicalPageIndex = _machine.Memory.GetUint16(arraySegment, arrayOffset + 2u);
+            ushort logicalPageIndex = 0; // = _machine.Memory.GetUint16(arraySegment, arrayOffset);
+            ushort physicalPageIndex = 0; // = _machine.Memory.GetUint16(arraySegment, arrayOffset + 2u);
 
             if (physicalPageIndex < 0 || physicalPageIndex >= MaximumPhysicalPages) {
                 // Return "physical page out of range" code.
@@ -506,49 +514,49 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Copies a block of memory.
     /// </summary>
     private void Move() {
-        int length = (int)_machine.Memory.GetUint32(_state.DS, _state.SI);
+        // int length = (int)_machine.Memory.GetUint32(_state.DS, _state.SI);
 
-        byte sourceType = _machine.Memory.GetByte(_state.DS, _state.SI + 4u);
-        int sourceHandleIndex = _machine.Memory.GetUint16(_state.DS, _state.SI + 5u);
-        int sourceOffset = _machine.Memory.GetUint16(_state.DS, _state.SI + 7u);
-        int sourcePage = _machine.Memory.GetUint16(_state.DS, _state.SI + 9u);
+        // byte sourceType = _machine.Memory.GetByte(_state.DS, _state.SI + 4u);
+        // int sourceHandleIndex = _machine.Memory.GetUint16(_state.DS, _state.SI + 5u);
+        // int sourceOffset = _machine.Memory.GetUint16(_state.DS, _state.SI + 7u);
+        // int sourcePage = _machine.Memory.GetUint16(_state.DS, _state.SI + 9u);
 
-        byte destType = _machine.Memory.GetByte(_state.DS, _state.SI + 11u);
-        int destHandleIndex = _machine.Memory.GetUint16(_state.DS, _state.SI + 12u);
-        int destOffset = _machine.Memory.GetUint16(_state.DS, _state.SI + 14u);
-        int destPage = _machine.Memory.GetUint16(_state.DS, _state.SI + 16u);
+        // byte destType = _machine.Memory.GetByte(_state.DS, _state.SI + 11u);
+        // int destHandleIndex = _machine.Memory.GetUint16(_state.DS, _state.SI + 12u);
+        // int destOffset = _machine.Memory.GetUint16(_state.DS, _state.SI + 14u);
+        // int destPage = _machine.Memory.GetUint16(_state.DS, _state.SI + 16u);
 
-        SyncToEms();
+        // SyncToEms();
 
-        if (sourceType == 0 && destType == 0) {
-            _state.AH = ConventionalMemoryConventionalMemory((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
-        } else if (sourceType != 0 && destType == 0) {
-            if (!handles.TryGetValue(sourceHandleIndex, out _)) {
-                // Return "couldn't find specified handle" code.
-                _state.AH = 0x83;
-                return;
-            }
+        // if (sourceType == 0 && destType == 0) {
+        //     _state.AH = ConventionalMemoryConventionalMemory((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
+        // } else if (sourceType != 0 && destType == 0) {
+        //     if (!handles.TryGetValue(sourceHandleIndex, out _)) {
+        //         // Return "couldn't find specified handle" code.
+        //         _state.AH = 0x83;
+        //         return;
+        //     }
 
-            _state.AH = EmsToConventionalMemory(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
-        } else if (sourceType == 0 && destType != 0) {
-            if (!handles.TryGetValue(destHandleIndex, out _)) {
-                // Return "couldn't find specified handle" code.
-                _state.AH = 0x83;
-                return;
-            }
+        //     _state.AH = EmsToConventionalMemory(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
+        // } else if (sourceType == 0 && destType != 0) {
+        //     if (!handles.TryGetValue(destHandleIndex, out _)) {
+        //         // Return "couldn't find specified handle" code.
+        //         _state.AH = 0x83;
+        //         return;
+        //     }
 
-            _state.AH = ConvToEms((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
-        } else {
-            if (!handles.TryGetValue(sourceHandleIndex, out EmsHandle? sourceHandle) || !handles.TryGetValue(destHandleIndex, out EmsHandle? destHandle)) {
-                // Return "couldn't find specified handle" code.
-                _state.AH = 0x83;
-                return;
-            }
+        //     _state.AH = ConvToEms((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
+        // } else {
+        //     if (!handles.TryGetValue(sourceHandleIndex, out EmsHandle? sourceHandle) || !handles.TryGetValue(destHandleIndex, out EmsHandle? destHandle)) {
+        //         // Return "couldn't find specified handle" code.
+        //         _state.AH = 0x83;
+        //         return;
+        //     }
 
-            _state.AH = EmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
-        }
+        //     _state.AH = EmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
+        // }
 
-        SyncFromEms();
+        // SyncFromEms();
     }
     /// <summary>
     /// Copies data from mapped conventional memory to EMS pages.
@@ -575,8 +583,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
-    private Span<byte> GetMappedPage(int physicalPageIndex) => _machine.Memory.Span.Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
-    private Span<byte> GetLogicalPage(int logicalPageIndex) => _machine.Memory.Span.Slice(logicalPageIndex * PageSize, PageSize);
+    /// <summary>
+    /// TODO: Replace this with internal memory array
+    /// </summary>
+    /// <param name="physicalPageIndex"></param>
+    /// <returns></returns>
+    private Span<byte> GetMappedPage(int physicalPageIndex) => _machine.Memory.GetSpan(0, _machine.Memory.Ram.Length).Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
+
+    /// <summary>
+    /// TODO: Replace this with internal memory array
+    /// </summary>
+    /// <param name="physicalPageIndex"></param>
+    /// <returns></returns>
+    private Span<byte> GetLogicalPage(int logicalPageIndex) => _machine.Memory.GetSpan(0, _machine.Memory.Ram.Length).Slice(logicalPageIndex * PageSize, PageSize);
     private ushort GetNextFreePage(short handle) {
         for (int i = 0; i < pageOwners.Length; i++) {
             if (pageOwners[i] == -1) {
@@ -607,11 +626,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         if (!reverse) {
             for (uint offset = 0; offset < length; offset++) {
-                memory.SetByte(destAddress + offset, memory.GetByte(sourceAddress + offset));
+                //memory.SetByte(destAddress + offset, memory.GetByte(sourceAddress + offset));
             }
         } else {
             for (int offset = length - 1; offset >= 0; offset--) {
-                memory.SetByte(destAddress + (uint)offset, memory.GetByte(sourceAddress + (uint)offset));
+                //memory.SetByte(destAddress + (uint)offset, memory.GetByte(sourceAddress + (uint)offset));
             }
         }
 
@@ -646,7 +665,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
 
             for (int i = 0; i < size; i++) {
-                memory.SetByte(sourceCount++, source[offset + i]);
+                //memory.SetByte(sourceCount++, source[offset + i]);
             }
 
             length -= size;
@@ -685,7 +704,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
 
             for (int i = 0; i < size; i++) {
-                target[offset + i] = memory.GetByte(sourceCount++);
+                target[offset + i] = 0; //memory.GetByte(sourceCount++);
             }
 
             length -= size;
