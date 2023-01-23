@@ -7,12 +7,13 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
 using System.Linq;
+using System.Text;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
 /// TODO: Remove dependencies to Memory class.
 /// </summary>
-public sealed class ExpandedMemoryManager : InterruptHandler {
+public sealed partial class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Size of each EMS page in bytes.
     /// </summary>
@@ -33,14 +34,24 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private const int LastHandle = 254;
     private const int SystemHandle = 0;
 
-    private byte[] XmsRam { get; init; } = new byte[8 * 1024 * 1024];
+    public const string EmsIdentifier = "EMMXXXX0";
+
+    /// <summary>
+    /// TODO: Make main memory reads within the EMS Segment be read from the EmsRam array
+    /// </summary>
+    /// <value></value>
+    public EmsMemoryMapper EmsMemoryMapper { get; init; }
+
+    public byte[] XmsRam { get; init; } = new byte[8 * 1024 * 1024];
 
     private readonly short[] pageOwners = new short[MaximumLogicalPages];
     private readonly SortedList<int, EmsHandle> handles = new();
     private readonly int[] mappedPages = new int[MaximumPhysicalPages] { -1, -1, -1, -1 };
     public ExpandedMemoryManager(Machine machine) : base(machine) {
+        EmsMemoryMapper = new(_machine.Memory, MemoryUtils.ToPhysicalAddress(PageFrameSegment, 0));
+        EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length);
+
         pageOwners.AsSpan().Fill(-1);
-        //_machine.Memory.SetString(0xF100, 0x000A, "EMMXXXX0");
 
         for (int i = 0; i < 24; i++) {
             pageOwners[i] = SystemHandle;
