@@ -32,9 +32,9 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         return GetUint8Array(BaseAddress, start, length);
     }
 
-    public string GetZeroTerminatedString(int start, int maxLength) {
+    public string GetZeroTerminatedString(uint start, int maxLength) {
         StringBuilder res = new();
-        uint physicalStart = (uint)(BaseAddress + start);
+        uint physicalStart = BaseAddress + start;
         for (int i = 0; i < maxLength; i++) {
             byte characterByte = GetUint8(physicalStart, i);
             if (characterByte == 0) {
