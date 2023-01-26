@@ -43,7 +43,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private readonly int[] mappedPages = new int[MaximumPhysicalPages] { -1, -1, -1, -1 };
     public ExpandedMemoryManager(Machine machine) : base(machine) {
         EmsMemoryMapper = new(_machine.Memory, MemoryUtils.ToPhysicalAddress(PageFrameSegment, 0));
-        EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length);
+        EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
 
         pageOwners.AsSpan().Fill(-1);
 
@@ -397,7 +397,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int handleIndex = _state.DX;
         if (handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Write the handle name to ES:DI.
-            EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), handle.Name, handle.Name.Length);
+            EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), handle.Name, handle.Name.Length + 1);
             // Return good status.
             _state.AH = 0;
         } else {
