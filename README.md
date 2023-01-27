@@ -129,7 +129,7 @@ The list of custom commands can be displayed like this:
 ```
 (gdb) monitor dumpall
 ```
-Dumps everything described below in one shot. Files are created in the dump folder as explained [here](## Dumping data)
+Dumps everything described below in one shot. Files are created in the dump folder as explained [here](https://github.com/OpenRakis/Spice86#dumping-data)
 Several files are produced:
  - spice86dumpMemoryDump.bin: Snapshot of the real mode address space. Contains the instructions that are actually loaded and executed. They may differ from the exe you are running because DOS programs can rewrite some of their instructions / load additional modules in memory.
  - spice86dumpExecutionFlow.json: Contains information used by the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) to make sense of the memory dump, like addresses of the functions, the labels, the instructions that have been executed ...
