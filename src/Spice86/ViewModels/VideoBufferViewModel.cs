@@ -140,7 +140,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private int _width = 200;
 
     [ObservableProperty]
-    private long _framesRendered = 0;
+    private long _framesRendered;
 
     private bool _appClosing;
 
@@ -176,7 +176,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
             };
             _drawThread.Start();
         }
-        _drawAction ??= new Action(() => {
+        _drawAction ??= () => {
             _frameRenderTimeWatch.Restart();
             using ILockedFramebuffer pixels = Bitmap.Lock();
             uint* firstPixelAddress = (uint*)pixels.Address;
@@ -205,7 +205,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
             }, DispatcherPriority.Render);
             _frameRenderTimeWatch.Stop();
             LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
-        });
+        };
         if(!_exitDrawThread) {
             _manualResetEvent.Set();
             _manualResetEvent.Reset();

@@ -57,12 +57,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
 
     [ObservableProperty]
-    private bool _isPaused = false;
+    private bool _isPaused;
 
     public event EventHandler<EventArgs>? KeyUp;
     public event EventHandler<EventArgs>? KeyDown;
 
-    private bool _isMainWindowClosing = false;
+    private bool _isMainWindowClosing;
 
     public MainWindowViewModel(ILogger logger) {
         _logger = logger;
@@ -78,7 +78,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [RelayCommand]
     public async Task DumpEmulatorStateToFile() {
-        if (_programExecutor is null || _configuration is null) {
+        if (_programExecutor is null) {
             return;
         }
         OpenFolderDialog ofd = new OpenFolderDialog() {
@@ -125,7 +125,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private void SetMainTitle() {
-        MainTitle = $"{nameof(Spice86)} {_configuration?.Exe}";
+        MainTitle = $"{nameof(Spice86)} {_configuration.Exe}";
     }
 
     [ObservableProperty]
@@ -157,7 +157,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private async Task StartNewExecutable() {
         if (App.MainWindow is not null) {
-            OpenFileDialog? ofd = new OpenFileDialog() {
+            OpenFileDialog ofd = new OpenFileDialog() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
                 Filters = new(){
@@ -172,7 +172,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 }
             };
             string[]? files = await ofd.ShowAsync(App.MainWindow);
-            if (files?.Any() == true && _configuration is not null) {
+            if (files?.Any() == true) {
                 _configuration.Exe = files[0];
                 _configuration.ExeArgs = "";
                 _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
@@ -227,9 +227,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [RelayCommand]
     public void ResetTimeMultiplier() {
-        if (_configuration is not null) {
-            TimeMultiplier = _configuration.TimeMultiplier;
-        }
+        TimeMultiplier = _configuration.TimeMultiplier;
     }
 
     private Rgb[] _palette = Array.Empty<Rgb>();
@@ -270,8 +268,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private bool RunEmulator() {
-        if (_configuration is not null &&
-            !string.IsNullOrWhiteSpace(_configuration.Exe) &&
+        if (!string.IsNullOrWhiteSpace(_configuration.Exe) &&
             !string.IsNullOrWhiteSpace(_configuration.CDrive)) {
             RunMachine();
             return true;

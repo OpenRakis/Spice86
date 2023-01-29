@@ -20,24 +20,24 @@ using System.Threading;
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
 public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDisposable {
-    private const int DSP_DATA_AVAILABLE_PORT_NUMBER = 0x22E;
-    private const int DSP_READ_PORT_NUMBER = 0x22A;
-    private const int DSP_RESET_PORT_NUMBER = 0x226;
-    private const int DSP_WRITE_BUFFER_STATUS_PORT_NUMBER = 0x22C;
-    private const int FM_MUSIC_DATA_PORT_NUMBER = 0x229;
-    private const int FM_MUSIC_DATA_PORT_NUMBER_2 = 0x389;
-    private const int FM_MUSIC_STATUS_PORT_NUMBER = 0x228;
-    private const int FM_MUSIC_STATUS_PORT_NUMBER_2 = 0x388;
-    private const int LEFT_SPEAKER_DATA_PORT_NUMBER = 0x221;
-    private const int LEFT_SPEAKER_STATUS_PORT_NUMBER = 0x220;
-    private const int MIXER_DATA_PORT_NUMBER = 0x225;
-    private const int MIXER_REGISTER_PORT_NUMBER = 0x224;
-    private const int RIGHT_SPEAKER_DATA_PORT_NUMBER = 0x223;
-    private const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222;
+    public const int DSP_DATA_AVAILABLE_PORT_NUMBER = 0x22E;
+    public const int DSP_READ_PORT_NUMBER = 0x22A;
+    public const int DSP_RESET_PORT_NUMBER = 0x226;
+    public const int DSP_WRITE_BUFFER_STATUS_PORT_NUMBER = 0x22C;
+    public const int FM_MUSIC_DATA_PORT_NUMBER = 0x229;
+    public const int FM_MUSIC_DATA_PORT_NUMBER_2 = 0x389;
+    public const int FM_MUSIC_STATUS_PORT_NUMBER = 0x228;
+    public const int FM_MUSIC_STATUS_PORT_NUMBER_2 = 0x388;
+    public const int LEFT_SPEAKER_DATA_PORT_NUMBER = 0x221;
+    public const int LEFT_SPEAKER_STATUS_PORT_NUMBER = 0x220;
+    public const int MIXER_DATA_PORT_NUMBER = 0x225;
+    public const int MIXER_REGISTER_PORT_NUMBER = 0x224;
+    public const int RIGHT_SPEAKER_DATA_PORT_NUMBER = 0x223;
+    public const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222;
 
-    private bool _disposed = false;
+    private bool _disposed;
 
-    private static readonly SortedList<byte, byte> commandLengths = new() {
+    private static readonly SortedList<byte, byte> CommandLengths = new() {
         [Commands.SetTimeConstant] = 1,
         [Commands.SingleCycleDmaOutput8] = 2,
         [Commands.DspIdentification] = 1,
@@ -72,12 +72,13 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private int _pauseDuration;
     private volatile bool _pausePlayback;
     private BlasterState _state;
-    private bool _playbackStarted = false;
+    private bool _playbackStarted;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
     /// <param name="machine">Virtual machine instance associated with the device.</param>
+    /// <param name="configuration">The emulator config.</param>
     /// <param name="irq">IRQ number for the Sound Blaster.</param>
     /// <param name="dma8">8-bit DMA channel for the Sound Blaster.</param>
     /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
@@ -155,7 +156,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                     _currentCommand = value;
                     _state = BlasterState.ReadingCommand;
                     _commandData.Clear();
-                    commandLengths.TryGetValue(value, out _commandDataLength);
+                    CommandLengths.TryGetValue(value, out _commandDataLength);
                     if (_commandDataLength == 0) {
                         ProcessCommand();
                     }

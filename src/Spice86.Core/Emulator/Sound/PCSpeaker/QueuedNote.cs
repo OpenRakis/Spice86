@@ -14,7 +14,7 @@ internal readonly struct QueuedNote : IEquatable<QueuedNote> {
     /// <summary>
     /// Initializes a new instance of the QueuedNote struct.
     /// </summary>
-    /// <param name="halfPeriod">Length of a period in samples.</param>
+    /// <param name="period">Length of a period in samples.</param>
     /// <param name="periodCount">Number of full periods in the note.</param>
     public QueuedNote(int period, int periodCount) {
         Period = period;

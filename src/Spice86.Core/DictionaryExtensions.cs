@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 internal static class DictionaryExtensions {
     /// <summary>
-    /// Like <see cref="GetValueOrDefault"/> but adds the value to the dict if not found.<br/>
+    /// Like "GetValueOrDefault" but adds the value to the dict if not found.<br/>
     /// </summary>
     /// <typeparam name="TKey">The generic key type</typeparam>
     /// <typeparam name="TValue">The generic return type</typeparam>

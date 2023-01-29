@@ -1,4 +1,6 @@
-﻿using Spice86.Core.DI;
+﻿using Serilog.Events;
+
+using Spice86.Core.DI;
 
 namespace Spice86.Core.Emulator.Gdb;
 
@@ -186,7 +188,10 @@ public class GdbCustomCommandsHandler {
         int bits;
         try {
             bits = int.Parse(bitsString);
-        } catch (Exception) {
+        } catch (Exception e) {
+            if (_logger.IsEnabled(LogEventLevel.Error)) {
+                _logger.Error(e, "{MethodName}", nameof(ReadRam));
+            }
             return Help($"Unparseable bits value {bitsString}");
         }
         string addressString = args[1].ToUpper();
@@ -220,12 +225,15 @@ public class GdbCustomCommandsHandler {
 
         try {
             return ConvertUtils.ParseHex16(valueOrRegisterName);
-        } catch (Exception) {
+        } catch (Exception e) {
+            if (_logger.IsEnabled(LogEventLevel.Error)) {
+                _logger.Error(e, "{MethodName}", nameof(ExtractValueFromHexOrRegisterName));
+            }
             return null;
         }
     }
 
-    private string ExtractAction(string[] args) {
+    private static string ExtractAction(string[] args) {
         if (args.Length >= 2) {
             return args[1];
         }

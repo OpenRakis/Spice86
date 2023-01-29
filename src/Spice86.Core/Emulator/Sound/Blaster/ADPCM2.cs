@@ -36,7 +36,6 @@ internal class ADPCM2 : ADPCMDecoder {
     /// <param name="sourceOffset">Offset in source array to start decoding.</param>
     /// <param name="count">Number of bytes to decode.</param>
     /// <param name="destination">Destination array to write decoded PCM data.</param>
-    /// <param name="destinationOffset">Offset in destination array to start writing.</param>
     public override void Decode(byte[] source, int sourceOffset, int count, Span<byte> destination) {
         byte current = Reference;
 

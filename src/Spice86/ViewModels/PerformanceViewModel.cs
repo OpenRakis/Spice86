@@ -104,5 +104,5 @@ public partial class PerformanceViewModel : ObservableObject {
     private double _framesPerSecond = -1;
 
     [ObservableProperty]
-    private double _videoBuffersLastFrameRenderTime = 0;
+    private double _videoBuffersLastFrameRenderTime;
 }
