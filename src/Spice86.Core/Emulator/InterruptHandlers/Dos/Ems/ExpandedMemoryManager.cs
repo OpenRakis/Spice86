@@ -40,9 +40,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private readonly short[] pageOwners = new short[MaximumLogicalPages];
     private readonly SortedList<int, EmsHandle> handles = new();
-    private readonly int[] mappedPages = new int[MaximumPhysicalPages] { -1, -1, -1, -1 };
+    private readonly int[] mappedPages = new int[] { -1, -1, -1, -1 };
     public ExpandedMemoryManager(Machine machine) : base(machine) {
-        EmsMemoryMapper = new(_machine.Memory, MemoryUtils.ToPhysicalAddress(PageFrameSegment, 0));
+        EmsMemoryMapper = new(EmsRam, MemoryUtils.ToPhysicalAddress(PageFrameSegment, 0));
         EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
 
         pageOwners.AsSpan().Fill(-1);
@@ -87,7 +87,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public void GetPageFrameAddress() {
         // Return page frame segment in BX.
-        _state.BX = unchecked(PageFrameSegment);
+        _state.BX = PageFrameSegment;
         // Set good status.
         _state.AH = 0;
     }
@@ -232,7 +232,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     for (int i = emsHandle.LogicalPages.Count - 1; i >= emsHandle.LogicalPages.Count - pagesRequested; i--) {
                         mappedPages[emsHandle.LogicalPages[i]] = -1;
                     }
-                emsHandle.LogicalPages.RemoveRange(emsHandle.LogicalPages.Count - pagesRequested, emsHandle.PagesAllocated - pagesRequested);
+                    emsHandle.LogicalPages.RemoveRange(emsHandle.LogicalPages.Count - pagesRequested, emsHandle.PagesAllocated - pagesRequested);
                 } else if (pagesRequested > emsHandle.PagesAllocated) {
                     int pagesToAdd = pagesRequested - emsHandle.PagesAllocated;
                     for (int i = 0; i < pagesToAdd; i++) {
@@ -315,7 +315,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int logicalPageIndex = _state.BX;
 
         if (logicalPageIndex != 0xFFFF) {
-            if (logicalPageIndex < 0 || logicalPageIndex >= handle.LogicalPages.Count) {
+            if (logicalPageIndex >= handle.LogicalPages.Count) {
                 // Return "logical page out of range" code.
                 _state.AH = 0x8A;
                 return;
@@ -510,17 +510,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Copies a block of memory.
     /// </summary>
     private void Move() {
-        int length = (int)_machine.Memory.GetUint32(MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI));
+        int length = (int)EmsRam.GetUint32(MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI));
 
-        byte sourceType = _machine.Memory.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 4u)));
-        int sourceHandleIndex = _machine.Memory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 5u)));
-        int sourceOffset = _machine.Memory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 7u)));
-        int sourcePage = _machine.Memory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 9u)));
+        byte sourceType = EmsRam.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 4u)));
+        int sourceHandleIndex = EmsRam.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 5u)));
+        int sourceOffset = EmsRam.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 7u)));
+        int sourcePage = EmsRam.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 9u)));
 
-        byte destType = _machine.Memory.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 11u)));
-        int destHandleIndex = _machine.Memory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 12u)));
-        int destOffset = _machine.Memory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 14u)));
-        int destPage = _machine.Memory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 16u)));
+        byte destType = EmsRam.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 11u)));
+        int destHandleIndex = EmsRam.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 12u)));
+        int destOffset = EmsRam.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 14u)));
+        int destPage = EmsRam.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 16u)));
 
         SyncToEms();
 
@@ -579,9 +579,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
-    private Span<byte> GetMappedPage(int physicalPageIndex) => EmsRam.GetSpan(0, _machine.Memory.Ram.Length).Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
+    private Span<byte> GetMappedPage(int physicalPageIndex) => EmsRam.GetSpan(0, EmsRam.Ram.Length).Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
 
-    private Span<byte> GetLogicalPage(int logicalPageIndex) => _machine.Memory.GetSpan(0, _machine.Memory.Ram.Length).Slice(logicalPageIndex * PageSize, PageSize);
+    private Span<byte> GetLogicalPage(int logicalPageIndex) => EmsRam.GetSpan(0, EmsRam.Ram.Length).Slice(logicalPageIndex * PageSize, PageSize);
     private ushort GetNextFreePage(short handle) {
         for (int i = 0; i < pageOwners.Length; i++) {
             if (pageOwners[i] == -1) {
@@ -594,12 +594,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private byte ConventionalMemoryConventionalMemory(uint sourceAddress, uint destAddress, int length) {
-        if (length < 0) {
-            throw new ArgumentOutOfRangeException(nameof(length));
-        }
-
-        if (length == 0) {
-            return 0;
+        switch (length)
+        {
+            case < 0:
+                throw new ArgumentOutOfRangeException(nameof(length));
+            case 0:
+                return 0;
         }
 
         if (sourceAddress + length > Memory.ConvMemorySize || destAddress + length > Memory.ConvMemorySize) {
@@ -608,7 +608,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         bool overlap = sourceAddress + length - 1 >= destAddress || destAddress + length - 1 >= sourceAddress;
         bool reverse = overlap && sourceAddress > destAddress;
-        Memory memory = _machine.Memory;
 
         if (!reverse) {
             for (uint offset = 0; offset < length; offset++) {
@@ -623,12 +622,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return overlap ? (byte)0x92 : (byte)0;
     }
     private byte EmsToConventionalMemory(int sourcePage, int sourcePageOffset, uint destAddress, int length) {
-        if (length < 0) {
-            throw new ArgumentOutOfRangeException(nameof(length));
-        }
-
-        if (length == 0) {
-            return 0;
+        switch (length)
+        {
+            case < 0:
+                throw new ArgumentOutOfRangeException(nameof(length));
+            case 0:
+                return 0;
         }
 
         if (destAddress + length > Memory.ConvMemorySize) {
@@ -661,12 +660,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return 0;
     }
     private byte ConvToEms(uint sourceAddress, int destPage, int destPageOffset, int length) {
-        if (length < 0) {
-            throw new ArgumentOutOfRangeException(nameof(length));
-        }
-
-        if (length == 0) {
-            return 0;
+        switch (length)
+        {
+            case < 0:
+                throw new ArgumentOutOfRangeException(nameof(length));
+            case 0:
+                return 0;
         }
 
         if (sourceAddress + length > Memory.ConvMemorySize) {
@@ -699,12 +698,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return 0;
     }
     private byte EmsToEms(EmsHandle srcHandle, int sourcePage, int sourcePageOffset, EmsHandle destHandle, int destPage, int destPageOffset, int length) {
-        if (length < 0) {
-            throw new ArgumentOutOfRangeException(nameof(length));
-        }
-
-        if (length == 0) {
-            return 0;
+        switch (length)
+        {
+            case < 0:
+                throw new ArgumentOutOfRangeException(nameof(length));
+            case 0:
+                return 0;
         }
 
         if (sourcePageOffset >= PageSize || destPageOffset >= PageSize) {
