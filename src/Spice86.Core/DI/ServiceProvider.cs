@@ -17,7 +17,7 @@ public partial class ServiceProvider {
     
 }
 
-public static class ServiceProviderExtnesions {
+public static class ServiceProviderExtensions {
     public static ILogger GetLoggerForContext<T>(this ServiceProvider serviceProvider) {
         ILogger logger = serviceProvider.GetService<ILoggerService>().Logger.ForContext<T>();
         return logger;
