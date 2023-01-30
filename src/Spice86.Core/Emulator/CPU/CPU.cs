@@ -64,7 +64,7 @@ public class Cpu {
     public Cpu(Machine machine, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
         _loggerService = loggerService;
         _machine = machine;
-        _memory = machine.Memory;
+        _memory = machine.MainMemory;
         State = new State();
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);

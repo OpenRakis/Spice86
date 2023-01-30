@@ -56,7 +56,7 @@ public class MachineTest {
         ProgramExecutor programExecutor = CreateProgramExecutor("add");
         Machine machine = programExecutor.Machine;
         MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
-        Memory memory = machine.Memory;
+        Memory memory = machine.MainMemory;
 
         // simple read
         // 2 reads, but breakpoint is removed after first
@@ -364,7 +364,7 @@ public class MachineTest {
     [AssertionMethod]
     private Machine TestOneBin(string binName, byte[] expected) {
         Machine machine = Execute(binName);
-        Memory memory = machine.Memory;
+        Memory memory = machine.MainMemory;
         CompareMemoryWithExpected(memory, expected, 0, expected.Length - 1);
         return machine;
     }

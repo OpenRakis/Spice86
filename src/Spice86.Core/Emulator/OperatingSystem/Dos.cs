@@ -33,8 +33,8 @@ public class Dos {
     public Dos(Machine machine, ILoggerService logger) {
         _machine = machine;
         _logger = logger;
-        FileManager = new DosFileManager(_machine.Memory, _logger, this);
-        MemoryManager = new DosMemoryManager(_machine.Memory, _logger);
+        FileManager = new DosFileManager(_machine.MainMemory, _logger, this);
+        MemoryManager = new DosMemoryManager(_machine.MainMemory, _logger);
         DosInt20Handler = new DosInt20Handler(_machine, _logger);
         DosInt21Handler = new DosInt21Handler(_machine, _logger, this);
         DosInt2FHandler = new DosInt2fHandler(_machine, _logger);
@@ -89,33 +89,33 @@ public class Dos {
         device.Offset = offset ?? (ushort)(Devices.Count * DeviceDriverHeaderLength);
         // Write the DOS device driver header to memory
         ushort index = device.Offset;
-        _machine.Memory.UInt16[device.Segment, index] = 0xFFFF;
+        _machine.MainMemory.UInt16[device.Segment, index] = 0xFFFF;
         index += 2;
-        _machine.Memory.UInt16[device.Segment, index] = 0xFFFF;
+        _machine.MainMemory.UInt16[device.Segment, index] = 0xFFFF;
         index += 2;
-        _machine.Memory.UInt16[device.Segment, index] = (ushort)device.Attributes;
+        _machine.MainMemory.UInt16[device.Segment, index] = (ushort)device.Attributes;
         index += 2;
-        _machine.Memory.UInt16[device.Segment, index] = device.StrategyEntryPoint;
+        _machine.MainMemory.UInt16[device.Segment, index] = device.StrategyEntryPoint;
         index += 2;
-        _machine.Memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
+        _machine.MainMemory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
         index += 2;
         if (device.Attributes.HasFlag(DeviceAttributes.Character)) {
             var characterDevice = (CharacterDevice)device;
-            _machine.Memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
+            _machine.MainMemory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
                 Encoding.ASCII.GetBytes( $"{characterDevice.Name,-8}"));
         } else {
             var blockDevice = (BlockDevice)device;
-            _machine.Memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
+            _machine.MainMemory.UInt8[device.Segment, index] = blockDevice.UnitCount;
             index += 1;
-            _machine.Memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
+            _machine.MainMemory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
                 Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
         }
 
         // Make the previous device point to this one
         if (Devices.Count > 0) {
             IVirtualDevice previousDevice = Devices[^1];
-            _machine.Memory.UInt16[previousDevice.Segment, previousDevice.Offset] = device.Offset;
-            _machine.Memory.UInt16[previousDevice.Segment, (ushort)(previousDevice.Offset + 2)] = device.Segment;
+            _machine.MainMemory.UInt16[previousDevice.Segment, previousDevice.Offset] = device.Offset;
+            _machine.MainMemory.UInt16[previousDevice.Segment, (ushort)(previousDevice.Offset + 2)] = device.Segment;
         }
 
         // Handle changing of current input, output or clock devices.
