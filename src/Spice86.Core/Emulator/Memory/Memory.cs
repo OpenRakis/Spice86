@@ -10,26 +10,6 @@ using System.Collections.Generic;
 /// Addressable memory of the machine.
 /// </summary>
 public class Memory {
-    /// <summary>
-    /// Starting physical address of video RAM.
-    /// </summary>
-    public const int VramAddress = 0xA000 << 4;
-
-    /// <summary>
-    /// The highest address which is mapped in the class VgaCard
-    /// </summary>
-    /// <remarks>
-    /// Video RAM mapping is technically up to 0xBFFF0 normally.
-    /// </remarks>
-    public const int VramUpperBound = 0xBFFF << 4;
-
-    /// <summary>
-    /// Size of conventional memory in bytes.
-    /// </summary>
-    public const uint ConvMemorySize = 1024 * 1024;
-
-    public bool EnableA20 { get; internal set; }
-
     public int MemorySize { get; init; }
 
     private readonly BreakPointHolder _readBreakPoints = new();
@@ -40,9 +20,6 @@ public class Memory {
     public byte CurrentlyWritingByte { get; private set; } = 0;
 
     public Memory(uint sizeInKb) {
-        if (sizeInKb * 1024 < ConvMemorySize) {
-            throw new ArgumentException("Memory size must be at least 1 MB.");
-        }
         this.MemorySize = (int)sizeInKb * 1024;
         Ram = new byte[sizeInKb * 1024];
         UInt8 = new(this);

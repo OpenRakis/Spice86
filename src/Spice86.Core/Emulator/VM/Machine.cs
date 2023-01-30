@@ -74,7 +74,7 @@ public class Machine : IDisposable {
 
     public MachineBreakpoints MachineBreakpoints { get; }
 
-    public Memory Memory { get; }
+    public MainMemory MainMemory { get; }
 
     public Midi Midi { get; }
 
@@ -121,8 +121,8 @@ public class Machine : IDisposable {
         Gui = gui;
         RecordData = recordData;
 
-        Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes);
-        Bios = new Bios(Memory);
+        MainMemory = new MainMemory(sizeInKb: (uint)Configuration.Kilobytes);
+        Bios = new Bios(MainMemory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
         if(configuration.Ems) {
             Ems = new(this);
@@ -235,7 +235,7 @@ public class Machine : IDisposable {
                 if (Gui?.IsPaused == true || IsPaused) {
                     Gui?.WaitForContinue();
                 }
-                dmaChannel.Transfer(Memory);
+                dmaChannel.Transfer(MainMemory);
                 if (!_exitDmaLoop) {
                     _dmaResetEvent.WaitOne(1);
                 }

@@ -27,7 +27,7 @@ public class CSharpOverrideHelper {
 
     public Machine Machine { get; }
 
-    public Memory Memory => Machine.Memory;
+    public Memory Memory => Machine.MainMemory;
 
     public UInt8Indexer UInt8 => Memory.UInt8;
     public UInt16Indexer UInt16 => Memory.UInt16;

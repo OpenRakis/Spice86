@@ -19,7 +19,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     protected DefaultIOPortHandler(Machine machine, Configuration configuration) {
         Configuration = configuration;
         _machine = machine;
-        _memory = machine.Memory;
+        _memory = machine.MainMemory;
         _cpu = machine.Cpu;
         _failOnUnhandledPort = Configuration.FailOnUnhandledPort;
     }
