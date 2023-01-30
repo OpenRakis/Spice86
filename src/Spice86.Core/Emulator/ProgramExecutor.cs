@@ -137,7 +137,7 @@ public sealed class ProgramExecutor : IDisposable {
             // if needed
             Machine.InstallAllCallbacksInInterruptTable();
             // Put HLT at the reset address
-            Machine.Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
+            Machine.MainMemory.UInt16[0xF000, 0xFFF0] = 0xF4;
         } else {
             // Bios will take care of enabling interrupts (or not)
             Machine.DualPic.MaskAllInterrupts();

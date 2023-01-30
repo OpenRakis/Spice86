@@ -1,4 +1,6 @@
-﻿using Serilog.Events;
+﻿namespace Spice86.Core.Emulator.ReverseEngineer;
+
+using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
@@ -13,8 +15,6 @@ using Spice86.Shared.Interfaces;
 
 using System.Linq;
 
-namespace Spice86.Core.Emulator.ReverseEngineer;
-
 public class CSharpOverrideHelper {
     protected readonly ILoggerService _loggerService;
 
@@ -22,7 +22,7 @@ public class CSharpOverrideHelper {
 
     public Machine Machine { get; }
 
-    public Memory.Memory Memory => Machine.Memory;
+    public Memory Memory => Machine.MainMemory;
 
     public UInt8Indexer UInt8 => Memory.UInt8;
     public UInt16Indexer UInt16 => Memory.UInt16;

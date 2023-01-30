@@ -44,7 +44,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
         if (_machine.Configuration.InitializeDOS is true) {
             return _machine.CallbackHandler.NopCallbackInstructionInRamCopy();
         }
-        return _machine.Memory.Ram;
+        return _machine.MainMemory.Ram;
     }
 
     private void DumpExecutionFlow() {

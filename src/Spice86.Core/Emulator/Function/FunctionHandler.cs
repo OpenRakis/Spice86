@@ -95,7 +95,7 @@ public class FunctionHandler {
     }
 
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
-        Memory memory = _machine.Memory;
+        Memory memory = _machine.MainMemory;
         State state = _machine.Cpu.State;
         return returnCallType switch {
             CallType.NEAR => new SegmentedAddress(state.CS, memory.GetUint16(stackPhysicalAddress)),
