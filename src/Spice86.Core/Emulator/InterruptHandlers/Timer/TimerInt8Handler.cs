@@ -16,7 +16,7 @@ public class TimerInt8Handler : InterruptHandler {
 
     public TimerInt8Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _timer = machine.Timer;
-        _memory = machine.Memory;
+        _memory = machine.MainMemory;
         _dualPic = machine.DualPic;
     }
 

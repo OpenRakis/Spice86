@@ -104,8 +104,8 @@ public class ExecutionFlowRecorder {
                 return;
             }
 
-            byte oldValue = machine.Memory.UInt8[physicalAddress];
-            byte newValue = machine.Memory.CurrentlyWritingByte;
+            byte oldValue = machine.MainMemory.UInt8[physicalAddress];
+            byte newValue = machine.MainMemory.CurrentlyWritingByte;
             if (oldValue != newValue) {
                 State state = machine.Cpu.State;
                 RegisterExecutableByteModification(

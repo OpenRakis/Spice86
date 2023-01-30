@@ -3,7 +3,6 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -27,8 +26,8 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     protected DefaultIOPortHandler(Machine machine, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
         _machine = machine;
+        _memory = machine.MainMemory;
         _loggerService = loggerService;
-        _memory = machine.Memory;
         _cpu = machine.Cpu;
         _failOnUnhandledPort = Configuration.FailOnUnhandledPort;
     }
