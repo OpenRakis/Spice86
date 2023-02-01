@@ -121,13 +121,13 @@ public class Machine : IDisposable {
         Gui = gui;
         RecordData = recordData;
 
-        MainMemory = new MainMemory(sizeInKb: (uint)Configuration.Kilobytes);
+        MainMemory = new MainMemory(this, sizeInKb: (uint)Configuration.Kilobytes);
         Bios = new Bios(MainMemory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
         if(configuration.Ems) {
             Ems = new(this);
         }
-
+        
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
 
