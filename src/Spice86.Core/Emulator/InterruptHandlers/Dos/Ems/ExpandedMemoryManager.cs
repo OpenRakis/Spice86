@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+﻿using System.Numerics;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
@@ -28,9 +30,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public const int MaximumLogicalPages = 256;
 
     public const ushort PageFrameSegment = 0xE000;
-    private const int FirstHandle = 1;
-    private const int LastHandle = 254;
-    private const int SystemHandle = 0;
+    public const int FirstHandle = 1;
+    public const int LastHandle = 254;
+    public const int SystemHandle = 0;
 
     public const string EmsIdentifier = "EMMXXXX0";
 
@@ -40,7 +42,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private readonly short[] pageOwners = new short[MaximumLogicalPages];
     private readonly SortedList<int, EmsHandle> handles = new();
-    private readonly int[] mappedPages = new int[] { -1, -1, -1, -1 };
+    private readonly int[] mappedPages = new int[] {-1, -1, -1, -1};
+    
     public ExpandedMemoryManager(Machine machine) : base(machine) {
         ExpandedMemory = new(machine,8 * 1024);
         EmsMemoryMapper = new(ExpandedMemory, MemoryUtils.ToPhysicalAddress(PageFrameSegment, 0));
@@ -73,6 +76,52 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x53, new Callback(0x53, HandleName));
         _dispatchTable.Add(0x57, new Callback(0x57, MoveExchange));
         _dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
+    }
+    
+    public bool TryGetMappedPageData(uint address, out uint data) {
+        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
+            data = 0;
+            return false;
+        }
+        data = ExpandedMemory.GetUint32(address);
+        return true;
+    }
+
+    public bool TryGetMappedPageData(uint address, out ushort data) {
+        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
+            data = 0;
+            return false;
+        }
+        data = ExpandedMemory.GetUint16(address);
+        return true;
+    }
+    
+    public bool TryGetMappedPageData(uint address, out byte data) {
+        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
+            data = 0;
+            return false;
+        }
+        data = ExpandedMemory.GetUint8(address);
+        return true;
+    }
+
+    public bool TryWriteMappedPageData<T>(uint address, T data) where T : INumber<T> {
+        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
+            return false;
+        }
+        switch (data)
+        {
+            case byte b:
+                ExpandedMemory.SetUint8(address, b);
+                break;
+            case ushort u:
+                ExpandedMemory.SetUint16(address, u);
+                break;
+            case uint i:
+                ExpandedMemory.SetUint32(address, i);
+                break;
+        }
+        return true;
     }
 
     public void AdvancedMap() {
