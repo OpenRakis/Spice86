@@ -129,7 +129,7 @@ public class Machine : IDisposable {
         if(configuration.Ems) {
             Ems = new(this);
         }
-
+        
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
 
