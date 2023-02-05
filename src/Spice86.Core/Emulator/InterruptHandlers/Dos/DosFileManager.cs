@@ -1,6 +1,4 @@
-﻿using Spice86.Core.DI;
-
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
 
@@ -8,7 +6,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Utils;
 
 using Spice86.Core.Emulator.Errors;
-using Spice86.Logging;
 
 using System;
 using System.Collections.Generic;
@@ -365,10 +362,14 @@ public class DosFileManager {
     }
 
     private OpenFile? GetOpenFile(ushort fileHandle) {
-        return _openFiles[FileHandleToIndex(fileHandle)];
+        int index = FileHandleToIndex(fileHandle);
+        if (index >= _openFiles.Length) {
+            return null;
+        }
+        return _openFiles[index];
     }
 
-    private bool IsValidFileHandle(ushort fileHandle) {
+    private static bool IsValidFileHandle(ushort fileHandle) {
         return fileHandle is >= FileHandleOffset and <= (MaxOpenFiles + FileHandleOffset);
     }
 
@@ -510,7 +511,7 @@ public class DosFileManager {
         string fileToProcess = ConvertUtils.ToSlashPath(caseInsensitivePath);
         string? parentDir = Path.GetDirectoryName(fileToProcess);
         if (File.Exists(fileToProcess) || Directory.Exists(fileToProcess) ||
-            (string.IsNullOrWhiteSpace(parentDir) == false && Directory.GetDirectories(parentDir).Length == 0)) {
+            (string.IsNullOrWhiteSpace(parentDir) == false && Directory.Exists(parentDir) && Directory.GetDirectories(parentDir).Length == 0)) {
             // file exists or root reached, no need to go further. Path found.
             return caseInsensitivePath;
         }
