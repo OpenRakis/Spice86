@@ -116,23 +116,18 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     public void GetMappablePhysicalArrayAddressArray() {
-        throw new NotImplementedException();
     }
 
     public void HandleFunctions() {
-        throw new NotImplementedException();
     }
 
     public void SaveRestorePartialPageMap() {
-        throw new NotImplementedException();
     }
 
     public void SaveRestorePageMap() {
-        throw new NotImplementedException();
     }
 
     public void GetPagesForAllHandles() {
-        throw new NotImplementedException();
     }
 
     public bool TryGetMappedPageData(uint address, out uint data) {
