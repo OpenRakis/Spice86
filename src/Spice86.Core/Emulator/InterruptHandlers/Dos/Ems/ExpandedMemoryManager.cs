@@ -102,15 +102,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     public byte EmsAllocateMemory(ushort pages, ref ushort dx, bool canAllocateZeroPages) {
-        /* Check for 0 page allocation */
+        // Check for 0 page allocation
         if (pages == 0) {
             if (!canAllocateZeroPages) return EmsErrors.EmmZeroPages;
         }
-        /* Check for a free handle */
-        int handleNum = CreateHandle(pages);
-        /* Change handle only if there is no error. */
-        if (handleNum is not 0) {
-            dx = (ushort)handleNum;
+        // Check for a free handle
+        // Change handle only if there is no error.
+        if (TryCreateHandle(pages, out int handleIndex)) {
+            dx = (ushort)handleIndex;
         }
 
         return EmsErrors.EmmNoError;
@@ -310,8 +309,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         if (pagesRequested <= MaximumLogicalPages - AllocatedPages) {
             // Some programs like to use one more page than they ask for.
             // What a bunch of rubbish.
-            int handle = CreateHandle((int)pagesRequested + 1);
-            if (handle != 0) {
+            
+            if (TryCreateHandle((int)pagesRequested + 1, out int handle)) {
                 // Return handle in DX.
                 _state.DX = (ushort)handle;
                 // Return good status.
@@ -361,11 +360,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     /// <summary>
-    /// Attempts to create a new EMS handle.
+    /// Attempts to create a new EMS handle. Returns <c>false</c> if no handle could be created.
     /// </summary>
     /// <param name="pagesRequested">Number of pages to allocate to the new handle.</param>
+    /// <param name="handleIndex">Index for the newly created handle, if returned status is <c>true</c>.</param>
+
     /// <returns>New EMS handle if created successfully; otherwise zero.</returns>
-    private int CreateHandle(int pagesRequested) {
+    private bool TryCreateHandle(int pagesRequested, out int handleIndex) {
         for (int i = FirstHandle; i <= LastHandle; i++) {
             if (!_handles.ContainsKey(i)) {
                 var pages = new List<ushort>(pagesRequested);
@@ -374,11 +375,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 }
                 var handle = new EmsHandle(pages);
                 _handles.Add(i, handle);
-                return i;
+                handleIndex = i;
+                return true;
             }
         }
 
-        return 0;
+        handleIndex = 0;
+        return false;
     }
 
     /// <summary>
