@@ -5,7 +5,7 @@ using System.Linq;
 /// <summary>
 /// Represents a handle for allocated EMS memory.
 /// </summary>
-internal sealed class EmsHandle {
+public sealed class EmsHandle {
     private readonly int[] savedPageMap = new int[] { -1, -1, -1, -1 };
 
     private static readonly string nullHandleName = new((char)0, 8);
