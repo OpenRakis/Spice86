@@ -9,11 +9,11 @@ public static class EmsErrors {
     public const byte EmmFuncNoSup = 0x84;
     public const byte EmmOutOfHandles = 0x85;
     public const byte EmmSaveMapError = 0x86;
-    public const byte EmmOutOfPhys = 0x87;
-    public const byte EmmOutOfLog = 0x88;
+    public const byte EmmOutOfPhysicalPages = 0x87;
+    public const byte EmmOutOfLogicalPages = 0x88;
     public const byte EmmZeroPages = 0x89;
-    public const byte EmmLogOutRange = 0x8a;
-    public const byte EmmIllPhys = 0x8b;
+    public const byte EmsLogicalPageOutOfRange = 0x8a;
+    public const byte EmsIllegalPhysicalPage = 0x8b;
     public const byte EmmPageMapSaved = 0x8d;
     public const byte EmmNoSavedPageMap = 0x8e;
     public const byte EmmInvalidSub = 0x8f;
