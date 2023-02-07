@@ -61,23 +61,53 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private void FillDispatchTable() {
         _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
-        _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameAddress));
-        _dispatchTable.Add(0x42, new Callback(0x42, GetUnallocatedPageCount));
-        _dispatchTable.Add(0x43, new Callback(0x43, AllocatePages));
-        _dispatchTable.Add(0x44, new Callback(0x44, MapUnmapHandlePage));
-        _dispatchTable.Add(0x45, new Callback(0x45, DeallocatePages));
-        _dispatchTable.Add(0x46, new Callback(0x46, GetVersion));
+        _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameSegment));
+        _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfPages));
+        _dispatchTable.Add(0x43, new Callback(0x43, GetHandleAndAllocatePages));
+        _dispatchTable.Add(0x44, new Callback(0x44, MapExpandedMeoryPage));
+        _dispatchTable.Add(0x45, new Callback(0x45, ReleaseHandleAndFreePages));
+        _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
         _dispatchTable.Add(0x47, new Callback(0x47, SavePageMap));
         _dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
         _dispatchTable.Add(0x4B, new Callback(0x4B, GetHandleCount));
-        _dispatchTable.Add(0x4C, new Callback(0x4C, GetHandlePages));
-        _dispatchTable.Add(0x50, new Callback(0x50, AdvancedMap));
+        _dispatchTable.Add(0x4C, new Callback(0x4C, GetPagesForOneHandle));
+        _dispatchTable.Add(0x4D, new Callback(0x4D, GetPagesForAllHandles));
+        _dispatchTable.Add(0x4E, new Callback(0x4E, SaveRestorePageMap));
+        _dispatchTable.Add(0x4F, new Callback(0x4F, SaveRestorePartialPageMap));
+        _dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultiplePageMap));
         _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
-        _dispatchTable.Add(0x53, new Callback(0x53, HandleName));
-        _dispatchTable.Add(0x57, new Callback(0x57, MoveExchange));
+        _dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
+        _dispatchTable.Add(0x54, new Callback(0x54, HandleFunctions));
+        _dispatchTable.Add(0x57, new Callback(0x57, MemoryRegion));
+        _dispatchTable.Add(0x58, new Callback(0x58, GetMappablePhysicalArrayAddressArray));
+        _dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
         _dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
     }
-    
+
+    private void AllocateStandardRawPages() {
+        throw new NotImplementedException();
+    }
+
+    private void GetMappablePhysicalArrayAddressArray() {
+        throw new NotImplementedException();
+    }
+
+    private void HandleFunctions() {
+        throw new NotImplementedException();
+    }
+
+    private void SaveRestorePartialPageMap() {
+        throw new NotImplementedException();
+    }
+
+    private void SaveRestorePageMap() {
+        throw new NotImplementedException();
+    }
+
+    private void GetPagesForAllHandles() {
+        throw new NotImplementedException();
+    }
+
     public bool TryGetMappedPageData(uint address, out uint data) {
         if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
             data = 0;
@@ -124,7 +154,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return true;
     }
 
-    public void AdvancedMap() {
+    public void MapOrUnmapMultiplePageMap() {
         switch (_state.AL) {
             case EmsFunctions.AdvancedMap_MapUnmapPages:
                 MapUnmapMultiplePages();
@@ -135,14 +165,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
-    public void GetPageFrameAddress() {
+    public void GetPageFrameSegment() {
         // Return page frame segment in BX.
         _state.BX = PageFrameSegment;
         // Set good status.
         _state.AH = 0;
     }
 
-    public void GetUnallocatedPageCount() {
+    public void GetNumberOfPages() {
         // Return number of pages available in BX.
         _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
         // Return total number of pages in DX.
@@ -151,7 +181,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.AH = 0;
     }
 
-    public void GetVersion() {
+    public void GetEmmVersion() {
         // Return EMS version 4.0.
         _state.AL = 0x40;
         // Return good status.
@@ -191,7 +221,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
-    public void HandleName() {
+    public void SetGetHandleName() {
         switch (_state.AL) {
             case EmsFunctions.HandleName_Get:
                 GetHandleName();
@@ -206,7 +236,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
-    public void MoveExchange() {
+    public void MemoryRegion() {
         switch (_state.AL) {
             case EmsFunctions.MoveExchange_Move:
                 Move();
@@ -242,7 +272,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Allocates pages for a new handle.
     /// </summary>
-    public void AllocatePages() {
+    public void GetHandleAndAllocatePages() {
         uint pagesRequested = _state.BX;
         if (pagesRequested == 0) {
             // Return "attempted to allocate zero pages" code.
@@ -327,7 +357,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Deallocates a handle and all of its pages.
     /// </summary>
-    public void DeallocatePages() {
+    public void ReleaseHandleAndFreePages() {
         int handle = _state.DX;
         if (handles.Remove(handle)) {
             for (int i = 0; i < pageOwners.Length; i++) {
@@ -347,7 +377,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Maps or unmaps a physical page.
     /// </summary>
-    public void MapUnmapHandlePage() {
+    public void MapExpandedMeoryPage() {
         int physicalPage = _state.AL;
         if (physicalPage is < 0 or >= MaximumPhysicalPages) {
             // Return "physical page out of range" code.
@@ -427,7 +457,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Gets the number of pages allocated to a handle.
     /// </summary>
-    public void GetHandlePages() {
+    public void GetPagesForOneHandle() {
         int handleIndex = _state.DX;
         if (handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Return the number of pages allocated in BX.
@@ -575,7 +605,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         SyncToEms();
 
         if (sourceType == 0 && destType == 0) {
-            _state.AH = ConventionalMemoryConventionalMemory((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
+            _state.AH = CopyConventionalMemoryToConventionalMemory((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
         } else if (sourceType != 0 && destType == 0) {
             if (!handles.TryGetValue(sourceHandleIndex, out _)) {
                 // Return "couldn't find specified handle" code.
@@ -583,7 +613,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return;
             }
 
-            _state.AH = EmsToConventionalMemory(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
+            _state.AH = CopyEmsToConventionalMemory(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
         } else if (sourceType == 0 && destType != 0) {
             if (!handles.TryGetValue(destHandleIndex, out _)) {
                 // Return "couldn't find specified handle" code.
@@ -591,7 +621,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return;
             }
 
-            _state.AH = ConvToEms((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
+            _state.AH = CopyConventionalMemoryToEmsMemory((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
         } else {
             if (!handles.TryGetValue(sourceHandleIndex, out EmsHandle? sourceHandle) || !handles.TryGetValue(destHandleIndex, out EmsHandle? destHandle)) {
                 // Return "couldn't find specified handle" code.
@@ -599,7 +629,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return;
             }
 
-            _state.AH = EmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
+            _state.AH = CopyEmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
         }
 
         SyncFromEms();
@@ -643,7 +673,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return 0;
     }
 
-    private byte ConventionalMemoryConventionalMemory(uint sourceAddress, uint destAddress, int length) {
+    private byte CopyConventionalMemoryToConventionalMemory(uint sourceAddress, uint destAddress, int length) {
         switch (length)
         {
             case < 0:
@@ -671,7 +701,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         return overlap ? (byte)0x92 : (byte)0;
     }
-    private byte EmsToConventionalMemory(int sourcePage, int sourcePageOffset, uint destAddress, int length) {
+    private byte CopyEmsToConventionalMemory(int sourcePage, int sourcePageOffset, uint destAddress, int length) {
         switch (length)
         {
             case < 0:
@@ -709,7 +739,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         return 0;
     }
-    private byte ConvToEms(uint sourceAddress, int destPage, int destPageOffset, int length) {
+    private byte CopyConventionalMemoryToEmsMemory(uint sourceAddress, int destPage, int destPageOffset, int length) {
         switch (length)
         {
             case < 0:
@@ -747,7 +777,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         return 0;
     }
-    private byte EmsToEms(EmsHandle srcHandle, int sourcePage, int sourcePageOffset, EmsHandle destHandle, int destPage, int destPageOffset, int length) {
+    private byte CopyEmsToEms(EmsHandle srcHandle, int sourcePage, int sourcePageOffset, EmsHandle destHandle, int destPage, int destPageOffset, int length) {
         switch (length)
         {
             case < 0:
