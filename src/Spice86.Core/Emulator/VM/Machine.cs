@@ -125,7 +125,7 @@ public class Machine : IDisposable {
         Bios = new Bios(MainMemory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
         if(configuration.Ems) {
-            Ems = new(this);
+            Ems = new(this, serviceProvider.GetLoggerForContext<ExpandedMemoryManager>());
         }
         
         // Breakpoints
