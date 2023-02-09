@@ -30,6 +30,14 @@ public class SegmentedAddress : IComparable<SegmentedAddress> {
         return MemoryUtils.ToPhysicalAddress(Segment, Offset) == MemoryUtils.ToPhysicalAddress(other.Segment, other.Offset);
     }
 
+    /// <summary>
+    /// Overloaded addition operator.
+    /// </summary>
+    public static SegmentedAddress operator +(SegmentedAddress x, ushort y) {
+        x.Offset += y;
+        return x;
+    }
+
     public override int GetHashCode() {
         return (int)ToPhysical();
     }

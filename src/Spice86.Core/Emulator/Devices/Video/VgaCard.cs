@@ -1,4 +1,4 @@
-﻿using Spice86.Core.DI;
+﻿
 
 namespace Spice86.Core.Emulator.Devices.Video;
 
@@ -6,6 +6,7 @@ using Serilog;
 using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared;
+using Spice86.Core.Emulator.Devices.Video.Fonts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Memory;
@@ -17,7 +18,6 @@ using Spice86.Core.Emulator.VM;
 public class VgaCard : DefaultIOPortHandler {
     private readonly ILogger _logger;
 
-    public const ushort CRT_IO_PORT = 0x03D4;
     // http://www.osdever.net/FreeVGA/vga/extreg.htm#3xAR
     public const ushort VGA_SEQUENCER_ADDRESS_REGISTER_PORT = 0x03C4;
     public const ushort VGA_SEQUENCER_DATA_REGISTER_PORT = 0x03C5;
@@ -44,11 +44,14 @@ public class VgaCard : DefaultIOPortHandler {
     
     private readonly IGui? _gui;
     private byte _crtStatusRegister = StatusRegisterRetraceActive;
+    private readonly LazyConcurrentDictionary<FontType, SegmentedAddress> _fonts = new();
+    private ushort _nextFontOffset;
 
     public VgaCard(Machine machine, ILogger logger, IGui? gui, Configuration configuration) : base(machine, configuration) {
         _logger = logger;
         _gui = gui;
         VgaDac = new VgaDac(machine);
+        machine.Bios.CrtControllerBaseAddress = 0x03D4;
     }
 
     public void GetBlockOfDacColorRegisters(int firstRegister, int numberOfColors, uint colorValuesAddress) {
@@ -73,6 +76,15 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public VgaDac VgaDac { get; }
+
+    /// <summary>
+    /// Returns the address in memory where the specified font is stored.
+    /// </summary>
+    /// <param name="fontType">One of the <see cref="FontType"/>s</param>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public SegmentedAddress GetFontAddress(FontType fontType) {
+        return _fonts.GetOrAdd(fontType, LoadFont);
+    }
 
     public byte GetVgaReadIndex() {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
@@ -184,4 +196,21 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public void UpdateScreen() => _gui?.Draw(_memory.Ram, VgaDac.Rgbs);
+
+    private SegmentedAddress LoadFont(FontType type)
+    {
+        byte[] bytes = type switch {
+            FontType.Ega8X14 => Font.Ega8X14,
+            FontType.Ibm8X8 => Font.Ibm8X8,
+            FontType.Vga8X16 => Font.Vga8X16,
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown font")
+        };
+        int length = bytes.Length;
+        var address = new SegmentedAddress(MemoryMap.VideoBios, _nextFontOffset);
+        // Not using LoadData to avoid triggering breakpoints.
+        Array.Copy(bytes, 0, _memory.Ram, address.ToPhysical(), length);
+        _nextFontOffset += (ushort)length;
+
+        return address;
+    }
 }

@@ -363,7 +363,7 @@ public class DosFileManager {
 
     private OpenFile? GetOpenFile(ushort fileHandle) {
         int index = FileHandleToIndex(fileHandle);
-        if (index >= _openFiles.Length) {
+        if (index >= _openFiles.Length || index < 0) {
             return null;
         }
         return _openFiles[index];

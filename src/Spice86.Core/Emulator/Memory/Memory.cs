@@ -176,4 +176,23 @@ public class Memory {
         CurrentlyWritingByte = value;
         _writeBreakPoints.TriggerMatchingBreakPoints(address);
     }
+
+    // Overloads to work with segment:offset addresses.
+    public uint GetUint32(ushort segment, ushort offset) => 
+        GetUint32((uint)((segment << 4) + offset));
+    
+    public ushort GetUint16(ushort segment, ushort offset) => 
+        GetUint16((uint)((segment << 4) + offset));
+    
+    public byte GetUint8(ushort segment, ushort offset) => 
+        GetUint8((uint)((segment << 4) + offset));
+
+    public void SetUint32(ushort segment, ushort offset, uint value) =>
+        SetUint32((uint)((segment << 4) + offset), value);
+
+    public void SetUint16(ushort segment, ushort offset, ushort value) =>
+        SetUint16((uint)((segment << 4) + offset), value);
+
+    public void SetUint8(ushort segment, ushort offset, byte value) =>
+        SetUint8((uint)((segment << 4) + offset), value);
 }

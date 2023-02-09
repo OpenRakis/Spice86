@@ -6,6 +6,7 @@ using Serilog;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Devices.Video.Fonts;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
@@ -14,9 +15,6 @@ using Spice86.Core.Utils;
 using Spice86.Logging;
 
 public class VideoBiosInt10Handler : InterruptHandler {
-    public const int BiosVideoMode = 0x49;
-    public static readonly uint BIOS_VIDEO_MODE_ADDRESS = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, BiosVideoMode);
-    public static readonly uint CRT_IO_PORT_ADDRESS_IN_RAM = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, MemoryMap.BiosDataAreaOffsetCrtIoPort);
     private readonly ILogger _logger;
     private readonly byte _currentDisplayPage = 0;
     private readonly byte _numberOfScreenColumns = 80;
@@ -61,7 +59,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
             if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _logger.Information("GET VIDEO MODE");
             }
-            return _memory.GetUint8(BIOS_VIDEO_MODE_ADDRESS);
+            return _machine.Bios.VideoMode;
         }
     }
 
@@ -72,11 +70,6 @@ public class VideoBiosInt10Handler : InterruptHandler {
         _state.AH = _numberOfScreenColumns;
         _state.AL = VideoModeValue;
         _state.BH = _currentDisplayPage;
-    }
-
-    public void InitRam() {
-        SetVideoModeValue(VgaCard.MODE_320_200_256);
-        _memory.SetUint16(CRT_IO_PORT_ADDRESS_IN_RAM, VgaCard.CRT_IO_PORT);
     }
 
     public override void Run() {
@@ -134,7 +127,7 @@ public class VideoBiosInt10Handler : InterruptHandler {
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _logger.Information("SET VIDEO MODE {@VideoMode}", ConvertUtils.ToHex8(mode));
         }
-        _memory.SetUint8(BIOS_VIDEO_MODE_ADDRESS, mode);
+        _machine.Bios.VideoMode = mode;
         _vgaCard.SetVideoModeValue(mode);
     }
 
@@ -155,8 +148,39 @@ public class VideoBiosInt10Handler : InterruptHandler {
         _dispatchTable.Add(0x0E, new Callback(0x0E, WriteTextInTeletypeMode));
         _dispatchTable.Add(0x0F, new Callback(0x0F, GetVideoStatus));
         _dispatchTable.Add(0x10, new Callback(0x10, GetSetPaletteRegisters));
+        _dispatchTable.Add(0x11, new Callback(0x11, CharacterGeneratorRoutine));
         _dispatchTable.Add(0x12, new Callback(0x12, VideoSubsystemConfiguration));
         _dispatchTable.Add(0x1A, new Callback(0x1A, VideoDisplayCombination));
+    }
+
+    private void CharacterGeneratorRoutine() {
+        switch (_state.AL) {
+            case 0x30:
+                GetFontInformation();
+                break;
+
+            default:
+                throw new NotImplementedException($"Video command 11{_state.AL:X2}h not implemented.");
+        }
+    }
+
+    private void GetFontInformation() {
+        SegmentedAddress address = _state.BH switch {
+            0x00 => new SegmentedAddress(_memory.GetUint16(0x1F * 4 + 2), _memory.GetUint16(0x1F * 4)),
+            0x01 => new SegmentedAddress(_memory.GetUint16(0x43 * 4 + 2), _memory.GetUint16(0x43 * 4)),
+            0x02 => _vgaCard.GetFontAddress(FontType.Ega8X14),
+            0x03 => _vgaCard.GetFontAddress(FontType.Ibm8X8),
+            0x04 => _vgaCard.GetFontAddress(FontType.Ibm8X8) + (128 * 8), // 2nd half
+            0x05 => throw new NotImplementedException("No 9x14 font available"),
+            0x06 => _vgaCard.GetFontAddress(FontType.Vga8X16),
+            0x07 => throw new NotImplementedException("No 9x16 font available"),
+            _ => throw new NotImplementedException($"Video command 1130_{_state.BH:X2}h not implemented.")
+        };
+
+        _state.ES = address.Segment;
+        _state.BP = address.Offset;
+        _state.CX = _machine.Bios.CharacterPointHeight;
+        _state.DL = _machine.Bios.ScreenRows;
     }
 
     private void VideoDisplayCombination() {
