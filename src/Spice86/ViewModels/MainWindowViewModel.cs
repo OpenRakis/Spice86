@@ -15,8 +15,6 @@ using CommunityToolkit.Mvvm.Input;
 using MessageBox.Avalonia.BaseWindows.Base;
 using MessageBox.Avalonia.Enums;
 
-using Serilog;
-
 using Spice86;
 using Spice86.Keyboard;
 using Spice86.Views;
