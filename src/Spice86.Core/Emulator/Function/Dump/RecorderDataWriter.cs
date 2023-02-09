@@ -1,4 +1,5 @@
 using Spice86.Core.DI;
+using Spice86.Logging;
 
 namespace Spice86.Core.Emulator.Function.Dump;
 
@@ -11,19 +12,19 @@ using Spice86.Core.Emulator.VM;
 using System.Text.Json;
 
 public class RecorderDataWriter : RecordedDataIoHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
     private readonly Machine _machine;
     private readonly Cpu _cpu;
 
-    public RecorderDataWriter(string dumpDirectory, Machine machine, ILogger logger) : base(dumpDirectory) {
-        _logger = logger;
+    public RecorderDataWriter(string dumpDirectory, Machine machine, ILoggerService loggerService) : base(dumpDirectory) {
+        _loggerService = loggerService;
         _machine = machine;
         _cpu = machine.Cpu;
     }
 
     public void DumpAll() {
-        _logger.Information("Dumping all data to {DumpDirectory}", DumpDirectory);
+        _loggerService.Information("Dumping all data to {DumpDirectory}", DumpDirectory);
         DumpCpuRegisters("");
         DumpMemory("");
         DumpGhidraSymbols();
@@ -71,6 +72,6 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
     private void DumpExecutionFlow() {
-        new ExecutionFlowDumper(new ServiceProvider().GetLoggerForContext<ExecutionFlowDumper>()).Dump(_machine.Cpu.ExecutionFlowRecorder, GetExecutionFlowFile());
+        new ExecutionFlowDumper(new ServiceProvider().GetService<ILoggerService>()).Dump(_machine.Cpu.ExecutionFlowRecorder, GetExecutionFlowFile());
     }
 }

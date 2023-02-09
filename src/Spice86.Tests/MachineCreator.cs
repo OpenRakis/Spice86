@@ -1,3 +1,5 @@
+using Spice86.Logging;
+
 namespace Spice86.Tests;
 
 using Spice86.Core.CLI;
@@ -24,7 +26,7 @@ public class MachineCreator {
         };
 
         ProgramExecutor programExecutor = new ProgramExecutor(
-            new ServiceProvider().GetLoggerForContext<ProgramExecutor>(),
+            new ServiceProvider().GetService<ILoggerService>(),
             null, null, configuration);;
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;

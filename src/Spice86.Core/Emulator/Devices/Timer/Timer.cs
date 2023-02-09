@@ -21,7 +21,7 @@ using System.Diagnostics;
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
 public class Timer : DefaultIOPortHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
@@ -42,23 +42,23 @@ public class Timer : DefaultIOPortHandler {
     // retrace is in a separate counter because it needs to be controlled by the time multiplier unlike screen refresh
     private readonly Counter _vgaRetraceCounter;
 
-    public Timer(Machine machine, ILogger logger, DualPic dualPic, VgaCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
-        _logger = logger;
+    public Timer(Machine machine, ILoggerService loggerService, DualPic dualPic, VgaCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
+        _loggerService = loggerService;
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         _cpu = machine.Cpu;
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(machine,
-                new ServiceProvider().GetLoggerForContext<Counter>(),
+                new ServiceProvider().GetService<ILoggerService>(),
                 i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         }
         // screen refresh is 60hz regardless of the configuration
         _vgaScreenRefreshCounter = new Counter(machine,
-            new ServiceProvider().GetLoggerForContext<Counter>(), 4, new TimeCounterActivator(1));
+            new ServiceProvider().GetService<ILoggerService>(), 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
         // retrace 60 times per seconds
         _vgaRetraceCounter = new Counter(machine,
-            new ServiceProvider().GetLoggerForContext<Counter>(),
+            new ServiceProvider().GetService<ILoggerService>(),
             5, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         _vgaRetraceCounter.SetValue((int)(Counter.HardwareFrequency / 60));
     }
@@ -86,8 +86,8 @@ public class Timer : DefaultIOPortHandler {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             byte value = counter.ValueUsingMode;
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("READING COUNTER {@Counter}, partial value is {@Value}", counter, value);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("READING COUNTER {@Counter}, partial value is {@Value}", counter, value);
             }
             return value;
         }
@@ -105,8 +105,8 @@ public class Timer : DefaultIOPortHandler {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             counter.SetValueUsingMode(value);
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("SETTING COUNTER {@Index} to partial value {@Value}. {@Counter}", counter.Index, value, counter);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("SETTING COUNTER {@Index} to partial value {@Value}. {@Counter}", counter.Index, value, counter);
             }
             return;
         } 
@@ -114,8 +114,8 @@ public class Timer : DefaultIOPortHandler {
             int counterIndex = value >> 6;
             Counter counter = GetCounter(counterIndex);
             counter.Configure(value);
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("SETTING CONTROL REGISTER FOR COUNTER {@CounterIndex}. {@Counter}", counterIndex, counter);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("SETTING CONTROL REGISTER FOR COUNTER {@CounterIndex}. {@Counter}", counterIndex, counter);
             }
             return;
         }

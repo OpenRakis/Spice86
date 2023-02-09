@@ -16,10 +16,10 @@ using System.Diagnostics;
 using System.IO;
 
 public class ExecutionFlowDumper {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
-    public ExecutionFlowDumper(ILogger logger) {
-        _logger = logger;
+    public ExecutionFlowDumper(ILoggerService loggerService) {
+        _loggerService = loggerService;
     }
 
     public void Dump(ExecutionFlowRecorder executionFlowRecorder, string destinationFilePath) {
@@ -30,7 +30,7 @@ public class ExecutionFlowDumper {
 
     public ExecutionFlowRecorder ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
-            _logger.Information("File doesn't exists");
+            _loggerService.Information("File doesn't exists");
             return new ExecutionFlowRecorder();
         }
         try {

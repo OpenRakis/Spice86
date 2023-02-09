@@ -1,4 +1,5 @@
 ﻿using Spice86.Core.DI;
+using Spice86.Logging;
 
 namespace Spice86.Core.Emulator.Gdb;
 
@@ -10,7 +11,7 @@ using System;
 using System.Linq;
 
 public class GdbCommandHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private bool _isConnected = true;
     private readonly GdbCommandBreakpointHandler _gdbCommandBreakpointHandler;
     private readonly GdbCommandMemoryHandler _gdbCommandMemoryHandler;
@@ -19,18 +20,18 @@ public class GdbCommandHandler {
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
 
-    public GdbCommandHandler(GdbIo gdbIo, Machine machine, ILogger logger, Configuration configuration) {
-        _logger = logger;
+    public GdbCommandHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService, Configuration configuration) {
+        _loggerService = loggerService;
         _gdbIo = gdbIo;
         _machine = machine;
         _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine,
-            new ServiceProvider().GetLoggerForContext<GdbCommandMemoryHandler>());
+            new ServiceProvider().GetService<ILoggerService>());
         _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine,
-            new ServiceProvider().GetLoggerForContext<GdbCommandMemoryHandler>());
+            new ServiceProvider().GetService<ILoggerService>());
         _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine,
-            new ServiceProvider().GetLoggerForContext<GdbCommandBreakpointHandler>());
+            new ServiceProvider().GetService<ILoggerService>());
         _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine,
-            new ServiceProvider().GetLoggerForContext<GdbCustomCommandsHandler>(),
+            new ServiceProvider().GetService<ILoggerService>(),
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }
 
@@ -44,8 +45,8 @@ public class GdbCommandHandler {
     public void Step() => _gdbCommandBreakpointHandler.Step();
 
     public void RunCommand(string command) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Received command {@Command}", command);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Received command {@Command}", command);
         }
         char first = command[0];
         string commandContent = command[1..];
@@ -73,8 +74,8 @@ public class GdbCommandHandler {
                 'Z' => _gdbCommandBreakpointHandler.AddBreakpoint(commandContent),
                 _ => _gdbIo.GenerateUnsupportedResponse()
             };
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Responded with {@Response}", response);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("Responded with {@Response}", response);
             }
             if (response != null) {
                 _gdbIo.SendResponse(response);

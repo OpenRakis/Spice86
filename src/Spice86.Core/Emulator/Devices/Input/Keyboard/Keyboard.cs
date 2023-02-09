@@ -1,4 +1,5 @@
 ﻿using Spice86.Core.DI;
+using Spice86.Logging;
 
 namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
@@ -14,13 +15,13 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly IGui? _gui;
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
-    public Keyboard(Machine machine, ILogger logger, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) : base(machine, configuration) {
+    public Keyboard(Machine machine, ILoggerService loggerService, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) : base(machine, configuration) {
         ServiceProvider serviceProvider = new ServiceProvider();
-        _logger = logger;
+        _loggerService = loggerService;
         _gui = gui;
         _keyScanCodeConverter = keyScanCodeConverter;
         if (_gui is not null) {
@@ -56,13 +57,13 @@ public class Keyboard : DefaultIOPortHandler {
             KeyboardInput lastKeyboardInput = (KeyboardInput)LastKeyboardInput;
             if (lastKeyboardInput.IsPressed) {
                 scancode = _keyScanCodeConverter?.GetKeyPressedScancode(lastKeyboardInput);
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _logger.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
                 }
             } else {
                 scancode = _keyScanCodeConverter?.GetKeyReleasedScancode(lastKeyboardInput);
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _logger.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
                 }
             }
 

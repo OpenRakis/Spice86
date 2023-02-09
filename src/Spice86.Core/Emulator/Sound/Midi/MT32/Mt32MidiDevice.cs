@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Sound.Midi.MT32;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.Sound.Midi.MT32;
 
 using Spice86.Core.DI;
 using Spice86.Core.Emulator.Sound.Midi;
@@ -16,7 +18,7 @@ internal sealed class Mt32MidiDevice : MidiDevice {
 
         _player = new Mt32Player(
             romsPath,
-            new ServiceProvider().GetLoggerForContext<Mt32Player>(),
+            new ServiceProvider().GetService<ILoggerService>(),
             configuration);
     }
 

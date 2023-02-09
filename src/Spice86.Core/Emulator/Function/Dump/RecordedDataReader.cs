@@ -1,4 +1,6 @@
 
+using Spice86.Logging;
+
 namespace Spice86.Core.Emulator.Function.Dump;
 
 using Memory;
@@ -13,7 +15,7 @@ public class RecordedDataReader : RecordedDataIoHandler {
     public ExecutionFlowRecorder ReadExecutionFlowRecorderFromFileOrCreate(bool recordData) {
         ExecutionFlowRecorder executionFlowRecorder =
             new ExecutionFlowDumper(
-                new ServiceProvider().GetLoggerForContext<ExecutionFlowDumper>())
+                new ServiceProvider().GetService<ILoggerService>())
                     .ReadFromFileOrCreate(GetExecutionFlowFile());
         executionFlowRecorder.RecordData = recordData;
         return executionFlowRecorder;

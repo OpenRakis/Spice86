@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.LoadableFile.Bios;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.LoadableFile.Bios;
 
 using Spice86.Core.DI;
 using Spice86.Core.Emulator.LoadableFile;
@@ -15,7 +17,7 @@ public class BiosLoader : ExecutableFileLoader {
     public override bool DosInitializationNeeded => false;
 
     public BiosLoader(Machine machine) : base(machine,
-        new ServiceProvider().GetLoggerForContext<ExecutableFileLoader>()) {
+        new ServiceProvider().GetService<ILoggerService>()) {
     }
 
     public override byte[] LoadFile(string file, string? arguments) {

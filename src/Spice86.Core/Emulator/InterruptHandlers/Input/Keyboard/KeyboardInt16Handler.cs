@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
 using Serilog;
 
@@ -7,11 +9,11 @@ using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
 
 public class KeyboardInt16Handler : InterruptHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
-    public KeyboardInt16Handler(Machine machine, ILogger logger, BiosKeyboardBuffer biosKeyboardBuffer) : base(machine) {
-        _logger = logger;
+    public KeyboardInt16Handler(Machine machine, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(machine) {
+        _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _dispatchTable.Add(0x00, new Callback(0x00, () => GetKeystroke()));
         _dispatchTable.Add(0x01, new Callback(0x01, () => GetKeystrokeStatus(true)));
@@ -20,8 +22,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     public override byte Index => 0x16;
 
     public void GetKeystroke() {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("READ KEY STROKE");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("READ KEY STROKE");
         }
         ushort? keyCode = GetNextKeyCode();
         keyCode ??= 0;
@@ -32,8 +34,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public void GetKeystrokeStatus(bool calledFromVm) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("KEY STROKE STATUS");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("KEY STROKE STATUS");
         }
 
         // ZF = 0 if a key pressed (even Ctrl-Break)

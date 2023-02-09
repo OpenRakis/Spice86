@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using System.Text;
 
 public class FunctionHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
     private readonly Stack<FunctionCall> _callerStack = new();
 
@@ -26,8 +26,8 @@ public class FunctionHandler {
     private readonly Machine _machine;
 
     private uint StackPhysicalAddress => _machine.Cpu.State.StackPhysicalAddress;
-    public FunctionHandler(Machine machine, ILogger logger, bool recordData) {
-        _logger = logger;
+    public FunctionHandler(Machine machine, ILoggerService loggerService, bool recordData) {
+        _loggerService = loggerService;
         _machine = machine;
         _recordData = recordData;
     }
@@ -48,8 +48,8 @@ public class FunctionHandler {
 
             FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, recordReturn);
             _callerStack.Push(currentFunctionCall);
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _logger.Debug("Calling {@CurrentFunction} from {@Caller}", currentFunction, caller);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _loggerService.Debug("Calling {@CurrentFunction} from {@Caller}", currentFunction, caller);
             }
 
             currentFunction.Enter(caller);
@@ -119,15 +119,15 @@ public class FunctionHandler {
     public bool Ret(CallType returnCallType) {
         if (_recordData) {
             if (_callerStack.TryPop(out FunctionCall? currentFunctionCall) == false) {
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                    _logger.Warning("Returning but no call was done before!!");
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                    _loggerService.Warning("Returning but no call was done before!!");
                 }
                 return false;
             }
             FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
             bool returnAddressAlignedWithCallStack = AddReturn(returnCallType, currentFunctionCall, currentFunctionInformation);
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _logger.Debug("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _loggerService.Debug("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
             }
 
             if (!returnAddressAlignedWithCallStack) {
@@ -211,7 +211,7 @@ public class FunctionHandler {
         cpu.ExecutionFlowRecorder.RegisterUnalignedReturn(state.CS, state.IP, actualReturnAddress.Segment,
             actualReturnAddress.Offset);
         FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information) && currentFunctionInformation != null
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information) && currentFunctionInformation != null
             && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {
             CallType callType = currentFunctionCall.CallType;
             SegmentedAddress stackAddressAfterCall = currentFunctionCall.StackAddressAfterCall;
@@ -226,7 +226,7 @@ public class FunctionHandler {
             if (!Equals(expectedReturnAddress, returnAddressOnCallTimeStack)) {
                 additionalInformation += "Return address on stack was modified";
             }
-            _logger.Information(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
+            _loggerService.Information(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
                     Current function {@CurrentFunctionInformation} return {@CurrentFunctionReturn} will not go to the expected place:
                     - At {@CallType} call time, return was supposed to be {@ExpectedReturnAddress} stored at SS:SP {@StackAddressAfterCall}. Value there is now {@ReturnAddressOnCallTimeStack}
                     - On the stack it is now {@ActualReturnAddress} stored at SS:SP {@CurrentStackAddress}

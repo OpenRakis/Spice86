@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
 using Serilog;
 
@@ -11,13 +13,13 @@ using Spice86.Shared.Interfaces;
 /// Crude implementation of Int9
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
     private readonly Keyboard _keyboard;
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
-    public BiosKeyboardInt9Handler(Machine machine, ILogger logger, IKeyScanCodeConverter? keyScanCodeConverter) : base(machine) {
-        _logger = logger;
+    public BiosKeyboardInt9Handler(Machine machine, ILoggerService loggerService, IKeyScanCodeConverter? keyScanCodeConverter) : base(machine) {
+        _loggerService = loggerService;
         _keyboard = machine.Keyboard;
         _keyScanCodeConverter = keyScanCodeConverter;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
@@ -36,8 +38,8 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
         byte ascii = (_keyScanCodeConverter?.GetAsciiCode(scancode.Value)) ?? 0;
 
-        if(_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("{@BiosInt9KeyReceived}", ascii);
+        if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("{@BiosInt9KeyReceived}", ascii);
         }
 
         BiosKeyboardBuffer.AddKeyCode((ushort)(scancode.Value << 8 | ascii));

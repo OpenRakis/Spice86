@@ -1,4 +1,5 @@
 ﻿using Spice86.Core.DI;
+using Spice86.Logging;
 
 namespace Spice86.Core.Emulator;
 
@@ -33,14 +34,14 @@ using Spice86.Core.CLI;
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
 public sealed class ProgramExecutor : IDisposable {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private bool _disposedValue;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
 
-    public ProgramExecutor(ILogger logger, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) {
-        _logger = logger;
+    public ProgramExecutor(ILoggerService loggerService, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) {
+        _loggerService = loggerService;
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         Machine = CreateMachine(gui, keyScanCodeConverter);
         _gdbServer = CreateGdbServer();
@@ -53,7 +54,7 @@ public sealed class ProgramExecutor : IDisposable {
         Machine.Run();
         if (RecordData) {
             new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine,
-                new ServiceProvider().GetLoggerForContext<RecorderDataWriter>())
+                new ServiceProvider().GetService<ILoggerService>())
                 .DumpAll();
         }
     }
@@ -105,7 +106,7 @@ public sealed class ProgramExecutor : IDisposable {
         if (lowerCaseFileName.EndsWith(".exe")) {
             return new ExeLoader(
                 Machine,
-                new ServiceProvider().GetLoggerForContext<ExeLoader>(),
+                new ServiceProvider().GetService<ILoggerService>(),
                 entryPointSegment);
         }
 
@@ -117,7 +118,7 @@ public sealed class ProgramExecutor : IDisposable {
     }
 
     private Machine CreateMachine(IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter) {
-        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, new ServiceProvider().GetLoggerForContext<CounterConfigurator>());
+        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, new ServiceProvider().GetService<ILoggerService>());
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
         Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder,
@@ -126,8 +127,8 @@ public sealed class ProgramExecutor : IDisposable {
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("InitializeDOS parameter not provided. Guessed value is: {@InitializeDOS}", _configuration.InitializeDOS);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("InitializeDOS parameter not provided. Guessed value is: {@InitializeDOS}", _configuration.InitializeDOS);
             }
         }
 
@@ -152,7 +153,7 @@ public sealed class ProgramExecutor : IDisposable {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
             return new GdbServer(Machine,
-                new ServiceProvider().GetLoggerForContext<GdbServer>(),
+                new ServiceProvider().GetService<ILoggerService>(),
                 _configuration);
         }
 
@@ -163,8 +164,8 @@ public sealed class ProgramExecutor : IDisposable {
         IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Override supplied: {@OverideSupplier}", supplier);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("Override supplied: {@OverideSupplier}", supplier);
             }
 
             foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
@@ -235,8 +236,8 @@ public sealed class ProgramExecutor : IDisposable {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName,
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName,
                 loader.GetType());
         }
 

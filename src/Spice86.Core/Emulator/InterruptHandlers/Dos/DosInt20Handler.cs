@@ -13,16 +13,16 @@ using Spice86.Logging;
 /// Reimplementation of int20
 /// </summary>
 public class DosInt20Handler : InterruptHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
-    public DosInt20Handler(Machine machine, ILogger logger) : base(machine) {
-        _logger = logger;
+    public DosInt20Handler(Machine machine, ILoggerService loggerService) : base(machine) {
+        _loggerService = loggerService;
     }
 
     public override byte Index => 0x20;
 
     public override void Run() {
-        _logger.Information("PROGRAM TERMINATE");
+        _loggerService.Information("PROGRAM TERMINATE");
         _cpu.IsRunning = false;
     }
 }

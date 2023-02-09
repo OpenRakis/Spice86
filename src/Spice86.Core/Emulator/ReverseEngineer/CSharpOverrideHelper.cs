@@ -1,4 +1,5 @@
 ﻿using Spice86.Core.DI;
+using Spice86.Logging;
 
 namespace Spice86.Core.Emulator.ReverseEngineer;
 
@@ -20,7 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 public class CSharpOverrideHelper {
-    protected readonly ILogger _logger;
+    protected readonly ILoggerService _loggerService;
 
     public Cpu Cpu => Machine.Cpu;
 
@@ -93,8 +94,8 @@ public class CSharpOverrideHelper {
     }
 
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILogger logger) {
-        _logger = logger;
+        Machine machine, ILoggerService loggerService) {
+        _loggerService = loggerService;
         _functionInformations = functionInformations;
         Machine = machine;
         JumpDispatcher = new();
@@ -144,8 +145,8 @@ public class CSharpOverrideHelper {
 
             string error =
                 $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(
                     "There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.",
                     address, existingFunctionInformation.Name);
             }
@@ -167,8 +168,8 @@ public class CSharpOverrideHelper {
         if (recorder.Names.TryGetValue(physicalAddress, out string? existing)) {
             string error =
                 $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(
                     "There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it. Please check your mappings for duplicates.",
                     address, existing);
             }
@@ -279,7 +280,7 @@ public class CSharpOverrideHelper {
             message += " Found " + actualTarget.Name + " there.";
             if (actualTarget.FuntionOverride != null) {
                 message += " Calling it.";
-                _logger.Warning("{Message}", message);
+                _loggerService.Warning("{Message}", message);
                 ExecuteCall(actualTarget.FuntionOverride, () => actualTarget.FuntionOverride.Invoke(0).Invoke());
                 actualStackAddress = State.StackPhysicalAddress;
                 actualReturnCs = State.CS;
@@ -363,8 +364,8 @@ public class CSharpOverrideHelper {
     public UnrecoverableException FailAsUntested(string message) {
         string error =
             $"Untested code reached, please tell us how to reach this state. Here is the message: {message}. Here is the Machine stack: {State}";
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-            _logger.Error("{Error}", error);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            _loggerService.Error("{Error}", error);
         }
 
         return new UnrecoverableException(error);
@@ -398,7 +399,7 @@ public class CSharpOverrideHelper {
     public Action Hlt() => () => Exit();
 
     protected void Exit() {
-        _logger.Information("Program requested exit. Terminating now.");
+        _loggerService.Information("Program requested exit. Terminating now.");
         throw new HaltRequestedException();
     }
 }

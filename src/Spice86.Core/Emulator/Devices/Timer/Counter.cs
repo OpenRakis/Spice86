@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Devices.Timer;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.Devices.Timer;
 
 using Serilog;
 
@@ -8,7 +10,7 @@ using Spice86.Core.Utils;
 
 public class Counter {
     public const long HardwareFrequency = 1193182;
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     public CounterActivator Activator { get; protected set; }
     private readonly Machine _machine;
 
@@ -16,8 +18,8 @@ public class Counter {
 
     private bool _firstByteWritten;
 
-    public Counter(Machine machine, ILogger logger, int index, CounterActivator activator) {
-        _logger = logger;
+    public Counter(Machine machine, ILoggerService loggerService, int index, CounterActivator activator) {
+        _loggerService = loggerService;
         _machine = machine;
         Index = index;
         Activator = activator;
@@ -141,8 +143,8 @@ public class Counter {
 
     private void UpdateDesiredFreqency(long desiredFrequency) {
         Activator.Frequency = desiredFrequency;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", Index, desiredFrequency);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Updating counter {@Index} frequency to {@DesiredFrequency}.", Index, desiredFrequency);
         }
     }
 

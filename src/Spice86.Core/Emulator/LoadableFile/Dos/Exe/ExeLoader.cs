@@ -13,30 +13,30 @@ namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 /// Loads a DOS 16 bits EXE file in memory.
 /// </summary>
 public class ExeLoader : DosFileLoader {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly ushort _startSegment;
 
-    public ExeLoader(Machine machine, ILogger logger, ushort startSegment) : base(machine) {
-        _logger = logger;
+    public ExeLoader(Machine machine, ILoggerService loggerService, ushort startSegment) : base(machine) {
+        _loggerService = loggerService;
         _startSegment = startSegment;
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
         byte[] exe = ReadFile(file);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Exe size: {@ExeSize}", exe.Length);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Exe size: {@ExeSize}", exe.Length);
         }
         ExeFile exeFile = new ExeFile(exe);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Read header: {@ReadHeader}", exeFile);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Read header: {@ReadHeader}", exeFile);
         }
 
         LoadExeFileInMemory(exeFile, _startSegment);
         ushort pspSegment = (ushort)(_startSegment - 0x10);
         SetupCpuForExe(exeFile, _startSegment, pspSegment);
         new PspGenerator(_machine).GeneratePsp(pspSegment, arguments);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Initial CPU State: {@CpuState}", _cpu.State);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Initial CPU State: {@CpuState}", _cpu.State);
         }
         return exe;
     }

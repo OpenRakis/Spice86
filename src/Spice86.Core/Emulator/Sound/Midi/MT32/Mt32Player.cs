@@ -28,10 +28,10 @@ internal sealed class Mt32Player : IDisposable {
 
     private readonly ManualResetEvent _fillBufferEvent = new(false);
 
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
-    public Mt32Player(string romsPath, ILogger logger, Configuration configuration) {
-        _logger = logger;
+    public Mt32Player(string romsPath, ILoggerService loggerService, Configuration configuration) {
+        _loggerService = loggerService;
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
@@ -41,8 +41,8 @@ internal sealed class Mt32Player : IDisposable {
             return;
         }
         if(!LoadRoms(romsPath)) {
-            if(_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created", nameof(LoadRoms), romsPath, nameof(Mt32Player));
+            if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created", nameof(LoadRoms), romsPath, nameof(Mt32Player));
             }
             return;
         }

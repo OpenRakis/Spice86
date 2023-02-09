@@ -20,10 +20,10 @@ using System.Linq;
 /// Spice86 Entry Point
 /// </summary>
 public class Program {
-    private static readonly ILogger _logger;
+    private static readonly ILoggerService _loggerService;
 
     static Program() {
-        _logger = new ServiceProvider().GetLoggerForContext<Program>();
+        _loggerService = new ServiceProvider().GetService<ILoggerService>();
     }
 
     /// <summary>
@@ -54,13 +54,13 @@ public class Program {
         else {
             try {
                 ProgramExecutor programExecutor = new ProgramExecutor(
-                    new ServiceProvider().GetLoggerForContext<ProgramExecutor>(),
+                    new ServiceProvider().GetService<ILoggerService>(),
                     null, null, configuration);
                 programExecutor.Run();
             } catch (Exception e) {
                 e.Demystify();
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _logger.Error(e, "An error occurred during execution");
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _loggerService.Error(e, "An error occurred during execution");
                 }
                 throw;
             }

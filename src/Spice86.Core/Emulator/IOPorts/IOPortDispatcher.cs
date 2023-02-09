@@ -16,10 +16,10 @@ using Spice86.Logging;
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
 
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
-    public IOPortDispatcher(Machine machine, ILogger logger, Configuration configuration) : base(machine, configuration) {
-        _logger = logger;
+    public IOPortDispatcher(Machine machine, ILoggerService loggerService, Configuration configuration) : base(machine, configuration) {
+        _loggerService = loggerService;
         _failOnUnhandledPort = configuration.FailOnUnhandledPort;
     }
 
@@ -32,7 +32,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
     public override byte ReadByte(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte), entry.GetType(), port);
+            _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte), entry.GetType(), port);
             return entry.ReadByte(port);
         }
 
@@ -41,7 +41,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     
     public override ushort ReadWord(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord), entry.GetType(), port);
+            _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord), entry.GetType(), port);
             return entry.ReadWord(port);
         }
 
@@ -50,7 +50,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     
     public override uint ReadDWord(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadDWord), entry.GetType(), port);
+            _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadDWord), entry.GetType(), port);
             return entry.ReadDWord(port);
         }
 
@@ -59,7 +59,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
     public override void WriteByte(int port, byte value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteByte), entry.GetType(), port, value);
+            _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteByte), entry.GetType(), port, value);
             entry.WriteByte(port, value);
         } else {
             base.WriteByte(port, value);
@@ -68,7 +68,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
     public override void WriteWord(int port, ushort value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteWord), entry.GetType(), port, value);
+            _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteWord), entry.GetType(), port, value);
             entry.WriteWord(port, value);
         } else {
             base.WriteWord(port, value);
@@ -77,7 +77,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     
     public override void WriteDWord(int port, uint value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            _logger.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteDWord), entry.GetType(), port, value);
+            _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}", nameof(WriteDWord), entry.GetType(), port, value);
             entry.WriteDWord(port, value);
         } else {
             base.WriteDWord(port, value);
