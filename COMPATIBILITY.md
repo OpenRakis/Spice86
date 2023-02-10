@@ -20,7 +20,7 @@ Here is a list of old games I tested with what worked and what didn't:
 | Double dragon 3 | :see_no_evil: Crashes | Int 10.3 (text mode) not implemented. | 2021/09/26 |
 | Dragon's Lair | :see_no_evil: Crashes | Terminates without displaying anything and without error. | 2021/09/26 |
 | Dragon's Lair 3 | :see_no_evil: Crashes | Int 10.3 (text mode) not implemented. | 2021/09/26 |
-| Dune 2 | :slightly_smiling_face: Playable | Mouse cursor doesn't move (callback missing) | 2021/09/26 |
+| Dune 2 | :slightly_smiling_face: Playable | Mouse cursor doesn't move (callback missing) | 2023/02/10 |
 | F-15 Strike Eagle II | :see_no_evil: Crashes | Launching sub programs not implemented (int 21, 4B) | 2021/09/26 |
 | Flight Simulator 5 | :see_no_evil: Crashes | Launching sub programs not implemented (int 21, 4B) | 2021/09/26 |
 | Home Alone | :see_no_evil: Crashes | Int 10.8 (text mode) not implemented | 2021/09/26 |
