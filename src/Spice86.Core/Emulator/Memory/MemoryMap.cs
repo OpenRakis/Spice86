@@ -28,5 +28,5 @@ public static class MemoryMap {
     /// <summary>
     /// Segment where VGA BIOS is stored.
     /// </summary>
-    public const ushort VideoBios = 0xC000;
+    public const ushort VideoBiosSegment = 0xC000;
 }

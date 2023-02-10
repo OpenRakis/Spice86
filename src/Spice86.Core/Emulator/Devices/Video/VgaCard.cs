@@ -206,7 +206,7 @@ public class VgaCard : DefaultIOPortHandler {
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown font")
         };
         int length = bytes.Length;
-        var address = new SegmentedAddress(MemoryMap.VideoBios, _nextFontOffset);
+        var address = new SegmentedAddress(MemoryMap.VideoBiosSegment, _nextFontOffset);
         // Not using LoadData to avoid triggering breakpoints.
         Array.Copy(bytes, 0, _memory.Ram, address.ToPhysical(), length);
         _nextFontOffset += (ushort)length;
