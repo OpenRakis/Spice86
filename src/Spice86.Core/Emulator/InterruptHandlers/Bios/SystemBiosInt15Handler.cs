@@ -9,6 +9,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         _dispatchTable.Add(0xC0, new Callback(0xC0, Unsupported));
         _dispatchTable.Add(0xC2, new Callback(0xC2, Unsupported));
         _dispatchTable.Add(0xC4, new Callback(0xC4, Unsupported));
+        _dispatchTable.Add(0x88, new Callback(0x88, GetExtendedMemorySize));
     }
 
     public override byte Index => 0x15;
@@ -16,6 +17,15 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public override void Run() {
         byte operation = _state.AH;
         Run(operation);
+    }
+
+    /// <summary>
+    /// No extended memory size present. Yet.
+    /// Reports 0 in AX.
+    /// </summary>
+    public void GetExtendedMemorySize() {
+        //We've got no extended memory (yet)
+        _state.AX = 0;
     }
 
     private void Unsupported() {

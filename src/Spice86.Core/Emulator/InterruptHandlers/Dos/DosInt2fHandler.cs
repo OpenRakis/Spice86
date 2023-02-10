@@ -28,6 +28,15 @@ public class DosInt2fHandler : InterruptHandler {
 
     private void FillDispatchTable() {
         _dispatchTable.Add(0x15, new Callback(0x15, SendDeviceDriverRequest));
+        _dispatchTable.Add(0x43, new Callback(0x43, NoOp));
+    }
+
+    /// <summary>
+    /// This is an INT2F function that even DOSBox doesn't implement.
+    /// Right now, a NOP is sufficient in order to make some games (eg. Dune 2) work.
+    /// </summary>
+    public void NoOp() {
+        
     }
 
     public void SendDeviceDriverRequest() {
