@@ -183,7 +183,10 @@ public class MouseInt33Handler : InterruptHandler {
     /// <returns>Value within the emulated display surface area</returns>
     private static ushort RestrictValue(ushort value, ushort maxValue, ushort min, ushort max) {
         int range = max - min;
-        ushort valueInRange = (ushort)(value * range / maxValue);
+        ushort valueInRange = value;
+        if (maxValue is not 0) {
+            valueInRange = (ushort)(value * range / maxValue);
+        }
         if (valueInRange > max) {
             return Math.Min(max, value);
         }
