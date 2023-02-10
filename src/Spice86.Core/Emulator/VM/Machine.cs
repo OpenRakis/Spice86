@@ -23,6 +23,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.Vga;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -124,7 +125,7 @@ public class Machine : IDisposable {
 
         Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes);
         Bios = new Bios(Memory);
-        Cpu = new Cpu(this, new ServiceProvider().GetLoggerForContext<Cpu>(), executionFlowRecorder, recordData);
+        Cpu = new Cpu(this, new ServiceProvider().GetService<ILoggerService>(), executionFlowRecorder, recordData);
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this);
@@ -132,7 +133,7 @@ public class Machine : IDisposable {
         // IO devices
         IoPortDispatcher = new IOPortDispatcher(
             this,
-            serviceProvider.GetLoggerForContext<IOPortDispatcher>(),
+            serviceProvider.GetService<ILoggerService>(),
             configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
 
@@ -141,15 +142,15 @@ public class Machine : IDisposable {
 
         DualPic = new DualPic(this, configuration);
         Register(DualPic);
-        VgaCard = new VgaCard(this, serviceProvider.GetLoggerForContext<VgaCard>(), gui, configuration);
+        VgaCard = new VgaCard(this, serviceProvider.GetService<ILoggerService>(), gui, configuration);
         Register(VgaCard);
-        Timer = new Timer(this, serviceProvider.GetLoggerForContext<Timer>(), DualPic, VgaCard, counterConfigurator, configuration);
+        Timer = new Timer(this, serviceProvider.GetService<ILoggerService>(), DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
-        Keyboard = new Keyboard(this, serviceProvider.GetLoggerForContext<Keyboard>(), gui, keyScanCodeConverter, configuration);
+        Keyboard = new Keyboard(this, serviceProvider.GetService<ILoggerService>(), gui, keyScanCodeConverter, configuration);
         Register(Keyboard);
         Joystick = new Joystick(this, configuration);
         Register(Joystick);
-        PcSpeaker = new PcSpeaker(this, serviceProvider.GetLoggerForContext<PcSpeaker>(), configuration);
+        PcSpeaker = new PcSpeaker(this, serviceProvider.GetService<ILoggerService>(), configuration);
         Register(PcSpeaker);
         OPL3FM = new OPL3FM(this, configuration);
         Register(OPL3FM);
@@ -167,12 +168,12 @@ public class Machine : IDisposable {
         TimerInt8Handler = new TimerInt8Handler(this);
         Register(TimerInt8Handler);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this,
-            serviceProvider.GetLoggerForContext<BiosKeyboardInt9Handler>(),
+            serviceProvider.GetService<ILoggerService>(),
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
         VideoBiosInt10Handler = new VideoBiosInt10Handler(
             this,
-            serviceProvider.GetLoggerForContext<VideoBiosInt10Handler>(),
+            serviceProvider.GetService<ILoggerService>(),
             VgaCard);
         Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
@@ -181,21 +182,21 @@ public class Machine : IDisposable {
         Register(SystemBiosInt15Handler);
         KeyboardInt16Handler = new KeyboardInt16Handler(
             this,
-            serviceProvider.GetLoggerForContext<KeyboardInt16Handler>(),
+            serviceProvider.GetService<ILoggerService>(),
             BiosKeyboardInt9Handler.BiosKeyboardBuffer);
         Register(KeyboardInt16Handler);
         SystemClockInt1AHandler = new SystemClockInt1AHandler(
             this,
-            serviceProvider.GetLoggerForContext<SystemClockInt1AHandler>(),
+            serviceProvider.GetService<ILoggerService>(),
             TimerInt8Handler);
         Register(SystemClockInt1AHandler);
-        DosInt20Handler = new DosInt20Handler(this, serviceProvider.GetLoggerForContext<DosInt20Handler>());
+        DosInt20Handler = new DosInt20Handler(this, serviceProvider.GetService<ILoggerService>());
         Register(DosInt20Handler);
-        DosInt21Handler = new DosInt21Handler(this, serviceProvider.GetLoggerForContext<DosInt21Handler>());
+        DosInt21Handler = new DosInt21Handler(this, serviceProvider.GetService<ILoggerService>());
         Register(DosInt21Handler);
-        DosInt2fHandler = new DosInt2fHandler(this, serviceProvider.GetLoggerForContext<DosInt2fHandler>());
+        DosInt2fHandler = new DosInt2fHandler(this, serviceProvider.GetService<ILoggerService>());
         Register(DosInt2fHandler);
-        MouseInt33Handler = new MouseInt33Handler(this, serviceProvider.GetLoggerForContext<MouseInt33Handler>(), gui);
+        MouseInt33Handler = new MouseInt33Handler(this, serviceProvider.GetService<ILoggerService>(), gui);
         Register(MouseInt33Handler);
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"

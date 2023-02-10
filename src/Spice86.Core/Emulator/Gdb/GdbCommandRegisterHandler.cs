@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
@@ -11,20 +13,20 @@ using System.Diagnostics;
 using System.Text;
 
 public class GdbCommandRegisterHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
 
-    public GdbCommandRegisterHandler(GdbIo gdbIo, Machine machine, ILogger logger) {
-        _logger = logger;
+    public GdbCommandRegisterHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService) {
+        _loggerService = loggerService;
         _gdbIo = gdbIo;
         _machine = machine;
     }
 
     public string ReadAllRegisters() {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Reading all registers");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Reading all registers");
         }
         StringBuilder response = new(2 * 4 * 16);
         for (int i = 0; i < 16; i++) {
@@ -38,14 +40,14 @@ public class GdbCommandRegisterHandler {
     public string ReadRegister(string commandContent) {
         try {
             long index = ConvertUtils.ParseHex32(commandContent);
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Reading register {@RegisterIndex}", index);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("Reading register {@RegisterIndex}", index);
             }
             return _gdbIo.GenerateResponse(_gdbFormatter.FormatValueAsHex32(GetRegisterValue((int)index)));
         } catch (FormatException nfe) {
             nfe.Demystify();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(nfe, "Register read requested but could not understand the request {@CommandContent}", commandContent);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(nfe, "Register read requested but could not understand the request {@CommandContent}", commandContent);
             }
             return _gdbIo.GenerateUnsupportedResponse();
         }
@@ -62,8 +64,8 @@ public class GdbCommandRegisterHandler {
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
             nfe.Demystify();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(nfe, "Register write requested but could not understand the request {@CommandContent}", commandContent);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(nfe, "Register write requested but could not understand the request {@CommandContent}", commandContent);
             }
             return _gdbIo.GenerateUnsupportedResponse();
         }

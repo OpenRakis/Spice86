@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
@@ -12,7 +14,7 @@ using System.Net.Sockets;
 using System.Text;
 
 public sealed class GdbIo : IDisposable {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly List<byte> _rawCommand = new();
     private Socket? _socket;
@@ -20,8 +22,8 @@ public sealed class GdbIo : IDisposable {
     private bool _disposed;
     private NetworkStream? _stream;
 
-    public GdbIo(int port, ILogger logger) {
-        _logger = logger;
+    public GdbIo(int port, ILoggerService loggerService) {
+        _loggerService = loggerService;
         IPHostEntry host = Dns.GetHostEntry("localhost");
         IPAddress ip = new IPAddress(host.AddressList.First().GetAddressBytes());
         _tcpListener = new TcpListener(ip, port);
@@ -30,10 +32,10 @@ public sealed class GdbIo : IDisposable {
     public void WaitForConnection() {
         _tcpListener.Start();
         _socket = _tcpListener.AcceptSocket();
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             int port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
-            _logger.Information("GDB Server listening on port {@Port}", port);
-            _logger.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
+            _loggerService.Information("GDB Server listening on port {@Port}", port);
+            _loggerService.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
         }
         _stream = new NetworkStream(_socket);
     }
@@ -87,23 +89,23 @@ public sealed class GdbIo : IDisposable {
             chr = _stream.ReadByte();
         }
         string payload = GetPayload(resBuilder);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Received command from GDB {@GDBPayload}", payload);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Received command from GDB {@GDBPayload}", payload);
         }
         return payload;
     }
 
     public void SendResponse(string? data) {
         if (!IsClientConnected) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Cannot send response, client is not connected anymore.");
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("Cannot send response, client is not connected anymore.");
             }
             // Happens when the emulator thread reaches a breakpoint but the client is gone
             return;
         }
         if (data != null) {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Sending response {@ResponseData}", data);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("Sending response {@ResponseData}", data);
             }
             _stream?.Write(Encoding.UTF8.GetBytes(data));
         }

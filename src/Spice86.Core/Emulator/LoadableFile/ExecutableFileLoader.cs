@@ -18,10 +18,10 @@ public abstract class ExecutableFileLoader {
     protected Cpu _cpu;
     protected Machine _machine;
     protected Memory _memory;
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
-    protected ExecutableFileLoader(Machine machine, ILogger logger) {
-        _logger = logger;
+    protected ExecutableFileLoader(Machine machine, ILoggerService loggerService) {
+        _loggerService = loggerService;
         _machine = machine;
         _cpu = machine.Cpu;
         _memory = machine.Memory;
@@ -39,8 +39,8 @@ public abstract class ExecutableFileLoader {
         State state = _cpu.State;
         state.CS = cs;
         state.IP = ip;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Program entry point is {@ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Program entry point is {@ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
     }
 }

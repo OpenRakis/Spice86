@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 
 using Serilog;
 
@@ -11,11 +13,11 @@ using Spice86.Core.Emulator.VM;
 /// Implementation of int1A.
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly TimerInt8Handler _timerHandler;
 
-    public SystemClockInt1AHandler(Machine machine, ILogger logger, TimerInt8Handler timerHandler) : base(machine) {
-        _logger = logger;
+    public SystemClockInt1AHandler(Machine machine, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(machine) {
+        _loggerService = loggerService;
         _timerHandler = timerHandler;
         _dispatchTable.Add(0x00, new Callback(0x00, SetSystemClockCounter));
         _dispatchTable.Add(0x01, new Callback(0x01, GetSystemClockCounter));
@@ -30,8 +32,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
 
     public void GetSystemClockCounter() {
         uint value = _timerHandler.TickCounterValue;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }
 
         // let's say it never overflows
@@ -47,15 +49,15 @@ public class SystemClockInt1AHandler : InterruptHandler {
 
     public void SetSystemClockCounter() {
         uint value = (ushort)(_state.CX << 16 | _state.DX);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
         }
         _timerHandler.TickCounterValue = value;
     }
 
     private void TandySoundSystemUnhandled() {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("TANDY SOUND SYSTEM IS NOT IMPLEMENTED");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("TANDY SOUND SYSTEM IS NOT IMPLEMENTED");
         }
     }
 }

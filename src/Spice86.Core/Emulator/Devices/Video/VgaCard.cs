@@ -16,7 +16,7 @@ using Spice86.Core.Emulator.VM;
 /// Implementation of VGA card, currently only supports mode 0x13.<br/>
 /// </summary>
 public class VgaCard : DefaultIOPortHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
     // http://www.osdever.net/FreeVGA/vga/extreg.htm#3xAR
     public const ushort VGA_SEQUENCER_ADDRESS_REGISTER_PORT = 0x03C4;
@@ -47,8 +47,8 @@ public class VgaCard : DefaultIOPortHandler {
     private readonly LazyConcurrentDictionary<FontType, SegmentedAddress> _fonts = new();
     private ushort _nextFontOffset;
 
-    public VgaCard(Machine machine, ILogger logger, IGui? gui, Configuration configuration) : base(machine, configuration) {
-        _logger = logger;
+    public VgaCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) : base(machine, configuration) {
+        _loggerService = loggerService;
         _gui = gui;
         VgaDac = new VgaDac(machine);
         machine.Bios.CrtControllerBaseAddress = 0x03D4;
@@ -66,8 +66,8 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public byte GetStatusRegisterPort() {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("CHECKING RETRACE");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("CHECKING RETRACE");
         }
         byte res = _crtStatusRegister;
         // Next time we will be called retrace will be active, and this until the retrace tick
@@ -87,8 +87,8 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public byte GetVgaReadIndex() {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("GET VGA READ INDEX");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("GET VGA READ INDEX");
         }
         return VgaDac.State == VgaDac.VgaDacWrite ? (byte)0x3 : (byte)0x0;
     }
@@ -114,8 +114,8 @@ public class VgaCard : DefaultIOPortHandler {
             RgbDataWrite(value);
         } else if (port == VGA_STATUS_REGISTER_PORT) {
             bool vsync = (value & 0b100) != 1;
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Vsync value set to {@VSync} (this is not implemented)", vsync);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("Vsync value set to {@VSync} (this is not implemented)", vsync);
             }
         } else {
             base.WriteByte(port, value);
@@ -133,15 +133,15 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public byte RgbDataRead() {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("PALETTE READ");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("PALETTE READ");
         }
         return VgaDac.From8bitTo6bitColor(VgaDac.ReadColor());
     }
 
     public void RgbDataWrite(byte value) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("PALETTE WRITE {@Value}", value);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("PALETTE WRITE {@Value}", value);
         }
         VgaDac.WriteColor(VgaDac.From6bitColorTo8bit(value));
     }
@@ -161,8 +161,8 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public void SetVgaReadIndex(int value) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET VGA READ INDEX {@Value}", value);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SET VGA READ INDEX {@Value}", value);
         }
         VgaDac.ReadIndex = value;
         VgaDac.Colour = 0;
@@ -170,8 +170,8 @@ public class VgaCard : DefaultIOPortHandler {
     }
 
     public void SetVgaWriteIndex(int value) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET VGA WRITE INDEX {@Value}", value);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SET VGA WRITE INDEX {@Value}", value);
         }
         VgaDac.WriteIndex = value;
         VgaDac.Colour = 0;
@@ -184,8 +184,8 @@ public class VgaCard : DefaultIOPortHandler {
             const int videoWidth = 320;
             _gui?.SetResolution(videoWidth, videoHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
         } else {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error("UNSUPPORTED VIDEO MODE {@VideMode}", mode);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error("UNSUPPORTED VIDEO MODE {@VideMode}", mode);
             }
         }
     }

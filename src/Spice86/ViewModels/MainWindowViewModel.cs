@@ -1,4 +1,6 @@
-﻿using Spice86.Core.DI;
+﻿using Serilog.Events;
+
+using Spice86.Core.DI;
 
 namespace Spice86.ViewModels;
 
@@ -12,8 +14,6 @@ using CommunityToolkit.Mvvm.Input;
 
 using MessageBox.Avalonia.BaseWindows.Base;
 using MessageBox.Avalonia.Enums;
-
-using Serilog;
 
 using Spice86;
 using Spice86.Keyboard;
@@ -34,7 +34,7 @@ using System.Diagnostics;
 
 /// <inheritdoc />
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private Configuration _configuration = new();
     private bool _disposed;
     private Thread? _emulatorThread;
@@ -64,8 +64,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private bool _isMainWindowClosing;
 
-    public MainWindowViewModel(ILogger logger) {
-        _logger = logger;
+    public MainWindowViewModel(ILoggerService loggerService) {
+        _loggerService = loggerService;
         if (App.MainWindow is not null) {
             App.MainWindow.Closing += (s, e) => _isMainWindowClosing = true;
         }
@@ -98,7 +98,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
         if (!string.IsNullOrWhiteSpace(dir)) {
             new RecorderDataWriter(dir, _programExecutor.Machine,
-                new ServiceProvider().GetLoggerForContext<RecorderDataWriter>())
+                new ServiceProvider().GetService<ILoggerService>())
                     .DumpAll();
         }
     }
@@ -121,6 +121,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public void SetConfiguration(string[] args) {
         _configuration = GenerateConfiguration(args);
+        SetLogLevel(_configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
         SetMainTitle();
     }
 
@@ -362,6 +363,22 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
+    [ObservableProperty]
+    private string _currentLogLevel = "";
+
+    [RelayCommand]
+    public void SetLogLevel(string logLevel) {
+        if (logLevel == "Silent") {
+            CurrentLogLevel = logLevel;
+            _loggerService.AreLogsSilenced = true;
+            _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Fatal;
+        } else {
+            _loggerService.AreLogsSilenced = false;
+            _loggerService.LogLevelSwitch.MinimumLevel = Enum.Parse<LogEventLevel>(logLevel);
+            CurrentLogLevel = logLevel;
+        }
+    }
+
     private void RunMachine() {
         ShowVideo = true;
         _emulatorThread = new Thread(MachineThread) {
@@ -387,7 +404,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 _okayToContinueEvent.Set();
             }
             _programExecutor = new ProgramExecutor(
-                new ServiceProvider().GetLoggerForContext<ProgramExecutor>(),
+                new ServiceProvider().GetService<ILoggerService>(),
                 this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _programExecutor.Run();
@@ -397,8 +414,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             }
         } catch (Exception e) {
             e.Demystify();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(e, "An error occurred during execution");
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(e, "An error occurred during execution");
             }
             EmulatorErrorOccured += OnEmulatorErrorOccured;
             EmulatorErrorOccured?.Invoke(e);

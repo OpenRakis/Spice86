@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Serilog;
 
@@ -11,22 +13,22 @@ using Spice86.Core.Utils;
 /// PC speaker implementation.
 /// </summary>
 public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private const int PcSpeakerPortNumber = 0x61;
 
     private bool _disposed = false;
 
     private readonly InternalSpeaker _pcSpeaker;
 
-    public PcSpeaker(Machine machine, ILogger logger, Configuration configuration) : base(machine, configuration) {
-        _logger = logger;
+    public PcSpeaker(Machine machine, ILoggerService loggerService, Configuration configuration) : base(machine, configuration) {
+        _loggerService = loggerService;
         _pcSpeaker = new(configuration);
     }
 
     public override byte ReadByte(int port) {
         byte value = _pcSpeaker.ReadByte(port);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("PC Speaker get value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("PC Speaker get value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }
         return value;
     }
@@ -36,8 +38,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     }
 
     public override void WriteByte(int port, byte value) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("PC Speaker set value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("PC Speaker set value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }
 
         _pcSpeaker.WriteByte(port, value);

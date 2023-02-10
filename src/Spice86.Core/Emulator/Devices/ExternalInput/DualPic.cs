@@ -1,3 +1,5 @@
+using Spice86.Logging;
+
 namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Spice86.Core.DI;
@@ -26,8 +28,8 @@ public class DualPic : DefaultIOPortHandler {
     private readonly Pic _pic2;
 
     public DualPic(Machine machine, Configuration configuration) : base(machine, configuration) {
-        _pic1 = new Pic(machine, new ServiceProvider().GetLoggerForContext<Pic>(), true);
-        _pic2 = new Pic(machine, new ServiceProvider().GetLoggerForContext<Pic>(), false);
+        _pic1 = new Pic(machine, new ServiceProvider().GetService<ILoggerService>(), true);
+        _pic2 = new Pic(machine, new ServiceProvider().GetService<ILoggerService>(), false);
         Initialize();
     }
 

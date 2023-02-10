@@ -65,12 +65,15 @@ public class Configuration {
 
     [Option('p', nameof(ProgramEntryPointSegment), Default = 0x1000, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
     public int ProgramEntryPointSegment { get; init; }
+    
+    [Option('s', nameof(SilencedLogs), Default = false, Required = false, HelpText = "Disable all logs")]
+    public bool SilencedLogs { get; init; }
 
     [Option('l', nameof(VerboseLogs), Default = false, Required = false, HelpText = "Enable verbose level logs")]
     public bool VerboseLogs { get; init; }
 
     [Option('w', nameof(WarningLogs), Default = false, Required = false, HelpText = "Enable warning level logs")]
-    public bool WarningLogs { get; set; }
+    public bool WarningLogs { get; init; }
 
     [Option('m', nameof(Mt32RomsPath), Default = null, Required = false, HelpText = "Zip file or directory containing the MT-32 ROM files")]
     public string? Mt32RomsPath { get; init; }

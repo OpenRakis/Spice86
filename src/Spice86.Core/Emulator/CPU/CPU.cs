@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.CPU;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.CPU;
 using Serilog;
 
 using Spice86.Core.DI;
@@ -26,7 +28,7 @@ public class Cpu {
     // Extract regIndex from opcode
     private const int RegIndexMask = 0b111;
 
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
     private static readonly HashSet<int> _stringOpCodes = new()
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
@@ -54,16 +56,16 @@ public class Cpu {
 
     public ExecutionFlowRecorder ExecutionFlowRecorder { get; }
 
-    public Cpu(Machine machine, ILogger logger, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
-        _logger = logger;
+    public Cpu(Machine machine, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+        _loggerService = loggerService;
         _machine = machine;
         _memory = machine.Memory;
         State = new State();
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);
         ExecutionFlowRecorder = executionFlowRecorder;
-        FunctionHandler = new FunctionHandler(machine, new ServiceProvider().GetLoggerForContext<FunctionHandler>(), recordData);
-        FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, new ServiceProvider().GetLoggerForContext<FunctionHandler>(), recordData);
+        FunctionHandler = new FunctionHandler(machine, new ServiceProvider().GetService<ILoggerService>(), recordData);
+        FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, new ServiceProvider().GetService<ILoggerService>(), recordData);
         FunctionHandlerInUse = FunctionHandler;
         StaticAddressesRecorder = new StaticAddressesRecorder(State, recordData);
         _modRM = new ModRM(machine, this);
@@ -973,7 +975,7 @@ public class Cpu {
                 break;
             case 0xF4:
                 // HLT
-                _logger.Information("HLT instruction encountered, halting!");
+                _loggerService.Information("HLT instruction encountered, halting!");
                 IsRunning = false;
                 break;
             case 0xF5:

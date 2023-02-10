@@ -30,20 +30,20 @@ using System.Text;
 /// Custom commands list can be seen with the monitor help command.
 /// </summary>
 public class GdbCustomCommandsHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly RecorderDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
-    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, ILogger logger, Action<BreakPoint> onBreakpointReached,
+    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
-        _logger = logger;
+        _loggerService = loggerService;
         _gdbIo = gdbIo;
         _machine = machine;
         _onBreakpointReached = onBreakpointReached;
         _recordedDataWriter = new RecorderDataWriter(recordedDataDirectory, machine,
-            new ServiceProvider().GetLoggerForContext<RecorderDataWriter>());
+            new ServiceProvider().GetService<ILoggerService>());
     }
 
     public virtual string HandleCustomCommands(string command) {
@@ -87,8 +87,8 @@ public class GdbCustomCommandsHandler {
             long cyclesBreak = currentCycles + cyclesToWait;
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
             _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _logger.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _loggerService.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
             }
 
             return _gdbIo.GenerateMessageToDisplayResponse(
@@ -106,8 +106,8 @@ public class GdbCustomCommandsHandler {
             uint ip = ConvertUtils.ParseHex32(args[2]);
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
             _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _logger.Debug("Breakpoint added for cs:ip!\n{@BreakPoint}", breakPoint);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _loggerService.Debug("Breakpoint added for cs:ip!\n{@BreakPoint}", breakPoint);
             }
 
             return _gdbIo.GenerateMessageToDisplayResponse(
@@ -120,8 +120,8 @@ public class GdbCustomCommandsHandler {
     private string BreakStop() {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("Breakpoint added for end of execution!\n{@BreakPoint}", breakPoint);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("Breakpoint added for end of execution!\n{@BreakPoint}", breakPoint);
         }
 
         return _gdbIo.GenerateMessageToDisplayResponse("Breakpoint added for end of execution.");
@@ -137,8 +137,8 @@ public class GdbCustomCommandsHandler {
             fileNameConsumer.Invoke(fileName);
         } catch (IOException e) {
             e.Demystify();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(e, "{@ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(e, "{@ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
             }
 
             string errorWithException = $"{errorMessageInCaseIOException}: {e.Message}";
@@ -189,8 +189,8 @@ public class GdbCustomCommandsHandler {
         try {
             bits = int.Parse(bitsString);
         } catch (Exception e) {
-            if (_logger.IsEnabled(LogEventLevel.Error)) {
-                _logger.Error(e, "{MethodName}", nameof(ReadRam));
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error(e, "{MethodName}", nameof(ReadRam));
             }
             return Help($"Unparseable bits value {bitsString}");
         }
@@ -226,8 +226,8 @@ public class GdbCustomCommandsHandler {
         try {
             return ConvertUtils.ParseHex16(valueOrRegisterName);
         } catch (Exception e) {
-            if (_logger.IsEnabled(LogEventLevel.Error)) {
-                _logger.Error(e, "{MethodName}", nameof(ExtractValueFromHexOrRegisterName));
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error(e, "{MethodName}", nameof(ExtractValueFromHexOrRegisterName));
             }
             return null;
         }

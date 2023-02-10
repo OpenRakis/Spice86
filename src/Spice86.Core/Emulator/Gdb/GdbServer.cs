@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
@@ -8,7 +10,7 @@ using Spice86.Core.Emulator.VM;
 using System.Diagnostics;
 
 public sealed class GdbServer : IDisposable {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private EventWaitHandle? _waitFirstConnectionHandle;
     private readonly Configuration _configuration;
     private bool _disposed;
@@ -17,8 +19,8 @@ public sealed class GdbServer : IDisposable {
     private Thread? _gdbServerThread;
     private GdbIo? _gdbIo;
 
-    public GdbServer(Machine machine, ILogger logger, Configuration configuration) {
-        _logger = logger;
+    public GdbServer(Machine machine, ILoggerService loggerService, Configuration configuration) {
+        _loggerService = loggerService;
         _machine = machine;
         _configuration = configuration;
     }
@@ -51,7 +53,7 @@ public sealed class GdbServer : IDisposable {
         gdbIo.WaitForConnection();
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo,
             _machine,
-            new ServiceProvider().GetLoggerForContext<GdbCommandHandler>(),
+            new ServiceProvider().GetService<ILoggerService>(),
             _configuration);
         gdbCommandHandler.PauseEmulator();
         OnConnect();
@@ -62,7 +64,7 @@ public sealed class GdbServer : IDisposable {
                 gdbCommandHandler.RunCommand(command);
             }
         }
-        _logger.Information("Client disconnected");
+        _loggerService.Information("Client disconnected");
     }
 
     private void RunServer() {
@@ -70,14 +72,14 @@ public sealed class GdbServer : IDisposable {
             return;
         }
         int port = _configuration.GdbPort.Value;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Starting GDB server");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Starting GDB server");
         }
         try {
             while (_isRunning) {
                 try {
                     using GdbIo gdbIo = new GdbIo(port,
-                        new ServiceProvider().GetLoggerForContext<GdbIo>());
+                        new ServiceProvider().GetService<ILoggerService>());
                     // Make GdbIo available for Dispose
                     _gdbIo = gdbIo;
                     AcceptOneConnection(gdbIo);
@@ -85,20 +87,20 @@ public sealed class GdbServer : IDisposable {
                 } catch (IOException e) {
                     e.Demystify();
                     if (_isRunning) {
-                        _logger.Error(e, "Error in the GDB server, restarting it...");
+                        _loggerService.Error(e, "Error in the GDB server, restarting it...");
                     } else {
-                        _logger.Information("GDB Server connection closed and server is not running. Terminating it.");
+                        _loggerService.Information("GDB Server connection closed and server is not running. Terminating it.");
                     }
                 }
             }
         } catch (Exception e) {
             e.Demystify();
-            _logger.Error(e, "Unhandled error in the GDB server, restarting it...");
+            _loggerService.Error(e, "Unhandled error in the GDB server, restarting it...");
         } finally {
             _machine.Cpu.IsRunning = false;
             _machine.MachineBreakpoints.PauseHandler.RequestResume();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("GDB server stopped");
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("GDB server stopped");
             }
         }
     }

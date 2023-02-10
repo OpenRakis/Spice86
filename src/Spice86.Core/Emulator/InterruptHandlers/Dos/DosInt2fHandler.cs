@@ -1,3 +1,5 @@
+using Spice86.Logging;
+
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
@@ -12,10 +14,10 @@ using Spice86.Core.Emulator.VM;
 /// Reimplementation of int2f
 /// </summary>
 public class DosInt2fHandler : InterruptHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
-    public DosInt2fHandler(Machine machine, ILogger logger) : base(machine) {
-        _logger = logger;
+    public DosInt2fHandler(Machine machine, ILoggerService loggerService) : base(machine) {
+        _loggerService = loggerService;
         FillDispatchTable();
     }
 
@@ -42,8 +44,8 @@ public class DosInt2fHandler : InterruptHandler {
     public void SendDeviceDriverRequest() {
         ushort drive = _state.CX;
         uint deviceDriverRequestHeaderAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SEND DEVICE DRIVER REQUEST Drive {Drive} Request header at: {Address:x8}",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SEND DEVICE DRIVER REQUEST Drive {Drive} Request header at: {Address:x8}",
                 drive, deviceDriverRequestHeaderAddress);
         }
 

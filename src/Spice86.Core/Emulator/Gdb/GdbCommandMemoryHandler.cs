@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
 
@@ -12,13 +14,13 @@ using System.Diagnostics;
 using System.Text;
 
 public class GdbCommandMemoryHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
 
-    public GdbCommandMemoryHandler(GdbIo gdbIo, Machine machine, ILogger logger) {
-        _logger = logger;
+    public GdbCommandMemoryHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService) {
+        _loggerService = loggerService;
         _gdbIo = gdbIo;
         _machine = machine;
     }
@@ -32,8 +34,8 @@ public class GdbCommandMemoryHandler {
                 length = ConvertUtils.ParseHex32(commandContentSplit[1]);
             }
 
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("Reading memory at address {@Address} for a length of {@Length}", address, length);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("Reading memory at address {@Address} for a length of {@Length}", address, length);
             }
             Memory memory = _machine.Memory;
             int memorySize = memory.Size;
@@ -52,8 +54,8 @@ public class GdbCommandMemoryHandler {
             return _gdbIo.GenerateResponse(response.ToString());
         } catch (FormatException nfe) {
             nfe.Demystify();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(nfe, "Memory read requested but could not understand the request {@CommandContent}", commandContent);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(nfe, "Memory read requested but could not understand the request {@CommandContent}", commandContent);
             }
             return _gdbIo.GenerateUnsupportedResponse();
         }
@@ -102,8 +104,8 @@ public class GdbCommandMemoryHandler {
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
             nfe.Demystify();
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _logger.Error(nfe, "Memory write requested but could not understand the request {@CommandContent}", commandContent);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(nfe, "Memory write requested but could not understand the request {@CommandContent}", commandContent);
             }
             return _gdbIo.GenerateUnsupportedResponse();
         }

@@ -67,6 +67,7 @@ If there are already data there the emulator will load them first and complete t
   -h, --HeadlessMode                 (Default: false) Headless mode. If true, no GUI is shown.
   -l, --VerboseLogs                  (Default: false) Enable verbose level logs
   -w, --WarningLogs                  (Default: false) Enable warning level logs
+  -s, --SilencedLogs                 (Default: false) Disable all logs
   -i, --InitializeDOS                (Default: true) Install DOS interrupt vectors or not.
 
   --help                             Display this help screen.

@@ -1,3 +1,5 @@
+using Spice86.Logging;
+
 namespace Spice86;
 
 using Avalonia;
@@ -34,7 +36,7 @@ internal partial class App : Application {
         }
 
         MainWindowViewModel mainViewModel = new MainWindowViewModel(
-            new ServiceProvider().GetLoggerForContext<MainWindowViewModel>());
+            new ServiceProvider().GetService<ILoggerService>());
         mainViewModel.SetConfiguration(desktop.Args);
         desktop.MainWindow = new MainWindow {
             DataContext = mainViewModel,

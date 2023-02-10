@@ -15,13 +15,13 @@ using Spice86.Core.Utils;
 using Spice86.Logging;
 
 public class VideoBiosInt10Handler : InterruptHandler {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     private readonly byte _currentDisplayPage = 0;
     private readonly byte _numberOfScreenColumns = 80;
     private readonly VgaCard _vgaCard;
 
-    public VideoBiosInt10Handler(Machine machine, ILogger logger, VgaCard vgaCard) : base(machine) {
-        _logger = logger;
+    public VideoBiosInt10Handler(Machine machine, ILoggerService loggerService, VgaCard vgaCard) : base(machine) {
+        _loggerService = loggerService;
         _vgaCard = vgaCard;
         FillDispatchTable();
     }
@@ -29,8 +29,8 @@ public class VideoBiosInt10Handler : InterruptHandler {
     public void GetBlockOfDacColorRegisters() {
         ushort firstRegisterToGet = _state.BX;
         ushort numberOfColorsToGet = _state.CX;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("GET BLOCKS OF DAC COLOR REGISTERS. First register is {@FirstRegisterToGet}, getting {@NumberOfColorsToGet} colors, values are to be stored at address {@EsDx}", ConvertUtils.ToHex(firstRegisterToGet), numberOfColorsToGet, ConvertUtils.ToSegmentedAddressRepresentation(_state.ES, _state.DX));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("GET BLOCKS OF DAC COLOR REGISTERS. First register is {@FirstRegisterToGet}, getting {@NumberOfColorsToGet} colors, values are to be stored at address {@EsDx}", ConvertUtils.ToHex(firstRegisterToGet), numberOfColorsToGet, ConvertUtils.ToSegmentedAddressRepresentation(_state.ES, _state.DX));
         }
 
         uint colorValuesAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DX);
@@ -41,8 +41,8 @@ public class VideoBiosInt10Handler : InterruptHandler {
 
     public void GetSetPaletteRegisters() {
         byte op = _state.AL;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("GET/SET PALETTE REGISTERS {@Operation}", ConvertUtils.ToHex8(op));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("GET/SET PALETTE REGISTERS {@Operation}", ConvertUtils.ToHex8(op));
         }
 
         if (op == 0x12) {
@@ -56,16 +56,16 @@ public class VideoBiosInt10Handler : InterruptHandler {
 
     public byte VideoModeValue {
         get {
-            if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _logger.Information("GET VIDEO MODE");
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("GET VIDEO MODE");
             }
             return _machine.Bios.VideoMode;
         }
     }
 
     public void GetVideoStatus() {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("GET VIDEO STATUS");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("GET VIDEO STATUS");
         }
         _state.AH = _numberOfScreenColumns;
         _state.AL = VideoModeValue;
@@ -79,16 +79,16 @@ public class VideoBiosInt10Handler : InterruptHandler {
 
     public void ScrollPageUp() {
         byte scrollAmount = _state.AL;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SCROLL PAGE UP BY AMOUNT {@ScrollAmount}", ConvertUtils.ToHex8(scrollAmount));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SCROLL PAGE UP BY AMOUNT {@ScrollAmount}", ConvertUtils.ToHex8(scrollAmount));
         }
     }
 
     public void SetBlockOfDacColorRegisters() {
         ushort firstRegisterToSet = _state.BX;
         ushort numberOfColorsToSet = _state.CX;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET BLOCKS OF DAC COLOR REGISTERS. First register is {@FirstRegisterToSet}, setting {@NumberOfColorsToSet} colors, values are from address {@EsDx}", ConvertUtils.ToHex(firstRegisterToSet), numberOfColorsToSet, ConvertUtils.ToSegmentedAddressRepresentation(_state.ES, _state.DX));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SET BLOCKS OF DAC COLOR REGISTERS. First register is {@FirstRegisterToSet}, setting {@NumberOfColorsToSet} colors, values are from address {@EsDx}", ConvertUtils.ToHex(firstRegisterToSet), numberOfColorsToSet, ConvertUtils.ToSegmentedAddressRepresentation(_state.ES, _state.DX));
         }
 
         uint colorValuesAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DX);
@@ -98,23 +98,23 @@ public class VideoBiosInt10Handler : InterruptHandler {
     public void SetColorPalette() {
         byte colorId = _state.BH;
         byte colorValue = _state.BL;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET COLOR PALETTE {@ColorId}, {@ColorValue}", colorId, colorValue);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SET COLOR PALETTE {@ColorId}, {@ColorValue}", colorId, colorValue);
         }
     }
 
     public void SetCursorPosition() {
         byte cursorPositionRow = _state.DH;
         byte cursorPositionColumn = _state.DL;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET CURSOR POSITION, {@Row}, {@Column}", ConvertUtils.ToHex8(cursorPositionRow), ConvertUtils.ToHex8(cursorPositionColumn));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SET CURSOR POSITION, {@Row}, {@Column}", ConvertUtils.ToHex8(cursorPositionRow), ConvertUtils.ToHex8(cursorPositionColumn));
         }
     }
 
     public void SetCursorType() {
         ushort cursorStartEnd = _state.CX;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET CURSOR TYPE, SCAN LINE START END IS {@CursorStartEnd}", ConvertUtils.ToHex(cursorStartEnd));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SET CURSOR TYPE, SCAN LINE START END IS {@CursorStartEnd}", ConvertUtils.ToHex(cursorStartEnd));
         }
     }
 
@@ -124,8 +124,8 @@ public class VideoBiosInt10Handler : InterruptHandler {
     }
 
     public void SetVideoModeValue(byte mode) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("SET VIDEO MODE {@VideoMode}", ConvertUtils.ToHex8(mode));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("SET VIDEO MODE {@VideoMode}", ConvertUtils.ToHex8(mode));
         }
         _machine.Bios.VideoMode = mode;
         _vgaCard.SetVideoModeValue(mode);
@@ -133,8 +133,8 @@ public class VideoBiosInt10Handler : InterruptHandler {
 
     public void WriteTextInTeletypeMode() {
         byte chr = _state.AL;
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _logger.Information("Write Text in Teletype Mode ascii code {@AsciiCode}, chr {@Character}", ConvertUtils.ToHex(chr), ConvertUtils.ToChar(chr));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Write Text in Teletype Mode ascii code {@AsciiCode}, chr {@Character}", ConvertUtils.ToHex(chr), ConvertUtils.ToChar(chr));
         }
         Console.Out.Write(ConvertUtils.ToChar(chr));
     }
@@ -187,15 +187,15 @@ public class VideoBiosInt10Handler : InterruptHandler {
         byte op = _state.AL;
         switch (op) {
             case 0:
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _logger.Information("GET VIDEO DISPLAY COMBINATION");
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("GET VIDEO DISPLAY COMBINATION");
                 }
                 // VGA with analog color display
                 _state.BX = 0x08;
                 break;
             case 1:
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _logger.Information("SET VIDEO DISPLAY COMBINATION");
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("SET VIDEO DISPLAY COMBINATION");
                 }
                 throw new UnhandledOperationException(_machine, "Unimplemented");
             default:
@@ -210,13 +210,13 @@ public class VideoBiosInt10Handler : InterruptHandler {
         byte op = _state.BL;
         switch (op) {
             case 0x0:
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _logger.Information("UNKNOWN!");
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("UNKNOWN!");
                 }
                 break;
             case 0x10:
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _logger.Information("GET VIDEO CONFIGURATION INFORMATION");
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("GET VIDEO CONFIGURATION INFORMATION");
                 }
                 // color
                 _state.BH = 0;

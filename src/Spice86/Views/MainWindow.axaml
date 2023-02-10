@@ -28,6 +28,15 @@
 					<MenuItem Header="Debug">
 						<MenuItem Header="Color Palette" Command="{Binding ShowColorPaletteCommand}" />
 						<MenuItem Header="Performance" Command="{Binding ShowPerformanceCommand}" />
+						<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
+							<MenuItem Header="Silent" Command="{Binding SetLogLevel}" CommandParameter="Silent"></MenuItem>
+							<MenuItem Header="Verbose" Command="{Binding SetLogLevel}" CommandParameter="Verbose"></MenuItem>
+							<MenuItem Header="Debug" Command="{Binding SetLogLevel}" CommandParameter="Debug"></MenuItem>
+							<MenuItem Header="Information" Command="{Binding SetLogLevel}" CommandParameter="Information"></MenuItem>
+							<MenuItem Header="Warning" Command="{Binding SetLogLevel}" CommandParameter="Warning"></MenuItem>
+							<MenuItem Header="Error" Command="{Binding SetLogLevel}" CommandParameter="Error"></MenuItem>
+							<MenuItem Header="Fatal" Command="{Binding SetLogLevel}" CommandParameter="Fatal"></MenuItem>
+						</MenuItem>
 						<MenuItem Header="Dump emulator state to directory..." Command="{Binding DumpEmulatorStateToFileCommand}" />
 					</MenuItem>
 				</Menu>

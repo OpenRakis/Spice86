@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿using Spice86.Logging;
+
+namespace Spice86.Core.Emulator.VM;
 
 using Serilog;
 
@@ -9,12 +11,12 @@ using System.Diagnostics;
 using System.Threading;
 
 public sealed class PauseHandler : IDisposable {
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
 
     private readonly IGui? _gui;
 
-    public PauseHandler(ILogger logger, IGui? gui) {
-        _logger = logger;
+    public PauseHandler(ILoggerService loggerService, IGui? gui) {
+        _loggerService = loggerService;
         _gui = gui;
     }
 
@@ -77,8 +79,8 @@ public sealed class PauseHandler : IDisposable {
     }
 
     private void LogStatus(string message) {
-        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _logger.Debug("{@Message}: {@PauseRequested},{@Paused},{@PauseEnded}", message, _pauseRequested, _paused, _pauseEnded);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("{@Message}: {@PauseRequested},{@Paused},{@PauseEnded}", message, _pauseRequested, _paused, _pauseEnded);
         }
     }
 
