@@ -10,7 +10,6 @@ using Spice86.Core.Emulator.VM;
 /// Implementation of int8 that just updates a value in the bios data area.
 /// </summary>
 public class TimerInt8Handler : InterruptHandler {
-    private static readonly uint BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS = MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataAreaSegment, MemoryMap.BiosDataAreaOffsetTickCounter);
     private readonly DualPic _dualPic;
     private readonly Timer _timer;
 
@@ -28,5 +27,8 @@ public class TimerInt8Handler : InterruptHandler {
         _dualPic.AcknwowledgeInterrupt();
     }
 
-    public uint TickCounterValue { get => _memory.GetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS); set => _memory.SetUint32(BIOS_DATA_AREA_OFFSET_TICK_COUNTER_ADDRESS, value); }
+    public uint TickCounterValue {
+        get => _machine.Bios.RealTimeClock; 
+        set => _machine.Bios.RealTimeClock = value;
+    }
 }

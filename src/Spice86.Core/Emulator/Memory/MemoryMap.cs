@@ -2,15 +2,6 @@
 
 /// <summary> Informations about memory mapping of an IBM PC </summary>
 public static class MemoryMap {
-    public const int BiosDataAreaLength = 256;
-
-    // This is where the port to get VGA CRT status is stored
-    public const int BiosDataAreaOffsetCrtIoPort = 0x63;
-
-    // Counter incremented 18.2 times per second
-    public const int BiosDataAreaOffsetTickCounter = 0x6C;
-
-    public const int BiosDataAreaSegment = 0x40;
 
     public const int BootSectorCodeLength = 512;
 
@@ -33,4 +24,9 @@ public static class MemoryMap {
     public const int MonochromeTextVideoMemoryLength = 32767;
 
     public const int MonochromeTextVideoMemorySegment = 0xB000;
+    
+    /// <summary>
+    /// Segment where VGA BIOS is stored.
+    /// </summary>
+    public const ushort VideoBiosSegment = 0xC000;
 }

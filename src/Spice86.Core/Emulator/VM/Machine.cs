@@ -47,6 +47,8 @@ public class Machine : IDisposable {
     public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
     public bool RecordData { get; set; }
+    
+    public Bios Bios { get; set; }
 
     public BiosEquipmentDeterminationInt11Handler BiosEquipmentDeterminationInt11Handler { get; }
 
@@ -121,6 +123,7 @@ public class Machine : IDisposable {
         var serviceProvider = new ServiceProvider();
 
         Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes);
+        Bios = new Bios(Memory);
         Cpu = new Cpu(this, new ServiceProvider().GetLoggerForContext<Cpu>(), executionFlowRecorder, recordData);
 
         // Breakpoints
@@ -171,7 +174,6 @@ public class Machine : IDisposable {
             this,
             serviceProvider.GetLoggerForContext<VideoBiosInt10Handler>(),
             VgaCard);
-        VideoBiosInt10Handler.InitRam();
         Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);
