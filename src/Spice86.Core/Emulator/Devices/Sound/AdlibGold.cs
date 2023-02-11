@@ -1,4 +1,7 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound;
+﻿using Spice86.Logging;
+using Spice86.Shared.Interfaces;
+
+namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Dunet;
 
