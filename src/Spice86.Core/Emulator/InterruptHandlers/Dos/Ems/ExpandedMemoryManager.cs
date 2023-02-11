@@ -1,6 +1,8 @@
 ﻿using Serilog;
 using Serilog.Events;
 
+using Spice86.Logging;
+
 using System.Numerics;
 
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
@@ -47,10 +49,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private readonly SortedList<int, EmsHandle> _handles = new();
     private readonly int[] _mappedPages = new int[] {-1, -1, -1, -1};
 
-    private readonly ILogger _logger;
+    private readonly ILoggerService _loggerService;
     
-    public ExpandedMemoryManager(Machine machine, ILogger logger) : base(machine) {
-        _logger = logger;
+    public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
+        _loggerService = loggerService;
         EmsMemoryMapper = new(ExpandedMemory, MemoryUtils.ToPhysicalAddress(PageFrameSegment, 0));
         EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
 
@@ -95,8 +97,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AX = EmsAllocateMemory(_state.BX, ref dx, true);
             _state.DX = dx;
         } else {
-            if (_logger.IsEnabled(LogEventLevel.Error))
-                _logger.Error("EMS:Call 5A {@SubFunction} not supported", _state.AX);
+            if (_loggerService.IsEnabled(LogEventLevel.Error))
+                _loggerService.Error("EMS:Call 5A {@SubFunction} not supported", _state.AX);
             _state.AX = EmsErrors.EmsInvalidSubFunction;
         }
     }
