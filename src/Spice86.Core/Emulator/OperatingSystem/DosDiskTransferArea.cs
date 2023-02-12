@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer;
@@ -20,7 +20,10 @@ public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress {
 
     public ushort FileDate { get => GetUint16(FileDateOffset); set => SetUint16(FileDateOffset, value); }
 
-    public string FileName { get => GetZeroTerminatedString(FileNameOffset, FileNameSize); set => SetZeroTerminatedString(FileNameOffset, value, FileNameSize); }
+    public string FileName {
+        get => GetZeroTerminatedString(FileNameOffset, FileNameSize);
+        set => SetZeroTerminatedString(FileNameOffset, value, FileNameSize);
+    }
 
     public ushort FileSize { get => GetUint16(FileSizeOffset); set => SetUint16(FileSizeOffset, value); }
 

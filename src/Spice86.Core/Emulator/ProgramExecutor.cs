@@ -211,7 +211,7 @@ public sealed class ProgramExecutor : IDisposable {
         ArgumentException.ThrowIfNullOrEmpty(parentFolder);
 
         driveMap.Add('C', cDrive);
-        Machine.DosInt21Handler.DosFileManager.SetDiskParameters(parentFolder, driveMap);
+        Machine.Dos.FileManager.SetDiskParameters(parentFolder, driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration,

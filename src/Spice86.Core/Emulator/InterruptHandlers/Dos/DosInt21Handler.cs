@@ -1,4 +1,5 @@
-﻿using Spice86.Logging;
+﻿using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Logging;
 
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
@@ -32,17 +33,15 @@ public class DosInt21Handler : InterruptHandler {
 
     private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
+    private readonly List<IVirtualDevice> _devices;
 
-    public DosFileManager DosFileManager => _dosFileManager;
-
-    public DosInt21Handler(Machine machine, ILoggerService loggerService) : base(machine) {
+    public DosInt21Handler(Machine machine, ILoggerService loggerService, Emulator.OperatingSystem.Dos dos) : base(machine) {
         _loggerService = loggerService;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
-        _dosMemoryManager = new DosMemoryManager(machine.Memory,
-            new ServiceProvider().GetService<ILoggerService>());
-        _dosFileManager = new DosFileManager(_memory,
-            new ServiceProvider().GetService<ILoggerService>());
+        _dosMemoryManager = dos.MemoryManager;
+        _dosFileManager = dos.FileManager;
+        _devices = dos.Devices;
         FillDispatchTable();
     }
 
@@ -523,22 +522,26 @@ public class DosInt21Handler : InterruptHandler {
 
     private void IoControl(bool calledFromVm) {
         byte op = _state.AL;
-        ushort device = _state.BX;
+        ushort handle = _state.BX;
 
         SetCarryFlag(false, calledFromVm);
 
         switch (op) {
             case 0: {
                     if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                        _loggerService.Information("GET DEVICE INFORMATION");
+                        _loggerService.Information("GET DEVICE INFORMATION for handle {Handle}", handle);
                     }
-                    // Character or block device?
-                    _state.DX = device < DosFileManager.FileHandleOffset ? (ushort)0x80D3 : (ushort)0x02;
+
+                    if (handle < _devices.Count) {
+                        IVirtualDevice device = _devices[handle];
+                        // @TODO: use the device and it's attributes to fill the response
+                    }
+                    _state.DX = handle < _devices.Count ? (ushort)0x80D3 : (ushort)0x0002;
                     break;
                 }
             case 1: {
                     if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                        _loggerService.Information("SET DEVICE INFORMATION (unimplemented)");
+                        _loggerService.Information("SET DEVICE INFORMATION for handle {Handle} (unimplemented)", handle);
                     }
                     break;
                 }

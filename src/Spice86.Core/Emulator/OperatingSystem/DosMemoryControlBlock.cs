@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer;

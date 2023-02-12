@@ -23,6 +23,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.Vga;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
@@ -35,7 +36,6 @@ using System.Text;
 /// Emulates an IBM PC
 /// </summary>
 public class Machine : IDisposable {
-    private const int InterruptHandlersSegment = 0xF000;
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly Thread _dmaThread;
@@ -44,8 +44,6 @@ public class Machine : IDisposable {
     private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private bool _disposed;
-
-    public DosMemoryManager DosMemoryManager => DosInt21Handler.DosMemoryManager;
 
     public bool RecordData { get; set; }
     
@@ -59,11 +57,7 @@ public class Machine : IDisposable {
 
     public Cpu Cpu { get; }
 
-    public DosInt20Handler DosInt20Handler { get; }
-
-    public DosInt21Handler DosInt21Handler { get; }
-
-    public DosInt2fHandler DosInt2fHandler { get; }
+    public Dos Dos { get; }
 
     public GravisUltraSound GravisUltraSound { get; }
 
@@ -163,7 +157,7 @@ public class Machine : IDisposable {
         Register(Midi);
 
         // Services
-        CallbackHandler = new CallbackHandler(this, InterruptHandlersSegment);
+        CallbackHandler = new CallbackHandler(this, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
         TimerInt8Handler = new TimerInt8Handler(this);
         Register(TimerInt8Handler);
@@ -190,12 +184,11 @@ public class Machine : IDisposable {
             serviceProvider.GetService<ILoggerService>(),
             TimerInt8Handler);
         Register(SystemClockInt1AHandler);
-        DosInt20Handler = new DosInt20Handler(this, serviceProvider.GetService<ILoggerService>());
-        Register(DosInt20Handler);
-        DosInt21Handler = new DosInt21Handler(this, serviceProvider.GetService<ILoggerService>());
-        Register(DosInt21Handler);
-        DosInt2fHandler = new DosInt2fHandler(this, serviceProvider.GetService<ILoggerService>());
-        Register(DosInt2fHandler);
+
+        // Initialize DOS.
+        Dos = new Dos(this, new LoggerService(), configuration);
+        Dos.Initialize();
+        
         MouseInt33Handler = new MouseInt33Handler(this, serviceProvider.GetService<ILoggerService>(), gui);
         Register(MouseInt33Handler);
         _dmaThread = new Thread(DmaLoop) {

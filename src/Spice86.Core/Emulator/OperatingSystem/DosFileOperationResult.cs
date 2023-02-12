@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 public class DosFileOperationResult {
     private readonly bool _error;
     private readonly uint? _value;
@@ -10,8 +10,8 @@ public class DosFileOperationResult {
         _value = value;
     }
 
-    public static DosFileOperationResult Error(uint errorCode) {
-        return new DosFileOperationResult(true, false, errorCode);
+    public static DosFileOperationResult Error(ErrorCode errorCode) {
+        return new DosFileOperationResult(true, false, (uint?)errorCode);
     }
 
     public static DosFileOperationResult NoValue() {
