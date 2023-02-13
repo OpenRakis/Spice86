@@ -165,6 +165,8 @@ public abstract class Instructions16Or32 : Instructions {
         State.GS = DoLxsAndReturnSegmentValue();
     }
 
+    public abstract void Enter();
+
     public abstract void Leave();
     
     public abstract void Shld(Grp2CountSource countSource);

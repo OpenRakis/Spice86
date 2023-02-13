@@ -769,7 +769,7 @@ public class Cpu {
                 _instructions16Or32.MovRmImm();
                 break;
             case 0xC8: //ENTER
-                HandleInvalidOpcode(opcode);
+                _instructions16Or32.Enter();
                 break;
             case 0xC9: //LEAVE
                 _instructions16Or32.Leave();

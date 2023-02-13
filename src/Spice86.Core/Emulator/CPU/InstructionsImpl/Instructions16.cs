@@ -1,3 +1,5 @@
+using Spice86.Core.Emulator.Memory;
+
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
@@ -524,6 +526,33 @@ public class Instructions16 : Instructions16Or32 {
     public override void OutDx() {
         // OUT DX AX
         Cpu.Out16(State.DX, State.AX);
+    }
+
+    public override void Enter() {
+        ushort imm16 = Cpu.NextUint16();
+        byte level = Cpu.NextUint8();
+        level &= 0x1F;
+        Stack.Push16(State.BP);
+        ushort framePointer = State.SP;
+        if (level > 0) {
+            // do level-1 times
+            while (--level > 0) {
+                State.BP -= 2;
+                ushort temp16 = Stack.Pop16();
+                Stack.Push16(temp16);
+            }
+            // push(frame pointer)
+            Stack.Push16(framePointer);
+        }
+
+        State.SP -= imm16;
+
+        // ENTER finishes with memory write check on the final stack pointer
+        // the memory is touched but no write actually occurs
+        // emulate it by doing RMW read access from SS:SP
+        uint physical = new SegmentedAddress(State.SS, State.SP).ToPhysical();
+        this.Memory.SetUint16(physical, Memory.GetUint16(physical));
+        State.BP = framePointer;
     }
 
     public override void Leave() {
