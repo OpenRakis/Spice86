@@ -527,7 +527,7 @@ public class Instructions32 : Instructions16Or32 {
         if (level > 0) {
             // do level-1 times
             while (--level > 0) {
-                State.BP -= 2;
+                State.BP -= 4;
                 uint temp32 = Stack.Pop32();
                 Stack.Push32(temp32);
             }
@@ -535,7 +535,7 @@ public class Instructions32 : Instructions16Or32 {
             Stack.Push32(framePointer);
         }
 
-        State.SP -= imm16;
+        State.ESP -= imm16;
 
         // ENTER finishes with memory write check on the final stack pointer
         // the memory is touched but no write actually occurs
