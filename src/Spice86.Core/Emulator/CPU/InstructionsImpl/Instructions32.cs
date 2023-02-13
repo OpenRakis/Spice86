@@ -519,30 +519,26 @@ public class Instructions32 : Instructions16Or32 {
     }
 
     public override void Enter() {
-        ushort imm16 = Cpu.NextUint16();
+        ushort bytes = Cpu.NextUint16();
         byte level = Cpu.NextUint8();
         level &= 0x1F;
-        Stack.Push32(State.EBP);
-        uint framePointer = State.ESP;
+        ushort sp = State.SP;
+        ushort bp = State.BP;
+        sp -= 4;
+        Memory.SetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0), State.BP);
+        State.BP = (ushort)(State.SP - 2);
         if (level > 0) {
             // do level-1 times
-            while (--level > 0) {
-                State.BP -= 4;
-                uint temp32 = Stack.Pop32();
-                Stack.Push32(temp32);
+            for (int i = 1; i < level; i++) {
+                sp -= 4;
+                bp -= 4;
+                Memory.SetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0), Memory.GetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.SS + bp), 0)));
             }
-            // push(frame pointer)
-            Stack.Push32(framePointer);
+            sp -= 4;
+            Memory.SetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0), Memory.GetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.BP), 0)));
         }
-
-        State.ESP -= imm16;
-
-        // ENTER finishes with memory write check on the final stack pointer
-        // the memory is touched but no write actually occurs
-        // emulate it by doing RMW read access from SS:ESP
-        uint physical = MemoryUtils.ToPhysicalAddress(State.SS, State.SP);
-        this.Memory.SetUint32(physical, Memory.GetUint32(physical));
-        State.EBP = framePointer;
+        sp -= bytes;
+        State.ESP = State.ESP | sp;
     }
 
     public override void Leave() {
