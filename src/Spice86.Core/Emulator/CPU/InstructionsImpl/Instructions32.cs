@@ -540,7 +540,7 @@ public class Instructions32 : Instructions16Or32 {
         // ENTER finishes with memory write check on the final stack pointer
         // the memory is touched but no write actually occurs
         // emulate it by doing RMW read access from SS:ESP
-        uint physical = new SegmentedAddress(State.SS, State.SP).ToPhysical();
+        uint physical = MemoryUtils.ToPhysicalAddress(State.SS, State.SP);
         this.Memory.SetUint32(physical, Memory.GetUint32(physical));
         State.EBP = framePointer;
     }
