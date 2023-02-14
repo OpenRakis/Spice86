@@ -519,26 +519,39 @@ public class Instructions32 : Instructions16Or32 {
     }
 
     public override void Enter() {
-        ushort bytes = Cpu.NextUint16();
-        byte level = Cpu.NextUint8();
-        level &= 0x1F;
-        ushort sp = State.SP;
-        ushort bp = State.BP;
-        sp -= 4;
-        Memory.UInt32[(ushort)(State.SS + sp), 0] = State.EBP;
-        State.BP = (ushort)(State.SP - 2);
-        if (level > 0) {
-            // do level-1 times
-            for (int i = 1; i < level; i++) {
-                sp -= 4;
-                bp -= 4;
-                Memory.UInt32[(ushort)(State.SS + sp), 0] = Memory.UInt32[(ushort)(State.SS + bp), 0];
-            }
-            sp -= 4;
-            Memory.UInt32[(ushort)(State.SS + sp), 0] = State.EBP;
+        ushort stackSize = Cpu.NextUint16();
+        byte nestingLevel = Cpu.NextUint8();
+        nestingLevel %= 32;
+        const byte operandOffset = 4;
+        uint frameTemp;
+        if (stackSize == 32) {
+            Stack.Push32(State.EBP);
+            frameTemp = State.ESP;
+        } else { // stackSize = 16
+            Stack.Push16(State.BP);
+            frameTemp = State.SP;
         }
-        sp -= bytes;
-        State.ESP = State.ESP | sp;
+
+        if (nestingLevel == 0) {
+            if (stackSize == 32) {
+                State.EBP = frameTemp;
+                State.ESP = State.EBP - stackSize;
+            } else { // stackSize = 16
+                State.BP = (ushort)frameTemp;
+                State.SP = (ushort)(State.BP - stackSize);
+            }
+            return;
+        }
+        for (int i = 0; i < nestingLevel; i++) {
+            if (stackSize == 32) {
+                State.EBP -= operandOffset;
+                Stack.Push32(State.EBP);
+            } else { // stackSize = 16
+                State.BP -= operandOffset;
+                Stack.Push32(State.BP);
+            }
+        }
+        Stack.Push32(frameTemp);
     }
 
     public override void Leave() {

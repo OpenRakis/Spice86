@@ -165,6 +165,9 @@ public abstract class Instructions16Or32 : Instructions {
         State.GS = DoLxsAndReturnSegmentValue();
     }
 
+    /// <summary>
+    /// https://c9x.me/x86/html/file_module_x86_id_78.html
+    /// </summary>
     public abstract void Enter();
 
     public abstract void Leave();
