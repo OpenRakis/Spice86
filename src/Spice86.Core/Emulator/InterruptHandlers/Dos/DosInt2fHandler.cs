@@ -34,7 +34,7 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <summary>
-    /// Right now, a NOP is sufficient in order to make some games (eg. Dune 2) work.
+    /// TODO: Right now, a NOP is sufficient in order to make some games (eg. Dune 2) work.
     /// </summary>
     public void GetSetFileAttributes() {
         
