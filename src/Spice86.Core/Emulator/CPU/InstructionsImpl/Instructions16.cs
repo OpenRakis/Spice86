@@ -535,17 +535,17 @@ public class Instructions16 : Instructions16Or32 {
         ushort sp = State.SP;
         ushort bp = State.BP;
         sp -= 2;
-        Memory.SetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0), State.BP);
+        Memory.UInt16[MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0)] = State.BP;
         State.BP = (ushort)(State.SP - 2);
         if (level > 0) {
             // do level-1 times
             for (int i = 1; i < level; i++) {
                 sp -= 2;
                 bp -= 2;
-                Memory.SetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0), Memory.GetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.SS + bp), 0)));
+                Memory.UInt16[MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0)] = Memory.UInt16[MemoryUtils.ToPhysicalAddress((ushort)(State.SS + bp), 0)];
             }
             sp -= 2;
-            Memory.SetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0), Memory.GetUint16(MemoryUtils.ToPhysicalAddress((ushort)(State.BP), 0)));
+            Memory.UInt16[MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0)] = Memory.UInt16[MemoryUtils.ToPhysicalAddress(State.BP, 0)];
         }
         sp -= bytes;
         State.ESP = State.ESP | sp;
