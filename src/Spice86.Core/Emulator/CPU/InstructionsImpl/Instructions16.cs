@@ -545,7 +545,7 @@ public class Instructions16 : Instructions16Or32 {
                 Memory.UInt16[MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0)] = Memory.UInt16[MemoryUtils.ToPhysicalAddress((ushort)(State.SS + bp), 0)];
             }
             sp -= 2;
-            Memory.UInt16[MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0)] = Memory.UInt16[MemoryUtils.ToPhysicalAddress(State.BP, 0)];
+            Memory.UInt16[MemoryUtils.ToPhysicalAddress((ushort)(State.SS + sp), 0)] = State.BP;
         }
         sp -= bytes;
         State.ESP = State.ESP | sp;
