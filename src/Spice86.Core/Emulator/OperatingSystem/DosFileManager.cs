@@ -203,7 +203,8 @@ public class DosFileManager {
     public DosFileOperationResult OpenFile(string fileName, byte rwAccessMode) {
         string openMode = _fileOpenMode[rwAccessMode];
 
-        if (_dos.Devices.FirstOrDefault(virtualDevice => virtualDevice is CharacterDevice characterDevice && characterDevice.Name == fileName) is CharacterDevice device) {
+        CharacterDevice? device = _dos.Devices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
+        if (device is not null) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _loggerService.Information("Opening device {@FileName} with mode {@OpenMode}", fileName, openMode);
             }
