@@ -27,7 +27,7 @@ jobs:
 
     - name: Package NuGet
       working-directory: ./src
-      run: dotnet pack --include-symbols --include-source --configuration Release -o .
+      run: dotnet pack --include-symbols --include-source --configuration Release /p:PublishDir=.
 
     - name: Upload NuGet Bufdio.Spice86
       working-directory: ./src
