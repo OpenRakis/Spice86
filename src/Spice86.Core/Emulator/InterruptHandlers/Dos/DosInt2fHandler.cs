@@ -34,10 +34,6 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <summary>
-<<<<<<< Updated upstream
-    /// This is an INT2F function that needs to be implemented.
-=======
->>>>>>> Stashed changes
     /// Right now, a NOP is sufficient in order to make some games (eg. Dune 2) work.
     /// </summary>
     public void GetSetFileAttributes() {
