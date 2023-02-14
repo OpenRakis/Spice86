@@ -23,11 +23,11 @@ jobs:
 
     - name: Test with dotnet
       working-directory: ./src
-      run: dotnet test --configuration Release
+      run: dotnet test --configuration Release -o .
 
     - name: Package NuGet
       working-directory: ./src
-      run: dotnet pack --include-symbols --include-source --configuration Release /p:PublishDir=.
+      run: dotnet pack --include-symbols --include-source --configuration Release --no-build
 
     - name: Upload NuGet Bufdio.Spice86
       working-directory: ./src
