@@ -44,7 +44,7 @@ public static class MemoryUtils {
     public static ushort ToSegment(uint physicalAddress) {
         return (ushort)(physicalAddress >> 4);
     }
-    
+
     public static string GetZeroTerminatedString(byte[] memory, uint address, int maxLength) {
         StringBuilder res = new();
         for (int i = 0; i < maxLength; i++) {
