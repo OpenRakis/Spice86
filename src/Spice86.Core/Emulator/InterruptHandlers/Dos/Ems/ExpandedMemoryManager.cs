@@ -41,8 +41,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const string EmsIdentifier = "EMMXXXX0";
 
-    public EmsMemoryMapper EmsMemoryMapper { get; init; }
-
     public Memory ExpandedMemory { get; init; } = new(32 * 1024);
 
     private readonly short[] _pageOwners = new short[MaximumLogicalPages];
@@ -53,8 +51,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
         _loggerService = loggerService;
-        EmsMemoryMapper = new(ExpandedMemory, MemoryUtils.ToPhysicalAddress(PageFrameSegment, 0));
-        EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
+        MemoryUtils.SetZeroTerminatedString(ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
 
         _pageOwners.AsSpan().Fill(-1);
 
@@ -504,7 +501,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int handleIndex = _state.DX;
         if (_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Write the handle name to ES:DI.
-            EmsMemoryMapper.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), handle.Name, handle.Name.Length + 1);
+            MemoryUtils.SetZeroTerminatedString(this.ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), handle.Name, handle.Name.Length + 1);
             // Return good status.
             _state.AH = EmsErrors.EmmNoError;
         } else {
@@ -520,7 +517,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int handleIndex = _state.DX;
         if (_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Read the handle name from DS:SI.
-            handle.Name = EmsMemoryMapper.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
+            handle.Name = MemoryUtils.GetZeroTerminatedString(ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
             // Return good status.
             _state.AH = EmsErrors.EmmNoError;
         } else {
