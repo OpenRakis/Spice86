@@ -30,14 +30,17 @@ public class DosInt2fHandler : InterruptHandler {
 
     private void FillDispatchTable() {
         _dispatchTable.Add(0x15, new Callback(0x15, SendDeviceDriverRequest));
-        _dispatchTable.Add(0x43, new Callback(0x43, NoOp));
+        _dispatchTable.Add(0x43, new Callback(0x43, GetSetFileAttributes));
     }
 
     /// <summary>
+<<<<<<< Updated upstream
     /// This is an INT2F function that needs to be implemented.
+=======
+>>>>>>> Stashed changes
     /// Right now, a NOP is sufficient in order to make some games (eg. Dune 2) work.
     /// </summary>
-    public void NoOp() {
+    public void GetSetFileAttributes() {
         
     }
 
