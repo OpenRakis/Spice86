@@ -65,7 +65,12 @@ public class CallbackHandler : IndexBasedDispatcher {
     }
 
     private void InstallCallbackInInterruptTable(ICallback callback) {
-        _offset += InstallInterruptWithCallback(callback.Index, _callbackHandlerSegment, _offset);
+        // Use either the provided segment or the default one.
+        if (callback.InterruptHandlerSegment.HasValue) {
+            InstallInterruptWithCallback(callback.Index, callback.InterruptHandlerSegment.Value, 0x0000);
+        } else {
+            _offset += InstallInterruptWithCallback(callback.Index, _callbackHandlerSegment, _offset);
+        }
     }
 
     private ushort InstallInterruptWithCallback(byte vectorNumber, ushort segment, ushort offset) {

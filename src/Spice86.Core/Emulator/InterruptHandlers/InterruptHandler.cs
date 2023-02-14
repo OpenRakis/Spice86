@@ -29,6 +29,9 @@ public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
 
     public abstract void Run();
 
+    /// <inheritdoc />
+    public virtual ushort? InterruptHandlerSegment => null;
+
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
         return new UnhandledInterruptException(_machine, Index, index);
     }
