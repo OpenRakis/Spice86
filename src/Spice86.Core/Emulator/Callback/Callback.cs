@@ -12,6 +12,9 @@ public class Callback : ICallback {
 
     public byte Index { get; private set; }
 
+    /// <inheritdoc />
+    public ushort? InterruptHandlerSegment => null;
+
     public void Run() {
         _runnable.Invoke();
     }
