@@ -54,7 +54,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
         _loggerService = loggerService;
-        MemoryUtils.SetZeroTerminatedString(ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
+        MemoryUtils.SetZeroTerminatedString(machine.MainMemory.Ram, MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
 
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
