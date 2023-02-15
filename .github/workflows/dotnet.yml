@@ -46,5 +46,5 @@ jobs:
       run: nuget push Spice86.Core.3.0.18.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86
-      working-directory: ./src/Spice86
+      working-directory: ./src/Spice86/bin/Release
       run: nuget push Spice86.3.0.18.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
