@@ -41,6 +41,7 @@ jobs:
               dotnet publish -c Debug -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/windows
               dotnet publish -c Debug -r osx-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/macos
               dotnet publish -c Debug -r osx-arm64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/macos-arm64
+
        - name: Zip Debug output
          run: zip -qq -r DebugBuild.zip Debug
          working-directory: ./src/Spice86/bin
