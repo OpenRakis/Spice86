@@ -124,7 +124,6 @@ public class Machine : IDisposable {
         MainMemory = new MainMemory(this, sizeInKb: (uint)Configuration.Kilobytes);
         Bios = new Bios(MainMemory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
-        Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
@@ -200,7 +199,7 @@ public class Machine : IDisposable {
             Name = "DMAThread"
         };
         if(configuration.Ems) {
-            Ems = new(this, loggerService);
+            Ems = new(this);
         }
         if(Ems is not null) {
             Register(Ems);

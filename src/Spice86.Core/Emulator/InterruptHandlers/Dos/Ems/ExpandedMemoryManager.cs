@@ -58,10 +58,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private readonly SortedList<int, EmsHandle> _handles = new();
     private readonly int[] _mappedPages = new int[] {-1, -1, -1, -1};
 
-    private readonly ILoggerService _loggerService;
-    
-    public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
-        _loggerService = loggerService;
+    public ExpandedMemoryManager(Machine machine) : base(machine) {
         MemoryUtils.SetZeroTerminatedString(machine.MainMemory.Ram, MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
 
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
