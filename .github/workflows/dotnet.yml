@@ -23,7 +23,7 @@ jobs:
 
     - name: Test with dotnet
       working-directory: ./src
-      run: dotnet test --configuration Release -o .
+      run: dotnet test --configuration Release
 
     - name: Package NuGet
       working-directory: ./src
