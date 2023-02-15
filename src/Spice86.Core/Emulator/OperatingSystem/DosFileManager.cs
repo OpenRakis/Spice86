@@ -1,6 +1,6 @@
 ﻿using Spice86.Logging;
 
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog;
 
@@ -17,8 +17,7 @@ using System.Text.RegularExpressions;
 using System.Diagnostics;
 
 public class DosFileManager {
-    public const ushort FileHandleOffset = 5;
-    private const int MaxOpenFiles = 15;
+    private const int MaxOpenFiles = 20;
     private static readonly Dictionary<byte, string> _fileOpenMode = new();
     private readonly ILoggerService _loggerService;
     private string? _currentDir;
@@ -38,6 +37,8 @@ public class DosFileManager {
     private readonly Memory _memory;
 
     private readonly OpenFile?[] _openFiles = new OpenFile[MaxOpenFiles];
+    
+    private readonly Dos _dos;
 
     static DosFileManager() {
         _fileOpenMode.Add(0x00, "r");
@@ -45,9 +46,10 @@ public class DosFileManager {
         _fileOpenMode.Add(0x02, "rw");
     }
 
-    public DosFileManager(Memory memory, ILoggerService loggerService) {
+    public DosFileManager(Memory memory, ILoggerService loggerService, Dos dos) {
         _loggerService = loggerService;
         _memory = memory;
+        _dos = dos;
     }
 
     public DosFileOperationResult CloseFile(ushort fileHandle) {
@@ -109,7 +111,7 @@ public class DosFileManager {
             return NoFreeHandleError();
         }
 
-        ushort dosIndex = (ushort)(freeIndex.Value + FileHandleOffset);
+        ushort dosIndex = (ushort)freeIndex.Value;
         SetOpenFile(dosIndex, file);
         return DosFileOperationResult.Value16(dosIndex);
     }
@@ -141,7 +143,7 @@ public class DosFileManager {
                 }
             }
         }
-        return DosFileOperationResult.Error(0x03);
+        return DosFileOperationResult.Error(ErrorCode.PathNotFound);
     }
 
     public DosFileOperationResult FindNextMatchingFile() {
@@ -172,17 +174,6 @@ public class DosFileManager {
         return DosFileOperationResult.NoValue();
     }
 
-    public string GetDeviceName(ushort fileHandle) {
-        return fileHandle switch {
-            0 => "STDIN",
-            1 => "STDOUT",
-            2 => "STDERR",
-            3 => "STDAUX",
-            4 => "STDPRN",
-            _ => throw new UnrecoverableException($"This is a programming error. getDeviceName called with fileHandle={fileHandle}")
-        };
-    }
-
     public ushort DiskTransferAreaAddressOffset => _diskTransferAreaAddressOffset;
 
     public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
@@ -196,7 +187,7 @@ public class DosFileManager {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("Moving in file {@FileMove}", file.Name);
         }
-        FileStream randomAccessFile = file.RandomAccessFile;
+        Stream randomAccessFile = file.RandomAccessFile;
         try {
             uint newOffset = Seek(randomAccessFile, originOfMove, offset);
             return DosFileOperationResult.Value32(newOffset);
@@ -205,22 +196,54 @@ public class DosFileManager {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred while seeking file {@Error}", e);
             }
-            return DosFileOperationResult.Error(0x19);
+            return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
         }
     }
 
     public DosFileOperationResult OpenFile(string fileName, byte rwAccessMode) {
+        string openMode = _fileOpenMode[rwAccessMode];
+
+        CharacterDevice? device = _dos.Devices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
+        if (device is not null) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("Opening device {@FileName} with mode {@OpenMode}", fileName, openMode);
+            }
+            return OpenDeviceInternal(device, openMode);
+        }
+        
         string? hostFileName = ToHostCaseSensitiveFileName(fileName, false);
         if (hostFileName == null) {
             return FileNotFoundError(fileName);
         }
 
-        string openMode = _fileOpenMode[rwAccessMode];
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("Opening file {@HostFileName} with mode {@OpenMode}", hostFileName, openMode);
         }
 
         return OpenFileInternal(fileName, hostFileName, openMode);
+    }
+
+    public DosFileOperationResult OpenDevice(CharacterDevice device, string openMode, string name) {
+        return OpenDeviceInternal(device, openMode, name);
+    }
+
+    private DosFileOperationResult OpenDeviceInternal(CharacterDevice device, string openMode, string? name = null) {
+        int? freeIndex = FindNextFreeFileIndex();
+        if (freeIndex == null) {
+            return NoFreeHandleError();
+        }
+
+        Stream stream;
+        if (device == _dos.CurrentConsoleDevice) {
+             stream = openMode == "r" ? Console.OpenStandardInput() : Console.OpenStandardOutput();
+        } else {
+            stream = new DeviceStream(device.Name, openMode, _loggerService);
+        }
+
+        ushort dosIndex = (ushort)freeIndex.Value;
+        SetOpenFile(dosIndex, new OpenFile(name ?? device.Name, dosIndex, stream));
+        
+        return DosFileOperationResult.Value16(dosIndex);
     }
 
     public DosFileOperationResult ReadFile(ushort fileHandle, ushort readLength, uint targetAddress) {
@@ -271,10 +294,6 @@ public class DosFileManager {
     }
 
     public DosFileOperationResult WriteFileUsingHandle(ushort fileHandle, ushort writeLength, uint bufferAddress) {
-        if (IsWriteDeviceFileHandle(fileHandle)) {
-            return WriteToDevice(fileHandle, writeLength, bufferAddress);
-        }
-
         if (!IsValidFileHandle(fileHandle)) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _loggerService.Warning("Invalid or unsupported file handle {@FileHandle}. Doing nothing.", fileHandle);
@@ -313,10 +332,6 @@ public class DosFileManager {
         return count;
     }
 
-    private int FileHandleToIndex(ushort fileHandle) {
-        return fileHandle - FileHandleOffset;
-    }
-
     private DosFileOperationResult FileNotFoundError(string? fileName) {
         return FileNotFoundErrorWithLog($"File {fileName} not found!");
     }
@@ -326,14 +341,14 @@ public class DosFileManager {
             _loggerService.Warning("{@FileNotFoundErrorWithLog}: {@Message}", nameof(FileNotFoundErrorWithLog), message);
         }
 
-        return DosFileOperationResult.Error(0x02);
+        return DosFileOperationResult.Error(ErrorCode.FileNotFound);
     }
 
     private DosFileOperationResult FileNotOpenedError(int fileHandle) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
             _loggerService.Warning("File not opened: {@FileHandle}", fileHandle);
         }
-        return DosFileOperationResult.Error(0x06);
+        return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
     }
 
     /// <summary>
@@ -364,26 +379,21 @@ public class DosFileManager {
     }
 
     private OpenFile? GetOpenFile(ushort fileHandle) {
-        int index = FileHandleToIndex(fileHandle);
-        if (index >= _openFiles.Length || index < 0) {
+        if (fileHandle >= _openFiles.Length) {
             return null;
         }
-        return _openFiles[index];
+        return _openFiles[fileHandle];
     }
 
     private static bool IsValidFileHandle(ushort fileHandle) {
-        return fileHandle is >= FileHandleOffset and <= (MaxOpenFiles + FileHandleOffset);
-    }
-
-    private static bool IsWriteDeviceFileHandle(ushort fileHandle) {
-        return fileHandle is > 0 and < FileHandleOffset;
+        return fileHandle <= MaxOpenFiles;
     }
 
     private DosFileOperationResult NoFreeHandleError() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
             _loggerService.Warning("Could not find a free handle {@MethodName}", nameof(NoFreeHandleError));
         }
-        return DosFileOperationResult.Error(0x04);
+        return DosFileOperationResult.Error(ErrorCode.TooManyOpenFiles);
     }
 
     private string? GetActualCaseForFileName(string caseInsensitivePath) {
@@ -440,9 +450,9 @@ public class DosFileManager {
             return NoFreeHandleError();
         }
 
-        ushort dosIndex = (ushort)(freeIndex.Value + FileHandleOffset);
+        ushort dosIndex = (ushort)freeIndex.Value;
         try {
-            FileStream? randomAccessFile = null;
+            Stream? randomAccessFile = null;
             if (openMode == "r") {
                 string? realFileName = GetActualCaseForFileName(hostFileName);
                 if (File.Exists(hostFileName)) {
@@ -485,7 +495,7 @@ public class DosFileManager {
         return fileName.Replace($"{driveLetter}:", pathForDrive);
     }
 
-    private static uint Seek(FileStream randomAccessFile, byte originOfMove, uint offset) {
+    private static uint Seek(Stream randomAccessFile, byte originOfMove, uint offset) {
         long newOffset;
         if (originOfMove == 0) {
             newOffset = offset; // seek from beginning, offset is good
@@ -502,7 +512,7 @@ public class DosFileManager {
     }
 
     private void SetOpenFile(ushort fileHandle, OpenFile? openFile) {
-        _openFiles[FileHandleToIndex(fileHandle)] = openFile;
+        _openFiles[fileHandle] = openFile;
     }
 
     private string? ToCaseSensitiveFileName(string? caseInsensitivePath) {
@@ -617,12 +627,5 @@ public class DosFileManager {
         dosDiskTransferArea.FileTime = ToDosTime(creationLocalTime);
         dosDiskTransferArea.FileSize = (ushort)attributes.Length;
         dosDiskTransferArea.FileName = Path.GetFileName(matchingFile);
-    }
-
-    private DosFileOperationResult WriteToDevice(ushort fileHandle, ushort writeLength, uint bufferAddress) {
-        string deviceName = GetDeviceName(fileHandle);
-        Span<byte> buffer = _memory.GetSpan((int)bufferAddress, writeLength);
-        Console.WriteLine(deviceName + ConvertUtils.ToString(buffer));
-        return DosFileOperationResult.Value16(writeLength);
     }
 }

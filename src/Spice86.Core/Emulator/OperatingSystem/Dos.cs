@@ -1,0 +1,127 @@
+using Serilog.Events;
+
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
+using Spice86.Logging;
+
+using System.Linq;
+using System.Text;
+
+namespace Spice86.Core.Emulator.OperatingSystem;
+
+public class Dos {
+    private const int DeviceDriverHeaderLength = 18;
+    private readonly Machine _machine;
+    private readonly ILoggerService _logger;
+    private readonly DosInt20Handler _dosInt20Handler;
+    private readonly DosInt21Handler _dosInt21Handler;
+    private readonly DosInt2fHandler _dosInt2FHandler;
+
+    public readonly List<IVirtualDevice> Devices = new();
+    public CharacterDevice CurrentClockDevice { get; set; } = null!;
+    public CharacterDevice CurrentConsoleDevice { get; set; } = null!;
+    public DosMemoryManager MemoryManager { get; }
+    public DosFileManager FileManager { get; }
+
+    public Dos(Machine machine, ILoggerService logger, Configuration configuration) {
+        _machine = machine;
+        _logger = logger;
+        // _configuration = configuration.DOS;
+        FileManager = new DosFileManager(_machine.Memory, _logger, this);
+        MemoryManager = new DosMemoryManager(_machine.Memory, _logger);
+        _dosInt20Handler = new DosInt20Handler(_machine, _logger);
+        _dosInt21Handler = new DosInt21Handler(_machine, _logger, this);
+        _dosInt2FHandler = new DosInt2fHandler(_machine, _logger);
+    }
+
+    public void Initialize() {
+        if (_logger.IsEnabled(LogEventLevel.Information)) {
+            _logger.Information("Initializing DOS");
+        }
+
+        _machine.Register(_dosInt20Handler);
+        _machine.Register(_dosInt21Handler);
+        _machine.Register(_dosInt2FHandler);
+
+        AddDefaultDevices();
+        OpenDefaultFileHandles();
+    }
+
+    private void OpenDefaultFileHandles() {
+        if (Devices.FirstOrDefault(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
+            FileManager.OpenDevice(con, "r", "STDIN");
+            FileManager.OpenDevice(con, "w", "STDOUT");
+            FileManager.OpenDevice(con, "w", "STDERR");
+        }
+
+        if (Devices.FirstOrDefault(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
+            FileManager.OpenDevice(aux, "rw", "STDAUX");
+        }
+
+        if (Devices.FirstOrDefault(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
+            FileManager.OpenDevice(prn, "w", "STDPRN");
+        }
+    }
+
+    private void AddDefaultDevices() {
+        AddDevice(new CharacterDevice(DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON"));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX"));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN"));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK"));
+        AddDevice(new BlockDevice(DeviceAttributes.FatDevice, 1));
+    }
+
+    /// <summary>
+    /// Add a device to memory so that the information can be read by both DOS and programs. 
+    /// </summary>
+    /// <param name="device">The character or block device to add</param>
+    /// <param name="segment">The segment at which the </param>
+    /// <param name="offset"></param>
+    public void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
+        // Store the location of the header
+        device.Segment = segment ?? MemoryMap.DeviceDriverSegment;
+        device.Offset = offset ?? (ushort)(Devices.Count * DeviceDriverHeaderLength);
+        // Write the DOS device driver header to memory
+        ushort index = device.Offset;
+        _machine.Memory.UInt16[device.Segment, index] = 0xFFFF;
+        index += 2;
+        _machine.Memory.UInt16[device.Segment, index] = 0xFFFF;
+        index += 2;
+        _machine.Memory.UInt16[device.Segment, index] = (ushort)device.Attributes;
+        index += 2;
+        _machine.Memory.UInt16[device.Segment, index] = device.StrategyEntryPoint;
+        index += 2;
+        _machine.Memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
+        index += 2;
+        if (device.Attributes.HasFlag(DeviceAttributes.Character)) {
+            var characterDevice = (CharacterDevice)device;
+            _machine.Memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
+                Encoding.ASCII.GetBytes( $"{characterDevice.Name,-8}"));
+        } else {
+            var blockDevice = (BlockDevice)device;
+            _machine.Memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
+            index += 1;
+            _machine.Memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
+                Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
+        }
+
+        // Make the previous device point to this one
+        if (Devices.Count > 0) {
+            IVirtualDevice previousDevice = Devices[^1];
+            _machine.Memory.UInt16[previousDevice.Segment, previousDevice.Offset] = device.Offset;
+            _machine.Memory.UInt16[previousDevice.Segment, (ushort)(previousDevice.Offset + 2)] = device.Segment;
+        }
+
+        // Handle changing of current input, output or clock devices.
+        if (device.Attributes.HasFlag(DeviceAttributes.CurrentStdin) ||
+            device.Attributes.HasFlag(DeviceAttributes.CurrentStdout)) {
+            CurrentConsoleDevice = (CharacterDevice)device;
+        }
+        if (device.Attributes.HasFlag(DeviceAttributes.CurrentClock)) {
+            CurrentClockDevice = (CharacterDevice)device;
+        }
+
+        Devices.Add(device);
+    }
+}

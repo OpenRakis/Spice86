@@ -1,6 +1,6 @@
 ﻿using Spice86.Logging;
 
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog;
 

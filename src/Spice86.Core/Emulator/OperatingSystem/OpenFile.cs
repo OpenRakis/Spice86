@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Core.Emulator.Memory;
 
@@ -13,9 +13,9 @@ public class OpenFile {
     private readonly int _descriptor;
     private readonly List<MemoryRange> _loadedMemoryRanges = new();
     private readonly string _name;
-    private readonly FileStream _randomAccessFile;
+    private readonly Stream _randomAccessFile;
 
-    public OpenFile(string name, int descriptor, FileStream randomAccessFile) {
+    public OpenFile(string name, int descriptor, Stream randomAccessFile) {
         _name = name;
         _descriptor = descriptor;
         _randomAccessFile = randomAccessFile;
@@ -52,5 +52,5 @@ public class OpenFile {
 
     public string Name => _name;
 
-    public FileStream RandomAccessFile => _randomAccessFile;
+    public Stream RandomAccessFile => _randomAccessFile;
 }
