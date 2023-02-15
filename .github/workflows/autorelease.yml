@@ -31,14 +31,16 @@ jobs:
               dotnet restore
               dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Release/linux
               dotnet publish -c Release -r linux-arm64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Release/linux-arm64
-              dotnet publish -c Release -r linux-arm --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Release/linux-arm
+              dotnet publish -c Release -r win-arm64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Release/windows-arm64
               dotnet publish -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Release/windows
               dotnet publish -c Release -r osx-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Release/macos
               dotnet publish -c Release -r osx-arm64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Release/macos-arm64
               dotnet publish -c Debug -r linux-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/linux
+              dotnet publish -c Debug -r linux-arm64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/linux-arm64
+              dotnet publish -c Debug -r win-arm64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/windows-arm64
               dotnet publish -c Debug -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/windows
               dotnet publish -c Debug -r osx-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/macos
-
+              dotnet publish -c Debug -r osx-arm64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Debug/macos-arm64
        - name: Zip Debug output
          run: zip -qq -r DebugBuild.zip Debug
          working-directory: ./src/Spice86/bin
