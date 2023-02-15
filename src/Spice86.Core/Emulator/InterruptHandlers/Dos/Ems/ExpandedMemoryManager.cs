@@ -1,6 +1,7 @@
 ﻿using Serilog;
 using Serilog.Events;
 
+using Spice86.Core.Emulator.Devices.Memory;
 using Spice86.Logging;
 
 using System.Numerics;
@@ -49,15 +50,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public const int SystemHandle = 0;
 
     public const string EmsIdentifier = "EMMXXXX0";
-
-    public Memory ExpandedMemory { get; init; } = new(32 * 1024);
-
+    
     public override ushort? InterruptHandlerSegment => 0xF100;
 
     private readonly short[] _pageOwners = new short[MaximumLogicalPages];
     private readonly SortedList<int, EmsHandle> _handles = new();
-    private readonly int[] _mappedPages = new int[] {-1, -1, -1, -1};
-
+    private readonly int[] _mappedPages = {-1, -1, -1, -1};
+    
     public ExpandedMemoryManager(Machine machine) : base(machine) {
         MemoryUtils.SetZeroTerminatedString(machine.MainMemory.Ram, MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
 
@@ -98,7 +97,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             data = 0;
             return false;
         }
-        data = ExpandedMemory.GetUint32(address);
+        data = _machine.EmsCard.ExpandedMemory.GetUint32(address);
         return true;
     }
 
@@ -107,7 +106,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             data = 0;
             return false;
         }
-        data = ExpandedMemory.GetUint16(address);
+        data = _machine.EmsCard.ExpandedMemory.GetUint16(address);
         return true;
     }
     
@@ -116,7 +115,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             data = 0;
             return false;
         }
-        data = ExpandedMemory.GetUint8(address);
+        data = _machine.EmsCard.ExpandedMemory.GetUint8(address);
         return true;
     }
 
@@ -127,13 +126,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         switch (data)
         {
             case byte b:
-                ExpandedMemory.SetUint8(address, b);
+                _machine.EmsCard.ExpandedMemory.SetUint8(address, b);
                 break;
             case ushort u:
-                ExpandedMemory.SetUint16(address, u);
+                _machine.EmsCard.ExpandedMemory.SetUint16(address, u);
                 break;
             case uint i:
-                ExpandedMemory.SetUint32(address, i);
+                _machine.EmsCard.ExpandedMemory.SetUint32(address, i);
                 break;
         }
         return true;
@@ -465,7 +464,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int handleIndex = _state.DX;
         if (_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Write the handle name to ES:DI.
-            MemoryUtils.SetZeroTerminatedString(this.ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), handle.Name, handle.Name.Length + 1);
+            MemoryUtils.SetZeroTerminatedString(this._machine.EmsCard.ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), handle.Name, handle.Name.Length + 1);
             // Return good status.
             _state.AH = EmsErrors.EmmNoError;
         } else {
@@ -481,7 +480,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int handleIndex = _state.DX;
         if (_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
             // Read the handle name from DS:SI.
-            handle.Name = MemoryUtils.GetZeroTerminatedString(ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
+            handle.Name = MemoryUtils.GetZeroTerminatedString(_machine.EmsCard.ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
             // Return good status.
             _state.AH = EmsErrors.EmmNoError;
         } else {
@@ -511,8 +510,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         ushort arraySegment = _state.DS;
         ushort arrayOffset = _state.SI;
         for (int i = 0; i < pageCount; i++) {
-            ushort logicalPageIndex = ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(arraySegment, arrayOffset));
-            ushort physicalPageIndex = ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(arraySegment, (ushort)(arrayOffset + 2u)));
+            ushort logicalPageIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(arraySegment, arrayOffset));
+            ushort physicalPageIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(arraySegment, (ushort)(arrayOffset + 2u)));
 
             if (physicalPageIndex >= MaximumPhysicalPages) {
                 // Return "physical page out of range" code.
@@ -578,17 +577,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Copies a block of memory.
     /// </summary>
     public void Move() {
-        int length = (int)ExpandedMemory.GetUint32(MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI));
+        int length = (int)_machine.EmsCard.ExpandedMemory.GetUint32(MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI));
 
-        byte sourceType = ExpandedMemory.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 4u)));
-        int sourceHandleIndex = ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 5u)));
-        int sourceOffset = ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 7u)));
-        int sourcePage = ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 9u)));
+        byte sourceType = _machine.EmsCard.ExpandedMemory.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 4u)));
+        int sourceHandleIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 5u)));
+        int sourceOffset = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 7u)));
+        int sourcePage = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 9u)));
 
-        byte destType = ExpandedMemory.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 11u)));
-        int destHandleIndex = ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 12u)));
-        int destOffset = ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 14u)));
-        int destPage = ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 16u)));
+        byte destType = _machine.EmsCard.ExpandedMemory.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 11u)));
+        int destHandleIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 12u)));
+        int destOffset = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 14u)));
+        int destPage = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 16u)));
 
         CopyDataFromMappedConvMemoryToEmsPages();
 
@@ -643,9 +642,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
-    public Span<byte> GetMappedPage(int physicalPageIndex) => ExpandedMemory.GetSpan(0, ExpandedMemory.Ram.Length).Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
+    public Span<byte> GetMappedPage(int physicalPageIndex) => _machine.EmsCard.ExpandedMemory.GetSpan(0, _machine.EmsCard.ExpandedMemory.Ram.Length).Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
 
-    public Span<byte> GetLogicalPage(int logicalPageIndex) => ExpandedMemory.GetSpan(0, ExpandedMemory.Ram.Length).Slice(logicalPageIndex * PageSize, PageSize);
+    public Span<byte> GetLogicalPage(int logicalPageIndex) => _machine.EmsCard.ExpandedMemory.GetSpan(0, _machine.EmsCard.ExpandedMemory.Ram.Length).Slice(logicalPageIndex * PageSize, PageSize);
     
     public ushort GetNextFreePage(short handle) {
         for (int i = 0; i < _pageOwners.Length; i++) {
@@ -676,11 +675,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         if (!reverse) {
             for (uint offset = 0; offset < length; offset++) {
-                ExpandedMemory.SetUint8(destAddress + offset, ExpandedMemory.GetUint8(sourceAddress + offset));
+                _machine.EmsCard.ExpandedMemory.SetUint8(destAddress + offset, _machine.EmsCard.ExpandedMemory.GetUint8(sourceAddress + offset));
             }
         } else {
             for (int offset = length - 1; offset >= 0; offset--) {
-                ExpandedMemory.SetUint8(destAddress + (uint)offset, ExpandedMemory.GetUint8(sourceAddress + (uint)offset));
+                _machine.EmsCard.ExpandedMemory.SetUint8(destAddress + (uint)offset, _machine.EmsCard.ExpandedMemory.GetUint8(sourceAddress + (uint)offset));
             }
         }
 
@@ -715,7 +714,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
 
             for (int i = 0; i < size; i++) {
-                ExpandedMemory.SetUint8(sourceCount++, source[offset + i]);
+                _machine.EmsCard.ExpandedMemory.SetUint8(sourceCount++, source[offset + i]);
             }
 
             length -= size;
@@ -754,7 +753,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
 
             for (int i = 0; i < size; i++) {
-                target[offset + i] = ExpandedMemory.GetUint8(sourceCount++);
+                target[offset + i] = _machine.EmsCard.ExpandedMemory.GetUint8(sourceCount++);
             }
 
             length -= size;

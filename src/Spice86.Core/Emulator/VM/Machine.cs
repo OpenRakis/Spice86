@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿using Spice86.Core.Emulator.Devices.Memory;
+
+namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
@@ -108,6 +110,8 @@ public class Machine : IDisposable {
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
 
     public OPL3FM OPL3FM { get; }
+    
+    public EmsCard EmsCard { get; }
 
     public event Action? Paused;
 
@@ -198,6 +202,7 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
+        EmsCard = new(this, configuration);
         if(configuration.Ems) {
             Ems = new(this);
         }
