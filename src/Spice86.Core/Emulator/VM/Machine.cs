@@ -200,6 +200,9 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
+        if(configuration.Ems) {
+            Ems = new(this, loggerService);
+        }
         if(Ems is not null) {
             Register(Ems);
         }
