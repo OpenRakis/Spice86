@@ -130,6 +130,7 @@ public class Machine : IDisposable {
             Ems = new(this, loggerService);
         }
         
+
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
 
