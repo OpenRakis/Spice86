@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -42,6 +43,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public Memory ExpandedMemory { get; init; }
 
+    public override ushort? InterruptHandlerSegment => 0xF100;
+
     private readonly short[] _pageOwners = new short[MaximumLogicalPages];
     private readonly SortedList<int, EmsHandle> _handles = new();
     private readonly int[] _mappedPages = new int[] {-1, -1, -1, -1};
@@ -52,6 +55,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _loggerService = loggerService;
         ExpandedMemory = new(machine,8 * 1024);
         MemoryUtils.SetZeroTerminatedString(ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
+
+        var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
+        machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
 
         _pageOwners.AsSpan().Fill(-1);
 
