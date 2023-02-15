@@ -186,51 +186,48 @@ public sealed class FmSynthesizer
 
     private double GetNextSample()
     {
-        unsafe
+        Span<double> channelOutput = stackalloc double[4];
+
+        Span<double> outputBuffer = stackalloc double[4] { 0, 0, 0, 0 };
+
+        // If IsOpl3Mode = 0, use OPL2 mode with 9 channels. If IsOpl3Mode = 1, use OPL3 18 channels;
+        for (int array = 0; array < (IsOpl3Mode + 1); array++)
         {
-            Span<double> channelOutput = stackalloc double[4];
-
-            double* outputBuffer = stackalloc double[4] { 0, 0, 0, 0 };
-
-            // If IsOpl3Mode = 0, use OPL2 mode with 9 channels. If IsOpl3Mode = 1, use OPL3 18 channels;
-            for (int array = 0; array < (IsOpl3Mode + 1); array++)
+            for (int channelNumber = 0; channelNumber < 9; channelNumber++)
             {
-                for (int channelNumber = 0; channelNumber < 9; channelNumber++)
-                {
-                    // Reads output from each OPL3 channel, and accumulates it in the output buffer:
-                    channels[array, channelNumber].GetChannelOutput(channelOutput);
-                    for (int i = 0; i < channelOutput.Length; i++) {
-                        outputBuffer[i] += channelOutput[i];
-                    }
+                // Reads output from each OPL3 channel, and accumulates it in the output buffer:
+                channels[array, channelNumber].GetChannelOutput(channelOutput);
+                for (int i = 0; i < channelOutput.Length; i++) {
+                    outputBuffer[i] += channelOutput[i];
                 }
             }
-
-            double* output = stackalloc double[4];
-
-            const double ratio = 1.0 / 18.0;
-
-            // Normalizes the output buffer after all channels have been added,
-            // with a maximum of 18 channels,
-            // and multiplies it to get the 16 bit signed output.
-            for (int i = 0; i < 4; i++) {
-                output[i] = (float)(outputBuffer[i] * ratio);
-            }
-
-            // Advances the OPL3-wide vibrato index, which is used by 
-            // PhaseGenerator.getPhase() in each Operator.
-            vibratoIndex++;
-            if (vibratoIndex >= VibratoGenerator.Length) {
-                vibratoIndex = 0;
-            }
-            // Advances the OPL3-wide tremolo index, which is used by 
-            // EnvelopeGenerator.getEnvelope() in each Operator.
-            tremoloIndex++;
-            if (tremoloIndex >= tremoloTableLength) {
-                tremoloIndex = 0;
-            }
-
-            return (float)(output[0] + output[1] + output[2] + output[3]);
         }
+
+        Span<double> output = stackalloc double[4];
+
+        const double ratio = 1.0 / 18.0;
+
+        // Normalizes the output buffer after all channels have been added,
+        // with a maximum of 18 channels,
+        // and multiplies it to get the 16 bit signed output.
+        for (int i = 0; i < 4; i++) {
+            output[i] = (float)(outputBuffer[i] * ratio);
+        }
+
+        // Advances the OPL3-wide vibrato index, which is used by 
+        // PhaseGenerator.getPhase() in each Operator.
+        vibratoIndex++;
+        if (vibratoIndex >= VibratoGenerator.Length) {
+            vibratoIndex = 0;
+        }
+        // Advances the OPL3-wide tremolo index, which is used by 
+        // EnvelopeGenerator.getEnvelope() in each Operator.
+        tremoloIndex++;
+        if (tremoloIndex >= tremoloTableLength) {
+            tremoloIndex = 0;
+        }
+
+        return (float)(output[0] + output[1] + output[2] + output[3]);
     }
 
     internal double GetTremoloValue(int dam, int i)
