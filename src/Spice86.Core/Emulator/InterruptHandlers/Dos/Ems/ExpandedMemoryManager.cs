@@ -81,58 +81,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
         _dispatchTable.Add(0x4B, new Callback(0x4B, GetHandleCount));
         _dispatchTable.Add(0x4C, new Callback(0x4C, GetPagesForOneHandle));
-        _dispatchTable.Add(0x4D, new Callback(0x4D, GetPagesForAllHandles));
-        _dispatchTable.Add(0x4E, new Callback(0x4E, SaveRestorePageMap));
-        _dispatchTable.Add(0x4F, new Callback(0x4F, SaveRestorePartialPageMap));
         _dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultiplePageMap));
         _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         _dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
-        _dispatchTable.Add(0x54, new Callback(0x54, HandleFunctions));
         _dispatchTable.Add(0x57, new Callback(0x57, MemoryRegion));
-        _dispatchTable.Add(0x58, new Callback(0x58, GetMappablePhysicalArrayAddressArray));
-        _dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
         _dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
-    }
-
-    public void AllocateStandardRawPages() {
-        if (_state.AX <= 0x01) {
-            ushort dx = _state.DX;
-            _state.AX = EmsAllocateMemory(_state.BX, ref dx, true);
-            _state.DX = dx;
-        } else {
-            if (_loggerService.IsEnabled(LogEventLevel.Error))
-                _loggerService.Error("EMS:Call 5A {@SubFunction} not supported", _state.AX);
-            _state.AX = EmsErrors.EmsInvalidSubFunction;
-        }
-    }
-
-    public byte EmsAllocateMemory(ushort pages, ref ushort dx, bool canAllocateZeroPages) {
-        // Check for 0 page allocation
-        if (pages == 0) {
-            if (!canAllocateZeroPages) return EmsErrors.EmmZeroPages;
-        }
-        // Check for a free handle
-        // Change handle only if there is no error.
-        if (TryCreateHandle(pages, out int handleIndex)) {
-            dx = (ushort)handleIndex;
-        }
-
-        return EmsErrors.EmmNoError;
-    }
-
-    public void GetMappablePhysicalArrayAddressArray() {
-    }
-
-    public void HandleFunctions() {
-    }
-
-    public void SaveRestorePartialPageMap() {
-    }
-
-    public void SaveRestorePageMap() {
-    }
-
-    public void GetPagesForAllHandles() {
     }
 
     public bool TryGetMappedPageData(uint address, out uint data) {
