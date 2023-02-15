@@ -27,24 +27,24 @@ jobs:
 
     - name: Package NuGet
       working-directory: ./src
-      run: dotnet pack --include-symbols --include-source --configuration Release --no-build
+      run: dotnet pack --include-symbols --include-source --configuration Release
 
     - name: Upload NuGet Bufdio.Spice86
-      working-directory: ./src
+      working-directory: ./src/Bufdio.Spice86/bin/Release
       run: nuget push Bufdio.Spice86.3.0.18.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Shared
-      working-directory: ./src
+      working-directory: ./src/Spice86.Shared/bin/Release
       run: nuget push Spice86.Shared.3.0.18.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Logging
-      working-directory: ./src
+      working-directory: ./src/Spice86.Logging/bin/Release
       run: nuget push Spice86.Logging.3.0.18.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Core
-      working-directory: ./src
+      working-directory: ./src/Spice86.Core/bin/Release
       run: nuget push Spice86.Core.3.0.18.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86
-      working-directory: ./src
+      working-directory: ./src/Spice86
       run: nuget push Spice86.3.0.18.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
