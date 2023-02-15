@@ -26,7 +26,7 @@ jobs:
          run: dotnet test --configuration Release
 
        - name: Build with dotnet
-         working-directory: ./src/Spice86/Spice86
+         working-directory: ./src/Spice86
          run: |
               dotnet restore
               dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -o ../Release/linux
