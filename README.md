@@ -351,7 +351,7 @@ CPU:
 - Only 16 bits instructions are fully supported, memory size is 1MB
 - The only supported addressing mode is real mode. 286/386 Protected mode and the related instructions are not implemented.
 - Instruction set is (hopefully!) fully implemented for 8086, and validated via automated tests.
-- For 80186, BOUND, ENTER and LEAVE instructions are missing.
+- For 80186, BOUND instruction is missing.
 - For 80286, instructions related to protected mode are not implemented
 - For 80386, protected mode is not implemented. Some 32 bits instructions are implemented but not validated via integration tests for now.
 - No FPU instruction implemented apart those used for FPU detection.
