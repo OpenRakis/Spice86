@@ -58,8 +58,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private readonly int[] _mappedPages = {-1, -1, -1, -1};
     
     public ExpandedMemoryManager(Machine machine) : base(machine) {
-        MemoryUtils.SetZeroTerminatedString(machine.MainMemory.Ram, MemoryUtils.ToPhysicalAddress(0xF100 - PageFrameSegment, 0x000A), EmsIdentifier, EmsIdentifier.Length + 1);
-
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
 
