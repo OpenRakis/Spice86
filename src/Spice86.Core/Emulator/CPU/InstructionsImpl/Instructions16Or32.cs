@@ -166,7 +166,7 @@ public abstract class Instructions16Or32 : Instructions {
     }
 
     /// <summary>
-    /// https://c9x.me/x86/html/file_module_x86_id_78.html
+    /// https://xem.github.io/minix86/manual/intel-x86-and-64-manual-vol1/o_7281d5ea06a5b67a-159.html
     /// </summary>
     public abstract void Enter();
 

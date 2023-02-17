@@ -519,39 +519,19 @@ public class Instructions32 : Instructions16Or32 {
     }
 
     public override void Enter() {
-        ushort stackSize = Cpu.NextUint16();
-        byte nestingLevel = Cpu.NextUint8();
-        nestingLevel %= 32;
-        const byte operandOffset = 4;
-        uint frameTemp;
-        if (stackSize == 32) {
-            Stack.Push32(State.EBP);
-            frameTemp = State.ESP;
-        } else { // stackSize = 16
-            Stack.Push16(State.BP);
-            frameTemp = State.SP;
-        }
-
-        if (nestingLevel == 0) {
-            if (stackSize == 32) {
-                State.EBP = frameTemp;
-                State.ESP = State.EBP - stackSize;
-            } else { // stackSize = 16
-                State.BP = (ushort)frameTemp;
-                State.SP = (ushort)(State.BP - stackSize);
-            }
-            return;
-        }
-        for (int i = 0; i < nestingLevel; i++) {
-            if (stackSize == 32) {
+        ushort storage = Cpu.NextUint16();
+        byte level = Cpu.NextUint8();
+        Stack.Push32(State.EBP);
+        level &= 0x1f;
+        uint framePtr = State.ESP;
+        const int operandOffset = 4;
+        for (int i = 0; i < level; i++) {
                 State.EBP -= operandOffset;
                 Stack.Push32(State.EBP);
-            } else { // stackSize = 16
-                State.BP -= operandOffset;
-                Stack.Push32(State.BP);
-            }
         }
-        Stack.Push32(frameTemp);
+
+        State.EBP = framePtr;
+        State.ESP -= storage;
     }
 
     public override void Leave() {
