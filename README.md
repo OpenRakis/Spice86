@@ -377,7 +377,7 @@ Without it, there will be no sound.
 
 - Adlib/SoundBlaster MIDI OPL is supported.
 - SoundBlaster PCM is supported.
-- MT-32 is supported, but not on macOS, as MUNT is missing in the MT-32 wrapper for that platform. (PRs welcome !)
+- MT-32 is supported, but not on macOS, as a static build of MUNT is missing in the MT-32 wrapper for that platform. (PRs welcome !)
 - General MIDI is supported, but only on Windows (PRs welcome !).
 
 Compatibility list available [here](COMPATIBILITY.md).
