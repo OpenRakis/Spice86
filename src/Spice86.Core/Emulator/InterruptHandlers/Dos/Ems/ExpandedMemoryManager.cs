@@ -1,13 +1,6 @@
-﻿using Serilog;
-using Serilog.Events;
-
-using Spice86.Core.Emulator.Devices.Memory;
-using Spice86.Logging;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using System.Numerics;
-
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
-
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
