@@ -536,12 +536,13 @@ public class Instructions16 : Instructions16Or32 {
         ushort framePtr = State.SP;
         const int operandOffset = 2;
         for (int i = 0; i < level; i++) {
-            State.EBP -= operandOffset;
+            State.BP -= operandOffset;
             Stack.Push16(State.BP);
         }
 
         State.BP = framePtr;
-        State.SP -= storage;    }
+        State.SP -= storage;
+    }
 
     public override void Leave() {
         State.SP = State.BP;
