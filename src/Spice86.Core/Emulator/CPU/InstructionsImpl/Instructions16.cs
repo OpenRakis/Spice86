@@ -1,3 +1,5 @@
+using Spice86.Core.Emulator.Memory;
+
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
@@ -524,6 +526,22 @@ public class Instructions16 : Instructions16Or32 {
     public override void OutDx() {
         // OUT DX AX
         Cpu.Out16(State.DX, State.AX);
+    }
+
+    public override void Enter() {
+        ushort storage = Cpu.NextUint16();
+        byte level = Cpu.NextUint8();
+        Stack.Push16(State.BP);
+        level &= 0x1f;
+        ushort framePtr = State.SP;
+        const int operandOffset = 2;
+        for (int i = 0; i < level; i++) {
+            State.BP -= operandOffset;
+            Stack.Push16(State.BP);
+        }
+
+        State.BP = framePtr;
+        State.SP -= storage;
     }
 
     public override void Leave() {
