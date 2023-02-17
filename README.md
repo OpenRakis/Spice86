@@ -353,7 +353,7 @@ CPU:
 - Instruction set is (hopefully!) fully implemented for 8086, and validated via automated tests.
 - For 80186, BOUND instruction is missing.
 - For 80286, instructions related to protected mode are not implemented
-- For 80386, protected mode is not implemented. Some 32 bits instructions are implemented but not validated via integration tests for now.
+- For 80386, protected mode is not implemented. Most 32 bits instructions are implemented, but not validated via integration tests for now.
 - No FPU instruction implemented apart those used for FPU detection.
 
 Graphics:
