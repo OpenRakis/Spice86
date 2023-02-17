@@ -256,6 +256,11 @@ public class Cpu {
                 // POP GS
                 State.GS = Stack.Pop16();
                 break;
+            case 0xAF:
+                // IMUL r16, r/m16
+                // IMUL r32, r/m32
+                _instructions16Or32.ImulRmReg16Or32();
+                break;
             case 0xB4:
                 _instructions16Or32.Lfs();
                 break;

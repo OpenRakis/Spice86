@@ -218,6 +218,13 @@ public class Instructions32 : Instructions16Or32 {
         long result = Alu.Imul32(value, (int)ModRM.GetRm32());
         ModRM.R32 = (uint)result;
     }
+    
+    public override void ImulRmReg16Or32() {
+        // IMUL32 r32 rm32
+        ModRM.Read();
+        long result = Alu.Imul32((int)ModRM.R32, (int)ModRM.GetRm32());
+        ModRM.R32 = (uint)result;
+    }
 
     protected override void AdvanceSI() {
         AdvanceSI(State.Direction32);
