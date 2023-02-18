@@ -378,7 +378,12 @@ public class Instructions8 : Instructions {
 
     public void Sahf() {
         // SAHF
-        State.Flags.FlagRegister = State.AH;
+        // EFLAGS(SF:ZF:0:AF:0:PF:1:CF) := AH;
+        State.SignFlag = (State.AH & Flags.Sign) == 1;
+        State.ZeroFlag = (State.AH & Flags.Zero) == 1;
+        State.AuxiliaryFlag = (State.AH & Flags.Auxiliary) == 1;
+        State.ParityFlag = (State.AH & Flags.Parity) == 1;
+        State.CarryFlag = (State.AH & Flags.Carry) == 1;
     }
 
     public void Lahf() {
