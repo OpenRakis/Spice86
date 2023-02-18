@@ -75,6 +75,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         Pause();
         PauseEmulatorOnStart = false;
     }
+    
+    public void HideMouseCursor() {
+        VideoBuffers?.All(x => x.ShowCursor = false);
+    }
+
+    public void ShowMouseCursor() {
+        VideoBuffers?.All(x => x.ShowCursor = true);
+    }
 
     [RelayCommand]
     public async Task DumpEmulatorStateToFile() {

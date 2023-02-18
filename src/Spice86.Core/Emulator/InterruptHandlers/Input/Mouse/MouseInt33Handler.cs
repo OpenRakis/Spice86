@@ -161,16 +161,16 @@ public class MouseInt33Handler : InterruptHandler {
 
     public void ShowMouseCursor() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SHOW MOUSE CURSOR (unimplemented!)");
+            _loggerService.Information("SHOW MOUSE CURSOR");
         }
-        // @TODO: show mouse cursor
+        _gui?.ShowMouseCursor();
     }
 
     public void HideMouseCursor() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("HIDE MOUSE CURSOR (unimplemented!)");
+            _loggerService.Information("HIDE MOUSE CURSOR");
         }
-        // @TODO: hide mouse cursor
+        _gui?.HideMouseCursor();
     }
 
     /// <summary>

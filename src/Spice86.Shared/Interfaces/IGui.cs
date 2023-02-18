@@ -12,6 +12,16 @@ using System.Collections.Generic;
 /// </summary>
 public interface IGui {
     /// <summary>
+    /// Shows the UI mouse cursor
+    /// </summary>
+    void ShowMouseCursor();
+
+    /// <summary>
+    /// Hides the UI mouse cursor
+    /// </summary>
+    void HideMouseCursor();
+    
+    /// <summary>
     /// Indicates whether the GUI considers the Emulator is paused. <br/>
     /// When True, the Play button is displayed <br/>
     /// When False, the Pause button is displayed <br/>
