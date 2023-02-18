@@ -223,8 +223,7 @@ public class Instructions16 : Instructions16Or32 {
     public override void ImulRmReg16Or32() {
         // IMUL16 r16 rm16
         ModRM.Read();
-        int result = Alu.Imul16((short)ModRM.R16, (short)ModRM.GetRm16());
-        ModRM.R16 = (ushort)result;
+        ImulRmVal((short)ModRM.R16);
     }
     
     protected override void AdvanceSI() {
