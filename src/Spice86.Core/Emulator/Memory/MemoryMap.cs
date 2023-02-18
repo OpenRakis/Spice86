@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿using Spice86.Core.Emulator.OperatingSystem;
+
+namespace Spice86.Core.Emulator.Memory;
 
 /// <summary> Informations about memory mapping of an IBM PC </summary>
 public static class MemoryMap {

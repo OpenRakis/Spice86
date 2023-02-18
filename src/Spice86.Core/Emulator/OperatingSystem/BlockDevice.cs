@@ -18,6 +18,7 @@ internal class BlockDevice : VirtualDeviceBase {
     /// </summary>
     /// <param name="attributes">The device attributes.</param>
     /// <param name="unitCount">The amount of disks this device has.</param>
+    /// <param name="signature">The string identifier.</param>
     /// <param name="strategy">Optional entrypoint for the strategy routine.</param>
     /// <param name="interrupt">Optional entrypoint for the interrupt routine.</param>
     public BlockDevice(DeviceAttributes attributes, byte unitCount, string signature = "", ushort strategy = 0, ushort interrupt = 0)

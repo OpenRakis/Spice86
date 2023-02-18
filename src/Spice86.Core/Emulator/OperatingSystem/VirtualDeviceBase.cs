@@ -24,7 +24,7 @@ public abstract class VirtualDeviceBase : IVirtualDevice {
     public ushort Offset { get; set; }
     /// <summary>
     /// The device attributes.
-    /// <see cref="https://github.com/microsoft/MS-DOS/blob/master/v2.0/bin/DEVDRIV.DOC#L125"/>
+    /// <see href="https://github.com/microsoft/MS-DOS/blob/master/v2.0/bin/DEVDRIV.DOC#L125"/>
     /// </summary>
     public DeviceAttributes Attributes { get; set; }
     /// <summary>
