@@ -40,6 +40,8 @@ public class Cpu {
     private readonly Instructions16 _instructions16;
     private readonly Instructions32 _instructions32;
     private Instructions16Or32 _instructions16Or32;
+    private int _addressSize;
+
     public CallbackHandler? CallbackHandler { get; set; }
 
     // When true will crash if an interrupt targets code at 0000:0000
@@ -73,6 +75,7 @@ public class Cpu {
         _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
         _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
         _instructions16Or32 = _instructions16;
+        _addressSize = 16;
     }
 
     public void ExecuteNextInstruction() {
@@ -86,8 +89,9 @@ public class Cpu {
         } else {
             ExecOpcode(opcode);
         }
-        // Reset to 16 bit operand size
+        // Reset to 16 bit operand and address size
         _instructions16Or32 = _instructions16;
+        _addressSize = 16;
         State.ClearPrefixes();
         StaticAddressesRecorder.Commit();
         State.IncCycles();
@@ -210,7 +214,7 @@ public class Cpu {
             case 0x8D:
             case 0x8E:
             case 0x8F:
-                Jcc(TestJumpCondition(subcode));
+                Jcc(TestJumpCondition(subcode), _addressSize);
                 break;
             case 0x90:
             case 0x91:
@@ -912,8 +916,8 @@ public class Cpu {
 
                     break;
                 }
-            case 0xE3: // JCXZ
-                Jcc(TestJumpConditionCXZ());
+            case 0xE3: // JCXZ, JECXZ
+                Jcc(TestJumpConditionCXZ(_addressSize));
                 break;
             case 0xE4:
                 _instructions8.InImm8();
@@ -976,6 +980,8 @@ public class Cpu {
             case 0xF4:
                 // HLT
                 _loggerService.Information("HLT instruction encountered, halting!");
+                _loggerService.Debug(_machine.Cpu.State.ToString());
+                _loggerService.Debug(_machine.DumpCallStack());
                 IsRunning = false;
                 break;
             case 0xF5:
@@ -1213,9 +1219,12 @@ public class Cpu {
         return _stringOpCodes.Contains(opcode);
     }
 
-    private bool TestJumpConditionCXZ() {
-        // JCXZ
-        return State.CX == 0;
+    private bool TestJumpConditionCXZ(int addressSize) {
+        return addressSize switch {
+            16 => State.CX == 0,
+            32 => State.ECX == 0,
+            _ => throw new ArgumentOutOfRangeException(nameof(addressSize), addressSize, null)
+        };
     }
 
     private bool TestJumpCondition(byte opcode) {
@@ -1261,8 +1270,14 @@ public class Cpu {
     /// <summary>
     /// Jumps handling
     /// </summary>
-    private void Jcc(bool jump) {
-        sbyte address = (sbyte)NextUint8();
+    private void Jcc(bool jump, int offsetSize = 8) {
+        int address = offsetSize switch {
+            8 => (sbyte)NextUint8(),
+            16 => (short)NextUint16(),
+            32 => (int)NextUint32(),
+            _ => throw new ArgumentOutOfRangeException(nameof(offsetSize), offsetSize, null)
+        };
+
         if (jump) {
             HandleJump(State.CS, (ushort)(_internalIp + address));
         }
@@ -1339,6 +1354,9 @@ public class Cpu {
                 break;
             case 0x66:
                 _instructions16Or32 = _instructions32;
+                break;
+            case 0x67:
+                _addressSize = 32;
                 break;
             case 0xF0:
                 // LOCK
