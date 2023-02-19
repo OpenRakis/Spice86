@@ -236,7 +236,7 @@ public class Alu {
     }
 
     public long Imul32(int value1, int value2) {
-        long res = value1 * value2;
+        long res = (long)value1 * value2;
         bool doesNotFitInDWord = res != (int)res;
         _state.OverflowFlag = doesNotFitInDWord;
         _state.CarryFlag = doesNotFitInDWord;
@@ -284,7 +284,7 @@ public class Alu {
     }
 
     public ulong Mul32(uint value1, uint value2) {
-        ulong res = value1 * value2;
+        ulong res = (ulong)value1 * value2;
         bool upperHalfNonZero = (res & 0xFFFFFFFF00000000) != 0;
         _state.OverflowFlag = upperHalfNonZero;
         _state.CarryFlag = upperHalfNonZero;
