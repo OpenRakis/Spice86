@@ -41,6 +41,20 @@ public class Cpu {
     private readonly Instructions16 _instructions16;
     private readonly Instructions32 _instructions32;
     private Instructions16Or32 _instructions16Or32;
+    private int _addressSize;
+
+    /// <summary>
+    /// Address size for the currently executing instruction.
+    /// </summary>
+    public int AddressSize {
+        get => _addressSize;
+        private set {
+            if (value != 16 && value != 32)
+                throw new ArgumentOutOfRangeException(nameof(value), "Address size must be 16 or 32");
+            _addressSize = value;
+        }
+    }
+
     public CallbackHandler? CallbackHandler { get; set; }
 
     // When true will crash if an interrupt targets code at 0000:0000
@@ -74,6 +88,7 @@ public class Cpu {
         _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
         _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
         _instructions16Or32 = _instructions16;
+        AddressSize = 16;
     }
 
     public void ExecuteNextInstruction() {
@@ -92,8 +107,9 @@ public class Cpu {
                 HandleCpuException(e);
             }
         }
-        // Reset to 16 bit operand size
+        // Reset to 16 bit operand and address size
         _instructions16Or32 = _instructions16;
+        AddressSize = 16;
         State.ClearPrefixes();
         StaticAddressesRecorder.Commit();
         State.IncCycles();
@@ -231,7 +247,7 @@ public class Cpu {
             case 0x8D:
             case 0x8E:
             case 0x8F:
-                Jcc(TestJumpCondition(subcode));
+                Jcc(TestJumpCondition(subcode), AddressSize);
                 break;
             case 0x90:
             case 0x91:
@@ -915,9 +931,13 @@ public class Cpu {
                     // zeroFlag==false =>  LOOPNZ
                     bool zeroFlag = (opcode & 0x1) == 1;
                     sbyte address = (sbyte)NextUint8();
-                    ushort cx = (ushort)(State.CX - 1);
-                    State.CX = cx;
-                    if (cx != 0 && State.ZeroFlag == zeroFlag) {
+                    bool done = AddressSize switch {
+                        16 => --State.CX == 0,
+                        32 => --State.ECX == 0,
+                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+
+                    };
+                    if (!done && State.ZeroFlag == zeroFlag) {
                         ushort targetIp = (ushort)(_internalIp + address);
                         ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
                         _internalIp = targetIp;
@@ -928,9 +948,13 @@ public class Cpu {
             case 0xE2: {
                     // LOOP
                     sbyte address = (sbyte)NextUint8();
-                    ushort cx = (ushort)(State.CX - 1);
-                    State.CX = cx;
-                    if (cx != 0) {
+                    bool done = AddressSize switch {
+                        16 => --State.CX == 0,
+                        32 => --State.ECX == 0,
+                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                    };
+
+                    if (!done) {
                         ushort targetIp = (ushort)(_internalIp + address);
                         ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
                         _internalIp = targetIp;
@@ -938,7 +962,7 @@ public class Cpu {
 
                     break;
                 }
-            case 0xE3: // JCXZ
+            case 0xE3: // JCXZ, JECXZ
                 Jcc(TestJumpConditionCXZ());
                 break;
             case 0xE4:
@@ -1233,8 +1257,12 @@ public class Cpu {
     }
 
     private bool TestJumpConditionCXZ() {
-        // JCXZ
-        return State.CX == 0;
+        // JCXZ. JECXZ
+        return AddressSize switch {
+            16 => State.CX == 0,
+            32 => State.ECX == 0,
+            _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+        };
     }
 
     private bool TestJumpCondition(byte opcode) {
@@ -1280,8 +1308,14 @@ public class Cpu {
     /// <summary>
     /// Jumps handling
     /// </summary>
-    private void Jcc(bool jump) {
-        sbyte address = (sbyte)NextUint8();
+    private void Jcc(bool jump, int offsetSize = 8) {
+        int address = offsetSize switch {
+            8 => (sbyte)NextUint8(),
+            16 => (short)NextUint16(),
+            32 => (int)NextUint32(),
+            _ => throw new ArgumentOutOfRangeException(nameof(offsetSize), offsetSize, null)
+        };
+
         if (jump) {
             HandleJump(State.CS, (ushort)(_internalIp + address));
         }
@@ -1358,6 +1392,9 @@ public class Cpu {
                 break;
             case 0x66:
                 _instructions16Or32 = _instructions32;
+                break;
+            case 0x67:
+                AddressSize = 32;
                 break;
             case 0xF0:
                 // LOCK
