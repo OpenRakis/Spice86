@@ -222,7 +222,7 @@ public class Instructions32 : Instructions16Or32 {
     public override void ImulRmReg16Or32() {
         // IMUL32 r32 rm32
         ModRM.Read();
-        ImulRmVal((short)ModRM.R32);
+        ImulRmVal((int)ModRM.R32);
     }
 
     protected override void AdvanceSI() {
