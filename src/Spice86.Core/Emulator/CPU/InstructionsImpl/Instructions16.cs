@@ -222,6 +222,12 @@ public class Instructions16 : Instructions16Or32 {
         ModRM.R16 = (ushort)result;
     }
     
+    public override void ImulRmReg16Or32() {
+        // IMUL16 r16 rm16
+        ModRM.Read();
+        ImulRmVal((short)ModRM.R16);
+    }
+    
     protected override void AdvanceSI() {
         AdvanceSI(State.Direction16);
     }

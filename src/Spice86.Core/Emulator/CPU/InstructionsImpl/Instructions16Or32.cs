@@ -39,6 +39,8 @@ public abstract class Instructions16Or32 : Instructions {
     // IMUL R <- Rm x Imm16 / 32
     public abstract void ImulRmImm16Or32();
 
+    public abstract void ImulRmReg16Or32();
+
     public abstract void MovRmSreg();
     public abstract void Lea();
 
