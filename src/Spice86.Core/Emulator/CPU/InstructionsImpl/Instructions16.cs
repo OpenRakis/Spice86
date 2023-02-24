@@ -1,4 +1,4 @@
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Errors;
 
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Function;
@@ -466,6 +466,9 @@ public class Instructions16 : Instructions16Or32 {
     public void MovSregRm() {
         // MOV sreg rmw
         ModRM.Read();
+        if (ModRM.RegisterIndex == SegmentRegisters.CsIndex) {
+            throw new InvalidOpcodeException("Attempted to write to CS register with MOV instruction");
+        }
         ModRM.SegmentRegister = ModRM.GetRm16();
     }
 

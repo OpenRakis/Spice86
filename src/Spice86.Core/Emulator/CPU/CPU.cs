@@ -84,7 +84,12 @@ public class Cpu {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
             ProcessRep(opcode);
         } else {
-            ExecOpcode(opcode);
+            try {
+                ExecOpcode(opcode);
+            }
+            catch (CpuException e) {
+                HandleCpuException(e);
+            }
         }
         // Reset to 16 bit operand size
         _instructions16Or32 = _instructions16;
@@ -180,6 +185,22 @@ public class Cpu {
         }
 
         _memory.SetUint16(flagsAddress, (ushort)value);
+    }
+
+    private void HandleCpuException(CpuException cpuException) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(cpuException.ToString());
+        }
+        if (cpuException.Type is CpuExceptionType.Fault) {
+            _instructions16Or32 = _instructions16;
+            AddressSize = 16;
+            State.ClearPrefixes();
+            _internalIp = State.IP;
+        }
+        if (cpuException.ErrorCode != null) {
+            Stack.Push16(cpuException.ErrorCode.Value);
+        }
+        Interrupt(cpuException.Vector, false);
     }
 
     private static bool IsStringOpUpdatingFlags(int stringOpCode)
