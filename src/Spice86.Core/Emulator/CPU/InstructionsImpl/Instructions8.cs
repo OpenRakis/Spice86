@@ -279,26 +279,16 @@ public class Instructions8 : Instructions {
     protected override void Grp3DivRmAcc() {
         ushort v1 = State.AX;
         byte v2 = ModRM.GetRm8();
-        byte? result = Alu.Div8(v1, v2);
-        if (result == null) {
-            Cpu.HandleDivisionError();
-            return;
-        }
-
-        State.AL = result.Value;
+        byte result = Alu.Div8(v1, v2);
+        State.AL = result;
         State.AH = (byte)(v1 % v2);
     }
 
     protected override void Grp3IdivRmAcc() {
         short v1 = (short)State.AX;
         sbyte v2 = (sbyte)ModRM.GetRm8();
-        sbyte? result = Alu.Idiv8(v1, v2);
-        if (result == null) {
-            Cpu.HandleDivisionError();
-            return;
-        }
-
-        State.AL = (byte)result.Value;
+        sbyte result = Alu.Idiv8(v1, v2);
+        State.AL = (byte)result;
         State.AH = (byte)(v1 % v2);
     }
 

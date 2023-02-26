@@ -1,4 +1,4 @@
-using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.CPU.Exceptions;
 
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Function;
@@ -367,13 +367,8 @@ public class Instructions16 : Instructions16Or32 {
     protected override void Grp3DivRmAcc() {
         uint v1 = (uint)(State.DX << 16 | State.AX);
         ushort v2 = ModRM.GetRm16();
-        ushort? result = Alu.Div16(v1, v2);
-        if (result == null) {
-            Cpu.HandleDivisionError();
-            return;
-        }
-
-        State.AX = result.Value;
+        ushort result = Alu.Div16(v1, v2);
+        State.AX = result;
         State.DX = (ushort)(v1 % v2);
     }
 
@@ -381,13 +376,8 @@ public class Instructions16 : Instructions16Or32 {
         // no sign extension for v1 as it is already a 32bit value
         int v1 = State.DX << 16 | State.AX;
         short v2 = (short) ModRM.GetRm16();
-        short? result = Alu.Idiv16(v1, v2);
-        if (result == null) {
-            Cpu.HandleDivisionError();
-            return;
-        }
-
-        State.AX = (ushort)result.Value;
+        short result = Alu.Idiv16(v1, v2);
+        State.AX = (ushort)result;
         State.DX = (ushort)(v1 % v2);
     }
 
@@ -467,7 +457,7 @@ public class Instructions16 : Instructions16Or32 {
         // MOV sreg rmw
         ModRM.Read();
         if (ModRM.RegisterIndex == SegmentRegisters.CsIndex) {
-            throw new InvalidOpcodeException("Attempted to write to CS register with MOV instruction");
+            throw new CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
         }
         ModRM.SegmentRegister = ModRM.GetRm16();
     }

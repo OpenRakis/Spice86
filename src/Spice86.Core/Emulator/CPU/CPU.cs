@@ -5,6 +5,7 @@ using Serilog;
 
 using Spice86.Core.DI;
 using Spice86.Core.Emulator.Callback;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
@@ -193,14 +194,13 @@ public class Cpu {
         }
         if (cpuException.Type is CpuExceptionType.Fault) {
             _instructions16Or32 = _instructions16;
-            AddressSize = 16;
             State.ClearPrefixes();
             _internalIp = State.IP;
         }
         if (cpuException.ErrorCode != null) {
             Stack.Push16(cpuException.ErrorCode.Value);
         }
-        Interrupt(cpuException.Vector, false);
+        Interrupt(cpuException.InterruptVector, false);
     }
 
     private static bool IsStringOpUpdatingFlags(int stringOpCode)
@@ -1051,8 +1051,7 @@ public class Cpu {
     public void Aam(byte v2) {
         byte v1 = State.AL;
         if (v2 == 0) {
-            HandleDivisionError();
-            return;
+            throw new CpuDivisionErrorException("Division by zero");
         }
 
         byte result = (byte)(v1 % v2);
@@ -1167,12 +1166,6 @@ public class Cpu {
         State.IP = targetIP;
         _internalIp = targetIP;
         FunctionHandlerInUse.Call(callType, targetCS, targetIP, returnCS, returnIP);
-    }
-
-    public void HandleDivisionError() {
-        // Reset IP because instruction is not finished (this is how an actual CPU behaves)
-        _internalIp = State.IP;
-        Interrupt(0, false);
     }
 
     private void HandleExternalInterrupt() {
