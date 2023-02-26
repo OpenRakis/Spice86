@@ -14,9 +14,9 @@ public class Dos {
     private const int DeviceDriverHeaderLength = 18;
     private readonly Machine _machine;
     private readonly ILoggerService _logger;
-    private readonly DosInt20Handler _dosInt20Handler;
-    private readonly DosInt21Handler _dosInt21Handler;
-    private readonly DosInt2fHandler _dosInt2FHandler;
+    public DosInt20Handler DosInt20Handler { get; }
+    public DosInt21Handler DosInt21Handler { get; }
+    public DosInt2fHandler DosInt2FHandler { get; }
 
     public readonly List<IVirtualDevice> Devices = new();
     public CharacterDevice CurrentClockDevice { get; set; } = null!;
@@ -24,15 +24,14 @@ public class Dos {
     public DosMemoryManager MemoryManager { get; }
     public DosFileManager FileManager { get; }
 
-    public Dos(Machine machine, ILoggerService logger, Configuration configuration) {
+    public Dos(Machine machine, ILoggerService logger) {
         _machine = machine;
         _logger = logger;
-        // _configuration = configuration.DOS;
         FileManager = new DosFileManager(_machine.Memory, _logger, this);
         MemoryManager = new DosMemoryManager(_machine.Memory, _logger);
-        _dosInt20Handler = new DosInt20Handler(_machine, _logger);
-        _dosInt21Handler = new DosInt21Handler(_machine, _logger, this);
-        _dosInt2FHandler = new DosInt2fHandler(_machine, _logger);
+        DosInt20Handler = new DosInt20Handler(_machine, _logger);
+        DosInt21Handler = new DosInt21Handler(_machine, _logger, this);
+        DosInt2FHandler = new DosInt2fHandler(_machine, _logger);
     }
 
     public void Initialize() {
@@ -40,9 +39,9 @@ public class Dos {
             _logger.Information("Initializing DOS");
         }
 
-        _machine.Register(_dosInt20Handler);
-        _machine.Register(_dosInt21Handler);
-        _machine.Register(_dosInt2FHandler);
+        _machine.Register(DosInt20Handler);
+        _machine.Register(DosInt21Handler);
+        _machine.Register(DosInt2FHandler);
 
         AddDefaultDevices();
         OpenDefaultFileHandles();

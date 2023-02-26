@@ -1,3 +1,4 @@
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Logging;
 
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
@@ -29,15 +30,20 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     private void FillDispatchTable() {
+        _dispatchTable.Add(0x16, new Callback(0x16, () => ClearCFAndCX(true)));
         _dispatchTable.Add(0x15, new Callback(0x15, SendDeviceDriverRequest));
-        _dispatchTable.Add(0x43, new Callback(0x43, GetSetFileAttributes));
+        _dispatchTable.Add(0x43, new Callback(0x43, () => ClearCFAndCX(true)));
+        _dispatchTable.Add(0x46, new Callback(0x46, () => ClearCFAndCX(true)));
     }
 
     /// <summary>
-    /// TODO: Right now, a NOP is sufficient in order to make some games (eg. Dune 2) work.
+    /// A service that does nothing, but set the carry flag to false, and CX to 0 to indicate success.
+    /// <see href="https://github.com/FDOS/kernel/blob/master/kernel/int2f.asm"/> -> 'int2f_call:'.
     /// </summary>
-    public void GetSetFileAttributes() {
-        
+    /// <param name="calledFromVm">Whether it was called by the emulator or not</param>
+    public void ClearCFAndCX(bool calledFromVm) {
+        SetCarryFlag(false, calledFromVm);
+        _state.CX = 0;
     }
 
     public void SendDeviceDriverRequest() {
