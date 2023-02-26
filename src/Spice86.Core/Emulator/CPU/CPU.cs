@@ -1,7 +1,7 @@
 ﻿using Spice86.Logging;
 
 namespace Spice86.Core.Emulator.CPU;
-using Serilog;
+using Serilog.Events;
 
 using Spice86.Core.DI;
 using Spice86.Core.Emulator.Callback;
