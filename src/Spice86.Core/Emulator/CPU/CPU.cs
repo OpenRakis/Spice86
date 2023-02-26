@@ -5,6 +5,7 @@ using Serilog;
 
 using Spice86.Core.DI;
 using Spice86.Core.Emulator.Callback;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
@@ -84,7 +85,12 @@ public class Cpu {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
             ProcessRep(opcode);
         } else {
-            ExecOpcode(opcode);
+            try {
+                ExecOpcode(opcode);
+            }
+            catch (CpuException e) {
+                HandleCpuException(e);
+            }
         }
         // Reset to 16 bit operand size
         _instructions16Or32 = _instructions16;
@@ -180,6 +186,21 @@ public class Cpu {
         }
 
         _memory.SetUint16(flagsAddress, (ushort)value);
+    }
+
+    private void HandleCpuException(CpuException cpuException) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(cpuException.ToString());
+        }
+        if (cpuException.Type is CpuExceptionType.Fault) {
+            _instructions16Or32 = _instructions16;
+            State.ClearPrefixes();
+            _internalIp = State.IP;
+        }
+        if (cpuException.ErrorCode != null) {
+            Stack.Push16(cpuException.ErrorCode.Value);
+        }
+        Interrupt(cpuException.InterruptVector, false);
     }
 
     private static bool IsStringOpUpdatingFlags(int stringOpCode)
@@ -1030,8 +1051,7 @@ public class Cpu {
     public void Aam(byte v2) {
         byte v1 = State.AL;
         if (v2 == 0) {
-            HandleDivisionError();
-            return;
+            throw new CpuDivisionErrorException("Division by zero");
         }
 
         byte result = (byte)(v1 % v2);
@@ -1146,12 +1166,6 @@ public class Cpu {
         State.IP = targetIP;
         _internalIp = targetIP;
         FunctionHandlerInUse.Call(callType, targetCS, targetIP, returnCS, returnIP);
-    }
-
-    public void HandleDivisionError() {
-        // Reset IP because instruction is not finished (this is how an actual CPU behaves)
-        _internalIp = State.IP;
-        Interrupt(0, false);
     }
 
     private void HandleExternalInterrupt() {

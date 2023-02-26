@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.CPU;
+﻿using Spice86.Core.Emulator.CPU.Exceptions;
+
+namespace Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
 
@@ -151,84 +153,84 @@ public class Alu {
         return res;
     }
 
-    public uint? Div32(ulong value1, uint value2) {
+    public uint Div32(ulong value1, uint value2) {
         if (value2 == 0) {
-            return null;
+            throw new CpuDivisionErrorException($"Division by zero");
         }
 
         ulong res = value1 / value2;
         if (res > uint.MaxValue) {
-            return null;
+            throw new CpuDivisionErrorException($"Division result out of range: {res}");
         }
 
         return (uint)res;
     }
 
-    public ushort? Div16(uint value1, ushort value2) {
+    public ushort Div16(uint value1, ushort value2) {
         if (value2 == 0) {
-            return null;
+            throw new CpuDivisionErrorException($"Division by zero");
         }
 
         uint res = value1 / value2;
         if (res > ushort.MaxValue) {
-            return null;
+            throw new CpuDivisionErrorException($"Division result out of range: {res}");
         }
 
         return (ushort)res;
     }
 
-    public byte? Div8(ushort value1, byte value2) {
+    public byte Div8(ushort value1, byte value2) {
         if (value2 == 0) {
-            return null;
+            throw new CpuDivisionErrorException($"Division by zero");
         }
 
         uint res = (uint)(value1 / value2);
         if (res > byte.MaxValue) {
-            return null;
+            throw new CpuDivisionErrorException($"Division result out of range: {res}");
         }
 
         return (byte)res;
     }
     
-    public int? Idiv32(long value1, int value2) {
+    public int Idiv32(long value1, int value2) {
         if (value2 == 0) {
-            return null;
+            throw new CpuDivisionErrorException($"Division by zero");
         }
 
         long res = value1 / value2;
         unchecked {
             if (res is > 0x7FFFFFFF or < (int)0x80000000) {
-                return null;
+                throw new CpuDivisionErrorException($"Division result out of range: {res}");
             }
         }
 
         return (int)res;
     }
 
-    public short? Idiv16(int value1, short value2) {
+    public short Idiv16(int value1, short value2) {
         if (value2 == 0) {
-            return null;
+            throw new CpuDivisionErrorException($"Division by zero");
         }
 
         int res = value1 / value2;
         unchecked {
             if (res is > 0x7FFF or < (short)0x8000) {
-                return null;
+                throw new CpuDivisionErrorException($"Division result out of range: {res}");
             }
         }
 
         return (short)res;
     }
 
-    public sbyte? Idiv8(short value1, sbyte value2) {
+    public sbyte Idiv8(short value1, sbyte value2) {
         if (value2 == 0) {
-            return null;
+            throw new CpuDivisionErrorException($"Division by zero");
         }
 
         int res = value1 / value2;
         unchecked {
             if (res is > 0x7F or < ((sbyte)0x80)) {
-                return null;
+                throw new CpuDivisionErrorException($"Division result out of range: {res}");
             }
         }
 

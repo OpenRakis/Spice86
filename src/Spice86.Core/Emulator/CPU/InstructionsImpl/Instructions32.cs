@@ -366,13 +366,8 @@ public class Instructions32 : Instructions16Or32 {
     protected override void Grp3DivRmAcc() {
         ulong v1 = ((ulong)State.EDX << 32) | State.EAX;
         uint v2 = ModRM.GetRm32();
-        uint? result = Alu.Div32(v1, v2);
-        if (result == null) {
-            Cpu.HandleDivisionError();
-            return;
-        }
-
-        State.EAX = result.Value;
+        uint result = Alu.Div32(v1, v2);
+        State.EAX = result;
         State.EDX = (uint)(v1 % v2);
     }
 
@@ -380,13 +375,8 @@ public class Instructions32 : Instructions16Or32 {
         // no sign extension for v1 as it is already a 32bit value
         long v1 = (long)(((ulong)State.EDX << 32) | State.EAX);
         int v2 = (int) ModRM.GetRm32();
-        int? result = Alu.Idiv32(v1, v2);
-        if (result == null) {
-            Cpu.HandleDivisionError();
-            return;
-        }
-
-        State.EAX = (uint)result.Value;
+        int result = Alu.Idiv32(v1, v2);
+        State.EAX = (uint)result;
         State.EDX = (uint)(v1 % v2);
     }
 
