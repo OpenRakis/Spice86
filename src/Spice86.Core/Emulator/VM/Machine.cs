@@ -186,7 +186,7 @@ public class Machine : IDisposable {
         Register(SystemClockInt1AHandler);
 
         // Initialize DOS.
-        Dos = new Dos(this, serviceProvider.GetService<ILoggerService>(), configuration);
+        Dos = new Dos(this, serviceProvider.GetService<ILoggerService>());
         Dos.Initialize();
         
         MouseInt33Handler = new MouseInt33Handler(this, serviceProvider.GetService<ILoggerService>(), gui);

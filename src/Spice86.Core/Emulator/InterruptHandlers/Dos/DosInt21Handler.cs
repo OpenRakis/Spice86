@@ -417,8 +417,6 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
-    internal DosMemoryManager DosMemoryManager => _dosMemoryManager;
-
     private string ConvertDosChar(byte characterByte) {
         return _cp850CharSet.GetString(new[] { characterByte });
     }
@@ -446,7 +444,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x3E, new Callback(0x3E, () => CloseFile(true)));
         _dispatchTable.Add(0x3F, new Callback(0x3F, () => ReadFile(true)));
         _dispatchTable.Add(0x40, new Callback(0x40, () => WriteFileUsingHandle(true)));
-        _dispatchTable.Add(0x43, new Callback(0x43, () => GetSetFileAttribute(true)));
+        _dispatchTable.Add(0x43, new Callback(0x43, () => GetSetFileAttributes(true)));
         _dispatchTable.Add(0x44, new Callback(0x44, () => IoControl(true)));
         _dispatchTable.Add(0x42, new Callback(0x42, () => MoveFilePointerUsingHandle(true)));
         _dispatchTable.Add(0x45, new Callback(0x45, () => DuplicateFileHandle(true)));
@@ -461,7 +459,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
     }
 
-    private void GetCurrentDirectory(bool calledFromVm) {
+    public void GetCurrentDirectory(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("GET CURRENT DIRECTORY {@ResponseAddress}",
@@ -482,7 +480,7 @@ public class DosInt21Handler : InterruptHandler {
         return stringBuilder.ToString();
     }
 
-    private void GetSetFileAttribute(bool calledFromVm) {
+    public void GetSetFileAttributes(bool calledFromVm) {
         byte op = _state.AL;
         string dosFileName = GetStringAtDsDx();
         string? fileName = _dosFileManager.ToHostCaseSensitiveFileName(dosFileName, false);
