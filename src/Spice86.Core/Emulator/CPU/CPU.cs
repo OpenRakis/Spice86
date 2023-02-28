@@ -41,19 +41,11 @@ public class Cpu {
     private readonly Instructions16 _instructions16;
     private readonly Instructions32 _instructions32;
     private Instructions16Or32 _instructions16Or32;
-    private int _addressSize;
 
     /// <summary>
     /// Address size for the currently executing instruction.
     /// </summary>
-    public int AddressSize {
-        get => _addressSize;
-        private set {
-            if (value != 16 && value != 32)
-                throw new ArgumentOutOfRangeException(nameof(value), "Address size must be 16 or 32");
-            _addressSize = value;
-        }
-    }
+    public int AddressSize { get; private set; }
 
     public CallbackHandler? CallbackHandler { get; set; }
 

@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.CPU;
+﻿using Spice86.Core.Emulator.CPU.Exceptions;
+
+namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Function;
@@ -93,25 +95,31 @@ public class ModRM {
             MemoryAddress = null;
             return;
         }
-        bool bpForRm6 = mode != 0;
-
+        
         if (_cpu.AddressSize == 16) {
-            short disp = mode switch {
-                1 => _cpu.NextUint8(),
+            short displacement = mode switch {
+                1 => (sbyte)_cpu.NextUint8(),
                 2 => (short)_cpu.NextUint16(),
                 _ => 0
             };
-            MemoryOffset = (ushort?)(ComputeOffset16(bpForRm6) + disp);
+            ushort offset = ComputeOffset16(mode);
+            MemoryOffset = (ushort)(offset + displacement);
         } else {
-            int disp = mode switch {
-                1 => _cpu.NextUint8(),
+            long offset = ComputeOffset32(mode, _registerMemoryIndex);
+            int displacement = mode switch {
+                1 => (sbyte)_cpu.NextUint8(),
                 2 => (int)_cpu.NextUint32(),
                 _ => 0
             };
-            MemoryOffset = (ushort?)(ComputeOffset32(mode, _registerMemoryIndex) + disp);
+            offset += displacement;
+            if (offset is > ushort.MaxValue or < ushort.MinValue) {
+                throw new CpuGeneralProtectionFaultException("Displacement overflows 16 bits");
+            }
+            MemoryOffset = (ushort)offset;
         }
 
-        MemoryAddress = GetAddress(ComputeDefaultSegment(bpForRm6), (ushort)MemoryOffset, _registerMemoryIndex == 6);
+        int segmentRegisterIndex = ComputeDefaultSegment(mode);
+        MemoryAddress = GetAddress(segmentRegisterIndex, (ushort)MemoryOffset, _registerMemoryIndex == 6);
     }
 
     public void SetRm32(uint value) {
@@ -141,7 +149,7 @@ public class ModRM {
         }
     }
 
-    private int ComputeDefaultSegment(bool bpForRm6) {
+    private int ComputeDefaultSegment(int mode) {
         // The default segment register is SS for the effective addresses containing a
         // BP index, DS for other effective addresses
         return _registerMemoryIndex switch {
@@ -151,13 +159,13 @@ public class ModRM {
             3 => SegmentRegisters.SsIndex,
             4 => SegmentRegisters.DsIndex,
             5 => SegmentRegisters.DsIndex,
-            6 => bpForRm6 ? SegmentRegisters.SsIndex : SegmentRegisters.DsIndex,
+            6 => mode == 0 ? SegmentRegisters.DsIndex : SegmentRegisters.SsIndex,
             7 => SegmentRegisters.DsIndex,
             _ => throw new InvalidModeException(_machine, _registerMemoryIndex)
         };
     }
 
-    private ushort ComputeOffset16(bool bpForRm6) {
+    private ushort ComputeOffset16(int mode) {
         return _registerMemoryIndex switch {
             0 => (ushort)(_state.BX + _state.SI),
             1 => (ushort)(_state.BX + _state.DI),
@@ -165,13 +173,13 @@ public class ModRM {
             3 => (ushort)(_state.BP + _state.DI),
             4 => _state.SI,
             5 => _state.DI,
-            6 => bpForRm6 ? _state.BP : _cpu.NextUint16(),
+            6 => mode == 0 ? _cpu.NextUint16() : _state.BP,
             7 => _state.BX,
             _ => throw new InvalidModeException(_machine, _registerMemoryIndex)
         };
     }
 
-    private int ComputeOffset32(int mode, int rm) {
+    private uint ComputeOffset32(int mode, int rm) {
         uint result = rm switch {
             0 => _state.EAX,
             1 => _state.ECX,
@@ -183,7 +191,7 @@ public class ModRM {
             7 => _state.EDI,
             _ => throw new ArgumentOutOfRangeException(nameof(rm), rm, "Register memory index must be between 0 and 7 inclusive")
         };
-        return (int)result;
+        return result;
     }
 
     private uint CalculateSib(int mode) {
