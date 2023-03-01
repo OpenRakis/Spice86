@@ -1,5 +1,4 @@
-﻿using Spice86.Core.DI;
-using Spice86.Logging;
+﻿using Spice86.Logging;
 
 namespace Spice86.Core.Emulator;
 
@@ -54,7 +53,7 @@ public sealed class ProgramExecutor : IDisposable {
         Machine.Run();
         if (RecordData) {
             new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine,
-                new ServiceProvider().GetService<ILoggerService>())
+                _loggerService)
                 .DumpAll();
         }
     }
@@ -106,22 +105,22 @@ public sealed class ProgramExecutor : IDisposable {
         if (lowerCaseFileName.EndsWith(".exe")) {
             return new ExeLoader(
                 Machine,
-                new ServiceProvider().GetService<ILoggerService>(),
+                _loggerService,
                 entryPointSegment);
         }
 
         if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(Machine, entryPointSegment);
+            return new ComLoader(Machine, entryPointSegment, _loggerService);
         }
 
-        return new BiosLoader(Machine);
+        return new BiosLoader(Machine, _loggerService);
     }
 
     private Machine CreateMachine(IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter) {
-        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, new ServiceProvider().GetService<ILoggerService>());
-        RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory);
+        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
+        RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
-        Machine = new Machine(this, gui, keyScanCodeConverter, counterConfigurator, executionFlowRecorder,
+        Machine = new Machine(this, gui, keyScanCodeConverter, _loggerService, counterConfigurator, executionFlowRecorder,
             _configuration, RecordData);
         InitializeCpu();
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
@@ -153,7 +152,7 @@ public sealed class ProgramExecutor : IDisposable {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
             return new GdbServer(Machine,
-                new ServiceProvider().GetService<ILoggerService>(),
+                _loggerService,
                 _configuration);
         }
 
@@ -169,7 +168,7 @@ public sealed class ProgramExecutor : IDisposable {
             }
 
             foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
-                         .GenerateFunctionInformations(entryPointSegment, machine)) {
+                    .GenerateFunctionInformations(entryPointSegment, machine)) {
                 res.Add(element.Key, element.Value);
             }
         }

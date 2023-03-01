@@ -1,8 +1,6 @@
-﻿using Serilog.Events;
+﻿namespace Spice86.ViewModels;
 
-using Spice86.Core.DI;
-
-namespace Spice86.ViewModels;
+using Serilog.Events;
 
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -21,7 +19,6 @@ using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Logging;
 using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
@@ -106,7 +103,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
         if (!string.IsNullOrWhiteSpace(dir)) {
             new RecorderDataWriter(dir, _programExecutor.Machine,
-                new ServiceProvider().GetService<ILoggerService>())
+                _loggerService)
                     .DumpAll();
         }
     }
@@ -355,8 +352,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private static Configuration GenerateConfiguration(string[] args) {
-        return new CommandLineParser(new ServiceProvider().GetService<ILoggerService>())
-            .ParseCommandLine(args);
+        return CommandLineParser.ParseCommandLine(args);
     }
 
     private IEnumerable<VideoBufferViewModel> SortedBuffers() {
@@ -412,7 +408,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 _okayToContinueEvent.Set();
             }
             _programExecutor = new ProgramExecutor(
-                new ServiceProvider().GetService<ILoggerService>(),
+                _loggerService,
                 this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _programExecutor.Run();

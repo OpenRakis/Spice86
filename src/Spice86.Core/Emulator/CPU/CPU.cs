@@ -1,9 +1,9 @@
 ﻿using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.CPU;
 using Serilog.Events;
 
-using Spice86.Core.DI;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.InstructionsImpl;
@@ -71,8 +71,8 @@ public class Cpu {
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);
         ExecutionFlowRecorder = executionFlowRecorder;
-        FunctionHandler = new FunctionHandler(machine, new ServiceProvider().GetService<ILoggerService>(), recordData);
-        FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, new ServiceProvider().GetService<ILoggerService>(), recordData);
+        FunctionHandler = new FunctionHandler(machine, _loggerService, recordData);
+        FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
         StaticAddressesRecorder = new StaticAddressesRecorder(State, recordData);
         _modRM = new ModRM(machine, this);

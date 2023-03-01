@@ -42,7 +42,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Jab" Version="0.8.6" PrivateAssets="All" />
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
 		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.1.0" />
 		<PackageReference Include="JetBrains.Annotations" Version="2022.3.1" />

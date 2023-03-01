@@ -1,8 +1,7 @@
-﻿using Spice86.Logging;
+﻿namespace Spice86.Core.Emulator.LoadableFile.Bios;
 
-namespace Spice86.Core.Emulator.LoadableFile.Bios;
+using Spice86.Shared.Interfaces;
 
-using Spice86.Core.DI;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -16,8 +15,7 @@ public class BiosLoader : ExecutableFileLoader {
     private const ushort CodeSegment = 0xF000;
     public override bool DosInitializationNeeded => false;
 
-    public BiosLoader(Machine machine) : base(machine,
-        new ServiceProvider().GetService<ILoggerService>()) {
+    public BiosLoader(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
     }
 
     public override byte[] LoadFile(string file, string? arguments) {

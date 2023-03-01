@@ -1,12 +1,7 @@
-﻿using Spice86.Logging;
+﻿namespace Spice86.Core.Emulator.Gdb;
 
-namespace Spice86.Core.Emulator.Gdb;
-
-using Serilog;
-
-using Spice86.Core.DI;
 using Spice86.Core.Emulator.VM;
-
+using Spice86.Shared.Interfaces;
 using System.Diagnostics;
 
 public sealed class GdbServer : IDisposable {
@@ -53,7 +48,7 @@ public sealed class GdbServer : IDisposable {
         gdbIo.WaitForConnection();
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo,
             _machine,
-            new ServiceProvider().GetService<ILoggerService>(),
+            _loggerService,
             _configuration);
         gdbCommandHandler.PauseEmulator();
         OnConnect();
@@ -78,8 +73,7 @@ public sealed class GdbServer : IDisposable {
         try {
             while (_isRunning) {
                 try {
-                    using GdbIo gdbIo = new GdbIo(port,
-                        new ServiceProvider().GetService<ILoggerService>());
+                    using GdbIo gdbIo = new GdbIo(port, _loggerService);
                     // Make GdbIo available for Dispose
                     _gdbIo = gdbIo;
                     AcceptOneConnection(gdbIo);

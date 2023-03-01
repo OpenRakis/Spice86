@@ -1,11 +1,11 @@
 ﻿using Serilog;
 using Serilog.Events;
 
-using Spice86.Core.DI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 
@@ -16,7 +16,7 @@ public class ExeLoader : DosFileLoader {
     private readonly ILoggerService _loggerService;
     private readonly ushort _startSegment;
 
-    public ExeLoader(Machine machine, ILoggerService loggerService, ushort startSegment) : base(machine) {
+    public ExeLoader(Machine machine, ILoggerService loggerService, ushort startSegment) : base(machine, loggerService) {
         _loggerService = loggerService;
         _startSegment = startSegment;
     }

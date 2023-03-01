@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound;
+﻿using Spice86.Shared.Interfaces;
+
+namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.IOPorts;
@@ -17,8 +19,8 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     private readonly GeneralMidi _generalMidi;
     private bool _disposed;
 
-    public Midi(Machine machine, Configuration configuration) : base(machine, configuration) {
-        _generalMidi = new GeneralMidi(configuration, configuration.Mt32RomsPath);
+    public Midi(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration) {
+        _generalMidi = new GeneralMidi(configuration, loggerService);
         _machine.Paused += Machine_Paused;
         _machine.Resumed += Machine_Resumed;
     }

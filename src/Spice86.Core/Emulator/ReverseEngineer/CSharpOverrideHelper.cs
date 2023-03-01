@@ -1,5 +1,5 @@
-﻿using Spice86.Core.DI;
-using Spice86.Logging;
+﻿using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.ReverseEngineer;
 
@@ -125,7 +125,7 @@ public class CSharpOverrideHelper {
             functionName = name;
         } else {
             string methodName = overrideFunc.Method.Name;
-            FunctionInformation? parsedFunctionInformation = GhidraSymbolsDumper.NameToFunctionInformation(methodName);
+            FunctionInformation? parsedFunctionInformation = GhidraSymbolsDumper.NameToFunctionInformation(_loggerService, methodName);
             if (parsedFunctionInformation == null) {
                 throw new UnrecoverableException("Cannot parse " + methodName +
                     " into a spice86 function name as format is not correct.");

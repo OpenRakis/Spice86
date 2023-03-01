@@ -1,14 +1,14 @@
-using Spice86.Logging;
-
 namespace Spice86.Tests;
 
 using Spice86.Core.CLI;
-using Spice86.Core.DI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 using System;
+
+using Moq;
 
 public class MachineCreator {
     public ProgramExecutor CreateProgramExecutorFromBinName(string binName) {
@@ -26,8 +26,8 @@ public class MachineCreator {
         };
 
         ProgramExecutor programExecutor = new ProgramExecutor(
-            new ServiceProvider().GetService<ILoggerService>(),
-            null, null, configuration);;
+            new Mock<ILoggerService>().Object,
+            null, null, configuration);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
         // Disabling custom IO handling

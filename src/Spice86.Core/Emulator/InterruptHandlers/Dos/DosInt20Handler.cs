@@ -1,5 +1,5 @@
-﻿using Spice86.Core.DI;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+﻿using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 

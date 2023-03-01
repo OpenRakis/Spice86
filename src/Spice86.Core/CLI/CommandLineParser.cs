@@ -1,6 +1,4 @@
-﻿using Spice86.Core.DI;
-
-namespace Spice86.Core.CLI;
+﻿namespace Spice86.Core.CLI;
 
 using CommandLine;
 
@@ -21,30 +19,14 @@ using System.Reflection;
 /// Parses the command line options to create a Configuration.<br/>
 /// Displays help when configuration could not be parsed.
 /// </summary>
-public class CommandLineParser {
-    private readonly ILoggerService _loggerService;
-
-    public CommandLineParser(ILoggerService loggerService) {
-        _loggerService = loggerService;
-    }
-
-    public Configuration ParseCommandLine(string[] args) {
-        ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(args)
-            .WithNotParsed((e) => _loggerService.Error("{@Errors}", e));
+public static class CommandLineParser {
+    public static Configuration ParseCommandLine(string[] args) {
+        ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(args);
         return result.MapResult(initialConfig => {
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
-            if (initialConfig.SilencedLogs) {
-                _loggerService.AreLogsSilenced = true;
-            }
-            else if (initialConfig.WarningLogs) {
-                _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
-            }
-            else if (initialConfig.VerboseLogs) {
-                _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
-            }
             return initialConfig;
         }, error => {
             var message = "Unparseable command line";

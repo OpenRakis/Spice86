@@ -1,6 +1,7 @@
 using Serilog.Events;
 
 using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 using System.Linq;
 
