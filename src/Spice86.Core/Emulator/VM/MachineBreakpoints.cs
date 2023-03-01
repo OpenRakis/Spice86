@@ -2,7 +2,6 @@
 
 namespace Spice86.Core.Emulator.VM;
 
-using Spice86.Core.DI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -20,11 +19,11 @@ public sealed class MachineBreakpoints : IDisposable {
     private BreakPoint? _machineStopBreakPoint;
     private bool _disposed;
 
-    public MachineBreakpoints(Machine machine) {
+    public MachineBreakpoints(Machine machine, ILoggerService loggerService) {
         _state = machine.Cpu.State;
         _memory = machine.Memory;
         PauseHandler = new(
-            new ServiceProvider().GetService<ILoggerService>(),
+            loggerService,
             machine.Gui);
     }
 

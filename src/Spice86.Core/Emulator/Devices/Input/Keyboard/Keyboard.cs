@@ -1,5 +1,4 @@
-﻿using Spice86.Core.DI;
-using Spice86.Logging;
+﻿using Spice86.Logging;
 
 namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
@@ -20,7 +19,6 @@ public class Keyboard : DefaultIOPortHandler {
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
     public Keyboard(Machine machine, ILoggerService loggerService, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) : base(machine, configuration) {
-        ServiceProvider serviceProvider = new ServiceProvider();
         _loggerService = loggerService;
         _gui = gui;
         _keyScanCodeConverter = keyScanCodeConverter;

@@ -1,5 +1,5 @@
-﻿using Spice86.Core.DI;
-using Spice86.Core.Emulator.Function.Dump;
+﻿using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.Function;
 

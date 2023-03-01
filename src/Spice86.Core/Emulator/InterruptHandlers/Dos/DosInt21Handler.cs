@@ -1,11 +1,11 @@
 ﻿using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog;
 
-using Spice86.Core.DI;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;

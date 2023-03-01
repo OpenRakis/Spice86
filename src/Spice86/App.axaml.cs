@@ -1,4 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
+
+using Serilog.Events;
+
+using Spice86.Core.CLI;
+using Spice86.DependencyInjection;
 using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86;
 
@@ -12,7 +19,6 @@ using Spice86.ViewModels;
 using System;
 using System.Runtime.Versioning;
 using Spice86.Views;
-using Spice86.Core.DI;
 
 internal partial class App : Application {
     private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
@@ -35,8 +41,13 @@ internal partial class App : Application {
             throw new PlatformNotSupportedException("Spice86 needs the desktop Linux/Mac/Windows platform in order to run.");
         }
 
-        MainWindowViewModel mainViewModel = new MainWindowViewModel(
-            new ServiceProvider().GetService<ILoggerService>());
+        ServiceProvider serviceProvider = Startup.StartupInjectedServices(desktop.Args);
+        ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>();
+        if (loggerService is null) {
+            throw new InvalidOperationException("Could not get logging service from DI !");
+        }
+
+        MainWindowViewModel mainViewModel = new MainWindowViewModel(loggerService);
         mainViewModel.SetConfiguration(desktop.Args);
         desktop.MainWindow = new MainWindow {
             DataContext = mainViewModel,
@@ -46,6 +57,8 @@ internal partial class App : Application {
         MainWindow = (MainWindow)desktop.MainWindow;
         base.OnFrameworkInitializationCompleted();
     }
+
+    
 
     [SupportedOSPlatform("windows")]
     private static bool GetIsWindowsInDarkMode() {

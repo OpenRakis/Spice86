@@ -1,12 +1,7 @@
-﻿using Spice86.Core.DI;
-using Spice86.Logging;
-
-namespace Spice86.Core.Emulator.Gdb;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.VM;
-
+using Spice86.Shared.Interfaces;
 using System;
 using System.Linq;
 
@@ -24,14 +19,11 @@ public class GdbCommandHandler {
         _loggerService = loggerService;
         _gdbIo = gdbIo;
         _machine = machine;
-        _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine,
-            new ServiceProvider().GetService<ILoggerService>());
-        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine,
-            new ServiceProvider().GetService<ILoggerService>());
-        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine,
-            new ServiceProvider().GetService<ILoggerService>());
+        _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine, _loggerService);
+        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine, _loggerService);
+        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine, _loggerService);
         _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine,
-            new ServiceProvider().GetService<ILoggerService>(),
+            _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }
 

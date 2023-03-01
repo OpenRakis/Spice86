@@ -1,31 +1,22 @@
-﻿using Spice86.Core.DI;
-
-namespace Spice86;
+﻿namespace Spice86;
 
 using Avalonia;
 
 using OxyPlot.Avalonia;
 
-using Serilog;
+using Microsoft.Extensions.DependencyInjection;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
-using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 
 /// <summary>
 /// Spice86 Entry Point
 /// </summary>
 public class Program {
-    private static readonly ILoggerService _loggerService;
-
-    static Program() {
-        _loggerService = new ServiceProvider().GetService<ILoggerService>();
-    }
-
     /// <summary>
     /// Alternate Entry Point
     /// </summary>
@@ -44,26 +35,23 @@ public class Program {
     // yet and stuff might break.
     [STAThread]
     public static void Main(string[] args) {
-        Configuration configuration = new CommandLineParser(
-            new ServiceProvider().GetService<ILoggerService>())
-                .ParseCommandLine(args);
+        Configuration configuration = CommandLineParser.ParseCommandLine(args);
+        
         if(!configuration.HeadlessMode) {
             OxyPlotModule.EnsureLoaded();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
         }
         else {
-            try {
-                ProgramExecutor programExecutor = new ProgramExecutor(
-                    new ServiceProvider().GetService<ILoggerService>(),
-                    null, null, configuration);
-                programExecutor.Run();
-            } catch (Exception e) {
-                e.Demystify();
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _loggerService.Error(e, "An error occurred during execution");
-                }
-                throw;
+            ServiceProvider serviceProvider = Startup.StartupInjectedServices(args);
+            ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>();
+            if (loggerService is null) {
+                throw new InvalidOperationException("Could not get logging service from DI !");
             }
+            
+            ProgramExecutor programExecutor = new ProgramExecutor(
+                loggerService,
+                null, null, configuration);
+            programExecutor.Run();
         }
     }
 

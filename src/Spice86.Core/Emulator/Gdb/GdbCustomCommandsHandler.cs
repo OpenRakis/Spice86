@@ -1,10 +1,4 @@
-﻿using Serilog.Events;
-
-using Spice86.Core.DI;
-
-namespace Spice86.Core.Emulator.Gdb;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
@@ -18,6 +12,7 @@ using Spice86.Core.Utils;
 using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
+using Serilog.Events;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -42,8 +37,7 @@ public class GdbCustomCommandsHandler {
         _gdbIo = gdbIo;
         _machine = machine;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecorderDataWriter(recordedDataDirectory, machine,
-            new ServiceProvider().GetService<ILoggerService>());
+        _recordedDataWriter = new RecorderDataWriter(recordedDataDirectory, machine, _loggerService);
     }
 
     public virtual string HandleCustomCommands(string command) {

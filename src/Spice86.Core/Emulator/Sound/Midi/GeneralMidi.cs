@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Sound.Midi;
+﻿using Spice86.Shared.Interfaces;
+
+namespace Spice86.Core.Emulator.Sound.Midi;
 
 using Spice86.Core.Emulator;
 
@@ -22,13 +24,16 @@ public sealed class GeneralMidi : IDisposable {
 
     private bool _disposed = false;
 
+    private readonly ILoggerService _loggerService;
+
     private Configuration Configuration { get; init; }
 
     /// <summary>
     /// Initializes a new instance of the GeneralMidi class.
     /// </summary>
-    public GeneralMidi(Configuration configuration, string? mt32RomsPath = null) {
-        Mt32RomsPath = mt32RomsPath;
+    public GeneralMidi(Configuration configuration, ILoggerService loggerService) {
+        _loggerService = loggerService;
+        Mt32RomsPath = configuration.Mt32RomsPath;
         Configuration = configuration;
     }
 
@@ -85,7 +90,7 @@ public sealed class GeneralMidi : IDisposable {
             case DataPort:
                 if (_midiMapper is null) {
                     if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
-                        _midiMapper = new Mt32MidiDevice(Mt32RomsPath, Configuration);
+                        _midiMapper = new Mt32MidiDevice(Mt32RomsPath, Configuration, _loggerService);
                     } else if (OperatingSystem.IsWindows()) {
                         _midiMapper = new WindowsMidiMapper();
                     }

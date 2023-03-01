@@ -1,5 +1,4 @@
-﻿using Spice86.Core.DI;
-using Spice86.Core.Emulator.Gdb;
+﻿using Spice86.Core.Emulator.Gdb;
 
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 

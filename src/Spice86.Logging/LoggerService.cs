@@ -1,4 +1,6 @@
-﻿namespace Spice86.Logging;
+﻿using Spice86.Shared.Interfaces;
+
+namespace Spice86.Logging;
 
 using Serilog;
 using Serilog.Core;

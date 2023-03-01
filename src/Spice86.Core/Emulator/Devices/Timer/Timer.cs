@@ -1,4 +1,4 @@
-﻿using Spice86.Core.DI;
+﻿using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.Devices.Timer;
 
@@ -49,16 +49,16 @@ public class Timer : DefaultIOPortHandler {
         _cpu = machine.Cpu;
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(machine,
-                new ServiceProvider().GetService<ILoggerService>(),
+                _loggerService,
                 i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         }
         // screen refresh is 60hz regardless of the configuration
         _vgaScreenRefreshCounter = new Counter(machine,
-            new ServiceProvider().GetService<ILoggerService>(), 4, new TimeCounterActivator(1));
+            _loggerService, 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
         // retrace 60 times per seconds
         _vgaRetraceCounter = new Counter(machine,
-            new ServiceProvider().GetService<ILoggerService>(),
+            _loggerService,
             5, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         _vgaRetraceCounter.SetValue((int)(Counter.HardwareFrequency / 60));
     }

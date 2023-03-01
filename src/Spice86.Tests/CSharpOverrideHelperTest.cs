@@ -1,20 +1,21 @@
-using Spice86.Logging;
-
 namespace Spice86.Tests;
 
-using Spice86.Core.DI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
 
 using Xunit;
+using Moq;
 
 public class CSharpOverrideHelperTest {
+    private readonly Mock<ILoggerService> _loggerServiceMock = new();
+    
     private ProgramExecutor CreateDummyProgramExecutor() {
         ProgramExecutor res =  new MachineCreator().CreateProgramExecutorFromBinName("add");
         Machine machine = res.Machine;
@@ -23,12 +24,13 @@ public class CSharpOverrideHelperTest {
         machine.Cpu.State.SP = 100;
         return res;
     }
-
+    
     [Fact]
     void TestJumpReturns() {
         using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
         RecursiveJumps recursiveJumps =
-            new RecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(), programExecutor.Machine);
+            new RecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(), programExecutor.Machine,
+                _loggerServiceMock.Object);
         recursiveJumps.JumpTarget1(0);
         Assert.Equal(RecursiveJumps.MaxNumberOfJumps, recursiveJumps.NumberOfCallsTo1);
         Assert.Equal(RecursiveJumps.MaxNumberOfJumps, recursiveJumps.NumberOfCallsTo2);
@@ -39,7 +41,7 @@ public class CSharpOverrideHelperTest {
         using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
         
         SimpleCallsJumps callsJumps = new SimpleCallsJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
-            programExecutor.Machine);
+            programExecutor.Machine, _loggerServiceMock.Object);
         callsJumps.Entry_1000_0000_10000();
         Assert.Equal(1, callsJumps.NearCalled);
         Assert.Equal(1, callsJumps.FarCalled);
@@ -54,9 +56,8 @@ class RecursiveJumps : CSharpOverrideHelper {
     public int NumberOfCallsTo2 { get; set; }
 
     public RecursiveJumps(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine) : base(
-        functionInformations, machine,
-        new ServiceProvider().GetService<ILoggerService>()) {
+        Machine machine, ILoggerService loggerService) : base(
+        functionInformations, machine, loggerService) {
     }
 
     public Action JumpTarget1(int loadOffset) {
@@ -92,9 +93,9 @@ class SimpleCallsJumps : CSharpOverrideHelper {
     public int FarCalled1FromStack { get; set; }
     public int FarCalled2FromStack { get; set; }
 
-    public SimpleCallsJumps(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine) :
-        base(functionInformations, machine,
-        new ServiceProvider().GetService<ILoggerService>()) {
+    public SimpleCallsJumps(Dictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine,
+        ILoggerService loggerService) :
+        base(functionInformations, machine, loggerService) {
         DefineFunction(0, 0x200, Far_callee1_from_stack_0000_0200_00200);
         DefineFunction(0, 0x300, Far_callee2_from_stack_0000_0300_00300);
     }

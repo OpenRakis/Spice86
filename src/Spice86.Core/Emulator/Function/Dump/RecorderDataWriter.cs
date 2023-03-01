@@ -1,5 +1,5 @@
-using Spice86.Core.DI;
 using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.Function.Dump;
 
@@ -45,7 +45,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
     private void DumpGhidraSymbols() {
-        new GhidraSymbolsDumper().Dump(_machine, GetSymbolsFile());
+        new GhidraSymbolsDumper(_loggerService).Dump(_machine, GetSymbolsFile());
     }
 
     private void DumpCSharpStubs() {
@@ -72,6 +72,6 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
     private void DumpExecutionFlow() {
-        new ExecutionFlowDumper(new ServiceProvider().GetService<ILoggerService>()).Dump(_machine.Cpu.ExecutionFlowRecorder, GetExecutionFlowFile());
+        new ExecutionFlowDumper(_loggerService).Dump(_machine.Cpu.ExecutionFlowRecorder, GetExecutionFlowFile());
     }
 }

@@ -1,8 +1,7 @@
+using Serilog.Core;
 using Serilog.Events;
 
-namespace Spice86.Logging;
-
-using Serilog.Core;
+namespace Spice86.Shared.Interfaces;
 
 public interface ILoggerService {
     LoggingLevelSwitch LogLevelSwitch { get; set; }
