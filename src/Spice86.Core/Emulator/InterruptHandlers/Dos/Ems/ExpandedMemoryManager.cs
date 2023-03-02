@@ -407,9 +407,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         // If a page is already mapped, make sure it gets unmapped first.
         UnmapPage(physicalPageIndex);
 
-        Span<byte> pageFrame = this.GetMappedPage(physicalPageIndex);
-        Span<byte> ems = this.GetLogicalPage(logicalPage);
-        ems.CopyTo(pageFrame);
+        //Span<byte> pageFrame = this.GetMappedPage(physicalPageIndex);
+        //Span<byte> ems = this.GetLogicalPage(logicalPage);
+        //ems.CopyTo(pageFrame);
         _mappedPages[physicalPageIndex] = logicalPage;
     }
 
@@ -420,9 +420,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public void UnmapPage(int physicalPageIndex) {
         int currentPage = _mappedPages[physicalPageIndex];
         if (currentPage != -1) {
-            Span<byte> pageFrame = GetMappedPage(physicalPageIndex);
-            Span<byte> ems = GetLogicalPage(currentPage);
-            pageFrame.CopyTo(ems);
+            //Span<byte> pageFrame = GetMappedPage(physicalPageIndex);
+            //Span<byte> ems = GetLogicalPage(currentPage);
+            //pageFrame.CopyTo(ems);
             _mappedPages[physicalPageIndex] = -1;
         }
     }
