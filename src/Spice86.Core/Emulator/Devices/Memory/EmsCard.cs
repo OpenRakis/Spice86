@@ -12,6 +12,9 @@ public class EmsCard : DefaultIOPortHandler {
     {
     }
     
-    public Memory ExpandedMemory { get; init; } = new(6 * 1024);
+    /// <summary>
+    /// 32 MB of RAM (EMS v4)
+    /// </summary>
+    public Memory ExpandedMemory { get; init; } = new(32 * 1024);
 
 }
