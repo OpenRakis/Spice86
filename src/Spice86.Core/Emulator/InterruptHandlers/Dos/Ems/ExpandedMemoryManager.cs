@@ -47,7 +47,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public const ushort PageFrameSegment = 0xE000;
     public const int FirstHandle = 1;
     public const int LastHandle = 254;
-    public const int SystemHandle = 0;
+    public const int SegmentsPerPage = PageSize / 16;
 
     public const string EmsIdentifier = "EMMXXXX0";
     
@@ -55,19 +55,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private readonly short[] _pageOwners = new short[MaximumLogicalPages];
     private readonly SortedList<int, EmsHandle> _handles = new();
-    private readonly int[] _mappedPages = {-1, -1, -1, -1};
+    private readonly byte[]?[] _mappedPages = new byte[MaximumLogicalPages][];
     
     public ExpandedMemoryManager(Machine machine) : base(machine) {
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
-
-        _pageOwners.AsSpan().Fill(-1);
-
-        for (int i = 0; i < 24; i++) {
-            _pageOwners[i] = SystemHandle;
-        }
-
-        _handles[SystemHandle] = new EmsHandle(Enumerable.Range(0, 24).Select(i => (ushort)i));
         FillDispatchTable();
     }
 
@@ -76,7 +68,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameSegment));
         _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfPages));
         _dispatchTable.Add(0x43, new Callback(0x43, GetHandleAndAllocatePages));
-        _dispatchTable.Add(0x44, new Callback(0x44, MapExpandedMeoryPage));
+        _dispatchTable.Add(0x44, new Callback(0x44, MapUnmapHandlePage));
         _dispatchTable.Add(0x45, new Callback(0x45, ReleaseHandleAndFreePages));
         _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
         _dispatchTable.Add(0x47, new Callback(0x47, SavePageMap));
@@ -286,29 +278,25 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public void ReallocatePages() {
         int pagesRequested = _state.BX;
 
-        if (pagesRequested < MaximumLogicalPages) {
-            int handle = _state.DX;
-            if (_handles.TryGetValue(handle, out EmsHandle? emsHandle)) {
-                if (pagesRequested < emsHandle.PagesAllocated) {
-                    for (int i = emsHandle.LogicalPages.Count - 1; i >= emsHandle.LogicalPages.Count - pagesRequested; i--) {
-                        _mappedPages[emsHandle.LogicalPages[i]] = -1;
-                    }
-                    emsHandle.LogicalPages.RemoveRange(emsHandle.LogicalPages.Count - pagesRequested, emsHandle.PagesAllocated - pagesRequested);
-                } else if (pagesRequested > emsHandle.PagesAllocated) {
-                    int pagesToAdd = pagesRequested - emsHandle.PagesAllocated;
-                    for (int i = 0; i < pagesToAdd; i++) {
-                        ushort logicalPage = GetNextFreePage((short)handle);
-                        emsHandle.LogicalPages.Add(logicalPage);
-                    }
-                }
+        
+        if (pagesRequested < MaximumLogicalPages)
+        {
+            ushort handle = _state.DX;
+            if (_handles.TryGetValue(handle, out var emsHandle))
+            {
+                emsHandle.Reallocate(pagesRequested);
 
                 // Return good status.
                 _state.AH = EmsErrors.EmmNoError;
-            } else {
-                // Return "couldn't find specified handle" code.
-                _state.AH = EmsErrors.EmsIllegalPhysicalPage;
             }
-        } else {
+            else
+            {
+                // Return "couldn't find specified handle" c
+                _state.AH = EmsErrors.EmmInvalidHandle;
+            }
+        }
+        else
+        {
             // Return "not enough available pages" code.
             _state.AH = EmsErrors.EmmOutOfPhysicalPages;
         }
@@ -319,16 +307,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     /// <param name="pagesRequested">Number of pages to allocate to the new handle.</param>
     /// <param name="handleIndex">Index for the newly created handle, if returned status is <c>true</c>.</param>
-
     /// <returns>New EMS handle if created successfully; otherwise zero.</returns>
     public bool TryCreateHandle(int pagesRequested, out int handleIndex) {
         for (int i = FirstHandle; i <= LastHandle; i++) {
             if (!_handles.ContainsKey(i)) {
-                var pages = new List<ushort>(pagesRequested);
-                for (int p = 0; p < pagesRequested; p++) {
-                    pages.Add(GetNextFreePage((short)i));
-                }
-                var handle = new EmsHandle(pages);
+                EmsHandle handle = new EmsHandle(pagesRequested);
                 _handles.Add(i, handle);
                 handleIndex = i;
                 return true;
@@ -362,7 +345,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Maps or unmaps a physical page.
     /// </summary>
-    public void MapExpandedMeoryPage() {
+    public void MapUnmapHandlePage() {
         int physicalPage = _state.AL;
         if (physicalPage is < 0 or >= MaximumPhysicalPages) {
             // Return "physical page out of range" code.
@@ -380,13 +363,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int logicalPageIndex = _state.BX;
 
         if (logicalPageIndex != 0xFFFF) {
-            if (logicalPageIndex >= handle.LogicalPages.Count) {
+            byte[]? logicalPage = handle.GetLogicalPage(logicalPageIndex);
+            if(logicalPage == null) {
                 // Return "logical page out of range" code.
                 _state.AH = EmsErrors.EmsLogicalPageOutOfRange;
                 return;
             }
 
-            MapPage(handle.LogicalPages[logicalPageIndex], physicalPage);
+            MapPage(logicalPage, physicalPage);
         } else {
             UnmapPage(physicalPage);
         }
@@ -400,16 +384,16 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     /// <param name="logicalPage">Logical page to copy from.</param>
     /// <param name="physicalPageIndex">Index of physical page to copy to.</param>
-    public void MapPage(int logicalPage, int physicalPageIndex) {
+    public void MapPage(byte[] logicalPage, int physicalPageIndex) {
         // If the requested logical page is already mapped, it needs to get unmapped first.
         UnmapLogicalPage(logicalPage);
 
         // If a page is already mapped, make sure it gets unmapped first.
         UnmapPage(physicalPageIndex);
 
-        //Span<byte> pageFrame = this.GetMappedPage(physicalPageIndex);
-        //Span<byte> ems = this.GetLogicalPage(logicalPage);
-        //ems.CopyTo(pageFrame);
+        ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPageIndex);
+        Span<byte> src = _machine.EmsCard.ExpandedMemory.GetSpan(segment, PageSize);
+        logicalPage.CopyTo(src);
         _mappedPages[physicalPageIndex] = logicalPage;
     }
 
@@ -418,12 +402,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     /// <param name="physicalPageIndex">Physical page to copy from.</param>
     public void UnmapPage(int physicalPageIndex) {
-        int currentPage = _mappedPages[physicalPageIndex];
-        if (currentPage != -1) {
-            //Span<byte> pageFrame = GetMappedPage(physicalPageIndex);
-            //Span<byte> ems = GetLogicalPage(currentPage);
-            //pageFrame.CopyTo(ems);
-            _mappedPages[physicalPageIndex] = -1;
+        byte[]? currentPage = _mappedPages[physicalPageIndex];
+        if (currentPage != null) {
+            ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPageIndex);
+            Span<byte> src = _machine.EmsCard.ExpandedMemory.GetSpan(segment, PageSize);
+            src.CopyTo(currentPage);
+            _mappedPages[physicalPageIndex] = null;
         }
     }
 
@@ -431,7 +415,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Unmaps a specific logical page if it is currently mapped.
     /// </summary>
     /// <param name="logicalPage">Logical page to unmap.</param>
-    public void UnmapLogicalPage(int logicalPage) {
+    public void UnmapLogicalPage(byte[] logicalPage) {
         for (int i = 0; i < _mappedPages.Length; i++) {
             if (_mappedPages[i] == logicalPage) {
                 UnmapPage(i);
@@ -505,11 +489,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return;
         }
 
-        ushort arraySegment = _state.DS;
-        ushort arrayOffset = _state.SI;
+        uint arraySegment = _state.DS;
+        uint arrayOffset = _state.SI;
         for (int i = 0; i < pageCount; i++) {
-            ushort logicalPageIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(arraySegment, arrayOffset));
-            ushort physicalPageIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(arraySegment, (ushort)(arrayOffset + 2u)));
+            ushort logicalPageIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress((ushort) arraySegment, (ushort) arrayOffset));
+            ushort physicalPageIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress((ushort) arraySegment, (ushort)(arrayOffset + 2u)));
 
             if (physicalPageIndex >= MaximumPhysicalPages) {
                 // Return "physical page out of range" code.
@@ -518,18 +502,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
 
             if (logicalPageIndex != 0xFFFF) {
-                if (logicalPageIndex >= handle.LogicalPages.Count) {
+                byte[]? logicalPage = handle.GetLogicalPage(logicalPageIndex);
+                if (logicalPage == null) {
                     // Return "logical page out of range" code.
                     _state.AH = EmsErrors.EmsLogicalPageOutOfRange;
                     return;
                 }
 
-                MapPage(handle.LogicalPages[logicalPageIndex], physicalPageIndex);
+                MapPage(logicalPage, physicalPageIndex);
             } else {
                 UnmapPage(physicalPageIndex);
             }
 
-            arrayOffset = (ushort)(arrayOffset + 4u);
+            arrayOffset = arrayOffset + 4u;
         }
 
         // Return good status.
@@ -545,12 +530,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = EmsErrors.EmmInvalidHandle;
             return;
         }
-
-        _mappedPages.CopyTo(handle.SavedPageMap);
+        handle.SavedPageMap = _mappedPages.ToArray();
 
         // Return good status.
         _state.AH = EmsErrors.EmmNoError;
     }
+    
     /// <summary>
     /// Restores the state of page map registers for a handle.
     /// </summary>
@@ -563,8 +548,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         for (int i = 0; i < MaximumPhysicalPages; i++) {
-            if (handle.SavedPageMap[i] != _mappedPages[i]) {
-                MapPage(handle.SavedPageMap[i], i);
+            byte[]? pageMap = handle.SavedPageMap?.ElementAt(i);
+            if (pageMap != null && pageMap != _mappedPages[i]) {
+                MapPage(pageMap, i);
             }
         }
 
@@ -590,23 +576,23 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         CopyDataFromMappedConvMemoryToEmsPages();
 
         if (sourceType == 0 && destType == 0) {
-            _state.AH = CopyConventionalMemoryToConventionalMemory((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
+            _state.AH = EmsCopier.ConvToConv(_machine.EmsCard.ExpandedMemory, (uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
         } else if (sourceType != 0 && destType == 0) {
-            if (!_handles.TryGetValue(sourceHandleIndex, out _)) {
+            if (!_handles.TryGetValue(sourceHandleIndex, out EmsHandle? sourceHandle)) {
                 // Return "couldn't find specified handle" code.
                 _state.AH = EmsErrors.EmmInvalidHandle;
                 return;
             }
 
-            _state.AH = CopyEmsToConventionalMemory(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
+            _state.AH = EmsCopier.EmsToConv(sourceHandle, sourcePage, sourceOffset, _machine.EmsCard.ExpandedMemory, (uint)((destPage << 4) + destOffset), length);
         } else if (sourceType == 0 && destType != 0) {
-            if (!_handles.TryGetValue(destHandleIndex, out _)) {
+            if (!_handles.TryGetValue(destHandleIndex, out EmsHandle? sourceHandle)) {
                 // Return "couldn't find specified handle" code.
-                _state.AH = 0x83;
+                _state.AH = EmsErrors.EmmInvalidHandle;
                 return;
             }
 
-            _state.AH = CopyConventionalMemoryToEmsMemory((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
+            _state.AH = EmsCopier.EmsToConv(sourceHandle, sourcePage, sourceOffset, _machine.EmsCard.ExpandedMemory, (uint)((destPage << 4) + destOffset), length);
         } else {
             if (!_handles.TryGetValue(sourceHandleIndex, out EmsHandle? sourceHandle) || !_handles.TryGetValue(destHandleIndex, out EmsHandle? destHandle)) {
                 // Return "couldn't find specified handle" code.
@@ -614,35 +600,31 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return;
             }
 
-            _state.AH = CopyEmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
+            _state.AH = EmsCopier.EmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
         }
 
         CopyDataFromEmsPagesToMappedConvMem();
     }
     
     public void CopyDataFromMappedConvMemoryToEmsPages() {
-        for (int i = 0; i < MaximumPhysicalPages; i++) {
-            if (_mappedPages[i] != -1) {
-                Span<byte> src = GetMappedPage(i);
-                Span<byte> dest = GetLogicalPage(_mappedPages[i]);
-                src.CopyTo(dest);
+        for (byte i = 0; i < MaximumPhysicalPages; i++) {
+            if (_mappedPages[i] != null) {
+                ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * i);
+                Span<byte> src = _machine.EmsCard.ExpandedMemory.GetSpan(segment, PageSize);
+                src.CopyTo(_mappedPages[i]);
             }
         }
     }
     
     public void CopyDataFromEmsPagesToMappedConvMem() {
-        for (int i = 0; i < MaximumPhysicalPages; i++) {
-            if (_mappedPages[i] != -1) {
-                Span<byte> src = GetLogicalPage(_mappedPages[i]);
-                Span<byte> dest = GetMappedPage(i);
-                src.CopyTo(dest);
+        for (byte i = 0; i < MaximumPhysicalPages; i++) {
+            if (_mappedPages[i] != null) {
+                ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * i);
+                Span<byte> src = _machine.EmsCard.ExpandedMemory.GetSpan(segment, PageSize);
+                src.CopyTo(_mappedPages[i]);
             }
         }
     }
-
-    public Span<byte> GetMappedPage(int physicalPageIndex) => _machine.EmsCard.ExpandedMemory.GetSpan(0, _machine.EmsCard.ExpandedMemory.Ram.Length).Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
-
-    public Span<byte> GetLogicalPage(int logicalPageIndex) => _machine.EmsCard.ExpandedMemory.GetSpan(0, _machine.EmsCard.ExpandedMemory.Ram.Length).Slice(logicalPageIndex * PageSize, PageSize);
     
     public ushort GetNextFreePage(short handle) {
         for (int i = 0; i < _pageOwners.Length; i++) {
@@ -653,180 +635,5 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         return 0;
-    }
-
-    public byte CopyConventionalMemoryToConventionalMemory(uint sourceAddress, uint destAddress, int length) {
-        switch (length)
-        {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length));
-            case 0:
-                return 0;
-        }
-
-        if (sourceAddress + length > MainMemory.ConvMemorySize || destAddress + length > MainMemory.ConvMemorySize) {
-            return 0xA2;
-        }
-
-        bool overlap = sourceAddress + length - 1 >= destAddress || destAddress + length - 1 >= sourceAddress;
-        bool reverse = overlap && sourceAddress > destAddress;
-
-        if (!reverse) {
-            for (uint offset = 0; offset < length; offset++) {
-                _machine.EmsCard.ExpandedMemory.SetUint8(destAddress + offset, _machine.EmsCard.ExpandedMemory.GetUint8(sourceAddress + offset));
-            }
-        } else {
-            for (int offset = length - 1; offset >= 0; offset--) {
-                _machine.EmsCard.ExpandedMemory.SetUint8(destAddress + (uint)offset, _machine.EmsCard.ExpandedMemory.GetUint8(sourceAddress + (uint)offset));
-            }
-        }
-
-        return overlap ? EmsErrors.EmmMoveOverlap : EmsErrors.EmmNoError;
-    }
-    
-    public byte CopyEmsToConventionalMemory(int sourcePage, int sourcePageOffset, uint destAddress, int length) {
-        switch (length)
-        {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length));
-            case 0:
-                return 0;
-        }
-
-        if (destAddress + length > MainMemory.ConvMemorySize) {
-            return 0xA2;
-        }
-
-        if (sourcePageOffset >= PageSize) {
-            return 0x95;
-        }
-
-        int offset = sourcePageOffset;
-        uint sourceCount = destAddress;
-        int pageIndex = sourcePage;
-        while (length > 0) {
-            int size = Math.Min(length, PageSize - offset);
-            Span<byte> source = GetLogicalPage(pageIndex);
-            if (source.IsEmpty) {
-                return EmsErrors.EmsLogicalPageOutOfRange;
-            }
-
-            for (int i = 0; i < size; i++) {
-                _machine.EmsCard.ExpandedMemory.SetUint8(sourceCount++, source[offset + i]);
-            }
-
-            length -= size;
-            pageIndex++;
-            offset = 0;
-        }
-
-        return 0;
-    }
-    
-    public byte CopyConventionalMemoryToEmsMemory(uint sourceAddress, int destPage, int destPageOffset, int length) {
-        switch (length)
-        {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length));
-            case 0:
-                return 0;
-        }
-
-        if (sourceAddress + length > MainMemory.ConvMemorySize) {
-            return 0xA2;
-        }
-
-        if (destPageOffset >= PageSize) {
-            return 0x95;
-        }
-
-        int offset = destPageOffset;
-        uint sourceCount = sourceAddress;
-        int pageIndex = destPage;
-        while (length > 0) {
-            int size = Math.Min(length, PageSize - offset);
-            Span<byte> target = GetLogicalPage(pageIndex);
-            if (target.IsEmpty) {
-                return 0x8A;
-            }
-
-            for (int i = 0; i < size; i++) {
-                target[offset + i] = _machine.EmsCard.ExpandedMemory.GetUint8(sourceCount++);
-            }
-
-            length -= size;
-            pageIndex++;
-            offset = 0;
-        }
-
-        return 0;
-    }
-    
-    public byte CopyEmsToEms(EmsHandle srcHandle, int sourcePage, int sourcePageOffset, EmsHandle destHandle, int destPage, int destPageOffset, int length) {
-        switch (length)
-        {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length));
-            case 0:
-                return 0;
-        }
-
-        if (sourcePageOffset >= PageSize || destPageOffset >= PageSize) {
-            return 0x95;
-        }
-
-        bool overlap = false;
-        bool reverse = false;
-
-        if (srcHandle == destHandle) {
-            int sourceStart = sourcePage * PageSize + sourcePageOffset;
-            int destStart = destPage * PageSize + destPageOffset;
-            int sourceEnd = sourceStart + length;
-            int destEnd = destStart + length;
-
-            if (sourceStart < destStart) {
-                overlap = sourceEnd > destStart;
-            } else {
-                overlap = destEnd > sourceStart;
-                reverse = overlap;
-            }
-        }
-
-        if (!reverse) {
-            int sourceOffset = sourcePageOffset;
-            int currentSourcePage = sourcePage;
-            int destOffset = destPageOffset;
-            int currentDestPage = destPage;
-
-            while (length > 0) {
-                int size = Math.Min(Math.Min(length, PageSize - sourceOffset), PageSize - destOffset);
-                Span<byte> source = GetLogicalPage(currentSourcePage);
-                Span<byte> dest = GetLogicalPage(currentDestPage);
-                if (source.IsEmpty || dest.IsEmpty) {
-                    return EmsErrors.EmsLogicalPageOutOfRange;
-                }
-
-                for (int i = 0; i < size; i++) {
-                    dest[destOffset + i] = source[sourceOffset + i];
-                }
-
-                length -= size;
-                sourceOffset += size;
-                destOffset += size;
-
-                if (sourceOffset == PageSize) {
-                    sourceOffset = 0;
-                    currentSourcePage++;
-                }
-                if (destOffset == PageSize) {
-                    destOffset = 0;
-                    currentDestPage++;
-                }
-            }
-        } else {
-            throw new NotImplementedException();
-        }
-
-        return overlap ? EmsErrors.EmmMoveOverlap : EmsErrors.EmmNoError;
     }
 }
