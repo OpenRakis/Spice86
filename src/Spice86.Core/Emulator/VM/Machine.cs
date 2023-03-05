@@ -137,7 +137,6 @@ public class Machine : IDisposable {
         Register(DualPic);
         VgaCard = new AeonCard(this, loggerService, gui, configuration);
         Register(VgaCard as IIOPortHandler ?? throw new InvalidOperationException());
-        Register(VgaCard as InterruptHandler ?? throw new InvalidOperationException());
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
@@ -179,6 +178,7 @@ public class Machine : IDisposable {
             loggerService,
             TimerInt8Handler);
         Register(SystemClockInt1AHandler);
+        Register(VgaCard as InterruptHandler ?? throw new InvalidOperationException());
 
         // Initialize DOS.
         Dos = new Dos(this, loggerService);
