@@ -68,6 +68,7 @@
 		<PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
 	</ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\Aeon\Aeon.csproj" />
 		<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />

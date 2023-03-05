@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿using Spice86.Core.Emulator.InterruptHandlers;
+
+namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
@@ -92,9 +94,8 @@ public class Machine : IDisposable {
 
     public TimerInt8Handler TimerInt8Handler { get; }
 
-    public VgaCard VgaCard { get; }
+    public IVideoCard VgaCard { get; }
 
-    public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
     public DmaController DmaController { get; }
 
     /// <summary>
@@ -134,8 +135,9 @@ public class Machine : IDisposable {
 
         DualPic = new DualPic(this, configuration, loggerService);
         Register(DualPic);
-        VgaCard = new VgaCard(this, loggerService, gui, configuration);
-        Register(VgaCard);
+        VgaCard = new AeonCard(this, loggerService, gui, configuration);
+        Register(VgaCard as IIOPortHandler ?? throw new InvalidOperationException());
+        Register(VgaCard as InterruptHandler ?? throw new InvalidOperationException());
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
@@ -163,11 +165,6 @@ public class Machine : IDisposable {
             loggerService,
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(
-            this,
-            loggerService,
-            VgaCard);
-        Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
