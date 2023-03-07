@@ -18,48 +18,6 @@ namespace Aeon.Emulator.Video.Rendering
         {
         }
 
-
-
-        public override MemoryBitmap Dump()
-        {
-            int width = VideoMode.Width;
-            int height = VideoMode.Height;
-            var palette = VideoMode.Palette;
-            int startOffset = VideoMode.StartOffset;
-            int stride = VideoMode.Stride;
-            int lineCompare = VideoMode.LineCompare / 2;
-
-            unsafe
-            {
-                var bmp = new MemoryBitmap(stride * 4, IVgaCard.TotalVramBytes / (stride * 4));
-                uint* destPtr = (uint*)bmp.PixelBuffer.ToPointer();
-                uint* src = (uint*)VideoMode.VideoRam.ToPointer();
-
-                int max = Math.Min(height, lineCompare + 1);
-                int wordWidth = stride;
-
-                Span<byte> byteBuf = stackalloc byte[4];
-
-                for (int y = 0; y < bmp.Height; y++)
-                {
-                    int srcPos = y * stride;
-                    int destPos = y * bmp.Width;
-
-                    for (int x = 0; x < wordWidth; x++)
-                    {
-                        uint p = src[(srcPos + x) & ushort.MaxValue];
-                        BinaryPrimitives.WriteUInt32LittleEndian(byteBuf, p);
-                        destPtr[destPos++] = palette[byteBuf[0]];
-                        destPtr[destPos++] = palette[byteBuf[1]];
-                        destPtr[destPos++] = palette[byteBuf[2]];
-                        destPtr[destPos++] = palette[byteBuf[3]];
-                    }
-                }
-
-                return bmp;
-            }
-        }
-
         /// <summary>
         /// Updates the bitmap to match the current state of the video RAM.
         /// </summary>

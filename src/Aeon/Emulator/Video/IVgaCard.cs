@@ -40,10 +40,10 @@ public interface IVgaCard {
     /// Gets the text-mode display instance.
     /// </summary>
     public TextConsole TextConsole { get; }
-    
+
     /// <summary>
     /// Total number of bytes allocated for video RAM.
     /// </summary>
-    public const int TotalVramBytes = 1024 * 1024;
+    public uint TotalVramBytes { get; }
 
 }

@@ -1,6 +1,6 @@
 namespace Aeon.Emulator.Video
 {
-    internal static class Functions
+    public static class Functions
     {
         public const byte SetVideoMode = 0x00;
         public const byte SetCursorType = 0x01;

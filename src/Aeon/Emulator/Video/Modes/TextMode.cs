@@ -12,6 +12,7 @@ namespace Aeon.Emulator.Video.Modes
         private readonly unsafe byte** planes;
         private readonly Graphics graphics;
         private readonly Sequencer sequencer;
+        private readonly uint vramSize;
 
         public TextMode(int width, int height, int fontHeight, IVgaCard video)
             : base(width, height, 4, false, fontHeight, VideoModeType.Text, video)
@@ -30,6 +31,7 @@ namespace Aeon.Emulator.Video.Modes
 
             graphics = video.Graphics;
             sequencer = video.Sequencer;
+            vramSize = video.TotalVramBytes;
         }
 
         /// <summary>
@@ -48,7 +50,7 @@ namespace Aeon.Emulator.Video.Modes
 
         internal override byte GetVramByte(uint offset)
         {
-            if (offset - BaseAddress >= IVgaCard.TotalVramBytes)
+            if (offset - BaseAddress >= vramSize)
                 return 0;
 
             unsafe
@@ -71,7 +73,7 @@ namespace Aeon.Emulator.Video.Modes
 
         public override void SetVramByte(uint offset, byte value)
         {
-            if (offset - BaseAddress >= IVgaCard.TotalVramBytes)
+            if (offset - BaseAddress >= vramSize)
                 return;
 
             unsafe

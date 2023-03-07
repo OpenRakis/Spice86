@@ -36,7 +36,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         if (Design.IsDesignMode == false) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
-        _videoCard = null!;
         Width = 320;
         Height = 200;
         Address = 1;
@@ -181,7 +180,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         _drawAction ??= () => {
             _frameRenderTimeWatch.Restart();
             using ILockedFramebuffer pixels = Bitmap.Lock();
-            _videoCard.Render(Address, Width, Height, pixels.Address);
+            _videoCard?.Render(Address, Width, Height, pixels.Address);
 
             Dispatcher.UIThread.Post(() => {
                 UIUpdateMethod?.Invoke();
@@ -199,7 +198,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     [ObservableProperty]
     private long _lastFrameRenderTimeMs;
 
-    private readonly IVideoCard _videoCard;
+    private readonly IVideoCard? _videoCard;
 
     public override bool Equals(object? obj) {
         return this == obj || ((obj is VideoBufferViewModel other) && _index == other._index);

@@ -17,6 +17,7 @@ namespace Aeon.Emulator.Video
         private readonly CrtController crtController;
         private readonly AttributeController attributeController;
         private readonly Dac dac;
+        private readonly uint vramSize;
 
         private protected VideoMode(int width, int height, int bpp, bool planar, int fontHeight, VideoModeType modeType,
             IVgaCard video)
@@ -32,6 +33,7 @@ namespace Aeon.Emulator.Video
             crtController = video.CrtController;
             attributeController = video.AttributeController;
             VideoRam = GetVideoRamPointer(video);
+            vramSize = video.TotalVramBytes;
         }
         private protected VideoMode(int width, int height, VideoMode baseMode)
         {
@@ -122,7 +124,7 @@ namespace Aeon.Emulator.Video
         /// <summary>
         /// Gets the currently active display page index.
         /// </summary>
-        public int ActiveDisplayPage { get; internal set; }
+        public int ActiveDisplayPage { get; set; }
         /// <summary>
         /// Gets the height of the mode's font in pixels.
         /// </summary>
@@ -198,7 +200,7 @@ namespace Aeon.Emulator.Video
             unsafe
             {
                 byte* ptr = (byte*)VideoRam.ToPointer();
-                for (int i = 0; i < IVgaCard.TotalVramBytes; i++)
+                for (int i = 0; i < vramSize; i++)
                     ptr[i] = 0;
             }
 

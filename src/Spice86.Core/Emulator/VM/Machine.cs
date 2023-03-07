@@ -116,7 +116,7 @@ public class Machine : IDisposable {
         Gui = gui;
         RecordData = recordData;
 
-        Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes);
+        Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes, this);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
