@@ -19,6 +19,7 @@ public class InvalidVMOperationException : Exception {
 
     protected static string GenerateStatusMessage(Machine machine, string? message) {
         string error = $"An error occurred while machine was in this state: {machine.Cpu.State}";
+        error += Environment.NewLine + machine.Cpu.DumpLastFewStates();
         if (message != null) {
             error += $".{Environment.NewLine}Error is: {message}";
         }
