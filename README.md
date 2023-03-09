@@ -274,7 +274,7 @@ public class MyOverrides : CSharpOverrideHelper {
     // INC AX
     // RETF
     // Note that you can access the whole emulator to change the state in the overrides.
-    state.AX = state.GetAX() + 1;
+    state.AX++;
     return NearRet();
   }
 }
