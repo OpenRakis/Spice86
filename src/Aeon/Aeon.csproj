@@ -7,8 +7,4 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
-    <ItemGroup>
-      <Compile Remove="Emulator\Video\VideoHandler.cs" />
-    </ItemGroup>
-
 </Project>

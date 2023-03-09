@@ -179,6 +179,8 @@ public class Memory {
     private void MonitorWriteAccess(uint address, byte value) {
         CurrentlyWritingByte = value;
         _writeBreakPoints.TriggerMatchingBreakPoints(address);
+        // This is a hack that copies bytes written to this area to the internal video ram.
+        // TODO: Find a better way to map any area of memory to a device or something else.
         if (_machine != null && address is >= 0xA0000 and <= 0xBFFFF) {
             _machine.VgaCard.SetVramByte(address - 0xA0000, value);
         }
