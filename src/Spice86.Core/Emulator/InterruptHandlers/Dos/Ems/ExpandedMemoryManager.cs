@@ -42,7 +42,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Maximum number of logical pages.
     /// </summary>
-    public const int MaximumLogicalPages = 1024;
+    public const int MaximumLogicalPages = 256;
 
     public const ushort PageFrameSegment = 0xE000;
     public const int FirstHandle = 1;
@@ -66,7 +66,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private void FillDispatchTable() {
         _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
         _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameSegment));
-        _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfUnallocatedPages));
+        _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfPages));
         _dispatchTable.Add(0x43, new Callback(0x43, GetHandleAndAllocatePages));
         _dispatchTable.Add(0x44, new Callback(0x44, MapUnmapHandlePage));
         _dispatchTable.Add(0x45, new Callback(0x45, ReleaseHandleAndFreePages));
@@ -145,7 +145,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.AH = EmsErrors.EmmNoError;
     }
 
-    public void GetNumberOfUnallocatedPages() {
+    public void GetNumberOfPages() {
         // Return number of pages available in BX.
         _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
         // Return total number of pages in DX.
@@ -392,8 +392,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         UnmapPage(physicalPageIndex);
 
         ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPageIndex);
-        Span<byte> dest = _machine.EmsCard.ExpandedMemory.GetSpan(segment, PageSize);
-        logicalPage.CopyTo(dest);
+        Span<byte> src = _machine.EmsCard.ExpandedMemory.GetSpan(segment, PageSize);
+        logicalPage.CopyTo(src);
         _mappedPages[physicalPageIndex] = logicalPage;
     }
 
