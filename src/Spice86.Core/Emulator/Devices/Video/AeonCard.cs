@@ -262,13 +262,16 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         }
     }
 
+    /// <summary>
+    /// Special shortcut for VGA controller to select a register and write a value in one call.
+    /// </summary>
     public void WriteWord(int port, ushort value) {
         WriteByte(port, (byte)(value & 0xFF));
         WriteByte(port + 1, (byte)(value >> 8));
     }
 
     public void WriteDWord(int port, uint value) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("WriteDWord() is not implemented for VGA controller.");
     }
 
     /// <summary>
@@ -516,7 +519,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
                 break;
 
             case Functions.Palette_SetBorderColor:
-                // Ignore for now.
+                // TODO: Implement, ignore or remove
                 break;
 
             case Functions.Palette_SetAllRegisters:
@@ -524,6 +527,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
                 break;
 
             case Functions.Palette_ReadSingleDacRegister:
+                // TODO: Investigate and fix this.
                 // These are commented out because they cause weird issues sometimes.
                 //vm.Processor.DH = (byte)((dac.Palette[vm.Processor.BL] >> 18) & 0xCF);
                 //vm.Processor.CH = (byte)((dac.Palette[vm.Processor.BL] >> 10) & 0xCF);
@@ -543,7 +547,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
                 break;
 
             case Functions.Palette_ToggleBlink:
-                // Blinking is not emulated.
+                // TODO: Implement, ignore or remove
                 break;
 
             case Functions.Palette_SelectDacColorPage:
@@ -627,10 +631,12 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
     }
 
     private void WriteTextInTeletypeMode() {
+        // TODO: Implement or remove
         throw new NotImplementedException();
     }
 
     private void SetColorPaletteOrBackGroundColor() {
+        // TODO: Implement or remove
         throw new NotImplementedException();
     }
 
@@ -647,6 +653,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
     }
 
     private void ScrollPageDown() {
+        // TODO: Implement or remove
         throw new NotImplementedException();
     }
 
@@ -815,6 +822,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
     }
 
     private void ChangeVerticalEnd() {
+        // TODO: Implement or remove
         throw new NotImplementedException();
     }
 
