@@ -22,19 +22,19 @@ public class MainMemory : Memory {
     }
     
     public override void SetUint32(uint address, uint value) {
-        if (_machine.Ems?.TryWriteMappedPageData(address, value) is false or null) {
+        if (_machine.Ems?.TryWriteMappedPageData(address, value) is false) {
             base.SetUint32(address, value);
         }
     }
     
     public override void SetUint16(uint address, ushort value) {
-        if (_machine.Ems?.TryWriteMappedPageData(address, value) is false or null) {
+        if (_machine.Ems?.TryWriteMappedPageData(address, value) is false) {
             base.SetUint16(address, value);
         }
     }
 
     public override void SetUint8(uint address, byte value) {
-        if (_machine.Ems?.TryWriteMappedPageData(address, value) is false or null) {
+        if (_machine.Ems?.TryWriteMappedPageData(address, value) is false) {
             base.SetUint8(address, value);
         }
     }
