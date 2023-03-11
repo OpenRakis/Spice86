@@ -119,8 +119,8 @@ public class Pic {
         bool sendEndOfInterruptCommand = (value & 0b10_0000) != 0;
         bool sendSpecificCommand = (value & 0b100_0000) != 0;
         bool rotatePriorities = (value & 0b1000_0000) != 0;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose(
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information(
                 "PIC COMMAND OCW2 {@Value}. {@InterruptLevel}, {@SendEndOfInterruptCommand}, {@SendSpecificCommand}, @{RotatePriorities}",
                 ConvertUtils.ToHex8(value), interruptLevel, sendEndOfInterruptCommand, sendSpecificCommand,
                 rotatePriorities);

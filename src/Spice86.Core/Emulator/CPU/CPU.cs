@@ -58,8 +58,6 @@ public class Cpu {
     // Value used to read parts of the instruction.
     // CPU uses this internally and adjusts IP after instruction execution is done.
     private ushort _internalIp;
-    private readonly string[] _lastFewStates = new string[20];
-    private int _lastFewAddressesIndex;
 
     public IOPortDispatcher? IoPortDispatcher { get; set; }
 
@@ -87,7 +85,6 @@ public class Cpu {
 
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
-        RememberState(State.ToString());
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
         StaticAddressesRecorder.Reset();
         byte opcode = ProcessPrefixes();
@@ -114,19 +111,6 @@ public class Cpu {
 
     public void ExternalInterrupt(byte vectorNumber) {
         ExternalInterruptVectorNumber = vectorNumber;
-    }
-
-    private void RememberState(string internalIp) {
-        _lastFewStates[_lastFewAddressesIndex] = internalIp;
-        _lastFewAddressesIndex = (_lastFewAddressesIndex + 1) % _lastFewStates.Length;
-    }
-
-    public string DumpLastFewStates() {
-        var sb = new System.Text.StringBuilder();
-        for (int i = 0; i < _lastFewStates.Length; i++) {
-            sb.AppendLine(_lastFewStates[(_lastFewAddressesIndex + i) % _lastFewStates.Length]);
-        }
-        return sb.ToString();
     }
 
     public void FarRet(ushort numberOfBytesToPop) {
@@ -1034,8 +1018,6 @@ public class Cpu {
             case 0xF4:
                 // HLT
                 _loggerService.Information("HLT instruction encountered, halting!");
-                _loggerService.Debug(DumpLastFewStates());
-                _loggerService.Debug(_machine.DumpCallStack());
                 IsRunning = false;
                 break;
             case 0xF5:
