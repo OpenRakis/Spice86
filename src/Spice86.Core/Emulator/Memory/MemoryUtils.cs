@@ -1,4 +1,8 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿using Spice86.Core.Emulator.Errors;
+
+using System.Text;
+
+namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Errors;
 
@@ -44,7 +48,7 @@ public static class MemoryUtils {
     public static ushort ToSegment(uint physicalAddress) {
         return (ushort)(physicalAddress >> 4);
     }
-    
+
     public static string GetZeroTerminatedString(byte[] memory, uint address, int maxLength) {
         StringBuilder res = new();
         for (int i = 0; i < maxLength; i++) {

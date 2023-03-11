@@ -8,7 +8,7 @@ public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : MemoryBase
 
     private readonly SegmentRegisters _segmentRegisters;
 
-    public MemoryBasedDataStructureWithSegmentRegisterBaseAddress(Machine machine, int segmentRegisterIndex) : base(machine.Memory) {
+    public MemoryBasedDataStructureWithSegmentRegisterBaseAddress(Machine machine, int segmentRegisterIndex) : base(machine.MainMemory) {
         _segmentRegisterIndex = segmentRegisterIndex;
         _segmentRegisters = machine.Cpu.State.SegmentRegisters;
     }

@@ -1,9 +1,12 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿using Spice86.Core.Emulator.Devices.Memory;
+
+namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -14,6 +17,8 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -70,7 +75,7 @@ public class Machine : IDisposable {
 
     public MachineBreakpoints MachineBreakpoints { get; }
 
-    public Memory Memory { get; }
+    public MainMemory MainMemory { get; }
 
     public Midi Midi { get; }
 
@@ -96,11 +101,16 @@ public class Machine : IDisposable {
 
     public DmaController DmaController { get; }
 
+    public ExpandedMemoryManager? Ems { get; }
+
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
+
     public OPL3FM OPL3FM { get; }
+    
+    public EmsCard EmsCard { get; }
 
     public event Action? Paused;
 
@@ -114,8 +124,8 @@ public class Machine : IDisposable {
         Gui = gui;
         RecordData = recordData;
 
-        Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes, this);
-        Bios = new Bios(Memory);
+        MainMemory = new MainMemory(this, sizeInKb: (uint)Configuration.Kilobytes);
+        Bios = new Bios(MainMemory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
         // Breakpoints
@@ -188,6 +198,32 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
+        EmsCard = new(this, configuration);
+        if(configuration.Ems) {
+            Ems = new(this);
+        }
+        if(Ems is not null) {
+            Register(Ems);
+        }
+    }
+
+    public void Register(IIOPortHandler ioPortHandler) {
+        ioPortHandler.InitPortHandlers(IoPortDispatcher);
+
+        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
+            return;
+        }
+
+        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
+            throw new ArgumentException("Invalid DMA channel on DMA device.");
+        }
+
+        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
+        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+    }
+
+    public void Register(ICallback callback) {
+        CallbackHandler.AddCallback(callback);
     }
 
     /// <summary>
@@ -200,7 +236,7 @@ public class Machine : IDisposable {
                 if (Gui?.IsPaused == true || IsPaused) {
                     Gui?.WaitForContinue();
                 }
-                dmaChannel.Transfer(Memory);
+                dmaChannel.Transfer(MainMemory);
                 if (!_exitDmaLoop) {
                     _dmaResetEvent.WaitOne(1);
                 }
@@ -229,25 +265,6 @@ public class Machine : IDisposable {
 
     public string PeekReturn(CallType returnCallType) {
         return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
-    }
-
-    public void Register(IIOPortHandler ioPortHandler) {
-        ioPortHandler.InitPortHandlers(IoPortDispatcher);
-
-        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
-            return;
-        }
-
-        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
-            throw new ArgumentException("Invalid DMA channel on DMA device.");
-        }
-
-        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    public void Register(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
     }
 
     public void Run() {

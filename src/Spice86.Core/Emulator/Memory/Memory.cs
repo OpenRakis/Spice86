@@ -8,15 +8,19 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using System;
 using System.Collections.Generic;
 
-/// <summary> Addressable memory of the machine. </summary>
+/// <summary>
+/// Addressable memory
+/// </summary>
 public class Memory {
     private readonly BreakPointHolder _readBreakPoints = new();
 
     private readonly BreakPointHolder _writeBreakPoints = new();
     private readonly Machine? _machine;
 
-    // For breakpoints to access what is getting written
-    public byte CurrentlyWritingByte { get; private set; } = 0;
+    /// <summary>
+    /// For breakpoints to access what is getting written
+    /// </summary>
+    public byte CurrentlyWritingByte { get; private set; }
 
     public Memory(uint sizeInKb, Machine? machine = null) {
         Ram = new byte[sizeInKb * 1024];
@@ -31,13 +35,6 @@ public class Memory {
         return Ram.AsSpan(address, length);
     }
 
-    public byte[] GetData(uint address, uint length) {
-        MonitorRangeReadAccess(address, address + length);
-        byte[] res = new byte[length];
-        Array.Copy(Ram, address, res, 0, length);
-        return res;
-    }
-
     public byte[] Ram { get; }
 
     public int Size => Ram.Length;
@@ -46,14 +43,14 @@ public class Memory {
     public UInt16Indexer UInt16 { get; }
     public UInt32Indexer UInt32 { get; }
 
-    public ushort GetUint16(uint address) {
+    public virtual ushort GetUint16(uint address) {
         ushort res = MemoryUtils.GetUint16(Ram, address);
         MonitorReadAccess(address);
         MonitorReadAccess(address + 1);
         return res;
     }
 
-    public uint GetUint32(uint address) {
+    public virtual uint GetUint32(uint address) {
         uint res = MemoryUtils.GetUint32(Ram, address);
         MonitorReadAccess(address);
         MonitorReadAccess(address + 1);
@@ -62,9 +59,9 @@ public class Memory {
         return res;
     }
 
-    public byte GetUint8(uint addr) {
-        byte res = MemoryUtils.GetUint8(Ram, addr);
-        MonitorReadAccess(addr);
+    public virtual byte GetUint8(uint address) {
+        byte res = MemoryUtils.GetUint8(Ram, address);
+        MonitorReadAccess(address);
         return res;
     }
 
@@ -113,7 +110,7 @@ public class Memory {
         return null;
     }
 
-    public void SetUint16(uint address, ushort value) {
+    public virtual void SetUint16(uint address, ushort value) {
         byte value0 = (byte)value;
         MonitorWriteAccess(address, value0);
         Ram[address] = value0;
@@ -123,7 +120,7 @@ public class Memory {
         Ram[address + 1] = value1;
     }
 
-    public void SetUint32(uint address, uint value) {
+    public virtual void SetUint32(uint address, uint value) {
         byte value0 = (byte)value;
         MonitorWriteAccess(address, value0);
         Ram[address] = value0;
@@ -141,7 +138,7 @@ public class Memory {
         Ram[address + 3] = value3;
     }
 
-    public void SetUint8(uint address, byte value) {
+    public virtual void SetUint8(uint address, byte value) {
         MonitorWriteAccess(address, value);
         MemoryUtils.SetUint8(Ram, address, value);
     }

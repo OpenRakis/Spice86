@@ -20,7 +20,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
 
     protected InterruptHandler(Machine machine) {
         _machine = machine;
-        _memory = machine.Memory;
+        _memory = machine.MainMemory;
         _cpu = machine.Cpu;
         _state = _cpu.State;
     }
