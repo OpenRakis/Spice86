@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Authors>Greg Divis</Authors>
+        <Description>Parts of Aeon project, made suitable for including into Spice86</Description>
+        <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
+    </PropertyGroup>
+
+</Project>

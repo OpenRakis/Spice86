@@ -4,10 +4,10 @@
 
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Aeon.Emulator;
-using Aeon.Emulator.Video;
-using Aeon.Emulator.Video.Modes;
-using Aeon.Emulator.Video.Rendering;
+using Spice86.Aeon.Emulator;
+using Spice86.Aeon.Emulator.Video;
+using Spice86.Aeon.Emulator.Video.Modes;
+using Spice86.Aeon.Emulator.Video.Rendering;
 
 using Serilog.Events;
 
