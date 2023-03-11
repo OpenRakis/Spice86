@@ -175,7 +175,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
                 return GetInputStatus1Value();
 
             default:
-                return 0;
+                throw new InvalidOperationException($"Reading port 0x{port:X4} is not (yet) supported by this VGA controller.");
         }
     }
 
@@ -259,6 +259,8 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
                 }
 
                 break;
+            default:
+                throw new InvalidOperationException($"Writing 0x{value:X2} to port 0x{port:X4} is not (yet) supported by this VGA controller.");
         }
     }
 
@@ -353,10 +355,10 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         _dispatchTable.Add(0x12, new Callback.Callback(0x12, VideoSubsystemConfiguration));
         _dispatchTable.Add(0x13, new Callback.Callback(0x13, WriteString));
         _dispatchTable.Add(0x1A, new Callback.Callback(0x1A, VideoDisplayCombination));
-        _dispatchTable.Add(0x1B, new Callback.Callback(0x1B, GetFunctionalityInfo));
+        _dispatchTable.Add(0x1B, new Callback.Callback(0x1B, () => GetFunctionalityInfo()));
     }
 
-    private void WriteString() {
+    public void WriteString() {
         uint address = new SegmentedAddress(_state.ES, _state.BP).ToPhysical();
         StringBuilder res = new();
         for (uint i = address; i < address + 1024; i++) {
@@ -374,41 +376,49 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         }
     }
 
-    private void SetVideoMode() {
+    public void SetVideoMode() {
         SetVideoModeInternal((VideoModeId)_state.AL);
         _bios.VideoMode = _state.AL;
     }
 
-    private void GetFunctionalityInfo() {
+    public VideoFunctionalityInfo GetFunctionalityInfo() {
         ushort segment = _state.ES;
         ushort offset = _state.DI;
 
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-        _memory.SetUint32(address, MemoryMap.StaticFunctionalityTableSegment << 16); // SFT address
-        _memory.SetUint8(address + 0x04u, _bios.VideoMode); // video mode
-        _memory.SetUint16(address + 0x05u, _bios.ScreenColumns); // columns
-        _memory.SetUint32(address + 0x07u, 0); // regen buffer
-        for (uint i = 0; i < 8; i++) {
-            _memory.SetUint8(address + 0x0Bu + i * 2u, (byte)TextConsole.CursorPosition.X); // text cursor x
-            _memory.SetUint8(address + 0x0Cu + i * 2u, (byte)TextConsole.CursorPosition.Y); // text cursor y
+        var info = new VideoFunctionalityInfo(_memory, address) {
+            SftAddress = MemoryMap.StaticFunctionalityTableSegment << 16,
+            VideoMode = _bios.VideoMode,
+            ScreenColumns = _bios.ScreenColumns,
+            VideoBufferLength = MemoryMap.VideoBiosSegment - MemoryMap.GraphicVideoMemorySegment, // TODO: real value
+            VideoBufferAddress = MemoryMap.GraphicVideoMemorySegment, // TODO: real value
+            CursorEndLine = 0, // TODO: figure out what this is
+            CursorStartLine = 0, // TODO: figure out what this is
+            ActiveDisplayPage = (byte)CurrentMode.ActiveDisplayPage,
+            CrtControllerBaseAddress = _bios.CrtControllerBaseAddress,
+            CurrentRegister3X8Value = 0, // Unused in VGA
+            CurrentRegister3X9Value = 0, // Unused in VGA
+            ScreenRows = _bios.ScreenRows,
+            CharacterMatrixHeight = (ushort)CurrentMode.FontHeight,
+            ActiveDisplayCombinationCode = _bios.DisplayCombinationCode,
+            AlternateDisplayCombinationCode = 0x00, // No secondary display
+            NumberOfColorsSupported = (ushort)(1 << CurrentMode.BitsPerPixel),
+            NumberOfPages = 4,
+            NumberOfActiveScanLines = 0, // TODO: figure out what this is
+            TextCharacterTableUsed = 0, // TODO: figure out what this is
+            TextCharacterTableUsed2 = 0, // TODO: figure out what this is
+            OtherStateInformation = 0b00000001,
+            VideoRamAvailable = 3, // 0=64K, 1=128K, 2=192K, 3=256K
+            SaveAreaStatus = 0b00000000
+        };
+        for (int i = 0; i < 8; i++) {
+            info.SetCursorPosition(i, (byte)TextConsole.CursorPosition.X, (byte)TextConsole.CursorPosition.Y);
         }
-
-        _memory.SetUint16(address + 0x1Bu, 0); // cursor type
-        _memory.SetUint8(address + 0x1Du, (byte)CurrentMode.ActiveDisplayPage); // active display page
-        _memory.SetUint16(address + 0x1Eu, _bios.CrtControllerBaseAddress); // CRTC base address
-        _memory.SetUint8(address + 0x20u, 0); // current value of port 3x8h
-        _memory.SetUint8(address + 0x21u, 0); // current value of port 3x9h
-        _memory.SetUint8(address + 0x22u, _bios.ScreenRows); // screen rows
-        _memory.SetUint16(address + 0x23u, (ushort)CurrentMode.FontHeight); // bytes per character
-        _memory.SetUint8(address + 0x25u, _bios.VideoMode); // active display combination code
-        _memory.SetUint8(address + 0x26u, _bios.VideoMode); // alternate display combination code
-        _memory.SetUint16(address + 0x27u,
-            (ushort)(CurrentMode.BitsPerPixel * 8)); // number of colors supported in current mode
-        _memory.SetUint8(address + 0x29u, 4); // number of pages
-        _memory.SetUint8(address + 0x2Au, 0); // number of active scanLines
 
         // Indicate success.
         _state.AL = 0x1B;
+
+        return info;
     }
 
     /// <summary>
@@ -419,7 +429,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         _memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
     }
 
-    private void VideoDisplayCombination() {
+    public void VideoDisplayCombination() {
         if (_state.AL == 0x00) {
             _state.AL = 0x1A; // Function supported
             _state.BL = _bios.DisplayCombinationCode; // Primary display
@@ -430,7 +440,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         }
     }
 
-    private void VideoSubsystemConfiguration() {
+    public void VideoSubsystemConfiguration() {
         switch (_state.BL) {
             case Functions.EGA_GetInfo:
                 _state.BX = 0x03; // 256k installed
@@ -457,7 +467,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         }
     }
 
-    private void CharacterGeneratorRoutine() {
+    public void CharacterGeneratorRoutine() {
         switch (_state.AL) {
             case 0x30:
                 GetFontInformation();
@@ -512,7 +522,7 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         _state.DL = _machine.Bios.ScreenRows;
     }
 
-    private void GetSetPaletteRegisters() {
+    public void GetSetPaletteRegisters() {
         switch (_state.AL) {
             case Functions.Palette_SetSingleRegister:
                 SetEgaPaletteRegister(_state.BL, _state.BH);
@@ -624,61 +634,61 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         }
     }
 
-    private void GetVideoMode() {
+    public void GetVideoMode() {
         _state.AH = _bios.ScreenColumns;
         _state.AL = _bios.VideoMode;
         _state.BH = _bios.CurrentVideoPage;
     }
 
-    private void WriteTextInTeletypeMode() {
+    public void WriteTextInTeletypeMode() {
         // TODO: Implement or remove
         throw new NotImplementedException();
     }
 
-    private void SetColorPaletteOrBackGroundColor() {
+    public void SetColorPaletteOrBackGroundColor() {
         // TODO: Implement or remove
         throw new NotImplementedException();
     }
 
-    private void WriteCharacterAtCursor() {
+    public void WriteCharacterAtCursor() {
         TextConsole.Write(_state.AL);
     }
 
-    private void WriteCharacterAndAttributeAtCursor() {
+    public void WriteCharacterAndAttributeAtCursor() {
         TextConsole.Write(_state.AL, (byte)(_state.BL & 0x0F), (byte)(_state.BL >> 4), false);
     }
 
-    private void ReadCharacterAndAttributeAtCursor() {
+    public void ReadCharacterAndAttributeAtCursor() {
         _state.AX = TextConsole.GetCharacter(TextConsole.CursorPosition.X, TextConsole.CursorPosition.Y);
     }
 
-    private void ScrollPageDown() {
+    public void ScrollPageDown() {
         // TODO: Implement or remove
         throw new NotImplementedException();
     }
 
-    private void ScrollPageUp() {
+    public void ScrollPageUp() {
         byte foreground = (byte)((_state.BX >> 8) & 0x0F);
         byte background = (byte)((_state.BX >> 12) & 0x0F);
         TextConsole.ScrollTextUp(_state.CL, _state.CH, _state.DL, _state.DH, _state.AL, foreground, background);
     }
 
-    private void SelectActiveDisplayPage() {
+    public void SelectActiveDisplayPage() {
         CurrentMode.ActiveDisplayPage = _state.AL;
     }
 
-    private void GetCursorPosition() {
+    public void GetCursorPosition() {
         _state.CH = 14;
         _state.CL = 15;
         _state.DH = (byte)TextConsole.CursorPosition.Y;
         _state.DL = (byte)TextConsole.CursorPosition.X;
     }
 
-    private void SetCursorPosition() {
+    public void SetCursorPosition() {
         TextConsole.CursorPosition = new Point(_state.DL, _state.DH);
     }
 
-    private void SetCursorType() {
+    public void SetCursorType() {
         byte topScanLine = _state.CH;
         byte bottomScanLine = _state.CL;
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
