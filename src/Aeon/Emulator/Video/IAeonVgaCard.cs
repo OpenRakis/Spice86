@@ -1,6 +1,6 @@
 namespace Aeon.Emulator.Video;
 
-public interface IVgaCard {
+public interface IAeonVgaCard {
     /// <summary>
     /// Gets the VGA DAC.
     /// </summary>

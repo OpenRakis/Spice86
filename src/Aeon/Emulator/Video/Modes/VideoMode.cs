@@ -20,7 +20,7 @@ namespace Aeon.Emulator.Video
         private readonly uint vramSize;
 
         private protected VideoMode(int width, int height, int bpp, bool planar, int fontHeight, VideoModeType modeType,
-            IVgaCard video)
+            IAeonVgaCard video)
         {
             Width = width;
             Height = height;
@@ -193,7 +193,7 @@ namespace Aeon.Emulator.Video
         /// Performs any necessary initialization upon entering the video mode.
         /// </summary>
         /// <param name="video">The video device.</param>
-        public virtual void InitializeMode(IVgaCard video)
+        public virtual void InitializeMode(IAeonVgaCard video)
         {
             // video.VirtualMachine.PhysicalMemory.Bios.CharacterPointHeight = (ushort)FontHeight;
 
@@ -235,6 +235,6 @@ namespace Aeon.Emulator.Video
         /// </summary>
         /// <param name="video">Current VideoHandler instance.</param>
         /// <returns>Pointer to the mode's video RAM.</returns>
-        internal virtual nint GetVideoRamPointer(IVgaCard video) => video.VideoRam;
+        internal virtual nint GetVideoRamPointer(IAeonVgaCard video) => video.VideoRam;
     }
 }

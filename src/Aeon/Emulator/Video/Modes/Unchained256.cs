@@ -5,7 +5,7 @@ namespace Aeon.Emulator.Video.Modes
     /// </summary>
     public sealed class Unchained256 : Planar4
     {
-        public Unchained256(int width, int height, IVgaCard video)
+        public Unchained256(int width, int height, IAeonVgaCard video)
             : base(width, height, 8, 8, VideoModeType.Graphics, video)
         {
         }

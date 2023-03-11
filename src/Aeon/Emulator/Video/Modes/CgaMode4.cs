@@ -5,7 +5,7 @@ namespace Aeon.Emulator.Video.Modes
         private const uint BaseAddress = 0x18000;
         private unsafe readonly byte* videoRam;
 
-        public CgaMode4(IVgaCard video) : base(320, 200, 2, false, 8, VideoModeType.Graphics, video)
+        public CgaMode4(IAeonVgaCard video) : base(320, 200, 2, false, 8, VideoModeType.Graphics, video)
         {
             unsafe
             {

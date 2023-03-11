@@ -14,7 +14,7 @@ namespace Aeon.Emulator.Video.Modes
         private readonly Sequencer sequencer;
         private readonly uint vramSize;
 
-        public TextMode(int width, int height, int fontHeight, IVgaCard video)
+        public TextMode(int width, int height, int fontHeight, IAeonVgaCard video)
             : base(width, height, 4, false, fontHeight, VideoModeType.Text, video)
         {
             unsafe
@@ -128,7 +128,7 @@ namespace Aeon.Emulator.Video.Modes
             SetVramWord((uint)((y * Stride) + (x * 2)) + BaseAddress, (ushort)value);
         }
 
-        public override void InitializeMode(IVgaCard video)
+        public override void InitializeMode(IAeonVgaCard video)
         {
             base.InitializeMode(video);
             graphics.GraphicsMode = 0x10; // OddEven mode

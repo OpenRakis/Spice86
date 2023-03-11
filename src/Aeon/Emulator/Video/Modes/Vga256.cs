@@ -7,7 +7,7 @@ namespace Aeon.Emulator.Video.Modes
     {
         private readonly unsafe byte* videoRam;
 
-        public Vga256(int width, int height, IVgaCard video) : base(width, height, 8, false, 8, VideoModeType.Graphics, video)
+        public Vga256(int width, int height, IAeonVgaCard video) : base(width, height, 8, false, 8, VideoModeType.Graphics, video)
         {
             unsafe
             {

@@ -12,7 +12,7 @@ namespace Aeon.Emulator.Video
         private const byte ansiEscape = 0x1B;
         private readonly StringBuilder ansiCommand = new();
         private Point savedPosition = new(0, 24);
-        private readonly IVgaCard video;
+        private readonly IAeonVgaCard video;
         private bool boldEnabled;
         private bool negativeEnabled;
         private byte _screenColumns;
@@ -24,7 +24,7 @@ namespace Aeon.Emulator.Video
         /// <param name="video">Current VideoHandler instance.</param>
         /// <param name="screenColumns"></param>
         /// <param name="screenRows"></param>
-        public TextConsole(IVgaCard video, int screenColumns, int screenRows)
+        public TextConsole(IAeonVgaCard video, int screenColumns, int screenRows)
         {
             this.video = video;
             _screenColumns = (byte)screenColumns;

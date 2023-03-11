@@ -10,7 +10,6 @@ using Aeon.Emulator.Video.Rendering;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Devices.Video.Fonts;
-using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -22,7 +21,9 @@ using System.Text;
 
 namespace Spice86.Core.Emulator.Devices.Video;
 
-public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, IDisposable {
+using Spice86.Core.Emulator.CPU;
+
+public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposable, IVgaInterrupts {
     // Means the CRT is busy drawing a line, tells the program it should not draw
     private const byte StatusRegisterRetraceInactive = 0;
 
@@ -42,7 +43,6 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
     public uint TotalVramBytes => 1024 * 1024;
 
     private readonly Bios _bios;
-    private readonly Configuration _configuration;
     private readonly LazyConcurrentDictionary<FontType, SegmentedAddress> _fonts = new();
     private readonly IGui? _gui;
     private readonly ILoggerService _loggerService;
@@ -56,13 +56,14 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
     private SequencerRegister _sequencerRegister;
     private int _verticalTextResolution = 16;
     private bool _disposed;
+    private readonly State _state;
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
-        base(machine) {
+        base(machine, configuration) {
         _bios = machine.Bios;
+        _state = machine.Cpu.State;
         _loggerService = loggerService;
         _gui = gui;
-        _configuration = configuration;
 
         unsafe {
             VideoRam = new nint(NativeMemory.AllocZeroed(TotalVramBytes));
@@ -71,17 +72,11 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         InitializeStaticFunctionalityTable();
         TextConsole = new TextConsole(this, _bios.ScreenColumns, _bios.ScreenRows);
         SetVideoModeInternal(VideoModeId.ColorText80X25X4);
-        FillDispatchTable();
 
         _presenter = GetPresenter();
     }
 
     public bool DefaultPaletteLoading { get; set; } = true;
-
-    /// <summary>
-    /// The interrupt vector this class handles.
-    /// </summary>
-    public override byte Index => 0x10;
 
     private static IEnumerable<int> InputPorts =>
         new SortedSet<int> {
@@ -126,13 +121,13 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
             Ports.SequencerData
         };
 
-    public void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         foreach (int port in InputPorts.Union(OutputPorts)) {
             ioPortDispatcher.AddIOPortHandler(port, this);
         }
     }
 
-    public byte ReadByte(int port) {
+    public override byte ReadByte(int port) {
         switch (port) {
             case Ports.DacAddressReadMode:
                 return Dac.ReadIndex;
@@ -179,23 +174,27 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         }
     }
 
-    public ushort ReadWord(int port) {
+    public override ushort ReadWord(int port) {
+        byte value = ReadByte(port);
+        
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Returning byte for ReadWord() on port {Port}", port);
+            _loggerService.Verbose("Returning byte {Byte} for ReadWord() on port {Port}", value, port);
         }
 
-        return ReadByte(port);
+        return value;
     }
 
-    public uint ReadDWord(int port) {
+    public override uint ReadDWord(int port) {
+        byte value = ReadByte(port);
+        
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Returning byte for ReadDWord() on port {Port}", port);
+            _loggerService.Verbose("Returning byte {Byte} for ReadDWord() on port {Port}", value, port);
         }
 
-        return ReadByte(port);
+        return value;
     }
 
-    public void WriteByte(int port, byte value) {
+    public override void WriteByte(int port, byte value) {
         switch (port) {
             case Ports.DacAddressReadMode:
                 Dac.ReadIndex = value;
@@ -267,13 +266,9 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
     /// <summary>
     /// Special shortcut for VGA controller to select a register and write a value in one call.
     /// </summary>
-    public void WriteWord(int port, ushort value) {
+    public override void WriteWord(int port, ushort value) {
         WriteByte(port, (byte)(value & 0xFF));
         WriteByte(port + 1, (byte)(value >> 8));
-    }
-
-    public void WriteDWord(int port, uint value) {
-        throw new NotImplementedException("WriteDWord() is not implemented for VGA controller.");
     }
 
     /// <summary>
@@ -335,28 +330,6 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
     }
 
     public event EventHandler? VideoModeChanged;
-
-    private void FillDispatchTable() {
-        _dispatchTable.Add(0x00, new Callback.Callback(0x00, SetVideoMode));
-        _dispatchTable.Add(0x01, new Callback.Callback(0x01, SetCursorType));
-        _dispatchTable.Add(0x02, new Callback.Callback(0x02, SetCursorPosition));
-        _dispatchTable.Add(0x03, new Callback.Callback(0x03, GetCursorPosition));
-        _dispatchTable.Add(0x05, new Callback.Callback(0x05, SelectActiveDisplayPage));
-        _dispatchTable.Add(0x06, new Callback.Callback(0x06, ScrollPageUp));
-        _dispatchTable.Add(0x07, new Callback.Callback(0x07, ScrollPageDown));
-        _dispatchTable.Add(0x08, new Callback.Callback(0x08, ReadCharacterAndAttributeAtCursor));
-        _dispatchTable.Add(0x09, new Callback.Callback(0x09, WriteCharacterAndAttributeAtCursor));
-        _dispatchTable.Add(0x0A, new Callback.Callback(0x0A, WriteCharacterAtCursor));
-        _dispatchTable.Add(0x0B, new Callback.Callback(0x0B, SetColorPaletteOrBackGroundColor));
-        _dispatchTable.Add(0x0E, new Callback.Callback(0x0E, WriteTextInTeletypeMode));
-        _dispatchTable.Add(0x0F, new Callback.Callback(0x0F, GetVideoMode));
-        _dispatchTable.Add(0x10, new Callback.Callback(0x10, GetSetPaletteRegisters));
-        _dispatchTable.Add(0x11, new Callback.Callback(0x11, CharacterGeneratorRoutine));
-        _dispatchTable.Add(0x12, new Callback.Callback(0x12, VideoSubsystemConfiguration));
-        _dispatchTable.Add(0x13, new Callback.Callback(0x13, WriteString));
-        _dispatchTable.Add(0x1A, new Callback.Callback(0x1A, VideoDisplayCombination));
-        _dispatchTable.Add(0x1B, new Callback.Callback(0x1B, () => GetFunctionalityInfo()));
-    }
 
     public void WriteString() {
         uint address = new SegmentedAddress(_state.ES, _state.BP).ToPhysical();
@@ -788,14 +761,6 @@ public class AeonCard : InterruptHandler, IVideoCard, IVgaCard, IIOPortHandler, 
         _loggerService.Information("Video mode changed to {@Mode}", mode.GetType().Name);
         _presenter = GetPresenter();
         VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(true));
-    }
-
-    /// <summary>
-    ///   Runs the specified video BIOS function.
-    /// </summary>
-    public override void Run() {
-        byte operation = _state.AH;
-        Run(operation);
     }
 
     public Presenter GetPresenter() {

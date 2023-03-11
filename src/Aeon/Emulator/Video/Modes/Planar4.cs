@@ -12,7 +12,7 @@ namespace Aeon.Emulator.Video.Modes
         private readonly Graphics graphics;
         private readonly Sequencer sequencer;
 
-        public Planar4(int width, int height, int bpp, int fontHeight, VideoModeType modeType, IVgaCard video)
+        public Planar4(int width, int height, int bpp, int fontHeight, VideoModeType modeType, IAeonVgaCard video)
             : base(width, height, bpp, true, fontHeight, modeType, video)
         {
             unsafe

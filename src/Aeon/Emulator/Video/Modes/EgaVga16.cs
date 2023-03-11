@@ -5,7 +5,7 @@ namespace Aeon.Emulator.Video.Modes
     /// </summary>
     public sealed class EgaVga16 : Planar4
     {
-        public EgaVga16(int width, int height, int fontHeight, IVgaCard video)
+        public EgaVga16(int width, int height, int fontHeight, IAeonVgaCard video)
             : base(width, height, 4, fontHeight, VideoModeType.Graphics, video)
         {
         }

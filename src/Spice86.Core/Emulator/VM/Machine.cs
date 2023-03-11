@@ -13,12 +13,12 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -91,6 +91,8 @@ public class Machine : IDisposable {
     public TimerInt8Handler TimerInt8Handler { get; }
 
     public IVideoCard VgaCard { get; }
+    
+    public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
 
     public DmaController DmaController { get; }
 
@@ -160,6 +162,8 @@ public class Machine : IDisposable {
             loggerService,
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, (IVgaInterrupts)VgaCard);
+        Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
@@ -174,7 +178,6 @@ public class Machine : IDisposable {
             loggerService,
             TimerInt8Handler);
         Register(SystemClockInt1AHandler);
-        Register(VgaCard as InterruptHandler ?? throw new InvalidOperationException());
 
         // Initialize DOS.
         Dos = new Dos(this, loggerService);
