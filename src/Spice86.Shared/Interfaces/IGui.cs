@@ -78,7 +78,7 @@ public interface IGui {
     /// <param name="bufferWidth">The width, in pixels.</param>
     /// <param name="bufferHeight">The height, in pixels.</param>
     /// <param name="isPrimaryDisplay">Indicates if this is the videoBuffer that will receive input (mouse, keyboard, gamepad) events. False by default.</param>
-    void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false);
+    void AddBuffer(IVideoCard videoCard, uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false);
 
     IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary { get; }
 
@@ -101,13 +101,6 @@ public interface IGui {
     void SetResolution(int videoWidth, int videoHeight, uint offset);
 
     /// <summary>
-    /// Draws a video buffer to screen
-    /// </summary>
-    /// <param name="ram">The byte array of video data</param>
-    /// <param name="rgbs">The byte array of palette data</param>
-    void Draw(byte[] ram, Rgb[] rgbs);
-
-    /// <summary>
     /// Indicates whether the LMB is down.
     /// </summary>
     bool IsLeftButtonClicked { get; }
@@ -126,4 +119,9 @@ public interface IGui {
     /// Height of the primary video buffer from the emulator's point of view, in pixels.
     /// </summary>
     int Height { get; }
+
+    /// <summary>
+    /// Refresh the display with the content of the video ram.
+    /// </summary>
+    void UpdateScreen();
 }
