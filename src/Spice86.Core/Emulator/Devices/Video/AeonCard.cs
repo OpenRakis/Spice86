@@ -2,6 +2,8 @@
  * VGA card from Aeon project (https://github.com/gregdivis/Aeon) ported to Spice86.
  */
 
+namespace Spice86.Core.Emulator.Devices.Video;
+
 using Aeon.Emulator;
 using Aeon.Emulator.Video;
 using Aeon.Emulator.Video.Modes;
@@ -9,6 +11,7 @@ using Aeon.Emulator.Video.Rendering;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video.Fonts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -17,11 +20,6 @@ using Spice86.Shared.Interfaces;
 
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-
-namespace Spice86.Core.Emulator.Devices.Video;
-
-using Spice86.Core.Emulator.CPU;
 
 public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposable, IVgaInterrupts {
     // Means the CRT is busy drawing a line, tells the program it should not draw
@@ -332,20 +330,10 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public event EventHandler? VideoModeChanged;
 
     public void WriteString() {
-        uint address = new SegmentedAddress(_state.ES, _state.BP).ToPhysical();
-        StringBuilder res = new();
-        for (uint i = address; i < address + 1024; i++) {
-            byte characterByte = _memory.GetUint8(i);
-            if (characterByte == 0) {
-                break;
-            }
-
-            char character = Convert.ToChar(characterByte);
-            res.Append(character);
-        }
-
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("WRITE STRING: {0}", res.ToString());
+            uint address = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BP);
+            string str = MemoryUtils.GetZeroTerminatedString(_memory.Ram, address, _memory.Ram.Length - (int)address);
+            _loggerService.Information("WRITE STRING: {0}", str);
         }
     }
 
