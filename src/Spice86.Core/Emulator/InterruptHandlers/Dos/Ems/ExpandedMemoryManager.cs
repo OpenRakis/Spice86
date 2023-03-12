@@ -1,4 +1,12 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+﻿using Serilog;
+using Serilog.Events;
+
+using Spice86.Core.Emulator.Devices.Memory;
+using Spice86.Logging;
+
+using System.Numerics;
+
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using System.Numerics;
 using Spice86.Core.Emulator.Callback;
@@ -56,9 +64,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
-
-        machine.MainMemory.RegisterMapping(PageFrameSegment, machine.EmsCard.ExpandedMemory);
-        
         _pageOwners = new short[_machine.EmsCard.TotalPages];
         _pageOwners.AsSpan().Fill(-1);
 
@@ -86,6 +91,52 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
         _dispatchTable.Add(0x57, new Callback(0x57, MemoryRegion));
         _dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
+    }
+
+    public bool TryGetMappedPageData(uint address, out uint data) {
+        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
+            data = 0;
+            return false;
+        }
+        data = _machine.EmsCard.ExpandedMemory.GetUint32(address);
+        return true;
+    }
+
+    public bool TryGetMappedPageData(uint address, out ushort data) {
+        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
+            data = 0;
+            return false;
+        }
+        data = _machine.EmsCard.ExpandedMemory.GetUint16(address);
+        return true;
+    }
+    
+    public bool TryGetMappedPageData(uint address, out byte data) {
+        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
+            data = 0;
+            return false;
+        }
+        data = _machine.EmsCard.ExpandedMemory.GetUint8(address);
+        return true;
+    }
+
+    public bool TryWriteMappedPageData<T>(uint address, T data) where T : INumber<T> {
+        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
+            return false;
+        }
+        switch (data)
+        {
+            case byte b:
+                _machine.EmsCard.ExpandedMemory.SetUint8(address, b);
+                break;
+            case ushort u:
+                _machine.EmsCard.ExpandedMemory.SetUint16(address, u);
+                break;
+            case uint i:
+                _machine.EmsCard.ExpandedMemory.SetUint32(address, i);
+                break;
+        }
+        return true;
     }
 
     public void MapOrUnmapMultiplePageMap() {
