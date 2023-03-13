@@ -42,14 +42,14 @@ public class Memory {
     public UInt16Indexer UInt16 { get; }
     public UInt32Indexer UInt32 { get; }
 
-    public virtual ushort GetUint16(uint address) {
+    public ushort GetUint16(uint address) {
         ushort res = MemoryUtils.GetUint16(Ram, address);
         MonitorReadAccess(address);
         MonitorReadAccess(address + 1);
         return res;
     }
 
-    public virtual uint GetUint32(uint address) {
+    public uint GetUint32(uint address) {
         uint res = MemoryUtils.GetUint32(Ram, address);
         MonitorReadAccess(address);
         MonitorReadAccess(address + 1);
@@ -58,7 +58,7 @@ public class Memory {
         return res;
     }
 
-    public virtual byte GetUint8(uint addr) {
+    public byte GetUint8(uint addr) {
         byte res = MemoryUtils.GetUint8(Ram, addr);
         MonitorReadAccess(addr);
         return res;
@@ -109,7 +109,7 @@ public class Memory {
         return null;
     }
 
-    public virtual void SetUint16(uint address, ushort value) {
+    public void SetUint16(uint address, ushort value) {
         byte value0 = (byte)value;
         MonitorWriteAccess(address, value0);
         Ram[address] = value0;
@@ -119,7 +119,7 @@ public class Memory {
         Ram[address + 1] = value1;
     }
 
-    public virtual void SetUint32(uint address, uint value) {
+    public void SetUint32(uint address, uint value) {
         byte value0 = (byte)value;
         MonitorWriteAccess(address, value0);
         Ram[address] = value0;
@@ -137,7 +137,7 @@ public class Memory {
         Ram[address + 3] = value3;
     }
 
-    public virtual void SetUint8(uint address, byte value) {
+    public void SetUint8(uint address, byte value) {
         MonitorWriteAccess(address, value);
         MemoryUtils.SetUint8(Ram, address, value);
     }
