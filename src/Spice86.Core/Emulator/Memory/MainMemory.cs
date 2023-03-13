@@ -92,6 +92,9 @@ public class MainMemory : Memory {
         if (size < 4) {
             throw new ArgumentOutOfRangeException(nameof(size), "Mapping size must be at least 4 bytes.");
         }
+        if (size % 4 != 0) {
+            throw new ArgumentOutOfRangeException(nameof(size), "Mapping size must be a multiple of 4 bytes.");
+        }
         for (uint i = baseAddress; i < size + baseAddress; i++) {
             _getUint8Functions[i] = memory.GetUint8;
             _setUint8Functions[i] = memory.SetUint8;
