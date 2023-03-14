@@ -1,12 +1,11 @@
-namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
 
+namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
+
 public abstract class Instructions16Or32 : Instructions {
-    public Instructions16Or32(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm,
-        StaticAddressesRecorder staticAddressesRecorder) : base(machine, alu, cpu, memory, modRm,
-        staticAddressesRecorder) {
+    protected Instructions16Or32(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm) 
+        : base(machine, alu, cpu, memory, modRm) {
     }
 
     // Inc Reg
@@ -111,7 +110,6 @@ public abstract class Instructions16Or32 : Instructions {
             return;
         }
 
-        StaticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32Ptr);
         ushort ip = Memory.GetUint16(ipAddress.Value);
         ushort cs = Memory.GetUint16(ipAddress.Value + 2);
         Cpu.FarCallWithReturnIpNextInstruction(cs, ip);
@@ -128,7 +126,6 @@ public abstract class Instructions16Or32 : Instructions {
             return;
         }
 
-        StaticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32Ptr);
         ushort ip = Memory.GetUint16(ipAddress.Value);
         ushort cs = Memory.GetUint16(ipAddress.Value + 2);
         Cpu.JumpFar(cs, ip);
