@@ -1,8 +1,4 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.CPU;
-using Serilog.Events;
+﻿using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -13,8 +9,9 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
+using Spice86.Shared.Interfaces;
 
-using System.Collections.Generic;
+namespace Spice86.Core.Emulator.CPU;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
@@ -35,7 +32,7 @@ public class Cpu {
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Machine _machine;
-    private readonly Memory _memory;
+    private readonly Memory.Memory _memory;
     private readonly ModRM _modRM;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
@@ -74,11 +71,10 @@ public class Cpu {
         FunctionHandler = new FunctionHandler(machine, _loggerService, recordData);
         FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
-        StaticAddressesRecorder = new StaticAddressesRecorder(State, recordData);
         _modRM = new ModRM(machine, this);
-        _instructions8 = new Instructions8(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
-        _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
-        _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM, StaticAddressesRecorder);
+        _instructions8 = new Instructions8(machine, Alu, this, _memory, _modRM);
+        _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM);
+        _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
     }
@@ -86,7 +82,6 @@ public class Cpu {
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
-        StaticAddressesRecorder.Reset();
         byte opcode = ProcessPrefixes();
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
@@ -103,7 +98,6 @@ public class Cpu {
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
         State.ClearPrefixes();
-        StaticAddressesRecorder.Commit();
         State.IncCycles();
         HandleExternalInterrupt();
         State.IP = _internalIp;
@@ -137,9 +131,7 @@ public class Cpu {
     public Stack Stack { get; }
 
     public State State { get; }
-
-    public StaticAddressesRecorder StaticAddressesRecorder { get; }
-
+    
     public void InterruptRet() {
         FunctionHandlerInUse.Ret(CallType.INTERRUPT);
         _internalIp = Stack.Pop16();
