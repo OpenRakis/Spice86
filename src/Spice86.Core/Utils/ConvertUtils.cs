@@ -142,15 +142,6 @@ public static class ConvertUtils {
     public static string ToHex8(byte value) {
         return $"0x{value:X}";
     }
-    
-    public static string ToHex(OperandSizeName opSize, uint value) {
-        return opSize switch {
-            OperandSizeName.Byte8 => ToHex8((byte)value),
-            OperandSizeName.Word16 =>ToHex16((ushort)value),
-            OperandSizeName.Dword32 => ToHex32(value),
-            _ => $"Invalid opSize {opSize}"
-        };
-    }
 
     public static string ToSegmentedAddressRepresentation(ushort segment, ushort offset) {
         return $"{ToHex16(segment)}:{ToHex16(offset)}";

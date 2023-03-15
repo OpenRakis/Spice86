@@ -1,24 +1,19 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.ReverseEngineer;
-
-using Function.Dump;
-
-using Serilog;
+﻿using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Utils;
+using Spice86.Shared.Interfaces;
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
+
+namespace Spice86.Core.Emulator.ReverseEngineer;
 
 public class CSharpOverrideHelper {
     protected readonly ILoggerService _loggerService;
@@ -27,7 +22,7 @@ public class CSharpOverrideHelper {
 
     public Machine Machine { get; }
 
-    public Memory Memory => Machine.Memory;
+    public Memory.Memory Memory => Machine.Memory;
 
     public UInt8Indexer UInt8 => Memory.UInt8;
     public UInt16Indexer UInt16 => Memory.UInt16;
@@ -145,7 +140,7 @@ public class CSharpOverrideHelper {
 
             string error =
                 $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(
                     "There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.",
                     address, existingFunctionInformation.Name);
@@ -155,32 +150,6 @@ public class CSharpOverrideHelper {
         }
 
         return null;
-    }
-
-    public void DefineStaticAddress(ushort segment, ushort offset, string name) {
-        DefineStaticAddress(segment, offset, name, false);
-    }
-
-    public void DefineStaticAddress(ushort segment, ushort offset, string name, bool whiteListOnlyThisSegment) {
-        SegmentedAddress address = new(segment, offset);
-        uint physicalAddress = address.ToPhysical();
-        StaticAddressesRecorder recorder = Cpu.StaticAddressesRecorder;
-        if (recorder.Names.TryGetValue(physicalAddress, out string? existing)) {
-            string error =
-                $"There is already a static address defined at address {address} named {existing} but you are trying to redefine it as {name}. Please check your mappings for duplicates.";
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error(
-                    "There is already a static address defined at address {@Address} named {@Existing} but you are trying to redefine it. Please check your mappings for duplicates.",
-                    address, existing);
-            }
-
-            throw new UnrecoverableException(error);
-        }
-
-        recorder.AddName(physicalAddress, name);
-        if (whiteListOnlyThisSegment) {
-            recorder.AddSegmentTowhiteList(address);
-        }
     }
 
     public Action FarJump(ushort cs, ushort ip) {
@@ -364,7 +333,7 @@ public class CSharpOverrideHelper {
     public UnrecoverableException FailAsUntested(string message) {
         string error =
             $"Untested code reached, please tell us how to reach this state. Here is the message: {message}. Here is the Machine stack: {State}";
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
             _loggerService.Error("{Error}", error);
         }
 
