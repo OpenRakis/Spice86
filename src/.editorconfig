@@ -107,6 +107,7 @@ csharp_preferred_modifier_order = public,private,protected,internal,static,exter
 csharp_prefer_braces = true
 csharp_prefer_simple_using_statement = true
 csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_using_directive_placement = inside_namespace:silent
 
 # Expression-level preferences
 csharp_prefer_simple_default_expression = true
@@ -214,3 +215,6 @@ dotnet_naming_style.begins_with_i.required_prefix = I
 dotnet_naming_style.begins_with_i.required_suffix = 
 dotnet_naming_style.begins_with_i.word_separator = 
 dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+#Resharper based rules
+resharper_qualified_using_at_nested_scope = true
