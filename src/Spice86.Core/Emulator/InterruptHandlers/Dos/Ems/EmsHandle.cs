@@ -1,49 +1,44 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
-using System.Linq;
-
 /// <summary>
 /// Represents a handle for allocated EMS memory.
 /// </summary>
 public sealed class EmsHandle {
-    private readonly int[] savedPageMap = new int[] { -1, -1, -1, -1 };
+    public ushort Pages { get; set; }
+    
+    public int MemHandle { get; set; }
+    
+    /* 4 16kb pages in pageframe */
+    public const byte EmmMaxPhysicalPages = 4;
+    
+    private readonly EmmMapping[] _pageMap = new EmmMapping[EmmMaxPhysicalPages];
 
-    private static readonly string nullHandleName = new((char)0, 8);
+    private static readonly string _nullHandleName = new((char)0, 8);
 
     public EmsHandle() {
-        LogicalPages = new List<ushort>();
+        for (int i = 0; i < _pageMap.Length; i++) {
+            _pageMap[i] = new EmmMapping();
+        }
     }
-
-    public EmsHandle(IEnumerable<ushort> pages) {
-        LogicalPages = pages.ToList();
-    }
-
-    /// <summary>
-    /// Gets the number of pages currently allocated to the handle.
-    /// </summary>
-    public int PagesAllocated => LogicalPages.Count;
-
-    /// <summary>
-    /// Gets the logical pages allocated to the handle.
-    /// </summary>
-    public List<ushort> LogicalPages { get; }
 
     /// <summary>
     /// Gets or sets the handle name.
     /// </summary>
-    public string Name { get; set; } = nullHandleName;
+    public string Name { get; set; } = _nullHandleName;
 
     /// <summary>
     /// Gets or sets the saved page map for the handle.
     /// </summary>
-    public Span<int> SavedPageMap => savedPageMap;
+    public EmmMapping[] PageMap => _pageMap;
+    
+    public bool SavePagedMap { get; set; }
 
     /// <summary>
     /// Returns a string containing the handle name.
     /// </summary>
     /// <returns>String containing the handle name.</returns>
     public override string ToString() {
-        if (!string.IsNullOrEmpty(Name) && Name != nullHandleName) {
+        if (!string.IsNullOrEmpty(Name) && Name != _nullHandleName) {
             return Name;
         } else {
             return "Untitled";
