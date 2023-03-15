@@ -1,13 +1,11 @@
 using Spice86.Core.Emulator.CPU.Exceptions;
-
-namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
-using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
 
+namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
+
 public class Instructions16 : Instructions16Or32 {
-    public Instructions16(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm,
-        StaticAddressesRecorder staticAddressesRecorder) : base(machine, alu, cpu, memory, modRm,
-        staticAddressesRecorder) {
+    public Instructions16(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm)
+        : base(machine, alu, cpu, memory, modRm) {
     }
 
     public override void AddRmReg() {
@@ -431,13 +429,11 @@ public class Instructions16 : Instructions16Or32 {
     public override void MovAccMoffs() {
         // MOV AX moffs16
         State.AX = Memory.GetUint16(DsNextUint16Address);
-        StaticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Word16);
     }
 
     public override void MovMoffsAcc() {
         // MOV moffs16 AX
         Memory.SetUint16(DsNextUint16Address, State.AX);
-        StaticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Word16);
     }
     
     public override void MovRmImm() {
@@ -500,7 +496,6 @@ public class Instructions16 : Instructions16Or32 {
     protected override ushort DoLxsAndReturnSegmentValue() {
         uint memoryAddress = ReadLxsMemoryAddress();
         ModRM.R16 = Memory.GetUint16(memoryAddress);
-        StaticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32Ptr);
         return Memory.GetUint16(memoryAddress + 2);
     }
     

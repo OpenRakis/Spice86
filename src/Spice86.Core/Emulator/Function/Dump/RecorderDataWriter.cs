@@ -1,15 +1,10 @@
-using Spice86.Logging;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
-namespace Spice86.Core.Emulator.Function.Dump;
-
-using CPU;
-
-using Serilog;
-
-using Spice86.Core.Emulator.VM;
-
 using System.Text.Json;
+
+namespace Spice86.Core.Emulator.Function.Dump;
 
 public class RecorderDataWriter : RecordedDataIoHandler {
     private readonly ILoggerService _loggerService;
@@ -29,31 +24,12 @@ public class RecorderDataWriter : RecordedDataIoHandler {
         DumpMemory("");
         DumpGhidraSymbols();
         DumpExecutionFlow();
-        DumpFunctionsCsv();
-        DumpFunctions();
-        DumpCSharpStubs();
-    }
-
-    private void DumpFunctions() {
-        new FunctionInformationDumper().DumpFunctionHandlers(GenerateDumpFileName("FunctionsDetails.txt"),
-            new DetailedFunctionInformationToStringConverter(), _cpu.StaticAddressesRecorder, _cpu.FunctionHandler);
-    }
-
-    private void DumpFunctionsCsv() {
-        new FunctionInformationDumper().DumpFunctionHandlers(GenerateDumpFileName("Functions.csv"),
-            new CsvFunctionInformationToStringConverter(), _cpu.StaticAddressesRecorder, _cpu.FunctionHandler);
     }
 
     private void DumpGhidraSymbols() {
         new GhidraSymbolsDumper(_loggerService).Dump(_machine, GetSymbolsFile());
     }
-
-    private void DumpCSharpStubs() {
-        Cpu cpu = _machine.Cpu;
-        new FunctionInformationDumper().DumpFunctionHandlers(GenerateDumpFileName("CSharpStub.cs"),
-            new CSharpStubToStringConverter(), cpu.StaticAddressesRecorder, cpu.FunctionHandler);
-    }
-
+    
     public void DumpCpuRegisters(string suffix) {
         string path = GenerateDumpFileName($"CpuRegisters{suffix}.json");
         File.WriteAllText(path, JsonSerializer.Serialize(_cpu.State));

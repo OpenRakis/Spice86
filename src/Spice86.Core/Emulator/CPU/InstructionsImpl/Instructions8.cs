@@ -1,11 +1,10 @@
-namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
-using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
 
+namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
+
 public class Instructions8 : Instructions {
-    public Instructions8(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm,
-        StaticAddressesRecorder staticAddressesRecorder) : base(machine, alu, cpu, memory, modRm,
-        staticAddressesRecorder) {
+    public Instructions8(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm) :
+        base(machine, alu, cpu, memory, modRm) {
     }
 
     public override void AddRmReg() {
@@ -351,13 +350,11 @@ public class Instructions8 : Instructions {
     public override void MovAccMoffs() {
         // MOV AL moffs8
         State.AL = Memory.GetUint8(DsNextUint16Address);
-        StaticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Byte8);
     }
 
     public override void MovMoffsAcc() {
         // MOV moffs8 AL
         Memory.SetUint8(DsNextUint16Address, State.AL);
-        StaticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Byte8);
     }
 
     public override void MovRmImm() {

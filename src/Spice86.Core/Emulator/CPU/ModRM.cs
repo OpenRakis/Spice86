@@ -1,17 +1,14 @@
 ﻿using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 
 namespace Spice86.Core.Emulator.CPU;
-
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.VM;
 
 public class ModRM {
     private readonly Cpu _cpu;
     private readonly Machine _machine;
-    private readonly Memory _memory;
+    private readonly Memory.Memory _memory;
     private readonly State _state;
-    private readonly StaticAddressesRecorder _staticAddressesRecorder;
     private int _registerMemoryIndex;
 
     public ModRM(Machine machine, Cpu cpu) {
@@ -19,23 +16,14 @@ public class ModRM {
         _cpu = cpu;
         _memory = machine.Memory;
         _state = cpu.State;
-        _staticAddressesRecorder = cpu.StaticAddressesRecorder;
-    }
-
-    public uint GetAddress(int defaultSegmentRegisterIndex, ushort offset, bool recordAddress) {
-        int? segmentIndex = _state.SegmentOverrideIndex;
-        segmentIndex ??= defaultSegmentRegisterIndex;
-
-        if (recordAddress) {
-            _staticAddressesRecorder.SetCurrentValue((int)segmentIndex, offset);
-        }
-
-        ushort segment = _state.SegmentRegisters.GetRegister16((int)segmentIndex);
-        return MemoryUtils.ToPhysicalAddress(segment, offset);
     }
 
     public uint GetAddress(int defaultSegmentRegisterIndex, ushort offset) {
-        return GetAddress(defaultSegmentRegisterIndex, offset, false);
+        int? segmentIndex = _state.SegmentOverrideIndex;
+        segmentIndex ??= defaultSegmentRegisterIndex;
+
+        ushort segment = _state.SegmentRegisters.GetRegister16((int)segmentIndex);
+        return MemoryUtils.ToPhysicalAddress(segment, offset);
     }
 
     public uint? MemoryAddress { get; private set; }
@@ -54,8 +42,6 @@ public class ModRM {
         if (MemoryAddress == null) {
             return _state.Registers.GetRegister32(_registerMemoryIndex);
         }
-
-        _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Dword32);
         return _memory.GetUint32((uint)MemoryAddress);
     }
 
@@ -63,8 +49,6 @@ public class ModRM {
         if (MemoryAddress == null) {
             return _state.Registers.GetRegister16(_registerMemoryIndex);
         }
-
-        _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Word16);
         return _memory.GetUint16((uint)MemoryAddress);
     }
 
@@ -72,8 +56,6 @@ public class ModRM {
         if (MemoryAddress == null) {
             return _state.Registers.GetRegisterFromHighLowIndex8(_registerMemoryIndex);
         }
-
-        _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.READ, OperandSize.Byte8);
         return _memory.GetUint8((uint)MemoryAddress);
     }
 
@@ -119,14 +101,13 @@ public class ModRM {
         }
 
         int segmentRegisterIndex = ComputeDefaultSegment(mode);
-        MemoryAddress = GetAddress(segmentRegisterIndex, (ushort)MemoryOffset, _registerMemoryIndex == 6);
+        MemoryAddress = GetAddress(segmentRegisterIndex, (ushort)MemoryOffset);
     }
 
     public void SetRm32(uint value) {
         if (MemoryAddress == null) {
             _state.Registers.SetRegister32(_registerMemoryIndex, value);
         } else {
-            _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Dword32);
             _memory.SetUint32((uint)MemoryAddress, value);
         }
     }
@@ -135,7 +116,6 @@ public class ModRM {
         if (MemoryAddress == null) {
             _state.Registers.SetRegister16(_registerMemoryIndex, value);
         } else {
-            _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Word16);
             _memory.SetUint16((uint)MemoryAddress, value);
         }
     }
@@ -144,7 +124,6 @@ public class ModRM {
         if (MemoryAddress == null) {
             _state.Registers.SetRegisterFromHighLowIndex8(_registerMemoryIndex, value);
         } else {
-            _staticAddressesRecorder.SetCurrentAddressOperation(ValueOperation.WRITE, OperandSize.Byte8);
             _memory.SetUint8((uint)MemoryAddress, value);
         }
     }
