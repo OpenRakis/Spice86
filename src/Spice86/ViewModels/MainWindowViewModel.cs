@@ -137,8 +137,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     [ObservableProperty]
     private string? _mainTitle;
 
-    public void AddBuffer(uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false) {
-        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
+    public void AddBuffer(IVideoCard videoCard, uint address, double scale, int bufferWidth, int bufferHeight,
+        bool isPrimaryDisplay = false) {
+        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(videoCard, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         Dispatcher.UIThread.Post(
             () => {
                 if(!VideoBuffers.Any(x => x.Address == videoBuffer.Address)) {
@@ -240,13 +241,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public ReadOnlyCollection<Rgb> Palette => Array.AsReadOnly(_palette);
 
-    public void Draw(byte[] memory, Rgb[] palette) {
+    public void UpdateScreen() {
         if (_disposed || _isSettingResolution) {
             return;
         }
-        _palette = palette;
         foreach (VideoBufferViewModel videoBuffer in SortedBuffers()) {
-            videoBuffer.Draw(memory, palette);
+            videoBuffer.Draw();
         }
     }
 
@@ -310,7 +310,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             VideoBuffers = new();
             Width = width;
             Height = height;
-            AddBuffer(address, 1, width, height, true);
+            AddBuffer(_videoCard, address, 1, width, height, true);
             _isSettingResolution = false;
         }, DispatcherPriority.MaxValue);
     }
@@ -402,6 +402,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     [ObservableProperty]
     private bool _showVideo = true;
 
+    private IVideoCard _videoCard = null!;
+
     private void MachineThread() {
         try {
             if(!_disposed) {
@@ -411,6 +413,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 _loggerService,
                 this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
+            _videoCard = _programExecutor.Machine.VgaCard;
             _programExecutor.Run();
             Dispatcher.UIThread.Post(() => ShowVideo = false);
             if(_closeAppOnEmulatorExit) {

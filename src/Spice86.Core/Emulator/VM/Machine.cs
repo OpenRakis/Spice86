@@ -14,16 +14,14 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
-using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
-using Spice86.Core.Emulator.InterruptHandlers.Vga;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -92,9 +90,10 @@ public class Machine : IDisposable {
 
     public TimerInt8Handler TimerInt8Handler { get; }
 
-    public VgaCard VgaCard { get; }
-
+    public IVideoCard VgaCard { get; }
+    
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
+
     public DmaController DmaController { get; }
 
     /// <summary>
@@ -115,7 +114,7 @@ public class Machine : IDisposable {
         Gui = gui;
         RecordData = recordData;
 
-        Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes);
+        Memory = new Memory(sizeInKb: (uint)Configuration.Kilobytes, this);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
@@ -134,8 +133,8 @@ public class Machine : IDisposable {
 
         DualPic = new DualPic(this, configuration, loggerService);
         Register(DualPic);
-        VgaCard = new VgaCard(this, loggerService, gui, configuration);
-        Register(VgaCard);
+        VgaCard = new AeonCard(this, loggerService, gui, configuration);
+        Register(VgaCard as IIOPortHandler ?? throw new InvalidOperationException());
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
@@ -163,10 +162,7 @@ public class Machine : IDisposable {
             loggerService,
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(
-            this,
-            loggerService,
-            VgaCard);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, (IVgaInterrupts)VgaCard);
         Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);

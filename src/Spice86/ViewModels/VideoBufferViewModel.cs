@@ -44,7 +44,8 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         _frameRenderTimeWatch = new Stopwatch();
     }
 
-    public VideoBufferViewModel(double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
+    public VideoBufferViewModel(IVideoCard videoCard, double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
+        _videoCard = videoCard;
         _isPrimaryDisplay = isPrimaryDisplay;
         Width = width;
         Height = height;
@@ -102,7 +103,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
     /// </summary>
     [ObservableProperty]
-    private WriteableBitmap? _bitmap = new(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+    private WriteableBitmap? _bitmap = new(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
 
     private bool _showCursor = true;
 
@@ -131,13 +132,13 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     }
 
     [ObservableProperty]
-    private int _height = 320;
+    private int _height = 200;
 
     [ObservableProperty]
     private bool _isPrimaryDisplay;
 
     [ObservableProperty]
-    private int _width = 200;
+    private int _width = 320;
 
     [ObservableProperty]
     private long _framesRendered;
@@ -166,7 +167,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
 
     private Action? _drawAction;
 
-    public unsafe void Draw(byte[] memory, Rgb[] palette) {
+    public void Draw() {
         if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
             return;
         }
@@ -179,25 +180,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         _drawAction ??= () => {
             _frameRenderTimeWatch.Restart();
             using ILockedFramebuffer pixels = Bitmap.Lock();
-            uint* firstPixelAddress = (uint*)pixels.Address;
-            int rowBytes = Width;
-            uint memoryAddress = Address;
-            uint* currentRow = firstPixelAddress;
-            for (int row = 0; row < Height; row++) {
-                uint* startOfLine = currentRow;
-                uint* endOfLine = currentRow + Width;
-                for (uint* column = startOfLine; column < endOfLine; column++) {
-                    byte colorIndex = memory[memoryAddress];
-                    Rgb pixel = palette[colorIndex];
-                    uint argb = pixel.ToArgb();
-                    if (pixels.Format == PixelFormat.Rgba8888) {
-                        argb = pixel.ToRgba();
-                    }
-                    *column = argb;
-                    memoryAddress++;
-                }
-                currentRow += rowBytes;
-            }
+            _videoCard?.Render(Address, Width, Height, pixels.Address);
 
             Dispatcher.UIThread.Post(() => {
                 UIUpdateMethod?.Invoke();
@@ -206,7 +189,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
             _frameRenderTimeWatch.Stop();
             LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
         };
-        if(!_exitDrawThread) {
+        if (!_exitDrawThread) {
             _manualResetEvent.Set();
             _manualResetEvent.Reset();
         }
@@ -214,6 +197,8 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
 
     [ObservableProperty]
     private long _lastFrameRenderTimeMs;
+
+    private readonly IVideoCard? _videoCard;
 
     public override bool Equals(object? obj) {
         return this == obj || ((obj is VideoBufferViewModel other) && _index == other._index);

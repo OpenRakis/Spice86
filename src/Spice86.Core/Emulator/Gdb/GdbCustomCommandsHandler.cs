@@ -342,12 +342,10 @@ Supported custom commands:
         try {
             string action = ExtractAction(args);
             IGui? gui = _machine.Gui;
-            VgaCard vgaCard = _machine.VgaCard;
 
             // Actions for 1 parameter
             if ("refresh".Equals(action)) {
-                Memory memory = _machine.Memory;
-                gui?.Draw(memory.Ram, vgaCard.VgaDac.Rgbs);
+                gui?.UpdateScreen();
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
                 StringBuilder listBuilder = new StringBuilder();
@@ -370,7 +368,7 @@ Supported custom commands:
                     return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
                 }
 
-                gui?.AddBuffer(address, scale, resolution[0], resolution[1]);
+                gui?.AddBuffer(_machine.VgaCard, address, scale, resolution[0], resolution[1]);
                 return _gdbIo.GenerateMessageToDisplayResponse($"Added buffer to view address {address}");
             } else {
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand action {action}");
