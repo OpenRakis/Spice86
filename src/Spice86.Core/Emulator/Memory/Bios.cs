@@ -11,8 +11,10 @@ public sealed class Bios {
         VideoMode = 0x03;
         ScreenRows = 24;
         ScreenColumns = 80;
+        CurrentVideoPage = 0;
         CharacterPointHeight = 16;
         CrtControllerBaseAddress = 0x03D4;
+        DisplayCombinationCode = 0x08; // VGA with color monitor
     }
 
     /// <summary>
@@ -39,6 +41,14 @@ public sealed class Bios {
         set => _memory.UInt8[MemoryMap.BiosDataSegment, 0x004A] = value;
     }
 
+    /// <summary>
+    /// Gets or sets the CRT controller base address.
+    /// </summary>
+    public byte CurrentVideoPage {
+        get => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0062];
+        set => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0062] = value;
+    }
+    
     /// <summary>
     /// Gets or sets the CRT controller base address.
     /// </summary>
@@ -93,5 +103,13 @@ public sealed class Bios {
     public byte VideoDisplayData {
         get => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0089];
         set => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0089] = value;
+    }
+    
+    /// <summary>
+    /// Gets or sets the display combination code.
+    /// </summary>
+    public byte DisplayCombinationCode {
+        get => _memory.UInt8[MemoryMap.BiosDataSegment, 0x008A];
+        set => _memory.UInt8[MemoryMap.BiosDataSegment, 0x008A] = value;
     }
 }

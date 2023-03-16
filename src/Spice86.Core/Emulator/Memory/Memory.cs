@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿using Spice86.Core.Emulator.VM;
+
+namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -11,15 +13,17 @@ public class Memory {
     private readonly BreakPointHolder _readBreakPoints = new();
 
     private readonly BreakPointHolder _writeBreakPoints = new();
+    private readonly Machine? _machine;
 
     // For breakpoints to access what is getting written
     public byte CurrentlyWritingByte { get; private set; } = 0;
 
-    public Memory(uint sizeInKb) {
+    public Memory(uint sizeInKb, Machine? machine = null) {
         Ram = new byte[sizeInKb * 1024];
         UInt8 = new(this);
         UInt16 = new(this);
         UInt32 = new(this);
+        _machine = machine;
     }
 
     public Span<byte> GetSpan(int address, int length) {
@@ -175,5 +179,10 @@ public class Memory {
     private void MonitorWriteAccess(uint address, byte value) {
         CurrentlyWritingByte = value;
         _writeBreakPoints.TriggerMatchingBreakPoints(address);
+        // This is a hack that copies bytes written to this area to the internal video ram.
+        // TODO: Find a better way to map any area of memory to a device or something else.
+        if (_machine != null && address is >= 0xA0000 and <= 0xBFFFF) {
+            _machine.VgaCard.SetVramByte(address - 0xA0000, value);
+        }
     }
 }
