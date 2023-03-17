@@ -82,6 +82,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.AttributeData,
             Ports.CrtControllerAddress,
             Ports.CrtControllerAddressAlt,
+            Ports.CrtControllerAddressAltMirror1,
+            Ports.CrtControllerAddressAltMirror2,
             Ports.CrtControllerData,
             Ports.CrtControllerDataAlt,
             Ports.DacAddressReadMode,
@@ -105,6 +107,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.AttributeData,
             Ports.CrtControllerAddress,
             Ports.CrtControllerAddressAlt,
+            Ports.CrtControllerAddressAltMirror1,
+            Ports.CrtControllerAddressAltMirror2,
             Ports.CrtControllerData,
             Ports.CrtControllerDataAlt,
             Ports.DacAddressReadMode,
@@ -156,6 +160,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case Ports.CrtControllerAddress:
             case Ports.CrtControllerAddressAlt:
+            case Ports.CrtControllerAddressAltMirror1:
+            case Ports.CrtControllerAddressAltMirror2:
                 return (byte)_crtRegister;
 
             case Ports.CrtControllerData:
@@ -243,6 +249,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case Ports.CrtControllerAddress:
             case Ports.CrtControllerAddressAlt:
+            case Ports.CrtControllerAddressAltMirror1:
+            case Ports.CrtControllerAddressAltMirror2:
                 _crtRegister = (CrtControllerRegister)value;
                 break;
 
