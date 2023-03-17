@@ -166,10 +166,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             case Ports.InputStatus1ReadAlt:
                 _attributeDataMode = false;
                 return GetInputStatus1Value();
-
-            default:
-                throw new InvalidOperationException($"Reading port 0x{port:X4} is not (yet) supported by this VGA controller.");
         }
+
+        return base.ReadByte(port);
     }
 
     public override ushort ReadWord(int port) {
@@ -254,10 +253,10 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 if (previousVerticalEnd != CrtController.VerticalDisplayEnd) {
                     ChangeVerticalEnd();
                 }
-
                 break;
             default:
-                throw new InvalidOperationException($"Writing 0x{value:X2} to port 0x{port:X4} is not (yet) supported by this VGA controller.");
+                base.WriteByte(port, value);
+                break;
         }
     }
 
