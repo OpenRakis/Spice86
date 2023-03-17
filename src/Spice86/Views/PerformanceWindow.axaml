@@ -27,6 +27,10 @@
 				<TextBlock Text="{Binding InstructionsPerSecond,
 					Converter={StaticResource InvalidNumberToQuestionMarkConverter},
 					StringFormat={}{0:N0}}"/>
+				<Label Content="Instructions per second (avg)" />
+				<TextBlock Text="{Binding AverageInstructionsPerSecond,
+					Converter={StaticResource InvalidNumberToQuestionMarkConverter},
+					StringFormat={}{0:N0}}"/>
 				<Label Content="Frames per second (avg across all video buffers)" />
 				<TextBlock Text="{Binding FramesPerSecond,
 					Converter={StaticResource InvalidNumberToQuestionMarkConverter},
