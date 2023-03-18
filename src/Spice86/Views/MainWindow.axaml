@@ -26,6 +26,7 @@
 						<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Start the executable paused, to be used with GDB"></MenuItem>
 					</MenuItem>
 					<MenuItem Header="Debug">
+						<MenuItem Header="Debug Window" Command="{Binding ShowDebugWindowCommand}" />
 						<MenuItem Header="Color Palette" Command="{Binding ShowColorPaletteCommand}" />
 						<MenuItem Header="Performance" Command="{Binding ShowPerformanceCommand}" />
 						<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
