@@ -1,7 +1,7 @@
-﻿using Avalonia.Collections;
-
+﻿
 namespace Spice86.ViewModels;
 
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Models;
 
 using System;
-using System.Linq;
 
 public partial class PerformanceViewModel : ObservableObject {
     private readonly DispatcherTimer? _timer;
@@ -49,7 +48,7 @@ public partial class PerformanceViewModel : ObservableObject {
         _timer.Start();
     }
     
-    private double ApproxRollingAverage(double currentAverage, double instructionsPerSecond, long instructionsPerSecondSampleNumber) {
+    private static double ApproxRollingAverage(double currentAverage, double instructionsPerSecond, long instructionsPerSecondSampleNumber) {
 
         currentAverage -= currentAverage / instructionsPerSecondSampleNumber;
         currentAverage += instructionsPerSecond / instructionsPerSecondSampleNumber;

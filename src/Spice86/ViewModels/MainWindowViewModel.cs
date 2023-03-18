@@ -19,12 +19,10 @@ using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Diagnostics;
@@ -36,6 +34,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private bool _disposed;
     private Thread? _emulatorThread;
     private bool _isSettingResolution = false;
+    private DebugWindow? _debugWindow;
     private PaletteWindow? _paletteWindow;
     private PerformanceWindow? _performanceWindow;
 
@@ -222,11 +221,22 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
+    public void ShowDebugWindow() {
+        if (_debugWindow != null) {
+            _debugWindow.Activate();
+        } else {
+            _debugWindow = new DebugWindow(_programExecutor?.Machine);
+            _debugWindow.Closed += (s, e) => _debugWindow = null;
+            _debugWindow.Show();
+        }
+    }
+
+    [RelayCommand]
     public void ShowColorPalette() {
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
         } else {
-            _paletteWindow = new PaletteWindow(this);
+            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor?.Machine));
             _paletteWindow.Closed += (s, e) => _paletteWindow = null;
             _paletteWindow.Show();
         }
@@ -236,11 +246,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     public void ResetTimeMultiplier() {
         TimeMultiplier = _configuration.TimeMultiplier;
     }
-
-    private Rgb[] _palette = Array.Empty<Rgb>();
-
-    public ReadOnlyCollection<Rgb> Palette => Array.AsReadOnly(_palette);
-
     public void UpdateScreen() {
         if (_disposed || _isSettingResolution) {
             return;
