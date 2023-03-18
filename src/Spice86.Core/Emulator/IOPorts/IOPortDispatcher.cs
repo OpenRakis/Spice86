@@ -16,10 +16,7 @@ using Spice86.Logging;
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
 
-    private readonly ILoggerService _loggerService;
-
-    public IOPortDispatcher(Machine machine, ILoggerService loggerService, Configuration configuration) : base(machine, configuration) {
-        _loggerService = loggerService;
+    public IOPortDispatcher(Machine machine, ILoggerService loggerService, Configuration configuration) : base(machine, configuration, loggerService) {
         _failOnUnhandledPort = configuration.FailOnUnhandledPort;
     }
 

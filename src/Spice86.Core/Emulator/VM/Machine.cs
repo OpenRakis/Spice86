@@ -128,7 +128,7 @@ public class Machine : IDisposable {
             configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
 
-        DmaController = new DmaController(this, configuration);
+        DmaController = new DmaController(this, configuration, loggerService);
         Register(DmaController);
 
         DualPic = new DualPic(this, configuration, loggerService);
@@ -139,16 +139,16 @@ public class Machine : IDisposable {
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
         Register(Keyboard);
-        Joystick = new Joystick(this, configuration);
+        Joystick = new Joystick(this, configuration, loggerService);
         Register(Joystick);
         PcSpeaker = new PcSpeaker(this, loggerService, configuration);
         Register(PcSpeaker);
-        OPL3FM = new OPL3FM(this, configuration);
+        OPL3FM = new OPL3FM(this, configuration, loggerService);
         Register(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, configuration);
+        SoundBlaster = new SoundBlaster(this, configuration, loggerService);
         Register(SoundBlaster);
         SoundBlaster.AddEnvironnmentVariable();
-        GravisUltraSound = new GravisUltraSound(this, configuration);
+        GravisUltraSound = new GravisUltraSound(this, configuration, loggerService);
         Register(GravisUltraSound);
         Midi = new Midi(this, configuration, loggerService);
         Register(Midi);

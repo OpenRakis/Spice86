@@ -43,7 +43,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private readonly Bios _bios;
     private readonly LazyConcurrentDictionary<FontType, SegmentedAddress> _fonts = new();
     private readonly IGui? _gui;
-    private readonly ILoggerService _loggerService;
     private bool _attributeDataMode;
     private AttributeControllerRegister _attributeRegister;
     private CrtControllerRegister _crtRegister;
@@ -56,11 +55,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private bool _disposed;
     private readonly State _state;
 
-    public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
-        base(machine, configuration) {
+    public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) : base(machine, configuration, loggerService) {
         _bios = machine.Bios;
         _state = machine.Cpu.State;
-        _loggerService = loggerService;
         _gui = gui;
 
         unsafe {
