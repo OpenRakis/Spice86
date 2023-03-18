@@ -19,7 +19,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     private readonly GeneralMidi _generalMidi;
     private bool _disposed;
 
-    public Midi(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration) {
+    public Midi(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _generalMidi = new GeneralMidi(configuration, loggerService);
         _machine.Paused += Machine_Paused;
         _machine.Resumed += Machine_Resumed;

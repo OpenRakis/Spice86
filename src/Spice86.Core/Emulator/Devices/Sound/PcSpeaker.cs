@@ -14,15 +14,13 @@ using Spice86.Core.Utils;
 /// PC speaker implementation.
 /// </summary>
 public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
-    private readonly ILoggerService _loggerService;
     private const int PcSpeakerPortNumber = 0x61;
 
     private bool _disposed = false;
 
     private readonly InternalSpeaker _pcSpeaker;
 
-    public PcSpeaker(Machine machine, ILoggerService loggerService, Configuration configuration) : base(machine, configuration) {
-        _loggerService = loggerService;
+    public PcSpeaker(Machine machine, ILoggerService loggerService, Configuration configuration) : base(machine, configuration, loggerService) {
         _pcSpeaker = new(configuration);
     }
 

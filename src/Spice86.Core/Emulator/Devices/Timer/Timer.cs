@@ -21,7 +21,6 @@ using System.Diagnostics;
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
 public class Timer : DefaultIOPortHandler {
-    private readonly ILoggerService _loggerService;
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
@@ -42,8 +41,7 @@ public class Timer : DefaultIOPortHandler {
     // retrace is in a separate counter because it needs to be controlled by the time multiplier unlike screen refresh
     private readonly Counter _vgaRetraceCounter;
 
-    public Timer(Machine machine, ILoggerService loggerService, DualPic dualPic, IVideoCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration) {
-        _loggerService = loggerService;
+    public Timer(Machine machine, ILoggerService loggerService, DualPic dualPic, IVideoCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration, loggerService) {
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         _cpu = machine.Cpu;
