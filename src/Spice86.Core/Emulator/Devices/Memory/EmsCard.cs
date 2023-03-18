@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Basic implementation of an EMS Memory add-on card
@@ -12,7 +13,7 @@ using Spice86.Core.Emulator.VM;
 public class EmsCard : DefaultIOPortHandler {
     public const int EmmMaxHandles = 200;
     public const int MemorySizeInMb = 6;
-    public EmsCard(Machine machine, Configuration configuration) : base(machine, configuration)
+    public EmsCard(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService)
     {
         for (int i = 0; i < EmmHandles.Length; i++) {
             EmmHandles[i] = new();

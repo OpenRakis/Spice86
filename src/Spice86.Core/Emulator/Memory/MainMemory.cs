@@ -14,7 +14,7 @@ public class MainMemory : Memory {
 
     private readonly Machine _machine;
     
-    public MainMemory(Machine machine, uint sizeInKb) : base(machine, sizeInKb) {
+    public MainMemory(Machine machine, uint sizeInKb) : base(sizeInKb) {
         _machine = machine;
         if (sizeInKb * 1024 < ConvMemorySize) {
             throw new ArgumentException("Memory size must be at least 1 MB.");
@@ -34,6 +34,11 @@ public class MainMemory : Memory {
     }
 
     public override void SetUint8(uint address, byte value) {
+        // This is a hack that copies bytes written to this area to the internal video ram.
+        // TODO: Find a better way to map any area of memory to a device or something else.
+        if (address is >= 0xA0000 and <= 0xBFFFF) {
+            _machine.VgaCard.SetVramByte(address - 0xA0000, value);
+        }
         if (_machine.Ems?.TryWriteMappedPageData(address, value) is not true) {
             base.SetUint8(address, value);
         }
