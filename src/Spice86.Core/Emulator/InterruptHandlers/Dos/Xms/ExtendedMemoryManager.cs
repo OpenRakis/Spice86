@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.VM;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Provides DOS applications with XMS memory.
@@ -34,7 +35,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Specifies the starting physical address of XMS.
     /// </summary>
-    public const uint XmsBaseAddress = Memory.ConvMemorySize + 65536 + 0x4000 + 1024 * 1024;
+    public const uint XmsBaseAddress = 1024 * 1024 + 65536 + 0x4000 + 1024 * 1024;
 
     /// <summary>
     /// Total number of handles available at once.
@@ -52,7 +53,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// <summary>
     /// Gets the total amount of extended memory.
     /// </summary>
-    public int ExtendedMemorySize => _machine.Memory.MemorySize - (int)XmsBaseAddress;
+    public int ExtendedMemorySize => _machine.Memory.Size - (int)XmsBaseAddress;
 
     public override byte Index => 0x43;
 
@@ -151,12 +152,14 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     }
 
     public void GlobalDisableA20() {
-        _machine.Memory.IsA20Enabled = false;
+        //TODO: Implement this
+        //_machine.Memory.IsA20Enabled = false;
         _state.AX = 1; // Success
     }
 
     public void GlobalEnableA20() {
-        _machine.Memory.IsA20Enabled = true;
+        //TODO: Implement this
+        //_machine.Memory.IsA20Enabled = true;
         _state.AX = 1; // Success
     }
 
@@ -231,7 +234,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// </summary>
     public void EnableLocalA20() {
         if (_a20EnableCount == 0) {
-            _machine.Memory.IsA20Enabled = true;
+            //TODO: Enable this
+            //_machine.Memory.IsA20Enabled = true;
         }
         _a20EnableCount++;
         _state.AX = 1; // Success
@@ -242,7 +246,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// </summary>
     public void DisableLocalA20() {
         if (_a20EnableCount == 1) {
-            _machine.Memory.IsA20Enabled = false;
+            //TODO: Implement this
+            //_machine.Memory.IsA20Enabled = false;
         }
 
         if (_a20EnableCount > 0) {
@@ -260,7 +265,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
             throw new UnrecoverableException($"XMS already initialized, in {nameof(InitializeMemoryMap)}");
         }
 
-        uint memoryAvailable = (uint)_machine.Memory.MemorySize - XmsBaseAddress;
+        uint memoryAvailable = (uint)_machine.Memory.Size - XmsBaseAddress;
         _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, memoryAvailable, false));
     }
 
@@ -415,59 +420,55 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
     /// <summary>
     /// Copies a block of memory.
+    /// TODO: Verify this works
     /// </summary>
-    public void MoveExtendedMemoryBlock() {
-        bool a20State = _machine.Memory.IsA20Enabled;
-        _machine.Memory.IsA20Enabled = true;
+    public unsafe void MoveExtendedMemoryBlock() {
+        //TODO: Implement this
+        //bool a20State = _machine.Memory.IsA20Enabled;
+        //_machine.Memory.IsA20Enabled = true;
 
-        XmsMoveData moveData;
-        unsafe {
-            moveData = *(XmsMoveData*)_machine.Memory.GetPointer(_state.DS, _state.SI);
-        }
+        var moveDataSpan = _machine.Memory.GetSpan(_state.DS, _state.SI);
+        fixed (byte* moveDataPtr = moveDataSpan) {
+            XmsMoveData moveData = *(XmsMoveData*)moveDataPtr;
+            Span<byte> srcPtr = new byte[]{};
+            Span<byte> destPtr = new byte[]{};
 
-        IntPtr srcPtr = IntPtr.Zero;
-        IntPtr destPtr = IntPtr.Zero;
-
-        if (moveData.SourceHandle == 0) {
-            SegmentedAddress srcAddress = moveData.SourceAddress;
-            srcPtr = _machine.Memory.GetPointer(srcAddress.Segment, srcAddress.Offset);
-        } else {
-            if (TryGetBlock(moveData.SourceHandle, out XmsBlock srcBlock)) {
-                srcPtr = _machine.Memory.GetPointer((int)(XmsBaseAddress + srcBlock.Offset + moveData.SourceOffset));
+            if (moveData.SourceHandle == 0) {
+                SegmentedAddress srcAddress = moveData.SourceAddress;
+                srcPtr = _machine.Memory.GetSpan(srcAddress.Segment, srcAddress.Offset);
+            } else {
+                if (TryGetBlock(moveData.SourceHandle, out XmsBlock srcBlock)) {
+                    srcPtr = _machine.Memory.GetSpan((int)(XmsBaseAddress + srcBlock.Offset + moveData.SourceOffset), 0);
+                }
             }
-        }
 
-        if (moveData.DestHandle == 0) {
-            SegmentedAddress destAddress = moveData.DestAddress;
-            destPtr = _machine.Memory.GetPointer(destAddress.Segment, destAddress.Offset);
-        } else {
-            if (TryGetBlock(moveData.DestHandle, out XmsBlock destBlock)) {
-                destPtr = _machine.Memory.GetPointer((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset));
+            if (moveData.DestHandle == 0) {
+                SegmentedAddress destAddress = moveData.DestAddress;
+                destPtr = _machine.Memory.GetSpan(destAddress.Segment, destAddress.Offset);
+            } else {
+                if (TryGetBlock(moveData.DestHandle, out XmsBlock destBlock)) {
+                    destPtr = _machine.Memory.GetSpan((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset), 0);
+                }
             }
-        }
 
-        if (srcPtr == IntPtr.Zero) {
-            _state.BL = 0xA3; // Invalid source handle.
-            _state.AX = 0; // Didn't work.
-            return;
-        }
-        if (destPtr == IntPtr.Zero) {
-            _state.BL = 0xA5; // Invalid destination handle.
-            _state.AX = 0; // Didn't work.
-            return;
-        }
-
-        unsafe {
-            byte* src = (byte*)srcPtr.ToPointer();
-            byte* dest = (byte*)destPtr.ToPointer();
-
-            for (uint i = 0; i < moveData.Length; i++) {
-                dest[i] = src[i];
+            if (srcPtr.Length == 0) {
+                _state.BL = 0xA3; // Invalid source handle.
+                _state.AX = 0; // Didn't work.
+                return;
             }
-        }
+            if (destPtr.Length == 0) {
+                _state.BL = 0xA5; // Invalid destination handle.
+                _state.AX = 0; // Didn't work.
+                return;
+            }
 
-        _state.AX = 1; // Success.
-        _machine.Memory.IsA20Enabled = a20State;
+            srcPtr.CopyTo(destPtr);
+
+            _state.AX = 1; // Success.
+        
+            //_machine.Memory.IsA20Enabled = a20State;
+            
+        }
     }
 
     /// <summary>
@@ -475,7 +476,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
     /// </summary>
     public void QueryAnyFreeExtendedMemory() {
         _state.EAX = LargestFreeBlock / 1024u;
-        _state.ECX = (uint)(_machine.Memory.MemorySize - 1);
+        _state.ECX = (uint)(_machine.Memory.Size - 1);
         _state.EDX = (uint)(TotalFreeMemory / 1024);
 
         if (_state.EAX == 0) {

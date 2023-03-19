@@ -21,7 +21,8 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
-using Spice86.Core.Emulator.InterruptHandlers.Vga;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -174,7 +175,7 @@ public class Machine : IDisposable {
             loggerService,
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, loggerService, (IVgaInterrupts)VgaCard);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, (IVgaInterrupts)VgaCard);
         Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);
@@ -209,7 +210,8 @@ public class Machine : IDisposable {
     
     public void Register(IDeviceCallbackProvider callbackProvider) {
         int id = DeviceCallbackProviders.Count;
-        callbackProvider.CallbackAddress = this.Memory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
+        //TODO: Fix this
+        //callbackProvider.CallbackAddress = this.Memory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
         DeviceCallbackProviders.Add((uint)id, callbackProvider);
 
         // EB06909090909090CDFFCB

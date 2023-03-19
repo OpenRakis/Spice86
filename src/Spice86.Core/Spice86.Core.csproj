@@ -73,9 +73,4 @@
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-	  <Reference Include="Spice86.Core">
-	    <HintPath>..\Spice86\bin\Debug\net7.0\Spice86.Core.dll</HintPath>
-	  </Reference>
-	</ItemGroup>
 </Project>
