@@ -72,7 +72,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private Color _dacWriteColor;
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
-        base(machine, configuration) {
+        base(machine, configuration, loggerService) {
         _bios = machine.Bios;
         _state = machine.Cpu.State;
         _logger = new LoggerConfiguration()
@@ -444,22 +444,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public byte GetVramByte(uint address) {
         return CurrentMode.GetVramByte(address);
     }
-    public ushort GetVramWord(uint address) {
-        return CurrentMode.GetVramWord(address);
-    }
-    public uint GetVramDWord(uint address) {
-        return CurrentMode.GetVramDWord(address);
-    }
     public void SetVramByte(uint address, byte value) {
         CurrentMode.SetVramByte(address, value);
     }
-    public void SetVramWord(uint address, ushort value) {
-        CurrentMode.SetVramWord(address, value);
-    }
-    public void SetVramDWord(uint address, uint value) {
-        CurrentMode.SetVramDWord(address, value);
-    }
-
 
     public void Render(uint address, object width, object height, nint pixelsAddress) {
         _presenter ??= GetPresenter();

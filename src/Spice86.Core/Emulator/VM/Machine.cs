@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Memory;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
@@ -197,9 +198,9 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-        EmsCard = new(this, configuration);
+        EmsCard = new EmsCard(this, configuration, loggerService);
         if(configuration.Ems) {
-            Ems = new(this);
+            Ems = new ExpandedMemoryManager(this);
         }
         if(Ems is not null) {
             Register(Ems);
@@ -235,7 +236,7 @@ public class Machine : IDisposable {
                 if (Gui?.IsPaused == true || IsPaused) {
                     Gui?.WaitForContinue();
                 }
-                dmaChannel.Transfer(MainMemory);
+                dmaChannel.Transfer(Memory);
                 if (!_exitDmaLoop) {
                     _dmaResetEvent.WaitOne(1);
                 }

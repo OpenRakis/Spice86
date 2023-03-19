@@ -25,7 +25,7 @@ public class CallbackHandler : IndexBasedDispatcher {
 
     public CallbackHandler(Machine machine, ushort interruptHandlerSegment) {
         _machine = machine;
-        _memory = machine.MainMemory;
+        _memory = machine.Memory;
         _callbackHandlerSegment = interruptHandlerSegment;
     }
 

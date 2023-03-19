@@ -52,8 +52,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public ExpandedMemoryManager(Machine machine) : base(machine) {
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
-
-        machine.MainMemory.RegisterMapping(0xE0000, 0x10000, machine.EmsCard.ExpandedMemory);
         
         _pageOwners.AsSpan().Fill(-1);
 
@@ -612,7 +610,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return 0;
         }
 
-        if (sourceAddress + length > MainMemory.ConvMemorySize || destAddress + length > MainMemory.ConvMemorySize) {
+        if (sourceAddress + length > _machine.Memory.Size || destAddress + length > _machine.Memory.Size) {
             return 0xA2;
         }
 
@@ -641,7 +639,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return 0;
         }
 
-        if (destAddress + length > MainMemory.ConvMemorySize) {
+        if (destAddress + length > _machine.Memory.Size) {
             return 0xA2;
         }
 
@@ -680,7 +678,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return 0;
         }
 
-        if (sourceAddress + length > MainMemory.ConvMemorySize) {
+        if (sourceAddress + length > _machine.Memory.Size) {
             return 0xA2;
         }
 

@@ -15,7 +15,7 @@ public class PspGenerator {
     }
 
     public void GeneratePsp(ushort pspSegment, string? arguments) {
-        Memory memory = _machine.MainMemory;
+        Memory memory = _machine.Memory;
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 
         // https://en.wikipedia.org/wiki/Program_Segment_Prefix
