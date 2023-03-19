@@ -11,11 +11,11 @@ public class Rgb {
     public byte B { get; set; }
 
     public uint ToRgba() {
-        return (uint)(R << 16 | G << 8 | B) | 0xFF000000;
+        return (uint)(R << 16 | G << 8 | B) | 0x000000FF;
     }
 
     public uint ToBgra() {
-        return (uint)(B << 16 | G << 8 | R) | 0xFF000000;
+        return (uint)(B << 16 | G << 8 | R) | 0x000000FF;
     }
 
     public uint ToArgb() {
@@ -24,5 +24,13 @@ public class Rgb {
 
     public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
+    }
+
+    public static implicit operator uint(Rgb v) {
+        return ToUint(v);
+    }
+
+    public static uint ToUint(Rgb v) {
+        return (uint)(v.G << 16 | v.B << 8 | v.R);
     }
 }

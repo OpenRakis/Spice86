@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared;
 
 public partial class PaletteViewModel : ObservableObject {
     private readonly Machine? _machine;
@@ -28,7 +29,7 @@ public partial class PaletteViewModel : ObservableObject {
     }
 
     [ObservableProperty]
-    private AvaloniaList<uint> _palette = new();
+    private AvaloniaList<Rgb> _palette = new();
 
     /// <summary>
     /// Invoked by the timer to update the displayed colors.
@@ -40,7 +41,7 @@ public partial class PaletteViewModel : ObservableObject {
         if (videoCard is null) {
             return;
         }
-        ReadOnlySpan<uint> palette = videoCard.Dac.Palette;
+        ReadOnlySpan<Rgb> palette = videoCard.Dac.Palette;
         Palette.Clear();
         Palette.AddRange(palette.ToArray());
     }

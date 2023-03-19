@@ -1,5 +1,7 @@
 namespace Spice86.Aeon.Emulator.Video.Rendering
 {
+    using Spice86.Shared;
+
     /// <summary>
     /// Renders 8-bit graphics to a bitmap.
     /// </summary>
@@ -19,7 +21,7 @@ namespace Spice86.Aeon.Emulator.Video.Rendering
         protected override void DrawFrame(nint destination)
         {
             uint totalPixels = (uint)VideoMode.Width * (uint)VideoMode.Height;
-            ReadOnlySpan<uint> palette = VideoMode.Palette;
+            ReadOnlySpan<Rgb> palette = VideoMode.Palette;
 
             unsafe
             {
