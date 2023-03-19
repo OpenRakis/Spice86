@@ -444,6 +444,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x3E, new Callback(0x3E, () => CloseFile(true)));
         _dispatchTable.Add(0x3F, new Callback(0x3F, () => ReadFile(true)));
         _dispatchTable.Add(0x40, new Callback(0x40, () => WriteFileUsingHandle(true)));
+        _dispatchTable.Add(0x41, new Callback(0x41, () => DeleteFile(true)));
         _dispatchTable.Add(0x43, new Callback(0x43, () => GetSetFileAttributes(true)));
         _dispatchTable.Add(0x44, new Callback(0x44, () => IoControl(true)));
         _dispatchTable.Add(0x42, new Callback(0x42, () => MoveFilePointerUsingHandle(true)));
@@ -457,6 +458,9 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x4F, new Callback(0x4F, () => FindNextMatchingFile(true)));
         _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
+    }
+    private void DeleteFile(bool b) {
+        throw new NotImplementedException();
     }
 
     public void GetCurrentDirectory(bool calledFromVm) {

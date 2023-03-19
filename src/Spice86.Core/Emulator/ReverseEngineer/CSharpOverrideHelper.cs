@@ -15,6 +15,8 @@ using System.Linq;
 
 namespace Spice86.Core.Emulator.ReverseEngineer;
 
+using Memory = Spice86.Core.Emulator.Memory.Memory;
+
 public class CSharpOverrideHelper {
     protected readonly ILoggerService _loggerService;
 

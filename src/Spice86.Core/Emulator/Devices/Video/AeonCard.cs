@@ -4,22 +4,33 @@
 
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Serilog;
+using Serilog.Core;
+using Serilog.Enrichers;
+
 using Spice86.Aeon.Emulator;
 using Spice86.Aeon.Emulator.Video;
 using Spice86.Aeon.Emulator.Video.Modes;
 using Spice86.Aeon.Emulator.Video.Rendering;
 
 using Serilog.Events;
+using Serilog.Exceptions;
 
+using Spice86.Aeon;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video.Fonts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Logging;
+using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
+using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
+
+using Point = Spice86.Aeon.Emulator.Video.Point;
 
 public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposable, IVgaInterrupts {
     // Means the CRT is busy drawing a line, tells the program it should not draw
@@ -34,11 +45,11 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     // whole duration of the retrace to write to VRAM.
     // More info here: http://atrevida.comprenica.com/atrtut10.html
     private const byte StatusRegisterRetraceActive = 0b1000;
-
+    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
     /// <summary>
     ///     Total number of bytes allocated for video RAM.
     /// </summary>
-    public uint TotalVramBytes => 1024 * 1024;
+    public uint TotalVramBytes => 256 * 1024;
 
     private readonly Bios _bios;
     private readonly LazyConcurrentDictionary<FontType, SegmentedAddress> _fonts = new();
@@ -55,17 +66,30 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private int _verticalTextResolution = 16;
     private bool _disposed;
     private readonly State _state;
+    private readonly Logger _logger;
+    private Color _dacReadColor = Color.Black;
+    private int _dacReadIndex;
+    private int _dacWriteIndex;
+    private Color _dacWriteColor;
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
         base(machine, configuration) {
         _bios = machine.Bios;
         _state = machine.Cpu.State;
         _loggerService = loggerService;
+        _logger = new LoggerConfiguration()
+            .WriteTo.Console(outputTemplate: LogFormat)
+            .WriteTo.File("aeon.log", outputTemplate: LogFormat)
+            .MinimumLevel.Warning()
+            .CreateLogger();
         _gui = gui;
 
         unsafe {
             VideoRam = new nint(NativeMemory.AllocZeroed(TotalVramBytes));
         }
+
+        var videoRam = new VideoMemory(256, this, 0xA0000);
+        machine.MainMemory.RegisterMapping(0xA0000, 0x10000, videoRam);
 
         InitializeStaticFunctionalityTable();
         TextConsole = new TextConsole(this, _bios.ScreenColumns, _bios.ScreenRows);
@@ -126,57 +150,108 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public override byte ReadByte(int port) {
+        byte value = 0;
         switch (port) {
             case Ports.DacAddressReadMode:
-                return Dac.ReadIndex;
-
+                value = Dac.ReadIndex;
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Read DAC Read Index: {Value:X2}", port, value);
+                }
+                break;
             case Ports.DacAddressWriteMode:
-                return Dac.WriteIndex;
-
+                value = Dac.WriteIndex;
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Read DAC Write Index: {Value:X2}", port, value);
+                }
+                break;
             case Ports.DacData:
-                return Dac.Read();
-
+                value = Dac.Read();
+                switch (_dacReadIndex) {
+                    case 0:
+                        _dacReadColor = Color.FromArgb(0xFF, value, _dacReadColor.G, _dacReadColor.B);
+                        break;
+                    case 1:
+                        _dacReadColor = Color.FromArgb(0xFF, _dacReadColor.R, value, _dacReadColor.B);
+                        break;
+                    case 2:
+                        _dacReadColor = Color.FromArgb(0xFF, _dacReadColor.R, _dacReadColor.G, value);
+                        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                            _logger.Verbose("[{Port:X4}] Read DAC: {Color}", port, _dacReadColor);
+                        }
+                        break;
+                }
+                _dacReadIndex = (_dacReadIndex + 1) % 3;
+                break;
             case Ports.GraphicsControllerAddress:
-                return (byte)_graphicsRegister;
-
+                value = (byte)_graphicsRegister;
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Read current Graphics register: {Value:X2} {Register}", port, value, _graphicsRegister);
+                }
+                break;
             case Ports.GraphicsControllerData:
-                return Graphics.ReadRegister(_graphicsRegister);
-
+                value = Graphics.ReadRegister(_graphicsRegister);
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read from Graphics register {Register}: {Value:X2} {Explained}", port, _graphicsRegister, value, _graphicsRegister.Explain(value));
+                }
+                break;
             case Ports.SequencerAddress:
-                return (byte)_sequencerRegister;
-
+                value = (byte)_sequencerRegister;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read current _sequencerRegister: {Value:X2} {Register}", port, value, _sequencerRegister);
+                }
+                break;
             case Ports.SequencerData:
-                return Sequencer.ReadRegister(_sequencerRegister);
-
+                value = Sequencer.ReadRegister(_sequencerRegister);
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read from Sequencer register {Register}: {Value:X2} {Explained}", port, _sequencerRegister, value, _sequencerRegister.Explain(value));
+                }
+                break;
             case Ports.AttributeAddress:
-                return (byte)_attributeRegister;
-
+                value = (byte)_attributeRegister;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read _attributeRegister: {Value:X2} {Register}", port, value, _attributeRegister);
+                }
+                break;
             case Ports.AttributeData:
-                return AttributeController.ReadRegister(_attributeRegister);
-
-            case Ports.CrtControllerAddress:
-            case Ports.CrtControllerAddressAlt:
-                return (byte)_crtRegister;
-
-            case Ports.CrtControllerData:
-            case Ports.CrtControllerDataAlt:
-                return CrtController.ReadRegister(_crtRegister);
-
-            case Ports.InputStatus1Read:
-            case Ports.InputStatus1ReadAlt:
+                value = AttributeController.ReadRegister(_attributeRegister);
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read from Attribute register {Register}: {Value:X2}", port, _attributeRegister, value);
+                }
+                break;
+            case Ports.CrtControllerAddress or Ports.CrtControllerAddressAlt:
+                value = (byte)_crtRegister;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read _crtRegister: {Value:X2} {Register}", port, value, _crtRegister);
+                }
+                break;
+            case Ports.CrtControllerData or Ports.CrtControllerDataAlt:
+                value = CrtController.ReadRegister(_crtRegister);
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read from CRT register {Register}: {Value:X2} {Explained}", port, _crtRegister, value, _crtRegister.Explain(value));
+                }
+                break;
+            case Ports.InputStatus1Read or Ports.InputStatus1ReadAlt:
                 _attributeDataMode = false;
-                return GetInputStatus1Value();
-
+                value = GetInputStatus1Value();
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read byte from port InputStatus1Read: {Value:X2} {Binary}", port, value, Convert.ToString(value, 2).PadLeft(8, '0'));
+                }
+                // Next time we will be called retrace will be active, and this until the retrace tick
+                CrtStatusRegister = StatusRegisterRetraceActive;
+                break;
             default:
-                throw new InvalidOperationException($"Reading port 0x{port:X4} is not (yet) supported by this VGA controller.");
+                value = base.ReadByte(port);
+                break;
         }
+
+        return value;
     }
 
     public override ushort ReadWord(int port) {
         byte value = ReadByte(port);
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Returning byte {Byte} for ReadWord() on port {Port}", value, port);
+
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("Returning byte {Byte} for ReadWord() on port {Port}", value, port);
         }
 
         return value;
@@ -184,9 +259,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public override uint ReadDWord(int port) {
         byte value = ReadByte(port);
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Returning byte {Byte} for ReadDWord() on port {Port}", value, port);
+
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("Returning byte {Byte} for ReadDWord() on port {Port}", value, port);
         }
 
         return value;
@@ -195,43 +270,81 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public override void WriteByte(int port, byte value) {
         switch (port) {
             case Ports.DacAddressReadMode:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to DacAddressReadMode: {Value:X2}", port, value);
+                }
                 Dac.ReadIndex = value;
                 break;
 
             case Ports.DacAddressWriteMode:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to DacAddressWriteMode: {Value:X2}", port, value);
+                }
                 Dac.WriteIndex = value;
                 break;
 
             case Ports.DacData:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("[{Port:X4}] Write to DacData: {Value:X2}", port, value);
+                }
                 Dac.Write(value);
+                switch (_dacWriteIndex) {
+                    case 0:
+                        _dacWriteColor = Color.FromArgb(0xFF, value, _dacWriteColor.G, _dacWriteColor.B);
+                        break;
+                    case 1:
+                        _dacWriteColor = Color.FromArgb(0xFF, _dacWriteColor.R, value, _dacWriteColor.B);
+                        break;
+                    case 2:
+                        _dacWriteColor = Color.FromArgb(0xFF, _dacWriteColor.R, _dacWriteColor.G, value);
+                        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                            _logger.Verbose("[{Port:X4}] Write DAC[{Index}]: #{Color:X6}", port, Dac.WriteIndex - 1, _dacWriteColor.ToArgb() & 0x00FFFFFF);
+                        }
+                        break;
+                }
+                _dacWriteIndex = (_dacWriteIndex + 1) % 3;
                 break;
 
             case Ports.GraphicsControllerAddress:
                 _graphicsRegister = (GraphicsRegister)value;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to GraphicsControllerAddress: {Value:X2} {Register}", port, value, _graphicsRegister);
+                }
                 break;
 
             case Ports.GraphicsControllerData:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to Graphics register {Register}: {Value:X2} {Explained}", port, _graphicsRegister, value,  _graphicsRegister.Explain(value));
+                }
                 Graphics.WriteRegister(_graphicsRegister, value);
                 break;
 
             case Ports.SequencerAddress:
                 _sequencerRegister = (SequencerRegister)value;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to SequencerAddress: {Value:X2} {Register}", port, value, _sequencerRegister);
+                }
                 break;
 
             case Ports.SequencerData:
                 SequencerMemoryMode previousMode = Sequencer.SequencerMemoryMode;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to Sequencer register {Register}: {Value:X2} {Explained}", port, _sequencerRegister, value, _sequencerRegister.Explain(value));
+                }
                 Sequencer.WriteRegister(_sequencerRegister, value);
                 if ((previousMode & SequencerMemoryMode.Chain4) == SequencerMemoryMode.Chain4 &&
                     (Sequencer.SequencerMemoryMode & SequencerMemoryMode.Chain4) == 0) {
                     EnterModeX();
                 }
-
                 break;
 
             case Ports.AttributeAddress:
                 if (!_attributeDataMode) {
                     _attributeRegister = (AttributeControllerRegister)(value & 0x1F);
                 } else {
+                    if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                        _logger.Verbose("[{Port:X4}] Write to Attribute register {Register}: {Value:X2} {Binary}", port, _attributeRegister, value, Convert.ToString(value, 2).PadLeft(8, '0'));
+                    }
                     AttributeController.WriteRegister(_attributeRegister, value);
                 }
 
@@ -239,17 +352,26 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 break;
 
             case Ports.AttributeData:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to Attribute register {Register}: {Value:X2} {Binary}", port, _attributeRegister, value, Convert.ToString(value, 2).PadLeft(8, '0'));
+                }
                 AttributeController.WriteRegister(_attributeRegister, value);
                 break;
 
             case Ports.CrtControllerAddress:
             case Ports.CrtControllerAddressAlt:
                 _crtRegister = (CrtControllerRegister)value;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to CrtControllerAddress: {Value:X2} {Register}", port, value, _crtRegister);
+                }
                 break;
 
             case Ports.CrtControllerData:
             case Ports.CrtControllerDataAlt:
                 int previousVerticalEnd = CrtController.VerticalDisplayEnd;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to CRT register {Register}: {Value:X2} {Explained}", port, _crtRegister, value, _crtRegister.Explain(value));
+                }
                 CrtController.WriteRegister(_crtRegister, value);
                 if (previousVerticalEnd != CrtController.VerticalDisplayEnd) {
                     ChangeVerticalEnd();
@@ -257,7 +379,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
                 break;
             default:
-                throw new InvalidOperationException($"Writing 0x{value:X2} to port 0x{port:X4} is not (yet) supported by this VGA controller.");
+                base.WriteByte(port, value);
+                break;
         }
     }
 
@@ -265,8 +388,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     /// Special shortcut for VGA controller to select a register and write a value in one call.
     /// </summary>
     public override void WriteWord(int port, ushort value) {
-        WriteByte(port, (byte)(value & 0xFF));
-        WriteByte(port + 1, (byte)(value >> 8));
+        _machine.IoPortDispatcher.WriteByte(port, (byte)(value & 0xFF));
+        _machine.IoPortDispatcher.WriteByte(port + 1, (byte)(value >> 8));
     }
 
     /// <summary>
@@ -308,10 +431,37 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     ///     Gets the text-mode display instance.
     /// </summary>
     public TextConsole TextConsole { get; }
+    public byte CrtStatusRegister {
+        get => _crtStatusRegister;
+        set {
+            if (_crtStatusRegister != value) {
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("Setting _crtStatusRegister to {Value:X2}", value);
+                }
+                _crtStatusRegister = value;
+            }
+        }
+    }
 
+    public byte GetVramByte(uint address) {
+        return CurrentMode.GetVramByte(address);
+    }
+    public ushort GetVramWord(uint address) {
+        return CurrentMode.GetVramWord(address);
+    }
+    public uint GetVramDWord(uint address) {
+        return CurrentMode.GetVramDWord(address);
+    }
     public void SetVramByte(uint address, byte value) {
         CurrentMode.SetVramByte(address, value);
     }
+    public void SetVramWord(uint address, ushort value) {
+        CurrentMode.SetVramWord(address, value);
+    }
+    public void SetVramDWord(uint address, uint value) {
+        CurrentMode.SetVramDWord(address, value);
+    }
+
 
     public void Render(uint address, object width, object height, nint pixelsAddress) {
         _presenter ??= GetPresenter();
@@ -320,7 +470,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public void TickRetrace() {
         // Inactive at tick time, but will become active once the code checks for it.
-        _crtStatusRegister = StatusRegisterRetraceInactive;
+        CrtStatusRegister = StatusRegisterRetraceInactive;
     }
 
     public void UpdateScreen() {
@@ -330,14 +480,17 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public event EventHandler? VideoModeChanged;
 
     public void WriteString() {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_logger.IsEnabled(LogEventLevel.Information)) {
             uint address = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BP);
             string str = MemoryUtils.GetZeroTerminatedString(_memory.Ram, address, _memory.Ram.Length - (int)address);
-            _loggerService.Information("WRITE STRING: {0}", str);
+            _logger.Information("WRITE STRING: {0}", str);
         }
     }
 
     public void SetVideoMode() {
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("INT 10: Set video mode to {0:X2}", _state.AL);
+        }
         SetVideoModeInternal((VideoModeId)_state.AL);
         _bios.VideoMode = _state.AL;
     }
@@ -378,7 +531,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
         // Indicate success.
         _state.AL = 0x1B;
-
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("INT 10: GetFunctionalityInfo {0}", info);
+        }
         return info;
     }
 
@@ -395,35 +550,52 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             _state.AL = 0x1A; // Function supported
             _state.BL = _bios.DisplayCombinationCode; // Primary display
             _state.BH = 0x00; // No secondary display
+            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                _logger.Verbose("INT 10: Get display combination {0:X2}", _state.BL);
+            }
         } else if (_state.AL == 0x01) {
+            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                _logger.Verbose("INT 10: Set display combination {0:X2}", _state.BL);
+            }
             _state.AL = 0x1A; // Function supported
             _bios.DisplayCombinationCode = _state.BL;
         }
     }
 
     public void VideoSubsystemConfiguration() {
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("INT 10: VideoSubsystemConfiguration {0:X2}", _state.BL);
+        }
         switch (_state.BL) {
             case Functions.EGA_GetInfo:
                 _state.BX = 0x03; // 256k installed
                 _state.CX = 0x09; // EGA switches set
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: VideoSubsystemConfiguration - EGA_GetInfo");
+                }
                 break;
 
             case Functions.EGA_SelectVerticalResolution:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: VideoSubsystemConfiguration - EGA_SelectVerticalResolution {0:X2}", _state.AL);
+                }
                 _verticalTextResolution = _state.AL switch {
                     0 => 8,
                     1 => 14,
                     _ => 16
                 };
-
                 _state.AL = 0x12; // Success
                 break;
 
             case Functions.EGA_PaletteLoading:
                 DefaultPaletteLoading = _state.AL == 0;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: VideoSubsystemConfiguration - EGA_PaletteLoading {0}", DefaultPaletteLoading);
+                }
                 break;
 
             default:
-                _loggerService.Error("Video command {0:X2}, BL={1:X2}h not implemented.", Functions.EGA, _state.BL);
+                _logger.Error("Video command {0:X2}, BL={1:X2}h not implemented.", Functions.EGA, _state.BL);
                 break;
         }
     }
@@ -465,6 +637,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     private void GetFontInformation() {
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("INT 10: GetFontInformation {0:X2}", _state.BH);
+        }
         SegmentedAddress address = _state.BH switch {
             0x00 => new SegmentedAddress(_memory.GetUint16((0x1F * 4) + 2), _memory.GetUint16(0x1F * 4)),
             0x01 => new SegmentedAddress(_memory.GetUint16((0x43 * 4) + 2), _memory.GetUint16(0x43 * 4)),
@@ -481,23 +656,38 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _state.BP = address.Offset;
         _state.CX = _machine.Bios.CharacterPointHeight;
         _state.DL = _machine.Bios.ScreenRows;
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("INT 10: GetFontInformation - {0:X4}:{1:X4} {2} {3}", _state.ES, _state.BP, _state.CX, _state.DL);
+        }
     }
 
     public void GetSetPaletteRegisters() {
         switch (_state.AL) {
             case Functions.Palette_SetSingleRegister:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: SetSinglePaletteRegister {0:X2} {1:X2}", _state.BL, _state.BH);
+                }
                 SetEgaPaletteRegister(_state.BL, _state.BH);
                 break;
 
             case Functions.Palette_SetBorderColor:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: SetBorderColor UNIMPLEMENTED");
+                }
                 // TODO: Implement, ignore or remove
                 break;
 
             case Functions.Palette_SetAllRegisters:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: SetAllPaletteRegisters");
+                }
                 SetAllEgaPaletteRegisters();
                 break;
 
             case Functions.Palette_ReadSingleDacRegister:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: ReadSingleDacRegister {0:X2}", _state.BL);
+                }
                 // TODO: Investigate and fix this.
                 // These are commented out because they cause weird issues sometimes.
                 //vm.Processor.DH = (byte)((dac.Palette[vm.Processor.BL] >> 18) & 0xCF);
@@ -506,24 +696,36 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 break;
 
             case Functions.Palette_SetSingleDacRegister:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: SetSingleDacRegister {0:X2} {1:X2} {2:X2} {3:X2}", _state.BL, _state.DH, _state.CH, _state.CL);
+                }
                 Dac.SetColor(_state.BL, _state.DH, _state.CH, _state.CL);
                 break;
 
             case Functions.Palette_SetDacRegisters:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: SetDacRegisters");
+                }
                 SetDacRegisters();
                 break;
 
             case Functions.Palette_ReadDacRegisters:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: ReadDacRegisters");
+                }
                 ReadDacRegisters();
                 break;
 
             case Functions.Palette_ToggleBlink:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: ToggleBlink UNIMPLEMENTED");
+                }
                 // TODO: Implement, ignore or remove
                 break;
 
             case Functions.Palette_SelectDacColorPage:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("Select DAC color page");
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("Select DAC color page UNIMPLEMENTED");
                 }
 
                 break;
@@ -652,8 +854,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public void SetCursorType() {
         byte topScanLine = _state.CH;
         byte bottomScanLine = _state.CL;
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("SET CURSOR TYPE, SCAN LINE TOP: {@Top} BOTTOM: {@Bottom}", topScanLine,
+        if (_logger.IsEnabled(LogEventLevel.Information)) {
+            _logger.Information("SET CURSOR TYPE, SCAN LINE TOP: {@Top} BOTTOM: {@Bottom}", topScanLine,
                 bottomScanLine);
         }
     }
@@ -693,7 +895,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 break;
 
             case VideoModeId.Graphics320X200X8:
-                Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4;
+                Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4 | SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
                 mode = new Vga256(320, 200, this);
                 break;
 
@@ -706,7 +908,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 throw new NotSupportedException($"Video mode {id} is not supported.");
         }
 
-        _loggerService.Information("Setting video mode to {@Mode}", id);
+        _logger.Information("Setting video mode to {@Mode}", id);
 
         _gui?.SetResolution(mode.PixelWidth, mode.PixelHeight,
             MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
@@ -746,7 +948,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Dac.Reset();
         }
 
-        _loggerService.Information("Video mode changed to {@Mode}", mode.GetType().Name);
+        _logger.Information("Video mode changed to {@Mode}", mode.GetType().Name);
         _presenter = GetPresenter();
         VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(true));
     }
@@ -754,6 +956,10 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public Presenter GetPresenter() {
         if (CurrentMode.VideoModeType == VideoModeType.Text) {
             return new TextPresenter(CurrentMode);
+        }
+
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("Initializing graphics presenter for mode {@Mode}", CurrentMode);
         }
 
         return CurrentMode.BitsPerPixel switch {
@@ -771,6 +977,11 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     /// </summary>
     /// <returns>Current value of the input status 1 register.</returns>
     private byte GetInputStatus1Value() {
+        // uint value = InterruptTimer.IsInRealtimeInterval(VerticalBlankingTime, RefreshRate) ? 0x09u : 0x00u;
+        // if (InterruptTimer.IsInRealtimeInterval(HorizontalBlankingTime, HorizontalPeriod))
+        //     value |= 0x01u;
+        //
+        // return (byte)value;
         /*
          * bit 7,6: reserved
          * bit 5,4: "video feedback" color debug bits
@@ -778,9 +989,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
          * bit 2,1: reserved
          * bit 0: Display Enable
          */
-        byte res = _crtStatusRegister;
-        // Next time we will be called retrace will be active, and this until the retrace tick
-        _crtStatusRegister = StatusRegisterRetraceActive;
+        byte res = CrtStatusRegister;
+
         return res;
     }
 
@@ -790,10 +1000,43 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     private void EnterModeX() {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("ENTER MODE X");
+        }
         var mode = new Unchained256(320, 200, this);
         CrtController.Offset = 320 / 8;
         CurrentMode = mode;
+        _presenter = GetPresenter();
         VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(false));
     }
 
+}
+
+public class VideoMemory : Memory {
+    private readonly IVideoCard _videoCard;
+    private readonly uint _baseAddress;
+
+    public VideoMemory(uint sizeInKb, IVideoCard videoCard, uint baseAddress) : base(sizeInKb) {
+        _videoCard = videoCard;
+        _baseAddress = baseAddress;
+    }
+
+    public override ushort GetUint16(uint address) {
+        return _videoCard.GetVramWord(address - _baseAddress);
+    }
+    public override uint GetUint32(uint address) {
+        return _videoCard.GetVramDWord(address - _baseAddress);
+    }
+    public override byte GetUint8(uint address) {
+        return _videoCard.GetVramByte(address - _baseAddress);
+    }
+    public override void SetUint16(uint address, ushort value) {
+        _videoCard.SetVramWord(address - _baseAddress, value);
+    }
+    public override void SetUint32(uint address, uint value) {
+        _videoCard.SetVramDWord(address - _baseAddress, value);
+    }
+    public override void SetUint8(uint address, byte value) {
+        _videoCard.SetVramByte(address - _baseAddress, value);
+    }
 }

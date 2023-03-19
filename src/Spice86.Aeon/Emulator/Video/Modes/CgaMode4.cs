@@ -15,7 +15,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
 
         public override int Stride => 80;
 
-        internal override byte GetVramByte(uint offset)
+        public override byte GetVramByte(uint offset)
         {
             offset -= BaseAddress;
             unsafe
@@ -32,7 +32,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 videoRam[offset] = value;
             }
         }
-        internal override ushort GetVramWord(uint offset)
+        public override ushort GetVramWord(uint offset)
         {
             offset -= BaseAddress;
             unsafe
@@ -40,7 +40,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 return *(ushort*)(videoRam + offset);
             }
         }
-        internal override void SetVramWord(uint offset, ushort value)
+        public override void SetVramWord(uint offset, ushort value)
         {
             offset -= BaseAddress;
             unsafe
@@ -48,7 +48,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 *(ushort*)(videoRam + offset) = value;
             }
         }
-        internal override uint GetVramDWord(uint offset)
+        public override uint GetVramDWord(uint offset)
         {
             offset -= BaseAddress;
             unsafe
@@ -56,7 +56,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 return *(uint*)(videoRam + offset);
             }
         }
-        internal override void SetVramDWord(uint offset, uint value)
+        public override void SetVramDWord(uint offset, uint value)
         {
             offset -= BaseAddress;
             unsafe

@@ -73,6 +73,7 @@ public interface IGui {
     /// <summary>
     /// Adds a videobuffer to the GUI.
     /// </summary>
+    /// <param name="videoCard"></param>
     /// <param name="address">The start address in memory of the videobuffer.</param>
     /// <param name="scale">The amount by which to scale up the videobuffer on screen.</param>
     /// <param name="bufferWidth">The width, in pixels.</param>

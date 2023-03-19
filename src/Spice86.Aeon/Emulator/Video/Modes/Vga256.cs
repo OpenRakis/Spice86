@@ -17,7 +17,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
 
         public override int MouseWidth => PixelWidth * 2;
 
-        internal override byte GetVramByte(uint offset)
+        public override byte GetVramByte(uint offset)
         {
             unsafe
             {
@@ -32,28 +32,28 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 videoRam[offset] = value;
             }
         }
-        internal override ushort GetVramWord(uint offset)
+        public override ushort GetVramWord(uint offset)
         {
             unsafe
             {
                 return *(ushort*)(videoRam + offset);
             }
         }
-        internal override void SetVramWord(uint offset, ushort value)
+        public override void SetVramWord(uint offset, ushort value)
         {
             unsafe
             {
                 *(ushort*)(videoRam + offset) = value;
             }
         }
-        internal override uint GetVramDWord(uint offset)
+        public override uint GetVramDWord(uint offset)
         {
             unsafe
             {
                 return *(uint*)(videoRam + offset);
             }
         }
-        internal override void SetVramDWord(uint offset, uint value)
+        public override void SetVramDWord(uint offset, uint value)
         {
             unsafe
             {

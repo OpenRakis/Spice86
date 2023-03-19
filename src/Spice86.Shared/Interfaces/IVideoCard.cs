@@ -10,4 +10,9 @@ public interface IVideoCard {
     ///  Occurs when the emulated display mode has changed.
     /// </summary>
     public event EventHandler? VideoModeChanged;
+    uint GetVramDWord(uint baseAddress);
+    byte GetVramByte(uint baseAddress);
+    ushort GetVramWord(uint baseAddress);
+    void SetVramWord(uint baseAddress, ushort value);
+    void SetVramDWord(uint baseAddress, uint value);
 }

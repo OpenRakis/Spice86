@@ -148,7 +148,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         /// <param name="offset">Address of byte to read.</param>
         /// <returns>Byte at specified address.</returns>
-        internal abstract byte GetVramByte(uint offset);
+        public abstract byte GetVramByte(uint offset);
         /// <summary>
         /// Writes a byte to an address in video memory.
         /// </summary>
@@ -160,25 +160,25 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         /// <param name="offset">Address of word to read.</param>
         /// <returns>Word at specified address.</returns>
-        internal abstract ushort GetVramWord(uint offset);
+        public abstract ushort GetVramWord(uint offset);
         /// <summary>
         /// Writes a 16-bit word to an address in video memory.
         /// </summary>
         /// <param name="offset">Address where word will be written.</param>
         /// <param name="value">Value to write to specified address.</param>
-        internal abstract void SetVramWord(uint offset, ushort value);
+        public abstract void SetVramWord(uint offset, ushort value);
         /// <summary>
         /// Reads a 32-bit doubleword from an address in video memory.
         /// </summary>
         /// <param name="offset">Address of doubleword to read.</param>
         /// <returns>Doubleword at specified address.</returns>
-        internal abstract uint GetVramDWord(uint offset);
+        public abstract uint GetVramDWord(uint offset);
         /// <summary>
         /// Writes a 32-bit doubleword to an address in video memory.
         /// </summary>
         /// <param name="offset">Address where doubleword will be written.</param>
         /// <param name="value">Value to write to specified address.</param>
-        internal abstract void SetVramDWord(uint offset, uint value);
+        public abstract void SetVramDWord(uint offset, uint value);
         /// <summary>
         /// Writes a character at a position on the screen with the current font.
         /// </summary>

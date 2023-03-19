@@ -50,6 +50,10 @@ public class MainMemory : Memory {
             }
         }
     }
+    public static long ConvMemorySize {
+        get;
+        set;
+    }
 
     private void SetUnalignedUint16(uint address, ushort value) {
         SetUint8(address + 0, (byte)(value & 0xFF));

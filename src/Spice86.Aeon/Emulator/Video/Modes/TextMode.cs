@@ -48,7 +48,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         /// </summary>
         private bool IsOddEvenReadEnabled => (graphics.GraphicsMode & 0x10) != 0;
 
-        internal override byte GetVramByte(uint offset)
+        public override byte GetVramByte(uint offset)
         {
             if (offset - BaseAddress >= vramSize)
                 return 0;
@@ -97,17 +97,17 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 }
             }
         }
-        internal override ushort GetVramWord(uint offset)
+        public override ushort GetVramWord(uint offset)
         {
             uint value = GetVramByte(offset);
             return (ushort)(value | (uint)(GetVramByte(offset + 1u) << 8));
         }
-        internal override void SetVramWord(uint offset, ushort value)
+        public override void SetVramWord(uint offset, ushort value)
         {
             SetVramByte(offset, (byte)value);
             SetVramByte(offset + 1u, (byte)(value >> 8));
         }
-        internal override uint GetVramDWord(uint offset)
+        public override uint GetVramDWord(uint offset)
         {
             uint value = GetVramByte(offset);
             value |= (uint)(GetVramByte(offset + 1u) << 8);
@@ -115,7 +115,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
             value |= (uint)(GetVramByte(offset + 3u) << 24);
             return value;
         }
-        internal override void SetVramDWord(uint offset, uint value)
+        public override void SetVramDWord(uint offset, uint value)
         {
             SetVramByte(offset, (byte)value);
             SetVramByte(offset + 1u, (byte)(value >> 8));
@@ -132,8 +132,8 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         {
             base.InitializeMode(video);
             graphics.GraphicsMode = 0x10; // OddEven mode
-            graphics.MiscellaneousGraphics = 0xE0; // OddEven mode
-            sequencer.SequencerMemoryMode = SequencerMemoryMode.ExtendedMemory;
+            graphics.MiscellaneousGraphics = 0b00000001;
+            sequencer.SequencerMemoryMode = SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
             sequencer.MapMask = 0x03;
         }
         /// <summary>

@@ -12,4 +12,8 @@
         <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
+    </ItemGroup>
+
 </Project>
