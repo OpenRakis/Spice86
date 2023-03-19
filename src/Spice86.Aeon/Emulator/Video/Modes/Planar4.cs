@@ -24,7 +24,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
             sequencer = video.Sequencer;
         }
 
-        internal override byte GetVramByte(uint offset)
+        public override byte GetVramByte(uint offset)
         {
             offset %= 65536u;
 

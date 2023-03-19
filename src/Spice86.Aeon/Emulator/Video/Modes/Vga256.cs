@@ -17,7 +17,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
 
         public override int MouseWidth => PixelWidth * 2;
 
-        internal override byte GetVramByte(uint offset)
+        public override byte GetVramByte(uint offset)
         {
             unsafe
             {

@@ -64,6 +64,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             VideoRam = new nint(NativeMemory.AllocZeroed(TotalVramBytes));
         }
 
+        var memoryDevice = new VideoMemory(0x10000, this, 0xA0000);
+        _machine.Memory.RegisterMapping(0xA0000, 0x10000, memoryDevice);
+
         InitializeStaticFunctionalityTable();
         TextConsole = new TextConsole(this, _bios.ScreenColumns, _bios.ScreenRows);
         SetVideoModeInternal(VideoModeId.ColorText80X25X4);
@@ -306,6 +309,10 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     /// </summary>
     public TextConsole TextConsole { get; }
 
+    public byte GetVramByte(uint address) {
+        return CurrentMode.GetVramByte(address);
+    }
+    
     public void SetVramByte(uint address, byte value) {
         CurrentMode.SetVramByte(address, value);
     }

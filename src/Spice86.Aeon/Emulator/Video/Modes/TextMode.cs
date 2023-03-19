@@ -48,7 +48,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         /// </summary>
         private bool IsOddEvenReadEnabled => (graphics.GraphicsMode & 0x10) != 0;
 
-        internal override byte GetVramByte(uint offset)
+        public override byte GetVramByte(uint offset)
         {
             if (offset - BaseAddress >= vramSize)
                 return 0;

@@ -15,7 +15,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
 
         public override int Stride => 80;
 
-        internal override byte GetVramByte(uint offset)
+        public override byte GetVramByte(uint offset)
         {
             offset -= BaseAddress;
             unsafe
