@@ -1,6 +1,4 @@
-﻿using Spice86.Core.Emulator.Devices.Memory;
-
-namespace Spice86.Core.Emulator.VM;
+﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
@@ -75,7 +73,7 @@ public class Machine : IDisposable {
 
     public MachineBreakpoints MachineBreakpoints { get; }
 
-    public MainMemory MainMemory { get; }
+    public Memory Memory { get; }
 
     public Midi Midi { get; }
 
@@ -124,8 +122,9 @@ public class Machine : IDisposable {
         Gui = gui;
         RecordData = recordData;
 
-        MainMemory = new MainMemory(sizeInKb: (uint)Configuration.Kilobytes);
-        Bios = new Bios(MainMemory);
+        IMemoryDevice ram = new Ram((uint)Configuration.Kilobytes * 1024);
+        Memory = new Memory(ram);
+        Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
         // Breakpoints
@@ -138,7 +137,7 @@ public class Machine : IDisposable {
             configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
 
-        DmaController = new DmaController(this, configuration);
+        DmaController = new DmaController(this, configuration, loggerService);
         Register(DmaController);
 
         DualPic = new DualPic(this, configuration, loggerService);
@@ -149,16 +148,16 @@ public class Machine : IDisposable {
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
         Register(Keyboard);
-        Joystick = new Joystick(this, configuration);
+        Joystick = new Joystick(this, configuration, loggerService);
         Register(Joystick);
         PcSpeaker = new PcSpeaker(this, loggerService, configuration);
         Register(PcSpeaker);
-        OPL3FM = new OPL3FM(this, configuration);
+        OPL3FM = new OPL3FM(this, configuration, loggerService);
         Register(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, configuration);
+        SoundBlaster = new SoundBlaster(this, configuration, loggerService);
         Register(SoundBlaster);
         SoundBlaster.AddEnvironnmentVariable();
-        GravisUltraSound = new GravisUltraSound(this, configuration);
+        GravisUltraSound = new GravisUltraSound(this, configuration, loggerService);
         Register(GravisUltraSound);
         Midi = new Midi(this, configuration, loggerService);
         Register(Midi);

@@ -1,7 +1,7 @@
-﻿using Avalonia.Collections;
-
+﻿
 namespace Spice86.ViewModels;
 
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Models;
 
 using System;
-using System.Linq;
 
 public partial class PerformanceViewModel : ObservableObject {
     private readonly DispatcherTimer? _timer;
@@ -24,6 +23,11 @@ public partial class PerformanceViewModel : ObservableObject {
 
     [ObservableProperty]
     private AvaloniaList<Measurement> _cpuHistoryDataPoints = new();
+
+    [ObservableProperty]
+    private double _averageInstructionsPerSecond;
+
+    private long _instructionsPerSecondSampleNumber;
 
     private const int CpuHistoryTimeSpanInMinutes = 10;
 
@@ -43,6 +47,14 @@ public partial class PerformanceViewModel : ObservableObject {
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(300), DispatcherPriority.Normal, UpdatePerformanceInfo);
         _timer.Start();
     }
+    
+    private static double ApproxRollingAverage(double currentAverage, double instructionsPerSecond, long instructionsPerSecondSampleNumber) {
+
+        currentAverage -= currentAverage / instructionsPerSecondSampleNumber;
+        currentAverage += instructionsPerSecond / instructionsPerSecondSampleNumber;
+
+        return currentAverage;
+    }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
         if (_machine is null) {
@@ -51,6 +63,11 @@ public partial class PerformanceViewModel : ObservableObject {
         if (DateTimeOffset.Now - _lastUpdateTime >= TimeSpan.FromSeconds(1)) {
             if (_lastUpdateTime != DateTimeOffset.MinValue) {
                 InstructionsPerSecond = _machine.Cpu.State.Cycles - InstructionsExecuted;
+                if (double.IsNaN(AverageInstructionsPerSecond)) {
+                    AverageInstructionsPerSecond = InstructionsPerSecond;
+                }
+                AverageInstructionsPerSecond = ApproxRollingAverage(AverageInstructionsPerSecond, InstructionsPerSecond,
+                    _instructionsPerSecondSampleNumber++);
                 if(_mainViewModel?.VideoBuffers.Count > 0) {
                     FramesPerSecond = _mainViewModel.VideoBuffers
                         .Select(x => x.FramesRendered - _framesRendered

@@ -14,12 +14,10 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class Keyboard : DefaultIOPortHandler {
     private const int KeyboardIoPort = 0x60;
-    private readonly ILoggerService _loggerService;
     private readonly IGui? _gui;
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
-    public Keyboard(Machine machine, ILoggerService loggerService, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) : base(machine, configuration) {
-        _loggerService = loggerService;
+    public Keyboard(Machine machine, ILoggerService loggerService, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) : base(machine, configuration, loggerService) {
         _gui = gui;
         _keyScanCodeConverter = keyScanCodeConverter;
         if (_gui is not null) {

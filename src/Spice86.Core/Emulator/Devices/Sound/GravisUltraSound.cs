@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Gravis Ultra Sound implementation. Emulates an absent card :)
@@ -15,7 +16,7 @@ public class GravisUltraSound : DefaultIOPortHandler {
     private const int RegisterControls = 0x24F;
     private const int TimerControlRegister = 0x248;
 
-    public GravisUltraSound(Machine machine, Configuration configuration) : base(machine, configuration) {
+    public GravisUltraSound(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 using System;
 
@@ -30,7 +31,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     private bool _disposed = false;
 
-    public OPL3FM(Machine machine, Configuration configuration) : base(machine, configuration) {
+    public OPL3FM(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _audioPlayer = Audio.CreatePlayer(48000, 2048);
         if (_audioPlayer is not null) {
             _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);

@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Shared.Interfaces;
 
-using Spice86.Shared;
-
 using System.Collections.Generic;
 
 /// <summary>
@@ -73,7 +71,7 @@ public interface IGui {
     /// <summary>
     /// Adds a videobuffer to the GUI.
     /// </summary>
-    /// <param name="videoCard"></param>
+    /// <param name="videoCard">The video card implementation to use</param>
     /// <param name="address">The start address in memory of the videobuffer.</param>
     /// <param name="scale">The amount by which to scale up the videobuffer on screen.</param>
     /// <param name="bufferWidth">The width, in pixels.</param>

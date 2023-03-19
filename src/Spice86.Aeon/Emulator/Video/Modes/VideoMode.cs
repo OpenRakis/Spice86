@@ -160,25 +160,25 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         /// <param name="offset">Address of word to read.</param>
         /// <returns>Word at specified address.</returns>
-        public abstract ushort GetVramWord(uint offset);
+        internal abstract ushort GetVramWord(uint offset);
         /// <summary>
         /// Writes a 16-bit word to an address in video memory.
         /// </summary>
         /// <param name="offset">Address where word will be written.</param>
         /// <param name="value">Value to write to specified address.</param>
-        public abstract void SetVramWord(uint offset, ushort value);
+        internal abstract void SetVramWord(uint offset, ushort value);
         /// <summary>
         /// Reads a 32-bit doubleword from an address in video memory.
         /// </summary>
         /// <param name="offset">Address of doubleword to read.</param>
         /// <returns>Doubleword at specified address.</returns>
-        public abstract uint GetVramDWord(uint offset);
+        internal abstract uint GetVramDWord(uint offset);
         /// <summary>
         /// Writes a 32-bit doubleword to an address in video memory.
         /// </summary>
         /// <param name="offset">Address where doubleword will be written.</param>
         /// <param name="value">Value to write to specified address.</param>
-        public abstract void SetVramDWord(uint offset, uint value);
+        internal abstract void SetVramDWord(uint offset, uint value);
         /// <summary>
         /// Writes a character at a position on the screen with the current font.
         /// </summary>

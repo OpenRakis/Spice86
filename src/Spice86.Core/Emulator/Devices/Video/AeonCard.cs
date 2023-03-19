@@ -54,7 +54,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private readonly Bios _bios;
     private readonly LazyConcurrentDictionary<FontType, SegmentedAddress> _fonts = new();
     private readonly IGui? _gui;
-    private readonly ILoggerService _loggerService;
     private bool _attributeDataMode;
     private AttributeControllerRegister _attributeRegister;
     private CrtControllerRegister _crtRegister;
@@ -76,7 +75,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         base(machine, configuration) {
         _bios = machine.Bios;
         _state = machine.Cpu.State;
-        _loggerService = loggerService;
         _logger = new LoggerConfiguration()
             .WriteTo.Console(outputTemplate: LogFormat)
             .WriteTo.File("aeon.log", outputTemplate: LogFormat)
@@ -88,8 +86,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             VideoRam = new nint(NativeMemory.AllocZeroed(TotalVramBytes));
         }
 
-        var videoRam = new VideoMemory(256, this, 0xA0000);
-        machine.MainMemory.RegisterMapping(0xA0000, 0x10000, videoRam);
+        var memoryDevice = new VideoMemory(0x10000, this, 0xA0000);
+        _machine.Memory.RegisterMapping(0xA0000, 0x10000, memoryDevice);
 
         InitializeStaticFunctionalityTable();
         TextConsole = new TextConsole(this, _bios.ScreenColumns, _bios.ScreenRows);
@@ -1010,33 +1008,4 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(false));
     }
 
-}
-
-public class VideoMemory : Memory {
-    private readonly IVideoCard _videoCard;
-    private readonly uint _baseAddress;
-
-    public VideoMemory(uint sizeInKb, IVideoCard videoCard, uint baseAddress) : base(sizeInKb) {
-        _videoCard = videoCard;
-        _baseAddress = baseAddress;
-    }
-
-    public override ushort GetUint16(uint address) {
-        return _videoCard.GetVramWord(address - _baseAddress);
-    }
-    public override uint GetUint32(uint address) {
-        return _videoCard.GetVramDWord(address - _baseAddress);
-    }
-    public override byte GetUint8(uint address) {
-        return _videoCard.GetVramByte(address - _baseAddress);
-    }
-    public override void SetUint16(uint address, ushort value) {
-        _videoCard.SetVramWord(address - _baseAddress, value);
-    }
-    public override void SetUint32(uint address, uint value) {
-        _videoCard.SetVramDWord(address - _baseAddress, value);
-    }
-    public override void SetUint8(uint address, byte value) {
-        _videoCard.SetVramByte(address - _baseAddress, value);
-    }
 }

@@ -26,7 +26,7 @@ public class DualPic : DefaultIOPortHandler {
     private readonly Pic _pic1;
     private readonly Pic _pic2;
 
-    public DualPic(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration) {
+    public DualPic(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _pic1 = new Pic(machine, loggerService, true);
         _pic2 = new Pic(machine, loggerService, false);
         Initialize();

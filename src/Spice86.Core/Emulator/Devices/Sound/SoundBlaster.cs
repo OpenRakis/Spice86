@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.Blaster;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
@@ -82,7 +83,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="irq">IRQ number for the Sound Blaster.</param>
     /// <param name="dma8">8-bit DMA channel for the Sound Blaster.</param>
     /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
-    public SoundBlaster(Machine machine, Configuration configuration, byte irq = 7, int dma8 = 1, int dma16 = 5) : base(machine, configuration) {
+    /// <param name="loggerService">The logging service for events such as non-fatal errors, warnings, or information</param>
+    public SoundBlaster(Machine machine, Configuration configuration, ILoggerService loggerService, byte irq = 7, int dma8 = 1, int dma16 = 5) : base(machine, configuration, loggerService) {
         _machine.Paused += MachinePaused;
         _machine.Resumed += MachineResumed;
         IRQ = irq;
