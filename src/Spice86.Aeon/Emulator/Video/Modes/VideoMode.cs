@@ -148,7 +148,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         /// <param name="offset">Address of byte to read.</param>
         /// <returns>Byte at specified address.</returns>
-        internal abstract byte GetVramByte(uint offset);
+        public abstract byte GetVramByte(uint offset);
         /// <summary>
         /// Writes a byte to an address in video memory.
         /// </summary>
