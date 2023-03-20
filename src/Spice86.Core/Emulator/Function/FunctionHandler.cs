@@ -49,7 +49,10 @@ public class FunctionHandler {
             FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, recordReturn);
             _callerStack.Push(currentFunctionCall);
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _loggerService.Debug("Calling {@CurrentFunction} from {@Caller}", currentFunction, caller);
+                // _loggerService.Debug("{Address} Calling {@CurrentFunction} from {@Caller}", expectedReturnAddress, currentFunction.ToString(), caller?.ToString());
+            }
+            else if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Calling {@CurrentFunction} from {@Caller}", currentFunction, caller);
             }
 
             currentFunction.Enter(caller);
@@ -127,7 +130,10 @@ public class FunctionHandler {
             FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
             bool returnAddressAlignedWithCallStack = AddReturn(returnCallType, currentFunctionCall, currentFunctionInformation);
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _loggerService.Debug("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
+                // _loggerService.Debug("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation?.ToString(), GetFunctionInformation(CurrentFunctionCall)?.ToString());
+            }
+            else if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
             }
 
             if (!returnAddressAlignedWithCallStack) {

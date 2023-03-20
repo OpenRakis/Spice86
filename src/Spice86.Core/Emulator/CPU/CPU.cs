@@ -13,6 +13,8 @@ using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.CPU;
 
+using Serilog.Context;
+
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
 /// program use them. <br /> It also has some x87 FPU instructions to support telling the programs

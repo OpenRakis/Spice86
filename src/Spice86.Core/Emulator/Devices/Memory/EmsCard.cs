@@ -13,7 +13,6 @@ public class EmsCard : DefaultIOPortHandler {
         var ram = new Ram(6 * 1024 * 1024);
         ExpandedMemory = new Memory(ram);
         machine.Memory.RegisterMapping(0xE0000, 0x10000, ram);
-
     }
 
     public Memory ExpandedMemory { get; }
