@@ -8,6 +8,9 @@ namespace Spice86.Aeon.Emulator.Video
     public class Dac
     {
         private readonly Rgb[] _palette = new Rgb[256];
+        // TODO: Replace this with the faster FrozenDictionary once .NET 8 is released
+        // ImmutableDictionary is not immutable, and ReadOnlyDictionary is slower
+        private readonly Dictionary<byte, byte> _lightCorrectedValuesLookupTable = new();
         private int _readChannel;
         private int _writeChannel;
         private byte _readIndex;
@@ -18,6 +21,9 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         public Dac()
         {
+            for (int i = 0; i < byte.MaxValue + 1; i++) {
+                _lightCorrectedValuesLookupTable.Add((byte)i, (byte)(i * 255 / 63));
+            }
             Reset();
         }
 
@@ -86,13 +92,13 @@ namespace Spice86.Aeon.Emulator.Video
                 // We could shift by 2 instead, but while it's faster,
                 // it may not be as accurate.
                 case 1:
-                    color.G = (byte)(value * 255 / 63);
+                    color.G = _lightCorrectedValuesLookupTable[value];
                     break;
                 case 2:
-                    color.B = (byte)(value * 255 / 63);
+                    color.B = _lightCorrectedValuesLookupTable[value];
                     break;
                 default:
-                    color.R = (byte)(value * 255 / 63);
+                    color.R = _lightCorrectedValuesLookupTable[value];
                     _writeChannel = 0;
                     _writeIndex++;
                     break;
