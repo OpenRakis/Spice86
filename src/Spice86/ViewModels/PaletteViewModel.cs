@@ -2,6 +2,8 @@ namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
+using Avalonia.Media;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -26,10 +28,13 @@ public partial class PaletteViewModel : ObservableObject {
         _machine = machine;
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
         _timer.Start();
+        for (int i = 0; i < 256; i++) {
+            _palette.Add(new (){Fill = new SolidColorBrush()});
+        }
     }
 
     [ObservableProperty]
-    private AvaloniaList<Rgb> _palette = new();
+    private AvaloniaList<Rectangle> _palette = new();
 
     /// <summary>
     /// Invoked by the timer to update the displayed colors.
@@ -42,7 +47,13 @@ public partial class PaletteViewModel : ObservableObject {
             return;
         }
         ReadOnlySpan<Rgb> palette = videoCard.Dac.Palette;
-        Palette.Clear();
-        Palette.AddRange(palette.ToArray());
+        for(int i = 0; i < Palette.Count; i++) {
+            Rectangle rectangle = Palette[i];
+            Rgb source = palette[i];
+            if (rectangle.Fill is SolidColorBrush fill &&
+                (source.R != fill.Color.R || source.G != fill.Color.G || source.B != fill.Color.B)) {
+                fill.Color = Color.FromRgb(source.R, source.G, source.B);
+            }
+        }
     }
 }

@@ -4,7 +4,10 @@ using Avalonia.Markup.Xaml;
 
 namespace Spice86.UserControls;
 
+using Avalonia.Collections;
 using Avalonia.Controls.Shapes;
+
+using Spice86.Shared;
 
 public partial class PaletteUserControl : UserControl {
     public PaletteUserControl() {
@@ -14,10 +17,10 @@ public partial class PaletteUserControl : UserControl {
     private void InitializeComponent() {
         AvaloniaXamlLoader.Load(this);
     }
-    public static readonly StyledProperty<IEnumerable<Rectangle>> PaletteProperty =
-        AvaloniaProperty.Register<PaletteUserControl, IEnumerable<Rectangle>>(nameof(Palette));
+    public static readonly StyledProperty<AvaloniaList<Rgb>> PaletteProperty =
+        AvaloniaProperty.Register<PaletteUserControl, AvaloniaList<Rgb>>(nameof(Palette));
 
-    public IEnumerable<Rectangle> Palette
+    public AvaloniaList<Rgb> Palette
     {
         get { return GetValue(PaletteProperty); }
         set { SetValue(PaletteProperty, value); }
