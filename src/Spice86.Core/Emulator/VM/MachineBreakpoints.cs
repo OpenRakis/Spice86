@@ -21,7 +21,7 @@ public sealed class MachineBreakpoints : IDisposable {
 
     public MachineBreakpoints(Machine machine, ILoggerService loggerService) {
         _state = machine.Cpu.State;
-        _memory = machine.MainMemory;
+        _memory = machine.Memory;
         PauseHandler = new(
             loggerService,
             machine.Gui);

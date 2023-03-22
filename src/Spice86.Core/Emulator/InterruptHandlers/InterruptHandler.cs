@@ -21,7 +21,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
 
     protected InterruptHandler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _machine = machine;
-        _memory = machine.MainMemory;
+        _memory = machine.Memory;
         _cpu = machine.Cpu;
         _state = _cpu.State;
     }

@@ -24,7 +24,7 @@ public abstract class ExecutableFileLoader {
         _loggerService = loggerService;
         _machine = machine;
         _cpu = machine.Cpu;
-        _memory = machine.MainMemory;
+        _memory = machine.Memory;
     }
     public abstract bool DosInitializationNeeded {
         get;

@@ -1,23 +1,12 @@
-﻿using Serilog;
-using Serilog.Events;
-
-using Spice86.Core.Emulator.Devices.Memory;
-using Spice86.Logging;
-
-using System.Numerics;
-
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using System.Numerics;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
-
-using System.Linq;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
@@ -28,69 +17,16 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public const string EmsIdentifier = "EMMXXXX0";
 
     public const ushort EmmMaxHandles = 200;
-    
-
-    public Memory ExpandedMemory { get; init; }
-
     public override ushort? InterruptHandlerSegment => 0xF100;
 
     private readonly ILoggerService _loggerService;
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
         _loggerService = loggerService;
-        ExpandedMemory = new(8 * 1024);
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
-
         FillDispatchTable();
     }
-
-    public bool TryGetMappedPageData(uint address, out uint data) {
-        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
-            data = 0;
-            return false;
-        }
-        data = _machine.EmsCard.ExpandedMemory.GetUint32(address);
-        return true;
-    }
-
-    public bool TryGetMappedPageData(uint address, out ushort data) {
-        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
-            data = 0;
-            return false;
-        }
-        data = _machine.EmsCard.ExpandedMemory.GetUint16(address);
-        return true;
-    }
-    
-    public bool TryGetMappedPageData(uint address, out byte data) {
-        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
-            data = 0;
-            return false;
-        }
-        data = _machine.EmsCard.ExpandedMemory.GetUint8(address);
-        return true;
-    }
-
-    public bool TryWriteMappedPageData<T>(uint address, T data) where T : INumber<T> {
-        if (address is < (PageFrameSegment << 4) or >= (PageFrameSegment << 4) + 65536) {
-            return false;
-        }
-        switch (data)
-        {
-            case byte b:
-                _machine.EmsCard.ExpandedMemory.SetUint8(address, b);
-                break;
-            case ushort u:
-                _machine.EmsCard.ExpandedMemory.SetUint16(address, u);
-                break;
-            case uint i:
-                _machine.EmsCard.ExpandedMemory.SetUint32(address, i);
-                break;
-        }
-        return true;
-    }
-
 
     private void FillDispatchTable() {
         _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
