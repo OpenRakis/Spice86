@@ -69,14 +69,14 @@ namespace Spice86.Aeon.Emulator.Video
             switch (_readChannel)
             {
                 case 1:
-                    return color.G;
+                    return color.R;
                 case 2:
-                    return color.B;
+                    return color.G;
             }
 
             _readChannel = 0;
             _readIndex++;
-            return color.R;
+            return color.B;
         }
         
         /// <summary>
