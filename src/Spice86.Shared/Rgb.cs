@@ -31,6 +31,6 @@ public class Rgb {
     }
 
     public static uint ToUint(Rgb v) {
-        return (uint)(v.G << 16 | v.B << 8 | v.R);
+        return (uint)(v.R << 16 | v.G << 8 | v.B);
     }
 }
