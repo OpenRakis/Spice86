@@ -8,9 +8,6 @@ namespace Spice86.Aeon.Emulator.Video
     public class Dac
     {
         private readonly Rgb[] _palette = new Rgb[256];
-        // TODO: Replace this with the faster FrozenDictionary once .NET 8 is released
-        // ImmutableDictionary is not immutable, and ReadOnlyDictionary is slower
-        private readonly Dictionary<byte, byte> _lightCorrectedValuesLookupTable = new();
         private int _readChannel;
         private int _writeChannel;
         private byte _readIndex;
@@ -21,9 +18,6 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         public Dac()
         {
-            for (int i = 0; i < byte.MaxValue + 1; i++) {
-                _lightCorrectedValuesLookupTable.Add((byte)i, (byte)(i * 255 / 63));
-            }
             Reset();
         }
 
@@ -62,21 +56,20 @@ namespace Spice86.Aeon.Emulator.Video
         /// Reads the next channel in the current color.
         /// </summary>
         /// <returns>Red, green, or blue channel value.</returns>
-        public byte Read()
-        {
-            Rgb color = _palette[_readIndex];
+        public byte Read() {
+            uint color = _palette[_readIndex];
             _readChannel++;
             switch (_readChannel)
             {
                 case 1:
-                    return color.R;
+                    return (byte)((color >> 18) & 0x3F);
                 case 2:
-                    return color.G;
+                    return (byte)((color >> 10) & 0x3F);
             }
 
             _readChannel = 0;
             _readIndex++;
-            return color.B;
+            return (byte)((color >> 2) & 0x3F);
         }
         
         /// <summary>
@@ -92,13 +85,13 @@ namespace Spice86.Aeon.Emulator.Video
                 // We could shift by 2 instead, but while it's faster,
                 // it may not be as accurate.
                 case 1:
-                    color.R = _lightCorrectedValuesLookupTable[value];
+                    color.R = (byte)(value * 255 / 63);
                     break;
                 case 2:
-                    color.G = _lightCorrectedValuesLookupTable[value];
+                    color.G = (byte)(value * 255 / 63);
                     break;
                 default:
-                    color.B = _lightCorrectedValuesLookupTable[value];
+                    color.B = (byte)(value * 255 / 63);
                     _writeChannel = 0;
                     _writeIndex++;
                     break;
