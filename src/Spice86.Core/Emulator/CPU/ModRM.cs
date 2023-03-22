@@ -16,7 +16,7 @@ public class ModRM {
     public ModRM(Machine machine, Cpu cpu) {
         _machine = machine;
         _cpu = cpu;
-        _memory = machine.MainMemory;
+        _memory = machine.Memory;
         _state = cpu.State;
     }
 
