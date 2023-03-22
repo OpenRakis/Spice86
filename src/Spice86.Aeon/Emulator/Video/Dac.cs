@@ -92,13 +92,13 @@ namespace Spice86.Aeon.Emulator.Video
                 // We could shift by 2 instead, but while it's faster,
                 // it may not be as accurate.
                 case 1:
-                    color.G = _lightCorrectedValuesLookupTable[value];
+                    color.R = _lightCorrectedValuesLookupTable[value];
                     break;
                 case 2:
-                    color.B = _lightCorrectedValuesLookupTable[value];
+                    color.G = _lightCorrectedValuesLookupTable[value];
                     break;
                 default:
-                    color.R = _lightCorrectedValuesLookupTable[value];
+                    color.B = _lightCorrectedValuesLookupTable[value];
                     _writeChannel = 0;
                     _writeIndex++;
                     break;
