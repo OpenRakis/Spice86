@@ -26,7 +26,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     protected DefaultIOPortHandler(Machine machine, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
         _machine = machine;
-        _memory = machine.MainMemory;
+        _memory = machine.Memory;
         _loggerService = loggerService;
         _cpu = machine.Cpu;
         _failOnUnhandledPort = Configuration.FailOnUnhandledPort;

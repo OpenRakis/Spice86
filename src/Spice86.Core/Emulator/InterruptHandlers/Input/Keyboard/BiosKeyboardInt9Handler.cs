@@ -22,7 +22,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         _loggerService = loggerService;
         _keyboard = machine.Keyboard;
         _keyScanCodeConverter = keyScanCodeConverter;
-        BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.MainMemory);
+        BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
         BiosKeyboardBuffer.Init();
     }
 

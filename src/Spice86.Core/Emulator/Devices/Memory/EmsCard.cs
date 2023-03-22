@@ -68,7 +68,7 @@ public class EmsCard : DefaultIOPortHandler {
         }
     }
     
-    public Memory ExpandedMemory { get; init; } = new(MemorySizeInMb * 1024);
+    public Ram ExpandedMemory { get; init; } = new(MemorySizeInMb * 1024);
 
     public int AllocatePages(ushort pages, bool sequence) {
         throw new NotImplementedException();
