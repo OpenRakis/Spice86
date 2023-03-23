@@ -4,38 +4,49 @@
 /// RGB representation of a color.
 /// </summary>
 public class Rgb {
-    public byte R { get; set; }
+    /// <summary>
+    /// Red channel, on 8 bit
+    /// </summary>
+    public byte R8 { get; set; }
 
-    public byte G { get; set; }
+    /// <summary>
+    /// Green channel, on 8 bit
+    /// </summary>
+    public byte G8 { get; set; }
 
-    public byte B { get; set; }
+    /// <summary>
+    /// Blue channel, on 8 bit
+    /// </summary>
+    public byte B8 { get; set; }
+    
+    
+    /// <summary>
+    /// Red channel, on 6 bit
+    /// </summary>
+    public byte R6 { get; set; }
 
-    public uint ToRgba() {
-        return 0x000000FF | ToRgb();
-    }
+    /// <summary>
+    /// Green channel, on 6 bit
+    /// </summary>
+    public byte G6 { get; set; }
 
-    public uint ToBgra() {
-        return (uint)(B << 16 | G << 8 | R) | 0x000000FF;
-    }
+    /// <summary>
+    /// Blue channel, on 6 bit
+    /// </summary>
+    public byte B6 { get; set; }
 
-    public uint ToArgb() {
-        return 0xFF000000 | (uint)R << 16 | (uint)G << 8 | B;
-    }
+    public uint ToRgba() => 0x000000FF | ToRgb();
+    
 
-    public override string ToString() {
-        return System.Text.Json.JsonSerializer.Serialize(this);
-    }
+    public uint ToBgra() => (uint)(B8 << 16 | G8 << 8 | R8) | 0x000000FF;
 
-    public static implicit operator uint(Rgb v) {
-        return ToUint(v);
-    }
+    public uint ToArgb() => 0xFF000000 | (uint)R8 << 16 | (uint)G8 << 8 | B8;
 
-    public static uint ToUint(Rgb v) {
-        return v.ToRgb();
-    }
+    public override string ToString() => System.Text.Json.JsonSerializer.Serialize(this);
 
-    private uint ToRgb()
-    {
-        return (uint)(R << 16 | G << 8 | B);
-    }
+    public static implicit operator uint(Rgb v) => ToUint(v);
+
+    public static uint ToUint(Rgb v) => v.ToRgb();
+
+    private uint ToRgb() => (uint)(R8 << 16 | G8 << 8 | B8);
 }

@@ -64,13 +64,13 @@ namespace Spice86.Aeon.Emulator.Video
                 case 0:
                     _readChannel = 0;
                     _readIndex++;
-                    value = color.R;
+                    value = color.R6;
                     break;
                 case 1:
-                    value = color.G;
+                    value = color.G6;
                     break;
                 case 2:
-                    value = color.B;
+                    value = color.B6;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -83,8 +83,8 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         /// <param name="value">Red, green, or blue channel value.</param>
         public void Write(byte value) {
-            _writeChannel++;
             Rgb color = Palette[_writeIndex];
+            _writeChannel++;
             switch (_writeChannel)
             {
                 // value * 255 / 63, or else colors are way too dark on screen
@@ -93,13 +93,16 @@ namespace Spice86.Aeon.Emulator.Video
                 case 0:
                     _writeChannel = 0;
                     _writeIndex++;
-                    color.B = (byte)(value * 255 / 63);
+                    color.B6 = value;
+                    color.B8 = (byte)(value * 255 / 63);
                     break;
                 case 1:
-                    color.R = (byte)(value * 255 / 63);
+                    color.R6 = value;
+                    color.R8 = (byte)(value * 255 / 63);
                     break;
                 case 2:
-                    color.G = (byte)(value * 255 / 63);
+                    color.G6 = value;
+                    color.G8 = (byte)(value * 255 / 63);
                     break;
             }
         }
@@ -115,9 +118,9 @@ namespace Spice86.Aeon.Emulator.Video
                 byte g = source[i * 3 + 1];
                 byte b = source[i * 3 + 2];
                 Palette[i] = new Rgb() {
-                    R = r,
-                    G = g,
-                    B = b
+                    R8 = r,
+                    G8 = g,
+                    B8 = b
                 };
             }
         }
@@ -131,9 +134,9 @@ namespace Spice86.Aeon.Emulator.Video
         /// <param name="b">Blue component.</param>
         public void SetColor(byte index, byte r, byte g, byte b) {
             Rgb item = Palette[index];
-            item.R = (byte) (r & 0x3F);
-            item.G = (byte) (g & 0x3F);
-            item.B = (byte) (b & 0x3F);
+            item.R8 = (byte) (r & 0x3F);
+            item.G8 = (byte) (g & 0x3F);
+            item.B8 = (byte) (b & 0x3F);
         }
 
         #region DefaultPalette
