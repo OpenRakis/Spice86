@@ -49,4 +49,33 @@ public class Rgb {
     public static uint ToUint(Rgb v) => v.ToRgb();
 
     private uint ToRgb() => (uint)(R8 << 16 | G8 << 8 | B8);
+
+    public byte Read(int readChannel) {
+        return readChannel switch {
+            0 => R6,
+            1 => G6,
+            2 => B6,
+            _ => 0
+        };
+    }
+
+    public void Write(byte value, int writeChannel) {
+        switch (writeChannel)
+        {
+            // value * 255 / 63, or else colors are way too dark on screen
+            // We could shift by 2 instead, but while it's faster,
+            // it may not be as accurate.
+            case 0:
+                R6 = value;
+                R8 = (byte)(value * 255 / 63);
+                break;
+            case 1:
+                G6 = value;
+                G8 = (byte)(value * 255 / 63);
+                break;
+            case 2:
+                B6 = value;
+                B8 = (byte)(value * 255 / 63);
+                break;
+        }    }
 }

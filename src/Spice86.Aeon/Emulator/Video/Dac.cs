@@ -59,23 +59,13 @@ namespace Spice86.Aeon.Emulator.Video
         public byte Read() {
             Rgb color = Palette[_readIndex];
             _readChannel++;
-            byte value;
-            switch (_readChannel) {
-                case 0:
-                    _readChannel = 0;
-                    _readIndex++;
-                    value = color.R6;
-                    break;
-                case 1:
-                    value = color.G6;
-                    break;
-                case 2:
-                    value = color.B6;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+            if (_readChannel != 0) {
+                return color.Read(_readChannel);
             }
-            return value;
+
+            _readChannel = 0;
+            _readIndex++;
+            return color.Read(_readChannel);
         }
         
         /// <summary>
@@ -85,26 +75,13 @@ namespace Spice86.Aeon.Emulator.Video
         public void Write(byte value) {
             Rgb color = Palette[_writeIndex];
             _writeChannel++;
-            switch (_writeChannel)
-            {
-                // value * 255 / 63, or else colors are way too dark on screen
-                // We could shift by 2 instead, but while it's faster,
-                // it may not be as accurate.
-                case 0:
-                    _writeChannel = 0;
-                    _writeIndex++;
-                    color.B6 = value;
-                    color.B8 = (byte)(value * 255 / 63);
-                    break;
-                case 1:
-                    color.R6 = value;
-                    color.R8 = (byte)(value * 255 / 63);
-                    break;
-                case 2:
-                    color.G6 = value;
-                    color.G8 = (byte)(value * 255 / 63);
-                    break;
+            color.Write(value, _writeChannel);
+            if (_writeChannel != 0) {
+                return;
             }
+
+            _writeChannel = 0;
+            _writeIndex++;
         }
         
         /// <summary>
