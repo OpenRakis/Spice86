@@ -51,8 +51,8 @@ public partial class PaletteViewModel : ObservableObject {
             Rectangle rectangle = Palette[i];
             Rgb source = palette[i];
             if (rectangle.Fill is SolidColorBrush fill &&
-                (source.R != fill.Color.R || source.G != fill.Color.G || source.B != fill.Color.B)) {
-                fill.Color = Color.FromRgb(source.R, source.G, source.B);
+                (source.R8 != fill.Color.R || source.G8 != fill.Color.G || source.B8 != fill.Color.B)) {
+                fill.Color = Color.FromRgb(source.R8, source.G8, source.B8);
             }
         }
     }

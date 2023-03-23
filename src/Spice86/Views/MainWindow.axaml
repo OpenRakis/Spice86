@@ -27,7 +27,7 @@
 					</MenuItem>
 					<MenuItem Header="Debug">
 						<MenuItem Header="Debug Window" Command="{Binding ShowDebugWindowCommand}" />
-						<MenuItem Header="Color PaletteAsSpan" Command="{Binding ShowColorPaletteCommand}" />
+						<MenuItem Header="Color Palette" Command="{Binding ShowColorPaletteCommand}" />
 						<MenuItem Header="Performance" Command="{Binding ShowPerformanceCommand}" />
 						<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
 							<MenuItem Header="Silent" Command="{Binding SetLogLevel}" CommandParameter="Silent"></MenuItem>
