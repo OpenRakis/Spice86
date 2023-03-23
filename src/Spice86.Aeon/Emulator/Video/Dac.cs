@@ -56,20 +56,21 @@ namespace Spice86.Aeon.Emulator.Video
         /// Reads the next channel in the current color.
         /// </summary>
         /// <returns>Red, green, or blue channel value.</returns>
-        public byte Read() {
-            uint color = _palette[_readIndex];
+        public byte Read()
+        {
+            Rgb color = _palette[_readIndex];
             _readChannel++;
             switch (_readChannel)
             {
                 case 1:
-                    return (byte)((color >> 18) & 0x3F);
+                    return color.R;
                 case 2:
-                    return (byte)((color >> 10) & 0x3F);
+                    return color.G;
             }
 
             _readChannel = 0;
             _readIndex++;
-            return (byte)((color >> 2) & 0x3F);
+            return color.B;
         }
         
         /// <summary>
