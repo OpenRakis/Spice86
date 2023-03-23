@@ -11,7 +11,7 @@ public class Rgb {
     public byte B { get; set; }
 
     public uint ToRgba() {
-        return ToRgb() | 0x000000FF;
+        return 0x000000FF | ToRgb();
     }
 
     public uint ToBgra() {
