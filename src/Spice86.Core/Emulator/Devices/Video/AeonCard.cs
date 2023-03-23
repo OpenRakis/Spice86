@@ -510,9 +510,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             case Functions.Palette_ReadSingleDacRegister:
                 // TODO: Investigate and fix this.
                 // These are commented out because they cause weird issues sometimes.
-                //vm.Processor.DH = (byte)((dac.Palette[vm.Processor.BL] >> 18) & 0xCF);
-                //vm.Processor.CH = (byte)((dac.Palette[vm.Processor.BL] >> 10) & 0xCF);
-                //vm.Processor.CL = (byte)((dac.Palette[vm.Processor.BL] >> 2) & 0xCF);
+                //vm.Processor.DH = (byte)((dac.PaletteAsSpan[vm.Processor.BL] >> 18) & 0xCF);
+                //vm.Processor.CH = (byte)((dac.PaletteAsSpan[vm.Processor.BL] >> 10) & 0xCF);
+                //vm.Processor.CL = (byte)((dac.PaletteAsSpan[vm.Processor.BL] >> 2) & 0xCF);
                 break;
 
             case Functions.Palette_SetSingleDacRegister:

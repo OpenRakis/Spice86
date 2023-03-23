@@ -9,7 +9,7 @@
 		Icon="/Icon/Spice86.ico"
 		WindowStartupLocation="CenterOwner"
 		CanResize="False"
-        Title="Color Palette" Height="300" Width="300" ShowInTaskbar="False"
+        Title="Color PaletteAsSpan" Height="300" Width="300" ShowInTaskbar="False"
         DataContext="{Binding}">
 	<Design.DataContext>
 		<viewModels:PaletteViewModel />

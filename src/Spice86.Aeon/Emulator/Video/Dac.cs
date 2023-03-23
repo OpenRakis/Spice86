@@ -7,7 +7,6 @@ namespace Spice86.Aeon.Emulator.Video
     /// </summary>
     public class Dac
     {
-        private readonly Rgb[] _palette = new Rgb[256];
         private int _readChannel;
         private int _writeChannel;
         private byte _readIndex;
@@ -24,7 +23,9 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets the full 256-color palette.
         /// </summary>
-        public ReadOnlySpan<Rgb> Palette => _palette.AsSpan();
+        public ReadOnlySpan<Rgb> PaletteAsSpan => Palette.AsSpan();
+
+        public Rgb[] Palette { get; } = new Rgb[256];
 
         /// <summary>
         /// Gets or sets the current palette read index.
@@ -58,7 +59,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <returns>Red, green, or blue channel value.</returns>
         public byte Read()
         {
-            Rgb color = _palette[_readIndex];
+            Rgb color = Palette[_readIndex];
             _readChannel++;
             switch (_readChannel)
             {
@@ -79,7 +80,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <param name="value">Red, green, or blue channel value.</param>
         public void Write(byte value) {
             _writeChannel++;
-            Rgb color = _palette[_writeIndex];
+            Rgb color = Palette[_writeIndex];
             switch (_writeChannel)
             {
                 // value * 255 / 63, or else colors are way too dark on screen
@@ -110,7 +111,7 @@ namespace Spice86.Aeon.Emulator.Video
                 byte r = source[i * 3];
                 byte g = source[i * 3 + 1];
                 byte b = source[i * 3 + 2];
-                _palette[i] = new Rgb() {
+                Palette[i] = new Rgb() {
                     R = r,
                     G = g,
                     B = b
@@ -127,7 +128,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <param name="b">Blue component.</param>
         public void SetColor(byte index, byte r, byte g, byte b)
         {
-            Rgb item = _palette[index];
+            Rgb item = Palette[index];
             item.R = (byte) (r & 0x3F);
             item.G = (byte) (g & 0x3F);
             item.B = (byte) (b & 0x3F);
