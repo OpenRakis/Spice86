@@ -5,8 +5,7 @@ namespace Spice86.Aeon.Emulator.Video
     /// <summary>
     /// Emulates the VGA DAC which provides access to the palette.
     /// </summary>
-    public class Dac
-    {
+    public class Dac {
         private int _readChannel;
         private int _writeChannel;
         private byte _readIndex;
@@ -15,8 +14,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Initializes a new instance of the <see cref="Dac"/> class.
         /// </summary>
-        public Dac()
-        {
+        public Dac() {
             Reset();
         }
 
@@ -25,13 +23,15 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         public ReadOnlySpan<Rgb> PaletteAsSpan => Palette.AsSpan();
 
+        /// <summary>
+        /// 8-bit length Palette store
+        /// </summary>
         public Rgb[] Palette { get; } = new Rgb[256];
 
         /// <summary>
         /// Gets or sets the current palette read index.
         /// </summary>
-        public byte ReadIndex
-        {
+        public byte ReadIndex {
             get => _readIndex;
             set
             {
@@ -43,8 +43,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets or sets the current palette write index.
         /// </summary>
-        public byte WriteIndex
-        {
+        public byte WriteIndex {
             get => _writeIndex;
             set
             {
@@ -57,21 +56,26 @@ namespace Spice86.Aeon.Emulator.Video
         /// Reads the next channel in the current color.
         /// </summary>
         /// <returns>Red, green, or blue channel value.</returns>
-        public byte Read()
-        {
+        public byte Read() {
             Rgb color = Palette[_readIndex];
             _readChannel++;
-            switch (_readChannel)
-            {
+            byte value;
+            switch (_readChannel) {
+                case 0:
+                    _readChannel = 0;
+                    _readIndex++;
+                    value = color.R;
+                    break;
                 case 1:
-                    return color.R;
+                    value = color.G;
+                    break;
                 case 2:
-                    return color.G;
+                    value = color.B;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
-
-            _readChannel = 0;
-            _readIndex++;
-            return color.B;
+            return value;
         }
         
         /// <summary>
@@ -86,16 +90,16 @@ namespace Spice86.Aeon.Emulator.Video
                 // value * 255 / 63, or else colors are way too dark on screen
                 // We could shift by 2 instead, but while it's faster,
                 // it may not be as accurate.
+                case 0:
+                    _writeChannel = 0;
+                    _writeIndex++;
+                    color.B = (byte)(value * 255 / 63);
+                    break;
                 case 1:
                     color.R = (byte)(value * 255 / 63);
                     break;
                 case 2:
                     color.G = (byte)(value * 255 / 63);
-                    break;
-                default:
-                    color.B = (byte)(value * 255 / 63);
-                    _writeChannel = 0;
-                    _writeIndex++;
                     break;
             }
         }
@@ -103,8 +107,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Resets the colors to the default 256-color VGA palette.
         /// </summary>
-        public void Reset()
-        {
+        public void Reset() {
             ReadOnlySpan<byte> source = DefaultPalette;
             for (int i = 0; i < 256; i++)
             {
@@ -126,8 +129,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <param name="r">Red component.</param>
         /// <param name="g">Green component.</param>
         /// <param name="b">Blue component.</param>
-        public void SetColor(byte index, byte r, byte g, byte b)
-        {
+        public void SetColor(byte index, byte r, byte g, byte b) {
             Rgb item = Palette[index];
             item.R = (byte) (r & 0x3F);
             item.G = (byte) (g & 0x3F);
@@ -135,8 +137,7 @@ namespace Spice86.Aeon.Emulator.Video
         }
 
         #region DefaultPalette
-        private static ReadOnlySpan<byte> DefaultPalette => new byte[]
-            {
+        private static ReadOnlySpan<byte> DefaultPalette => new byte[] {
                 0x00, 0x00, 0x00, 0x00, 0x00, 0xA8, 0x00, 0xA8, 0x00, 0x00, 0xA8, 0xA8, 0xA8, 0x00, 0x00, 0xA8,
                 0x00, 0xA8, 0xA8, 0x54, 0x00, 0xA8, 0xA8, 0xA8, 0x54, 0x54, 0x54, 0x54, 0x54, 0xFC, 0x54, 0xFC,
                 0x54, 0x54, 0xFC, 0xFC, 0xFC, 0x54, 0x54, 0xFC, 0x54, 0xFC, 0xFC, 0xFC, 0x54, 0xFC, 0xFC, 0xFC,
