@@ -11,7 +11,7 @@ public class Rgb {
     public byte B { get; set; }
 
     public uint ToRgba() {
-        return (uint)(R << 16 | G << 8 | B) | 0x000000FF;
+        return ToRgb() | 0x000000FF;
     }
 
     public uint ToBgra() {
@@ -31,6 +31,11 @@ public class Rgb {
     }
 
     public static uint ToUint(Rgb v) {
-        return (uint)(v.R << 16 | v.G << 8 | v.B);
+        return v.ToRgb();
+    }
+
+    private uint ToRgb()
+    {
+        return (uint)(R << 16 | G << 8 | B);
     }
 }
