@@ -21,7 +21,7 @@
                                         <Grid RowDefinitions="Auto,*">
                                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Dac</Label>
                                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                        <Label>PaletteAsSpan</Label>
+                                                        <Label>Palette</Label>
                                                         <TextBlock Text="{Binding VideoCard.Dac.PaletteAsSpan}"></TextBlock>
                                                         <Label>ReadIndex</Label>
                                                         <TextBlock Text="{Binding VideoCard.Dac.ReadIndex, StringFormat={}{0:X2}}"></TextBlock>
@@ -140,7 +140,7 @@
                                                         <TextBlock Text="{Binding VideoCard.CurrentMode.Font, StringFormat={}{0:X2}}"></TextBlock>
                                                         <Label>Height</Label>
                                                         <TextBlock Text="{Binding VideoCard.CurrentMode.Height, StringFormat={}{0:X2}}"></TextBlock>
-                                                        <Label>PaletteAsSpan</Label>
+                                                        <Label>Palette</Label>
                                                         <TextBlock Text="{Binding VideoCard.CurrentMode.Palette}"></TextBlock>
                                                         <Label>Stride</Label>
                                                         <TextBlock Text="{Binding VideoCard.CurrentMode.Stride, StringFormat={}{0:X2}}"></TextBlock>
