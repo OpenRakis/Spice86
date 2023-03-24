@@ -44,9 +44,9 @@ public class Rgb {
 
     public override string ToString() => System.Text.Json.JsonSerializer.Serialize(this);
 
-    public static implicit operator uint(Rgb v) => ToUint(v);
+    public static implicit operator uint(Rgb v) => v.ToUint();
 
-    public static uint ToUint(Rgb v) => v.ToRgb();
+    public uint ToUint() => ToRgb();
 
     private uint ToRgb() => (uint)(R8 << 24 | G8 << 16 | B8 << 8) | 0xFF;
 
@@ -77,5 +77,6 @@ public class Rgb {
                 B6 = value;
                 B8 = (byte)(value * 255 / 63);
                 break;
-        }    }
+        }
+    }
 }
