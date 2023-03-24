@@ -38,7 +38,7 @@ public class Rgb {
     public uint ToRgba() => 0x000000FF | ToRgb();
     
 
-    public uint ToBgra() => (uint)(B8 << 16 | G8 << 8 | R8) | 0x000000FF;
+    public uint ToBgra() => (uint)(B8 << 24 | G8 << 16 | R8 << 8 | 0xFF);
 
     public uint ToArgb() => 0xFF000000 | (uint)R8 << 16 | (uint)G8 << 8 | B8;
 
