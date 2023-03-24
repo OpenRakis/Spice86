@@ -38,7 +38,7 @@ public class Rgb {
     public uint ToRgba() => 0x000000FF | ToRgb();
     
 
-    public uint ToBgra() => (uint)(B8 << 16 | G8 << 8 | R8) | 0x000000FF;
+    public uint ToBgra() => (uint)(B8 << 24 | G8 << 16 | R8 << 8 ) | 0x000000FF;
 
     public uint ToArgb() => 0xFF000000 | (uint)R8 << 16 | (uint)G8 << 8 | B8;
 
@@ -48,26 +48,32 @@ public class Rgb {
 
     public uint ToUint() => ToRgb();
 
-    private uint ToRgb() => (uint)(R8 << 24 | G8 << 16 | B8 << 8) | 0xFF;
+    public uint ToRgb() => (uint)(R8 << 24 | G8 << 16 | B8 << 8) | 0x000000FF;
 
-    public byte Read(int readChannel) {
-        return readChannel switch {
-            0 => R6,
-            1 => G6,
-            2 => B6,
-            _ => 0
-        };
+    public byte Read(ref int readChannel, ref byte readIndex) {
+        switch (readChannel) {
+            default:
+                readChannel = 0;
+                readIndex++;
+                return R6;
+            case 1:
+                return G6;
+            case 2:
+                return B6;
+        }
     }
 
-    public void Write(byte value, int writeChannel) {
+    public void Write(byte value, ref int writeChannel, ref byte writeIndex) {
         switch (writeChannel)
         {
             // value * 255 / 63, or else colors are way too dark on screen
             // We could shift by 2 instead, but while it's faster,
             // it may not be as accurate.
-            case 0:
+            default:
                 R6 = value;
                 R8 = (byte)(value * 255 / 63);
+                writeChannel = 0;
+                writeIndex++;
                 break;
             case 1:
                 G6 = value;

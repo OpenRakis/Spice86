@@ -59,13 +59,7 @@ namespace Spice86.Aeon.Emulator.Video
         public byte Read() {
             Rgb color = Palette[_readIndex];
             _readChannel++;
-            if (_readChannel is 1 or 2) {
-                return color.Read(_readChannel);
-            }
-
-            _readChannel = 0;
-            _readIndex++;
-            return color.Read(_readChannel);
+            return color.Read(ref _readChannel, ref _readIndex);
         }
         
         /// <summary>
@@ -73,15 +67,9 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         /// <param name="value">Red, green, or blue channel value.</param>
         public void Write(byte value) {
-            _writeChannel++;
             Rgb color = Palette[_writeIndex];
-            if (_writeChannel is 1 or 2) {
-                color.Write(value, _writeChannel);
-            } else {
-                color.Write(value, _writeChannel);
-                _writeChannel = 0;
-                _writeIndex++;
-            }
+            _writeChannel++;
+            color.Write(value, ref _writeChannel, ref _writeIndex);
         }
         
         /// <summary>
