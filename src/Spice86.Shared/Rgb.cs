@@ -38,7 +38,7 @@ public class Rgb {
     public uint ToRgba() => 0x000000FF | ToRgb();
     
 
-    public uint ToBgra() => (uint)(B8 << 24 | G8 << 16 | R8 << 8 | 0xFF);
+    public uint ToBgra() => (uint)(B8 << 16 | G8 << 8 | R8) | 0x000000FF;
 
     public uint ToArgb() => 0xFF000000 | (uint)R8 << 16 | (uint)G8 << 8 | B8;
 
@@ -48,7 +48,7 @@ public class Rgb {
 
     public static uint ToUint(Rgb v) => v.ToRgb();
 
-    private uint ToRgb() => (uint)(R8 << 16 | G8 << 8 | B8);
+    private uint ToRgb() => (uint)(R8 << 24 | G8 << 16 | B8 << 8) | 0xFF;
 
     public byte Read(int readChannel) {
         return readChannel switch {
