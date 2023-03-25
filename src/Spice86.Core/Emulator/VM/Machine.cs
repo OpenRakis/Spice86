@@ -126,11 +126,7 @@ public class Machine : IDisposable {
         Memory = new Memory(ram);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
-        if(configuration.Ems) {
-            Ems = new(this, loggerService);
-        }
         
-
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
 
@@ -201,7 +197,7 @@ public class Machine : IDisposable {
         };
         EmsCard = new(this, configuration, loggerService);
         if(configuration.Ems) {
-            Ems = new(this, loggerService);
+            Ems = new(this);
         }
         if(Ems is not null) {
             Register(Ems);
