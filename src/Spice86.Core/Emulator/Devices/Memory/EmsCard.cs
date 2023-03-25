@@ -27,10 +27,10 @@ public class EmsCard : DefaultIOPortHandler {
             EmmSegmentMappings[i] = new();
         }
 
-        _memory = new(MemorySizeInMb);
+        _memoryBlock = new(MemorySizeInMb);
     }
 
-    private readonly MemoryBlock _memory;
+    private readonly MemoryBlock _memoryBlock;
 
     public EmmMapping[] EmmSegmentMappings { get; private set; } = new EmmMapping[0x40];
 
@@ -40,14 +40,14 @@ public class EmsCard : DefaultIOPortHandler {
     
     public const ushort XmsStart = 0x110;
 
-    public int TotalPages => _memory.Pages;
+    public int TotalPages => _memoryBlock.Pages;
 
     public ushort FreeMemoryTotal {
         get {
             ushort free = 0;
             ushort index = XmsStart;
             while (index < TotalPages) {
-                if (_memory.MemoryHandles[index] == 0) {
+                if (_memoryBlock.MemoryHandles[index] == 0) {
                     free++;
                 }
 
