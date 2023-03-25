@@ -195,7 +195,7 @@ public class Machine : IDisposable {
         };
         EmsCard = new(this, configuration, loggerService);
         if(configuration.Ems) {
-            Ems = new(this);
+            Ems = new(this, loggerService);
         }
         if(Ems is not null) {
             Register(Ems);
