@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
+using Serilog.Events;
+
 using System.Numerics;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Devices.Memory;
@@ -18,11 +20,23 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public const string EmsIdentifier = "EMMXXXX0";
 
     public const ushort EmmMaxHandles = 200;
+
+    public const byte EmmMaxPhysPage = 4;
+
+    public const ushort EmmNullPage = 0xFFFF;
+    
+    public const ushort EmmNullHandle = 0xFFFF;
+
+    public const ushort EmmPageFrame = 0xE000;
+    
     public override ushort? InterruptHandlerSegment => 0xF100;
     
     public override byte Index => 0x67;
 
-    public ExpandedMemoryManager(Machine machine) : base(machine) {
+    private ILoggerService _loggerService;
+
+    public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
+        _loggerService = loggerService;
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
         FillDispatchTable();
@@ -87,8 +101,49 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Maps or unmaps a physical page.
     /// </summary>
     public void MapExpandedMemoryPage() {
-        int physicalPage = _state.AL;
-        
+        ushort handle = _state.DX;
+        EmmMapPage(_state.AX, ref handle, _state.BX);
+        _state.DX = handle;
+    }
+    
+    private byte EmmMapPage(ushort physicalPage, ref ushort handle, ushort logicalPage) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("{@MethodName}: {@physicalPage} {@Handle}, {@LogicalPage}",
+                nameof(EmmMapPage), physicalPage, handle, logicalPage);
+        }
+        /* Check for too high physical page */
+        if (physicalPage >= EmmMaxPhysPage) {
+            return EmsErrors.EmsIllegalPhysicalPage;
+        }
+
+        /* unmapping doesn't need valid handle (as handle isn't used) */
+        if (logicalPage == EmmNullPage) {
+            /* Unmapping */
+            _machine.EmsCard.EmmMappings[physicalPage].Handle = EmmNullHandle;
+            _machine.EmsCard.EmmMappings[physicalPage].Page = EmmNullPage;
+            return EmsErrors.EmmNoError;
+        }
+        /* Check for valid handle */
+        if (!ValidateHandle(handle)) {
+            return EmsErrors.EmmInvalidHandle;
+        }
+
+        if (logicalPage < _machine.EmsCard.EmmHandles[handle].Pages) {
+            /* Mapping it is */
+            _machine.EmsCard.EmmMappings[physicalPage].Handle = handle;
+            _machine.EmsCard.EmmMappings[physicalPage].Page = logicalPage;
+            return EmsErrors.EmmNoError;
+        } else {
+            /* Illegal logical page it is */
+            return EmsErrors.EmsLogicalPageOutOfRange;
+        }
+    }
+    
+    public bool ValidateHandle(ushort handle) {
+        if (handle >= EmmMaxHandles) {
+            return false;
+        }
+        return _machine.EmsCard.EmmHandles[handle].Pages != EmmNullHandle;
     }
     
     /// <summary>
@@ -248,6 +303,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
             _machine.EmsCard.EmmHandles[handle].Pages = pages;
             _machine.EmsCard.EmmHandles[handle].MemHandle = mem;
+            // Change handle only if there is no error.
             dhandle = handle;
         }
         return EmsErrors.EmmNoError;
