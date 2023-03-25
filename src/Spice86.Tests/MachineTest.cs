@@ -149,7 +149,7 @@ public class MachineTest {
             memory.SetUint8(1, 0);
             memory.SetUint8(2, 0);
         });
-        AssertAddressRangeMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 3, 5, false, () => {
+        AssertAddressRangeMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 3, 11, false, () => {
             // Inclusion of breakpoint range
             memory.Memset(0, 0, 5);
             // Start is the same
