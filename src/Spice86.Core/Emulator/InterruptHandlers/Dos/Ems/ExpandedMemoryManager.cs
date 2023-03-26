@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -43,6 +44,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// 2 = EMS386. <br/>
     /// </summary>
     public byte EmsType { get; init; } = 2;
+    
+    public Ram Memory { get; init; }
     
     public MemoryBlock MemoryBlock { get; }
 
@@ -88,6 +91,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmSegmentMappings[i] = new();
         }
 
+        Memory = new(MemorySizeInMb);
         MemoryBlock = new(MemorySizeInMb);
 
         FillDispatchTable();
