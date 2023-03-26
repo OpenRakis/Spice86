@@ -465,7 +465,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             break;
 
         default:
-            throw new UnrecoverableException();
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                    nameof(GetHardwareInformation), _state.AL);
+            }
+            break;
         }
     }
 
