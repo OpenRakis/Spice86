@@ -34,7 +34,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public override byte Index => 0x67;
 
-    private ILoggerService _loggerService;
+    private readonly ILoggerService _loggerService;
     
     public MemoryBlock Memory { get; }
 
@@ -65,16 +65,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
     
-    public ushort FreePages {
-        get {
-            ushort count = (ushort)(FreeMemoryTotal / 4);
-            if (count > 0x7FFF) {
-                return 0x7FFF;
-            }
-
-            return count;
-        }
-    }
+    public ushort FreePages => Math.Min((ushort)0x7FFF, (ushort)(FreeMemoryTotal / 4));
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
         _loggerService = loggerService;
