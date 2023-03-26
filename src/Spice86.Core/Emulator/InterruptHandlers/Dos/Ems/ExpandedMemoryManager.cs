@@ -112,14 +112,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public void GetStatus() {
         // Return good status in AH.
-        _state.AH = EmsErrors.EmmNoError;
+        _state.AH = EmsStatus.EmmNoError;
     }
     
     public void GetPageFrameSegment() {
         // Return page frame segment in BX.
         _state.BX = PageFrameSegment;
         // Set good status.
-        _state.AH = EmsErrors.EmmNoError;
+        _state.AH = EmsStatus.EmmNoError;
     }
     
     public void GetNumberOfPages() {
@@ -128,7 +128,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         // Return number of pages available in BX.
         _state.BX = GetFreePages();
         // Set good status.
-        _state.AH = EmsErrors.EmmNoError;
+        _state.AH = EmsStatus.EmmNoError;
     }
     
     /// <summary>
@@ -156,7 +156,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
         /* Check for too high physical page */
         if (physicalPage >= EmmMaxPhysPage) {
-            return EmsErrors.EmsIllegalPhysicalPage;
+            return EmsStatus.EmsIllegalPhysicalPage;
         }
 
         /* unmapping doesn't need valid handle (as handle isn't used) */
@@ -164,21 +164,21 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             /* Unmapping */
             EmmMappings[physicalPage].Handle = EmmNullHandle;
             EmmMappings[physicalPage].Page = EmmNullPage;
-            return EmsErrors.EmmNoError;
+            return EmsStatus.EmmNoError;
         }
         /* Check for valid handle */
         if (!IsValidHandle(handle)) {
-            return EmsErrors.EmmInvalidHandle;
+            return EmsStatus.EmmInvalidHandle;
         }
 
         if (logicalPage < EmmHandles[handle].Pages) {
             /* Mapping it is */
             EmmMappings[physicalPage].Handle = handle;
             EmmMappings[physicalPage].Page = logicalPage;
-            return EmsErrors.EmmNoError;
+            return EmsStatus.EmmNoError;
         } else {
             /* Illegal logical page it is */
-            return EmsErrors.EmsLogicalPageOutOfRange;
+            return EmsStatus.EmsLogicalPageOutOfRange;
         }
     }
     
@@ -200,13 +200,34 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         // Return EMS version 4.0.
         _state.AL = 0x40;
         // Return good status.
-        _state.AH = 0;
+        _state.AH = EmsStatus.EmmNoError;
     }
     
     /// <summary>
     /// Saves the current state of page map registers for a handle.
     /// </summary>
     public void SavePageMap() {
+        _state.AX = SavePageMap(_state.DX);
+    }
+
+    public ushort SavePageMap(ushort handle) {
+        /* Check for valid handle */
+        if (handle >= EmmMaxHandles || EmmHandles[handle].Pages == EmmNullHandle) {
+            if (handle != 0) {
+                return EmsStatus.EmmInvalidHandle;
+            }
+        }
+        /* Check for previous save */
+        if (EmmHandles[handle].SavePagedMap) {
+            return EmsStatus.EmmPageMapSaved;
+        }
+        /* Copy the mappings over */
+        for (int i = 0; i < EmmMaxPhysPage; i++) {
+            EmmHandles[handle].PageMap[i].Page = EmmMappings[i].Page;
+            EmmHandles[handle].PageMap[i].Handle = EmmMappings[i].Handle;
+        }
+        EmmHandles[handle].SavePagedMap = true;
+        return EmsStatus.EmmNoError;
     }
     
     /// <summary>
@@ -219,7 +240,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         // Return the number of EMM handles (plus 1 for the OS handle).
         _state.BX = (ushort)(EmmHandles.Length + 1);
         // Return good status.
-        _state.AH = EmsErrors.EmmNoError;
+        _state.AH = EmsStatus.EmmNoError;
     }
     
     /// <summary>
@@ -301,7 +322,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             // Return total number of pages in DX.
             _state.DX = (ushort) TotalPages;
             // Set good status.
-            _state.AH = EmsErrors.EmmNoError;
+            _state.AH = EmsStatus.EmmNoError;
             break;
 
         default:
@@ -321,19 +342,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public ushort EmmAllocateMemory(ushort pages, ref ushort dhandle, bool canAllocateZeroPages) {
         // Check for 0 page allocation
         if (pages is 0 && !canAllocateZeroPages) {
-            return EmsErrors.EmmZeroPages;
+            return EmsStatus.EmmZeroPages;
         }
         
         // Check for enough free pages
         if (GetFreeMemoryTotal() / 4 < pages) {
-            return EmsErrors.EmmOutOfLogicalPages;
+            return EmsStatus.EmmOutOfLogicalPages;
         }
 
         ushort handle = 1;
         // Check for a free handle
         while (EmmHandles[handle].Pages > 0) {
             if (++handle >= EmmMaxHandles) {
-                return EmsErrors.EmmOutOfHandles;
+                return EmsStatus.EmmOutOfHandles;
             }
         }
 
@@ -349,7 +370,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             // Change handle only if there is no error.
             dhandle = handle;
         }
-        return EmsErrors.EmmNoError;
+        return EmsStatus.EmmNoError;
     }
 
     /// <summary>
@@ -408,8 +429,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// TODO: Merge this with <see cref="DosMemoryManager"/>
     /// </summary>
-    /// <param name="requestedSize">The requested memory block requestedSize</param>
-    /// <returns>The index of the first memory page that is greater than <param name="requestedSize"></param> </returns>
+    /// <param name="requestedSize">The requested memory block size</param>
+    /// <returns>The index of the first memory page that is greater than requestedSize</returns>
     private int BestMatch(int requestedSize) {
         int index = XmsStart;
         int first = 0;
