@@ -201,7 +201,34 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Deallocates a handle and all of its pages.
     /// </summary>
     public void ReleaseHandleAndFreePages() {
-        int handle = _state.DX;
+        _state.AX = ReleaseMemory(_state.DX);
+    }
+
+    public ushort ReleaseMemory(ushort handle) {
+        /* Check for valid handle */
+        if (!IsValidHandle(handle)) {
+            return EmsStatus.EmmInvalidHandle;
+        }
+
+        if (EmmHandles[handle].Pages != 0) {
+            ReleasePages(EmmHandles[handle].MemHandle);
+        }
+        /* Reset handle */
+        EmmHandles[handle].MemHandle = 0;
+        // OS handle is NEVER deallocated
+        EmmHandles[handle].Pages = handle == 0 ? (ushort) 0 : EmmNullHandle;
+        EmmHandles[handle].SavePagedMap = false;
+        EmmHandles[handle].Name = string.Empty;
+        return EmsStatus.EmmNoError;
+
+    }
+
+    private void ReleasePages(int handle) {
+        while (handle > 0) {
+            int next = MemoryBlock.MemoryHandles[handle];
+            MemoryBlock.MemoryHandles[handle] = 0;
+            handle = next;
+        }
     }
 
     public void GetEmmVersion() {
