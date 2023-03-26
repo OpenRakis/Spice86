@@ -36,7 +36,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private readonly ILoggerService _loggerService;
     
-    public MemoryBlock Memory { get; }
+    public MemoryBlock MemoryBlock { get; }
 
     public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[0x40];
 
@@ -48,13 +48,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const int MemorySizeInMb = 6;
 
-    public int TotalPages => Memory.Pages;
+    public int TotalPages => MemoryBlock.Pages;
 
     public ushort GetFreeMemoryTotal() {
         ushort free = 0;
         ushort index = XmsStart;
         while (index < TotalPages) {
-            if (Memory.MemoryHandles[index] == 0) {
+            if (MemoryBlock.MemoryHandles[index] == 0) {
                 free++;
             }
             index++;
@@ -80,7 +80,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmSegmentMappings[i] = new();
         }
 
-        Memory = new(MemorySizeInMb);
+        MemoryBlock = new(MemorySizeInMb);
 
         FillDispatchTable();
     }
@@ -352,56 +352,103 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return EmsErrors.EmmNoError;
     }
 
+    /// <summary>
+    /// TODO: Merge this with <see cref="DosMemoryManager"/>
+    /// </summary>
+    /// <param name="pages">The number of pages the allocated memory page must at least have.</param>
+    /// <param name="sequence">Whether to allocate in sequence or not.</param>
+    /// <returns></returns>
     private int AllocatePages(ushort pages, bool sequence) {
         int ret = -1;
-        if (pages == 0) return 0;
+        if (pages == 0) {
+            return 0;
+        }
         if (sequence) {
             int index = BestMatch(pages);
-            if (index == 0) return 0;
+            if (index == 0) {
+                return 0;
+            }
             while (pages != 0) {
                 if (ret == -1)
                     ret = index;
                 else {
-                    Memory.MemoryHandles[index - 1] = index;
+                    MemoryBlock.MemoryHandles[index - 1] = index;
                 }
                 index++;
                 pages--;
             }
-            Memory.MemoryHandles[index - 1] = -1;
+            MemoryBlock.MemoryHandles[index - 1] = -1;
         } else {
             if (GetFreeMemoryTotal() < pages) {
                 return 0;
             }
             int lastIndex = -1;
             while (pages != 0) {
-                byte index = BestMatch(1);
+                int index = BestMatch(1);
                 if (index == 0) {
                     FailFastWithLogMessage($"EMS: Memory corruption in {nameof(AllocatePages)}");
                 }
-                while (pages != 0 && (Memory.MemoryHandles[index] == 0)) {
+                while (pages != 0 && (MemoryBlock.MemoryHandles[index] == 0)) {
                     if (ret == -1) {
                         ret = index;
                     } else {
-                        Memory.MemoryHandles[lastIndex] = index;
+                        MemoryBlock.MemoryHandles[lastIndex] = index;
                     }
                     lastIndex = index;
                     index++;
                     pages--;
                 }
                 // Invalidate it in case we need another match.
-                Memory.MemoryHandles[lastIndex] = -1;
+                MemoryBlock.MemoryHandles[lastIndex] = -1;
             }
         }
         return ret;
     }
 
-    private byte BestMatch(int pages) {
-        throw new NotImplementedException();
+    /// <summary>
+    /// TODO: Merge this with <see cref="DosMemoryManager"/>
+    /// </summary>
+    /// <param name="requestedSize">The requested memory block requestedSize</param>
+    /// <returns>The index of the first memory page that is greater than <param name="requestedSize"></param> </returns>
+    private int BestMatch(int requestedSize) {
+        int index = XmsStart;
+        int first = 0;
+        int best = 0xfffffff;
+        int bestMatch = 0;
+        while (index < MemoryBlock.Pages) {
+            /* Check if we are searching for first free page */
+            if (first == 0) {
+                /* Check if this is a free page */
+                if (MemoryBlock.MemoryHandles[index] == 0) {
+                    first = index;
+                }
+            } else {
+                /* Check if this still is used page */
+                if (MemoryBlock.MemoryHandles[index] != 0) {
+                    int pages = index - first;
+                    if (pages == requestedSize) {
+                        return first;
+                    } else if (pages > requestedSize) {
+                        if (pages < best) {
+                            best = pages;
+                            bestMatch = first;
+                        }
+                    }
+                    // Always reset for new search
+                    first = 0;
+                }
+            }
+            index++;
+        }
+        /* Check for the final block if we can */
+        if (first != 0 && (index - first >= requestedSize) && (index - first < best)) {
+            return first;
+        }
+        return bestMatch;
     }
 
     [DoesNotReturn]
-    private void FailFastWithLogMessage(string message, [CallerMemberName] string methodName = nameof(FailFastWithLogMessage))
-    {
+    private void FailFastWithLogMessage(string message, [CallerMemberName] string methodName = nameof(FailFastWithLogMessage)) {
         UnrecoverableException e = new(message);
         if(_loggerService.IsEnabled(LogEventLevel.Fatal)) {
             _loggerService.Fatal(e, " \"Fatal error in {@MethodName} {@ExceptionMessage}\"", methodName, e.Message);
