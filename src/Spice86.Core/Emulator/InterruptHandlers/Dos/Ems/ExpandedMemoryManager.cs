@@ -626,11 +626,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Gets the name of a handle.
     /// </summary>
     public void GetHandleName(ushort handle) {
+        throw new NotImplementedException();
     }
 
     /// <summary>
     /// Set the name of a handle.
     /// </summary>
     public void SetHandleName(ushort handle) {
+        throw new NotImplementedException();
     }
 }
