@@ -347,12 +347,26 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     public void GetHandleCount() {
-        // Return the number of EMM handles (plus 1 for the OS handle).
-        _state.BX = (ushort)(EmmHandles.Length + 1);
+        _state.BX = 0;
+        _state.BX = CalculateHandleCount();
         // Return good status.
         _state.AH = EmsStatus.EmmNoError;
     }
-    
+
+    /// <summary>
+    /// Returns the number of EMM handles
+    /// </summary>
+    /// <returns>The number of EMM handles</returns>
+    private ushort CalculateHandleCount() {
+        ushort count = 0;
+        for (int i = 0; i < EmmMaxHandles; i++) {
+            if (EmmHandles[i].Pages != EmmNullHandle) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     /// <summary>
     /// Gets the number of pages allocated to a handle.
     /// </summary>
