@@ -57,7 +57,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public const ushort XmsStart = 0x110;
 
-    public const int MemorySizeInMb = 6;
+    /// <summary>
+    /// EMM v4 specs define 32 MB of RAM
+    /// </summary>
+    public const int MemorySizeInMb = 32;
 
     public int TotalPages => MemoryBlock.Pages;
 
@@ -91,7 +94,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmSegmentMappings[i] = new();
         }
 
-        Memory = new(MemorySizeInMb);
+        Memory = new(MemorySizeInMb * 1024 * 1024);
         MemoryBlock = new(MemorySizeInMb);
 
         FillDispatchTable();
