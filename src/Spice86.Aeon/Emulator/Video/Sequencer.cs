@@ -23,7 +23,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets or sets the Map Mask register.
         /// </summary>
-        public MaskValue MapMask { get; set; }
+        public MaskValue MapMask { get; set; } = 0xF;
         /// <summary>
         /// Gets the Character Map Select register.
         /// </summary>
