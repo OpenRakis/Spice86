@@ -2,6 +2,8 @@ using System.Runtime.CompilerServices;
 
 namespace Spice86.Aeon.Emulator.Video.Modes
 {
+    using System.Runtime.Intrinsics.X86;
+
     /// <summary>
     /// Implements functionality for 4-plane video modes.
     /// </summary>
@@ -37,11 +39,18 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                     return ReadByte(latches, graphics.ReadMapSelect & 0x3u);
                 }
 
-                uint colorDontCare = graphics.ColorDontCare.Expanded;
-                uint colorCompare = graphics.ColorCompare * 0x01010101u;
-                uint results = Intrinsics.AndNot(colorDontCare, latches ^ colorCompare);
-                byte* bytes = (byte*)&results;
-                return (byte)(bytes[0] | bytes[1] | bytes[2] | bytes[3]);
+                byte result = 0;
+                int colorDontCare = ~graphics.ColorDontCare.Packed;
+                int colorCompare = graphics.ColorCompare | colorDontCare;
+                for (int i = 0; i < 8; i++) {
+                    int extracted = Bmi2.IsSupported 
+                        ? (int)Bmi2.ParallelBitExtract(latches, 0x01010101u << i) 
+                        : (int)((latches & 1u << i) >> i | (latches & 0x100u << i) >> 7 + i | (latches & 0x10000u << i) >> 14 + i | (latches & 0x1000000u << i) >> 21 + i);
+                    int color = extracted | colorDontCare;
+                    if (color == colorCompare)
+                        result |= (byte)(1 << i);
+                }
+                return result;
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]

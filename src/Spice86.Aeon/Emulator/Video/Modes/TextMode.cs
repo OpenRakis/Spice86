@@ -132,8 +132,8 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         {
             base.InitializeMode(video);
             graphics.GraphicsMode = 0x10; // OddEven mode
-            graphics.MiscellaneousGraphics = 0xE0; // OddEven mode
-            sequencer.SequencerMemoryMode = SequencerMemoryMode.ExtendedMemory;
+            graphics.MiscellaneousGraphics = 0b00000001;
+            sequencer.SequencerMemoryMode = SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
             sequencer.MapMask = 0x03;
         }
         /// <summary>

@@ -461,8 +461,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         };
         int length = bytes.Length;
         var address = new SegmentedAddress(MemoryMap.VideoBiosSegment, _nextFontOffset);
-        // Not using LoadData to avoid triggering breakpoints.
-        Array.Copy(bytes, 0, _memory.Ram, address.ToPhysical(), length);
+        _memory.LoadData(address.ToPhysical(), bytes);
         _nextFontOffset += (ushort)length;
 
         return address;
@@ -697,7 +696,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 break;
 
             case VideoModeId.Graphics320X200X8:
-                Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4;
+                Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4 | SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
                 mode = new Vga256(320, 200, this);
                 break;
 
