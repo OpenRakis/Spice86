@@ -6,7 +6,12 @@ public static class RegisterExtensions {
     public static string Explain(this GraphicsRegister register, byte value) {
         switch (register) {
             case GraphicsRegister.SetReset:
-                break;
+                return string.Format("Planes: {0}{1}{2}{3}",
+                    (value & 0x01) == 0x01 ? "#" : ".",
+                    (value & 0x02) == 0x02 ? "#" : ".",
+                    (value & 0x04) == 0x04 ? "#" : ".",
+                    (value & 0x08) == 0x08 ? "#" : "."
+                );
             case GraphicsRegister.EnableSetReset:
                 return string.Format(
                     "[0]Plane 0: {0}, [1]Plane 1: {1}, [2]Plane 2: {2}, [3]Plane 3: {3}, [4-7]Reserved",
@@ -16,7 +21,7 @@ public static class RegisterExtensions {
                     (value & 0x08) == 0x08 ? "On" : "Off"
                 );
             case GraphicsRegister.ColorCompare:
-                break;
+                return string.Format("Color index: {0} 0x{0:X2}", value);
             case GraphicsRegister.DataRotate:
                 break;
             case GraphicsRegister.ReadMapSelect:
@@ -43,7 +48,12 @@ public static class RegisterExtensions {
                         _ => throw new ArgumentOutOfRangeException()
                     });
             case GraphicsRegister.ColorDontCare:
-                break;
+                return string.Format("Planes: {0}{1}{2}{3}",
+                    (value & 0x01) == 0x01 ? "#" : ".",
+                    (value & 0x02) == 0x02 ? "#" : ".",
+                    (value & 0x04) == 0x04 ? "#" : ".",
+                    (value & 0x08) == 0x08 ? "#" : "."
+                );
             case GraphicsRegister.BitMask:
                 return Convert.ToString(value, 2).PadLeft(8, '0');
             default:

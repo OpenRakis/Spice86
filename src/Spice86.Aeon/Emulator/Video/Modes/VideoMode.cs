@@ -227,6 +227,7 @@ namespace Spice86.Aeon.Emulator.Video
             crtController.LineCompare = 0xFF;
             crtController.Offset = (byte)(stride / 2u);
             crtController.StartAddress = 0;
+            video.Sequencer.MapMask = 0x0F;
             video.Graphics.BitMask = 0xFF;
         }
 

@@ -93,25 +93,20 @@ namespace Spice86.Aeon.Emulator.Video
         /// Writes the next channel in the current color.
         /// </summary>
         /// <param name="value">Red, green, or blue channel value.</param>
-        public void Write(byte value)
-        {
-            unsafe
-            {
+        public void Write(byte value) {
+            value &= 0x3F;
+            value = (byte)(value << 2 | value >> 4);
+            unsafe {
                 writeChannel++;
-                if (writeChannel == 1)
-                {
+                if (writeChannel == 1) {
                     palette[writeIndex] &= 0xFF00FFFF;
-                    palette[writeIndex] |= (uint)((value & 0x3F) << 18);
-                }
-                else if (writeChannel == 2)
-                {
+                    palette[writeIndex] |= (uint)(value << 16);
+                } else if (writeChannel == 2) {
                     palette[writeIndex] &= 0xFFFF00FF;
-                    palette[writeIndex] |= (uint)((value & 0x3F) << 10);
-                }
-                else
-                {
+                    palette[writeIndex] |= (uint)(value << 8);
+                } else {
                     palette[writeIndex] &= 0xFFFFFF00;
-                    palette[writeIndex] |= (uint)((value & 0x3F) << 2);
+                    palette[writeIndex] |= value;
                     writeChannel = 0;
                     writeIndex++;
                 }
@@ -141,14 +136,15 @@ namespace Spice86.Aeon.Emulator.Video
         /// <param name="r">Red component.</param>
         /// <param name="g">Green component.</param>
         /// <param name="b">Blue component.</param>
-        public void SetColor(byte index, byte r, byte g, byte b)
-        {
-            uint red = (r & 0x3Fu) << 18;
-            uint green = (g & 0x3Fu) << 10;
-            uint blue = (b & 0x3Fu) << 2;
+        public void SetColor(byte index, byte r, byte g, byte b) {
+            r &= 0x3F;
+            g &= 0x3F;
+            b &= 0x3F;
+            uint red = (uint)((r << 2 | r >> 4) << 16);
+            uint green = (uint)((g << 2 | g >> 4) << 8);
+            uint blue = (uint)(b << 2 | b >> 4);
 
-            unsafe
-            {
+            unsafe {
                 palette[index] = red | green | blue;
             }
         }

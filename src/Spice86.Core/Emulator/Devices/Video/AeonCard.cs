@@ -6,15 +6,12 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Serilog;
 using Serilog.Core;
-using Serilog.Enrichers;
 
-using Spice86.Aeon.Emulator;
 using Spice86.Aeon.Emulator.Video;
 using Spice86.Aeon.Emulator.Video.Modes;
 using Spice86.Aeon.Emulator.Video.Rendering;
 
 using Serilog.Events;
-using Serilog.Exceptions;
 
 using Spice86.Aeon;
 using Spice86.Core.Emulator.CPU;
@@ -22,8 +19,6 @@ using Spice86.Core.Emulator.Devices.Video.Fonts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
-using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
 using System.Drawing;
@@ -33,8 +28,6 @@ using System.Runtime.InteropServices;
 using Point = Spice86.Aeon.Emulator.Video.Point;
 
 public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposable, IVgaInterrupts {
-    // Means the CRT is busy drawing a line, tells the program it should not draw
-    private const byte StatusRegisterRetraceInactive = 0;
 
     // 4th bit is 1 when the CRT finished drawing and is returning to the beginning
     // of the screen (retrace).
@@ -44,7 +37,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     // This is to be sure to catch the start of the retrace to ensure having the
     // whole duration of the retrace to write to VRAM.
     // More info here: http://atrevida.comprenica.com/atrtut10.html
-    private const byte StatusRegisterRetraceActive = 0b1000;
     private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
     /// <summary>
     ///     Total number of bytes allocated for video RAM.
@@ -57,7 +49,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private bool _attributeDataMode;
     private AttributeControllerRegister _attributeRegister;
     private CrtControllerRegister _crtRegister;
-    private byte _crtStatusRegister = StatusRegisterRetraceActive;
+    private byte _crtStatusRegister;
     private GraphicsRegister _graphicsRegister;
     private ushort _nextFontOffset;
     private Presenter? _presenter;
@@ -76,7 +68,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _bios = machine.Bios;
         _state = machine.Cpu.State;
         _logger = new LoggerConfiguration()
-            // .WriteTo.Console(outputTemplate: LogFormat)
+            .WriteTo.Console(outputTemplate: LogFormat)
             .WriteTo.File("aeon.log", outputTemplate: LogFormat)
             .MinimumLevel.Debug()
             .CreateLogger();
@@ -148,7 +140,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public override byte ReadByte(int port) {
-        byte value = 0;
+        byte value;
         switch (port) {
             case Ports.DacAddressReadMode:
                 value = Dac.ReadIndex;
@@ -229,13 +221,14 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 }
                 break;
             case Ports.InputStatus1Read or Ports.InputStatus1ReadAlt:
-                _attributeDataMode = false;
-                value = GetInputStatus1Value();
+                _attributeDataMode = false; // Reset the attribute data mode for port 0x03C0 to "Index"
+                value = CrtStatusRegister;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Read byte from port InputStatus1Read: {Value:X2} {Binary}", port, value, Convert.ToString(value, 2).PadLeft(8, '0'));
                 }
                 // Next time we will be called retrace will be active, and this until the retrace tick
-                CrtStatusRegister = StatusRegisterRetraceActive;
+                // Set vsync flag to true
+                CrtStatusRegister |= 0b00001000;
                 break;
             default:
                 value = base.ReadByte(port);
@@ -463,7 +456,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public void TickRetrace() {
         // Inactive at tick time, but will become active once the code checks for it.
-        CrtStatusRegister = StatusRegisterRetraceInactive;
+        // Set vsync flag to false.
+        CrtStatusRegister &= 0b11110111;
     }
 
     public void UpdateScreen() {
@@ -622,8 +616,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         };
         int length = bytes.Length;
         var address = new SegmentedAddress(MemoryMap.VideoBiosSegment, _nextFontOffset);
-        // Not using LoadData to avoid triggering breakpoints.
-        Array.Copy(bytes, 0, _memory.Ram, address.ToPhysical(), length);
+        _memory.LoadData(address.ToPhysical(), bytes);
         _nextFontOffset += (ushort)length;
 
         return address;
@@ -943,7 +936,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
         _logger.Information("Video mode changed to {@Mode}", mode.GetType().Name);
         _presenter = GetPresenter();
-        VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(true));
+        _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
     }
 
     public Presenter GetPresenter() {
@@ -965,28 +958,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         };
     }
 
-    /// <summary>
-    ///     Returns the current value of the input status 1 register.
-    /// </summary>
-    /// <returns>Current value of the input status 1 register.</returns>
-    private byte GetInputStatus1Value() {
-        // uint value = InterruptTimer.IsInRealtimeInterval(VerticalBlankingTime, RefreshRate) ? 0x09u : 0x00u;
-        // if (InterruptTimer.IsInRealtimeInterval(HorizontalBlankingTime, HorizontalPeriod))
-        //     value |= 0x01u;
-        //
-        // return (byte)value;
-        /*
-         * bit 7,6: reserved
-         * bit 5,4: "video feedback" color debug bits
-         * bit 3: Vertical Retrace/Video (VSYNC)
-         * bit 2,1: reserved
-         * bit 0: Display Enable
-         */
-        byte res = CrtStatusRegister;
-
-        return res;
-    }
-
     private void ChangeVerticalEnd() {
         // TODO: Implement or remove
         throw new NotImplementedException();
@@ -1000,7 +971,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         CrtController.Offset = 320 / 8;
         CurrentMode = mode;
         _presenter = GetPresenter();
-        VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(false));
+        _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
     }
 
 }
