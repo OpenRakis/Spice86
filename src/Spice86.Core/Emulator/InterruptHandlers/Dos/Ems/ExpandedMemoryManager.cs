@@ -427,7 +427,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     private void GetPageForAllHandles() {
         ushort handles = _state.BX;
-        _state.AX = GetPagesForAllHandles((uint) (MemoryUtils.ToSegment(_state.SI) + _state.DI), ref handles);
+        _state.AX = GetPagesForAllHandles((uint) (MemoryUtils.ToSegment(_state.ESI) + _state.DI), ref handles);
         _state.BX = handles;
     }
 
