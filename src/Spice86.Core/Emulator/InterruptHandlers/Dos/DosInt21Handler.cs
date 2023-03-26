@@ -425,6 +425,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x01, new Callback(0x01, WaitForKey));
         _dispatchTable.Add(0x02, new Callback(0x02, DisplayOutput));
         _dispatchTable.Add(0x06, new Callback(0x06, () => DirectConsoleIo(true)));
+        _dispatchTable.Add(0x08, new Callback(0x08, WaitForKeyNoEcho));
         _dispatchTable.Add(0x09, new Callback(0x09, PrintString));
         _dispatchTable.Add(0x0C, new Callback(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction));
         _dispatchTable.Add(0x0D, new Callback(0x0D, DiskReset));
@@ -460,8 +461,11 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
     }
+    private void WaitForKeyNoEcho() {
+        WaitForKey();
+    }
     private void WaitForKey() {
-        Thread.Sleep(5000);
+        Thread.Sleep(1000);
         // throw new NotImplementedException();
     }
     private void DeleteFile(bool b) {

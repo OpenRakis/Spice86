@@ -62,6 +62,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private int _dacReadIndex;
     private int _dacWriteIndex;
     private Color _dacWriteColor;
+    private bool _displayDisabled;
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
         base(machine, configuration, loggerService) {
@@ -78,7 +79,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             VideoRam = new nint(NativeMemory.AllocZeroed(TotalVramBytes));
         }
 
-        var memoryDevice = new VideoMemory(0x40000, this, 0xA0000);
+        var memoryDevice = new VideoMemory(0x10000, this, 0xA0000);
         _machine.Memory.RegisterMapping(0xA0000, 0x10000, memoryDevice);
 
         InitializeStaticFunctionalityTable();
@@ -339,7 +340,15 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case Ports.AttributeAddress:
                 if (!_attributeDataMode) {
-                    _attributeRegister = (AttributeControllerRegister)(value & 0x1F);
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        if (_displayDisabled && (value & 0b10000) != 0) {
+                            _logger.Debug("[{Port:X4}] Display enabled by setting bit 5 of the Attribute Controller Index to 1", port);
+                        } else if (!_displayDisabled && (value & 0b10000) == 0) {
+                            _logger.Debug("[{Port:X4}] Display disabled by setting bit 5 of the Attribute Controller Index to 0", port);
+                        }
+                    }
+                    _displayDisabled = (value & 0b10000) == 0;
+                    _attributeRegister = (AttributeControllerRegister)(value & 0b11111);
                 } else {
                     if (_logger.IsEnabled(LogEventLevel.Debug)) {
                         _logger.Debug("[{Port:X4}] Write to Attribute register {Register}: {Value:X2} {Binary}", port, _attributeRegister, value, Convert.ToString(value, 2).PadLeft(8, '0'));
@@ -443,7 +452,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public byte GetVramByte(uint address) {
-        return CurrentMode.GetVramByte(address);
+        return _displayDisabled ? (byte)0 : CurrentMode.GetVramByte(address);
     }
     public void SetVramByte(uint address, byte value) {
         CurrentMode.SetVramByte(address, value);
@@ -679,6 +688,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 //vm.Processor.DH = (byte)((dac.Palette[vm.Processor.BL] >> 18) & 0xCF);
                 //vm.Processor.CH = (byte)((dac.Palette[vm.Processor.BL] >> 10) & 0xCF);
                 //vm.Processor.CL = (byte)((dac.Palette[vm.Processor.BL] >> 2) & 0xCF);
+                _state.DH = (byte)((Dac.Palette[_state.BL] >> 18) & 0x3F);
+                _state.CH = (byte)((Dac.Palette[_state.BL] >> 10) & 0x3F);
+                _state.CL = (byte)((Dac.Palette[_state.BL] >> 2) & 0x3F);
                 break;
 
             case Functions.Palette_SetSingleDacRegister:
@@ -731,9 +743,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         int count = _state.CX;
 
         for (int i = start; i < count; i++) {
-            uint r = (Dac.Palette[start + i] >> 18) & 0xCFu;
-            uint g = (Dac.Palette[start + i] >> 10) & 0xCFu;
-            uint b = (Dac.Palette[start + i] >> 2) & 0xCFu;
+            uint r = (Dac.Palette[start + i] >> 18) & 0x3F;
+            uint g = (Dac.Palette[start + i] >> 10) & 0x3F;
+            uint b = (Dac.Palette[start + i] >> 2) & 0x3F;
 
             _memory.UInt8[segment, offset++] = (byte)r;
             _memory.UInt8[segment, offset++] = (byte)g;
@@ -766,6 +778,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         ushort segment = _state.ES;
         ushort offset = _state.DX;
         for (int i = 0; i < 16u; i++, offset++) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose))
+                _loggerService.Verbose("INT 10: SetAllPaletteRegisters {0:X2} {1:X2}", i, _memory.UInt8[segment, offset]);
             SetEgaPaletteRegister(i, _memory.UInt8[segment, offset]);
         }
     }
@@ -800,10 +814,14 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public void WriteCharacterAtCursor() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("INT 10: WriteCharacterAtCursor {0:X2}", _state.AL);
         TextConsole.Write(_state.AL);
     }
 
     public void WriteCharacterAndAttributeAtCursor() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("INT 10: WriteCharacterAndAttributeAtCursor {0:X2} {1:X2}", _state.AL, _state.BL);
         TextConsole.Write(_state.AL, (byte)(_state.BL & 0x0F), (byte)(_state.BL >> 4), false);
     }
 
@@ -834,6 +852,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public void SetCursorPosition() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("INT 10: SetCursorPosition {0:X2} {1:X2}", _state.DH, _state.DL);
         TextConsole.CursorPosition = new Point(_state.DL, _state.DH);
     }
 
