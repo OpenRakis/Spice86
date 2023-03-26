@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems; 
 
-public static class EmsErrors {
+public static class EmsStatus {
     public const byte EmsInvalidSubFunction = 0x8F;
     public const byte EmmNoError = 0x00;
     public const byte EmmSoftMal = 0x80;
