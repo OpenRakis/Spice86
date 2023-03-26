@@ -27,27 +27,27 @@ public class EmsCard : DefaultIOPortHandler {
             EmmSegmentMappings[i] = new();
         }
 
-        _memoryBlock = new(MemorySizeInMb);
+        Memory = new(MemorySizeInMb);
     }
 
-    private readonly MemoryBlock _memoryBlock;
+    public MemoryBlock Memory { get; }
 
-    public EmmMapping[] EmmSegmentMappings { get; private set; } = new EmmMapping[0x40];
+    public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[0x40];
 
-    public EmmMapping[] EmmMappings { get; private set; } = new EmmMapping[EmsHandle.EmmMaxPhysicalPages];
+    public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmsHandle.EmmMaxPhysicalPages];
     
-    public EmsHandle[] EmmHandles { get; private set; } = new EmsHandle[EmmMaxHandles];
+    public EmsHandle[] EmmHandles { get; } = new EmsHandle[EmmMaxHandles];
     
     public const ushort XmsStart = 0x110;
 
-    public int TotalPages => _memoryBlock.Pages;
+    public int TotalPages => Memory.Pages;
 
     public ushort FreeMemoryTotal {
         get {
             ushort free = 0;
             ushort index = XmsStart;
             while (index < TotalPages) {
-                if (_memoryBlock.MemoryHandles[index] == 0) {
+                if (Memory.MemoryHandles[index] == 0) {
                     free++;
                 }
 
@@ -66,11 +66,5 @@ public class EmsCard : DefaultIOPortHandler {
 
             return count;
         }
-    }
-    
-    public Ram ExpandedMemory { get; init; } = new(MemorySizeInMb * 1024);
-
-    public int AllocatePages(ushort pages, bool sequence) {
-        throw new NotImplementedException();
     }
 }

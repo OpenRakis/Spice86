@@ -11,6 +11,9 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
 /// <summary>
 /// Provides DOS applications with EMS memory.
 /// </summary>
@@ -124,7 +127,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return EmsErrors.EmmNoError;
         }
         /* Check for valid handle */
-        if (!ValidateHandle(handle)) {
+        if (!IsValidHandle(handle)) {
             return EmsErrors.EmmInvalidHandle;
         }
 
@@ -139,7 +142,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
     
-    public bool ValidateHandle(ushort handle) {
+    public bool IsValidHandle(ushort handle) {
         if (handle >= EmmMaxHandles) {
             return false;
         }
@@ -296,7 +299,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         int mem;
         if (pages != 0) {
-            mem = _machine.EmsCard.AllocatePages((ushort)(pages * 4), false);
+            mem = AllocatePages((ushort)(pages * 4), false);
             if (mem == 0) {
                 throw new UnrecoverableException("EMS: Memory allocation failure");
             }
@@ -307,6 +310,63 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             dhandle = handle;
         }
         return EmsErrors.EmmNoError;
+    }
+
+    private int AllocatePages(ushort pages, bool sequence) {
+        int ret = -1;
+        if (pages == 0) return 0;
+        if (sequence) {
+            int index = BestMatch(pages);
+            if (index == 0) return 0;
+            while (pages != 0) {
+                if (ret == -1)
+                    ret = index;
+                else {
+                    _machine.EmsCard.Memory.MemoryHandles[index - 1] = index;
+                }
+                index++;
+                pages--;
+            }
+            _machine.EmsCard.Memory.MemoryHandles[index - 1] = -1;
+        } else {
+            if (_machine.EmsCard.FreeMemoryTotal < pages) {
+                return 0;
+            }
+            int lastIndex = -1;
+            while (pages != 0) {
+                byte index = BestMatch(1);
+                if (index == 0) {
+                    FailFastWithLogMessage($"EMS: Memory corruption in {nameof(AllocatePages)}");
+                }
+                while (pages != 0 && (_machine.EmsCard.Memory.MemoryHandles[index] == 0)) {
+                    if (ret == -1) {
+                        ret = index;
+                    } else {
+                        _machine.EmsCard.Memory.MemoryHandles[lastIndex] = index;
+                    }
+                    lastIndex = index;
+                    index++;
+                    pages--;
+                }
+                // Invalidate it in case we need another match.
+                _machine.EmsCard.Memory.MemoryHandles[lastIndex] = -1;
+            }
+        }
+        return ret;
+    }
+
+    private byte BestMatch(int pages) {
+        throw new NotImplementedException();
+    }
+
+    [DoesNotReturn]
+    private void FailFastWithLogMessage(string message, [CallerMemberName] string methodName = nameof(FailFastWithLogMessage))
+    {
+        UnrecoverableException e = new(message);
+        if(_loggerService.IsEnabled(LogEventLevel.Fatal)) {
+            _loggerService.Fatal(e, " \"Fatal error in {@MethodName} {@ExceptionMessage}\"", methodName, e.Message);
+        }
+        throw e;
     }
 
     /// <summary>
