@@ -1,13 +1,7 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.OperatingSystem;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Core.Emulator.Memory;
-
-using System.Collections.Generic;
+using Spice86.Shared.Interfaces;
 
 public class DosMemoryManager {
     private readonly ILoggerService _loggerService;
@@ -21,12 +15,11 @@ public class DosMemoryManager {
     }
 
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSize) {
-        IList<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
+        IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
 
         // take the smallest
         DosMemoryControlBlock? blockOptional = null;
-        for (int i = 0; i < candidates.Count; i++) {
-            DosMemoryControlBlock? currentElement = candidates[i];
+        foreach (DosMemoryControlBlock currentElement in candidates) {
             if (blockOptional is null || currentElement.Size < blockOptional.Size) {
                 blockOptional = currentElement;
             }
@@ -52,7 +45,7 @@ public class DosMemoryManager {
         return block;
     }
 
-    public DosMemoryControlBlock? FindLargestFree() {
+    public DosMemoryControlBlock FindLargestFree() {
         DosMemoryControlBlock? current = _start;
         DosMemoryControlBlock? largest = null;
         while (true) {
@@ -132,7 +125,7 @@ public class DosMemoryManager {
         return true;
     }
 
-    private IList<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
+    private IEnumerable<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
         DosMemoryControlBlock? current = _start;
         List<DosMemoryControlBlock> candidates = new();
         while (true) {
@@ -180,7 +173,7 @@ public class DosMemoryManager {
         return true;
     }
 
-    private void JoinContiguousBlocks(DosMemoryControlBlock destination, DosMemoryControlBlock next) {
+    private static void JoinContiguousBlocks(DosMemoryControlBlock destination, DosMemoryControlBlock next) {
         destination.TypeField = next.TypeField;
 
         // +1 because next block metadata is going to free space
