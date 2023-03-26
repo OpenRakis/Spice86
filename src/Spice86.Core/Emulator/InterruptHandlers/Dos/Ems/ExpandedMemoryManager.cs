@@ -108,7 +108,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x4D, new Callback(0x4D, GetPageForAllHandles));
         _dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
         _dispatchTable.Add(0x4F, new Callback(0x4F, SaveOrRestorePartialPageMap));
-        _dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultiplePageMap));
+        _dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultipleHandlePages));
         _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         _dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
         _dispatchTable.Add(0x54, new Callback(0x54, HandleFunctions));
@@ -315,11 +315,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 nameof(EmmMapSegment), segment, handle, logicalPage);
         }
 
-        bool IsValidSegment = false;
+        bool isValidSegment = false;
 
         if (EmsType is 1 or 3) {
             if (segment < 0xf000 + 0x1000) {
-                IsValidSegment = true;
+                isValidSegment = true;
             }
         } else {
             switch (segment)
@@ -328,12 +328,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 // allow mapping of EMS page frame
                 case >= EmmPageFrame and < EmmPageFrame + 0x1000:
                     // allow mapping of graphics memory
-                    IsValidSegment = true;
+                    isValidSegment = true;
                     break;
             }
         }
 
-        if (!IsValidSegment) {
+        if (!isValidSegment) {
             return EmsStatus.EmsIllegalPhysicalPage;
         }
 
@@ -414,31 +414,26 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     
-    public void MapOrUnmapMultiplePageMap() {
-        switch (_state.AL) {
-            case EmsSubFunctions.MapUnmapPages:
-                MapUnmapMultiplePages();
-                break;
-            default:
-                throw new UnrecoverableException("Not implemented EMS subfunction", new NotImplementedException($"{_state.AL} function not implemented"));
-        }
+    public void MapOrUnmapMultipleHandlePages() {
+        throw new NotImplementedException();
     }
 
     /// <summary>
     /// Reallocates pages for a handle.
     /// </summary>
     public void ReallocatePages() {
-        
+        throw new NotImplementedException();
     }
 
     public void SetGetHandleName() {
+        ushort handle = _state.DX;
         switch (_state.AL) {
             case EmsSubFunctions.HandleNameGet:
-                GetHandleName();
+                GetHandleName(handle);
                 break;
 
             case EmsSubFunctions.HandleNameSet:
-                SetHandleName();
+                SetHandleName(handle);
                 break;
 
             default:
@@ -451,14 +446,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     public void MemoryRegion() {
-        switch (_state.AL) {
-            case EmsSubFunctions.MoveExchangeMove:
-                //Move();
-                break;
-
-            default:
-                throw new NotImplementedException($"EMM function 57{_state.AL:X2}h not implemented.");
-        }
+        throw new NotImplementedException();
     }
 
     private void GetMappablePhysicalArrayAddressArray() {
@@ -637,18 +625,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Gets the name of a handle.
     /// </summary>
-    public void GetHandleName() {
+    public void GetHandleName(ushort handle) {
     }
 
     /// <summary>
     /// Set the name of a handle.
     /// </summary>
-    public void SetHandleName() {
-    }
-
-    /// <summary>
-    /// Maps or unmaps multiple pages.
-    /// </summary>
-    public void MapUnmapMultiplePages() {
+    public void SetHandleName(ushort handle) {
     }
 }
