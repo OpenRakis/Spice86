@@ -4,16 +4,17 @@ namespace Spice86.Core.Emulator.Memory;
 ///     Represents plain old RAM.
 /// </summary>
 public class Ram : IMemoryDevice {
-    private readonly byte[] _memory;
+    private byte[] _storage;
+    public byte[] GetStorage() => _storage;
 
     public Ram(uint size) {
-        _memory = new byte[size];
+        _storage = new byte[size];
     }
 
-    public uint Size => (uint)_memory.Length;
+    public uint Size => (uint)_storage.Length;
 
     public byte Read(uint address) {
-        return _memory[address];
+        return _storage[address];
     }
 
     public ushort ReadWord(uint address) {
@@ -21,7 +22,7 @@ public class Ram : IMemoryDevice {
     }
     
     public void Write(uint address, byte value) {
-        _memory[address] = value;
+        _storage[address] = value;
     }
 
     public void WriteWord(uint address, ushort value) {
@@ -39,7 +40,7 @@ public class Ram : IMemoryDevice {
     }
     
     public Span<byte> GetSpan(int address, int length) {
-        return _memory.AsSpan(address, length);
+        return _storage.AsSpan(address, length);
     }
 
 }

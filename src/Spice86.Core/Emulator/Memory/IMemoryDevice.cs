@@ -5,6 +5,11 @@ namespace Spice86.Core.Emulator.Memory;
 /// </summary>
 public interface IMemoryDevice {
     /// <summary>
+    /// The array used for storage
+    /// </summary>
+    byte[] GetStorage();
+    
+    /// <summary>
     ///     The size of the device in bytes.
     /// </summary>
     uint Size {

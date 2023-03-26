@@ -12,6 +12,7 @@ using Spice86.Shared.Interfaces;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
@@ -483,11 +484,18 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         switch (operation)
         {
             case EmsSubFunctions.HandleNameGet:
+                if (handle >= EmmMaxHandles || EmmHandles[handle].Pages == EmmNullHandle) {
+                    return EmsStatus.EmmInvalidHandle;
+                }
                 GetHandleName(handle);
                 break;
 
             case EmsSubFunctions.HandleNameSet:
-                SetHandleName(handle);
+                if (handle >= EmmMaxHandles || EmmHandles[handle].Pages == EmmNullHandle) {
+                    return EmsStatus.EmmInvalidHandle;
+                }
+                SetHandleName(handle, MemoryUtils.GetZeroTerminatedString(
+                    Memory.GetStorage(), MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI), 8));
                 break;
 
             default:
@@ -677,14 +685,16 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Gets the name of a handle.
     /// </summary>
-    public void GetHandleName(ushort handle) {
-        throw new NotImplementedException();
+    public string GetHandleName(ushort handle) {
+        MemoryUtils.SetZeroTerminatedString(
+            Memory.GetStorage(), MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
+        return EmmHandles[handle].Name;
     }
 
     /// <summary>
     /// Set the name of a handle.
     /// </summary>
-    public void SetHandleName(ushort handle) {
-        throw new NotImplementedException();
+    public void SetHandleName(ushort handle, string name) {
+        EmmHandles[handle].Name = name;
     }
 }
