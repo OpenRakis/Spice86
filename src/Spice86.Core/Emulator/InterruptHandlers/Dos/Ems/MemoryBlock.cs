@@ -1,5 +1,10 @@
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems; 
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
+using Spice86.Core.Emulator.OperatingSystem;
+
+/// <summary>
+/// TODO: Merge this with <see cref="DosMemoryControlBlock"/>
+/// </summary>
 public record MemoryBlock {
     public int MemorySize { get; private set; }
     
