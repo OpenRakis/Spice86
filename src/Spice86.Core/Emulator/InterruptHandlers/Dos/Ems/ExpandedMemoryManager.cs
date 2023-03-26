@@ -35,6 +35,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public override byte Index => 0x67;
 
     private readonly ILoggerService _loggerService;
+
+    /// <summary>
+    /// Type of EMS emulation. <br/>
+    /// 0 = Mixed mode. <br/>
+    /// 1 = EMS board. <br/>
+    /// 2 = EMS386. <br/>
+    /// </summary>
+    public byte EmsType { get; init; } = 2;
     
     public MemoryBlock MemoryBlock { get; }
 
@@ -234,8 +242,110 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Restores the state of page map registers for a handle.
     /// </summary>
     public void RestorePageMap() {
+        _state.AX = RestorePageMap(_state.DX);
     }
-    
+
+    public byte RestorePageMap(ushort handle) {
+        /* Check for valid handle */
+        if (handle >= EmmMaxHandles || EmmHandles[handle].Pages == EmmNullHandle) {
+            if (handle != 0) {
+                return EmsStatus.EmmInvalidHandle;
+            }
+        }
+        /* Check for previous save */
+        if (!EmmHandles[handle].SavePagedMap) {
+            return EmsStatus.EmmNoSavedPageMap;
+        }
+        /* Restore the mappings */
+        EmmHandles[handle].SavePagedMap = false;
+        for (int i = 0; i < EmmMaxPhysPage; i++) {
+            EmmMappings[i].Page = EmmHandles[handle].PageMap[i].Page;
+            EmmMappings[i].Handle = EmmHandles[handle].PageMap[i].Handle;
+        }
+        return RestoreMappingTable();
+    }
+
+    private byte RestoreMappingTable() {
+        /* Move through the mappings table and setup mapping accordingly */
+        for (int i = 0; i < 0x40; i++) {
+            /* Skip the pageframe */
+            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMaxPhysPage) {
+                continue;
+            }
+            EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
+        }
+        for (ushort i = 0; i < EmmMaxPhysPage; i++) {
+            ushort handle = EmmMappings[i].Handle;
+            EmmMapPage(i, ref handle, EmmMappings[i].Page);
+        }
+        return EmsStatus.EmmNoError;
+
+    }
+
+    private byte EmmMapSegment(int segment, ushort handle, ushort logicalPage) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("{@MethodName}: {@Handle}, {@Segment}, {@LogicalPage}",
+                nameof(EmmMapSegment), segment, handle, logicalPage);
+        }
+
+        bool IsValidSegment = false;
+
+        if (EmsType is 1 or 3) {
+            if (segment < 0xf000 + 0x1000) {
+                IsValidSegment = true;
+            }
+        } else {
+            switch (segment)
+            {
+                case >= 0xa000 and < 0xb000:
+                // allow mapping of EMS page frame
+                case >= EmmPageFrame and < EmmPageFrame + 0x1000:
+                    // allow mapping of graphics memory
+                    IsValidSegment = true;
+                    break;
+            }
+        }
+
+        if (!IsValidSegment) {
+            return EmsStatus.EmsIllegalPhysicalPage;
+        }
+
+        int toPhysicalPage = (segment - EmmPageFrame) / (0x1000 / EmmMaxPhysPage);
+
+        /* unmapping doesn't need valid handle (as handle isn't used) */
+        if (logicalPage == EmmNullPage) {
+            /* Unmapping */
+            if (toPhysicalPage is >= 0 and < EmmMaxPhysPage) {
+                EmmMappings[toPhysicalPage].Handle = EmmNullHandle;
+                EmmMappings[toPhysicalPage].Page = EmmNullPage;
+            } else {
+                EmmSegmentMappings[segment >> 10].Handle = EmmNullHandle;
+                EmmSegmentMappings[segment >> 10].Page = EmmNullPage;
+            }
+            return EmsStatus.EmmNoError;
+        }
+        /* Check for valid handle */
+        if (!IsValidHandle(handle)) {
+            return EmsStatus.EmmInvalidHandle;
+        }
+
+        if (logicalPage < EmmHandles[handle].Pages) {
+            /* Mapping it is */
+            if (toPhysicalPage is >= 0 and < EmmMaxPhysPage) {
+                EmmMappings[toPhysicalPage].Handle = handle;
+                EmmMappings[toPhysicalPage].Page = logicalPage;
+            } else {
+                EmmSegmentMappings[segment >> 10].Handle = handle;
+                EmmSegmentMappings[segment >> 10].Page = logicalPage;
+            }
+
+            return EmsStatus.EmmNoError;
+        } else {
+            /* Illegal logical page it is */
+            return EmsStatus.EmsLogicalPageOutOfRange;
+        }
+    }
+
     public void GetHandleCount() {
         // Return the number of EMM handles (plus 1 for the OS handle).
         _state.BX = (ushort)(EmmHandles.Length + 1);
