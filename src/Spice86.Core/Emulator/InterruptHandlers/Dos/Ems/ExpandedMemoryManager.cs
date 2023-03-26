@@ -117,6 +117,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
         _dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
     }
+
+    public override void Run() {
+        byte operation = _state.AH;
+        if (!_dispatchTable.ContainsKey(operation)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EMS function not provided: {@StateAh}", operation);
+            }
+            _state.AX = EmsStatus.EmmFuncNoSup;
+        }
+        Run(operation);
+    }
     
     public void GetStatus() {
         // Return good status in AH.
@@ -475,17 +486,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private void AllocateStandardRawPages() {
         throw new NotImplementedException();
-    }
-    
-    public override void Run() {
-        byte operation = _state.AH;
-        if (!_dispatchTable.ContainsKey(operation)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("EMS function not provided: {@StateAh}", operation);
-            }
-            _state.AX = EmsStatus.EmmFuncNoSup;
-        }
-        Run(operation);
     }
 
     public ushort EmmAllocateMemory(ushort pages, ref ushort dhandle, bool canAllocateZeroPages) {
