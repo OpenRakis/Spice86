@@ -337,8 +337,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 isValidSegment = true;
             }
         } else {
-            switch (segment)
-            {
+            switch (segment) {
                 case >= 0xa000 and < 0xb000:
                 // allow mapping of EMS page frame
                 case >= EmmPageFrame and < EmmPageFrame + 0x1000:
@@ -382,10 +381,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
 
             return EmsStatus.EmmNoError;
-        } else {
-            /* Illegal logical page it is */
-            return EmsStatus.EmsLogicalPageOutOfRange;
         }
+
+        /* Illegal logical page it is */
+        return EmsStatus.EmsLogicalPageOutOfRange;
     }
 
     public void GetHandleCount() {
@@ -440,7 +439,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
             handles++;
             Memory.Write(table, i);
-            Memory.Write(table, handles);
+            Memory.WriteWord(table, handles);
         }
         return EmsStatus.EmmNoError;
     }
