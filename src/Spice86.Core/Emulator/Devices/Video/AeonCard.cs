@@ -752,7 +752,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
         _loggerService.Information("Video mode changed to {@Mode}", mode.GetType().Name);
         _presenter = GetPresenter();
-        VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(true));
+        _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
     }
 
     public Presenter GetPresenter() {
@@ -797,7 +797,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         var mode = new Unchained256(320, 200, this);
         CrtController.Offset = 320 / 8;
         CurrentMode = mode;
-        VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(false));
+        _presenter = GetPresenter();
+        _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
     }
 
 }

@@ -54,6 +54,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
         _frameRenderTimeWatch = new Stopwatch();
+        _bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
     }
 
     private void DrawThreadMethod() {
@@ -103,7 +104,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     /// that's why it's used to bind the Source property of the Image control in VideoBufferView.xaml<br/>
     /// </summary>
     [ObservableProperty]
-    private WriteableBitmap? _bitmap = new(new PixelSize(320, 200), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+    private WriteableBitmap? _bitmap;
 
     private bool _showCursor = true;
 
