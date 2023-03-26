@@ -371,7 +371,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Gets the number of pages allocated to a handle.
     /// </summary>
     public void GetPagesForOneHandle() {
-        int handleIndex = _state.DX;
+        throw new NotImplementedException();
     }
     
     private void GetPageForAllHandles() {
@@ -460,6 +460,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public override void Run() {
         byte operation = _state.AH;
+        if (!_dispatchTable.ContainsKey(operation)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EMS function not provided: {@StateAh}", operation);
+            }
+            _state.AX = EmsStatus.EmmFuncNoSup;
+        }
         Run(operation);
     }
 
