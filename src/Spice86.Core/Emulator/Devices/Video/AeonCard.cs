@@ -697,7 +697,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 break;
 
             case VideoModeId.Graphics320X200X8:
-                Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4;
+                Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4 | SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
                 mode = new Vga256(320, 200, this);
                 break;
 
