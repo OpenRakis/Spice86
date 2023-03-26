@@ -15,19 +15,23 @@ public class Ram : IMemoryDevice {
     public byte Read(uint address) {
         return _memory[address];
     }
+
+    public ushort ReadWord(uint address) {
+        return BitConverter.ToUInt16(GetSpan((int)address, 2));
+    }
     
     public void Write(uint address, byte value) {
         _memory[address] = value;
     }
 
-    public void Write(uint address, ushort value) {
+    public void WriteWord(uint address, ushort value) {
         byte[] bytes = BitConverter.GetBytes(value);
         foreach (byte item in bytes) {
             Write(address, item);
         }
     }
     
-    public void Write(uint address, uint value) {
+    public void WriteDWord(uint address, uint value) {
         byte[] bytes = BitConverter.GetBytes(value);
         foreach (byte item in bytes) {
             Write(address, item);
