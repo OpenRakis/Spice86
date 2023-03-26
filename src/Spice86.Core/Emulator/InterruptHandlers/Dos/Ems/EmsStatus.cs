@@ -1,7 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems; 
 
 public static class EmsStatus {
-    public const byte EmsInvalidSubFunction = 0x8F;
     public const byte EmmNoError = 0x00;
     public const byte EmmSoftMal = 0x80;
     public const byte EmmHardMal = 0x81;
@@ -16,7 +15,7 @@ public static class EmsStatus {
     public const byte EmsIllegalPhysicalPage = 0x8b;
     public const byte EmmPageMapSaved = 0x8d;
     public const byte EmmNoSavedPageMap = 0x8e;
-    public const byte EmmInvalidSub = 0x8f;
+    public const byte EmmInvalidSubFunction = 0x8f;
     public const byte EmmFeatNoSup = 0x91;
     public const byte EmmMoveOverlap = 0x92;
     public const byte EmmMoveOverlapi = 0x97;
