@@ -43,12 +43,9 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 int colorDontCare = ~graphics.ColorDontCare.Packed;
                 int colorCompare = graphics.ColorCompare | colorDontCare;
                 for (int i = 0; i < 8; i++) {
-                    int extracted;
-                    if (Bmi2.IsSupported)
-                        extracted = (int)Bmi2.ParallelBitExtract(latches, 0x01010101u << i);
-                    else {
-                        extracted = (int)((latches & 1u << i) >> i | (latches & 0x100u << i) >> 7 + i | (latches & 0x10000u << i) >> 14 + i | (latches & 0x1000000u << i) >> 21 + i);
-                    }
+                    int extracted = Bmi2.IsSupported 
+                        ? (int)Bmi2.ParallelBitExtract(latches, 0x01010101u << i) 
+                        : (int)((latches & 1u << i) >> i | (latches & 0x100u << i) >> 7 + i | (latches & 0x10000u << i) >> 14 + i | (latches & 0x1000000u << i) >> 21 + i);
                     int color = extracted | colorDontCare;
                     if (color == colorCompare)
                         result |= (byte)(1 << i);
