@@ -15,6 +15,11 @@ public class VideoMemory : IMemoryDevice {
         _baseAddress = baseAddress;
         Size = size;
     }
+
+    public byte[] GetStorage() {
+        throw new NotSupportedException();
+    }
+
     public uint Size {
         get;
     }
@@ -24,7 +29,16 @@ public class VideoMemory : IMemoryDevice {
     public void Write(uint address, byte value) {
         _videoCard.SetVramByte(address - _baseAddress, value);
     }
+
+    public void WriteWord(uint address, ushort value) {
+        throw new NotSupportedException();
+    }
+
+    public void WriteDWord(uint address, uint value) {
+        throw new NotSupportedException();
+    }
+
     public Span<byte> GetSpan(int address, int length) {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 }
