@@ -1,12 +1,9 @@
-﻿using Spice86.Core.Emulator.Devices.Memory;
-
-namespace Spice86.Core.Emulator.VM;
+﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -108,8 +105,6 @@ public class Machine : IDisposable {
 
     public OPL3FM OPL3FM { get; }
     
-    public EmsCard EmsCard { get; }
-
     public event Action? Paused;
 
     public event Action? Resumed;
@@ -195,7 +190,6 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-        EmsCard = new(this, configuration, loggerService);
         if(configuration.Ems) {
             Ems = new(this, loggerService);
         }
