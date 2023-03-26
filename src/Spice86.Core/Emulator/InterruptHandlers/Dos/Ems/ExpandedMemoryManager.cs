@@ -50,22 +50,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public int TotalPages => Memory.Pages;
 
-    public ushort FreeMemoryTotal {
-        get {
-            ushort free = 0;
-            ushort index = XmsStart;
-            while (index < TotalPages) {
-                if (Memory.MemoryHandles[index] == 0) {
-                    free++;
-                }
-
-                index++;
+    public ushort GetFreeMemoryTotal() {
+        ushort free = 0;
+        ushort index = XmsStart;
+        while (index < TotalPages) {
+            if (Memory.MemoryHandles[index] == 0) {
+                free++;
             }
-            return free;
+            index++;
         }
+        return free;
     }
-    
-    public ushort FreePages => Math.Min((ushort)0x7FFF, (ushort)(FreeMemoryTotal / 4));
+
+    public ushort GetFreePages() => Math.Min((ushort) 0x7FFF, (ushort) (GetFreeMemoryTotal() / 4));
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
         _loggerService = loggerService;
@@ -129,7 +126,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         // Return total number of pages in DX.
         _state.DX = (ushort) (TotalPages / 4);
         // Return number of pages available in BX.
-        _state.BX = FreePages;
+        _state.BX = GetFreePages();
         // Set good status.
         _state.AH = EmsErrors.EmmNoError;
     }
@@ -300,7 +297,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         switch (_state.AL) {
         case EmsSubFunctions.GetHardwareInformationUnallocatedRawPages:
             // Return number of pages available in BX.
-            _state.BX = FreePages;
+            _state.BX = GetFreePages();
             // Return total number of pages in DX.
             _state.DX = (ushort) TotalPages;
             // Set good status.
@@ -328,7 +325,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
         
         // Check for enough free pages
-        if (FreeMemoryTotal / 4 < pages) {
+        if (GetFreeMemoryTotal() / 4 < pages) {
             return EmsErrors.EmmOutOfLogicalPages;
         }
 
@@ -372,7 +369,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
             Memory.MemoryHandles[index - 1] = -1;
         } else {
-            if (FreeMemoryTotal < pages) {
+            if (GetFreeMemoryTotal() < pages) {
                 return 0;
             }
             int lastIndex = -1;
