@@ -413,7 +413,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Gets the number of pages allocated to a handle.
     /// </summary>
     public void GetPagesForOneHandle() {
-        throw new NotImplementedException();
+        if (!IsValidHandle(_state.DX)) {
+            _state.AX = EmsStatus.EmmInvalidHandle;
+            return;
+        }
+
+        _state.BX = GetPagesForOneHandle(_state.DX);
+        _state.AX = EmsStatus.EmmNoError;
+    }
+
+    public ushort GetPagesForOneHandle(ushort handle) {
+        return EmmHandles[handle].Pages;
     }
     
     private void GetPageForAllHandles() {
