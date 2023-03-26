@@ -2,9 +2,7 @@
 
 using Serilog.Events;
 
-using System.Numerics;
 using Spice86.Core.Emulator.Callback;
-using Spice86.Core.Emulator.Devices.Memory;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -37,11 +35,65 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public override byte Index => 0x67;
 
     private ILoggerService _loggerService;
+    
+    public MemoryBlock Memory { get; }
+
+    public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[0x40];
+
+    public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmsHandle.EmmMaxPhysicalPages];
+    
+    public EmsHandle[] EmmHandles { get; } = new EmsHandle[EmmMaxHandles];
+    
+    public const ushort XmsStart = 0x110;
+
+    public const int MemorySizeInMb = 6;
+
+    public int TotalPages => Memory.Pages;
+
+    public ushort FreeMemoryTotal {
+        get {
+            ushort free = 0;
+            ushort index = XmsStart;
+            while (index < TotalPages) {
+                if (Memory.MemoryHandles[index] == 0) {
+                    free++;
+                }
+
+                index++;
+            }
+            return free;
+        }
+    }
+    
+    public ushort FreePages {
+        get {
+            ushort count = (ushort)(FreeMemoryTotal / 4);
+            if (count > 0x7FFF) {
+                return 0x7FFF;
+            }
+
+            return count;
+        }
+    }
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
         _loggerService = loggerService;
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
+        for (int i = 0; i < EmmHandles.Length; i++) {
+            EmmHandles[i] = new();
+        }
+
+        for (int i = 0; i < EmmMappings.Length; i++) {
+            EmmMappings[i] = new();
+        }
+
+        for (int i = 0; i < EmmSegmentMappings.Length; i++) {
+            EmmSegmentMappings[i] = new();
+        }
+
+        Memory = new(MemorySizeInMb);
+
         FillDispatchTable();
     }
 
@@ -84,9 +136,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public void GetNumberOfPages() {
         // Return total number of pages in DX.
-        _state.DX = (ushort) (_machine.EmsCard.TotalPages / 4);
+        _state.DX = (ushort) (TotalPages / 4);
         // Return number of pages available in BX.
-        _state.BX = _machine.EmsCard.FreePages;
+        _state.BX = FreePages;
         // Set good status.
         _state.AH = EmsErrors.EmmNoError;
     }
@@ -122,8 +174,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         /* unmapping doesn't need valid handle (as handle isn't used) */
         if (logicalPage == EmmNullPage) {
             /* Unmapping */
-            _machine.EmsCard.EmmMappings[physicalPage].Handle = EmmNullHandle;
-            _machine.EmsCard.EmmMappings[physicalPage].Page = EmmNullPage;
+            EmmMappings[physicalPage].Handle = EmmNullHandle;
+            EmmMappings[physicalPage].Page = EmmNullPage;
             return EmsErrors.EmmNoError;
         }
         /* Check for valid handle */
@@ -131,10 +183,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return EmsErrors.EmmInvalidHandle;
         }
 
-        if (logicalPage < _machine.EmsCard.EmmHandles[handle].Pages) {
+        if (logicalPage < EmmHandles[handle].Pages) {
             /* Mapping it is */
-            _machine.EmsCard.EmmMappings[physicalPage].Handle = handle;
-            _machine.EmsCard.EmmMappings[physicalPage].Page = logicalPage;
+            EmmMappings[physicalPage].Handle = handle;
+            EmmMappings[physicalPage].Page = logicalPage;
             return EmsErrors.EmmNoError;
         } else {
             /* Illegal logical page it is */
@@ -146,7 +198,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         if (handle >= EmmMaxHandles) {
             return false;
         }
-        return _machine.EmsCard.EmmHandles[handle].Pages != EmmNullHandle;
+        return EmmHandles[handle].Pages != EmmNullHandle;
     }
     
     /// <summary>
@@ -177,7 +229,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public void GetHandleCount() {
         // Return the number of EMM handles (plus 1 for the OS handle).
-        _state.BX = (ushort)(_machine.EmsCard.EmmHandles.Length + 1);
+        _state.BX = (ushort)(EmmHandles.Length + 1);
         // Return good status.
         _state.AH = EmsErrors.EmmNoError;
     }
@@ -257,9 +309,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         switch (_state.AL) {
         case EmsSubFunctions.GetHardwareInformationUnallocatedRawPages:
             // Return number of pages available in BX.
-            _state.BX = _machine.EmsCard.FreePages;
+            _state.BX = FreePages;
             // Return total number of pages in DX.
-            _state.DX = (ushort) _machine.EmsCard.TotalPages;
+            _state.DX = (ushort) TotalPages;
             // Set good status.
             _state.AH = EmsErrors.EmmNoError;
             break;
@@ -285,13 +337,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
         
         // Check for enough free pages
-        if (_machine.EmsCard.FreeMemoryTotal / 4 < pages) {
+        if (FreeMemoryTotal / 4 < pages) {
             return EmsErrors.EmmOutOfLogicalPages;
         }
 
         ushort handle = 1;
         // Check for a free handle
-        while (_machine.EmsCard.EmmHandles[handle].Pages > 0) {
+        while (EmmHandles[handle].Pages > 0) {
             if (++handle >= EmmMaxHandles) {
                 return EmsErrors.EmmOutOfHandles;
             }
@@ -304,8 +356,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 throw new UnrecoverableException("EMS: Memory allocation failure");
             }
 
-            _machine.EmsCard.EmmHandles[handle].Pages = pages;
-            _machine.EmsCard.EmmHandles[handle].MemHandle = mem;
+            EmmHandles[handle].Pages = pages;
+            EmmHandles[handle].MemHandle = mem;
             // Change handle only if there is no error.
             dhandle = handle;
         }
@@ -322,14 +374,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 if (ret == -1)
                     ret = index;
                 else {
-                    _machine.EmsCard.Memory.MemoryHandles[index - 1] = index;
+                    Memory.MemoryHandles[index - 1] = index;
                 }
                 index++;
                 pages--;
             }
-            _machine.EmsCard.Memory.MemoryHandles[index - 1] = -1;
+            Memory.MemoryHandles[index - 1] = -1;
         } else {
-            if (_machine.EmsCard.FreeMemoryTotal < pages) {
+            if (FreeMemoryTotal < pages) {
                 return 0;
             }
             int lastIndex = -1;
@@ -338,18 +390,18 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 if (index == 0) {
                     FailFastWithLogMessage($"EMS: Memory corruption in {nameof(AllocatePages)}");
                 }
-                while (pages != 0 && (_machine.EmsCard.Memory.MemoryHandles[index] == 0)) {
+                while (pages != 0 && (Memory.MemoryHandles[index] == 0)) {
                     if (ret == -1) {
                         ret = index;
                     } else {
-                        _machine.EmsCard.Memory.MemoryHandles[lastIndex] = index;
+                        Memory.MemoryHandles[lastIndex] = index;
                     }
                     lastIndex = index;
                     index++;
                     pages--;
                 }
                 // Invalidate it in case we need another match.
-                _machine.EmsCard.Memory.MemoryHandles[lastIndex] = -1;
+                Memory.MemoryHandles[lastIndex] = -1;
             }
         }
         return ret;
