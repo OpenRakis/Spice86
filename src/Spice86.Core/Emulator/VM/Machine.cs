@@ -106,8 +106,6 @@ public class Machine : IDisposable {
 
     public OPL3FM OPL3FM { get; }
     
-    public EmsCard EmsCard { get; }
-
     public event Action? Paused;
 
     public event Action? Resumed;
@@ -193,7 +191,6 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-        EmsCard = new(this, configuration, loggerService);
         if(configuration.Ems) {
             Ems = new(this, loggerService);
         }
