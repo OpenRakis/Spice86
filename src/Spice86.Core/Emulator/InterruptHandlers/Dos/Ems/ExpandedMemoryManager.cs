@@ -466,7 +466,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public void SetGetHandleName() {
         ushort handle = _state.DX;
-        switch (_state.AL) {
+        _state.AX = GetSetHandleName(handle, _state.AL);
+    }
+
+    /// <summary>
+    /// Gets or Set a handle name, depending on the <paramref name="operation"/>
+    /// </summary>
+    /// <param name="handle">The handle reference</param>
+    /// <param name="operation">Get: 0, Set: 1</param>
+    /// <returns>The state of the operation</returns>
+    public ushort GetSetHandleName(ushort handle, byte operation)
+    {
+        switch (operation)
+        {
             case EmsSubFunctions.HandleNameGet:
                 GetHandleName(handle);
                 break;
@@ -476,8 +488,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
 
             default:
-                throw new UnrecoverableException();
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    
+                }
+                return EmsStatus.EmmInvalidSubFunction;
         }
+
+        return EmsStatus.EmmNoError;
     }
 
     private void HandleFunctions() {
@@ -626,11 +643,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     int pages = index - first;
                     if (pages == requestedSize) {
                         return first;
-                    } else if (pages > requestedSize) {
-                        if (pages < best) {
-                            best = pages;
-                            bestMatch = first;
-                        }
+                    }
+
+                    if (pages > requestedSize && pages < best) {
+                        best = pages;
+                        bestMatch = first;
                     }
                     // Always reset for new search
                     first = 0;
