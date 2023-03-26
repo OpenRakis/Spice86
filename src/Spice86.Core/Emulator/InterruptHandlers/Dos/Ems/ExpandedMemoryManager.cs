@@ -21,7 +21,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const string EmsIdentifier = "EMMXXXX0";
 
-    public const ushort EmmMaxHandles = 200;
+    public const byte EmmMaxHandles = 200;
 
     public const byte EmmMaxPhysPage = 4;
 
@@ -427,9 +427,24 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
     
     private void GetPageForAllHandles() {
-        throw new NotImplementedException();
+        ushort handles = _state.BX;
+        _state.AX = GetPagesForAllHandles((uint) (MemoryUtils.ToSegment(_state.SI) + _state.DI), ref handles);
+        _state.BX = handles;
     }
-    
+
+    private ushort GetPagesForAllHandles(uint table, ref ushort handles) {
+        handles = 0;
+        for (byte i = 0; i < EmmMaxHandles; i++) {
+            if (EmmHandles[i].Pages == EmmNullHandle) {
+                continue;
+            }
+            handles++;
+            Memory.Write(table, i);
+            Memory.Write(table, handles);
+        }
+        return EmsStatus.EmmNoError;
+    }
+
     private void SaveOrRestorePageMap() {
         throw new NotImplementedException();
     }

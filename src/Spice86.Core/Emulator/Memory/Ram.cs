@@ -19,6 +19,21 @@ public class Ram : IMemoryDevice {
     public void Write(uint address, byte value) {
         _memory[address] = value;
     }
+
+    public void Write(uint address, ushort value) {
+        byte[] bytes = BitConverter.GetBytes(value);
+        foreach (byte item in bytes) {
+            Write(address, item);
+        }
+    }
+    
+    public void Write(uint address, uint value) {
+        byte[] bytes = BitConverter.GetBytes(value);
+        foreach (byte item in bytes) {
+            Write(address, item);
+        }
+    }
+    
     public Span<byte> GetSpan(int address, int length) {
         return _memory.AsSpan(address, length);
     }
