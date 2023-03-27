@@ -8,12 +8,14 @@ public sealed class EmmHandle {
     
     public int MemHandle { get; set; }
     
-    /* 4 16kb pages in pageframe */
+    /// <summary>
+    /// 4 16 KB pages in PageFrame
+    /// </summary>
     public const byte EmmMaxPhysicalPages = 4;
     
     private readonly EmmMapping[] _pageMap = new EmmMapping[EmmMaxPhysicalPages];
 
-    private static readonly string _nullHandleName = new((char)0, 8);
+    private const string NullHandleName = "";
 
     public EmmHandle() {
         for (int i = 0; i < _pageMap.Length; i++) {
@@ -24,21 +26,21 @@ public sealed class EmmHandle {
     /// <summary>
     /// Gets or sets the handle name.
     /// </summary>
-    public string Name { get; set; } = _nullHandleName;
+    public string Name { get; set; } = NullHandleName;
 
     /// <summary>
     /// Gets or sets the saved page map for the handle.
     /// </summary>
     public EmmMapping[] PageMap => _pageMap;
     
-    public bool SavePagedMap { get; set; }
+    public bool IsPageMapSaved { get; set; }
 
     /// <summary>
     /// Returns a string containing the handle name.
     /// </summary>
     /// <returns>String containing the handle name.</returns>
     public override string ToString() {
-        if (!string.IsNullOrEmpty(Name) && Name != _nullHandleName) {
+        if (!string.IsNullOrWhiteSpace(Name) && Name != NullHandleName) {
             return Name;
         } else {
             return "Untitled";
