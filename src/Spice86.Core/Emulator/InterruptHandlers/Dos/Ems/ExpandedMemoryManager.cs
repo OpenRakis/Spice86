@@ -611,7 +611,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    
+                    _loggerService.Error("{@MethodName}: subFunction {@FunctionId} invalid", nameof(GetSetHandleName), operation);
                 }
                 return EmmStatus.EmmInvalidSubFunction;
         }
