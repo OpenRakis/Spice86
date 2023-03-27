@@ -12,14 +12,12 @@ public sealed class EmmHandle {
     /// 4 16 KB pages in PageFrame
     /// </summary>
     public const byte EmmMaxPhysicalPages = 4;
-    
-    private readonly EmmMapping[] _pageMap = new EmmMapping[EmmMaxPhysicalPages];
 
     private const string NullHandleName = "";
 
     public EmmHandle() {
-        for (int i = 0; i < _pageMap.Length; i++) {
-            _pageMap[i] = new EmmMapping();
+        for (int i = 0; i < PageMap.Length; i++) {
+            PageMap[i] = new EmmMapping();
         }
     }
 
@@ -31,9 +29,9 @@ public sealed class EmmHandle {
     /// <summary>
     /// Gets or sets the saved page map for the handle.
     /// </summary>
-    public EmmMapping[] PageMap => _pageMap;
-    
-    public bool IsPageMapSaved { get; set; }
+    public EmmMapping[] PageMap { get; } = new EmmMapping[EmmMaxPhysicalPages];
+
+    public bool SavePageMap { get; set; }
 
     /// <summary>
     /// Returns a string containing the handle name.

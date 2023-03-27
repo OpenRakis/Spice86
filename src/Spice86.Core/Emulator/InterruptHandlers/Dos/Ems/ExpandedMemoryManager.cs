@@ -235,7 +235,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         EmmHandles[handle].MemHandle = 0;
         // OS handle is NEVER deallocated
         EmmHandles[handle].Pages = handle == 0 ? (ushort) 0 : EmmNullHandle;
-        EmmHandles[handle].IsPageMapSaved = false;
+        EmmHandles[handle].SavePageMap = false;
         EmmHandles[handle].Name = string.Empty;
         return EmmStatus.EmmNoError;
 
@@ -271,7 +271,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
         }
         /* Check for previous save */
-        if (EmmHandles[handle].IsPageMapSaved) {
+        if (EmmHandles[handle].SavePageMap) {
             return EmmStatus.EmmPageMapSaved;
         }
         /* Copy the mappings over */
@@ -279,7 +279,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmHandles[handle].PageMap[i].Page = EmmMappings[i].Page;
             EmmHandles[handle].PageMap[i].Handle = EmmMappings[i].Handle;
         }
-        EmmHandles[handle].IsPageMapSaved = true;
+        EmmHandles[handle].SavePageMap = true;
         return EmmStatus.EmmNoError;
     }
     
@@ -298,11 +298,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
         }
         /* Check for previous save */
-        if (!EmmHandles[handle].IsPageMapSaved) {
+        if (!EmmHandles[handle].SavePageMap) {
             return EmmStatus.EmmNoSavedPageMap;
         }
         /* Restore the mappings */
-        EmmHandles[handle].IsPageMapSaved = false;
+        EmmHandles[handle].SavePageMap = false;
         for (int i = 0; i < EmmMappings.Length; i++) {
             EmmMappings[i].Page = EmmHandles[handle].PageMap[i].Page;
             EmmMappings[i].Handle = EmmHandles[handle].PageMap[i].Handle;
@@ -468,7 +468,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.AX = ReallocatePages(_state.DX, _state.BX);
     }
 
-    public ushort ReallocatePages(ushort handle, ushort pages) {
+    public byte ReallocatePages(ushort handle, ushort pages) {
         /* Check for valid handle */
         if (!IsValidHandle(handle)) {
             return EmmStatus.EmmInvalidHandle;
@@ -680,17 +680,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         int memHandle;
-        if (pages != 0) {
-            memHandle = AllocatePages((ushort)(pages * 4), false);
-            if (memHandle == 0) {
-                throw new UnrecoverableException("EMS: Memory allocation failure");
-            }
-
-            EmmHandles[handle].Pages = pages;
-            EmmHandles[handle].MemHandle = memHandle;
-            // Change handle only if there is no error.
-            dhandle = handle;
+        if (pages == 0) {
+            return EmmStatus.EmmNoError;
         }
+
+        memHandle = AllocatePages((ushort)(pages * 4), false);
+        if (memHandle == 0) {
+            throw new UnrecoverableException("EMS: Memory allocation failure");
+        }
+
+        EmmHandles[handle].Pages = pages;
+        EmmHandles[handle].MemHandle = memHandle;
+        // Change handle only if there is no error.
+        dhandle = handle;
         return EmmStatus.EmmNoError;
     }
 
