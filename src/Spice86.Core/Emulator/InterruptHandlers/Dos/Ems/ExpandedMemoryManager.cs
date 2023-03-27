@@ -235,7 +235,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         EmmHandles[handle].MemHandle = 0;
         // OS handle is NEVER deallocated
         EmmHandles[handle].Pages = handle == 0 ? (ushort) 0 : EmmNullHandle;
-        EmmHandles[handle].SavePagedMap = false;
+        EmmHandles[handle].IsPageMapSaved = false;
         EmmHandles[handle].Name = string.Empty;
         return EmmStatus.EmmNoError;
 
@@ -271,7 +271,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
         }
         /* Check for previous save */
-        if (EmmHandles[handle].SavePagedMap) {
+        if (EmmHandles[handle].IsPageMapSaved) {
             return EmmStatus.EmmPageMapSaved;
         }
         /* Copy the mappings over */
@@ -279,7 +279,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmHandles[handle].PageMap[i].Page = EmmMappings[i].Page;
             EmmHandles[handle].PageMap[i].Handle = EmmMappings[i].Handle;
         }
-        EmmHandles[handle].SavePagedMap = true;
+        EmmHandles[handle].IsPageMapSaved = true;
         return EmmStatus.EmmNoError;
     }
     
@@ -298,11 +298,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
         }
         /* Check for previous save */
-        if (!EmmHandles[handle].SavePagedMap) {
+        if (!EmmHandles[handle].IsPageMapSaved) {
             return EmmStatus.EmmNoSavedPageMap;
         }
         /* Restore the mappings */
-        EmmHandles[handle].SavePagedMap = false;
+        EmmHandles[handle].IsPageMapSaved = false;
         for (int i = 0; i < EmmMappings.Length; i++) {
             EmmMappings[i].Page = EmmHandles[handle].PageMap[i].Page;
             EmmMappings[i].Handle = EmmHandles[handle].PageMap[i].Handle;
