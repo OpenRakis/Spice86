@@ -21,9 +21,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const string EmsIdentifier = "EMMXXXX0";
 
-    public const byte EmmMaxHandles = 200;
+    public const byte EmmHandlesLength = 200;
 
-    public const byte EmmMaxPhysPage = 4;
+    public const byte EmmMappingsLength = 4;
 
     public const ushort EmmNullPage = 0xFFFF;
     
@@ -53,7 +53,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmmHandle.EmmMaxPhysicalPages];
     
-    public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmMaxHandles];
+    public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmHandlesLength];
     
     public const ushort XmsStart = 0x110;
 
@@ -181,7 +181,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 nameof(EmmMapPage), physicalPage, handle, logicalPage);
         }
         /* Check for too high physical page */
-        if (physicalPage >= EmmMaxPhysPage) {
+        if (physicalPage >= EmmMappings.Length) {
             return EmmStatus.EmsIllegalPhysicalPage;
         }
 
@@ -275,7 +275,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return EmmStatus.EmmPageMapSaved;
         }
         /* Copy the mappings over */
-        for (int i = 0; i < EmmMaxPhysPage; i++) {
+        for (int i = 0; i < EmmMappings.Length; i++) {
             EmmHandles[handle].PageMap[i].Page = EmmMappings[i].Page;
             EmmHandles[handle].PageMap[i].Handle = EmmMappings[i].Handle;
         }
@@ -303,7 +303,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
         /* Restore the mappings */
         EmmHandles[handle].SavePagedMap = false;
-        for (int i = 0; i < EmmMaxPhysPage; i++) {
+        for (int i = 0; i < EmmMappings.Length; i++) {
             EmmMappings[i].Page = EmmHandles[handle].PageMap[i].Page;
             EmmMappings[i].Handle = EmmHandles[handle].PageMap[i].Handle;
         }
@@ -314,12 +314,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         /* Move through the mappings table and setup mapping accordingly */
         for (int i = 0; i < 0x40; i++) {
             /* Skip the pageframe */
-            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMaxPhysPage) {
+            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMappingsLength) {
                 continue;
             }
             EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
         }
-        for (ushort i = 0; i < EmmMaxPhysPage; i++) {
+        for (ushort i = 0; i < EmmMappings.Length; i++) {
             ushort handle = EmmMappings[i].Handle;
             EmmMapPage(i, ref handle, EmmMappings[i].Page);
         }
@@ -354,12 +354,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return EmmStatus.EmsIllegalPhysicalPage;
         }
 
-        int toPhysicalPage = (segment - EmmPageFrame) / (0x1000 / EmmMaxPhysPage);
+        int toPhysicalPage = (segment - EmmPageFrame) / (0x1000 / EmmMappings.Length);
 
         /* unmapping doesn't need valid handle (as handle isn't used) */
         if (logicalPage == EmmNullPage) {
             /* Unmapping */
-            if (toPhysicalPage is >= 0 and < EmmMaxPhysPage) {
+            if (toPhysicalPage is >= 0 and < EmmMappingsLength) {
                 EmmMappings[toPhysicalPage].Handle = EmmNullHandle;
                 EmmMappings[toPhysicalPage].Page = EmmNullPage;
             } else {
@@ -375,7 +375,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         if (logicalPage < EmmHandles[handle].Pages) {
             /* Mapping it is */
-            if (toPhysicalPage is >= 0 and < EmmMaxPhysPage) {
+            if (toPhysicalPage is >= 0 and < EmmMappingsLength) {
                 EmmMappings[toPhysicalPage].Handle = handle;
                 EmmMappings[toPhysicalPage].Page = logicalPage;
             } else {
@@ -436,7 +436,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private ushort GetPagesForAllHandles(uint table, ref ushort handles) {
         handles = 0;
-        for (byte i = 0; i < EmmMaxHandles; i++) {
+        for (byte i = 0; i < EmmHandlesLength; i++) {
             if (EmmHandles[i].Pages == EmmNullHandle) {
                 continue;
             }
@@ -595,14 +595,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         switch (operation)
         {
             case EmsSubFunctions.HandleNameGet:
-                if (handle >= EmmMaxHandles || EmmHandles[handle].Pages == EmmNullHandle) {
+                if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
                     return EmmStatus.EmmInvalidHandle;
                 }
                 GetHandleName(handle);
                 break;
 
             case EmsSubFunctions.HandleNameSet:
-                if (handle >= EmmMaxHandles || EmmHandles[handle].Pages == EmmNullHandle) {
+                if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
                     return EmmStatus.EmmInvalidHandle;
                 }
                 SetHandleName(handle, MemoryUtils.GetZeroTerminatedString(
@@ -673,7 +673,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         ushort handle = 1;
         // Check for a free handle
         while (EmmHandles[handle].Pages > 0) {
-            if (++handle >= EmmMaxHandles) {
+            if (++handle >= EmmHandles.Length) {
                 return EmmStatus.EmmOutOfHandles;
             }
         }
