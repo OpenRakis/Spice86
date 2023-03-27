@@ -695,7 +695,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     /// <summary>
-    /// TODO: Merge this with <see cref="DosMemoryManager"/>
+    /// Allocates an EMS Memory page, or several.
     /// </summary>
     /// <param name="pages">The number of pages the allocated memory page must at least have.</param>
     /// <param name="sequence">Whether to allocate in sequence or not.</param>
@@ -748,7 +748,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     /// <summary>
-    /// TODO: Merge this with <see cref="DosMemoryManager"/>
+    /// Returns the EMS memory page ID with the most appropriate length
     /// </summary>
     /// <param name="requestedSize">The requested memory block size</param>
     /// <returns>The index of the first memory page that is greater than requestedSize</returns>
