@@ -12,7 +12,6 @@ using Spice86.Shared.Interfaces;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
@@ -52,9 +51,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[0x40];
 
-    public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmsHandle.EmmMaxPhysicalPages];
+    public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmmHandle.EmmMaxPhysicalPages];
     
-    public EmsHandle[] EmmHandles { get; } = new EmsHandle[EmmMaxHandles];
+    public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmMaxHandles];
     
     public const ushort XmsStart = 0x110;
 
@@ -210,7 +209,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
     
     public bool IsValidHandle(ushort handle) {
-        if (handle >= EmmMaxHandles) {
+        if (handle >= EmmHandles.Length) {
             return false;
         }
         return EmmHandles[handle].Pages != EmmNullHandle;
@@ -266,7 +265,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public ushort SavePageMap(ushort handle) {
         /* Check for valid handle */
-        if (handle >= EmmMaxHandles || EmmHandles[handle].Pages == EmmNullHandle) {
+        if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
             if (handle != 0) {
                 return EmmStatus.EmmInvalidHandle;
             }
@@ -293,7 +292,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public byte RestorePageMap(ushort handle) {
         /* Check for valid handle */
-        if (handle >= EmmMaxHandles || EmmHandles[handle].Pages == EmmNullHandle) {
+        if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
             if (handle != 0) {
                 return EmmStatus.EmmInvalidHandle;
             }
@@ -337,7 +336,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         bool isValidSegment = false;
 
         if (EmsType is 1 or 3) {
-            if (segment < 0xf000 + 0x1000) {
+            if (segment < 0xF000 + 0x1000) {
                 isValidSegment = true;
             }
         } else {
@@ -386,7 +385,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
             return EmmStatus.EmmNoError;
         }
-
         /* Illegal logical page it is */
         return EmmStatus.EmsLogicalPageOutOfRange;
     }
@@ -404,8 +402,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <returns>The number of EMM handles</returns>
     private ushort CalculateHandleCount() {
         ushort count = 0;
-        for (int i = 0; i < EmmMaxHandles; i++) {
-            if (EmmHandles[i].Pages != EmmNullHandle) {
+        foreach (EmmHandle handle in EmmHandles)
+        {
+            if (handle.Pages != EmmNullHandle) {
                 count++;
             }
         }
@@ -481,7 +480,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
             EmmHandles[handle].MemHandle = mem;
         } else {
-            /*MemHandle*/
             int mem = AllocatePages((ushort) (pages * 4), false);
             if (mem == 0) {
                 FailFastWithLogMessage("EMS:Memory allocation failure during reallocation");
@@ -495,7 +493,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private bool ReallocatePages(ref int handle, ushort pages, bool sequence) {
         if (handle <= 0) {
-            if (pages == 0) return true;
+            if (pages == 0) {
+                return true;
+            }
             handle = AllocatePages(pages, sequence);
             return (handle > 0);
         }
@@ -559,16 +559,20 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 } else {
                     /* Not Enough space allocate new block and copy */
                     /*MemHandle*/
-                    int newhandle = AllocatePages(pages, true);
-                    if (newhandle == 0) return false;
-                    Memory.BlockCopy(newhandle * 4096, handle * 4096, oldPages * 4096);
+                    int newHandle = AllocatePages(pages, true);
+                    if (newHandle == 0) {
+                        return false;
+                    }
+                    Memory.BlockCopy(newHandle * 4096, handle * 4096, oldPages * 4096);
                     ReleasePages(handle);
-                    handle = newhandle;
+                    handle = newHandle;
                     return true;
                 }
             } else {
                 int rem = AllocatePages(need, false);
-                if (rem == 0) return false;
+                if (rem == 0) {
+                    return false;
+                }
                 MemoryBlock.MemoryHandles[last] = rem;
                 return true;
             }
@@ -616,7 +620,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void HandleFunctions() {
-        throw new NotImplementedException();
+        _state.AX = HandleNameSearch();
+    }
+
+    public ushort HandleNameSearch() {
+        return 0;
     }
 
     public void MemoryRegion() {
@@ -670,15 +678,15 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
         }
 
-        int mem;
+        int memHandle;
         if (pages != 0) {
-            mem = AllocatePages((ushort)(pages * 4), false);
-            if (mem == 0) {
+            memHandle = AllocatePages((ushort)(pages * 4), false);
+            if (memHandle == 0) {
                 throw new UnrecoverableException("EMS: Memory allocation failure");
             }
 
             EmmHandles[handle].Pages = pages;
-            EmmHandles[handle].MemHandle = mem;
+            EmmHandles[handle].MemHandle = memHandle;
             // Change handle only if there is no error.
             dhandle = handle;
         }
@@ -702,9 +710,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return 0;
             }
             while (pages != 0) {
-                if (ret == -1)
+                if (ret == -1) {
                     ret = index;
-                else {
+                } else {
                     MemoryBlock.MemoryHandles[index - 1] = index;
                 }
                 index++;
@@ -762,7 +770,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     if (pages == requestedSize) {
                         return first;
                     }
-
                     if (pages > requestedSize && pages < best) {
                         best = pages;
                         bestMatch = first;
@@ -774,7 +781,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             index++;
         }
         /* Check for the final block if we can */
-        if (first != 0 && (index - first >= requestedSize) && (index - first < best)) {
+        if (first != 0 && index - first >= requestedSize && index - first < best) {
             return first;
         }
         return bestMatch;
