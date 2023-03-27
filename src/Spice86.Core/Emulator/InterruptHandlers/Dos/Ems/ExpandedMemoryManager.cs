@@ -606,8 +606,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
                     return EmmStatus.EmmInvalidHandle;
                 }
-                SetHandleName(handle, MemoryUtils.GetZeroTerminatedString(
-                    Memory.GetStorage(), MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI), 8));
+                SetHandleName(handle,
+                    MemoryUtils.GetZeroTerminatedString(Memory, MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
+                        8));
                 break;
 
             default:
@@ -804,7 +805,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public string GetHandleName(ushort handle) {
         MemoryUtils.SetZeroTerminatedString(
-            Memory.GetStorage(), MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
+            Memory, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
         return EmmHandles[handle].Name;
     }
 
