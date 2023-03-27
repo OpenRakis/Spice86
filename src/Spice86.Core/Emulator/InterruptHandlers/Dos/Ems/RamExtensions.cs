@@ -8,4 +8,10 @@ internal static class RamExtensions {
         Span<byte> dest = memory.GetSpan(destAddress, size);
         src.CopyTo(dest);
     }
+
+    public static void WriteWord(this Ram memory, uint address, ushort value) {
+        Span<byte> src = BitConverter.GetBytes(value).AsSpan();
+        Span<byte> dest = memory.GetSpan((int) address, src.Length);
+        src.CopyTo(dest);
+    }
 }
