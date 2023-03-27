@@ -373,20 +373,21 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return EmmStatus.EmmInvalidHandle;
         }
 
-        if (logicalPage < EmmHandles[handle].Pages) {
-            /* Mapping it is */
-            if (toPhysicalPage is >= 0 and < EmmMappingsLength) {
-                EmmMappings[toPhysicalPage].Handle = handle;
-                EmmMappings[toPhysicalPage].Page = logicalPage;
-            } else {
-                EmmSegmentMappings[segment >> 10].Handle = handle;
-                EmmSegmentMappings[segment >> 10].Page = logicalPage;
-            }
-
-            return EmmStatus.EmmNoError;
+        if (logicalPage >= EmmHandles[handle].Pages) {
+            return EmmStatus.EmsLogicalPageOutOfRange;
         }
+
+        /* Mapping it is */
+        if (toPhysicalPage is >= 0 and < EmmMappingsLength) {
+            EmmMappings[toPhysicalPage].Handle = handle;
+            EmmMappings[toPhysicalPage].Page = logicalPage;
+        } else {
+            EmmSegmentMappings[segment >> 10].Handle = handle;
+            EmmSegmentMappings[segment >> 10].Page = logicalPage;
+        }
+
+        return EmmStatus.EmmNoError;
         /* Illegal logical page it is */
-        return EmmStatus.EmsLogicalPageOutOfRange;
     }
 
     public void GetHandleCount() {
