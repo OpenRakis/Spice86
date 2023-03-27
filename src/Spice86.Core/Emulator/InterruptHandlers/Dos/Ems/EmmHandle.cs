@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents a handle for allocated EMS memory.
 /// </summary>
-public sealed class EmsHandle {
+public sealed class EmmHandle {
     public ushort Pages { get; set; }
     
     public int MemHandle { get; set; }
@@ -15,7 +15,7 @@ public sealed class EmsHandle {
 
     private static readonly string _nullHandleName = new((char)0, 8);
 
-    public EmsHandle() {
+    public EmmHandle() {
         for (int i = 0; i < _pageMap.Length; i++) {
             _pageMap[i] = new EmmMapping();
         }
