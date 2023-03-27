@@ -19,6 +19,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -93,18 +94,19 @@ public class Machine : IDisposable {
     public TimerInt8Handler TimerInt8Handler { get; }
 
     public IVideoCard VgaCard { get; }
+    
+    public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
+
+    public ExpandedMemoryManager? Ems { get; set; }
 
     public DmaController DmaController { get; }
-
-    public ExpandedMemoryManager? Ems { get; }
 
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
-
     public OPL3FM OPL3FM { get; }
-    
+
     public event Action? Paused;
 
     public event Action? Resumed;
@@ -121,7 +123,7 @@ public class Machine : IDisposable {
         Memory = new Memory(ram);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
-        
+
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
 
@@ -166,6 +168,8 @@ public class Machine : IDisposable {
             loggerService,
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, (IVgaInterrupts)VgaCard);
+        Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
@@ -197,7 +201,7 @@ public class Machine : IDisposable {
             Register(Ems);
         }
     }
-
+    
     public void Register(IIOPortHandler ioPortHandler) {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
 

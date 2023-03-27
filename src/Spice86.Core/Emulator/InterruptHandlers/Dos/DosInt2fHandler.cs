@@ -18,12 +18,10 @@ using Spice86.Core.Emulator.VM;
 public class DosInt2fHandler : InterruptHandler {
     private readonly ILoggerService _loggerService;
 
-    public DosInt2fHandler(Machine machine, ILoggerService logger) : base(machine) {
-        _loggerService = logger;
+    public DosInt2fHandler(Machine machine, ILoggerService loggerService) : base(machine) {
+        _loggerService = loggerService;
         FillDispatchTable();
     }
-
-    public const ushort DosErrorCode = 0x8;
 
     public override byte Index => 0x2f;
 

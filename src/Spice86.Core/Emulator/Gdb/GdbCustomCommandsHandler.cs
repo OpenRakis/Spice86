@@ -345,7 +345,6 @@ Supported custom commands:
 
             // Actions for 1 parameter
             if ("refresh".Equals(action)) {
-                Memory memory = _machine.Memory;
                 gui?.UpdateScreen();
                 return _gdbIo.GenerateResponse("");
             } else if ("list".Equals(action)) {
