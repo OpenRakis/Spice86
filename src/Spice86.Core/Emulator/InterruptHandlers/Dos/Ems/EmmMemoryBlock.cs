@@ -1,19 +1,23 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
-using Spice86.Core.Emulator.OperatingSystem;
-
-/// <summary>
-/// TODO: Merge this with <see cref="DosMemoryControlBlock"/>
-/// </summary>
 public record MemoryBlock {
+    /// <summary>
+    /// Memory size in MB
+    /// </summary>
     public int MemorySize { get; private set; }
     
     public MemoryBlock(ushort memorySizeInMb) {
         MemorySize = memorySizeInMb;
-        Pages = (MemorySize * 1024 * 1024) / 4096;
+        Pages = MemorySize * 1024 * 1024 / 4096;
         MemoryHandles = new int[Pages];
     }
+    /// <summary>
+    /// Number of pages. Initially set at MemorySize * 1024 * 1024 / 4096
+    /// </summary>
     public int Pages { get; init; }
 
+    /// <summary>
+    /// IDs or EMM Memory Handles
+    /// </summary>
     public int[] MemoryHandles { get; init; }
 }
