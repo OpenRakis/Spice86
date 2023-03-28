@@ -324,7 +324,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmMapPage(i, ref handle, EmmMappings[i].Page);
         }
         return EmmStatus.EmmNoError;
-
     }
 
     private byte EmmMapSegment(int segment, ushort handle, ushort logicalPage) {
@@ -368,7 +367,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
             return EmmStatus.EmmNoError;
         }
-        /* Check for valid handle */
         if (!IsValidHandle(handle)) {
             return EmmStatus.EmmInvalidHandle;
         }
@@ -377,7 +375,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return EmmStatus.EmsLogicalPageOutOfRange;
         }
 
-        /* Mapping it is */
+        // Mapping
         if (toPhysicalPage is >= 0 and < EmmMappingsLength) {
             EmmMappings[toPhysicalPage].Handle = handle;
             EmmMappings[toPhysicalPage].Page = logicalPage;
@@ -387,7 +385,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         return EmmStatus.EmmNoError;
-        /* Illegal logical page it is */
     }
 
     public void GetHandleCount() {
