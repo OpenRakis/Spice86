@@ -229,7 +229,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 }
                 // Next time we will be called retrace will be active, and this until the retrace tick
                 // Set vsync flag to true
-                CrtStatusRegister |= 0b00001000;
+                CrtStatusRegister |= 0b00001001;
                 break;
             default:
                 value = base.ReadByte(port);
@@ -377,10 +377,14 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             case Ports.CrtControllerData:
             case Ports.CrtControllerDataAlt:
                 int previousVerticalEnd = CrtController.VerticalDisplayEnd;
+                int previousMaximumScanLine = CrtController.MaximumScanLine & 0x1F;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Write to CRT register {Register}: {Value:X2} {Explained}", port, _crtRegister, value, _crtRegister.Explain(value));
                 }
                 CrtController.WriteRegister(_crtRegister, value);
+                if (previousMaximumScanLine != (CrtController.MaximumScanLine & 0x1F)) {
+                    ChangeMaximumScanLine(previousMaximumScanLine);
+                }
                 if (previousVerticalEnd != CrtController.VerticalDisplayEnd) {
                     ChangeVerticalEnd();
                 }
@@ -390,6 +394,18 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 base.WriteByte(port, value);
                 break;
         }
+    }
+    private void ChangeMaximumScanLine(int previousDoubleScan) {
+        int newHeight = previousDoubleScan == 0 ? CurrentMode.Height / 2 : CurrentMode.Height * 2;
+        VideoMode mode = CurrentMode switch {
+            Unchained256 => new Unchained256(CurrentMode.Width, newHeight, this),
+            Vga256 => new Vga256(CurrentMode.Width, newHeight, this),
+            CgaMode4 => new CgaMode4(this),
+            EgaVga16 => new EgaVga16(CurrentMode.Width, newHeight, CurrentMode.FontHeight, this),
+            TextMode => new TextMode(CurrentMode.Width, newHeight, CurrentMode.FontHeight, this),
+            _ => throw new InvalidOperationException("Unknown video mode")
+        };
+        SwitchToMode(mode);
     }
 
     /// <summary>
@@ -466,7 +482,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public void TickRetrace() {
         // Inactive at tick time, but will become active once the code checks for it.
         // Set vsync flag to false.
-        CrtStatusRegister &= 0b11110111;
+        CrtStatusRegister &= 0b11110110;
     }
 
     public void UpdateScreen() {
@@ -903,6 +919,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             case VideoModeId.Graphics320X200X8:
                 Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4 | SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
                 mode = new Vga256(320, 200, this);
+                CrtController.MaximumScanLine |= 1;
                 break;
 
             case VideoModeId.Text40X25X1:
@@ -946,7 +963,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     /// </summary>
     /// <param name="mode">New display mode.</param>
     public void SetDisplayMode(VideoMode mode) {
-        CurrentMode = mode;
         mode.InitializeMode(this);
         Graphics.WriteRegister(GraphicsRegister.ColorDontCare, 0x0F);
 
@@ -955,8 +971,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         }
 
         _logger.Information("Video mode changed to {@Mode}", mode.GetType().Name);
-        _presenter = GetPresenter();
-        _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
+        SwitchToMode(mode);
     }
 
     public Presenter GetPresenter() {
@@ -988,7 +1003,11 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             _logger.Debug("ENTER MODE X");
         }
         var mode = new Unchained256(320, 200, this);
+        CrtController.MaximumScanLine |= 0x01;
         CrtController.Offset = 320 / 8;
+        SwitchToMode(mode);
+    }
+    private void SwitchToMode(VideoMode mode) {
         CurrentMode = mode;
         _presenter = GetPresenter();
         _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));

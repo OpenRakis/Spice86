@@ -427,6 +427,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x06, new Callback(0x06, () => DirectConsoleIo(true)));
         _dispatchTable.Add(0x08, new Callback(0x08, WaitForKeyNoEcho));
         _dispatchTable.Add(0x09, new Callback(0x09, PrintString));
+        _dispatchTable.Add(0x0B, new Callback(0x0B, CheckStdInInput));
         _dispatchTable.Add(0x0C, new Callback(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction));
         _dispatchTable.Add(0x0D, new Callback(0x0D, DiskReset));
         _dispatchTable.Add(0x0E, new Callback(0x0E, SelectDefaultDrive));
@@ -460,6 +461,10 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x4F, new Callback(0x4F, () => FindNextMatchingFile(true)));
         _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
+    }
+    private void CheckStdInInput() {
+        WaitForKey();
+        // throw new NotImplementedException();
     }
     private void WaitForKeyNoEcho() {
         WaitForKey();

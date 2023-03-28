@@ -95,11 +95,13 @@ namespace Spice86.Aeon.Emulator.Video.Rendering
                                 destPtr[destPos++] = palette[paletteMap[UnpackIndex(srcPtr[srcPos], 7 - i)]];
                         }
 
+                        // Split screen functionality
                         if (height < VideoMode.Height)
                         {
                             startOffset = 0;
                             height = VideoMode.Height - VideoMode.LineCompare - 1;
                             destStart = VideoMode.LineCompare * width;
+                            bitPan = 0;
                         }
                         else
                         {

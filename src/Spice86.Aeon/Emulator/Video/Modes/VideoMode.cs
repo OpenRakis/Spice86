@@ -205,12 +205,14 @@ namespace Spice86.Aeon.Emulator.Video
             }
 
             int stride;
+            crtController.MaximumScanLine = 0x40;
 
             if (VideoModeType == VideoModeType.Text)
             {
                 video.TextConsole.Width = Width;
                 video.TextConsole.Height = Height;
                 stride = Width * 2;
+                crtController.MaximumScanLine |= 0x0F;
             }
             else
             {
@@ -223,7 +225,6 @@ namespace Spice86.Aeon.Emulator.Video
             }
 
             crtController.Overflow = 1 << 4;
-            crtController.MaximumScanLine = 1 << 6;
             crtController.LineCompare = 0xFF;
             crtController.Offset = (byte)(stride / 2u);
             crtController.StartAddress = 0;

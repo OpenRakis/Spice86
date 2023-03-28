@@ -105,7 +105,13 @@ public static class RegisterExtensions {
             case CrtControllerRegister.PresetRowScan:
                 break;
             case CrtControllerRegister.MaximumScanLine:
-                break;
+                return string.Format(
+                    "[0-4]Maximum scan line: {0}, [5]Start Vertical Blanking bit9: {1}, [6]Line Compare bit9: {2}, [7]Scan Doubling: {3}",
+                    value & 0x1F,
+                    (value & 0x20) == 0x20 ? "1" : "0",
+                    (value & 0x40) == 0x40 ? "1" : "0",
+                    (value & 0x80) == 0x80 ? "1" : "0"
+                );
             case CrtControllerRegister.CursorStart:
                 break;
             case CrtControllerRegister.CursorEnd:
@@ -145,7 +151,7 @@ public static class RegisterExtensions {
                     (value & 0x04) == 0x04 ? "Double" : "Normal",
                     (value & 0x08) == 0x08 ? "Double" : "Normal",
                     (value & 0x20) == 0x20 ? "On" : "Off",
-                    (value & 0x40) == 0x40 ? "Word" : "Byte",
+                    (value & 0x40) == 0x40 ? "Byte" : "Word",
                     (value & 0x80) == 0x80 ? "On" : "Off"
                 );
             case CrtControllerRegister.LineCompare:

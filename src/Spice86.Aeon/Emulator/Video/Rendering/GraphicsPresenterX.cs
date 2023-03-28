@@ -56,6 +56,7 @@ namespace Spice86.Aeon.Emulator.Video.Rendering
                     }
                 }
 
+                // Split-screen functionality
                 if (max < height)
                 {
                     for (int y = max + 1; y < height; y++)
