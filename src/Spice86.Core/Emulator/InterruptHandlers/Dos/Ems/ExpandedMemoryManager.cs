@@ -31,6 +31,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public const ushort EmmNullHandle = 0xFFFF;
 
     public const ushort EmmPageFrame = 0xE000;
+
+    public const ushort EmmPageSize = 16 * 1024;
     
     public override ushort? InterruptHandlerSegment => 0xF100;
     
@@ -475,9 +477,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 uint offset = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
                 // TODO: Remove this, use Span
                 for (int i = 0; i < EmmMappings.Length; i++) {
-                    EmmMapping itEmmMapping = EmmMappings[i];
+                    EmmMapping item = EmmMappings[i];
                     _memory.LoadData((uint)(offset + i * EmmMappings.Length),
-                        BitConverter.GetBytes(itEmmMapping.Handle).Union(BitConverter.GetBytes(itEmmMapping.Page))
+                        BitConverter.GetBytes(item.Handle).Union(BitConverter.GetBytes(item.Page))
                             .ToArray());
                 }
                 offset = MemoryUtils.ToPhysicalAddress(_state.DS, _state.ES);
@@ -486,7 +488,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     EmmMappings[i].Handle = _memory.GetUint16((uint) (offset + i));
                     EmmMappings[i].Page = _memory.GetUint16((uint) (offset + i + sizeof(ushort)));
                     offset += (ushort)(i + sizeof(ushort));
-
                 }
                 _state.AH = EmmRestoreMappingTable();
             break;
@@ -508,9 +509,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private byte EmmRestoreMappingTable() {
         /* Move through the mappings table and setup mapping accordingly */
-        for (/*Bitu*/int i = 0; i < 0x40; i++) {
+        for (int i = 0; i < 0x40; i++) {
             /* Skip the pageframe */
-            if ((i >= EmmPageFrame / 0x400) && (i < (EmmPageFrame / 0x400) + EmmMappingsLength)) continue;
+            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMappingsLength) continue;
             EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
         }
         for (byte i = 0; i < EmmMappingsLength; i++) {
@@ -519,13 +520,86 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmMappings[i].Handle = handle;
         }
         return EmmStatus.EmmNoError;
-
     }
     
     private void SaveOrRestorePartialPageMap() {
-        throw new NotImplementedException();
+        _state.AH = SaveOrRestorePartialPageMap(_state.AL);
     }
 
+    /// <summary>
+    /// Save or restore partial page map
+    /// </summary>
+    /// <param name="operation">0: Save partial page map, 1: Restore partial page map, 2: Get partial page map array size</param>
+    /// <returns></returns>
+    public byte SaveOrRestorePartialPageMap(byte operation) {
+        uint list;
+        ushort count;
+        uint data;
+        switch (operation) {
+            case 0x00:    /* Save Partial Page Map */
+                list = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+                data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                count = _memory.GetUint16(list);
+                list += 2;
+                _memory.SetUint16(data, count);
+                data += 2;
+                for (; count > 0; count--) {
+                    ushort segment = _memory.GetUint16(list);
+                    list += 2;
+                    if (segment is >= EmmPageFrame and < EmmPageFrame + 0x1000) {
+                        ushort page = (ushort) ((segment - EmmPageFrame) / (EmmPageFrame >> 4));
+                        _memory.SetUint16(data, segment);
+                        data += 2;
+                        //TODO: Remove this, use Span
+                        _memory.LoadData(
+                            data, BitConverter.GetBytes(EmmMappings[page].Handle).Union(BitConverter.GetBytes(EmmMappings[page].Page)).ToArray(), EmmMappings.Length);
+                        data += (uint)EmmMappings.Length;
+                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrame - 0x1000 and < EmmPageFrame or >= 0xa000 and < 0xb000) {
+                        _memory.SetUint16(data, segment);
+                        data += 2;
+                        //TODO: Remove this, use Span
+                        _memory.LoadData(
+                            data, BitConverter.GetBytes(EmmSegmentMappings[segment >> 10].Handle).Union(BitConverter.GetBytes(EmmSegmentMappings[segment >> 10].Page)).ToArray(), EmmSegmentMappings.Length);
+                        data += (uint)EmmMappings.Length;
+                    } else {
+                        return EmmStatus.EmsIllegalPhysicalPage;
+                    }
+                }
+                break;
+            case 0x01:    /* Restore Partial Page Map */
+                data = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+                count = _memory.GetUint16(data);
+                data += 2;
+                for (; count > 0; count--) {
+                    ushort segment = _memory.GetUint16(data);
+                    data += 2;
+                    if (segment is >= EmmPageFrame and < EmmPageFrame + 0x1000) {
+                        ushort page = (ushort) ((segment - EmmPageFrame) / (EmmPageSize >> 4));
+                        EmmMappings[page].Handle = _memory.GetUint16(data);
+                        EmmMappings[page].Page = _memory.GetUint16(data + sizeof(ushort));
+                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrame - 0x1000 and < EmmPageFrame or >= 0xa000 and < 0xb000) {
+                        EmmSegmentMappings[segment >> 10].Handle = _memory.GetUint16(data);
+                        EmmSegmentMappings[segment >> 10].Page = _memory.GetUint16(data + sizeof(ushort));
+                    } else {
+                        return EmmStatus.EmsIllegalPhysicalPage;
+                    }
+                    data += (uint)EmmMappings.Length;
+                }
+                return EmmRestoreMappingTable();
+            case 0x02:    /* Get Partial Page Map Array Size */
+                _state.AL = (byte)(2 + _state.BX * 2 * EmmMappings.Length);
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error))
+                {
+                    _loggerService.Error(
+                        "{@MethodName} subFunction number {@SubFunctionId} not supported",
+                        nameof(SaveOrRestorePartialPageMap), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+        }
+        return EmmStatus.EmmNoError;
+    }
     
     public void MapOrUnmapMultipleHandlePages() {
         ushort operation = _state.AX;
@@ -581,7 +655,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                         "{@MethodName} subFunction number {@SubFunctionId} not supported",
                         nameof(MapOrUnmapMultipleHandlePages), operation);
                 }
-
                 _state.AH = EmmStatus.EmmInvalidSubFunction;
                 break;
         }
