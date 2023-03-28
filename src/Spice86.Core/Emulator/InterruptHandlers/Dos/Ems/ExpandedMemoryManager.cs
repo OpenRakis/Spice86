@@ -45,8 +45,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public byte EmsType { get; init; } = 2;
     
-    public Ram Memory { get; init; }
-    
     public MemoryBlock MemoryBlock { get; }
 
     public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[0x40];
@@ -94,7 +92,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmSegmentMappings[i] = new();
         }
 
-        Memory = new(MemorySizeInMb * 1024 * 1024);
         MemoryBlock = new(MemorySizeInMb);
 
         FillDispatchTable();
@@ -439,8 +436,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 continue;
             }
             handles++;
-            Memory.Write(table, i);
-            Memory.WriteWord(table, handles);
+            _memory.SetUint8(table, i);
+            _memory.SetUint16(table, handles);
         }
         return EmmStatus.EmmNoError;
     }
@@ -645,7 +642,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     if (newHandle == 0) {
                         return false;
                     }
-                    Memory.BlockCopy(newHandle * 4096, handle * 4096, oldPages * 4096);
+                    _memory.BlockCopy(newHandle * 4096, handle * 4096, oldPages * 4096);
                     ReleasePages(handle);
                     handle = newHandle;
                     return true;
@@ -688,7 +685,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     return EmmStatus.EmmInvalidHandle;
                 }
                 SetHandleName(handle,
-                    MemoryUtils.GetZeroTerminatedString(Memory, MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
+                    MemoryUtils.GetZeroTerminatedString(_memory, MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
                         8));
                 break;
 
@@ -886,7 +883,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public string GetHandleName(ushort handle) {
         MemoryUtils.SetZeroTerminatedString(
-            Memory, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
+            _memory, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
         return EmmHandles[handle].Name;
     }
 

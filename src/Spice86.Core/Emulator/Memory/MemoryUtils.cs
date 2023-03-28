@@ -71,7 +71,7 @@ public static class MemoryUtils {
         SetUint8(memory, (uint)(address + i), 0);
     }
     
-    public static void SetZeroTerminatedString(Ram memory, uint address, string value, int maxLength) {
+    public static void SetZeroTerminatedString(Memory memory, uint address, string value, int maxLength) {
         if (value.Length + 1 > maxLength) {
             throw new UnrecoverableException($"String {value} is more than {maxLength} cannot write it at offset {address}");
         }
@@ -79,15 +79,15 @@ public static class MemoryUtils {
         for (; i < value.Length; i++) {
             char character = value[i];
             byte charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
-            memory.Write((uint)(address + i), charFirstByte);
+            memory.SetUint8((uint)(address + i), charFirstByte);
         }
-        memory.Write((uint)(address + i), 0);
+        memory.SetUint8((uint)(address + i), 0);
     }
 
-    public static string GetZeroTerminatedString(Ram memory, uint address, int maxLength) {
+    public static string GetZeroTerminatedString(Memory memory, uint address, int maxLength) {
         StringBuilder res = new();
         for (int i = 0; i < maxLength; i++) {
-            byte characterByte = memory.Read((uint)(address + i));
+            byte characterByte = memory.GetUint8((uint)(address + i));
             if (characterByte == 0) {
                 break;
             }
