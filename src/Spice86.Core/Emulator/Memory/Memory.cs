@@ -38,6 +38,12 @@ public class Memory {
             return copy;
         }
     }
+    
+    public void BlockCopy(int destAddress, int srcAddress, int size) {
+        Span<byte> src = this.GetSpan(srcAddress, size);
+        Span<byte> dest = this.GetSpan(destAddress, size);
+        src.CopyTo(dest);
+    }
 
     /// <summary>
     ///     Writes a 4-byte value to ram.
