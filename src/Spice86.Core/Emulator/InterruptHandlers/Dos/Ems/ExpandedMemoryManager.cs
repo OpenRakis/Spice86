@@ -131,7 +131,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("EMS function not provided: {@StateAh}", operation);
             }
-            _state.AX = EmmStatus.EmmFuncNoSup;
+            _state.AH = EmmStatus.EmmFuncNoSup;
         }
         Run(operation);
     }
@@ -219,10 +219,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Deallocates a handle and all of its pages.
     /// </summary>
     public void ReleaseHandleAndFreePages() {
-        _state.AX = ReleaseMemory(_state.DX);
+        _state.AH = ReleaseMemory(_state.DX);
     }
 
-    public ushort ReleaseMemory(ushort handle) {
+    public byte ReleaseMemory(ushort handle) {
         /* Check for valid handle */
         if (!IsValidHandle(handle)) {
             return EmmStatus.EmmInvalidHandle;
@@ -287,7 +287,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Restores the state of page map registers for a handle.
     /// </summary>
     public void RestorePageMap() {
-        _state.AX = RestorePageMap(_state.DX);
+        _state.AH = RestorePageMap(_state.DX);
     }
 
     public byte RestorePageMap(ushort handle) {
@@ -417,12 +417,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void GetPagesForOneHandle() {
         if (!IsValidHandle(_state.DX)) {
-            _state.AX = EmmStatus.EmmInvalidHandle;
+            _state.AH = EmmStatus.EmmInvalidHandle;
             return;
         }
 
         _state.BX = GetPagesForOneHandle(_state.DX);
-        _state.AX = EmmStatus.EmmNoError;
+        _state.AH = EmmStatus.EmmNoError;
     }
 
     public ushort GetPagesForOneHandle(ushort handle) {
@@ -431,7 +431,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     private void GetPageForAllHandles() {
         ushort handles = _state.BX;
-        _state.AX = GetPagesForAllHandles((uint) (MemoryUtils.ToSegment(_state.ESI) + _state.DI), ref handles);
+        _state.AH = GetPagesForAllHandles((uint) (MemoryUtils.ToSegment(_state.ESI) + _state.DI), ref handles);
         _state.BX = handles;
     }
 
@@ -480,7 +480,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     ushort physPage = _memory.GetUint16(dataPhysical);
                     dataPhysical += 2;
                     ushort handle = _state.DX;
-                    _state.AX = EmmMapPage(physPage, ref handle, logPage);
+                    _state.AH = EmmMapPage(physPage, ref handle, logPage);
                     if (_state.AH != EmmStatus.EmmNoError)
                     {
                         break;
@@ -521,7 +521,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Reallocates pages for a handle.
     /// </summary>
     public void ReallocatePages() {
-        _state.AX = ReallocatePages(_state.DX, _state.BX);
+        _state.AH = ReallocatePages(_state.DX, _state.BX);
     }
 
     public byte ReallocatePages(ushort handle, ushort pages) {
@@ -638,7 +638,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public void SetGetHandleName() {
         ushort handle = _state.DX;
-        _state.AX = GetSetHandleName(handle, _state.AL);
+        _state.AH = GetSetHandleName(handle, _state.AL);
     }
 
     /// <summary>
@@ -647,7 +647,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="handle">The handle reference</param>
     /// <param name="operation">Get: 0, Set: 1</param>
     /// <returns>The state of the operation</returns>
-    public ushort GetSetHandleName(ushort handle, byte operation)
+    public byte GetSetHandleName(ushort handle, byte operation)
     {
         switch (operation)
         {
@@ -678,11 +678,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void HandleFunctions() {
-        _state.AX = HandleNameSearch();
+        _state.AH = HandleNameSearch();
     }
 
-    public ushort HandleNameSearch() {
-        return 0;
+    public byte HandleNameSearch() {
+        throw new NotImplementedException();
     }
 
     public void MemoryRegion() {
