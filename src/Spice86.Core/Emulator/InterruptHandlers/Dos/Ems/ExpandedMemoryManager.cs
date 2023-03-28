@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 /// <summary>
@@ -443,36 +444,82 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void SaveOrRestorePageMap() {
-        switch (_state.AL) {
+        SaveOrRestorePageMap(_state.AL);
+    }
+
+    /// <summary>
+    /// Saves or restore the page map
+    /// </summary>
+    /// <param name="operation">0: Save, 1: Restore, 2: Save and Restore, 3: Get Map Page Array Size</param>
+    public void SaveOrRestorePageMap(byte operation) {
+        switch (operation) {
             case 0x00:	/* Save Page Map */
-                uint physicalAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
-                // TODO: Remove this, use Span
-                foreach (EmmMapping mapping in EmmMappings)
-                {
-                    _memory.SetUint16(physicalAddress, mapping.Handle);
-                }
-                _state.AH=EmmStatus.EmmNoError;
-                break;
+            uint physicalAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+            // TODO: Remove this, use Span
+            foreach (EmmMapping mapping in EmmMappings) {
+                _memory.SetUint16(physicalAddress, mapping.Handle);
+            }
+            _state.AH = EmmStatus.EmmNoError;
+            break;
             case 0x01:	/* Restore Page Map */
-                /* TODO */
-                //MEM_BlockRead(SegPhys(ds)+reg_si,emm_mappings,sizeof(emm_mappings));
-                /* TODO */
-                //_state.AH=EmmRestoreMappingTable();
+                uint address = MemoryUtils.ToPhysicalAddress(_state.DS, _state.ES);
+                // TODO: Remove this, use Span
+                for (int i = 0; i < EmmMappings.Length; i++) {
+                    EmmMappings[i].Handle = _memory.GetUint16((uint) (address + i));
+                    EmmMappings[i].Page = _memory.GetUint16((uint) (address + i + sizeof(ushort)));
+                    address += (ushort)(i + sizeof(ushort));
+                }
+                _state.AH = EmmRestoreMappingTable();
                 break;
             case 0x02:	/* Save and Restore Page Map */
-                /* TODO */
-                //MEM_BlockWrite(SegPhys(es)+reg_di,emm_mappings,sizeof(emm_mappings));
-                //MEM_BlockRead(SegPhys(ds)+reg_si,emm_mappings,sizeof(emm_mappings));
-                //_state.AH=EmmRestoreMappingTable();
-                break;
+                uint offset = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                // TODO: Remove this, use Span
+                for (int i = 0; i < EmmMappings.Length; i++) {
+                    EmmMapping itEmmMapping = EmmMappings[i];
+                    _memory.LoadData((uint)(offset + i * EmmMappings.Length),
+                        BitConverter.GetBytes(itEmmMapping.Handle).Union(BitConverter.GetBytes(itEmmMapping.Page))
+                            .ToArray());
+                }
+                offset = MemoryUtils.ToPhysicalAddress(_state.DS, _state.ES);
+                // TODO: Remove this, use Span
+                for (int i = 0; i < EmmMappings.Length; i++) {
+                    EmmMappings[i].Handle = _memory.GetUint16((uint) (offset + i));
+                    EmmMappings[i].Page = _memory.GetUint16((uint) (offset + i + sizeof(ushort)));
+                    offset += (ushort)(i + sizeof(ushort));
+
+                }
+                _state.AH = EmmRestoreMappingTable();
+            break;
             case 0x03:	/* Get Page Map Array Size */
                 _state.AL = (byte)EmmMappings.Length;
                 _state.AH = EmmStatus.EmmNoError;
-                break;
+            break;
             default:
-                _state.AH = EmmStatus.EmmInvalidSubFunction;
-                break;
+            if (_loggerService.IsEnabled(LogEventLevel.Error))
+            {
+                _loggerService.Error(
+                    "{@MethodName} subFunction number {@SubFunctionId} not supported",
+                    nameof(SaveOrRestorePageMap), operation);
+            }
+            _state.AH = EmmStatus.EmmInvalidSubFunction;
+            break;
         }
+    }
+
+    private byte EmmRestoreMappingTable() {
+        /* Move through the mappings table and setup mapping accordingly */
+        for (/*Bitu*/int i = 0; i < 0x40; i++) {
+            /* Skip the pageframe */
+            if ((i >= EmmPageFrame / 0x400) && (i < (EmmPageFrame / 0x400) + EmmMappingsLength)) continue;
+            EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
+        }
+        for (byte i = 0; i < EmmMappingsLength; i++) {
+            ushort handle = EmmMappings[i].Handle;
+            EmmMapPage(i, ref handle, EmmMappings[i].Page);
+            EmmMappings[i].Handle = handle;
+        }
+        return EmmStatus.EmmNoError;
+
     }
     
     private void SaveOrRestorePartialPageMap() {
