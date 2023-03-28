@@ -446,6 +446,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         switch (_state.AL) {
             case 0x00:	/* Save Page Map */
                 uint physicalAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                // TODO: Remove this, use Span
                 foreach (EmmMapping mapping in EmmMappings)
                 {
                     _memory.SetUint16(physicalAddress, mapping.Handle);
@@ -626,7 +627,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     free++;
                 }
                 if (free >= need) {
-                    /* Enough space allocate more pages */
+                    /* Enough space, allocate more pages */
                     index = last;
                     while (need != 0) {
                         MemoryBlock.MemoryHandles[index] = index + 1;
@@ -636,13 +637,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     MemoryBlock.MemoryHandles[index] = -1;
                     return true;
                 } else {
-                    /* Not Enough space allocate new block and copy */
-                    /*MemHandle*/
+                    /* Not Enough space, allocate new block and copy */
                     int newHandle = AllocatePages(pages, true);
                     if (newHandle == 0) {
                         return false;
                     }
-                    _memory.BlockCopy(newHandle * 4096, handle * 4096, oldPages * 4096);
+                    _memory.MemCopy((uint) (newHandle * 4096), (uint) (handle * 4096), (uint) (oldPages * 4096));
                     ReleasePages(handle);
                     handle = newHandle;
                     return true;
