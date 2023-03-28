@@ -432,7 +432,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.BX = handles;
     }
 
-    private ushort GetPagesForAllHandles(uint table, ref ushort handles) {
+    private byte GetPagesForAllHandles(uint table, ref ushort handles) {
         handles = 0;
         for (byte i = 0; i < EmmHandlesLength; i++) {
             if (EmmHandles[i].Pages == EmmNullHandle) {
