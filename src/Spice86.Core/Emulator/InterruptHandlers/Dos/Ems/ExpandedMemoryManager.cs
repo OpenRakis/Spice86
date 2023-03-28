@@ -685,7 +685,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     return EmmStatus.EmmInvalidHandle;
                 }
                 SetHandleName(handle,
-                    MemoryUtils.GetZeroTerminatedString(_memory, MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
+                    MemoryUtils.GetZeroTerminatedString(_memory.Ram, MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
                         8));
                 break;
 
@@ -883,7 +883,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public string GetHandleName(ushort handle) {
         MemoryUtils.SetZeroTerminatedString(
-            _memory, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
+            _memory.Ram, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
         return EmmHandles[handle].Name;
     }
 
