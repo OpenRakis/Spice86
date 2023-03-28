@@ -458,7 +458,63 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     
     public void MapOrUnmapMultipleHandlePages() {
-        throw new NotImplementedException();
+        ushort operation = _state.AX;
+        _state.AH = EmmStatus.EmmNoError;
+        MapOrUnmapMultipleHandlePages(operation);
+    }
+
+    /// <summary>
+    /// Map or unmap multiple handle pages
+    /// </summary>
+    /// <param name="operation">0: Use physical page numbers, 1: Use segment addressing</param>
+    public void MapOrUnmapMultipleHandlePages(ushort operation)
+    {
+        switch (operation)
+        {
+            case 0x00: // use physical page numbers
+                uint dataPhysical = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+                for (int i = 0; i < _state.CX; i++)
+                {
+                    ushort logPage = _memory.GetUint16(dataPhysical);
+                    dataPhysical += 2;
+                    ushort physPage = _memory.GetUint16(dataPhysical);
+                    dataPhysical += 2;
+                    ushort handle = _state.DX;
+                    _state.AX = EmmMapPage(physPage, ref handle, logPage);
+                    if (_state.AH != EmmStatus.EmmNoError)
+                    {
+                        break;
+                    }
+                }
+
+                break;
+            case 0x01: // use segment address
+            {
+                uint data = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+                for (int i = 0; i < _state.CX; i++)
+                {
+                    ushort logPage = _memory.GetUint16(data);
+                    data += 2;
+                    _state.AH = EmmMapSegment(_memory.GetUint16(data), _state.DX, logPage);
+                    data += 2;
+                    if (_state.AH != EmmStatus.EmmNoError)
+                    {
+                        break;
+                    }
+                }
+            }
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error))
+                {
+                    _loggerService.Error(
+                        "{@MethodName} subFunction number {@SubFunctionId} not supported",
+                        nameof(MapOrUnmapMultipleHandlePages), operation);
+                }
+
+                _state.AH = EmmStatus.EmmInvalidSubFunction;
+                break;
+        }
     }
 
     /// <summary>
