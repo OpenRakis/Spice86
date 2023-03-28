@@ -446,7 +446,35 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void SaveOrRestorePageMap() {
-        throw new NotImplementedException();
+        switch (_state.AL) {
+            case 0x00:	/* Save Page Map */
+                uint physicalAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                foreach (EmmMapping mapping in EmmMappings)
+                {
+                    _memory.SetUint16(physicalAddress, mapping.Handle);
+                }
+                _state.AH=EmmStatus.EmmNoError;
+                break;
+            case 0x01:	/* Restore Page Map */
+                /* TODO */
+                //MEM_BlockRead(SegPhys(ds)+reg_si,emm_mappings,sizeof(emm_mappings));
+                /* TODO */
+                //_state.AH=EmmRestoreMappingTable();
+                break;
+            case 0x02:	/* Save and Restore Page Map */
+                /* TODO */
+                //MEM_BlockWrite(SegPhys(es)+reg_di,emm_mappings,sizeof(emm_mappings));
+                //MEM_BlockRead(SegPhys(ds)+reg_si,emm_mappings,sizeof(emm_mappings));
+                //_state.AH=EmmRestoreMappingTable();
+                break;
+            case 0x03:	/* Get Page Map Array Size */
+                _state.AL = (byte)EmmMappings.Length;
+                _state.AH = EmmStatus.EmmNoError;
+                break;
+            default:
+                _state.AH = EmmStatus.EmmInvalidSubFunction;
+                break;
+        }
     }
     
     private void SaveOrRestorePartialPageMap() {
