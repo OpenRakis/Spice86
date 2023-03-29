@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Shared.Interfaces;
 
+using Spice86.Shared;
+
 using System.Collections.Generic;
 
 /// <summary>
