@@ -532,12 +532,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="operation">0: Save partial page map, 1: Restore partial page map, 2: Get partial page map array size</param>
     /// <returns></returns>
     public byte SaveOrRestorePartialPageMap(byte operation) {
-        uint list;
         ushort count;
         uint data;
         switch (operation) {
             case 0x00:    /* Save Partial Page Map */
-                list = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+                uint list = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
                 data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
                 count = _memory.GetUint16(list);
                 list += 2;
