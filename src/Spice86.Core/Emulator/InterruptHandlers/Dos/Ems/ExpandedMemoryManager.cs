@@ -429,7 +429,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     private void GetPageForAllHandles() {
         ushort handles = _state.BX;
-        _state.AH = GetPagesForAllHandles((uint) (MemoryUtils.ToSegment(_state.ESI) + _state.DI), ref handles);
+        _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), ref handles);
         _state.BX = handles;
     }
 
