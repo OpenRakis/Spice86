@@ -929,7 +929,30 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void AllocateStandardRawPages() {
-        throw new NotImplementedException();
+        _state.AH = AllocateStandardRawPages(_state.AL);
+    }
+
+    /// <summary>
+    /// Allocate standard raw pages
+    /// </summary>
+    /// <param name="operation">less than 1: allocate page, even with 0 length. Other values: Invalid subFunction</param>
+    public byte AllocateStandardRawPages(byte operation) {
+        switch (operation) {
+            case <= 0x01: {
+                ushort handle = _state.DX;
+                EmmAllocateMemory(_state.BX, ref handle, true);
+                _state.DX = handle;
+                break;
+            }
+            default: {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(AllocateStandardRawPages), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+            }
+        }
+        return EmmStatus.EmmNoError;
     }
 
     public ushort EmmAllocateMemory(ushort pages, ref ushort dhandle, bool canAllocateZeroPages) {
