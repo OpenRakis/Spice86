@@ -24,7 +24,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const byte EmmHandlesLength = 200;
 
-    public const byte EmmMappingsLength = 4;
+    public const byte EmmMaxPhysicalPages = 4;
 
     public const ushort EmmNullPage = 0xFFFF;
     
@@ -314,7 +314,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         /* Move through the mappings table and setup mapping accordingly */
         for (int i = 0; i < 0x40; i++) {
             /* Skip the pageframe */
-            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMappingsLength) {
+            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMaxPhysicalPages) {
                 continue;
             }
             EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
@@ -358,7 +358,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         /* unmapping doesn't need valid handle (as handle isn't used) */
         if (logicalPage == EmmNullPage) {
             /* Unmapping */
-            if (toPhysicalPage is >= 0 and < EmmMappingsLength) {
+            if (toPhysicalPage is >= 0 and < EmmMaxPhysicalPages) {
                 EmmMappings[toPhysicalPage].Handle = EmmNullHandle;
                 EmmMappings[toPhysicalPage].Page = EmmNullPage;
             } else {
@@ -376,7 +376,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         // Mapping
-        if (toPhysicalPage is >= 0 and < EmmMappingsLength) {
+        if (toPhysicalPage is >= 0 and < EmmMaxPhysicalPages) {
             EmmMappings[toPhysicalPage].Handle = handle;
             EmmMappings[toPhysicalPage].Page = logicalPage;
         } else {
@@ -511,10 +511,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         /* Move through the mappings table and setup mapping accordingly */
         for (int i = 0; i < 0x40; i++) {
             /* Skip the pageframe */
-            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMappingsLength) continue;
+            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMaxPhysicalPages) continue;
             EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
         }
-        for (byte i = 0; i < EmmMappingsLength; i++) {
+        for (byte i = 0; i < EmmMaxPhysicalPages; i++) {
             ushort handle = EmmMappings[i].Handle;
             EmmMapPage(i, ref handle, EmmMappings[i].Page);
             EmmMappings[i].Handle = handle;
@@ -819,10 +819,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void HandleFunctions() {
-        _state.AH = HandleNameSearch();
+        _state.AH = HandleNameSearch(_state.AL);
     }
 
-    public byte HandleNameSearch() {
+    public byte HandleNameSearch(byte operation) {
         throw new NotImplementedException();
     }
 
@@ -831,9 +831,38 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void GetMappablePhysicalArrayAddressArray() {
-        throw new NotImplementedException();
+        _state.AH = GetMappablePhysicalArrayAddressArray(_state.AL);
     }
-    
+
+    /// <summary>
+    /// Get mappable physical array address array
+    /// </summary>
+    /// <param name="operation">0: Get the information. Other value: Invalid subFunction.</param>
+    private byte GetMappablePhysicalArrayAddressArray(byte operation) {
+        switch (operation) {
+            case 0x00: {
+                uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                int step = 0x1000 / EmmMappings.Length;
+                for (int i = 0; i < EmmMappings.Length; i++) {
+                    _memory.SetUint16(data, (ushort) (EmmPageFrame + step * i));
+                    data += 2;
+                    _memory.SetUint16(data, (ushort) i);
+                    data += 2;
+                }
+                break;
+            }
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(GetMappablePhysicalArrayAddressArray), _state.AL);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+        }
+        // Set number of pages
+        _state.CX = (ushort) EmmMappings.Length;
+        return EmmStatus.EmmNoError;
+    }
+
     public void GetHardwareInformation() {
         switch (_state.AL) {
         case EmsSubFunctions.GetHardwareInformationUnallocatedRawPages:
