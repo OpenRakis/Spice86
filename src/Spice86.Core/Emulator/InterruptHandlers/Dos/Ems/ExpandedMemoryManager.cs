@@ -910,21 +910,37 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public void GetHardwareInformation() {
         switch (_state.AL) {
-        case EmsSubFunctions.GetHardwareInformationUnallocatedRawPages:
-            // Return number of pages available in BX.
-            _state.BX = GetFreePages();
-            // Return total number of pages in DX.
-            _state.DX = (ushort) TotalPages;
-            // Set good status.
-            _state.AH = EmmStatus.EmmNoError;
+            case EmsSubFunctions.GetHardwareConfiguration:
+                uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                // 1 page is 1K paragraphs (16KB)
+                _memory.SetUint16(data,0x0400);
+                data+=2;
+                // No alternate register sets
+                _memory.SetUint16(data,0x0000);
+                data+=2;
+                // Context save area size
+                _memory.SetUint16(data, (ushort)EmmMappings.Length);
+                data+=2;
+                // No DMA channels
+                _memory.SetUint16(data,0x0000);
+                data+=2;
+                // Always 0 for LIM standard
+                _memory.SetUint16(data,0x0000);
+                break;
+            case EmsSubFunctions.GetHardwareInformationUnallocatedRawPages:
+                // Return number of pages available in BX.
+                _state.BX = GetFreePages();
+                // Return total number of pages in DX.
+                _state.DX = (ushort) TotalPages;
+                // Set good status.
+                _state.AH = EmmStatus.EmmNoError;
             break;
-
-        default:
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
-                    nameof(GetHardwareInformation), _state.AL);
-            }
-            break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(GetHardwareInformation), _state.AL);
+                }
+                break;
         }
     }
 
