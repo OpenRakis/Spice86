@@ -13,6 +13,7 @@ using Spice86.Shared.Interfaces;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
@@ -22,7 +23,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const string EmsIdentifier = "EMMXXXX0";
 
-    public const byte EmmHandlesLength = 200;
+    public const byte EmmMaxHandles = 200;
 
     public const byte EmmMaxPhysicalPages = 4;
 
@@ -54,7 +55,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmmHandle.EmmMaxPhysicalPages];
     
-    public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmHandlesLength];
+    public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmMaxHandles];
     
     public const ushort XmsStart = 0x110;
 
@@ -434,7 +435,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private byte GetPagesForAllHandles(uint table, ref ushort handles) {
         handles = 0;
-        for (byte i = 0; i < EmmHandlesLength; i++) {
+        for (byte i = 0; i < EmmMaxHandles; i++) {
             if (EmmHandles[i].Pages == EmmNullHandle) {
                 continue;
             }
@@ -819,11 +820,55 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     private void HandleFunctions() {
-        _state.AH = HandleNameSearch(_state.AL);
+        _state.AH = HandleFunctions(_state.AL);
     }
 
-    public byte HandleNameSearch(byte operation) {
-        throw new NotImplementedException();
+    /// <summary>
+    /// Handle Functions.
+    /// </summary>
+    /// <param name="operation">0: Get all handle names. 1: Search for a handle name. 2: Get total number of handles. Other values: invalid subFunction.s</param>
+    public byte HandleFunctions(byte operation) {
+        string name;
+        ushort handle = 0;
+        uint data;
+        switch (operation) {
+            case 0x00:    /* Get all handle names */
+                _state.AL = 0;
+                data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                for (handle = 0; handle < EmmMaxHandles; handle++) {
+                    if (EmmHandles[handle].Pages == EmmNullHandle) {
+                        continue;
+                    }
+                    _state.AL++;
+                    _memory.SetUint16(data, handle);
+                    _memory.LoadData(data + 2, Encoding.ASCII.GetBytes(EmmHandles[handle].Name), 8);
+                    data += 10;
+                }
+                break;
+            case 0x01: /* Search for a handle name */
+                name = MemoryUtils.GetZeroTerminatedString(_memory.Ram,
+                    MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
+                for (handle = 0; handle < EmmMaxHandles; handle++) {
+                    if (EmmHandles[handle].Pages == EmmNullHandle ||
+                        !name.Equals(EmmHandles[handle].Name, StringComparison.InvariantCultureIgnoreCase)) {
+                        continue;
+                    }
+
+                    _state.DX = handle;
+                    return EmmStatus.EmmNoError;
+                }
+                return EmmStatus.EmmNotFound;
+            case 0x02: /* Get Total number of handles */
+                _state.BX = (ushort) EmmHandles.Length;
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(HandleFunctions), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+        }
+        return EmmStatus.EmmNoError;
     }
 
     public void MemoryRegion() {
@@ -854,7 +899,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
-                        nameof(GetMappablePhysicalArrayAddressArray), _state.AL);
+                        nameof(GetMappablePhysicalArrayAddressArray), operation);
                 }
                 return EmmStatus.EmmInvalidSubFunction;
         }
