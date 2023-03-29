@@ -63,7 +63,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
         }
 
         if (length == Length) {
-            return new XmsBlock[1] { new XmsBlock(handle, Offset, length, true) };
+            return new XmsBlock[] { new XmsBlock(handle, Offset, length, true) };
         }
 
         var blocks = new XmsBlock[2];

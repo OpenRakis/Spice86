@@ -11,21 +11,17 @@ using Spice86.Core.Emulator.VM;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Provides DOS applications with XMS memory.
-/// TODO: Remove dependency on main memory.
-/// TODO: Remove unsafe code
 /// </summary>
 public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
-    private SegmentedAddress _callbackAddress;
     private int _a20EnableCount;
     private readonly LinkedList<XmsBlock> _xmsBlocksLinkedList = new();
     private readonly SortedList<int, int> _xmsHandles = new();
 
     public ExtendedMemoryManager(Machine machine) : base(machine) {
-        _callbackAddress = new(0, 0);
+        CallbackAddress = new(0, 0);
         _machine = machine;
         FillDispatchTable();
     }
@@ -57,9 +53,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
 
     public override byte Index => 0x43;
 
-    public SegmentedAddress CallbackAddress {
-        set => _callbackAddress = value;
-    }
+    public SegmentedAddress CallbackAddress { get; set; }
 
     private void FillDispatchTable() {
         _dispatchTable.Add(0x00, new Callback(0x00, GetVersionNumber));
@@ -82,6 +76,36 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         _dispatchTable.Add(0x89, new Callback(0x89, () => AllocateAnyExtendedMemory(_state.EDX)));
         _dispatchTable.Add(0x2F, new Callback(0x2F, RunXmsInterruptCallback));
     }
+    
+    /// <summary>
+    /// 0000:0000 EB06                            JMP 0008 <br/>
+    /// 0000:0002 90                              NOP <br/>
+    /// 0000:0003 90                              NOP <br/>
+    /// 0000:0004 90                              NOP <br/>
+    /// 0000:0005 90                              NOP <br/>
+    /// 0000:0006 90                              NOP <br/>
+    /// 0000:0007 90                              NOP <br/>
+    /// 0000:0008 CD43                            INT 43 <br/>
+    /// 0000:000A CB                              RETF <br/>
+    /// </summary>
+    public void SetRaiseCallbackInstruction() {
+        uint startAddress = 0x1198;
+        foreach (byte item in new byte[] {
+            0xEB,
+            0x06,
+            0x90,
+            0x90,
+            0x90,
+            0x90,
+            0x90,
+            0x90,
+            0xCD,
+            Index,
+            0xCB}) {
+            _memory.SetUint8(startAddress, item);
+            startAddress++;
+        }
+    }
 
     public void FinishDeviceInitialization() {
         InitializeMemoryMap();
@@ -99,8 +123,8 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
                 break;
 
             case XmsHandlerFunctions.GetCallbackAddress:
-                _state.BX = _callbackAddress.Offset;
-                _state.ES = _callbackAddress.Segment;
+                _state.BX = CallbackAddress.Offset;
+                _state.ES = CallbackAddress.Segment;
                 break;
 
             default:
@@ -264,9 +288,7 @@ public class ExtendedMemoryManager : InterruptHandler, IDeviceCallbackProvider {
         if (_xmsBlocksLinkedList.Count != 0) {
             throw new UnrecoverableException($"XMS already initialized, in {nameof(InitializeMemoryMap)}");
         }
-
-        uint memoryAvailable = (uint)_machine.Memory.Size - XmsBaseAddress;
-        _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, memoryAvailable, false));
+        _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, 0, false));
     }
 
     /// <summary>
