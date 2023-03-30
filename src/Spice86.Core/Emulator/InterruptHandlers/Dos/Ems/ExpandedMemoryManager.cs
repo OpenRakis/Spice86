@@ -35,8 +35,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const ushort EmmPageSize = 16 * 1024;
 
-    public const ushort X86PagingPageSize = 4096;
-    
     public override ushort? InterruptHandlerSegment => 0xF100;
     
     public override byte Index => 0x67;
@@ -61,10 +59,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public const ushort XmsStart = 0x110;
 
-    /// <summary>
-    /// EMM v4 specs define 32 MB of RAM
-    /// </summary>
-    public const int MemorySizeInMb = 32;
+    public const int MemorySizeInMb = 16;
 
     public int TotalPages => MemoryBlock.Pages;
 
@@ -132,7 +127,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         byte operation = _state.AH;
         if (!_dispatchTable.ContainsKey(operation)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("EMS function not provided: {@StateAh}", operation);
+                _loggerService.Error("EMS function not provided: {@Function}", operation);
             }
             _state.AH = EmmStatus.EmmFuncNoSup;
         }
@@ -165,7 +160,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void GetHandleAndAllocatePages() {
         ushort handles = _state.DX;
-        _state.AX = EmmAllocateMemory(_state.BX, ref handles, false);
+        _state.AH = EmmAllocateMemory(_state.BX, ref handles, false);
         _state.DX = handles;
     }
     
@@ -174,7 +169,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void MapExpandedMemoryPage() {
         ushort handle = _state.DX;
-        _state.AX = EmmMapPage(_state.AX, ref handle, _state.BX);
+        _state.AH = EmmMapPage(_state.BX, ref handle, _state.BX);
         _state.DX = handle;
     }
     
@@ -263,10 +258,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Saves the current state of page map registers for a handle.
     /// </summary>
     public void SavePageMap() {
-        _state.AX = SavePageMap(_state.DX);
+        _state.AH = SavePageMap(_state.DX);
     }
 
-    public ushort SavePageMap(ushort handle) {
+    public byte SavePageMap(ushort handle) {
         /* Check for valid handle */
         if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
             if (handle != 0) {
@@ -979,7 +974,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return EmmStatus.EmmNoError;
     }
 
-    public ushort EmmAllocateMemory(ushort pages, ref ushort dhandle, bool canAllocateZeroPages) {
+    public byte EmmAllocateMemory(ushort pages, ref ushort dhandle, bool canAllocateZeroPages) {
         // Check for 0 page allocation
         if (pages is 0 && !canAllocateZeroPages) {
             return EmmStatus.EmmZeroPages;
