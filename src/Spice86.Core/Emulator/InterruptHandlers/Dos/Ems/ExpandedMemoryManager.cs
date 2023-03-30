@@ -34,6 +34,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public const ushort EmmPageFrame = 0xE000;
 
     public const ushort EmmPageSize = 16 * 1024;
+
+    public const ushort X86PagingPageSize = 4096;
     
     public override ushort? InterruptHandlerSegment => 0xF100;
     
@@ -871,8 +873,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         return EmmStatus.EmmNoError;
     }
 
-    public void MemoryRegion() {
-        throw new NotImplementedException();
+    /// <summary>
+    /// Uses X86 Memory Paging, which means protected mode. Unimplemented.
+    /// </summary>
+    private void MemoryRegion() {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("{@MethodName} is unimplemented", nameof(MemoryRegion));
+        }
+        _state.AH = EmmStatus.EmmFuncNoSup;
     }
 
     private void GetMappablePhysicalArrayAddressArray() {
