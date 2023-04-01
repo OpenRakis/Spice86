@@ -41,7 +41,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     /// <summary>
     ///     Total number of bytes allocated for video RAM.
     /// </summary>
-    public uint TotalVramBytes => 1024 * 1024;
+    public uint TotalVramBytes => 0x40000;
 
     private readonly Bios _bios;
     private readonly LazyConcurrentDictionary<FontType, SegmentedAddress> _fonts = new();
@@ -99,8 +99,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.CrtControllerAddressAlt,
             Ports.CrtControllerData,
             Ports.CrtControllerDataAlt,
-            Ports.DacAddressReadMode,
-            Ports.DacAddressWriteMode,
+            Ports.DacAddressReadIndex,
+            Ports.DacAddressWriteIndex,
             Ports.DacData,
             Ports.DacStateRead,
             Ports.FeatureControlRead,
@@ -122,8 +122,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.CrtControllerAddressAlt,
             Ports.CrtControllerData,
             Ports.CrtControllerDataAlt,
-            Ports.DacAddressReadMode,
-            Ports.DacAddressWriteMode,
+            Ports.DacAddressReadIndex,
+            Ports.DacAddressWriteIndex,
             Ports.DacData,
             Ports.FeatureControlWrite,
             Ports.FeatureControlWriteAlt,
@@ -143,13 +143,13 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public override byte ReadByte(int port) {
         byte value;
         switch (port) {
-            case Ports.DacAddressReadMode:
+            case Ports.DacAddressReadIndex:
                 value = Dac.ReadIndex;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Read DAC Read Index: {Value:X2}", port, value);
                 }
                 break;
-            case Ports.DacAddressWriteMode:
+            case Ports.DacAddressWriteIndex:
                 value = Dac.WriteIndex;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Read DAC Write Index: {Value:X2}", port, value);
@@ -224,8 +224,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             case Ports.InputStatus1Read or Ports.InputStatus1ReadAlt:
                 _attributeDataMode = false; // Reset the attribute data mode for port 0x03C0 to "Index"
                 value = CrtStatusRegister;
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("[{Port:X4}] Read byte from port InputStatus1Read: {Value:X2} {Binary}", port, value, Convert.ToString(value, 2).PadLeft(8, '0'));
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read byte from port InputStatus1Read: {Value:X2} {Binary}", port, value, Convert.ToString(value, 2).PadLeft(8, '0'));
                 }
                 // Next time we will be called retrace will be active, and this until the retrace tick
                 // Set vsync flag to true
@@ -261,16 +261,16 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public override void WriteByte(int port, byte value) {
         switch (port) {
-            case Ports.DacAddressReadMode:
+            case Ports.DacAddressReadIndex:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("[{Port:X4}] Write to DacAddressReadMode: {Value:X2}", port, value);
+                    _logger.Debug("[{Port:X4}] Write to DacAddressReadIndex: {Value}", port, value);
                 }
                 Dac.ReadIndex = value;
                 break;
 
-            case Ports.DacAddressWriteMode:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("[{Port:X4}] Write to DacAddressWriteMode: {Value:X2}", port, value);
+            case Ports.DacAddressWriteIndex:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to DacAddressWriteIndex: {Value}", port, value);
                 }
                 Dac.WriteIndex = value;
                 break;
@@ -917,9 +917,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 break;
 
             case VideoModeId.Graphics320X200X8:
-                Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4 | SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
                 mode = new Vga256(320, 200, this);
-                CrtController.MaximumScanLine |= 1;
                 break;
 
             case VideoModeId.Text40X25X1:
@@ -1005,6 +1003,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         var mode = new Unchained256(320, 200, this);
         CrtController.MaximumScanLine |= 0x01;
         CrtController.Offset = 320 / 8;
+        CrtController.Overflow = 0x3E;
+        CrtController.CrtModeControl = 0xE3;
         SwitchToMode(mode);
     }
     private void SwitchToMode(VideoMode mode) {

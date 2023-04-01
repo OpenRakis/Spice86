@@ -465,12 +465,14 @@ public class DosInt21Handler : InterruptHandler {
     private void CheckStdInInput() {
         WaitForKey();
         // throw new NotImplementedException();
+        _state.AL = 0;
     }
     private void WaitForKeyNoEcho() {
         WaitForKey();
     }
     private void WaitForKey() {
-        Thread.Sleep(1000);
+        return;
+        Thread.Sleep(10000);
         // throw new NotImplementedException();
     }
     private void DeleteFile(bool b) {

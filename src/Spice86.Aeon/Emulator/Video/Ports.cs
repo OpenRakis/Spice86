@@ -13,8 +13,8 @@ namespace Spice86.Aeon.Emulator.Video
         public const int SequencerAddress = 0x03C4;
         public const int SequencerData = 0x03C5;
         public const int DacStateRead = 0x03C7;
-        public const int DacAddressReadMode = 0x03C7;
-        public const int DacAddressWriteMode = 0x03C8;
+        public const int DacAddressReadIndex = 0x03C7;
+        public const int DacAddressWriteIndex = 0x03C8;
         public const int DacData = 0x03C9;
         public const int FeatureControlRead = 0x03CA;
         public const int MiscOutputRead = 0x03CC;

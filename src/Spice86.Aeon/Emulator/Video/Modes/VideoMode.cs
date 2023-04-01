@@ -224,11 +224,11 @@ namespace Spice86.Aeon.Emulator.Video
                     stride = Width;
             }
 
-            crtController.Overflow = 1 << 4;
+            crtController.Overflow = 0x1F;
             crtController.LineCompare = 0xFF;
             crtController.Offset = (byte)(stride / 2u);
             crtController.StartAddress = 0;
-            video.Sequencer.MapMask = 0x0F;
+            // video.Sequencer.MapMask = 0x0F;
             video.Graphics.BitMask = 0xFF;
         }
 

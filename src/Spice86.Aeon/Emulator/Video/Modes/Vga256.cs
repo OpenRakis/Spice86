@@ -17,6 +17,15 @@ namespace Spice86.Aeon.Emulator.Video.Modes
 
         public override int MouseWidth => PixelWidth * 2;
 
+        public override void InitializeMode(IAeonVgaCard video) {
+            base.InitializeMode(video);
+            video.AttributeController.AttributeModeControl = 0x41;
+            video.Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4 | SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
+            video.CrtController.MaximumScanLine |= 1;
+            video.CrtController.Overflow = 0x1F;
+            video.CrtController.CrtModeControl = 0xA3;
+        }
+
         public override byte GetVramByte(uint offset)
         {
             unsafe

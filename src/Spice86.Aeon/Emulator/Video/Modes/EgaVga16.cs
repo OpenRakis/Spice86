@@ -9,5 +9,14 @@ namespace Spice86.Aeon.Emulator.Video.Modes
             : base(width, height, 4, fontHeight, VideoModeType.Graphics, video)
         {
         }
+
+        public override void InitializeMode(IAeonVgaCard video) {
+            base.InitializeMode(video);
+            video.AttributeController.AttributeModeControl = 0x01;
+            video.CrtController.CrtModeControl = 0xE3;
+            video.Sequencer.SequencerMemoryMode = SequencerMemoryMode.ExtendedMemory;
+            video.Graphics.GraphicsMode = 0x00;
+            video.CrtController.Overflow = 0x3E;
+        }
     }
 }

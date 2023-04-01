@@ -37,7 +37,7 @@ public sealed class ProgramExecutor : IDisposable {
     private bool _disposedValue;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
-    private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
+    private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is true;
 
     public ProgramExecutor(ILoggerService loggerService, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) {
         _loggerService = loggerService;

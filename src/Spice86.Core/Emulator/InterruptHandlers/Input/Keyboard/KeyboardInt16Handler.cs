@@ -35,8 +35,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public void GetKeystrokeStatus(bool calledFromVm) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("KEY STROKE STATUS");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("KEY STROKE STATUS");
         }
 
         // ZF = 0 if a key pressed (even Ctrl-Break)
