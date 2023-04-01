@@ -1,54 +1,66 @@
 namespace Spice86.Aeon.Emulator.Video
 {
-    using Spice86.Shared;
-
     /// <summary>
     /// Emulates the VGA DAC which provides access to the palette.
     /// </summary>
-    public class Dac {
-        private int _readChannel;
-        private int _writeChannel;
-        private byte _readIndex;
-        private byte _writeIndex;
+    public sealed class Dac
+    {
+        private readonly unsafe uint* palette;
+        private readonly UnsafeBuffer<uint> paletteBuffer = new(256);
+        private int readChannel;
+        private int writeChannel;
+        private byte readIndex;
+        private byte writeIndex;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Dac"/> class.
         /// </summary>
-        public Dac() {
+        public Dac()
+        {
+            unsafe
+            {
+                palette = paletteBuffer.ToPointer();
+            }
+
             Reset();
         }
 
         /// <summary>
         /// Gets the full 256-color palette.
         /// </summary>
-        public ReadOnlySpan<Rgb> PaletteAsSpan => Palette.AsSpan();
-
-        /// <summary>
-        /// 8-bit length Palette store
-        /// </summary>
-        public Rgb[] Palette { get; } = new Rgb[256];
+        public ReadOnlySpan<uint> Palette
+        {
+            get
+            {
+                unsafe
+                {
+                    return new ReadOnlySpan<uint>(palette, 256);
+                }
+            }
+        }
 
         /// <summary>
         /// Gets or sets the current palette read index.
         /// </summary>
-        public byte ReadIndex {
-            get => _readIndex;
+        public byte ReadIndex
+        {
+            get => readIndex;
             set
             {
-                _readIndex = value;
-                _readChannel = 0;
+                readIndex = value;
+                readChannel = 0;
             }
         }
-        
         /// <summary>
         /// Gets or sets the current palette write index.
         /// </summary>
-        public byte WriteIndex {
-            get => _writeIndex;
+        public byte WriteIndex
+        {
+            get => writeIndex;
             set
             {
-                _writeIndex = value;
-                _writeChannel = 0;
+                writeIndex = value;
+                writeChannel = 0;
             }
         }
 
@@ -56,40 +68,67 @@ namespace Spice86.Aeon.Emulator.Video
         /// Reads the next channel in the current color.
         /// </summary>
         /// <returns>Red, green, or blue channel value.</returns>
-        public byte Read() {
-            Rgb color = Palette[_readIndex];
-            _readChannel++;
-            return color.Read(ref _readChannel, ref _readIndex);
+        public byte Read()
+        {
+            unsafe
+            {
+                uint color = palette[readIndex];
+                readChannel++;
+                if (readChannel == 1)
+                {
+                    return (byte)((color >> 18) & 0x3F);
+                }
+
+                if (readChannel == 2)
+                {
+                    return (byte)((color >> 10) & 0x3F);
+                }
+
+                readChannel = 0;
+                readIndex++;
+                return (byte)((color >> 2) & 0x3F);
+            }
         }
-        
         /// <summary>
         /// Writes the next channel in the current color.
         /// </summary>
         /// <param name="value">Red, green, or blue channel value.</param>
         public void Write(byte value) {
-            Rgb color = Palette[_writeIndex];
-            _writeChannel++;
-            color.Write(value, ref _writeChannel, ref _writeIndex);
+            value &= 0x3F;
+            value = (byte)(value << 2 | value >> 4);
+            unsafe {
+                writeChannel++;
+                if (writeChannel == 1) {
+                    palette[writeIndex] &= 0xFF00FFFF;
+                    palette[writeIndex] |= (uint)(value << 16);
+                } else if (writeChannel == 2) {
+                    palette[writeIndex] &= 0xFFFF00FF;
+                    palette[writeIndex] |= (uint)(value << 8);
+                } else {
+                    palette[writeIndex] &= 0xFFFFFF00;
+                    palette[writeIndex] |= value;
+                    writeChannel = 0;
+                    writeIndex++;
+                }
+            }
         }
-        
         /// <summary>
         /// Resets the colors to the default 256-color VGA palette.
         /// </summary>
-        public void Reset() {
-            ReadOnlySpan<byte> source = DefaultPalette;
+        public void Reset()
+        {
+            var source = DefaultPalette;
             for (int i = 0; i < 256; i++)
             {
-                byte r = source[i * 3];
-                byte g = source[i * 3 + 1];
-                byte b = source[i * 3 + 2];
-                Palette[i] = new Rgb() {
-                    R8 = r,
-                    G8 = g,
-                    B8 = b
-                };
+                uint r = source[i * 3];
+                uint g = source[i * 3 + 1];
+                uint b = source[i * 3 + 2];
+                unsafe
+                {
+                    palette[i] = b | (g << 8) | (r << 16);
+                }
             }
         }
-        
         /// <summary>
         /// Sets a color to the specified RGB values.
         /// </summary>
@@ -98,14 +137,21 @@ namespace Spice86.Aeon.Emulator.Video
         /// <param name="g">Green component.</param>
         /// <param name="b">Blue component.</param>
         public void SetColor(byte index, byte r, byte g, byte b) {
-            Rgb item = Palette[index];
-            item.R8 = (byte) (r & 0x3F);
-            item.G8 = (byte) (g & 0x3F);
-            item.B8 = (byte) (b & 0x3F);
+            r &= 0x3F;
+            g &= 0x3F;
+            b &= 0x3F;
+            uint red = (uint)((r << 2 | r >> 4) << 16);
+            uint green = (uint)((g << 2 | g >> 4) << 8);
+            uint blue = (uint)(b << 2 | b >> 4);
+
+            unsafe {
+                palette[index] = red | green | blue;
+            }
         }
 
         #region DefaultPalette
-        private static ReadOnlySpan<byte> DefaultPalette => new byte[] {
+        private static ReadOnlySpan<byte> DefaultPalette => new byte[]
+            {
                 0x00, 0x00, 0x00, 0x00, 0x00, 0xA8, 0x00, 0xA8, 0x00, 0x00, 0xA8, 0xA8, 0xA8, 0x00, 0x00, 0xA8,
                 0x00, 0xA8, 0xA8, 0x54, 0x00, 0xA8, 0xA8, 0xA8, 0x54, 0x54, 0x54, 0x54, 0x54, 0xFC, 0x54, 0xFC,
                 0x54, 0x54, 0xFC, 0xFC, 0xFC, 0x54, 0x54, 0xFC, 0x54, 0xFC, 0xFC, 0xFC, 0x54, 0xFC, 0xFC, 0xFC,

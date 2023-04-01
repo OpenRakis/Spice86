@@ -27,10 +27,10 @@ public partial class PaletteViewModel : ObservableObject {
     public PaletteViewModel(Machine? machine) {
         _machine = machine;
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
-        _timer.Start();
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
         }
+        _timer.Start();
     }
 
     [ObservableProperty]
@@ -46,13 +46,14 @@ public partial class PaletteViewModel : ObservableObject {
         if (videoCard is null) {
             return;
         }
-        ReadOnlySpan<Rgb> palette = videoCard.Dac.Palette;
+
+        ReadOnlySpan<uint> palette = videoCard.CurrentMode.Palette;
         for(int i = 0; i < Palette.Count; i++) {
             Rectangle rectangle = Palette[i];
-            Rgb source = palette[i];
-            if (rectangle.Fill is SolidColorBrush fill &&
-                (source.R8 != fill.Color.R || source.G8 != fill.Color.G || source.B8 != fill.Color.B)) {
-                fill.Color = Color.FromRgb(source.R8, source.G8, source.B8);
+            uint source = palette[i];
+            Rgb rgb = Rgb.FromUint(source);
+            if (rectangle.Fill is SolidColorBrush fill) {
+                fill.Color = Color.FromRgb(rgb.R, rgb.G, rgb.B);
             }
         }
     }
