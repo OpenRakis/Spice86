@@ -14,9 +14,6 @@
         <Design.DataContext>
                 <vm:DebugViewModel />
         </Design.DataContext>
-        <Window.Resources>
-                <converters:RgbToRectangleConverter x:Key="RgbToRectangleConverter" />
-        </Window.Resources>
         <ScrollViewer>
                 <TabControl>
                         <TabItem Header="Video Card">
@@ -25,7 +22,7 @@
                                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Dac</Label>
                                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
                                                         <Label>Palette</Label>
-                                                        <TextBlock Text="{Binding VideoCard.Dac.Palette}"></TextBlock>
+                                                        <TextBlock Text="{Binding VideoCard.Dac.PaletteAsSpan}"></TextBlock>
                                                         <Label>ReadIndex</Label>
                                                         <TextBlock Text="{Binding VideoCard.Dac.ReadIndex, StringFormat={}{0:X2}}"></TextBlock>
                                                         <Label>WriteIndex</Label>

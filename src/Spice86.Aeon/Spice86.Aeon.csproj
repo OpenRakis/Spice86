@@ -12,4 +12,8 @@
         <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+    </ItemGroup>
+
 </Project>
