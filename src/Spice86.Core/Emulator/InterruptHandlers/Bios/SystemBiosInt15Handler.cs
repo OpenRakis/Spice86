@@ -22,10 +22,11 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Reports ExtendedMemoryManager.ExtendedMemorySize in AX.
+    /// Reports extended memory size in AX.
+    /// TODO: Fix this.
     /// </summary>
     public void GetExtendedMemorySize() {
-        _state.AX = (ushort) (_machine.Xms?.ExtendedMemorySize ?? 0);
+        _state.AX = (ushort)(_machine.Xms != null ? _machine.Memory.Size : 0);
     }
 
     public void CopyExtendedMemory() {

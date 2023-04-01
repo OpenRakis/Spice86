@@ -198,15 +198,8 @@ public class Machine : IDisposable {
             Name = "DMAThread"
         };
         if(Xms is not null) {
-            Register((ICallback)Xms);
-            Register((IDeviceCallbackProvider)Xms);
+            Register(Xms);
         }
-    }
-
-    
-    public void Register(IDeviceCallbackProvider callbackProvider) {
-        callbackProvider.SetRaiseCallbackInstruction();
-        callbackProvider.FinishDeviceInitialization();
     }
 
     public void Register(IIOPortHandler ioPortHandler) {
