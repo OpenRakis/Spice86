@@ -19,10 +19,10 @@
     <PropertyGroup>
         <NoWarn>CS1591</NoWarn>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <version>4.0.0</version>
-        <Authors>Kevin Ferrare, Maximilien Noal</Authors>
+        <version>4.0.1</version>
+        <Authors>Greg Divis</Authors>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-        <Description>Reverse engineer and rewrite real mode dos programs</Description>
+        <Description>Parts of Aeon project, made suitable for including into Spice86</Description>
         <PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
         <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
         <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
