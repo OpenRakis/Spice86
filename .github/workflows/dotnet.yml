@@ -31,7 +31,7 @@ jobs:
 
     - name: Upload Nuget Spice86.Aeon
       working-directory: ./src/Spice86.Aeon/bin/Release
-      run: nuget push Spice86.Aeon.4.0.1.nupkg ${{secret.NUGET_API_KEU}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.Aeon.4.0.1.nupkg ${{secret.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Bufdio.Spice86
       working-directory: ./src/Bufdio.Spice86/bin/Release
