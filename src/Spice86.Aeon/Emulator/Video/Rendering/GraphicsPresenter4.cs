@@ -49,50 +49,24 @@ namespace Spice86.Aeon.Emulator.Video.Rendering
                             int destPos = width * y + destStart;
 
                             for (int i = bitPan; i < 8; i++)
-                                destPtr[destPos++] = palette[paletteMap[UnpackIndex(srcPtr[srcPos], 7 - i)]];
+                                destPtr[destPos++] = EgaToArgb(paletteMap[UnpackIndex(srcPtr[srcPos], 7 - i)]);
 
                             srcPos++;
 
                             for (int xb = 1; xb < safeWidth; xb++)
                             {
-                                // vram is stored as:
-                                // [p1byte] [p2byte] [p3byte] [p4byte]
-                                // to build index for nibble one:
-                                // p1[0] p2[0] p3[0] p4[0]
-
-                                uint p = srcPtr[srcPos & 0xFFFF];
-                                int palIndex = UnpackIndex(p, 0);
-                                destPtr[destPos + 7] = palette[paletteMap[palIndex]];
-
-                                palIndex = UnpackIndex(p, 1);
-                                destPtr[destPos + 6] = palette[paletteMap[palIndex]];
-
-                                palIndex = UnpackIndex(p, 2);
-                                destPtr[destPos + 5] = palette[paletteMap[palIndex]];
-
-                                palIndex = UnpackIndex(p, 3);
-                                destPtr[destPos + 4] = palette[paletteMap[palIndex]];
-
-                                palIndex = UnpackIndex(p, 4);
-                                destPtr[destPos + 3] = palette[paletteMap[palIndex]];
-
-                                palIndex = UnpackIndex(p, 5);
-                                destPtr[destPos + 2] = palette[paletteMap[palIndex]];
-
-                                palIndex = UnpackIndex(p, 6);
-                                destPtr[destPos + 1] = palette[paletteMap[palIndex]];
-
-                                palIndex = UnpackIndex(p, 7);
-                                destPtr[destPos] = palette[paletteMap[palIndex]];
-
-                                destPos += 8;
-                                srcPos++;
+                                uint source = srcPtr[srcPos++ & 0xFFFF];
+                                for (int i = 7; i >= 0; i--) {
+                                    int index = UnpackIndex(source, i);
+                                    byte ega = paletteMap[index];
+                                    destPtr[destPos++] = EgaToArgb(ega);
+                                }
                             }
 
                             srcPos &= 0xFFFF;
 
                             for (int i = 0; i < bitPan; i++)
-                                destPtr[destPos++] = palette[paletteMap[UnpackIndex(srcPtr[srcPos], 7 - i)]];
+                                destPtr[destPos++] = EgaToArgb(paletteMap[UnpackIndex(srcPtr[srcPos], 7 - i)]);
                         }
 
                         if (height < VideoMode.Height)
@@ -108,6 +82,17 @@ namespace Spice86.Aeon.Emulator.Video.Rendering
                     }
                 }
             }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static uint EgaToArgb(byte ega) {
+            int red = 0b1010101 * (ega >> 1 & 2 | ega >> 5 & 1);
+            int green = 0b1010101 * (ega & 2 | ega >> 4 & 1);
+            int blue = 0b1010101 * (ega << 1 & 2 | ega >> 3 & 1);
+            
+            uint argb = (uint)(red << 16 | green << 8 | blue);
+           
+            return argb;
         }
 
         // it's important for this to get inlined
