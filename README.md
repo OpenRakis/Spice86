@@ -281,7 +281,7 @@ CPU:
 - No FPU instruction implemented apart those used for FPU detection.
 
 Graphics:
-- Only VGA mode 0x13 is implemented
+- Text modes, VGA, EGA, and CGA are entirely or partially implemented.
 
 DOS:
 - Part of int 21 is implemented. Identifies itself as dos 5.0 for now.
@@ -299,6 +299,7 @@ Sound:
 On *nix systems, you'll need to have libportaudio installed.
 Without it, there will be no sound.
 
+- PC Speaker is implemented.
 - Adlib/SoundBlaster MIDI OPL is supported.
 - SoundBlaster PCM is supported.
 - MT-32 is supported, but not on macOS, as a static build of MUNT is missing in the MT-32 wrapper for that platform. (PRs welcome !)
@@ -369,7 +370,7 @@ Stunts:
 
 ### Credits
 
-Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Most notably DMA support, PC Speaker, SoundBlaster, MT-32, and General MIDI devices.
+Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Most notably the video card, DMA support, PC Speaker, SoundBlaster, MT-32, and General MIDI devices.
 
 Also, this project uses JetBrains Rider licenses, thanks to JetBrains' [Open Source Community Support](https://www.jetbrains.com/community/opensource/#support).
 
