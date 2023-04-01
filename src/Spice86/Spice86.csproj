@@ -16,9 +16,9 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>4.0.1</version>
+		<version>4.0.2</version>
 		<PackageReleaseNotes>New VGA implementation, more performance, new RE features</PackageReleaseNotes>
-		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
+        <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
 		<PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>

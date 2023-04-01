@@ -19,7 +19,7 @@
     <PropertyGroup>
         <NoWarn>CS1591</NoWarn>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <version>4.0.1</version>
+        <version>4.0.2</version>
         <Authors>Greg Divis</Authors>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <Description>Parts of Aeon project, made suitable for including into Spice86</Description>

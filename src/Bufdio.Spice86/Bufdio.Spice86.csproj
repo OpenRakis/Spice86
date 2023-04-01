@@ -3,7 +3,6 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Bufdio.Spice86</RootNamespace>
-    <Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal</Authors>
     <Copyright>Luthfi Tri Atmaja</Copyright>
     <Description>Only for Spice86 usage. A cross platform audio playback library for .NET based on PortAudio, forked from the original Bufdio by Luthfi Tri Atmaja.</Description>
     <NoWarn>IDE0090</NoWarn>
@@ -15,8 +14,8 @@
 	<PropertyGroup>
 		<NoWarn>CS1591</NoWarn>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>4.0.1</version>
-		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
+		<version>4.0.2</version>
+		<Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
 		<PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
