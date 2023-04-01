@@ -10,7 +10,7 @@
         Icon="/Icon/Spice86.ico"
         CanResize="True"
         WindowStartupLocation="CenterOwner"
-        MinWidth="640" MinHeight="400" Width="640" Height="400" ShowInTaskbar="False">
+        MinWidth="640" MinHeight="400" Width="640" Height="400">
         <Design.DataContext>
                 <vm:DebugViewModel />
         </Design.DataContext>
