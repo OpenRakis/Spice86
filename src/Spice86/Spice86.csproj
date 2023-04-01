@@ -16,8 +16,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>3.0.18</version>
-		<PackageReleaseNotes>Emulator main memory amount is now configurable</PackageReleaseNotes>
+		<version>4.0.0</version>
+		<PackageReleaseNotes>New VGA implementation, more performance, new RE features</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
