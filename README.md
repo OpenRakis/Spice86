@@ -281,6 +281,12 @@ CPU:
 - For 80386, protected mode is not implemented.
 - No FPU instruction implemented apart those used for FPU detection.
 
+Memory:
+- Segmented addressing is implemented.
+- Helpers are available in order to convert a segmented address into a physical address, and vice-versa.
+- EMS and XMS are not implemented.
+- X86 Paging (virtual memory) is not implemented.
+
 Graphics:
 - VGA, EGA, and CGA are entirely or partially implemented.
 - Text modes are not implemented.
