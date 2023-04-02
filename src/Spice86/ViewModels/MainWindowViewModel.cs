@@ -73,12 +73,15 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
     
     public void HideMouseCursor() {
-        VideoBuffers.All(x => x.ShowCursor = false);
+        foreach (VideoBufferViewModel x in VideoBuffers) {
+            x.ShowCursor = false;
+        }
     }
 
     public void ShowMouseCursor() {
-        VideoBuffers.All(x => x.ShowCursor = true);
-    }
+        foreach (VideoBufferViewModel x in VideoBuffers) {
+            x.ShowCursor = true;
+        }    }
 
     public bool IsEmulatorThreadPresent => _emulatorThread is not null;
 
