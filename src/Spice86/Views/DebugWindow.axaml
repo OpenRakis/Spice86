@@ -6,7 +6,6 @@
         x:Class="Spice86.Views.DebugWindow"
         Title="Debug"
         xmlns:vm="using:Spice86.ViewModels"
-        xmlns:converters="clr-namespace:Spice86.Converters"
         Icon="/Icon/Spice86.ico"
         CanResize="True"
         WindowStartupLocation="CenterOwner"
@@ -22,7 +21,7 @@
                                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Dac</Label>
                                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
                                                         <Label>Palette</Label>
-                                                        <TextBlock Text="{Binding VideoCard.Dac.PaletteAsSpan}"></TextBlock>
+                                                        <TextBlock Text="{Binding VideoCard.Dac.Palette}"></TextBlock>
                                                         <Label>ReadIndex</Label>
                                                         <TextBlock Text="{Binding VideoCard.Dac.ReadIndex, StringFormat={}{0:X2}}"></TextBlock>
                                                         <Label>WriteIndex</Label>

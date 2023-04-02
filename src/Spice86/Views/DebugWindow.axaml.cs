@@ -20,7 +20,7 @@ public partial class DebugWindow : Window {
         }
     }
     
-    public DebugWindow(Machine? machine) {
+    public DebugWindow(Machine machine) {
         InitializeComponent();
 #if DEBUG
         this.AttachDevTools();

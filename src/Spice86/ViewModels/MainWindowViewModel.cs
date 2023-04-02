@@ -73,21 +73,31 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
     
     public void HideMouseCursor() {
-        foreach (VideoBufferViewModel x in VideoBuffers) {
-            x.ShowCursor = false;
-        }
+        Dispatcher.UIThread.Post(() => {
+                foreach (VideoBufferViewModel x in VideoBuffers) {
+                    x.ShowCursor = false;
+                }            
+        });
     }
 
     public void ShowMouseCursor() {
-        foreach (VideoBufferViewModel x in VideoBuffers) {
-            x.ShowCursor = true;
-        }    }
+        Dispatcher.UIThread.Post(() => {
+            foreach (VideoBufferViewModel x in VideoBuffers) {
+                x.ShowCursor = true;
+            }            
+        });
+    }
 
-    public bool IsEmulatorThreadPresent => _emulatorThread is not null;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ShowDebugWindowCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ShowColorPaletteCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DumpEmulatorStateToFileCommand))]
+    private bool _isMachineRunning;
 
-    public bool IsProgramExecutorPresent => _programExecutor is not null;
-
-    [RelayCommand(CanExecute = nameof(IsProgramExecutorPresent))]
+    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public async Task DumpEmulatorStateToFile() {
         if (_programExecutor is null) {
             return;
@@ -114,7 +124,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsEmulatorThreadPresent))]
+    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void Pause() {
         if (_emulatorThread is null) {
             return;
@@ -124,7 +134,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         IsPaused = true;
     }
 
-    [RelayCommand(CanExecute = nameof(IsEmulatorThreadPresent))]
+    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void Play() {
         if (_emulatorThread is null) {
             return;
@@ -201,6 +211,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 while (_emulatorThread?.IsAlive == true) {
                     Dispatcher.UIThread.RunJobs();
                 }
+
+                IsMachineRunning = false;
                 _closeAppOnEmulatorExit = false;
                 RunEmulator();
             }
@@ -217,7 +229,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsProgramExecutorPresent))]
+    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public async Task ShowPerformance() {
         if (_performanceWindow != null) {
             _performanceWindow.Activate();
@@ -234,7 +246,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsProgramExecutorPresent))]
+    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowDebugWindow() {
         if (_debugWindow != null) {
             _debugWindow.Activate();
@@ -245,7 +257,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsProgramExecutorPresent))]
+    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
@@ -275,11 +287,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public int MouseY { get; set; }
 
-    public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary =>
-        VideoBuffers
-        .ToDictionary(static x =>
-            x.Address,
-            x => (IVideoBufferViewModel)x);
+    public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary {
+        get =>
+            VideoBuffers
+                .ToDictionary(static x =>
+                        x.Address,
+                    x => (IVideoBufferViewModel)x);
+        set => throw new NotImplementedException();
+    }
 
     public int Width { get; private set; }
 
@@ -353,6 +368,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         if (!_disposed) {
             if (disposing) {
                 PlayCommand.Execute(null);
+                IsMachineRunning = false;
                 DisposeEmulator();
                 _performanceWindow?.Close();
                 _paletteWindow?.Close();
@@ -404,7 +420,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private void RunMachine() {
-        ShowVideo = true;
         _emulatorThread = new Thread(MachineThread) {
             Name = "Emulator"
         };
@@ -434,8 +449,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _videoCard = _programExecutor.Machine.VgaCard;
+            Dispatcher.UIThread.Post(() => IsMachineRunning = true);
+            Dispatcher.UIThread.Post(() => ShowVideo = true);
             _programExecutor.Run();
-            Dispatcher.UIThread.Post(() => ShowVideo = false);
+            Dispatcher.UIThread.Post(() => IsMachineRunning = false);
             if(_closeAppOnEmulatorExit) {
                 Dispatcher.UIThread.Post(() => App.MainWindow?.Close());
             }
