@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.VM;
@@ -22,6 +23,9 @@ public partial class DebugViewModel : ObservableObject {
         }
         _timer = new DispatcherTimer();
     }
+
+    [RelayCommand]
+    public void UpdateData() => UpdateValues(this, EventArgs.Empty);
     
     public DebugViewModel(Machine machine) {
         _machine = machine;
