@@ -73,14 +73,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
     
     public void HideMouseCursor() {
-        VideoBuffers?.All(x => x.ShowCursor = false);
+        VideoBuffers.All(x => x.ShowCursor = false);
     }
 
     public void ShowMouseCursor() {
-        VideoBuffers?.All(x => x.ShowCursor = true);
+        VideoBuffers.All(x => x.ShowCursor = true);
     }
 
-    [RelayCommand]
+    public bool IsEmulatorThreadPresent => _emulatorThread is not null;
+
+    public bool IsProgramExecutorPresent => _programExecutor is not null;
+
+    [RelayCommand(CanExecute = nameof(IsProgramExecutorPresent))]
     public async Task DumpEmulatorStateToFile() {
         if (_programExecutor is null) {
             return;
@@ -107,20 +111,24 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsEmulatorThreadPresent))]
     public void Pause() {
-        if (_emulatorThread is not null) {
-            _okayToContinueEvent.Reset();
-            IsPaused = true;
+        if (_emulatorThread is null) {
+            return;
         }
+
+        _okayToContinueEvent.Reset();
+        IsPaused = true;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsEmulatorThreadPresent))]
     public void Play() {
-        if (_emulatorThread is not null) {
-            _okayToContinueEvent.Set();
-            IsPaused = false;
+        if (_emulatorThread is null) {
+            return;
         }
+
+        _okayToContinueEvent.Set();
+        IsPaused = false;
     }
 
     public void SetConfiguration(string[] args) {
@@ -206,8 +214,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
-    [RelayCommand]
-    public void ShowPerformance() {
+    [RelayCommand(CanExecute = nameof(IsProgramExecutorPresent))]
+    public async Task ShowPerformance() {
         if (_performanceWindow != null) {
             _performanceWindow.Activate();
         } else if (_programExecutor is not null) {
@@ -217,26 +225,29 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             };
             _performanceWindow.Closed += (s, e) => _performanceWindow = null;
             _performanceWindow.Show();
+        } else {
+            await MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("", "Please start a program first")
+                .ShowDialog(App.MainWindow);
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsProgramExecutorPresent))]
     public void ShowDebugWindow() {
         if (_debugWindow != null) {
             _debugWindow.Activate();
-        } else {
-            _debugWindow = new DebugWindow(_programExecutor?.Machine);
+        } else if(_programExecutor is not null) {
+            _debugWindow = new DebugWindow(_programExecutor.Machine);
             _debugWindow.Closed += (s, e) => _debugWindow = null;
             _debugWindow.Show();
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsProgramExecutorPresent))]
     public void ShowColorPalette() {
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
-        } else {
-            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor?.Machine));
+        } else if(_programExecutor is not null) {
+            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.Machine));
             _paletteWindow.Closed += (s, e) => _paletteWindow = null;
             _paletteWindow.Show();
         }
@@ -279,12 +290,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private bool RunEmulator() {
-        if (!string.IsNullOrWhiteSpace(_configuration.Exe) &&
-            !string.IsNullOrWhiteSpace(_configuration.CDrive)) {
-            RunMachine();
-            return true;
+        if (string.IsNullOrWhiteSpace(_configuration.Exe) ||
+            string.IsNullOrWhiteSpace(_configuration.CDrive)) {
+            return false;
         }
-        return false;
+
+        RunMachine();
+        return true;
     }
 
     public void OnMouseClick(PointerEventArgs @event, bool click) {
