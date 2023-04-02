@@ -281,7 +281,8 @@ CPU:
 - No FPU instruction implemented apart those used for FPU detection.
 
 Graphics:
-- Text modes, VGA, EGA, and CGA are entirely or partially implemented.
+- VGA, EGA, and CGA are entirely or partially implemented.
+- Text modes are not implemented.
 
 DOS:
 - Part of int 21 is implemented. Identifies itself as dos 5.0 for now.
