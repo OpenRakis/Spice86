@@ -572,7 +572,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         int start = _state.BX;
         int count = _state.CX;
 
-        for (int i = start; i < count; i++) {
+        for (int i = 0; i < count; i++) {
             byte r = _memory.UInt8[segment, offset++];
             byte g = _memory.UInt8[segment, offset++];
             byte b = _memory.UInt8[segment, offset++];
