@@ -65,7 +65,7 @@
                                                         </WrapPanel>
                                                 </Grid>
                                                 <Grid RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">CtrController</Label>
+                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
                                                         <WrapPanel Grid.Row="1" Orientation="Vertical">
                                                                 <TextBlock Text="{Binding VideoCard.CrtControllerOffset, StringFormat='Offset: {0:X2}'}"></TextBlock>
                                                                 <TextBlock Text="{Binding VideoCard.CrtControllerOverflow, StringFormat='Overflow: {0:X2}'}"></TextBlock>
