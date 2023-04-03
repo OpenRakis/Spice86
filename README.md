@@ -288,8 +288,8 @@ Memory:
 - X86 Paging (virtual memory) is not implemented.
 
 Graphics:
-- VGA, EGA, and CGA are entirely or partially implemented.
-- Text modes are not implemented.
+- Text modes, VGA, EGA, and CGA are entirely or partially implemented.
+- Some text modes are not implemented.
 
 DOS:
 - Part of int 21 is implemented. Identifies itself as dos 5.0 for now.
