@@ -16,8 +16,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>4.0.2</version>
-		<PackageReleaseNotes>New VGA implementation, more performance, new RE features</PackageReleaseNotes>
+		<version>4.0.3</version>
+		<PackageReleaseNotes>fixed VGA palette bug, improved Debug window, fixed video functions Show/Hide Cursor</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
