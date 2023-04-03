@@ -255,6 +255,9 @@ public class MyOverridesGlobalsOnDs : MemoryBasedDataStructureWithDsBaseAddress 
 }
 ```
 
+*Remember*: You must tell Spice86 to use your assembly code overrides with the command line argument "--UseCodeOverrides true" when debugging your project.
+Along with the mandatory path to your DOS program, passed with the --ExePath argument.
+
 ## Misc
 ### C Drive
 It is possible to provide a C: Drive for emulated DOS functions with the option **--CDrive**. Default is current folder. For some games you may need to set the C drive to the game folder.
