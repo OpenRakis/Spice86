@@ -44,7 +44,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         public byte ReadIndex
         {
-            get => readIndex++;
+            get => readIndex;
             set
             {
                 readIndex = value;

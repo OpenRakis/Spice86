@@ -338,8 +338,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _gui?.UpdateScreen();
     }
 
-    public event EventHandler? VideoModeChanged;
-
     public void WriteString() {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             uint address = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BP);
