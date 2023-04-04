@@ -1,14 +1,9 @@
-﻿using Spice86.Core.Emulator.Gdb;
-
-namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.Callback;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
