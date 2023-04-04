@@ -80,7 +80,4 @@ public class Configuration {
 
     [Option('k', nameof(Kilobytes), Default = 1024, Required = false, HelpText = "The amount of main memory, in kilobytes")]
     public int Kilobytes { get; init; } = 1024;
-
-    [Option(nameof(Xms), Default = false, Required = false, HelpText = "Enable XMS")]
-    public bool Xms { get; init; }
 }

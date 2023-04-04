@@ -4,7 +4,6 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -15,7 +14,6 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -100,8 +98,6 @@ public class Machine : IDisposable {
 
     public DmaController DmaController { get; }
 
-    public ExtendedMemoryManager? Xms { get; }
-
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
@@ -125,9 +121,6 @@ public class Machine : IDisposable {
         Memory = new Memory(ram);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
-        if(configuration.Xms) {
-            Xms = new(this);
-        }
 
         // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, loggerService);
@@ -199,9 +192,6 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-        if(Xms is not null) {
-            Register(Xms);
-        }
     }
 
     public void Register(IIOPortHandler ioPortHandler) {
