@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Memory;
 
 public class SystemBiosInt15Handler : InterruptHandler {
     public SystemBiosInt15Handler(Machine machine) : base(machine) {
+        _dispatchTable.Add(0x6, new Callback(0x6, Unsupported));
         _dispatchTable.Add(0xC0, new Callback(0xC0, Unsupported));
         _dispatchTable.Add(0xC2, new Callback(0xC2, Unsupported));
         _dispatchTable.Add(0xC4, new Callback(0xC4, Unsupported));
