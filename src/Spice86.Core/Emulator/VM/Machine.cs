@@ -24,6 +24,8 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
 using System;

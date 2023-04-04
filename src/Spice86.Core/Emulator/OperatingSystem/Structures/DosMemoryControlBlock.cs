@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.OperatingSystem;
+﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer;

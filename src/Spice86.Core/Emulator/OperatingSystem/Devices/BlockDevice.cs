@@ -1,4 +1,6 @@
-namespace Spice86.Core.Emulator.OperatingSystem;
+namespace Spice86.Core.Emulator.OperatingSystem.Devices;
+
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
 /// Block devices are things like hard drives, floppy drives, etc.
