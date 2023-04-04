@@ -11,7 +11,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         _dispatchTable.Add(0xC0, new Callback(0xC0, Unsupported));
         _dispatchTable.Add(0xC2, new Callback(0xC2, Unsupported));
         _dispatchTable.Add(0xC4, new Callback(0xC4, Unsupported));
-        _dispatchTable.Add(0x87, new Callback(0x87, CopyExtendedMemory));
+        _dispatchTable.Add(0x87, new Callback(0x87, () => CopyExtendedMemory(true)));
         _dispatchTable.Add(0x88, new Callback(0x88, GetExtendedMemorySize));
     }
 
@@ -24,22 +24,24 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
     /// <summary>
     /// Reports extended memory size in AX.
-    /// TODO: Fix this.
     /// </summary>
     public void GetExtendedMemorySize() {
-        _state.AX = (ushort)(_machine.Xms != null ? _machine.Memory.Size : 0);
+        if (_machine.Xms is not null) {
+            _state.AX = (ushort)(_machine.Xms != null ? 0 : _machine.Memory.Size);
+        }
     }
 
-    public void CopyExtendedMemory() {
+    public void CopyExtendedMemory(bool calledFromVm) {
         bool enabled = _memory.IsA20Enabled;
         _machine.Memory.EnableOrDisableA20Gate(true);
-        uint bytes = _state.ECX;
-        uint data = _state.ESI;
-        long source = _memory.UInt32[data + 0x12 ] & 0x00FFFFFF + _memory.UInt8[data + 0x16] << 24;
+        uint bytes = (uint)(_state.CX * 2);
+        uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.SI);
+        long source = _memory.UInt32[data + 0x12] & 0x00FFFFFF + _memory.UInt8[data + 0x16] << 24;
         long dest = _memory.UInt32[data + 0x1A] & 0x00FFFFFF + _memory.UInt8[data + 0x1E] << 24;
-        _state.EAX = (_state.EAX & 0xFFFF) | (_state.EAX & 0xFFFF0000);
         _memory.MemCopy((uint)source, (uint)dest, bytes);
+        _state.AX = 0;
         _memory.EnableOrDisableA20Gate(enabled);
+        SetCarryFlag(false, calledFromVm);
     }
 
     private void Unsupported() {
