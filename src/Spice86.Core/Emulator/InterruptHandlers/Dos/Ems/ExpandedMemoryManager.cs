@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 

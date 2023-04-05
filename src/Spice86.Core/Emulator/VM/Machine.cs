@@ -201,21 +201,6 @@ public class Machine : IDisposable {
             Register(Ems);
         }
     }
-    
-    public void Register(IIOPortHandler ioPortHandler) {
-        ioPortHandler.InitPortHandlers(IoPortDispatcher);
-
-        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
-            return;
-        }
-
-        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
-            throw new ArgumentException("Invalid DMA channel on DMA device.");
-        }
-
-        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
 
     public void Register(ICallback callback) {
         CallbackHandler.AddCallback(callback);
@@ -234,10 +219,6 @@ public class Machine : IDisposable {
 
         DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
         _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    public void Register(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
     }
 
     /// <summary>
