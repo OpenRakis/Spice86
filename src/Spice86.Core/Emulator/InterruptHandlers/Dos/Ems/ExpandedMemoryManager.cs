@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
@@ -63,7 +62,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public const ushort XmsStart = 0x110;
 
-    public const int MemorySizeInMb = 16;
+    public ushort MemorySizeInMb { get; init; }
 
     public int TotalPages => MemoryBlock.Pages;
 
@@ -83,6 +82,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
         _loggerService = loggerService;
+        MemorySizeInMb = (ushort) (_memory.Size / 1024 / 1024);
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
         for (int i = 0; i < EmmHandles.Length; i++) {
