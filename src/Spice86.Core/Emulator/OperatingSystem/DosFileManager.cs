@@ -9,6 +9,9 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Utils;
 
 using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System;
 using System.Collections.Generic;

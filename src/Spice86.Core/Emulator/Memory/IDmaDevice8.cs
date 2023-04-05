@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.Devices;
-
 using System;
 
 /// <summary>
@@ -19,6 +17,7 @@ public interface IDmaDevice8 {
     /// <param name="source">Bytes to write to the device.</param>
     /// <returns>Number of bytes actually written to the device.</returns>
     int WriteBytes(ReadOnlySpan<byte> source);
+
     /// <summary>
     /// Invoked when a transfer is completed in single-cycle mode.
     /// </summary>

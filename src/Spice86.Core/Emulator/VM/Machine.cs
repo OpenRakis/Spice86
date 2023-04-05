@@ -22,6 +22,8 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -100,6 +102,7 @@ public class Machine : IDisposable {
     /// Gets the current DOS environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
+
     public OPL3FM OPL3FM { get; }
 
     public event Action? Paused;
@@ -191,6 +194,25 @@ public class Machine : IDisposable {
         };
     }
 
+    public void Register(IIOPortHandler ioPortHandler) {
+        ioPortHandler.InitPortHandlers(IoPortDispatcher);
+
+        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
+            return;
+        }
+
+        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
+            throw new ArgumentException("Invalid DMA channel on DMA device.");
+        }
+
+        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
+        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+    }
+
+    public void Register(ICallback callback) {
+        CallbackHandler.AddCallback(callback);
+    }
+
     /// <summary>
     /// https://techgenix.com/direct-memory-access/
     /// </summary>
@@ -230,25 +252,6 @@ public class Machine : IDisposable {
 
     public string PeekReturn(CallType returnCallType) {
         return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
-    }
-
-    public void Register(IIOPortHandler ioPortHandler) {
-        ioPortHandler.InitPortHandlers(IoPortDispatcher);
-
-        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
-            return;
-        }
-
-        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
-            throw new ArgumentException("Invalid DMA channel on DMA device.");
-        }
-
-        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    public void Register(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
     }
 
     public void Run() {

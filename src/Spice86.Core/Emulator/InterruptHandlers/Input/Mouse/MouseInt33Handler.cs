@@ -1,14 +1,9 @@
-﻿using Spice86.Core.Emulator.Gdb;
-
-namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.Callback;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -43,9 +38,31 @@ public class MouseInt33Handler : InterruptHandler {
         _dispatchTable.Add(0x13, new Callback(0x13, SetMouseDoubleSpeedThreshold));
         _dispatchTable.Add(0x14, new Callback(0x14, SwapMouseUserDefinedSubroutine));
         _dispatchTable.Add(0x1A, new Callback(0x1A, SetMouseSensitivity));
+        _dispatchTable.Add(0x1C, new Callback(0x1C, SetInterruptRate));
+        _dispatchTable.Add(0x24, new Callback(0x24, GetSoftwareVersionAndMouseType));
+        _dispatchTable.Add(0xA1, new Callback(0xA1, Unsupported));
+    }
+
+    /// <summary>
+    /// NOP
+    /// </summary>
+    public void Unsupported() {
+    }
+
+    public void GetSoftwareVersionAndMouseType() {
+        _state.BX = 0x805; //Version 8.05
+        _state.CH = 0x04;  /* PS/2 type */
+        _state.CL = 0;     /* PS/2 (unused) */
     }
 
     public override byte Index => 0x33;
+
+    /// <summary>
+    /// Interrupt rate is set by the host OS. NOP.
+    /// </summary>
+    public void SetInterruptRate() {
+        // NOP
+    }
 
     public void GetMousePositionAndStatus() {
         if (_gui is null) {

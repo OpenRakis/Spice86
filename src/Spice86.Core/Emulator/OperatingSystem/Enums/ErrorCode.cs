@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.OperatingSystem;
+namespace Spice86.Core.Emulator.OperatingSystem.Enums;
 
 public enum ErrorCode : byte
 {

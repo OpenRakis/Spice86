@@ -1,15 +1,17 @@
+namespace Spice86.Core.Emulator.OperatingSystem;
+
+using System.Linq;
+using System.Text;
+
 using Serilog.Events;
 
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
-
-using System.Linq;
-using System.Text;
-
-namespace Spice86.Core.Emulator.OperatingSystem;
 
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;
@@ -24,6 +26,8 @@ public class Dos {
     public CharacterDevice CurrentConsoleDevice { get; set; } = null!;
     public DosMemoryManager MemoryManager { get; }
     public DosFileManager FileManager { get; }
+    
+    public DosTables DosTables { get; } = new();
 
     public Dos(Machine machine, ILoggerService logger) {
         _machine = machine;

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Callback;
 
 public class SystemBiosInt15Handler : InterruptHandler {
     public SystemBiosInt15Handler(Machine machine) : base(machine) {
+        _dispatchTable.Add(0x6, new Callback(0x6, Unsupported));
         _dispatchTable.Add(0xC0, new Callback(0xC0, Unsupported));
         _dispatchTable.Add(0xC2, new Callback(0xC2, Unsupported));
         _dispatchTable.Add(0xC4, new Callback(0xC4, Unsupported));
@@ -20,11 +21,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// No extended memory size present. Yet.
-    /// Reports 0 in AX.
+    /// Reports extended memory size in AX.
     /// </summary>
     public void GetExtendedMemorySize() {
-        //We've got no extended memory (yet)
         _state.AX = 0;
     }
 

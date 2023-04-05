@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
 public class DosMemoryManager {
