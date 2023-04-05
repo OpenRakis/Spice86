@@ -201,7 +201,11 @@ public class Machine : IDisposable {
             Register(Ems);
         }
     }
-    
+
+    public void Register(ICallback callback) {
+        CallbackHandler.AddCallback(callback);
+    }
+
     public void Register(IIOPortHandler ioPortHandler) {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
 
@@ -215,10 +219,6 @@ public class Machine : IDisposable {
 
         DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
         _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    public void Register(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
     }
 
     /// <summary>
