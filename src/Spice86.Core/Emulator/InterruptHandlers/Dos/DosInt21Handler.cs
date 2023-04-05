@@ -15,6 +15,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 /// <summary>
@@ -199,7 +200,7 @@ public class DosInt21Handler : InterruptHandler {
 
     public void DisplayOutput() {
         byte characterByte = _state.DL;
-        string character = ConvertDosChar(characterByte);
+        string character = ConvertSingleDosChar(characterByte);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("PRINT CHR: {@CharacterByte} ({@Character})", ConvertUtils.ToHex8(characterByte), character);
         }
@@ -228,8 +229,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("FIND FIRST MATCHING FILE {@Attributes}, {@FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
         }
-        DosFileOperationResult dosFileOperationResult =
-            _dosFileManager.FindFirstMatchingFile(fileSpec);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.FindFirstMatchingFile(fileSpec);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -239,8 +239,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("FIND NEXT MATCHING FILE {@Attributes}, {@FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
         }
-        DosFileOperationResult dosFileOperationResult =
-            _dosFileManager.FindNextMatchingFile();
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.FindNextMatchingFile();
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -485,8 +484,13 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
-    private string ConvertDosChar(byte characterByte) {
-        return _cp850CharSet.GetString(new[] { characterByte });
+    private string ConvertSingleDosChar(byte characterByte) {
+        ReadOnlySpan<byte> sourceAsArray = stackalloc byte[] {characterByte};
+        return _cp850CharSet.GetString(sourceAsArray);
+    }
+    
+    private string ConvertDosChars(IEnumerable<byte> characterBytes) {
+        return _cp850CharSet.GetString(characterBytes.ToArray());
     }
     
     public void GetCurrentDirectory(bool calledFromVm) {
@@ -502,11 +506,13 @@ public class DosInt21Handler : InterruptHandler {
 
     private string GetDosString(Memory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
-        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder stringBuilder = new();
+        List<byte> sourceArray = new();
         while (memory.GetUint8(stringStart) != end) {
-            string c = ConvertDosChar(memory.GetUint8(stringStart++));
-            stringBuilder.Append(c);
+            sourceArray.Add(memory.GetUint8(stringStart++));
         }
+        string convertedString = ConvertDosChars(sourceArray);
+        stringBuilder.Append(convertedString);
         return stringBuilder.ToString();
     }
 
