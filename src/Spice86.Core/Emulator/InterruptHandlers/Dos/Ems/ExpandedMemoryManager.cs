@@ -53,7 +53,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// 1 = EMS board. <br/>
     /// 2 = EMS386. <br/>
     /// </summary>
-    public byte EmsType { get; init; } = 2;
+    public byte EmsType { get; init; } = 1;
     
     public MemoryBlock MemoryBlock { get; }
 
@@ -63,9 +63,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmMaxHandles];
     
-    public const ushort XmsStart = 0x110;
-
-    public ushort MemorySizeInMb { get; init; }
+    public ushort MemorySizeInMb { get; }
 
     public int TotalPages => MemoryBlock.Pages;
 
@@ -73,7 +71,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
         _loggerService = loggerService;
-        MemorySizeInMb = (ushort) (_memory.Size / 1024 / 1024);
+        MemorySizeInMb = Math.Min((ushort)8, (ushort) (_memory.Size / 1024 / 1024));
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
         for (int i = 0; i < EmmHandles.Length; i++) {
@@ -86,11 +84,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         for (int i = 0; i < EmmSegmentMappings.Length; i++) {
             EmmSegmentMappings[i] = new();
-        }
-        
-        for (int i = 0; i < 0x40; i++) {
-            EmmSegmentMappings[i].Page = EmmNullPage;
-            EmmSegmentMappings[i].Handle = EmmNullHandle;
         }
 
         MemoryBlock = new(MemorySizeInMb);
@@ -161,7 +154,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public ushort GetFreeMemoryTotal() {
         ushort free = 0;
-        ushort index = XmsStart;
+        ushort index = 0;
         while (index < TotalPages) {
             if (MemoryBlock.MemoryHandles[index] == 0) {
                 free++;
@@ -311,8 +304,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     public void GetEmmVersion() {
-        // Return EMS version 4.0.
-        _state.AL = 0x40;
+        // Return EMS version 3.2.
+        _state.AL = 0x32;
         // Return good status.
         _state.AH = EmmStatus.EmmNoError;
     }
@@ -1082,50 +1075,54 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="sequence">Whether to allocate in sequence or not.</param>
     /// <returns></returns>
     private int AllocatePages(ushort pages, bool sequence) {
-        int ret = -1;
-        if (pages == 0) {
-            return 0;
-        }
-        if (sequence) {
-            int index = BestMatch(pages);
-            if (index == 0) {
+        try {
+            int ret = -1;
+            if (pages == 0) {
                 return 0;
             }
-            while (pages != 0) {
-                if (ret == -1) {
-                    ret = index;
-                } else {
-                    MemoryBlock.MemoryHandles[index - 1] = index;
-                }
-                index++;
-                pages--;
-            }
-            MemoryBlock.MemoryHandles[index - 1] = -1;
-        } else {
-            if (GetFreeMemoryTotal() < pages) {
-                return 0;
-            }
-            int lastIndex = -1;
-            while (pages != 0) {
-                int index = BestMatch(1);
+            if (sequence) {
+                int index = BestMatch(pages);
                 if (index == 0) {
-                    FailFastWithLogMessage($"EMS: Memory corruption in {nameof(AllocatePages)}");
+                    return 0;
                 }
-                while (pages != 0 && (MemoryBlock.MemoryHandles[index] == 0)) {
+                while (pages != 0) {
                     if (ret == -1) {
                         ret = index;
                     } else {
-                        MemoryBlock.MemoryHandles[lastIndex] = index;
+                        MemoryBlock.MemoryHandles[index - 1] = index;
                     }
-                    lastIndex = index;
                     index++;
                     pages--;
                 }
-                // Invalidate it in case we need another match.
-                MemoryBlock.MemoryHandles[lastIndex] = -1;
+                MemoryBlock.MemoryHandles[index - 1] = -1;
+            } else {
+                if (GetFreeMemoryTotal() < pages) {
+                    return 0;
+                }
+                int lastIndex = -1;
+                while (pages != 0) {
+                    int index = BestMatch(1);
+                    if (index == 0) {
+                        FailFastWithLogMessage($"EMS: Memory corruption in {nameof(AllocatePages)}");
+                    }
+                    while (pages != 0 && (MemoryBlock.MemoryHandles[index] == 0)) {
+                        if (ret == -1) {
+                            ret = index;
+                        } else {
+                            MemoryBlock.MemoryHandles[lastIndex] = index;
+                        }
+                        lastIndex = index;
+                        index++;
+                        pages--;
+                    }
+                    // Invalidate it in case we need another match.
+                    MemoryBlock.MemoryHandles[lastIndex] = -1;
+                }
             }
+            return ret;
+        } catch (ArgumentOutOfRangeException e) {
+            throw new UnrecoverableException("EMS: Memory allocation failure", e);
         }
-        return ret;
     }
 
     /// <summary>
@@ -1134,7 +1131,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="requestedSize">The requested memory block size</param>
     /// <returns>The index of the first memory page that is greater than requestedSize</returns>
     private int BestMatch(int requestedSize) {
-        int index = XmsStart;
+        int index = 0;
         int first = 0;
         int best = 0xfffffff;
         int bestMatch = 0;
