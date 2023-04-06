@@ -135,7 +135,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         _dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
         _dispatchTable.Add(0x54, new Callback(0x54, HandleFunctions));
-        _dispatchTable.Add(0x57, new Callback(0x57, MemoryRegion));
         _dispatchTable.Add(0x58, new Callback(0x58, GetMappablePhysicalArrayAddressArray));
         _dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
         _dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
@@ -925,16 +924,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 return EmmStatus.EmmInvalidSubFunction;
         }
         return EmmStatus.EmmNoError;
-    }
-
-    /// <summary>
-    /// Uses X86 Memory Paging, which means protected mode. Unimplemented.
-    /// </summary>
-    private void MemoryRegion() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("{@MethodName} is unimplemented", nameof(MemoryRegion));
-        }
-        _state.AH = EmmStatus.EmmFuncNoSup;
     }
 
     public void GetMappablePhysicalArrayAddressArray() {
