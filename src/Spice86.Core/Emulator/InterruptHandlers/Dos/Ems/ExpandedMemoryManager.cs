@@ -20,8 +20,6 @@ using System.Text;
 /// Provides DOS applications with EMS memory.
 /// </summary>
 public sealed class ExpandedMemoryManager : InterruptHandler {
-    public const ushort PageFrameSegment = 0xE000;
-
     public const string EmsIdentifier = "EMMXXXX0";
 
     public const byte EmmMaxHandles = 200;
@@ -32,7 +30,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public const ushort EmmNullHandle = 0xFFFF;
 
-    public const ushort EmmPageFrame = 0xE000;
+    public const ushort EmmPageFrameSegment = 0xE000;
 
     public const ushort EmmPageSize = 16 * 1024;
     
@@ -145,7 +143,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public void GetPageFrameSegment() {
         // Return page frame segment in BX.
-        _state.BX = PageFrameSegment;
+        _state.BX = EmmPageFrameSegment;
         // Set good status.
         _state.AH = EmmStatus.EmmNoError;
     }
@@ -183,18 +181,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="logicalPage">Logical page data to copy from.</param>
     /// <param name="physicalPage">Index of physical page to copy to.</param>
     private void CopyLogicalPageToPhysicalPage(int logicalPage, int physicalPage) {
-        ushort destSegment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPage);
+        ushort destSegment = (ushort)(EmmPageFrameSegment + SegmentsPerPage * physicalPage);
         uint destAddress = MemoryUtils.ToPhysicalAddress(destSegment, 0);
         EmmMapping mapping = EmmMappings[logicalPage];
         _memory.LoadData(destAddress, mapping.Data);
     }
     
     /// <summary>
-    /// Copies data from a logical page to a physical page.
+    /// Copies data from a physical page to a logical page.
     /// </summary>
     /// <param name="physicalPage">Index of logical page to copy from.</param>
+    /// <param name="logicalPage">Logical page data to copy from.</param>
     private void CopyPhysicalPageToLogicalPage(int physicalPage, int logicalPage) {
-        ushort srcSegment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPage);
+        ushort srcSegment = (ushort)(EmmPageFrameSegment + SegmentsPerPage * physicalPage);
         uint srcAddress = MemoryUtils.ToPhysicalAddress(srcSegment, 0);
         byte[] data = _memory.GetData(srcAddress, EmmPageSize);
         EmmMappings[logicalPage].Data = data;
@@ -343,7 +342,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         /* Move through the mappings table and setup mapping accordingly */
         for (int i = 0; i < 0x40; i++) {
             /* Skip the pageframe */
-            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMaxPhysicalPages) {
+            if (i is >= EmmPageFrameSegment / 0x400 and < (EmmPageFrameSegment / 0x400) + EmmMaxPhysicalPages) {
                 continue;
             }
             EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
@@ -371,7 +370,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             switch (segment) {
                 case >= 0xa000 and < 0xb000:
                 // allow mapping of EMS page frame
-                case >= EmmPageFrame and < EmmPageFrame + 0x1000:
+                case >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000:
                     // allow mapping of graphics memory
                     isValidSegment = true;
                     break;
@@ -382,7 +381,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return EmmStatus.EmsIllegalPhysicalPage;
         }
 
-        int physicalPage = (segment - EmmPageFrame) / (0x1000 / EmmMappings.Length);
+        int physicalPage = (segment - EmmPageFrameSegment) / (0x1000 / EmmMappings.Length);
 
         /* unmapping doesn't need valid handle (as handle isn't used) */
         if (logicalPage == EmmNullPage) {
@@ -543,7 +542,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         /* Move through the mappings table and setup mapping accordingly */
         for (int i = 0; i < 0x40; i++) {
             /* Skip the pageframe */
-            if (i is >= EmmPageFrame / 0x400 and < (EmmPageFrame / 0x400) + EmmMaxPhysicalPages) continue;
+            if (i is >= EmmPageFrameSegment / 0x400 and < (EmmPageFrameSegment / 0x400) + EmmMaxPhysicalPages) continue;
             EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
         }
         for (byte i = 0; i < EmmMaxPhysicalPages; i++) {
@@ -577,14 +576,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 for (; count > 0; count--) {
                     ushort segment = _memory.GetUint16(list);
                     list += 2;
-                    if (segment is >= EmmPageFrame and < EmmPageFrame + 0x1000) {
-                        ushort page = (ushort) ((segment - EmmPageFrame) / (EmmPageFrame >> 4));
+                    if (segment is >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000) {
+                        ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageFrameSegment >> 4));
                         _memory.SetUint16(data, segment);
                         data += 2;
                         _memory.LoadData(
                             data, BitConverter.GetBytes(EmmMappings[page].Handle).Union(BitConverter.GetBytes(EmmMappings[page].Page)).ToArray(), EmmMappings.Length);
                         data += (uint)EmmMappings.Length;
-                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrame - 0x1000 and < EmmPageFrame or >= 0xa000 and < 0xb000) {
+                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
                         _memory.SetUint16(data, segment);
                         data += 2;
                         _memory.LoadData(
@@ -602,11 +601,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 for (; count > 0; count--) {
                     ushort segment = _memory.GetUint16(data);
                     data += 2;
-                    if (segment is >= EmmPageFrame and < EmmPageFrame + 0x1000) {
-                        ushort page = (ushort) ((segment - EmmPageFrame) / (EmmPageSize >> 4));
+                    if (segment is >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000) {
+                        ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageSize >> 4));
                         EmmMappings[page].Handle = _memory.GetUint16(data);
                         EmmMappings[page].Page = _memory.GetUint16(data + sizeof(ushort));
-                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrame - 0x1000 and < EmmPageFrame or >= 0xa000 and < 0xb000) {
+                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
                         EmmSegmentMappings[segment >> 10].Handle = _memory.GetUint16(data);
                         EmmSegmentMappings[segment >> 10].Page = _memory.GetUint16(data + sizeof(ushort));
                     } else {
@@ -924,7 +923,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
                 int step = 0x1000 / EmmMappings.Length;
                 for (int i = 0; i < EmmMappings.Length; i++) {
-                    _memory.SetUint16(data, (ushort) (EmmPageFrame + step * i));
+                    _memory.SetUint16(data, (ushort) (EmmPageFrameSegment + step * i));
                     data += 2;
                     _memory.SetUint16(data, (ushort) i);
                     data += 2;
