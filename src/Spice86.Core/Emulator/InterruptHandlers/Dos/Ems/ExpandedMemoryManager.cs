@@ -22,6 +22,11 @@ using System.Text;
 public sealed class ExpandedMemoryManager : InterruptHandler {
     public const string EmsIdentifier = "EMMXXXX0";
 
+    /// <summary>
+    /// EMM system handle (reserved for OS usage)
+    /// </summary>
+    public const byte EmmSystemHandle = 0;
+
     public const byte EmmMaxHandles = 200;
 
     public const byte EmmMaxPhysicalPages = 4;
@@ -64,18 +69,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public int TotalPages => MemoryBlock.Pages;
 
-    public ushort GetFreeMemoryTotal() {
-        ushort free = 0;
-        ushort index = XmsStart;
-        while (index < TotalPages) {
-            if (MemoryBlock.MemoryHandles[index] == 0) {
-                free++;
-            }
-            index++;
-        }
-        return free;
-    }
-
     public ushort GetFreePages() => Math.Min((ushort) 0x7FFF, (ushort) (GetFreeMemoryTotal() / 4));
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
@@ -94,10 +87,40 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         for (int i = 0; i < EmmSegmentMappings.Length; i++) {
             EmmSegmentMappings[i] = new();
         }
+        
+        for (int i = 0; i < 0x40; i++) {
+            EmmSegmentMappings[i].Page = EmmNullPage;
+            EmmSegmentMappings[i].Handle = EmmNullHandle;
+        }
 
         MemoryBlock = new(MemorySizeInMb);
 
         FillDispatchTable();
+        
+        _state.AH = EmmAllocateSystemHandle(8);
+    }
+    
+    /// <summary>
+    /// Allocates OS-dedicated handle (ems handle zero, 128kb) <br/>
+    /// This handle is never deallocated.
+    /// </summary>
+    /// <param name="pages">The number of pages to initialize</param>
+    /// <returns>Success or error code.</returns>
+    private byte EmmAllocateSystemHandle(ushort pages) {
+        /* Check for enough free pages */
+        if ((GetFreeMemoryTotal() / 4) < pages) {
+            return EmmStatus.EmmOutOfLogicalPages;
+        }
+
+        /* Release memory if already allocated */
+        if (EmmHandles[EmmSystemHandle].Pages != EmmNullHandle) {
+            ReleasePages(EmmHandles[EmmSystemHandle].MemHandle);
+        }
+        int mem = AllocatePages((ushort) (pages * 4), false);
+        if (mem == 0) FailFastWithLogMessage("EMS: System handle memory allocation failure");
+        EmmHandles[EmmSystemHandle].Pages = pages;
+        EmmHandles[EmmSystemHandle].MemHandle = mem;
+        return EmmStatus.EmmNoError;
     }
 
     private void FillDispatchTable() {
@@ -134,6 +157,18 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = EmmStatus.EmmFuncNoSup;
         }
         Run(operation);
+    }
+    
+    public ushort GetFreeMemoryTotal() {
+        ushort free = 0;
+        ushort index = XmsStart;
+        while (index < TotalPages) {
+            if (MemoryBlock.MemoryHandles[index] == 0) {
+                free++;
+            }
+            index++;
+        }
+        return free;
     }
     
     public void GetStatus() {
@@ -909,7 +944,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.AH = EmmStatus.EmmFuncNoSup;
     }
 
-    private void GetMappablePhysicalArrayAddressArray() {
+    public void GetMappablePhysicalArrayAddressArray() {
         _state.AH = GetMappablePhysicalArrayAddressArray(_state.AL);
     }
 
@@ -917,7 +952,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Get mappable physical array address array
     /// </summary>
     /// <param name="operation">0: Get the information. Other value: Invalid subFunction.</param>
-    private byte GetMappablePhysicalArrayAddressArray(byte operation) {
+    public byte GetMappablePhysicalArrayAddressArray(byte operation) {
         switch (operation) {
             case 0x00: {
                 uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
@@ -978,7 +1013,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
-    private void AllocateStandardRawPages() {
+    public void AllocateStandardRawPages() {
         _state.AH = AllocateStandardRawPages(_state.AL);
     }
 
@@ -1018,18 +1053,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         ushort handle = 1;
         // Check for a free handle
-        while (EmmHandles[handle].Pages > 0) {
+        while (EmmHandles[handle].Pages != EmmNullHandle) {
             if (++handle >= EmmHandles.Length) {
                 return EmmStatus.EmmOutOfHandles;
             }
         }
 
-        int memHandle;
         if (pages == 0) {
             return EmmStatus.EmmNoError;
         }
 
-        memHandle = AllocatePages((ushort)(pages * 4), false);
+        int memHandle = AllocatePages((ushort)(pages * 4), false);
         if (memHandle == 0) {
             throw new UnrecoverableException("EMS: Memory allocation failure");
         }
