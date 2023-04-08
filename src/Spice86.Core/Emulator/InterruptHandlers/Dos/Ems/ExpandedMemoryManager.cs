@@ -48,7 +48,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private readonly ILoggerService _loggerService;
     public MemoryBlock MemoryBlock { get; }
 
-    public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[0x40];
+    public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[64];
 
     public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmmHandle.EmmMaxPhysicalPages];
     
