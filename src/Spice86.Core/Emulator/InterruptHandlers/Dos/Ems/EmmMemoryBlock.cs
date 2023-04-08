@@ -17,7 +17,7 @@ public record MemoryBlock {
     public int Pages { get; init; }
 
     /// <summary>
-    /// IDs or EMM Memory Handles
+    /// IDs of EMM Memory Handles
     /// </summary>
     public int[] MemoryHandles { get; init; }
 }
