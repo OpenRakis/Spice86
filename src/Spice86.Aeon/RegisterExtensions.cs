@@ -162,3 +162,21 @@ public static class RegisterExtensions {
         return "not yet implemented";
     }
 }
+
+public static class MiscOutputRegister {
+    public static string Explain(byte value) {
+        return string.Format(" [0]I/OAS: {2}, [1]Ram en: {3}, [2-3]Clock Select: {4}, [4]Reserved, [5]O/E Page: {5}, [6]Hsync polarity: {6}, [7]Vsync Polarity: {7}",
+            value & 0x01,
+            (value & 0x02) == 0x02 ? "1" : "0",
+            (value >> 3 & 3) switch {
+                0 => "25Mhz",
+                1 => "28Mhz",
+                2 => "Reserved",
+                3 => "Reserved",
+            },
+            (value & 0x20) == 0x20 ? "High" : "Low",
+            (value & 0x40) == 0x40 ? "1" : "0",
+            (value & 0x80) == 0x80 ? "1" : "0"
+        );
+    }
+}

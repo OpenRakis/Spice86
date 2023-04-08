@@ -37,7 +37,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     // This is to be sure to catch the start of the retrace to ensure having the
     // whole duration of the retrace to write to VRAM.
     // More info here: http://atrevida.comprenica.com/atrtut10.html
-    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3} {Properties:j}] {Message:lj}{NewLine}{Exception}";
     /// <summary>
     ///     Total number of bytes allocated for video RAM.
     /// </summary>
@@ -63,12 +63,14 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private int _dacWriteIndex;
     private Color _dacWriteColor;
     private bool _displayDisabled;
+    private byte _miscOutputRegister;
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
         base(machine, configuration, loggerService) {
         _bios = machine.Bios;
         _state = machine.Cpu.State;
         _logger = new LoggerConfiguration()
+            .Enrich.FromLogContext()
             .WriteTo.Console(outputTemplate: LogFormat)
             .WriteTo.File("aeon.log", outputTemplate: LogFormat)
             .MinimumLevel.Debug()
@@ -231,6 +233,12 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 // Set vsync flag to true
                 CrtStatusRegister |= 0b00001001;
                 break;
+            case Ports.MiscOutputRead:
+                value = _miscOutputRegister;
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Read MiscOutput: {Value:X2} {Explained}", port, value, MiscOutputRegister.Explain(value));
+                }
+                break;
             default:
                 value = base.ReadByte(port);
                 break;
@@ -390,19 +398,28 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 }
 
                 break;
+            case Ports.MiscOutputWrite:
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Write to MiscOutputWrite: {Value:X2} {Explained}", port, value, MiscOutputRegister.Explain(value));
+                }
+                _miscOutputRegister = value;
+                break;
             default:
                 base.WriteByte(port, value);
                 break;
         }
     }
     private void ChangeMaximumScanLine(int previousDoubleScan) {
-        int newHeight = previousDoubleScan == 0 ? CurrentMode.Height / 2 : CurrentMode.Height * 2;
+        int height = previousDoubleScan == 0 ? CurrentMode.Height / 2 : CurrentMode.Height * 2;
+        ChangeResolution(CurrentMode.Width, height);
+    }
+    private void ChangeResolution(int width, int height) {
         VideoMode mode = CurrentMode switch {
-            Unchained256 => new Unchained256(CurrentMode.Width, newHeight, this),
-            Vga256 => new Vga256(CurrentMode.Width, newHeight, this),
+            Unchained256 => new Unchained256(width, height, this),
+            Vga256 => new Vga256(width, height, this),
             CgaMode4 => new CgaMode4(this),
-            EgaVga16 => new EgaVga16(CurrentMode.Width, newHeight, CurrentMode.FontHeight, this),
-            TextMode => new TextMode(CurrentMode.Width, newHeight, CurrentMode.FontHeight, this),
+            EgaVga16 => new EgaVga16(width, height, CurrentMode.FontHeight, this),
+            TextMode => new TextMode(width, height, CurrentMode.FontHeight, this),
             _ => throw new InvalidOperationException("Unknown video mode")
         };
         SwitchToMode(mode);
@@ -699,11 +716,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("INT 10: ReadSingleDacRegister {0:X2}", _state.BL);
                 }
-                // TODO: Investigate and fix this.
-                // These are commented out because they cause weird issues sometimes.
-                //vm.Processor.DH = (byte)((dac.Palette[vm.Processor.BL] >> 18) & 0xCF);
-                //vm.Processor.CH = (byte)((dac.Palette[vm.Processor.BL] >> 10) & 0xCF);
-                //vm.Processor.CL = (byte)((dac.Palette[vm.Processor.BL] >> 2) & 0xCF);
                 _state.DH = (byte)((Dac.Palette[_state.BL] >> 18) & 0x3F);
                 _state.CH = (byte)((Dac.Palette[_state.BL] >> 10) & 0x3F);
                 _state.CL = (byte)((Dac.Palette[_state.BL] >> 2) & 0x3F);
@@ -735,13 +747,15 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                     _logger.Debug("INT 10: ToggleBlink UNIMPLEMENTED");
                 }
                 // TODO: Implement, ignore or remove
+                throw new NotImplementedException("INT 10: 3 ToggleBlink");
                 break;
 
             case Functions.Palette_SelectDacColorPage:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("Select DAC color page UNIMPLEMENTED");
+                    _logger.Debug("INT 10: Select DAC color page UNIMPLEMENTED");
                 }
-
+                // TODO: Implement, ignore or remove
+                throw new NotImplementedException("INT 10: 13 Select DAC color page");
                 break;
 
             default:
@@ -777,12 +791,15 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         ushort offset = _state.DX;
         int start = _state.BX;
         int count = _state.CX;
-
-        for (int i = start; i < count; i++) {
+        if (_logger.IsEnabled(LogEventLevel.Debug))
+            _logger.Debug("INT 10: SetDacRegisters, Memory: {0:X4}:{1:X4} StartIndex: {2} Count: {3}", segment, offset, start, count);
+        for (int i = 0; i < count + start; i++) {
             byte r = _memory.UInt8[segment, offset++];
             byte g = _memory.UInt8[segment, offset++];
             byte b = _memory.UInt8[segment, offset++];
-
+            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                _logger.Verbose("INT 10: SetDacRegisters, Index: {0} R:{1:X2} G:{2:X2} B:{3:X2}", i, r, g, b);
+            }
             Dac.SetColor((byte)(start + i), r, g, b);
         }
     }
@@ -803,13 +820,13 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     /// <summary>
     ///   Gets a specific EGA color palette register.
     /// </summary>
-    /// <param name="index">Index of color to set.</param>
-    /// <param name="color">New value of the color.</param>
-    private void SetEgaPaletteRegister(int index, byte color) {
+    /// <param name="index">Index of palette to set.</param>
+    /// <param name="value">New value on that index the palette register.</param>
+    private void SetEgaPaletteRegister(int index, byte value) {
         if (_bios.VideoMode == (byte)VideoModeId.ColorGraphics320X200X4) {
-            AttributeController.InternalPalette[index & 0x0F] = (byte)(color & 0x0F);
+            AttributeController.InternalPalette[index & 0x0F] = (byte)(value & 0x0F);
         } else {
-            AttributeController.InternalPalette[index & 0x0F] = color;
+            AttributeController.InternalPalette[index & 0x0F] = value;
         }
     }
 
@@ -857,7 +874,10 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public void SelectActiveDisplayPage() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("INT 10: SelectActiveDisplayPage {0:X2}", _state.AL);
         CurrentMode.ActiveDisplayPage = _state.AL;
+        _bios.CurrentVideoPage = _state.AL;
     }
 
     public void GetCursorPosition() {
@@ -1001,10 +1021,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             _logger.Debug("ENTER MODE X");
         }
         var mode = new Unchained256(320, 200, this);
-        CrtController.MaximumScanLine |= 0x01;
-        CrtController.Offset = 320 / 8;
-        CrtController.Overflow = 0x3E;
-        CrtController.CrtModeControl = 0xE3;
         SwitchToMode(mode);
     }
     private void SwitchToMode(VideoMode mode) {

@@ -140,12 +140,12 @@ namespace Spice86.Aeon.Emulator.Video
             r &= 0x3F;
             g &= 0x3F;
             b &= 0x3F;
-            uint red = (uint)((r << 2 | r >> 4) << 16);
-            uint green = (uint)((g << 2 | g >> 4) << 8);
+            uint red = (uint)(r << 2 | r >> 4);
+            uint green = (uint)(g << 2 | g >> 4);
             uint blue = (uint)(b << 2 | b >> 4);
 
             unsafe {
-                palette[index] = red | green | blue;
+                palette[index] = red << 16 | green << 8 | blue;
             }
         }
 

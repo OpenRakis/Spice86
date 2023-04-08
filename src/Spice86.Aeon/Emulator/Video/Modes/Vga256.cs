@@ -7,7 +7,8 @@ namespace Spice86.Aeon.Emulator.Video.Modes
     {
         private readonly unsafe byte* videoRam;
 
-        public Vga256(int width, int height, IAeonVgaCard video) : base(width, height, 8, false, 8, VideoModeType.Graphics, video)
+        public Vga256(int width, int height, IAeonVgaCard video) 
+            : base(width, height, 8, false, 8, VideoModeType.Graphics, video)
         {
             unsafe
             {
@@ -21,9 +22,10 @@ namespace Spice86.Aeon.Emulator.Video.Modes
             base.InitializeMode(video);
             video.AttributeController.AttributeModeControl = 0x41;
             video.Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4 | SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
-            video.CrtController.MaximumScanLine |= 1;
+            video.CrtController.MaximumScanLine |= 0x01;
             video.CrtController.Overflow = 0x1F;
             video.CrtController.CrtModeControl = 0xA3;
+            video.CrtController.Offset = 320 / 8;
         }
 
         public override byte GetVramByte(uint offset)

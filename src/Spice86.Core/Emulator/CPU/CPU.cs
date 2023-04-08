@@ -90,9 +90,10 @@ public class Cpu {
             ProcessRep(opcode);
         } else {
             try {
-                ExecOpcode(opcode);
-            }
-            catch (CpuException e) {
+                using (LogContext.PushProperty("IP", $"{State.CS:X4}:{State.IP:X4}")) {
+                    ExecOpcode(opcode);
+                }
+            } catch (CpuException e) {
                 HandleCpuException(e);
             }
         }

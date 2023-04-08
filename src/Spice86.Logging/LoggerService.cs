@@ -18,7 +18,8 @@ public class LoggerService : ILoggerService {
 
     public LoggerService() {
         _logger = new LoggerConfiguration()
-        .Enrich.With(new ThreadIdEnricher())
+        .Enrich.FromLogContext()
+        // .Enrich.With(new ThreadIdEnricher())
         .Enrich.WithExceptionDetails()
         .WriteTo.Console(outputTemplate: LogFormat)
         .WriteTo.Debug(outputTemplate: LogFormat)
