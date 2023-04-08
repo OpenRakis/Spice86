@@ -202,7 +202,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void MapExpandedMemoryPage() {
         ushort handle = _state.DX;
-        _state.AH = EmmMapPage(_state.BX, ref handle, _state.BX);
+        _state.AH = EmmMapPage(_state.BX, ref handle, _state.AL);
         _state.DX = handle;
     }
     
