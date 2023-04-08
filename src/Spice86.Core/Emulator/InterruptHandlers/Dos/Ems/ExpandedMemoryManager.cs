@@ -37,7 +37,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public const ushort EmmNullHandle = 0xFFFF;
 
-    public const ushort EmmPageFrameSegment = 0xD000;
+    public const ushort EmmPageFrameSegment = 0xE000;
 
     public const ushort EmmPageSize = 16384;
 
@@ -46,18 +46,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public override byte Index => 0x67;
 
     private readonly ILoggerService _loggerService;
-
-    /// <summary>
-    /// Type of EMS emulation. <br/>
-    /// 0 = Mixed mode. <br/>
-    /// 1 = EMS board. <br/>
-    /// 2 = EMS386. <br/>
-    /// </summary>
-    public byte EmsType { get; init; } = 1;
-    
     public MemoryBlock MemoryBlock { get; }
 
-    public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[0x40];
+    public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[64];
 
     public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmmHandle.EmmMaxPhysicalPages];
     
@@ -112,7 +103,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             ReleasePages(EmmHandles[EmmSystemHandle].MemHandle);
         }
         int mem = AllocatePages((ushort) (pages * 4), false);
-        if (mem == 0) FailFastWithLogMessage("EMS: System handle memory allocation failure");
+        if (mem == 0) {
+            FailFastWithLogMessage("EMS: System handle memory allocation failure");
+        }
         EmmHandles[EmmSystemHandle].Pages = pages;
         EmmHandles[EmmSystemHandle].MemHandle = mem;
         return EmmStatus.EmmNoError;
@@ -411,22 +404,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 nameof(EmmMapSegment), segment, handle, logicalPage);
         }
 
-        bool isValidSegment = false;
-
-        if (EmsType is 1 or 3) {
-            if (segment < 0xF000 + 0x1000) {
-                isValidSegment = true;
-            }
-        } else {
-            switch (segment) {
-                case >= 0xa000 and < 0xb000:
-                // allow mapping of EMS page frame
-                case >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000:
-                    // allow mapping of graphics memory
-                    isValidSegment = true;
-                    break;
-            }
-        }
+        bool isValidSegment = segment < 0xF000 + 0x1000;
 
         if (!isValidSegment) {
             return EmmStatus.EmsIllegalPhysicalPage;
@@ -630,7 +608,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                         _memory.LoadData(
                             data, BitConverter.GetBytes(EmmMappings[page].Handle).Union(BitConverter.GetBytes(EmmMappings[page].Page)).ToArray(), EmmMappings.Length);
                         data += (uint)EmmMappings.Length;
-                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
+                    } else if (segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
                         _memory.SetUint16(data, segment);
                         data += 2;
                         _memory.LoadData(
@@ -652,7 +630,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                         ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageSize >> 4));
                         EmmMappings[page].Handle = _memory.GetUint16(data);
                         EmmMappings[page].Page = _memory.GetUint16(data + sizeof(ushort));
-                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
+                    } else if (segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
                         EmmSegmentMappings[segment >> 10].Handle = _memory.GetUint16(data);
                         EmmSegmentMappings[segment >> 10].Page = _memory.GetUint16(data + sizeof(ushort));
                     } else {
