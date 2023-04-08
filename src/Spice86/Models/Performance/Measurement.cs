@@ -1,11 +1,9 @@
-namespace Spice86.Models;
+namespace Spice86.Models.Performance;
 
 public class Measurement
     {
         public double Time { get; set; }
         public double Value { get; set; }
-        public double Minimum { get; set; }
-        public double Maximum { get; set; }
 
         public override string ToString()
         {

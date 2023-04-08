@@ -26,6 +26,8 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -205,6 +207,25 @@ public class Machine : IDisposable {
         if(Ems is not null) {
             Register(Ems);
         }
+    }
+
+    public void Register(IIOPortHandler ioPortHandler) {
+        ioPortHandler.InitPortHandlers(IoPortDispatcher);
+
+        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
+            return;
+        }
+
+        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
+            throw new ArgumentException("Invalid DMA channel on DMA device.");
+        }
+
+        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
+        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+    }
+
+    public void Register(ICallback callback) {
+        CallbackHandler.AddCallback(callback);
     }
 
     public void Register(IIOPortHandler ioPortHandler) {

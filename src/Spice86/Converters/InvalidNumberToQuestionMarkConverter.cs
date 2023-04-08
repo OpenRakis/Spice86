@@ -6,11 +6,22 @@ using System;
 using System.Globalization;
 
 internal class InvalidNumberToQuestionMarkConverter : IValueConverter {
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        if ((value is long l && l == -1) || (value is double d && d == -1)) {
-            return "?";
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
+        switch (value)
+        {
+            case null:
+            case long l when l == -1:
+            case int i when i == -1:
+            case short s when s == -1:
+            case sbyte b when b == -1:
+            case nint n when n == -1:
+            case Half h when h == -1:
+            case float f when float.IsNegative(f):
+            case double d when double.IsNegative(d):
+                return "?";
+            default:
+                return value;
         }
-        return value;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {

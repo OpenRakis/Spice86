@@ -3,19 +3,16 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:userControls="clr-namespace:Spice86.UserControls"
-        xmlns:converters="clr-namespace:Spice86.Converters"
         xmlns:viewModels="clr-namespace:Spice86.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Spice86.Views.PaletteWindow"
 		Icon="/Icon/Spice86.ico"
 		WindowStartupLocation="CenterOwner"
 		CanResize="False"
-        Title="Color Palette" Height="300" Width="300" ShowInTaskbar="False"
+        Title="Color Palette" Height="300" Width="300"
         DataContext="{Binding}">
 	<Design.DataContext>
 		<viewModels:PaletteViewModel />
-	</Design.DataContext>	<Window.Resources>
-		<converters:RgbToRectangleConverter x:Key="RgbToRectangleConverter" />
-	</Window.Resources>
-	<userControls:PaletteUserControl Palette="{Binding Palette, Converter={StaticResource RgbToRectangleConverter}}" />
+	</Design.DataContext>
+	<userControls:PaletteUserControl Palette="{Binding Palette}" />
 </Window>

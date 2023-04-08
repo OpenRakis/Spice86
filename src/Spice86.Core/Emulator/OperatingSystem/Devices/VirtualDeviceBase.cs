@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+
 public abstract class VirtualDeviceBase : IVirtualDevice {
     
     /// <summary>

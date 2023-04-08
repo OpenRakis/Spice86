@@ -16,9 +16,9 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>3.0.18</version>
-		<PackageReleaseNotes>Emulator main memory amount is now configurable</PackageReleaseNotes>
-		<Authors>Kevin Ferrare, Maximilien Noal</Authors>
+		<version>4.0.3</version>
+		<PackageReleaseNotes>fixed VGA palette bug, improved Debug window, fixed video functions Show/Hide Cursor</PackageReleaseNotes>
+        <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
 		<PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
@@ -52,10 +52,10 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-		<PackageReference Include="Avalonia" Version="0.10.18" />
-		<PackageReference Include="Avalonia.Desktop" Version="0.10.18" />
+		<PackageReference Include="Avalonia" Version="0.10.19" />
+		<PackageReference Include="Avalonia.Desktop" Version="0.10.19" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.18" />
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.19" />
 	</ItemGroup>
 	<ItemGroup>
 		<AvaloniaResource Include="Icon\Spice86.ico" />

@@ -9,8 +9,8 @@
   <PropertyGroup>
     <NoWarn>CS1591</NoWarn>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <version>3.0.18</version>
-    <Authors>Kevin Ferrare, Maximilien Noal</Authors>
+    <version>4.0.3</version>
+    <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <Description>Reverse engineer and rewrite real mode dos programs</Description>
     <PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>

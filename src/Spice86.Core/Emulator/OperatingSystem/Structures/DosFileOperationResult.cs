@@ -1,4 +1,7 @@
-﻿namespace Spice86.Core.Emulator.OperatingSystem;
+﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
+
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+
 public class DosFileOperationResult {
     private readonly bool _error;
     private readonly uint? _value;

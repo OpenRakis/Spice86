@@ -99,6 +99,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.AttributeData,
             Ports.CrtControllerAddress,
             Ports.CrtControllerAddressAlt,
+            Ports.CrtControllerAddressAltMirror1,
+            Ports.CrtControllerAddressAltMirror2,
             Ports.CrtControllerData,
             Ports.CrtControllerDataAlt,
             Ports.DacAddressReadIndex,
@@ -122,6 +124,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.AttributeData,
             Ports.CrtControllerAddress,
             Ports.CrtControllerAddressAlt,
+            Ports.CrtControllerAddressAltMirror1,
+            Ports.CrtControllerAddressAltMirror2,
             Ports.CrtControllerData,
             Ports.CrtControllerDataAlt,
             Ports.DacAddressReadIndex,
@@ -211,7 +215,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                     _logger.Debug("[{Port:X4}] Read from Attribute register {Register}: {Value:X2}", port, _attributeRegister, value);
                 }
                 break;
-            case Ports.CrtControllerAddress or Ports.CrtControllerAddressAlt:
+            case Ports.CrtControllerAddress or Ports.CrtControllerAddressAlt or case Ports.CrtControllerAddressAltMirror1 or Ports.CrtControllerAddressAltMirror2:
                 value = (byte)_crtRegister;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Read _crtRegister: {Value:X2} {Register}", port, value, _crtRegister);
@@ -376,6 +380,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case Ports.CrtControllerAddress:
             case Ports.CrtControllerAddressAlt:
+            case Ports.CrtControllerAddressAltMirror1:
+            case Ports.CrtControllerAddressAltMirror2:
                 _crtRegister = (CrtControllerRegister)value;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Write to CrtControllerAddress: {Value:X2} {Register}", port, value, _crtRegister);
@@ -505,8 +511,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public void UpdateScreen() {
         _gui?.UpdateScreen();
     }
-
-    public event EventHandler? VideoModeChanged;
 
     public void WriteString() {
         if (_logger.IsEnabled(LogEventLevel.Information)) {
@@ -791,6 +795,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         ushort offset = _state.DX;
         int start = _state.BX;
         int count = _state.CX;
+
         if (_logger.IsEnabled(LogEventLevel.Debug))
             _logger.Debug("INT 10: SetDacRegisters, Memory: {0:X4}:{1:X4} StartIndex: {2} Count: {3}", segment, offset, start, count);
         for (int i = 0; i < count + start; i++) {

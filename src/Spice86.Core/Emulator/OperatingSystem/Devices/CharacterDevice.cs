@@ -1,4 +1,6 @@
-namespace Spice86.Core.Emulator.OperatingSystem;
+namespace Spice86.Core.Emulator.OperatingSystem.Devices;
+
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
 /// Character devices are things like the console, the printer, the clock, etc.

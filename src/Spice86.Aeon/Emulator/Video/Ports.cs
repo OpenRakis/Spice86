@@ -20,6 +20,8 @@ namespace Spice86.Aeon.Emulator.Video
         public const int MiscOutputRead = 0x03CC;
         public const int GraphicsControllerAddress = 0x03CE;
         public const int GraphicsControllerData = 0x03CF;
+        public const int CrtControllerAddressAltMirror1 = 0x03D0;
+        public const int CrtControllerAddressAltMirror2 = 0x03D2;
         public const int CrtControllerAddressAlt = 0x03D4;
         public const int CrtControllerDataAlt = 0x03D5;
         public const int InputStatus1ReadAlt = 0x03DA;

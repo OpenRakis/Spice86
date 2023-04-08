@@ -255,6 +255,10 @@ public class MyOverridesGlobalsOnDs : MemoryBasedDataStructureWithDsBaseAddress 
 }
 ```
 
+*Remember*: You must tell Spice86 to use your assembly code overrides with the command line argument "--UseCodeOverride true" when debugging your project.
+
+Along with the mandatory path to your DOS program, passed with the --ExePath argument.
+
 ## Misc
 ### C Drive
 It is possible to provide a C: Drive for emulated DOS functions with the option **--CDrive**. Default is current folder. For some games you may need to set the C drive to the game folder.
@@ -273,15 +277,23 @@ Screen is refreshed 30 times per second and each time a VGA retrace wait is dete
 ### Emulator features
 CPU:
 - Only 16 bits instructions are fully supported, memory size is 1MB
+- Most 32 bits instructions are implemented, but not validated via integration tests for now.
 - The only supported addressing mode is real mode. 286/386 Protected mode and the related instructions are not implemented.
 - Instruction set is (hopefully!) fully implemented for 8086, and validated via automated tests.
 - For 80186, BOUND instruction is missing.
 - For 80286, instructions related to protected mode are not implemented
-- For 80386, protected mode is not implemented. Most 32 bits instructions are implemented, but not validated via integration tests for now.
+- For 80386, protected mode is not implemented.
 - No FPU instruction implemented apart those used for FPU detection.
 
+Memory:
+- Segmented addressing is implemented.
+- Helpers are available in order to convert a segmented address into a physical address, and vice-versa.
+- EMS and XMS are not implemented.
+- X86 Paging (virtual memory) is not implemented.
+
 Graphics:
-- Only VGA mode 0x13 is implemented
+- Text modes, VGA, EGA, and CGA are entirely or partially implemented.
+- Some text modes are not implemented.
 
 DOS:
 - Part of int 21 is implemented. Identifies itself as dos 5.0 for now.
@@ -299,6 +311,7 @@ Sound:
 On *nix systems, you'll need to have libportaudio installed.
 Without it, there will be no sound.
 
+- PC Speaker is implemented.
 - Adlib/SoundBlaster MIDI OPL is supported.
 - SoundBlaster PCM is supported.
 - MT-32 is supported, but not on macOS, as a static build of MUNT is missing in the MT-32 wrapper for that platform. (PRs welcome !)
@@ -369,7 +382,7 @@ Stunts:
 
 ### Credits
 
-Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Most notably DMA support, PC Speaker, SoundBlaster, MT-32, and General MIDI devices.
+Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Most notably the video card, DMA support, PC Speaker, SoundBlaster, MT-32, and General MIDI devices.
 
 Also, this project uses JetBrains Rider licenses, thanks to JetBrains' [Open Source Community Support](https://www.jetbrains.com/community/opensource/#support).
 

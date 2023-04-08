@@ -3,26 +3,13 @@
 /// <summary>
 /// RGB representation of a color.
 /// </summary>
-public class Rgb {
-    public byte R { get; set; }
-
-    public byte G { get; set; }
-
-    public byte B { get; set; }
-
-    public uint ToRgba() {
-        return (uint)(R << 16 | G << 8 | B) | 0xFF000000;
-    }
-
-    public uint ToBgra() {
-        return (uint)(B << 16 | G << 8 | R) | 0xFF000000;
-    }
-
-    public uint ToArgb() {
-        return 0xFF000000 | (uint)R << 16 | (uint)G << 8 | B;
-    }
-
-    public override string ToString() {
-        return System.Text.Json.JsonSerializer.Serialize(this);
-    }
+/// <param name="R">Red channel</param>
+/// <param name="G">Green channel</param>
+/// <param name="B">Blue channel</param>
+public readonly record struct Rgb(byte R, byte G, byte B) {
+    public static Rgb FromUint(uint value) => new(
+        (byte)((value >> 16) & 0xff),
+        (byte)((value >> 8) & 0xff),
+        (byte)(value & 0xff)
+    );
 }

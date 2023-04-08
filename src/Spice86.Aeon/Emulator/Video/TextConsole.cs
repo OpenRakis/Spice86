@@ -100,6 +100,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <param name="destinationOffset">Top left corner of destination rectangle to copy to.</param>
         /// <param name="width">Width of rectangle to copy.</param>
         /// <param name="height">Height of rectangle to copy.</param>
+        /// <param name="background">Background color of character to write.</param>
         public void MoveBlock(Point sourceOffset, Point destinationOffset, int width, int height, ushort background)
         {
             if (video.CurrentMode is TextMode mode)

@@ -18,7 +18,6 @@ namespace Spice86.Aeon.Emulator.Video.Rendering
         /// <summary>
         /// Initializes a new instance of the TextPresenter class.
         /// </summary>
-        /// <param name="dest">Pointer to destination bitmap.</param>
         /// <param name="videoMode">VideoMode instance describing the video mode.</param>
         public TextPresenter(VideoMode videoMode) : base(videoMode)
         {
