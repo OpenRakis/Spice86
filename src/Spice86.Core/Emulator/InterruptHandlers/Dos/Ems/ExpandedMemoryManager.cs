@@ -164,7 +164,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             }
             index++;
         }
-        return free;
+        return (ushort) (free - 1);
     }
     
     public void GetStatus() {
