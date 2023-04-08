@@ -41,10 +41,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const ushort EmmPageSize = 16384;
 
-    public const int EmmSegmentSize = 16384;
-    
-    public const int EmmSegmentsPerPage = EmmPageSize / EmmSegmentSize;
-
     public override ushort? InterruptHandlerSegment => 0xF100;
     
     public override byte Index => 0x67;
@@ -211,8 +207,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     /// <param name="physicalPage">Physical page id.</param>
     private void MapEmmPage(int physicalPage) {
-        ushort destSegment = (ushort)(EmmPageFrameSegment + EmmSegmentsPerPage * physicalPage);
-        uint destAddress = MemoryUtils.ToPhysicalAddress(destSegment, 0);
+        uint destAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * physicalPage));
         EmmMapping mapping = EmmMappings[physicalPage];
         mapping.DestAddress = destAddress;
         _memory.RegisterMapping(destAddress, mapping.Size, mapping);
