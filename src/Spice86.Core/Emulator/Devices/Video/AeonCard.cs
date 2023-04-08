@@ -37,7 +37,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     // This is to be sure to catch the start of the retrace to ensure having the
     // whole duration of the retrace to write to VRAM.
     // More info here: http://atrevida.comprenica.com/atrtut10.html
-    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3} {Properties:j}] {Message:lj}{NewLine}{Exception}";
+    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
     /// <summary>
     ///     Total number of bytes allocated for video RAM.
     /// </summary>
@@ -215,7 +215,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                     _logger.Debug("[{Port:X4}] Read from Attribute register {Register}: {Value:X2}", port, _attributeRegister, value);
                 }
                 break;
-            case Ports.CrtControllerAddress or Ports.CrtControllerAddressAlt or case Ports.CrtControllerAddressAltMirror1 or Ports.CrtControllerAddressAltMirror2:
+            case Ports.CrtControllerAddress or Ports.CrtControllerAddressAlt or Ports.CrtControllerAddressAltMirror1 or Ports.CrtControllerAddressAltMirror2:
                 value = (byte)_crtRegister;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Read _crtRegister: {Value:X2} {Register}", port, value, _crtRegister);
@@ -756,14 +756,31 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case Functions.Palette_SelectDacColorPage:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: Select DAC color page UNIMPLEMENTED");
+                    _logger.Debug("INT 10: Select DAC color page");
                 }
-                // TODO: Implement, ignore or remove
-                throw new NotImplementedException("INT 10: 13 Select DAC color page");
+                SelectDacColorPage(_state.BL, _state.BH);
                 break;
 
             default:
                 throw new NotImplementedException($"Video command 10 {_state.AL:X2} not implemented.");
+        }
+    }
+    private void SelectDacColorPage(byte subFunction, byte value) {
+        switch (subFunction) {
+            case 0x00:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: Set AttributeModeControl bit 7 to {Value:X2}", value);
+                }
+                AttributeController.AttributeModeControl = (byte)(value == 0 ? AttributeController.AttributeModeControl & 0b01111111u : AttributeController.AttributeModeControl | 0b10000000u);
+                break;
+            case 0x01:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("INT 10: Set ColorSelect to {Value:X2}", value);
+                }
+                AttributeController.ColorSelect = value;
+                break;
+            default:
+                throw new NotImplementedException($"SelectDacColorPage SubFunction {subFunction:X2} not implemented.");
         }
     }
 
@@ -1002,8 +1019,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             return new TextPresenter(CurrentMode);
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Initializing graphics presenter for mode {@Mode}", CurrentMode);
+        if (_logger.IsEnabled(LogEventLevel.Information)) {
+            _logger.Information("Initializing graphics presenter for mode {@Mode}", CurrentMode);
         }
 
         return CurrentMode.BitsPerPixel switch {

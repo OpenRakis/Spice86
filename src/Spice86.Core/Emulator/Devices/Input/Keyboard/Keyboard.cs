@@ -1,8 +1,4 @@
-﻿using Spice86.Logging;
-
-namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
@@ -54,12 +50,12 @@ public class Keyboard : DefaultIOPortHandler {
             if (lastKeyboardInput.IsPressed) {
                 scancode = _keyScanCodeConverter?.GetKeyPressedScancode(lastKeyboardInput);
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _loggerService.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
+                    _loggerService.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs.ToString(), scancode);
                 }
             } else {
                 scancode = _keyScanCodeConverter?.GetKeyReleasedScancode(lastKeyboardInput);
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _loggerService.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
+                    _loggerService.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs.ToString(), scancode);
                 }
             }
 

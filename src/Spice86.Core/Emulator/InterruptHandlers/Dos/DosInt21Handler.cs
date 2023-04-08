@@ -382,8 +382,8 @@ public class DosInt21Handler : InterruptHandler {
         byte originOfMove = _state.AL;
         ushort fileHandle = _state.BX;
         uint offset = (uint)(_state.CX << 16 | _state.DX);
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("MOVE FILE POINTER USING HANDLE. {@OriginOfMove}, {@FileHandle}, {@Offset}", originOfMove, fileHandle,
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("MOVE FILE POINTER USING HANDLE. {@OriginOfMove}, {@FileHandle}, {@Offset}", originOfMove, fileHandle,
             offset);
         }
 
@@ -422,8 +422,8 @@ public class DosInt21Handler : InterruptHandler {
     public void ReadFile(bool calledFromVm) {
         ushort fileHandle = _state.BX;
         ushort readLength = _state.CX;
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("READ FROM FILE handle {@FileHandle} length {@ReadLength} to {@DsDx}", fileHandle, readLength,
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("READ FROM FILE handle {@FileHandle} length {@ReadLength} to {@DsDx}", fileHandle, readLength,
                 ConvertUtils.ToSegmentedAddressRepresentation(_state.DS, _state.DX));
         }
         uint targetMemory = MemoryUtils.ToPhysicalAddress(_state.DS, _state.DX);

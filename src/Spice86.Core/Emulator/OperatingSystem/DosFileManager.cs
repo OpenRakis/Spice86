@@ -188,8 +188,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Moving in file {@FileMove}", file.Name);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Moving in file {@FileMove}", file.Name);
         }
         Stream randomAccessFile = file.RandomAccessFile;
         try {
@@ -256,8 +256,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Reading from file {@FileName}", file.Name);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("Reading from file {@FileName}", file.Name);
         }
 
         byte[] buffer = new byte[readLength];

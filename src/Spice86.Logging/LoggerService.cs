@@ -9,7 +9,7 @@ using Serilog.Exceptions;
 using Serilog.Enrichers;
 
 public class LoggerService : ILoggerService {
-    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3} {Properties:j}] {Message:lj}{NewLine}{Exception}";
+    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Information);
     
     public bool AreLogsSilenced { get; set; }
