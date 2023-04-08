@@ -13,6 +13,8 @@ using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.CPU;
 
+using Serilog.Context;
+
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
 /// program use them. <br /> It also has some x87 FPU instructions to support telling the programs
@@ -55,6 +57,7 @@ public class Cpu {
     // Value used to read parts of the instruction.
     // CPU uses this internally and adjusts IP after instruction execution is done.
     private ushort _internalIp;
+    private string _userModeAddress = "Uninitialized";
 
     public IOPortDispatcher? IoPortDispatcher { get; set; }
 
@@ -80,27 +83,34 @@ public class Cpu {
     }
 
     public void ExecuteNextInstruction() {
-        _internalIp = State.IP;
-        ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
-        byte opcode = ProcessPrefixes();
-        if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
-            // continueZeroFlag is either true or false if a rep prefix has been encountered
-            ProcessRep(opcode);
-        } else {
-            try {
-                ExecOpcode(opcode);
+        using (LogContext.PushProperty("IP", _userModeAddress)) {
+            _internalIp = State.IP;
+            ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
+            byte opcode = ProcessPrefixes();
+            if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
+                // continueZeroFlag is either true or false if a rep prefix has been encountered
+                ProcessRep(opcode);
+            } else {
+                try {
+                    ExecOpcode(opcode);
+                }
+                catch (CpuException e) {
+                    HandleCpuException(e);
+                }
             }
-            catch (CpuException e) {
-                HandleCpuException(e);
+
+            // Reset to 16 bit operand and address size
+            _instructions16Or32 = _instructions16;
+            AddressSize = 16;
+            State.ClearPrefixes();
+            State.IncCycles();
+            HandleExternalInterrupt();
+            State.IP = _internalIp;
+            if (State.CS < 0xF000) {
+                // Keep reporting last seen user-mode address when we're in BIOS code.
+                _userModeAddress = $"{State.CS:X4}:{State.IP:X4}";
             }
         }
-        // Reset to 16 bit operand and address size
-        _instructions16Or32 = _instructions16;
-        AddressSize = 16;
-        State.ClearPrefixes();
-        State.IncCycles();
-        HandleExternalInterrupt();
-        State.IP = _internalIp;
     }
 
     public void ExternalInterrupt(byte vectorNumber) {
