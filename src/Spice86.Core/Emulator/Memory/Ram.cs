@@ -15,10 +15,11 @@ public class Ram : IMemoryDevice {
     public byte Read(uint address) {
         return _memory[address];
     }
-    
+
     public void Write(uint address, byte value) {
         _memory[address] = value;
     }
+
     public Span<byte> GetSpan(int address, int length) {
         return _memory.AsSpan(address, length);
     }

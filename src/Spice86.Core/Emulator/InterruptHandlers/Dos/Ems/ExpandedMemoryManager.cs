@@ -1,66 +1,121 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
 /// </summary>
 public sealed class ExpandedMemoryManager : InterruptHandler {
-    public static class EmsSubFunctions {
-        public const byte MapUnmapPages = 0x00;
-        public const byte HandleNameGet = 0x00;
-        public const byte HandleNameSet = 0x01;
-        public const byte GetHardwareInformationUnallocatedRawPages = 0x01;
-        public const byte MoveExchangeMove = 0x00;
-    }
-
-    /// <summary>
-    /// Size of each EMS page in bytes.
-    /// </summary>
-    public const int PageSize = 16384;
-
-    /// <summary>
-    /// Maximum number of mappable pages.
-    /// </summary>
-    public const int MaximumPhysicalPages = 4;
-
-    /// <summary>
-    /// Maximum number of logical pages.
-    /// </summary>
-    public const int MaximumLogicalPages = 256;
-
-    public const ushort PageFrameSegment = 0xE000;
-    public const int FirstHandle = 1;
-    public const int LastHandle = 254;
-    public const int SystemHandle = 0;
-
     public const string EmsIdentifier = "EMMXXXX0";
-    
-    public override ushort? InterruptHandlerSegment => 0xF100;
 
-    private readonly short[] _pageOwners = new short[MaximumLogicalPages];
-    private readonly SortedList<int, EmsHandle> _handles = new();
-    private readonly int[] _mappedPages = {-1, -1, -1, -1};
+    /// <summary>
+    /// EMM system handle (reserved for OS usage)
+    /// </summary>
+    public const byte EmmSystemHandle = 0;
+
+    public const byte EmmMaxHandles = 200;
+
+    public const uint EmmPageFrameSize = 64 * 1024;
+
+    public const byte EmmMaxPhysicalPages = (byte) (EmmPageFrameSize / EmmPageSize);
+
+    public const ushort EmmNullPage = 0xFFFF;
     
-    public ExpandedMemoryManager(Machine machine) : base(machine) {
+    public const ushort EmmNullHandle = 0xFFFF;
+
+    public const ushort EmmPageFrameSegment = 0xD000;
+
+    public const ushort EmmPageSize = 16384;
+
+    public override ushort? InterruptHandlerSegment => 0xF100;
+    
+    public override byte Index => 0x67;
+
+    private readonly ILoggerService _loggerService;
+
+    /// <summary>
+    /// Type of EMS emulation. <br/>
+    /// 0 = Mixed mode. <br/>
+    /// 1 = EMS board. <br/>
+    /// 2 = EMS386. <br/>
+    /// </summary>
+    public byte EmsType { get; init; } = 1;
+    
+    public MemoryBlock MemoryBlock { get; }
+
+    public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[0x40];
+
+    public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmmHandle.EmmMaxPhysicalPages];
+    
+    public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmMaxHandles];
+    
+    public ushort MemorySizeInMb { get; }
+
+    public int TotalPages => MemoryBlock.Pages;
+
+    public ushort GetFreePages() => Math.Min((ushort) 0x7FFF, (ushort) (GetFreeMemoryTotal() / 4));
+
+    public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
+        _loggerService = loggerService;
+        MemorySizeInMb = Math.Max((ushort)8, (ushort) (_memory.Size / 1024 / 1024));
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
-        
-        _pageOwners.AsSpan().Fill(-1);
-
-        for (int i = 0; i < 24; i++) {
-            _pageOwners[i] = SystemHandle;
+        for (int i = 0; i < EmmHandles.Length; i++) {
+            EmmHandles[i] = new EmmHandle();
         }
 
-        _handles[SystemHandle] = new EmsHandle(Enumerable.Range(0, 24).Select(i => (ushort)i));
+        for (int i = 0; i < EmmMappings.Length; i++) {
+            EmmMappings[i] = new EmmMapping();
+        }
+
+        for (int i = 0; i < EmmSegmentMappings.Length; i++) {
+            EmmSegmentMappings[i] = new EmmMapping();
+        }
+
+        MemoryBlock = new MemoryBlock(MemorySizeInMb);
+
         FillDispatchTable();
+        
+        _state.AH = EmmAllocateSystemHandle(8);
+    }
+    
+    /// <summary>
+    /// Allocates OS-dedicated handle (ems handle zero, 128kb) <br/>
+    /// This handle is never deallocated.
+    /// </summary>
+    /// <param name="pages">The number of pages to initialize</param>
+    /// <returns>Success or error code.</returns>
+    private byte EmmAllocateSystemHandle(ushort pages) {
+        /* Check for enough free pages */
+        if ((GetFreeMemoryTotal() / 4) < pages) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning))
+                _loggerService.Warning("EMS: Not enough free pages to allocate system handle. Free pages: {0}, requested pages: {1}", GetFreeMemoryTotal() / 4, pages);
+            return EmmStatus.EmmOutOfLogicalPages;
+        }
+
+        /* Release memory if already allocated */
+        if (EmmHandles[EmmSystemHandle].Pages != EmmNullHandle) {
+            ReleasePages(EmmHandles[EmmSystemHandle].MemHandle);
+        }
+        int mem = AllocatePages((ushort) (pages * 4), false);
+        if (mem == 0) FailFastWithLogMessage("EMS: System handle memory allocation failure");
+        EmmHandles[EmmSystemHandle].Pages = pages;
+        EmmHandles[EmmSystemHandle].MemHandle = mem;
+        return EmmStatus.EmmNoError;
     }
 
     private void FillDispatchTable() {
@@ -68,161 +123,616 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameSegment));
         _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfPages));
         _dispatchTable.Add(0x43, new Callback(0x43, GetHandleAndAllocatePages));
-        _dispatchTable.Add(0x44, new Callback(0x44, MapExpandedMeoryPage));
+        _dispatchTable.Add(0x44, new Callback(0x44, MapExpandedMemoryPage));
         _dispatchTable.Add(0x45, new Callback(0x45, ReleaseHandleAndFreePages));
         _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
         _dispatchTable.Add(0x47, new Callback(0x47, SavePageMap));
         _dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
         _dispatchTable.Add(0x4B, new Callback(0x4B, GetHandleCount));
         _dispatchTable.Add(0x4C, new Callback(0x4C, GetPagesForOneHandle));
-        _dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultiplePageMap));
+        _dispatchTable.Add(0x4D, new Callback(0x4D, GetPageForAllHandles));
+        _dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
+        _dispatchTable.Add(0x4F, new Callback(0x4F, SaveOrRestorePartialPageMap));
+        _dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultipleHandlePages));
         _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         _dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
-        _dispatchTable.Add(0x57, new Callback(0x57, MemoryRegion));
+        _dispatchTable.Add(0x54, new Callback(0x54, HandleFunctions));
+        _dispatchTable.Add(0x58, new Callback(0x58, GetMappablePhysicalArrayAddressArray));
         _dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
-    }
-
-    public void MapOrUnmapMultiplePageMap() {
-        switch (_state.AL) {
-            case EmsSubFunctions.MapUnmapPages:
-                MapUnmapMultiplePages();
-                break;
-            default:
-                throw new UnrecoverableException("Not implemented EMS subfunction", new NotImplementedException($"{_state.AL} function not implemented"));
-        }
-    }
-
-    public void GetPageFrameSegment() {
-        // Return page frame segment in BX.
-        _state.BX = PageFrameSegment;
-        // Set good status.
-        _state.AH = EmsErrors.EmmNoError;
-    }
-
-    public void GetNumberOfPages() {
-        // Return number of pages available in BX.
-        _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
-        // Return total number of pages in DX.
-        _state.DX = MaximumLogicalPages;
-        // Set good status.
-        _state.AH = EmsErrors.EmmNoError;
-    }
-
-    public void GetEmmVersion() {
-        // Return EMS version 4.0.
-        _state.AL = 0x40;
-        // Return good status.
-        _state.AH = 0;
-    }
-
-    public void GetHardwareInformation() {
-        switch (_state.AL) {
-        case EmsSubFunctions.GetHardwareInformationUnallocatedRawPages:
-            // Return number of pages available in BX.
-            _state.BX = (ushort)(MaximumLogicalPages - AllocatedPages);
-            // Return total number of pages in DX.
-            _state.DX = MaximumLogicalPages;
-            // Set good status.
-            _state.AH = EmsErrors.EmmNoError;
-            break;
-
-        default:
-            throw new UnrecoverableException();
-        }
-    }
-
-    public void GetHandleCount() {
-        // Return the number of EMM handles (plus 1 for the OS handle).
-        _state.BX = (ushort)(_handles.Count + 1);
-        // Return good status.
-        _state.AH = EmsErrors.EmmNoError;
-    }
-
-    public void AdvanceMap() {
-        switch (_state.AL) {
-            case EmsSubFunctions.MapUnmapPages:
-                MapUnmapMultiplePages();
-                break;
-            default:
-                throw new UnrecoverableException();
-        }
-    }
-
-    public void SetGetHandleName() {
-        switch (_state.AL) {
-            case EmsSubFunctions.HandleNameGet:
-                GetHandleName();
-                break;
-
-            case EmsSubFunctions.HandleNameSet:
-                SetHandleName();
-                break;
-
-            default:
-                throw new UnrecoverableException();
-        }
-    }
-
-    public void MemoryRegion() {
-        switch (_state.AL) {
-            case EmsSubFunctions.MoveExchangeMove:
-                Move();
-                break;
-
-            default:
-                throw new NotImplementedException($"EMM function 57{_state.AL:X2}h not implemented.");
-        }
-    }
-
-    /// <summary>
-    /// Gets the total number of allocated EMS pages.
-    /// </summary>
-    public int AllocatedPages => _handles.Values.Sum(p => p.PagesAllocated);
-
-    /// <summary>
-    /// Gets the mapped address in main memory for the current page
-    /// </summary>
-    public uint MappedAddress => MemoryUtils.ToPhysicalAddress(PageFrameSegment, 0);
-
-    public override byte Index => 0x67;
-
-    public void GetStatus() {
-        // Return good status in AH.
-        _state.AH = 0;
+        _dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
     }
 
     public override void Run() {
         byte operation = _state.AH;
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose))
+            _loggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, _state.AL);
+        if (!_dispatchTable.ContainsKey(operation)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EMS function not provided: {@Function}", operation);
+            }
+            _state.AH = EmmStatus.EmmFuncNoSup;
+        }
         Run(operation);
     }
-
+    
+    public ushort GetFreeMemoryTotal() {
+        ushort free = 0;
+        ushort index = 0;
+        while (index < TotalPages) {
+            if (MemoryBlock.MemoryHandles[index] == 0) {
+                free++;
+            }
+            index++;
+        }
+        return (ushort) (free - 1);
+    }
+    
+    public void GetStatus() {
+        // Return good status in AH.
+        _state.AH = EmmStatus.EmmNoError;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("EMS: {@MethodName}: {@Result}", nameof(GetStatus), _state.AH);
+    }
+    
+    public void GetPageFrameSegment() {
+        // Return page frame segment in BX.
+        _state.BX = EmmPageFrameSegment;
+        // Set good status.
+        _state.AH = EmmStatus.EmmNoError;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("EMS: {@MethodName}: 0x{Result:X4}", nameof(GetPageFrameSegment), _state.BX);
+    }
+    
+    public void GetNumberOfPages() {
+        // Return total number of pages in DX.
+        _state.DX = (ushort) (TotalPages / 4);
+        // Return number of pages available in BX.
+        _state.BX = GetFreePages();
+        // Set good status.
+        _state.AH = EmmStatus.EmmNoError;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("EMS: {@MethodName}: Total: {@Total} Free: {@Free}", nameof(GetNumberOfPages), _state.DX, _state.BX);
+    }
+    
     /// <summary>
     /// Allocates pages for a new handle.
     /// </summary>
     public void GetHandleAndAllocatePages() {
-        uint pagesRequested = _state.BX;
-        if (pagesRequested == 0) {
-            // Return "attempted to allocate zero pages" code.
-            _state.AH = EmsErrors.EmmZeroPages;
+        ushort handles = _state.DX;
+        ushort pages = _state.BX;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("EMS: {@MethodName}: requesting {@Pages} pages", nameof(GetHandleAndAllocatePages), pages);
+        _state.AH = EmmAllocateMemory(pages, ref handles, false);
+        _state.DX = handles;
+        if (_state.AH == EmmStatus.EmmNoError && _loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("EMS: {@MethodName}: got handle {@Handle} [{HandleName}]", nameof(GetHandleAndAllocatePages), handles, GetHandleName(handles));
+    }
+    
+    /// <summary>
+    /// Maps or unmaps a physical page.
+    /// </summary>
+    public void MapExpandedMemoryPage() {
+        ushort handle = _state.DX;
+        ushort physicalPage = _state.AL;
+        ushort logicalPage = _state.BX;
+        _state.AH = EmmMapPage(physicalPage, handle, logicalPage);
+        _state.DX = handle;
+    }
+    
+    /// <summary>
+    /// Maps data from a logical page to a physical page.
+    /// </summary>
+    /// <param name="physicalPage">Physical page id.</param>
+    private void MapEmmPage(int physicalPage) {
+        uint destAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * physicalPage));
+        EmmMapping mapping = EmmMappings[physicalPage];
+        mapping.DestAddress = destAddress;
+        _memory.RegisterMapping(destAddress, mapping.Size, mapping);
+    }
+    
+    /// <summary>
+    /// Removes an EMM page mapping
+    /// </summary>
+    /// <param name="physicalPage">Physical page id.</param>
+    private void UnmapEmmPage(int physicalPage) {
+        EmmMapping mapping = EmmMappings[physicalPage];
+        _memory.UnregisterMapping(mapping.DestAddress, mapping.Size, mapping);
+    }
+    
+    private byte EmmMapPage(ushort physicalPage, ushort handle, ushort logicalPage) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("EMS: {@MethodName}: Map logical page {@LogicalPage} of handle {@Handle} {@HandleName} to physical page {@PhysicalPage} [0x{Segment:X4}]",
+                nameof(EmmMapPage), logicalPage, handle, EmmHandles[handle].Name, physicalPage, physicalPage * 0x400 + EmmPageFrameSegment);
+        }
+        /* Check for too high physical page */
+        if (physicalPage >= EmmMappings.Length) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("{@MethodName}: Invalid physical page {@PhysicalPage}", nameof(EmmMapPage), physicalPage);
+            }
+            return EmmStatus.EmsIllegalPhysicalPage;
+        }
+
+        /* unmapping doesn't need valid handle (as handle isn't used) */
+        if (logicalPage == EmmNullPage) {
+            /* Unmapping */
+            EmmMappings[physicalPage].Handle = EmmNullHandle;
+            EmmMappings[physicalPage].Page = EmmNullPage;
+            UnmapEmmPage(physicalPage);
+            return EmmStatus.EmmNoError;
+        }
+        /* Check for valid handle */
+        if (!IsValidHandle(handle)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("{@MethodName}: Invalid handle {@Handle}", nameof(EmmMapPage), handle);
+            }
+            return EmmStatus.EmmInvalidHandle;
+        }
+
+        if (logicalPage < EmmHandles[handle].Pages) {
+            /* Mapping it is */
+            EmmMappings[physicalPage].Handle = handle;
+            EmmMappings[physicalPage].Page = logicalPage;
+            MapEmmPage(physicalPage);
+            return EmmStatus.EmmNoError;
+        } else {
+            /* Illegal logical page it is */
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("{@MethodName}: Illegal logical page {@LogicalPage}", nameof(EmmMapPage), logicalPage);
+            }
+            return EmmStatus.EmsLogicalPageOutOfRange;
+        }
+    }
+    
+    public bool IsValidHandle(ushort handle) {
+        if (handle >= EmmHandles.Length) {
+            return false;
+        }
+        return EmmHandles[handle].Pages != EmmNullHandle;
+    }
+    
+    /// <summary>
+    /// Deallocates a handle and all of its pages.
+    /// </summary>
+    public void ReleaseHandleAndFreePages() {
+        _state.AH = ReleaseMemory(_state.DX);
+    }
+
+    public byte ReleaseMemory(ushort handle) {
+        /* Check for valid handle */
+        if (!IsValidHandle(handle)) {
+            return EmmStatus.EmmInvalidHandle;
+        }
+
+        if (EmmHandles[handle].Pages != 0) {
+            ReleasePages(EmmHandles[handle].MemHandle);
+        }
+        /* Reset handle */
+        EmmHandles[handle].MemHandle = 0;
+        // OS handle is NEVER deallocated
+        EmmHandles[handle].Pages = handle == 0 ? (ushort) 0 : EmmNullHandle;
+        EmmHandles[handle].SavePageMap = false;
+        EmmHandles[handle].Name = string.Empty;
+        return EmmStatus.EmmNoError;
+
+    }
+
+    private void ReleasePages(int handle) {
+        while (handle > 0) {
+            int next = MemoryBlock.MemoryHandles[handle];
+            MemoryBlock.MemoryHandles[handle] = 0;
+            handle = next;
+        }
+    }
+
+    public void GetEmmVersion() {
+        // Return EMS version 3.2.
+        _state.AL = 0x32;
+        // Return good status.
+        _state.AH = EmmStatus.EmmNoError;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Debug("EMS: {@MethodName}: 0x{Version:X2}", nameof(GetEmmVersion), _state.AL);
+    }
+    
+    /// <summary>
+    /// Saves the current state of page map registers for a handle.
+    /// </summary>
+    public void SavePageMap() {
+        _state.AH = SavePageMap(_state.DX);
+    }
+
+    public byte SavePageMap(ushort handle) {
+        /* Check for valid handle */
+        if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
+            if (handle != 0) {
+                return EmmStatus.EmmInvalidHandle;
+            }
+        }
+        /* Check for previous save */
+        if (EmmHandles[handle].SavePageMap) {
+            return EmmStatus.EmmPageMapSaved;
+        }
+        /* Copy the mappings over */
+        for (int i = 0; i < EmmMappings.Length; i++) {
+            EmmHandles[handle].PageMap[i].Page = EmmMappings[i].Page;
+            EmmHandles[handle].PageMap[i].Handle = EmmMappings[i].Handle;
+            EmmHandles[handle].PageMap[i].Ram = EmmMappings[i].Ram;
+        }
+        EmmHandles[handle].SavePageMap = true;
+        return EmmStatus.EmmNoError;
+    }
+    
+    /// <summary>
+    /// Restores the state of page map registers for a handle.
+    /// </summary>
+    public void RestorePageMap() {
+        _state.AH = RestorePageMap(_state.DX);
+    }
+
+    public byte RestorePageMap(ushort handle) {
+        /* Check for valid handle */
+        if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
+            if (handle != 0) {
+                return EmmStatus.EmmInvalidHandle;
+            }
+        }
+        /* Check for previous save */
+        if (!EmmHandles[handle].SavePageMap) {
+            return EmmStatus.EmmNoSavedPageMap;
+        }
+        /* Restore the mappings */
+        EmmHandles[handle].SavePageMap = false;
+        for (int i = 0; i < EmmMappings.Length; i++) {
+            EmmMappings[i].Page = EmmHandles[handle].PageMap[i].Page;
+            EmmMappings[i].Handle = EmmHandles[handle].PageMap[i].Handle;
+            EmmMappings[i].Ram = EmmHandles[handle].PageMap[i].Ram;
+        }
+        return RestoreMappingTable();
+    }
+
+    private byte RestoreMappingTable() {
+        /* Move through the mappings table and setup mapping accordingly */
+        for (int i = 0; i < EmmSegmentMappings.Length; i++) {
+            /* Skip the pageframe */
+            if (i is >= EmmPageFrameSegment / 0x400 and < (EmmPageFrameSegment / 0x400) + EmmMaxPhysicalPages) {
+                continue;
+            }
+            EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
+        }
+        for (ushort i = 0; i < EmmMappings.Length; i++) {
+            ushort handle = EmmMappings[i].Handle;
+            EmmMapPage(i, handle, EmmMappings[i].Page);
+        }
+        return EmmStatus.EmmNoError;
+    }
+
+    private byte EmmMapSegment(int segment, ushort handle, ushort logicalPage) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("{@MethodName}: {@Handle}, {@Segment}, {@LogicalPage}",
+                nameof(EmmMapSegment), segment, handle, logicalPage);
+        }
+
+        bool isValidSegment = false;
+
+        if (EmsType is 1 or 3) {
+            if (segment < 0xF000 + 0x1000) {
+                isValidSegment = true;
+            }
+        } else {
+            switch (segment) {
+                case >= 0xa000 and < 0xb000:
+                // allow mapping of EMS page frame
+                case >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000:
+                    // allow mapping of graphics memory
+                    isValidSegment = true;
+                    break;
+            }
+        }
+
+        if (!isValidSegment) {
+            return EmmStatus.EmsIllegalPhysicalPage;
+        }
+
+        int physicalPage = (segment - EmmPageFrameSegment) / (0x1000 / EmmMappings.Length);
+
+        /* unmapping doesn't need valid handle (as handle isn't used) */
+        if (logicalPage == EmmNullPage) {
+            /* Unmapping */
+            if (physicalPage is >= 0 and < EmmMaxPhysicalPages) {
+                EmmMappings[physicalPage].Handle = EmmNullHandle;
+                EmmMappings[physicalPage].Page = EmmNullPage;
+                UnmapEmmPage(physicalPage);
+            } else {
+                EmmSegmentMappings[segment >> 10].Handle = EmmNullHandle;
+                EmmSegmentMappings[segment >> 10].Page = EmmNullPage;
+                UnmapEmmPage(segment >> 10);
+            }
+            return EmmStatus.EmmNoError;
+        }
+        if (!IsValidHandle(handle)) {
+            return EmmStatus.EmmInvalidHandle;
+        }
+
+        if (logicalPage >= EmmHandles[handle].Pages) {
+            return EmmStatus.EmsLogicalPageOutOfRange;
+        }
+
+        // Mapping
+        if (physicalPage is >= 0 and < EmmMaxPhysicalPages) {
+            EmmMappings[physicalPage].Handle = handle;
+            EmmMappings[physicalPage].Page = logicalPage;
+            MapEmmPage(physicalPage);
+        } else {
+            EmmSegmentMappings[segment >> 10].Handle = handle;
+            EmmSegmentMappings[segment >> 10].Page = logicalPage;
+            MapEmmPage(segment >> 10);
+        }
+
+        return EmmStatus.EmmNoError;
+    }
+
+    public void GetHandleCount() {
+        _state.BX = 0;
+        _state.BX = CalculateHandleCount();
+        // Return good status.
+        _state.AH = EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
+    /// Returns the number of EMM handles
+    /// </summary>
+    /// <returns>The number of EMM handles</returns>
+    private ushort CalculateHandleCount() {
+        ushort count = 0;
+        foreach (EmmHandle handle in EmmHandles)
+        {
+            if (handle.Pages != EmmNullHandle) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Gets the number of pages allocated to a handle.
+    /// </summary>
+    public void GetPagesForOneHandle() {
+        if (!IsValidHandle(_state.DX)) {
+            _state.AH = EmmStatus.EmmInvalidHandle;
             return;
         }
 
-        if (pagesRequested <= MaximumLogicalPages - AllocatedPages) {
-            // Some programs like to use one more page than they ask for.
-            // What a bunch of rubbish.
-            
-            if (TryCreateHandle((int)pagesRequested + 1, out int handle)) {
-                // Return handle in DX.
-                _state.DX = (ushort)handle;
-                // Return good status.
-                _state.AH = EmsErrors.EmmNoError;
-            } else {
-                // Return "all handles in use" code.
-                _state.AH = EmsErrors.EmmOutOfHandles;
+        _state.BX = EmmHandles[_state.DX].Pages;
+        _state.AH = EmmStatus.EmmNoError;
+    }
+
+    private void GetPageForAllHandles() {
+        ushort handles = _state.BX;
+        _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), ref handles);
+        _state.BX = handles;
+    }
+
+    private byte GetPagesForAllHandles(uint table, ref ushort handles) {
+        handles = 0;
+        for (byte i = 0; i < EmmMaxHandles; i++) {
+            if (EmmHandles[i].Pages == EmmNullHandle) {
+                continue;
             }
-        } else {
-            // Return "not enough available pages" code.
-            _state.AH = EmsErrors.EmmOutOfPhysicalPages;
+            handles++;
+            _memory.SetUint8(table, i);
+            _memory.SetUint16(table, handles);
+        }
+        return EmmStatus.EmmNoError;
+    }
+
+    private void SaveOrRestorePageMap() {
+        SaveOrRestorePageMap(_state.AL);
+    }
+
+    /// <summary>
+    /// Saves or restore the page map
+    /// </summary>
+    /// <param name="operation">0: Save, 1: Restore, 2: Save and Restore, 3: Get Map Page Array Size</param>
+    public void SaveOrRestorePageMap(byte operation) {
+        switch (operation) {
+            case 0x00:	/* Save Page Map */
+            uint physicalAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+            // TODO: Remove this, use Span
+            foreach (EmmMapping mapping in EmmMappings) {
+                _memory.SetUint16(physicalAddress, mapping.Handle);
+            }
+            _state.AH = EmmStatus.EmmNoError;
+            break;
+            case 0x01:	/* Restore Page Map */
+                uint address = MemoryUtils.ToPhysicalAddress(_state.DS, _state.ES);
+                // TODO: Remove this, use Span
+                for (int i = 0; i < EmmMappings.Length; i++) {
+                    EmmMappings[i].Handle = _memory.GetUint16((uint) (address + i));
+                    EmmMappings[i].Page = _memory.GetUint16((uint) (address + i + sizeof(ushort)));
+                    address += (ushort)(i + sizeof(ushort));
+                }
+                _state.AH = EmmRestoreMappingTable();
+                break;
+            case 0x02:	/* Save and Restore Page Map */
+                uint offset = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                // TODO: Remove this, use Span
+                for (int i = 0; i < EmmMappings.Length; i++) {
+                    EmmMapping item = EmmMappings[i];
+                    _memory.LoadData((uint)(offset + i * EmmMappings.Length),
+                        BitConverter.GetBytes(item.Handle).Union(BitConverter.GetBytes(item.Page))
+                            .ToArray());
+                }
+                offset = MemoryUtils.ToPhysicalAddress(_state.DS, _state.ES);
+                for (int i = 0; i < EmmMappings.Length; i++) {
+                    EmmMappings[i].Handle = _memory.GetUint16((uint) (offset + i));
+                    EmmMappings[i].Page = _memory.GetUint16((uint) (offset + i + sizeof(ushort)));
+                    offset += (ushort)(i + sizeof(ushort));
+                }
+                _state.AH = EmmRestoreMappingTable();
+            break;
+            case 0x03:	/* Get Page Map Array Size */
+                _state.AL = (byte)EmmMappings.Length;
+                _state.AH = EmmStatus.EmmNoError;
+            break;
+            default:
+            if (_loggerService.IsEnabled(LogEventLevel.Error))
+            {
+                _loggerService.Error(
+                    "{@MethodName} subFunction number {@SubFunctionId} not supported",
+                    nameof(SaveOrRestorePageMap), operation);
+            }
+            _state.AH = EmmStatus.EmmInvalidSubFunction;
+            break;
+        }
+    }
+
+    private byte EmmRestoreMappingTable() {
+        /* Move through the mappings table and setup mapping accordingly */
+        for (int i = 0; i < EmmSegmentMappings.Length; i++) {
+            /* Skip the pageframe */
+            if (i is >= EmmPageFrameSegment / 0x400 and < (EmmPageFrameSegment / 0x400) + EmmMaxPhysicalPages) continue;
+            EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
+        }
+        for (byte i = 0; i < EmmMaxPhysicalPages; i++) {
+            ushort handle = EmmMappings[i].Handle;
+            EmmMapPage(i, handle, EmmMappings[i].Page);
+            EmmMappings[i].Handle = handle;
+        }
+        return EmmStatus.EmmNoError;
+    }
+    
+    private void SaveOrRestorePartialPageMap() {
+        _state.AH = SaveOrRestorePartialPageMap(_state.AL);
+    }
+
+    /// <summary>
+    /// Save or restore partial page map
+    /// </summary>
+    /// <param name="operation">0: Save partial page map, 1: Restore partial page map, 2: Get partial page map array size</param>
+    /// <returns></returns>
+    public byte SaveOrRestorePartialPageMap(byte operation) {
+        ushort count;
+        uint data;
+        switch (operation) {
+            case 0x00:    /* Save Partial Page Map */
+                uint list = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+                data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                count = _memory.GetUint16(list);
+                list += 2;
+                _memory.SetUint16(data, count);
+                data += 2;
+                for (; count > 0; count--) {
+                    ushort segment = _memory.GetUint16(list);
+                    list += 2;
+                    if (segment is >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000) {
+                        ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageFrameSegment >> 4));
+                        _memory.SetUint16(data, segment);
+                        data += 2;
+                        _memory.LoadData(
+                            data, BitConverter.GetBytes(EmmMappings[page].Handle).Union(BitConverter.GetBytes(EmmMappings[page].Page)).ToArray(), EmmMappings.Length);
+                        data += (uint)EmmMappings.Length;
+                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
+                        _memory.SetUint16(data, segment);
+                        data += 2;
+                        _memory.LoadData(
+                            data, BitConverter.GetBytes(EmmSegmentMappings[segment >> 10].Handle).Union(BitConverter.GetBytes(EmmSegmentMappings[segment >> 10].Page)).ToArray(), EmmSegmentMappings.Length);
+                        data += (uint)EmmMappings.Length;
+                    } else {
+                        return EmmStatus.EmsIllegalPhysicalPage;
+                    }
+                }
+                break;
+            case 0x01:    /* Restore Partial Page Map */
+                data = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+                count = _memory.GetUint16(data);
+                data += 2;
+                for (; count > 0; count--) {
+                    ushort segment = _memory.GetUint16(data);
+                    data += 2;
+                    if (segment is >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000) {
+                        ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageSize >> 4));
+                        EmmMappings[page].Handle = _memory.GetUint16(data);
+                        EmmMappings[page].Page = _memory.GetUint16(data + sizeof(ushort));
+                    } else if (EmsType is 1 or 3 || segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
+                        EmmSegmentMappings[segment >> 10].Handle = _memory.GetUint16(data);
+                        EmmSegmentMappings[segment >> 10].Page = _memory.GetUint16(data + sizeof(ushort));
+                    } else {
+                        return EmmStatus.EmsIllegalPhysicalPage;
+                    }
+                    data += (uint)EmmMappings.Length;
+                }
+                return EmmRestoreMappingTable();
+            case 0x02:    /* Get Partial Page Map Array Size */
+                _state.AL = (byte)(2 + _state.BX * 2 * EmmMappings.Length);
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error))
+                {
+                    _loggerService.Error(
+                        "{@MethodName} subFunction number {@SubFunctionId} not supported",
+                        nameof(SaveOrRestorePartialPageMap), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+        }
+        return EmmStatus.EmmNoError;
+    }
+    
+    /// <summary>
+    /// Map or unmap multiple handle pages
+    /// </summary>
+    public void MapOrUnmapMultipleHandlePages() {
+        byte operation = _state.AL;
+        ushort handle = _state.DX;
+        ushort numberOfPages = _state.CX;
+        uint mapAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "EMS: {@MethodName} Map {@NumberOfPages} pages from handle {@Handle} according to the map at address 0x{@MapAddress:X6}",
+                nameof(MapOrUnmapMultipleHandlePages), numberOfPages, handle, mapAddress);
+        }
+
+        _state.AH = EmmStatus.EmmNoError;
+        switch (operation)
+        {
+            case 0x00: // use physical page numbers
+                for (int i = 0; i < numberOfPages; i++)
+                {
+                    ushort logicalPage = _memory.GetUint16(mapAddress);
+                    mapAddress += 2;
+                    ushort physicalPage = _memory.GetUint16(mapAddress);
+                    mapAddress += 2;
+                    _state.AH = EmmMapPage(physicalPage, handle, logicalPage);
+                    if (_state.AH != EmmStatus.EmmNoError)
+                    {
+                        break;
+                    }
+                }
+
+                break;
+            case 0x01: // use segment address
+            {
+                for (int i = 0; i < numberOfPages; i++)
+                {
+                    ushort logicalPage = _memory.GetUint16(mapAddress);
+                    mapAddress += 2;
+                    ushort segment = _memory.GetUint16(mapAddress);
+                    mapAddress += 2;
+                    _state.AH = EmmMapSegment(segment, handle, logicalPage);
+                    if (_state.AH != EmmStatus.EmmNoError)
+                    {
+                        break;
+                    }
+                }
+            }
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error))
+                {
+                    _loggerService.Error(
+                        "{@MethodName} subFunction number {@SubFunctionId} not supported",
+                        nameof(MapOrUnmapMultipleHandlePages), operation);
+                }
+                _state.AH = EmmStatus.EmmInvalidSubFunction;
+                break;
         }
     }
 
@@ -230,549 +740,474 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Reallocates pages for a handle.
     /// </summary>
     public void ReallocatePages() {
-        int pagesRequested = _state.BX;
-
-        if (pagesRequested < MaximumLogicalPages) {
-            int handle = _state.DX;
-            if (_handles.TryGetValue(handle, out EmsHandle? emsHandle)) {
-                if (pagesRequested < emsHandle.PagesAllocated) {
-                    for (int i = emsHandle.LogicalPages.Count - 1; i >= emsHandle.LogicalPages.Count - pagesRequested; i--) {
-                        _mappedPages[emsHandle.LogicalPages[i]] = -1;
-                    }
-                    emsHandle.LogicalPages.RemoveRange(emsHandle.LogicalPages.Count - pagesRequested, emsHandle.PagesAllocated - pagesRequested);
-                } else if (pagesRequested > emsHandle.PagesAllocated) {
-                    int pagesToAdd = pagesRequested - emsHandle.PagesAllocated;
-                    for (int i = 0; i < pagesToAdd; i++) {
-                        ushort logicalPage = GetNextFreePage((short)handle);
-                        emsHandle.LogicalPages.Add(logicalPage);
-                    }
-                }
-
-                // Return good status.
-                _state.AH = EmsErrors.EmmNoError;
-            } else {
-                // Return "couldn't find specified handle" code.
-                _state.AH = EmsErrors.EmsIllegalPhysicalPage;
-            }
-        } else {
-            // Return "not enough available pages" code.
-            _state.AH = EmsErrors.EmmOutOfPhysicalPages;
-        }
+        _state.AH = ReallocatePages(_state.DX, _state.BX);
     }
 
-    /// <summary>
-    /// Attempts to create a new EMS handle. Returns <c>false</c> if no handle could be created.
-    /// </summary>
-    /// <param name="pagesRequested">Number of pages to allocate to the new handle.</param>
-    /// <param name="handleIndex">Index for the newly created handle, if returned status is <c>true</c>.</param>
+    public byte ReallocatePages(ushort handle, ushort pages) {
+        /* Check for valid handle */
+        if (!IsValidHandle(handle)) {
+            return EmmStatus.EmmInvalidHandle;
+        }
+        if (EmmHandles[handle].Pages != 0) {
+            /* Check for enough pages */
+            int mem = EmmHandles[handle].MemHandle;
+            if (!ReallocatePages(ref mem, (ushort) (pages * 4), false)) {
+                return EmmStatus.EmmOutOfLogicalPages;
+            }
+            EmmHandles[handle].MemHandle = mem;
+        } else {
+            int mem = AllocatePages((ushort) (pages * 4), false);
+            if (mem == 0) {
+                FailFastWithLogMessage("EMS:Memory allocation failure during reallocation");
+            }
+            EmmHandles[handle].MemHandle = mem;
+        }
+        /* Update size */
+        EmmHandles[handle].Pages = pages;
+        return EmmStatus.EmmNoError;
+    }
 
-    /// <returns>New EMS handle if created successfully; otherwise zero.</returns>
-    public bool TryCreateHandle(int pagesRequested, out int handleIndex) {
-        for (int i = FirstHandle; i <= LastHandle; i++) {
-            if (!_handles.ContainsKey(i)) {
-                var pages = new List<ushort>(pagesRequested);
-                for (int p = 0; p < pagesRequested; p++) {
-                    pages.Add(GetNextFreePage((short)i));
+    private bool ReallocatePages(ref int handle, ushort pages, bool sequence) {
+        if (handle <= 0) {
+            if (pages == 0) {
+                return true;
+            }
+            handle = AllocatePages(pages, sequence);
+            return (handle > 0);
+        }
+        if (pages == 0) {
+            ReleasePages(handle);
+            handle = -1;
+            return true;
+        }
+        int index = handle;
+        int last = 0;
+        ushort oldPages = 0;
+        while (index > 0) {
+            oldPages++;
+            last = index;
+            index = MemoryBlock.MemoryHandles[index];
+        }
+
+        if (oldPages == pages) {
+            return true;
+        }
+        if (oldPages > pages) {
+            /* Decrease size */
+            pages--;
+            index = handle;
+            oldPages--;
+            while (pages != 0) {
+                index = MemoryBlock.MemoryHandles[index];
+                pages--;
+                oldPages--;
+            }
+            int next = MemoryBlock.MemoryHandles[index];
+            MemoryBlock.MemoryHandles[index] = -1;
+            index = next;
+            while (oldPages != 0) {
+                next = MemoryBlock.MemoryHandles[index];
+                MemoryBlock.MemoryHandles[index] = 0;
+                index = next;
+                oldPages--;
+            }
+            return true;
+        } else {
+            /* Increase size, check for enough free space */
+            ushort need = (ushort) (pages - oldPages);
+            if (sequence) {
+                index = last + 1;
+                int free = 0;
+                while (index < MemoryBlock.Pages && MemoryBlock.MemoryHandles[index] == 0) {
+                    index++;
+                    free++;
                 }
-                var handle = new EmsHandle(pages);
-                _handles.Add(i, handle);
-                handleIndex = i;
+                if (free >= need) {
+                    /* Enough space, allocate more pages */
+                    index = last;
+                    while (need != 0) {
+                        MemoryBlock.MemoryHandles[index] = index + 1;
+                        need--;
+                        index++;
+                    }
+                    MemoryBlock.MemoryHandles[index] = -1;
+                    return true;
+                } else {
+                    /* Not Enough space, allocate new block and copy */
+                    int newHandle = AllocatePages(pages, true);
+                    if (newHandle == 0) {
+                        return false;
+                    }
+                    _memory.MemCopy((uint) (newHandle * 4096), (uint) (handle * 4096), (uint) (oldPages * 4096));
+                    ReleasePages(handle);
+                    handle = newHandle;
+                    return true;
+                }
+            } else {
+                int rem = AllocatePages(need, false);
+                if (rem == 0) {
+                    return false;
+                }
+                MemoryBlock.MemoryHandles[last] = rem;
                 return true;
             }
         }
+    }
 
-        handleIndex = 0;
-        return false;
+    public void SetGetHandleName() {
+        ushort handle = _state.DX;
+        _state.AH = GetSetHandleName(handle, _state.AL);
     }
 
     /// <summary>
-    /// Deallocates a handle and all of its pages.
+    /// Gets or Set a handle name, depending on the <paramref name="operation"/>
     /// </summary>
-    public void ReleaseHandleAndFreePages() {
-        int handle = _state.DX;
-        if (_handles.Remove(handle)) {
-            for (int i = 0; i < _pageOwners.Length; i++) {
-                if (_pageOwners[i] == handle) {
-                    _pageOwners[i] = -1;
+    /// <param name="handle">The handle reference</param>
+    /// <param name="operation">Get: 0, Set: 1</param>
+    /// <returns>The state of the operation</returns>
+    public byte GetSetHandleName(ushort handle, byte operation)
+    {
+        switch (operation)
+        {
+            case EmsSubFunctions.HandleNameGet:
+                if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
+                    return EmmStatus.EmmInvalidHandle;
+                }
+                GetHandleName(handle);
+                break;
+
+            case EmsSubFunctions.HandleNameSet:
+                if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
+                    return EmmStatus.EmmInvalidHandle;
+                }
+                SetHandleName(handle,
+                    MemoryUtils.GetZeroTerminatedString(_memory.Ram, MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
+                        8));
+                break;
+
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: subFunction {@FunctionId} invalid", nameof(GetSetHandleName), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+        }
+
+        return EmmStatus.EmmNoError;
+    }
+
+    private void HandleFunctions() {
+        _state.AH = HandleFunctions(_state.AL);
+    }
+
+    /// <summary>
+    /// Handle Functions.
+    /// </summary>
+    /// <param name="operation">0: Get all handle names. 1: Search for a handle name. 2: Get total number of handles. Other values: invalid subFunction.s</param>
+    public byte HandleFunctions(byte operation) {
+        string name;
+        ushort handle = 0;
+        uint data;
+        switch (operation) {
+            case 0x00:    /* Get all handle names */
+                _state.AL = 0;
+                data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                for (handle = 0; handle < EmmMaxHandles; handle++) {
+                    if (EmmHandles[handle].Pages == EmmNullHandle) {
+                        continue;
+                    }
+                    _state.AL++;
+                    _memory.SetUint16(data, handle);
+                    _memory.LoadData(data + 2, Encoding.ASCII.GetBytes(EmmHandles[handle].Name), 8);
+                    data += 10;
+                }
+                break;
+            case 0x01: /* Search for a handle name */
+                name = MemoryUtils.GetZeroTerminatedString(_memory.Ram,
+                    MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
+                for (handle = 0; handle < EmmMaxHandles; handle++) {
+                    if (EmmHandles[handle].Pages == EmmNullHandle ||
+                        !name.Equals(EmmHandles[handle].Name, StringComparison.InvariantCultureIgnoreCase)) {
+                        continue;
+                    }
+
+                    _state.DX = handle;
+                    return EmmStatus.EmmNoError;
+                }
+                return EmmStatus.EmmNotFound;
+            case 0x02: /* Get Total number of handles */
+                _state.BX = (ushort) EmmHandles.Length;
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(HandleFunctions), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+        }
+        return EmmStatus.EmmNoError;
+    }
+
+    public void GetMappablePhysicalArrayAddressArray() {
+        _state.AH = GetMappablePhysicalArrayAddressArray(_state.AL);
+    }
+
+    /// <summary>
+    /// Get mappable physical array address array
+    /// </summary>
+    /// <param name="operation">0: Get the information. Other value: Invalid subFunction.</param>
+    public byte GetMappablePhysicalArrayAddressArray(byte operation) {
+        switch (operation) {
+            case 0x00: {
+                uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                int step = 0x1000 / EmmMappings.Length;
+                for (int i = 0; i < EmmMappings.Length; i++) {
+                    _memory.SetUint16(data, (ushort) (EmmPageFrameSegment + step * i));
+                    data += 2;
+                    _memory.SetUint16(data, (ushort) i);
+                    data += 2;
+                }
+                break;
+            }
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(GetMappablePhysicalArrayAddressArray), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+        }
+        // Set number of pages
+        _state.CX = (ushort) EmmMappings.Length;
+        return EmmStatus.EmmNoError;
+    }
+
+    public void GetHardwareInformation() {
+        switch (_state.AL) {
+            case EmsSubFunctions.GetHardwareConfiguration:
+                uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                // 1 page is 1K paragraphs (16KB)
+                _memory.SetUint16(data,0x0400);
+                data+=2;
+                // No alternate register sets
+                _memory.SetUint16(data,0x0000);
+                data+=2;
+                // Context save area size
+                _memory.SetUint16(data, (ushort)EmmMappings.Length);
+                data+=2;
+                // No DMA channels
+                _memory.SetUint16(data,0x0000);
+                data+=2;
+                // Always 0 for LIM standard
+                _memory.SetUint16(data,0x0000);
+                break;
+            case EmsSubFunctions.GetHardwareInformationUnallocatedRawPages:
+                // Return number of pages available in BX.
+                _state.BX = GetFreePages();
+                // Return total number of pages in DX.
+                _state.DX = (ushort) TotalPages;
+                // Set good status.
+                _state.AH = EmmStatus.EmmNoError;
+            break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(GetHardwareInformation), _state.AL);
+                }
+                break;
+        }
+    }
+
+    public void AllocateStandardRawPages() {
+        _state.AH = AllocateStandardRawPages(_state.AL);
+    }
+
+    /// <summary>
+    /// Allocate standard raw pages
+    /// </summary>
+    /// <param name="operation">less than 1: allocate page, even with 0 length. Other values: Invalid subFunction</param>
+    public byte AllocateStandardRawPages(byte operation) {
+        switch (operation) {
+            case <= 0x01: {
+                ushort handle = _state.DX;
+                EmmAllocateMemory(_state.BX, ref handle, true);
+                _state.DX = handle;
+                break;
+            }
+            default: {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(AllocateStandardRawPages), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+            }
+        }
+        return EmmStatus.EmmNoError;
+    }
+
+    public byte EmmAllocateMemory(ushort pages, ref ushort dhandle, bool canAllocateZeroPages) {
+        // Check for 0 page allocation
+        if (pages is 0 && !canAllocateZeroPages) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("{@MethodName}: Attempt to allocate 0 pages", nameof(EmmAllocateMemory));
+            }
+            return EmmStatus.EmmZeroPages;
+        }
+        
+        // Check for enough free pages
+        if (GetFreeMemoryTotal() / 4 < pages) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("{@MethodName}: Attempt to allocate {@Pages} pages, but only {@FreePages} pages are available",
+                    nameof(EmmAllocateMemory), pages, GetFreeMemoryTotal() / 4);
+            }
+            return EmmStatus.EmmOutOfLogicalPages;
+        }
+
+        ushort handle = 1;
+        // Check for a free handle
+        while (EmmHandles[handle].Pages != EmmNullHandle) {
+            if (++handle >= EmmHandles.Length) {
+                if (_loggerService.IsEnabled(LogEventLevel.Warning))
+                    _loggerService.Warning("{@MethodName}: Attempt to allocate {@Pages} pages, but no free handles are available",
+                        nameof(EmmAllocateMemory), pages);
+                return EmmStatus.EmmOutOfHandles;
+            }
+        }
+
+        if (pages == 0) {
+            return EmmStatus.EmmNoError;
+        }
+
+        int memHandle = AllocatePages((ushort)(pages * 4), false);
+        if (memHandle == 0) {
+            throw new UnrecoverableException("EMS: Memory allocation failure");
+        }
+
+        EmmHandles[handle].Pages = pages;
+        EmmHandles[handle].MemHandle = memHandle;
+        // Change handle only if there is no error.
+        dhandle = handle;
+        return EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
+    /// Allocates an EMS Memory page, or several.
+    /// </summary>
+    /// <param name="pages">The number of pages the allocated memory page must at least have.</param>
+    /// <param name="sequence">Whether to allocate in sequence or not.</param>
+    /// <returns></returns>
+    private int AllocatePages(ushort pages, bool sequence) {
+        try {
+            int ret = -1;
+            if (pages == 0) {
+                return 0;
+            }
+            if (sequence) {
+                int index = BestMatch(pages);
+                if (index == 0) {
+                    return 0;
+                }
+                while (pages != 0) {
+                    if (ret == -1) {
+                        ret = index;
+                    } else {
+                        MemoryBlock.MemoryHandles[index - 1] = index;
+                    }
+                    index++;
+                    pages--;
+                }
+                MemoryBlock.MemoryHandles[index - 1] = -1;
+            } else {
+                if (GetFreeMemoryTotal() < pages) {
+                    return 0;
+                }
+                int lastIndex = -1;
+                while (pages != 0) {
+                    int index = BestMatch(1);
+                    if (index == 0) {
+                        FailFastWithLogMessage($"EMS: Memory corruption in {nameof(AllocatePages)}");
+                    }
+                    while (pages != 0 && (MemoryBlock.MemoryHandles[index] == 0)) {
+                        if (ret == -1) {
+                            ret = index;
+                        } else {
+                            MemoryBlock.MemoryHandles[lastIndex] = index;
+                        }
+                        lastIndex = index;
+                        index++;
+                        pages--;
+                    }
+                    // Invalidate it in case we need another match.
+                    MemoryBlock.MemoryHandles[lastIndex] = -1;
                 }
             }
-
-            // Return good status.
-            _state.AH = EmsErrors.EmmNoError;
-        } else {
-            // Return "couldn't find specified handle" code.
-            _state.AH = EmsErrors.EmmInvalidHandle;
+            return ret;
+        } catch (ArgumentOutOfRangeException e) {
+            throw new UnrecoverableException("EMS: Memory allocation failure", e);
         }
     }
 
     /// <summary>
-    /// Maps or unmaps a physical page.
+    /// Returns the EMS memory page ID with the most appropriate length
     /// </summary>
-    public void MapExpandedMeoryPage() {
-        int physicalPage = _state.AL;
-        if (physicalPage is < 0 or >= MaximumPhysicalPages) {
-            // Return "physical page out of range" code.
-            _state.AH = EmsErrors.EmsIllegalPhysicalPage;
-            return;
-        }
-
-        int handleIndex = _state.DX;
-        if (!_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
-            // Return "couldn't find specified handle" code.
-            _state.AH = EmsErrors.EmmInvalidHandle;
-            return;
-        }
-
-        int logicalPageIndex = _state.BX;
-
-        if (logicalPageIndex != 0xFFFF) {
-            if (logicalPageIndex >= handle.LogicalPages.Count) {
-                // Return "logical page out of range" code.
-                _state.AH = EmsErrors.EmsLogicalPageOutOfRange;
-                return;
+    /// <param name="requestedSize">The requested memory block size</param>
+    /// <returns>The index of the first memory page that is greater than requestedSize</returns>
+    private int BestMatch(int requestedSize) {
+        int index = 0;
+        int first = 0;
+        int best = 0xfffffff;
+        int bestMatch = 0;
+        while (index < MemoryBlock.Pages) {
+            /* Check if we are searching for first free page */
+            if (first == 0) {
+                /* Check if this is a free page */
+                if (MemoryBlock.MemoryHandles[index] == 0) {
+                    first = index;
+                }
+            } else {
+                /* Check if this still is used page */
+                if (MemoryBlock.MemoryHandles[index] != 0) {
+                    int pages = index - first;
+                    if (pages == requestedSize) {
+                        return first;
+                    }
+                    if (pages > requestedSize && pages < best) {
+                        best = pages;
+                        bestMatch = first;
+                    }
+                    // Always reset for new search
+                    first = 0;
+                }
             }
-
-            MapPage(handle.LogicalPages[logicalPageIndex], physicalPage);
-        } else {
-            UnmapPage(physicalPage);
+            index++;
         }
-
-        // Return good status.
-        _state.AH = 0;
+        /* Check for the final block if we can */
+        if (first != 0 && index - first >= requestedSize && index - first < best) {
+            return first;
+        }
+        return bestMatch;
     }
 
-    /// <summary>
-    /// Copies data from a logical page to a physical page.
-    /// </summary>
-    /// <param name="logicalPage">Logical page to copy from.</param>
-    /// <param name="physicalPageIndex">Index of physical page to copy to.</param>
-    public void MapPage(int logicalPage, int physicalPageIndex) {
-        // If the requested logical page is already mapped, it needs to get unmapped first.
-        UnmapLogicalPage(logicalPage);
-
-        // If a page is already mapped, make sure it gets unmapped first.
-        UnmapPage(physicalPageIndex);
-
-        //Span<byte> pageFrame = this.GetMappedPage(physicalPageIndex);
-        //Span<byte> ems = this.GetLogicalPage(logicalPage);
-        //ems.CopyTo(pageFrame);
-        _mappedPages[physicalPageIndex] = logicalPage;
-    }
-
-    /// <summary>
-    /// Copies data from a physical page to a logical page.
-    /// </summary>
-    /// <param name="physicalPageIndex">Physical page to copy from.</param>
-    public void UnmapPage(int physicalPageIndex) {
-        int currentPage = _mappedPages[physicalPageIndex];
-        if (currentPage != -1) {
-            //Span<byte> pageFrame = GetMappedPage(physicalPageIndex);
-            //Span<byte> ems = GetLogicalPage(currentPage);
-            //pageFrame.CopyTo(ems);
-            _mappedPages[physicalPageIndex] = -1;
+    [DoesNotReturn]
+    private void FailFastWithLogMessage(string message, [CallerMemberName] string methodName = nameof(FailFastWithLogMessage)) {
+        UnrecoverableException e = new(message);
+        if(_loggerService.IsEnabled(LogEventLevel.Fatal)) {
+            _loggerService.Fatal(e, " \"Fatal error in {@MethodName} {@ExceptionMessage}\"", methodName, e.Message);
         }
-    }
-
-    /// <summary>
-    /// Unmaps a specific logical page if it is currently mapped.
-    /// </summary>
-    /// <param name="logicalPage">Logical page to unmap.</param>
-    public void UnmapLogicalPage(int logicalPage) {
-        for (int i = 0; i < _mappedPages.Length; i++) {
-            if (_mappedPages[i] == logicalPage) {
-                UnmapPage(i);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Gets the number of pages allocated to a handle.
-    /// </summary>
-    public void GetPagesForOneHandle() {
-        int handleIndex = _state.DX;
-        if (_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
-            // Return the number of pages allocated in BX.
-            _state.BX = (ushort)handle.PagesAllocated;
-            // Return good status.
-            _state.AH = EmsErrors.EmmNoError;
-        } else {
-            // Return "couldn't find specified handle" code.
-            _state.AH = EmsErrors.EmmInvalidHandle;
-        }
+        throw e;
     }
 
     /// <summary>
     /// Gets the name of a handle.
     /// </summary>
-    public void GetHandleName() {
-        int handleIndex = _state.DX;
-        if (_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
-            // Write the handle name to ES:DI.
-            MemoryUtils.SetZeroTerminatedString(this._machine.EmsCard.ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), handle.Name, handle.Name.Length + 1);
-            // Return good status.
-            _state.AH = EmsErrors.EmmNoError;
-        } else {
-            // Return "couldn't find specified handle" code.
-            _state.AH = EmsErrors.EmmInvalidHandle;
-        }
+    public string GetHandleName(ushort handle) {
+        MemoryUtils.SetZeroTerminatedString(
+            _memory.Ram, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
+        return EmmHandles[handle].Name;
     }
 
     /// <summary>
     /// Set the name of a handle.
     /// </summary>
-    public void SetHandleName() {
-        int handleIndex = _state.DX;
-        if (_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
-            // Read the handle name from DS:SI.
-            handle.Name = MemoryUtils.GetZeroTerminatedString(_machine.EmsCard.ExpandedMemory.Ram, MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
-            // Return good status.
-            _state.AH = EmsErrors.EmmNoError;
-        } else {
-            // Return "couldn't find specified handle" code.
-            _state.AH = EmsErrors.EmmInvalidHandle;
-        }
-    }
-
-    /// <summary>
-    /// Maps or unmaps multiple pages.
-    /// </summary>
-    public void MapUnmapMultiplePages() {
-        int handleIndex = _state.DX;
-        if (!_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
-            // Return "couldn't find specified handle" code.
-            _state.AH = EmsErrors.EmmInvalidHandle;
-            return;
-        }
-
-        int pageCount = _state.CX;
-        if (pageCount is < 0 or > MaximumPhysicalPages) {
-            // Return "physical page count out of range" code.
-            _state.AH = EmsErrors.EmsIllegalPhysicalPage;
-            return;
-        }
-
-        ushort arraySegment = _state.DS;
-        ushort arrayOffset = _state.SI;
-        for (int i = 0; i < pageCount; i++) {
-            ushort logicalPageIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(arraySegment, arrayOffset));
-            ushort physicalPageIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(arraySegment, (ushort)(arrayOffset + 2u)));
-
-            if (physicalPageIndex >= MaximumPhysicalPages) {
-                // Return "physical page out of range" code.
-                _state.AH = EmsErrors.EmsIllegalPhysicalPage;
-                return;
-            }
-
-            if (logicalPageIndex != 0xFFFF) {
-                if (logicalPageIndex >= handle.LogicalPages.Count) {
-                    // Return "logical page out of range" code.
-                    _state.AH = EmsErrors.EmsLogicalPageOutOfRange;
-                    return;
-                }
-
-                MapPage(handle.LogicalPages[logicalPageIndex], physicalPageIndex);
-            } else {
-                UnmapPage(physicalPageIndex);
-            }
-
-            arrayOffset = (ushort)(arrayOffset + 4u);
-        }
-
-        // Return good status.
-        _state.AH = 0;
-    }
-    /// <summary>
-    /// Saves the current state of page map registers for a handle.
-    /// </summary>
-    public void SavePageMap() {
-        int handleIndex = _state.DX;
-        if (!_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
-            // Return "couldn't find specified handle" code.
-            _state.AH = EmsErrors.EmmInvalidHandle;
-            return;
-        }
-
-        _mappedPages.CopyTo(handle.SavedPageMap);
-
-        // Return good status.
-        _state.AH = EmsErrors.EmmNoError;
-    }
-    /// <summary>
-    /// Restores the state of page map registers for a handle.
-    /// </summary>
-    public void RestorePageMap() {
-        int handleIndex = _state.DX;
-        if (!_handles.TryGetValue(handleIndex, out EmsHandle? handle)) {
-            // Return "couldn't find specified handle" code.
-            _state.AH = EmsErrors.EmmInvalidHandle;
-            return;
-        }
-
-        for (int i = 0; i < MaximumPhysicalPages; i++) {
-            if (handle.SavedPageMap[i] != _mappedPages[i]) {
-                MapPage(handle.SavedPageMap[i], i);
-            }
-        }
-
-        // Return good status.
-        _state.AH = EmsErrors.EmmNoError;
-    }
-    /// <summary>
-    /// Copies a block of memory.
-    /// </summary>
-    public void Move() {
-        int length = (int)_machine.EmsCard.ExpandedMemory.GetUint32(MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI));
-
-        byte sourceType = _machine.EmsCard.ExpandedMemory.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 4u)));
-        int sourceHandleIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 5u)));
-        int sourceOffset = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 7u)));
-        int sourcePage = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 9u)));
-
-        byte destType = _machine.EmsCard.ExpandedMemory.GetUint8(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 11u)));
-        int destHandleIndex = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 12u)));
-        int destOffset = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 14u)));
-        int destPage = _machine.EmsCard.ExpandedMemory.GetUint16(MemoryUtils.ToPhysicalAddress(_state.DS, (ushort)(_state.SI + 16u)));
-
-        CopyDataFromMappedConvMemoryToEmsPages();
-
-        if (sourceType == 0 && destType == 0) {
-            _state.AH = CopyConventionalMemoryToConventionalMemory((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
-        } else if (sourceType != 0 && destType == 0) {
-            if (!_handles.TryGetValue(sourceHandleIndex, out _)) {
-                // Return "couldn't find specified handle" code.
-                _state.AH = EmsErrors.EmmInvalidHandle;
-                return;
-            }
-
-            _state.AH = CopyEmsToConventionalMemory(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
-        } else if (sourceType == 0 && destType != 0) {
-            if (!_handles.TryGetValue(destHandleIndex, out _)) {
-                // Return "couldn't find specified handle" code.
-                _state.AH = 0x83;
-                return;
-            }
-
-            _state.AH = CopyConventionalMemoryToEmsMemory((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
-        } else {
-            if (!_handles.TryGetValue(sourceHandleIndex, out EmsHandle? sourceHandle) || !_handles.TryGetValue(destHandleIndex, out EmsHandle? destHandle)) {
-                // Return "couldn't find specified handle" code.
-                _state.AH = EmsErrors.EmmInvalidHandle;
-                return;
-            }
-
-            _state.AH = CopyEmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
-        }
-
-        CopyDataFromEmsPagesToMappedConvMem();
-    }
-    
-    public void CopyDataFromMappedConvMemoryToEmsPages() {
-        for (int i = 0; i < MaximumPhysicalPages; i++) {
-            if (_mappedPages[i] != -1) {
-                Span<byte> src = GetMappedPage(i);
-                Span<byte> dest = GetLogicalPage(_mappedPages[i]);
-                src.CopyTo(dest);
-            }
-        }
-    }
-    
-    public void CopyDataFromEmsPagesToMappedConvMem() {
-        for (int i = 0; i < MaximumPhysicalPages; i++) {
-            if (_mappedPages[i] != -1) {
-                Span<byte> src = GetLogicalPage(_mappedPages[i]);
-                Span<byte> dest = GetMappedPage(i);
-                src.CopyTo(dest);
-            }
-        }
-    }
-
-    public Span<byte> GetMappedPage(int physicalPageIndex) => _machine.EmsCard.ExpandedMemory.GetSpan(0, _machine.EmsCard.ExpandedMemory.Ram.Length).Slice((PageFrameSegment << 4) + physicalPageIndex * PageSize, PageSize);
-
-    public Span<byte> GetLogicalPage(int logicalPageIndex) => _machine.EmsCard.ExpandedMemory.GetSpan(0, _machine.EmsCard.ExpandedMemory.Ram.Length).Slice(logicalPageIndex * PageSize, PageSize);
-    
-    public ushort GetNextFreePage(short handle) {
-        for (int i = 0; i < _pageOwners.Length; i++) {
-            if (_pageOwners[i] == -1) {
-                _pageOwners[i] = handle;
-                return (ushort)i;
-            }
-        }
-
-        return 0;
-    }
-
-    public byte CopyConventionalMemoryToConventionalMemory(uint sourceAddress, uint destAddress, int length) {
-        switch (length)
-        {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length));
-            case 0:
-                return 0;
-        }
-
-        if (sourceAddress + length > _machine.Memory.Size || destAddress + length > _machine.Memory.Size) {
-            return 0xA2;
-        }
-
-        bool overlap = sourceAddress + length - 1 >= destAddress || destAddress + length - 1 >= sourceAddress;
-        bool reverse = overlap && sourceAddress > destAddress;
-
-        if (!reverse) {
-            for (uint offset = 0; offset < length; offset++) {
-                _machine.EmsCard.ExpandedMemory.SetUint8(destAddress + offset, _machine.EmsCard.ExpandedMemory.GetUint8(sourceAddress + offset));
-            }
-        } else {
-            for (int offset = length - 1; offset >= 0; offset--) {
-                _machine.EmsCard.ExpandedMemory.SetUint8(destAddress + (uint)offset, _machine.EmsCard.ExpandedMemory.GetUint8(sourceAddress + (uint)offset));
-            }
-        }
-
-        return overlap ? EmsErrors.EmmMoveOverlap : EmsErrors.EmmNoError;
-    }
-    
-    public byte CopyEmsToConventionalMemory(int sourcePage, int sourcePageOffset, uint destAddress, int length) {
-        switch (length)
-        {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length));
-            case 0:
-                return 0;
-        }
-
-        if (destAddress + length > _machine.Memory.Size) {
-            return 0xA2;
-        }
-
-        if (sourcePageOffset >= PageSize) {
-            return 0x95;
-        }
-
-        int offset = sourcePageOffset;
-        uint sourceCount = destAddress;
-        int pageIndex = sourcePage;
-        while (length > 0) {
-            int size = Math.Min(length, PageSize - offset);
-            Span<byte> source = GetLogicalPage(pageIndex);
-            if (source.IsEmpty) {
-                return EmsErrors.EmsLogicalPageOutOfRange;
-            }
-
-            for (int i = 0; i < size; i++) {
-                _machine.EmsCard.ExpandedMemory.SetUint8(sourceCount++, source[offset + i]);
-            }
-
-            length -= size;
-            pageIndex++;
-            offset = 0;
-        }
-
-        return 0;
-    }
-    
-    public byte CopyConventionalMemoryToEmsMemory(uint sourceAddress, int destPage, int destPageOffset, int length) {
-        switch (length)
-        {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length));
-            case 0:
-                return 0;
-        }
-
-        if (sourceAddress + length > _machine.Memory.Size) {
-            return 0xA2;
-        }
-
-        if (destPageOffset >= PageSize) {
-            return 0x95;
-        }
-
-        int offset = destPageOffset;
-        uint sourceCount = sourceAddress;
-        int pageIndex = destPage;
-        while (length > 0) {
-            int size = Math.Min(length, PageSize - offset);
-            Span<byte> target = GetLogicalPage(pageIndex);
-            if (target.IsEmpty) {
-                return 0x8A;
-            }
-
-            for (int i = 0; i < size; i++) {
-                target[offset + i] = _machine.EmsCard.ExpandedMemory.GetUint8(sourceCount++);
-            }
-
-            length -= size;
-            pageIndex++;
-            offset = 0;
-        }
-
-        return 0;
-    }
-    
-    public byte CopyEmsToEms(EmsHandle srcHandle, int sourcePage, int sourcePageOffset, EmsHandle destHandle, int destPage, int destPageOffset, int length) {
-        switch (length)
-        {
-            case < 0:
-                throw new ArgumentOutOfRangeException(nameof(length));
-            case 0:
-                return 0;
-        }
-
-        if (sourcePageOffset >= PageSize || destPageOffset >= PageSize) {
-            return 0x95;
-        }
-
-        bool overlap = false;
-        bool reverse = false;
-
-        if (srcHandle == destHandle) {
-            int sourceStart = sourcePage * PageSize + sourcePageOffset;
-            int destStart = destPage * PageSize + destPageOffset;
-            int sourceEnd = sourceStart + length;
-            int destEnd = destStart + length;
-
-            if (sourceStart < destStart) {
-                overlap = sourceEnd > destStart;
-            } else {
-                overlap = destEnd > sourceStart;
-                reverse = overlap;
-            }
-        }
-
-        if (!reverse) {
-            int sourceOffset = sourcePageOffset;
-            int currentSourcePage = sourcePage;
-            int destOffset = destPageOffset;
-            int currentDestPage = destPage;
-
-            while (length > 0) {
-                int size = Math.Min(Math.Min(length, PageSize - sourceOffset), PageSize - destOffset);
-                Span<byte> source = GetLogicalPage(currentSourcePage);
-                Span<byte> dest = GetLogicalPage(currentDestPage);
-                if (source.IsEmpty || dest.IsEmpty) {
-                    return EmsErrors.EmsLogicalPageOutOfRange;
-                }
-
-                for (int i = 0; i < size; i++) {
-                    dest[destOffset + i] = source[sourceOffset + i];
-                }
-
-                length -= size;
-                sourceOffset += size;
-                destOffset += size;
-
-                if (sourceOffset == PageSize) {
-                    sourceOffset = 0;
-                    currentSourcePage++;
-                }
-                if (destOffset == PageSize) {
-                    destOffset = 0;
-                    currentDestPage++;
-                }
-            }
-        } else {
-            throw new NotImplementedException();
-        }
-
-        return overlap ? EmsErrors.EmmMoveOverlap : EmsErrors.EmmNoError;
+    public void SetHandleName(ushort handle, string name) {
+        EmmHandles[handle].Name = name;
     }
 }

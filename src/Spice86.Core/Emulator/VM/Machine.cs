@@ -100,18 +100,15 @@ public class Machine : IDisposable {
     
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
 
-    public DmaController DmaController { get; }
+    public ExpandedMemoryManager? Ems { get; set; }
 
-    public ExpandedMemoryManager? Ems { get; }
+    public DmaController DmaController { get; }
 
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
-
     public OPL3FM OPL3FM { get; }
-    
-    public EmsCard EmsCard { get; }
 
     public event Action? Paused;
 
@@ -200,30 +197,14 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-        EmsCard = new EmsCard(this, configuration, loggerService);
         if(configuration.Ems) {
-            Ems = new ExpandedMemoryManager(this);
+            Ems = new(this, loggerService);
         }
         if(Ems is not null) {
             Register(Ems);
         }
     }
 
-    public void Register(IIOPortHandler ioPortHandler) {
-        ioPortHandler.InitPortHandlers(IoPortDispatcher);
-
-        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
-            return;
-        }
-
-        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
-            throw new ArgumentException("Invalid DMA channel on DMA device.");
-        }
-
-        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
     public void Register(ICallback callback) {
         CallbackHandler.AddCallback(callback);
     }
@@ -241,10 +222,6 @@ public class Machine : IDisposable {
 
         DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
         _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    public void Register(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
     }
 
     /// <summary>

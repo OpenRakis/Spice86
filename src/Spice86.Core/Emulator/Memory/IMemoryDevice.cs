@@ -24,7 +24,7 @@ public interface IMemoryDevice {
     /// <param name="address">The memory address to write to</param>
     /// <param name="value">The byte value to write</param>
     void Write(uint address, byte value);
-    
+
     /// <summary>
     /// Get a span of bytes from the device.
     /// </summary>
