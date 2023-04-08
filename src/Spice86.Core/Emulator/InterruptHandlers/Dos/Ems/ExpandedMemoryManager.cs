@@ -29,17 +29,21 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public const byte EmmMaxHandles = 200;
 
-    public const byte EmmMaxPhysicalPages = 4;
+    public const uint EmmPageFrameSize = 64 * 1024;
+
+    public const byte EmmMaxPhysicalPages = (byte) (EmmPageFrameSize / EmmPageSize);
 
     public const ushort EmmNullPage = 0xFFFF;
     
     public const ushort EmmNullHandle = 0xFFFF;
 
-    public const ushort EmmPageFrameSegment = 0xE000;
+    public const ushort EmmPageFrameSegment = 0xD000;
 
-    public const ushort EmmPageSize = 16 * 1024;
+    public const ushort EmmPageSize = 16384;
+
+    public const int EmmSegmentSize = 16384;
     
-    public const int EmmSegmentsPerPage = EmmPageSize / 16;
+    public const int EmmSegmentsPerPage = EmmPageSize / EmmSegmentSize;
 
     public override ushort? InterruptHandlerSegment => 0xF100;
     
@@ -364,7 +368,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private byte RestoreMappingTable() {
         /* Move through the mappings table and setup mapping accordingly */
-        for (int i = 0; i < 0x40; i++) {
+        for (int i = 0; i < EmmSegmentMappings.Length; i++) {
             /* Skip the pageframe */
             if (i is >= EmmPageFrameSegment / 0x400 and < (EmmPageFrameSegment / 0x400) + EmmMaxPhysicalPages) {
                 continue;
@@ -564,7 +568,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private byte EmmRestoreMappingTable() {
         /* Move through the mappings table and setup mapping accordingly */
-        for (int i = 0; i < 0x40; i++) {
+        for (int i = 0; i < EmmSegmentMappings.Length; i++) {
             /* Skip the pageframe */
             if (i is >= EmmPageFrameSegment / 0x400 and < (EmmPageFrameSegment / 0x400) + EmmMaxPhysicalPages) continue;
             EmmMapSegment(i << 10, EmmSegmentMappings[i].Handle, EmmSegmentMappings[i].Page);
@@ -681,6 +685,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     {
                         break;
                     }
+
+                    _state.DX = handle;
                 }
 
                 break;
