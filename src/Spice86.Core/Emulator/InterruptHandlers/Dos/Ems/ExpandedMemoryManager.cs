@@ -654,7 +654,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
     
     public void MapOrUnmapMultipleHandlePages() {
-        ushort operation = _state.AX;
+        ushort operation = _state.AL;
         _state.AH = EmmStatus.EmmNoError;
         MapOrUnmapMultipleHandlePages(operation);
     }
