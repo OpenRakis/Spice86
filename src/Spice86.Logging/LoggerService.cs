@@ -6,33 +6,34 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Exceptions;
-using Serilog.Enrichers;
 
 public class LoggerService : ILoggerService {
-    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
+    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3} {Properties:j}] {Message:lj}{NewLine}{Exception}";
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
 
     public bool AreLogsSilenced { get; set; }
 
     private readonly ILogger _logger;
 
+    private readonly ILogger _forcedLogger;
+
     public LoggerService() {
-        _logger = new LoggerConfiguration()
-        .Enrich.FromLogContext()
-        .Enrich.WithExceptionDetails()
-        .WriteTo.Console(outputTemplate: LogFormat)
-        .WriteTo.Debug(outputTemplate: LogFormat)
-        .MinimumLevel.ControlledBy(LogLevelSwitch)
-        .CreateLogger();
+        _logger = CreateLoggerConfiguration()
+            .MinimumLevel.ControlledBy(LogLevelSwitch)
+            .CreateLogger();
+        _forcedLogger = CreateLoggerConfiguration().CreateLogger();
+    }
+    public LoggerConfiguration CreateLoggerConfiguration() {
+        return new LoggerConfiguration()
+            .Enrich.WithExceptionDetails()
+            .WriteTo.Console(outputTemplate: LogFormat)
+            .WriteTo.Debug(outputTemplate: LogFormat);
     }
 
 #pragma warning disable Serilog004
     
     public void Forced(string messageTemplate, params object?[]? properties) {
-        LogEventLevel currentLogLevel = LogLevelSwitch.MinimumLevel;
-        LogLevelSwitch.MinimumLevel = LogEventLevel.Fatal;
-        Fatal(messageTemplate, properties);
-        LogLevelSwitch.MinimumLevel = currentLogLevel;
+        _forcedLogger.Fatal(messageTemplate, properties);
     }
     
     public void Information(string messageTemplate, params object?[]? properties) {
