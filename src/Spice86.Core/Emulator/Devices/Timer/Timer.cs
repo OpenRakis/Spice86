@@ -84,8 +84,8 @@ public class Timer : DefaultIOPortHandler {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             byte value = counter.ValueUsingMode;
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("READING COUNTER {Counter}, partial value is {Value}", counter, value);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("READING COUNTER {Counter}, partial value is {Value}", counter, value);
             }
             return value;
         }
@@ -103,8 +103,8 @@ public class Timer : DefaultIOPortHandler {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             counter.SetValueUsingMode(value);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("SETTING COUNTER {Index} to partial value {Value}. {Counter}", counter.Index, value, counter);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SETTING COUNTER {Index} to partial value {Value}. {Counter}", counter.Index, value, counter);
             }
             return;
         } 
@@ -112,8 +112,8 @@ public class Timer : DefaultIOPortHandler {
             int counterIndex = value >> 6;
             Counter counter = GetCounter(counterIndex);
             counter.Configure(value);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("SETTING CONTROL REGISTER FOR COUNTER {CounterIndex}. {Counter}", counterIndex, counter);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SETTING CONTROL REGISTER FOR COUNTER {CounterIndex}. {Counter}", counterIndex, counter);
             }
             return;
         }

@@ -339,10 +339,10 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public void WriteString() {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             uint address = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BP);
             string str = MemoryUtils.GetZeroTerminatedString(_memory.Ram, address, _memory.Ram.Length - (int)address);
-            _loggerService.Information("WRITE STRING: {0}", str);
+            _loggerService.Verbose("WRITE STRING: {WrittenString}", str);
         }
     }
 
@@ -660,8 +660,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public void SetCursorType() {
         byte topScanLine = _state.CH;
         byte bottomScanLine = _state.CL;
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("SET CURSOR TYPE, SCAN LINE TOP: {Top} BOTTOM: {Bottom}", topScanLine,
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SET CURSOR TYPE, SCAN LINE TOP: {Top} BOTTOM: {Bottom}", topScanLine,
                 bottomScanLine);
         }
     }
@@ -714,7 +714,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 throw new NotSupportedException($"Video mode {id} is not supported.");
         }
 
-        _loggerService.Information("Setting video mode to {Mode}", id);
+        _loggerService.Verbose("Setting video mode to {Mode}", id);
 
         _gui?.SetResolution(mode.PixelWidth, mode.PixelHeight,
             MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
@@ -754,7 +754,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Dac.Reset();
         }
 
-        _loggerService.Information("Video mode changed to {Mode}", mode.GetType().Name);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Video mode changed to {Mode}", mode.GetType().Name);
+        }
         _presenter = GetPresenter();
         _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
     }

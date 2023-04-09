@@ -22,7 +22,7 @@ public class DosInt20Handler : InterruptHandler {
     public override byte Index => 0x20;
 
     public override void Run() {
-        _loggerService.Information("PROGRAM TERMINATE");
+        _loggerService.Verbose("PROGRAM TERMINATE");
         _cpu.IsRunning = false;
     }
 }

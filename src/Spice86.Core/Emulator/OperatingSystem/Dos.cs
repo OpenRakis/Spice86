@@ -40,8 +40,8 @@ public class Dos {
     }
 
     public void Initialize() {
-        if (_logger.IsEnabled(LogEventLevel.Information)) {
-            _logger.Information("Initializing DOS");
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("Initializing DOS");
         }
 
         _machine.Register(DosInt20Handler);

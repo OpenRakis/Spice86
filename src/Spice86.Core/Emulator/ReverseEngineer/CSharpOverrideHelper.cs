@@ -368,7 +368,7 @@ public class CSharpOverrideHelper {
     public Action Hlt() => () => Exit();
 
     protected void Exit() {
-        _loggerService.Information("Program requested exit. Terminating now.");
+        _loggerService.Verbose("Program requested exit. Terminating now.");
         throw new HaltRequestedException();
     }
 }

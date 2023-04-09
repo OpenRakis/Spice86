@@ -1019,7 +1019,7 @@ public class Cpu {
                 break;
             case 0xF4:
                 // HLT
-                _loggerService.Information("HLT instruction encountered, halting!");
+                _loggerService.Verbose("HLT instruction encountered, halting!");
                 IsRunning = false;
                 break;
             case 0xF5:

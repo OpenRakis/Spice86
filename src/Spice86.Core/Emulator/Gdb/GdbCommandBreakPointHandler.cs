@@ -47,8 +47,8 @@ public class GdbCommandBreakpointHandler {
             _loggerService.Debug("Breakpoint reached!\n{BreakPoint}", breakPoint);
         }
         if (!_gdbIo.IsClientConnected) {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("Breakpoint reached but client is not connected. Nothing to do.\n{BreakPoint}", breakPoint);
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Breakpoint reached but client is not connected. Nothing to do.\n{BreakPoint}", breakPoint);
             }
             return;
         }

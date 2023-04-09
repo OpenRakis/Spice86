@@ -62,8 +62,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Closed {ClosedFileName}, file was loaded in ram in those addresses: {ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Closed {ClosedFileName}, file was loaded in ram in those addresses: {ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
         }
 
         SetOpenFile(fileHandle, null);
@@ -86,8 +86,8 @@ public class DosFileManager {
             return FileNotFoundErrorWithLog($"Could not find parent of {fileName} so cannot create file.");
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Creating file {HostFileName} with attribute {FileAttribute}", hostFileName, fileAttribute);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Creating file {HostFileName} with attribute {FileAttribute}", hostFileName, fileAttribute);
         }
         FileInfo path = new FileInfo(hostFileName);
         try {
@@ -188,8 +188,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Moving in file {FileMove}", file.Name);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Moving in file {FileMove}", file.Name);
         }
         Stream randomAccessFile = file.RandomAccessFile;
         try {
@@ -209,8 +209,8 @@ public class DosFileManager {
 
         CharacterDevice? device = _dos.Devices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
         if (device is not null) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
             }
             return OpenDeviceInternal(device, openMode);
         }
@@ -220,8 +220,8 @@ public class DosFileManager {
             return FileNotFoundError(fileName);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Opening file {HostFileName} with mode {OpenMode}", hostFileName, openMode);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Opening file {HostFileName} with mode {OpenMode}", hostFileName, openMode);
         }
 
         return OpenFileInternal(fileName, hostFileName, openMode);
@@ -256,8 +256,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Reading from file {FileName}", file.Name);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Reading from file {FileName}", file.Name);
         }
 
         byte[] buffer = new byte[readLength];
@@ -619,8 +619,8 @@ public class DosFileManager {
     }
 
     private void UpdateDTAFromFile(string matchingFile) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Found matching file {MatchingFile}", matchingFile);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Found matching file {MatchingFile}", matchingFile);
         }
         DosDiskTransferArea dosDiskTransferArea = new(_memory, GetDiskTransferAreaAddressPhysical());
         FileInfo attributes = new FileInfo(matchingFile);

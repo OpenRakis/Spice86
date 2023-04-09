@@ -72,8 +72,8 @@ public class DeviceStream : Stream {
             throw new NotSupportedException();
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Information)) {
-            _logger.Information("Writing {Count} bytes to device {DeviceName} at position {Position}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("Writing {Count} bytes to device {DeviceName} at position {Position}",
                 count, _deviceName, offset);
             byte[] bytes = buffer.Skip(offset).Take(count).ToArray();
             _logger.Debug("{Bytes}", BitConverter.ToString(bytes));

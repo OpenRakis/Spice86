@@ -30,7 +30,7 @@ public class ExecutionFlowDumper {
 
     public ExecutionFlowRecorder ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
-            _loggerService.Information("File doesn't exists");
+            _loggerService.Verbose("File doesn't exists");
             return new ExecutionFlowRecorder();
         }
         try {

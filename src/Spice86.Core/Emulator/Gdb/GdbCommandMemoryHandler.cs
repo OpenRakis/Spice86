@@ -35,8 +35,8 @@ public class GdbCommandMemoryHandler {
                 length = ConvertUtils.ParseHex32(commandContentSplit[1]);
             }
 
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Reading memory at address {Address} for a length of {Length}", address, length);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Reading memory at address {Address} for a length of {Length}", address, length);
             }
             Memory memory = _machine.Memory;
             int memorySize = memory.Size;

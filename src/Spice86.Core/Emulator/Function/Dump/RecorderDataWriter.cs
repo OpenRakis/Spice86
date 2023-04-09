@@ -19,7 +19,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
     public void DumpAll() {
-        _loggerService.Information("Dumping all data to {DumpDirectory}", DumpDirectory);
+        _loggerService.Verbose("Dumping all data to {DumpDirectory}", DumpDirectory);
         DumpCpuRegisters("");
         DumpMemory("");
         DumpGhidraSymbols();
