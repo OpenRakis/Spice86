@@ -15,8 +15,8 @@ namespace Spice86.Aeon.Emulator.Video
         public const int DisplayPageSize = 0x1000 / 2;
 
         private readonly CrtController crtController;
-        private readonly AttributeController attributeController;
-        private readonly Dac dac;
+        internal readonly AttributeController attributeController;
+        internal readonly Dac dac;
         private readonly uint vramSize;
 
         private protected VideoMode(int width, int height, int bpp, bool planar, int fontHeight, VideoModeType modeType,

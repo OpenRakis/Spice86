@@ -165,7 +165,7 @@ public static class RegisterExtensions {
 
 public static class MiscOutputRegister {
     public static string Explain(byte value) {
-        return string.Format(" [0]I/OAS: {2}, [1]Ram en: {3}, [2-3]Clock Select: {4}, [4]Reserved, [5]O/E Page: {5}, [6]Hsync polarity: {6}, [7]Vsync Polarity: {7}",
+        return string.Format(" [0]I/OAS: {0}, [1]Ram en: {1}, [2-3]Clock Select: {2}, [4]Reserved, [5]O/E Page: {3}, [6]Hsync polarity: {4}, [7]Vsync Polarity: {5}",
             value & 0x01,
             (value & 0x02) == 0x02 ? "1" : "0",
             (value >> 3 & 3) switch {

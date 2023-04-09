@@ -46,7 +46,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     {
         if (_loggerService.IsEnabled(LogEventLevel.Error))
         {
-            _loggerService.Error("Unhandled port read: {PortNumber} in {MethodName}", port, methodName);
+            _loggerService.Error("Unhandled port read: 0x{PortNumber:X4} in {MethodName}", port, methodName);
         }
     }
     
@@ -54,7 +54,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     {
         if (_loggerService.IsEnabled(LogEventLevel.Error))
         {
-            _loggerService.Error("Unhandled port write: {PortNumber:X4}, {Value:X4} in {MethodName}", port, value, methodName);
+            _loggerService.Error("Unhandled port write: 0x{PortNumber:X4}, 0x{Value:X4} in {MethodName}", port, value, methodName);
         }
     }
 
