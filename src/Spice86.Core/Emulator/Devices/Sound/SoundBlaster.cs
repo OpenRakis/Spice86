@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Serilog;
+using Serilog.Events;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator;
@@ -160,12 +161,16 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                     _commandData.Clear();
                     CommandLengths.TryGetValue(value, out _commandDataLength);
                     if (_commandDataLength == 0) {
-                        ProcessCommand();
+                        if (!ProcessCommand()) {
+                            base.WriteByte(port, value);
+                        }
                     }
                 } else if (_state == BlasterState.ReadingCommand) {
                     _commandData.Add(value);
                     if (_commandData.Count >= _commandDataLength) {
-                        ProcessCommand();
+                        if (!ProcessCommand()) {
+                            base.WriteByte(port, value);
+                        }
                     }
                 }
                 break;
@@ -309,7 +314,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// Performs the action associated with the current DSP command.
     /// </summary>
-    private void ProcessCommand() {
+    private bool ProcessCommand() {
         _outputData.Clear();
         switch (_currentCommand) {
             case Commands.GetVersionNumber:
@@ -452,10 +457,14 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 break;
 
             default:
-                throw new NotImplementedException($"Sound Blaster command {_currentCommand:X2}h not implemented.");
-        }
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("Sound Blaster command {CurrentCommand} not implemented", _currentCommand);
+                }
 
+                return false;
+        }
         _state = BlasterState.WaitingForCommand;
+        return true;
     }
 
     /// <summary>
