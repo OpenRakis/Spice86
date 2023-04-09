@@ -2,6 +2,8 @@ namespace Spice86.Core.Emulator.Function.Dump;
 
 using Memory;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
@@ -67,7 +69,9 @@ public class GhidraSymbolsDumper {
 
     public IDictionary<SegmentedAddress, FunctionInformation> ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
-            _loggerService.Information("File doesn't exists");
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("File doesn't exist");
+            }
             return new Dictionary<SegmentedAddress, FunctionInformation>();
         }
         return File.ReadLines(filePath)
@@ -85,19 +89,25 @@ public class GhidraSymbolsDumper {
             return null;
         }
         string type = split[2];
-        if (type != "f") {
-            _loggerService.Debug("Cannot parse line {Line} into a function, type is not f", line);
-            // Not a function line
-            return null;
+        if (type == "f") {
+            return NameToFunctionInformation(_loggerService, split[0]);
         }
-        return NameToFunctionInformation(_loggerService, split[0]);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Cannot parse line {Line} into a function, type is not f", line);
+        }
+
+        // Not a function line
+        return null;
     }
 
     public static FunctionInformation? NameToFunctionInformation(ILoggerService loggerService, string nameWithAddress) {
         string[] nameSplit = nameWithAddress.Split("_");
         if (nameSplit.Length < 4) {
             // Format is not correct, we can't use this line
-            loggerService.Information("Cannot parse function name {NameWithAddress} into a function, segmented address missing", nameWithAddress);
+            if (loggerService.IsEnabled(LogEventLevel.Debug)) {
+                loggerService.Debug("Cannot parse function name {NameWithAddress} into a function, segmented address missing", nameWithAddress);
+            }
             return null;
         }
         SegmentedAddress address;
@@ -106,7 +116,11 @@ public class GhidraSymbolsDumper {
             ushort offset = ConvertUtils.ParseHex16(nameSplit[^2]);
             address = new SegmentedAddress(segment, offset);
         } catch (FormatException) {
-            loggerService.Information("Cannot parse function name {NameWithAddress} into a function, the last 3 underscore segments of the name are not hexadecimal values", nameWithAddress);
+            if (loggerService.IsEnabled(LogEventLevel.Debug)) {
+                loggerService.Debug(
+                    "Cannot parse function name {NameWithAddress} into a function, the last 3 underscore segments of the name are not hexadecimal values",
+                    nameWithAddress);
+            }
             return null;
         }
         string nameWithoutAddress = string.Join("_", nameSplit.Take(nameSplit.Length - 3));

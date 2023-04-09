@@ -126,8 +126,8 @@ public sealed class ProgramExecutor : IDisposable {
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("InitializeDOS parameter not provided. Guessed value is: {@InitializeDOS}", _configuration.InitializeDOS);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", _configuration.InitializeDOS);
             }
         }
 
@@ -163,8 +163,8 @@ public sealed class ProgramExecutor : IDisposable {
         IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Override supplied: {@OverideSupplier}", supplier);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Override supplied: {OverideSupplier}", supplier);
             }
 
             foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
@@ -235,8 +235,8 @@ public sealed class ProgramExecutor : IDisposable {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName,
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Loading file {FileName} with loader {LoaderType}", executableFileName,
                 loader.GetType());
         }
 

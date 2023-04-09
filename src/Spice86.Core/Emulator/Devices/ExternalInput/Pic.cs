@@ -67,9 +67,9 @@ public class Pic {
         bool icw4Present = (value & 0b1) != 0;
         bool singleController = (value & 0b10) != 0;
         bool levelTriggered = (value & 0b1000) != 0;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information(
-                "MASTER PIC COMMAND ICW1 {@Value}. {@Icw4Present}, {@SingleController}, {@LevelTriggered}",
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose(
+                "MASTER PIC COMMAND ICW1 {Value}. {Icw4Present}, {SingleController}, {LevelTriggered}",
                 ConvertUtils.ToHex8(value), icw4Present, singleController, levelTriggered);
         }
 
@@ -81,14 +81,14 @@ public class Pic {
     private void ProcessICW2(byte value) {
         _baseInterruptVector = (byte)(value & 0b11111000);
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("MASTER PIC COMMAND ICW2 {@Value}. {@BaseOffsetInInterruptDescriptorTable}",
+            _loggerService.Verbose("MASTER PIC COMMAND ICW2 {Value}. {BaseOffsetInInterruptDescriptorTable}",
                 ConvertUtils.ToHex8(value), value);
         }
     }
 
     private void ProcessICW3(byte value) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PIC COMMAND ICW3 {@Value}.", ConvertUtils.ToHex8(value));
+            _loggerService.Verbose("PIC COMMAND ICW3 {Value}.", ConvertUtils.ToHex8(value));
         }
 
         if (_initializationCommandsExpected == 3) {
@@ -99,7 +99,7 @@ public class Pic {
     private void ProcessICW4(byte value) {
         _autoEoi = (value & 0b10) != 0;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PIC COMMAND ICW4 {@Value}. Auto EOI is  {@AutoEoi}", ConvertUtils.ToHex8(value),
+            _loggerService.Verbose("PIC COMMAND ICW4 {Value}. Auto EOI is  {AutoEoi}", ConvertUtils.ToHex8(value),
                 _autoEoi);
         }
 
@@ -109,7 +109,7 @@ public class Pic {
     private void ProcessOCW1(byte value) {
         _interruptMaskRegister = value;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PIC COMMAND OCW1 {@Value}. Mask is {@Mask}", ConvertUtils.ToHex8(value),
+            _loggerService.Verbose("PIC COMMAND OCW1 {Value}. Mask is {Mask}", ConvertUtils.ToHex8(value),
                 ConvertUtils.ToBin8(value));
         }
     }
@@ -121,7 +121,7 @@ public class Pic {
         bool rotatePriorities = (value & 0b1000_0000) != 0;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose(
-                "PIC COMMAND OCW2 {@Value}. {@InterruptLevel}, {@SendEndOfInterruptCommand}, {@SendSpecificCommand}, @{RotatePriorities}",
+                "PIC COMMAND OCW2 {Value}. {InterruptLevel}, {SendEndOfInterruptCommand}, {SendSpecificCommand}, @{RotatePriorities}",
                 ConvertUtils.ToHex8(value), interruptLevel, sendEndOfInterruptCommand, sendSpecificCommand,
                 rotatePriorities);
         }
@@ -258,7 +258,7 @@ public class Pic {
         int readOperation = value & 0b11;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose(
-                "PIC COMMAND OCW3 {@Value}. {@SpecialMask}, {@Poll}, @{ReadOperation}",
+                "PIC COMMAND OCW3 {Value}. {SpecialMask}, {Poll}, @{ReadOperation}",
                 ConvertUtils.ToHex8(value), specialMask, poll, readOperation);
         }
 

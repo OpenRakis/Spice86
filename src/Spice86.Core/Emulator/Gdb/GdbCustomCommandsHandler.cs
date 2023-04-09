@@ -101,7 +101,7 @@ public class GdbCustomCommandsHandler {
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
             _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _loggerService.Debug("Breakpoint added for cs:ip!\n{@BreakPoint}", breakPoint);
+                _loggerService.Debug("Breakpoint added for cs:ip!\n@{@BreakPoint}", breakPoint);
             }
 
             return _gdbIo.GenerateMessageToDisplayResponse(
@@ -115,7 +115,7 @@ public class GdbCustomCommandsHandler {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint added for end of execution!\n{@BreakPoint}", breakPoint);
+            _loggerService.Debug("Breakpoint added for end of execution!@\n{@BreakPoint}", breakPoint);
         }
 
         return _gdbIo.GenerateMessageToDisplayResponse("Breakpoint added for end of execution.");
@@ -132,7 +132,7 @@ public class GdbCustomCommandsHandler {
         } catch (IOException e) {
             e.Demystify();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error(e, "{@ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
+                _loggerService.Error(e, "{ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
             }
 
             string errorWithException = $"{errorMessageInCaseIOException}: {e.Message}";

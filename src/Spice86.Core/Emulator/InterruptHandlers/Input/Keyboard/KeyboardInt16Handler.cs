@@ -23,8 +23,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     public override byte Index => 0x16;
 
     public void GetKeystroke() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("READ KEY STROKE");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("READ KEY STROKE");
         }
         ushort? keyCode = GetNextKeyCode();
         keyCode ??= 0;

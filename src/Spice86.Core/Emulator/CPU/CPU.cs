@@ -92,9 +92,9 @@ public class Cpu {
                 ProcessRep(opcode);
             } else {
                 try {
-
                     ExecOpcode(opcode);
-                } catch (CpuException e) {
+                }
+                catch (CpuException e) {
                     HandleCpuException(e);
                 }
             }
@@ -106,8 +106,10 @@ public class Cpu {
             State.IncCycles();
             HandleExternalInterrupt();
             State.IP = _internalIp;
-            if (State.CS < 0xF000)
+            if (State.CS < 0xF000) {
+                // Keep reporting last seen user-mode address when we're in BIOS code.
                 _userModeAddress = $"{State.CS:X4}:{State.IP:X4}";
+            }
         }
     }
 
@@ -198,7 +200,7 @@ public class Cpu {
 
     private void HandleCpuException(CpuException cpuException) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(cpuException.ToString());
+            _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
         if (cpuException.Type is CpuExceptionType.Fault) {
             _instructions16Or32 = _instructions16;
@@ -1017,7 +1019,9 @@ public class Cpu {
                 break;
             case 0xF4:
                 // HLT
-                _loggerService.Information("HLT instruction encountered, halting!");
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("HLT instruction encountered, halting!");
+                }
                 IsRunning = false;
                 break;
             case 0xF5:

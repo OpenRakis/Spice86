@@ -7,6 +7,6 @@ public class Measurement
 
         public override string ToString()
         {
-            return String.Format("{0:#0.0} {1:##0.0}", Time, Value);
+            return $"{Time:#0.0} {Value:##0.0}";
         }
     }

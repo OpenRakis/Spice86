@@ -24,11 +24,11 @@ public class ExeLoader : DosFileLoader {
     public override byte[] LoadFile(string file, string? arguments) {
         byte[] exe = ReadFile(file);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Exe size: {@ExeSize}", exe.Length);
+            _loggerService.Debug("Exe size: {ExeSize}", exe.Length);
         }
         ExeFile exeFile = new ExeFile(exe);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Read header: {@ReadHeader}", exeFile);
+            _loggerService.Debug("Read header: {ReadHeader}", exeFile);
         }
 
         LoadExeFileInMemory(exeFile, _startSegment);
@@ -36,7 +36,7 @@ public class ExeLoader : DosFileLoader {
         SetupCpuForExe(exeFile, _startSegment, pspSegment);
         new PspGenerator(_machine).GeneratePsp(pspSegment, arguments);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Initial CPU State: {@CpuState}", _cpu.State);
+            _loggerService.Debug("Initial CPU State: {CpuState}", _cpu.State);
         }
         return exe;
     }

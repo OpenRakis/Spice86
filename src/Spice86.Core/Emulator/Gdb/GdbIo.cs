@@ -4,6 +4,7 @@ using Spice86.Shared.Interfaces;
 namespace Spice86.Core.Emulator.Gdb;
 
 using Serilog;
+using Serilog.Events;
 
 using Spice86.Core.Utils;
 
@@ -35,7 +36,7 @@ public sealed class GdbIo : IDisposable {
         _socket = _tcpListener.AcceptSocket();
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             int port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
-            _loggerService.Information("GDB Server listening on port {@Port}", port);
+            _loggerService.Information("GDB Server listening on port {Port}", port);
             _loggerService.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
         }
         _stream = new NetworkStream(_socket);
@@ -90,23 +91,23 @@ public sealed class GdbIo : IDisposable {
             chr = _stream.ReadByte();
         }
         string payload = GetPayload(resBuilder);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Received command from GDB {@GDBPayload}", payload);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("Received command from GDB {GdbPayload}", payload);
         }
         return payload;
     }
 
     public void SendResponse(string? data) {
         if (!IsClientConnected) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Cannot send response, client is not connected anymore.");
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _loggerService.Debug("Cannot send response, client is not connected anymore");
             }
             // Happens when the emulator thread reaches a breakpoint but the client is gone
             return;
         }
         if (data != null) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Sending response {@ResponseData}", data);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Sending response {ResponseData}", data);
             }
             _stream?.Write(Encoding.UTF8.GetBytes(data));
         }
