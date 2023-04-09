@@ -53,13 +53,13 @@ public class Keyboard : DefaultIOPortHandler {
             KeyboardInput lastKeyboardInput = (KeyboardInput)LastKeyboardInput;
             if (lastKeyboardInput.IsPressed) {
                 scancode = _keyScanCodeConverter?.GetKeyPressedScancode(lastKeyboardInput);
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _loggerService.Information("Getting scancode. Key pressed {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("Getting scancode. Key pressed {KeyCode} scancode {ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
                 }
             } else {
                 scancode = _keyScanCodeConverter?.GetKeyReleasedScancode(lastKeyboardInput);
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _loggerService.Information("Getting scancode. Key released {@KeyCode} scancode {@ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("Getting scancode. Key released {KeyCode} scancode {ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
                 }
             }
 

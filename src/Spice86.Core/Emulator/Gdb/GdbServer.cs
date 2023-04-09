@@ -59,7 +59,7 @@ public sealed class GdbServer : IDisposable {
                 gdbCommandHandler.RunCommand(command);
             }
         }
-        _loggerService.Information("Client disconnected");
+        _loggerService.Verbose("Client disconnected");
     }
 
     private void RunServer() {
@@ -67,8 +67,8 @@ public sealed class GdbServer : IDisposable {
             return;
         }
         int port = _configuration.GdbPort.Value;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Starting GDB server");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Starting GDB server");
         }
         try {
             while (_isRunning) {
@@ -83,13 +83,13 @@ public sealed class GdbServer : IDisposable {
                     if (_isRunning) {
                         _loggerService.Error(e, "Error in the GDB server, restarting it...");
                     } else {
-                        _loggerService.Information("GDB Server connection closed and server is not running. Terminating it.");
+                        _loggerService.Verbose("GDB Server connection closed and server is not running. Terminating it");
                     }
                 }
             }
         } catch (Exception e) {
             e.Demystify();
-            _loggerService.Error(e, "Unhandled error in the GDB server, restarting it...");
+            _loggerService.Error(e, "Unhandled error in the GDB server, restarting it");
         } finally {
             _machine.Cpu.IsRunning = false;
             _machine.MachineBreakpoints.PauseHandler.RequestResume();

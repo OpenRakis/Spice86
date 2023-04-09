@@ -62,8 +62,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Closed {@ClosedFileName}, file was loaded in ram in those addresses: {@ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("Closed {ClosedFileName}, file was loaded in ram in those addresses: {ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
         }
 
         SetOpenFile(fileHandle, null);
@@ -86,8 +86,8 @@ public class DosFileManager {
             return FileNotFoundErrorWithLog($"Could not find parent of {fileName} so cannot create file.");
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Creating file {@HostFileName} with attribute {@FileAttribute}", hostFileName, fileAttribute);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Creating file {HostFileName} with attribute {FileAttribute}", hostFileName, fileAttribute);
         }
         FileInfo path = new FileInfo(hostFileName);
         try {
@@ -143,7 +143,7 @@ public class DosFileManager {
             } catch (IOException e) {
                 e.Demystify();
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _loggerService.Error(e, "Error while walking path {@CurrentMatchingFileSearchFolder} or getting attributes.", _currentMatchingFileSearchFolder);
+                    _loggerService.Error(e, "Error while walking path {CurrentMatchingFileSearchFolder} or getting attributes", _currentMatchingFileSearchFolder);
                 }
             }
         }
@@ -169,7 +169,7 @@ public class DosFileManager {
             } catch (IOException e) {
                 e.Demystify();
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                    _loggerService.Warning(e, "Error while getting attributes.");
+                    _loggerService.Warning(e, "Error while getting attributes");
                 }
                 return FileNotFoundError(null);
             }
@@ -188,8 +188,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Moving in file {@FileMove}", file.Name);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Moving in file {FileMove}", file.Name);
         }
         Stream randomAccessFile = file.RandomAccessFile;
         try {
@@ -198,7 +198,7 @@ public class DosFileManager {
         } catch (IOException e) {
             e.Demystify();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error(e, "An error occurred while seeking file {@Error}", e);
+                _loggerService.Error(e, "An error occurred while seeking file {Error}", e);
             }
             return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
         }
@@ -209,8 +209,8 @@ public class DosFileManager {
 
         CharacterDevice? device = _dos.Devices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
         if (device is not null) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Opening device {@FileName} with mode {@OpenMode}", fileName, openMode);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
             }
             return OpenDeviceInternal(device, openMode);
         }
@@ -220,8 +220,8 @@ public class DosFileManager {
             return FileNotFoundError(fileName);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Opening file {@HostFileName} with mode {@OpenMode}", hostFileName, openMode);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}", hostFileName, openMode);
         }
 
         return OpenFileInternal(fileName, hostFileName, openMode);
@@ -256,8 +256,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Reading from file {@FileName}", file.Name);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Reading from file {FileName}", file.Name);
         }
 
         byte[] buffer = new byte[readLength];
@@ -300,7 +300,7 @@ public class DosFileManager {
     public DosFileOperationResult WriteFileUsingHandle(ushort fileHandle, ushort writeLength, uint bufferAddress) {
         if (!IsValidFileHandle(fileHandle)) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning("Invalid or unsupported file handle {@FileHandle}. Doing nothing.", fileHandle);
+                _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing.", fileHandle);
             }
 
             // Fake that we wrote, this could be used to write to stdout / stderr ...
@@ -342,7 +342,7 @@ public class DosFileManager {
 
     private DosFileOperationResult FileNotFoundErrorWithLog(string message) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            _loggerService.Warning("{@FileNotFoundErrorWithLog}: {@Message}", nameof(FileNotFoundErrorWithLog), message);
+            _loggerService.Warning("{FileNotFoundErrorWithLog}: {Message}", nameof(FileNotFoundErrorWithLog), message);
         }
 
         return DosFileOperationResult.Error(ErrorCode.FileNotFound);
@@ -350,7 +350,7 @@ public class DosFileManager {
 
     private DosFileOperationResult FileNotOpenedError(int fileHandle) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            _loggerService.Warning("File not opened: {@FileHandle}", fileHandle);
+            _loggerService.Warning("File not opened: {FileHandle}", fileHandle);
         }
         return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
     }
@@ -395,7 +395,7 @@ public class DosFileManager {
 
     private DosFileOperationResult NoFreeHandleError() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            _loggerService.Warning("Could not find a free handle {@MethodName}", nameof(NoFreeHandleError));
+            _loggerService.Warning("Could not find a free handle {MethodName}", nameof(NoFreeHandleError));
         }
         return DosFileOperationResult.Error(ErrorCode.TooManyOpenFiles);
     }
@@ -408,10 +408,9 @@ public class DosFileManager {
         }
         string realFileName = "";
         string[] array = Directory.GetFiles(directoryCaseSensitive);
-        for (int i = 0; i < array.Length; i++) {
-            string? file = array[i];
-            string? fileToUpper = file.ToUpperInvariant();
-            string? searchedFile = caseInsensitivePath.ToUpperInvariant();
+        foreach (var file in array) {
+            string fileToUpper = file.ToUpperInvariant();
+            string searchedFile = caseInsensitivePath.ToUpperInvariant();
             if (fileToUpper == searchedFile) {
                 realFileName = file;
             }
@@ -426,7 +425,7 @@ public class DosFileManager {
         if (string.IsNullOrWhiteSpace(directory)) {
             return null;
         }
-        DirectoryInfo directoryInfo = new DirectoryInfo(directory);
+        DirectoryInfo directoryInfo = new(directory);
         if (directoryInfo.Exists) {
             return directory;
         }
@@ -457,25 +456,36 @@ public class DosFileManager {
         ushort dosIndex = (ushort)freeIndex.Value;
         try {
             Stream? randomAccessFile = null;
-            if (openMode == "r") {
-                string? realFileName = GetActualCaseForFileName(hostFileName);
-                if (File.Exists(hostFileName)) {
-                    randomAccessFile = File.OpenRead(hostFileName);
-                } else if (File.Exists(realFileName)) {
-                    randomAccessFile = File.OpenRead(realFileName);
-                } else {
-                    return FileNotFoundError(fileName);
+            switch (openMode)
+            {
+                case "r":
+                {
+                    string? realFileName = GetActualCaseForFileName(hostFileName);
+                    if (File.Exists(hostFileName)) {
+                        randomAccessFile = File.OpenRead(hostFileName);
+                    } else if (File.Exists(realFileName)) {
+                        randomAccessFile = File.OpenRead(realFileName);
+                    } else {
+                        return FileNotFoundError(fileName);
+                    }
+
+                    break;
                 }
-            } else if (openMode == "w") {
-                randomAccessFile = File.OpenWrite(hostFileName);
-            } else if (openMode == "rw") {
-                string? realFileName = GetActualCaseForFileName(hostFileName);
-                if (File.Exists(hostFileName)) {
-                    randomAccessFile = File.Open(hostFileName, FileMode.Open);
-                } else if (File.Exists(realFileName)) {
-                    randomAccessFile = File.Open(realFileName, FileMode.Open);
-                } else {
-                    return FileNotFoundError(fileName);
+                case "w":
+                    randomAccessFile = File.OpenWrite(hostFileName);
+                    break;
+                case "rw":
+                {
+                    string? realFileName = GetActualCaseForFileName(hostFileName);
+                    if (File.Exists(hostFileName)) {
+                        randomAccessFile = File.Open(hostFileName, FileMode.Open);
+                    } else if (File.Exists(realFileName)) {
+                        randomAccessFile = File.Open(realFileName, FileMode.Open);
+                    } else {
+                        return FileNotFoundError(fileName);
+                    }
+
+                    break;
                 }
             }
             if (randomAccessFile != null) {
@@ -500,16 +510,11 @@ public class DosFileManager {
     }
 
     private static uint Seek(Stream randomAccessFile, byte originOfMove, uint offset) {
-        long newOffset;
-        if (originOfMove == 0) {
-            newOffset = offset; // seek from beginning, offset is good
-        } else if (originOfMove == 1) {
-            // seek from last read
-            newOffset = randomAccessFile.Position + offset;
-        } else {
-            // seek from end
-            newOffset = randomAccessFile.Length - offset;
-        }
+        long newOffset = originOfMove switch {
+            0 => offset,
+            1 => randomAccessFile.Position + offset,
+            _ => randomAccessFile.Length - offset
+        };
 
         randomAccessFile.Seek(newOffset, SeekOrigin.Begin);
         return (uint)newOffset;
@@ -552,7 +557,7 @@ public class DosFileManager {
         } catch (IOException e) {
             e.Demystify();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning(e, "Error while checking file {@CaseInsensitivePath}: {@Exception}", caseInsensitivePath, e);
+                _loggerService.Warning(e, "Error while checking file {CaseInsensitivePath}: {Exception}", caseInsensitivePath, e);
             }
         }
 
@@ -619,8 +624,8 @@ public class DosFileManager {
     }
 
     private void UpdateDTAFromFile(string matchingFile) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Found matching file {@MatchingFile}", matchingFile);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Found matching file {MatchingFile}", matchingFile);
         }
         DosDiskTransferArea dosDiskTransferArea = new(_memory, GetDiskTransferAreaAddressPhysical());
         FileInfo attributes = new FileInfo(matchingFile);

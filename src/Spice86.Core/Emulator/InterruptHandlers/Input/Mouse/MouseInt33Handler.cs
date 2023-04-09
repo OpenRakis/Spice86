@@ -72,8 +72,8 @@ public class MouseInt33Handler : InterruptHandler {
         ushort y = RestrictValue((ushort)_gui.MouseY, (ushort)_gui.Height, _mouseMinY, _mouseMaxY);
         bool leftClick = _gui.IsLeftButtonClicked;
         bool rightClick = _gui.IsRightButtonClicked;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("GET MOUSE POSITION AND STATUS {@MouseX}, {@MouseY}, {@LeftClick}, {@RightClick}", x, y, leftClick, rightClick);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("GET MOUSE POSITION AND STATUS {MouseX}, {MouseY}, {LeftClick}, {RightClick}", x, y, leftClick, rightClick);
         }
         _state.CX = x;
         _state.DX = y;
@@ -81,8 +81,8 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     public void MouseInstalledFlag() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("MOUSE INSTALLED FLAG");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("MOUSE INSTALLED FLAG");
         }
         _state.AX = 0xFFFF;
 
@@ -103,8 +103,8 @@ public class MouseInt33Handler : InterruptHandler {
         ushort x = _state.CX;
         ushort y = _state.DX;
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SET MOUSE CURSOR POSITION {@MouseX}, {@MouseY}", x, y);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SET MOUSE CURSOR POSITION {MouseX}, {MouseY}", x, y);
         }
 
         _gui.MouseX = x;
@@ -113,24 +113,24 @@ public class MouseInt33Handler : InterruptHandler {
 
     public void SetMouseDoubleSpeedThreshold() {
         ushort threshold = _state.DX;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SET MOUSE DOUBLE SPEED THRESHOLD {@Threshold}", threshold);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SET MOUSE DOUBLE SPEED THRESHOLD {Threshold}", threshold);
         }
     }
 
     public void SetMouseHorizontalMinMaxPosition() {
         _mouseMinX = _state.CX;
         _mouseMaxX = _state.DX;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SET MOUSE HORIZONTAL MIN MAX POSITION {@MinX}, {@MaxX}", _mouseMinX, _mouseMaxX);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SET MOUSE HORIZONTAL MIN MAX POSITION {MinX}, {MaxX}", _mouseMinX, _mouseMaxX);
         }
     }
 
     public void SetMouseMickeyPixelRatio() {
         ushort rx = _state.CX;
         ushort ry = _state.DX;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SET MOUSE MICKEY PIXEL RATIO {@Rx}, {@Ry}", rx, ry);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SET MOUSE MICKEY PIXEL RATIO {Rx}, {Ry}", rx, ry);
         }
     }
 
@@ -138,8 +138,8 @@ public class MouseInt33Handler : InterruptHandler {
         ushort horizontalSpeed = _state.BX;
         ushort verticalSpeed = _state.CX;
         ushort threshold = _state.DX;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SET MOUSE SENSITIVITY {@HorizontalSpeed}, {@VerticalSpeed}, {@Threshold}", horizontalSpeed, verticalSpeed, threshold);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SET MOUSE SENSITIVITY {HorizontalSpeed}, {VerticalSpeed}, {Threshold}", horizontalSpeed, verticalSpeed, threshold);
         }
     }
 
@@ -147,16 +147,16 @@ public class MouseInt33Handler : InterruptHandler {
         _userCallbackMask = _state.CX;
         _userCallbackSegment = _state.ES;
         _userCallbackOffset = _state.DX;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SET MOUSE USER DEFINED SUBROUTINE (unimplemented!) {@Mask}, {@Segment}, {@Offset}", _userCallbackMask, _userCallbackSegment, _userCallbackOffset);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SET MOUSE USER DEFINED SUBROUTINE (unimplemented!) {Mask}, {Segment}, {Offset}", _userCallbackMask, _userCallbackSegment, _userCallbackOffset);
         }
     }
 
     public void SetMouseVerticalMinMaxPosition() {
         _mouseMinY = _state.CX;
         _mouseMaxY = _state.DX;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SET MOUSE VERTICAL MIN MAX POSITION {@MinY}, {@MaxY}", _mouseMinY, _mouseMaxY);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SET MOUSE VERTICAL MIN MAX POSITION {MinY}, {MaxY}", _mouseMinY, _mouseMaxY);
         }
     }
 
@@ -164,8 +164,8 @@ public class MouseInt33Handler : InterruptHandler {
         ushort newUserCallbackMask = _state.CX;
         ushort newUserCallbackSegment = _state.ES;
         ushort newUserCallbackOffset = _state.DX;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SWAP MOUSE USER DEFINED SUBROUTINE (unimplemented!) {@Mask}, {@Segment}, {@Offset}", newUserCallbackMask, newUserCallbackSegment, newUserCallbackOffset);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SWAP MOUSE USER DEFINED SUBROUTINE (unimplemented!) {Mask}, {Segment}, {Offset}", newUserCallbackMask, newUserCallbackSegment, newUserCallbackOffset);
         }
         _state.CX = _userCallbackMask;
         _state.ES = _userCallbackSegment;
@@ -176,15 +176,15 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     public void ShowMouseCursor() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SHOW MOUSE CURSOR");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SHOW MOUSE CURSOR");
         }
         _gui?.ShowMouseCursor();
     }
 
     public void HideMouseCursor() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("HIDE MOUSE CURSOR");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("HIDE MOUSE CURSOR");
         }
         _gui?.HideMouseCursor();
     }

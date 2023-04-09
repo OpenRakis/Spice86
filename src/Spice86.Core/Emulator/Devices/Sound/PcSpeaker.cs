@@ -26,8 +26,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
 
     public override byte ReadByte(int port) {
         byte value = _pcSpeaker.ReadByte(port);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("PC Speaker get value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PC Speaker get value {PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }
         return value;
     }
@@ -37,8 +37,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     }
 
     public override void WriteByte(int port, byte value) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("PC Speaker set value {@PCSpeakerValue}", ConvertUtils.ToHex8(value));
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PC Speaker set value {PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }
 
         _pcSpeaker.WriteByte(port, value);

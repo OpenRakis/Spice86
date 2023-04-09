@@ -4,6 +4,7 @@ using Spice86.Shared.Interfaces;
 namespace Spice86.Core.Emulator.Function;
 
 using Serilog;
+using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 
@@ -49,7 +50,7 @@ public class FunctionHandler {
             FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, recordReturn);
             _callerStack.Push(currentFunctionCall);
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _loggerService.Debug("Calling {@CurrentFunction} from {@Caller}", currentFunction, caller);
+                _loggerService.Debug("Calling {CurrentFunction} from {Caller}", currentFunction, caller);
             }
 
             currentFunction.Enter(caller);
@@ -127,7 +128,7 @@ public class FunctionHandler {
             FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
             bool returnAddressAlignedWithCallStack = AddReturn(returnCallType, currentFunctionCall, currentFunctionInformation);
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _loggerService.Debug("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
+                _loggerService.Debug("Returning from {CurrentFunctionInformation} to {CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
             }
 
             if (!returnAddressAlignedWithCallStack) {
@@ -211,7 +212,7 @@ public class FunctionHandler {
         cpu.ExecutionFlowRecorder.RegisterUnalignedReturn(state.CS, state.IP, actualReturnAddress.Segment,
             actualReturnAddress.Offset);
         FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information) && currentFunctionInformation != null
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose) && currentFunctionInformation != null
             && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {
             CallType callType = currentFunctionCall.CallType;
             SegmentedAddress stackAddressAfterCall = currentFunctionCall.StackAddressAfterCall;
@@ -226,16 +227,19 @@ public class FunctionHandler {
             if (!Equals(expectedReturnAddress, returnAddressOnCallTimeStack)) {
                 additionalInformation += "Return address on stack was modified";
             }
-            _loggerService.Information(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
-                    Current function {@CurrentFunctionInformation} return {@CurrentFunctionReturn} will not go to the expected place:
-                    - At {@CallType} call time, return was supposed to be {@ExpectedReturnAddress} stored at SS:SP {@StackAddressAfterCall}. Value there is now {@ReturnAddressOnCallTimeStack}
-                    - On the stack it is now {@ActualReturnAddress} stored at SS:SP {@CurrentStackAddress}
-                    {@AdditionalInformation}
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
+                    Current function {CurrentFunctionInformation} return {CurrentFunctionReturn} will not go to the expected place:
+                    - At {CallType} call time, return was supposed to be {ExpectedReturnAddress} stored at SS:SP {StackAddressAfterCall}. Value there is now {ReturnAddressOnCallTimeStack}
+                    - On the stack it is now {ActualReturnAddress} stored at SS:SP {CurrentStackAddress}
+                    {AdditionalInformation}
                 ",
-                currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
-                callType.ToString(), expectedReturnAddress?.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
-                actualReturnAddress.ToString(), currentStackAddress.ToString(),
-                additionalInformation);
+                    currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
+                    callType.ToString(), expectedReturnAddress?.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
+                    actualReturnAddress.ToString(), currentStackAddress.ToString(),
+                    additionalInformation);
+            }
         }
         return false;
     }
