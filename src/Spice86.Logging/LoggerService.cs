@@ -32,7 +32,7 @@ public class LoggerService : ILoggerService {
 #pragma warning disable Serilog004
     
     public void Forced(string messageTemplate, params object?[]? properties) {
-        _forcedLogger.Fatal(messageTemplate, properties);
+        _forcedLogger.Debug(messageTemplate, properties);
     }
     
     public void Information(string messageTemplate, params object?[]? properties) {
