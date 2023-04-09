@@ -7,6 +7,7 @@ using Errors;
 using Newtonsoft.Json;
 
 using Serilog;
+using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Logging;
@@ -30,7 +31,9 @@ public class ExecutionFlowDumper {
 
     public ExecutionFlowRecorder ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
-            _loggerService.Verbose("File doesn't exists");
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("File doesn't exist");
+            }
             return new ExecutionFlowRecorder();
         }
         try {

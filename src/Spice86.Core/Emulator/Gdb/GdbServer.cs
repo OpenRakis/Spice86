@@ -83,18 +83,18 @@ public sealed class GdbServer : IDisposable {
                     if (_isRunning) {
                         _loggerService.Error(e, "Error in the GDB server, restarting it...");
                     } else {
-                        _loggerService.Verbose("GDB Server connection closed and server is not running. Terminating it.");
+                        _loggerService.Verbose("GDB Server connection closed and server is not running. Terminating it");
                     }
                 }
             }
         } catch (Exception e) {
             e.Demystify();
-            _loggerService.Error(e, "Unhandled error in the GDB server, restarting it...");
+            _loggerService.Error(e, "Unhandled error in the GDB server, restarting it");
         } finally {
             _machine.Cpu.IsRunning = false;
             _machine.MachineBreakpoints.PauseHandler.RequestResume();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("GDB server stopped");
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("GDB server stopped");
             }
         }
     }

@@ -1019,7 +1019,9 @@ public class Cpu {
                 break;
             case 0xF4:
                 // HLT
-                _loggerService.Verbose("HLT instruction encountered, halting!");
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("HLT instruction encountered, halting!");
+                }
                 IsRunning = false;
                 break;
             case 0xF5:

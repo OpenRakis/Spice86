@@ -62,8 +62,8 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Closed {ClosedFileName}, file was loaded in ram in those addresses: {ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("Closed {ClosedFileName}, file was loaded in ram in those addresses: {ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
         }
 
         SetOpenFile(fileHandle, null);
@@ -143,7 +143,7 @@ public class DosFileManager {
             } catch (IOException e) {
                 e.Demystify();
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _loggerService.Error(e, "Error while walking path {CurrentMatchingFileSearchFolder} or getting attributes.", _currentMatchingFileSearchFolder);
+                    _loggerService.Error(e, "Error while walking path {CurrentMatchingFileSearchFolder} or getting attributes", _currentMatchingFileSearchFolder);
                 }
             }
         }
@@ -169,7 +169,7 @@ public class DosFileManager {
             } catch (IOException e) {
                 e.Demystify();
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                    _loggerService.Warning(e, "Error while getting attributes.");
+                    _loggerService.Warning(e, "Error while getting attributes");
                 }
                 return FileNotFoundError(null);
             }
@@ -220,8 +220,8 @@ public class DosFileManager {
             return FileNotFoundError(fileName);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Opening file {HostFileName} with mode {OpenMode}", hostFileName, openMode);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}", hostFileName, openMode);
         }
 
         return OpenFileInternal(fileName, hostFileName, openMode);
@@ -408,10 +408,9 @@ public class DosFileManager {
         }
         string realFileName = "";
         string[] array = Directory.GetFiles(directoryCaseSensitive);
-        for (int i = 0; i < array.Length; i++) {
-            string? file = array[i];
-            string? fileToUpper = file.ToUpperInvariant();
-            string? searchedFile = caseInsensitivePath.ToUpperInvariant();
+        foreach (var file in array) {
+            string fileToUpper = file.ToUpperInvariant();
+            string searchedFile = caseInsensitivePath.ToUpperInvariant();
             if (fileToUpper == searchedFile) {
                 realFileName = file;
             }
@@ -426,7 +425,7 @@ public class DosFileManager {
         if (string.IsNullOrWhiteSpace(directory)) {
             return null;
         }
-        DirectoryInfo directoryInfo = new DirectoryInfo(directory);
+        DirectoryInfo directoryInfo = new(directory);
         if (directoryInfo.Exists) {
             return directory;
         }
@@ -457,25 +456,36 @@ public class DosFileManager {
         ushort dosIndex = (ushort)freeIndex.Value;
         try {
             Stream? randomAccessFile = null;
-            if (openMode == "r") {
-                string? realFileName = GetActualCaseForFileName(hostFileName);
-                if (File.Exists(hostFileName)) {
-                    randomAccessFile = File.OpenRead(hostFileName);
-                } else if (File.Exists(realFileName)) {
-                    randomAccessFile = File.OpenRead(realFileName);
-                } else {
-                    return FileNotFoundError(fileName);
+            switch (openMode)
+            {
+                case "r":
+                {
+                    string? realFileName = GetActualCaseForFileName(hostFileName);
+                    if (File.Exists(hostFileName)) {
+                        randomAccessFile = File.OpenRead(hostFileName);
+                    } else if (File.Exists(realFileName)) {
+                        randomAccessFile = File.OpenRead(realFileName);
+                    } else {
+                        return FileNotFoundError(fileName);
+                    }
+
+                    break;
                 }
-            } else if (openMode == "w") {
-                randomAccessFile = File.OpenWrite(hostFileName);
-            } else if (openMode == "rw") {
-                string? realFileName = GetActualCaseForFileName(hostFileName);
-                if (File.Exists(hostFileName)) {
-                    randomAccessFile = File.Open(hostFileName, FileMode.Open);
-                } else if (File.Exists(realFileName)) {
-                    randomAccessFile = File.Open(realFileName, FileMode.Open);
-                } else {
-                    return FileNotFoundError(fileName);
+                case "w":
+                    randomAccessFile = File.OpenWrite(hostFileName);
+                    break;
+                case "rw":
+                {
+                    string? realFileName = GetActualCaseForFileName(hostFileName);
+                    if (File.Exists(hostFileName)) {
+                        randomAccessFile = File.Open(hostFileName, FileMode.Open);
+                    } else if (File.Exists(realFileName)) {
+                        randomAccessFile = File.Open(realFileName, FileMode.Open);
+                    } else {
+                        return FileNotFoundError(fileName);
+                    }
+
+                    break;
                 }
             }
             if (randomAccessFile != null) {
@@ -500,16 +510,11 @@ public class DosFileManager {
     }
 
     private static uint Seek(Stream randomAccessFile, byte originOfMove, uint offset) {
-        long newOffset;
-        if (originOfMove == 0) {
-            newOffset = offset; // seek from beginning, offset is good
-        } else if (originOfMove == 1) {
-            // seek from last read
-            newOffset = randomAccessFile.Position + offset;
-        } else {
-            // seek from end
-            newOffset = randomAccessFile.Length - offset;
-        }
+        long newOffset = originOfMove switch {
+            0 => offset,
+            1 => randomAccessFile.Position + offset,
+            _ => randomAccessFile.Length - offset
+        };
 
         randomAccessFile.Seek(newOffset, SeekOrigin.Begin);
         return (uint)newOffset;

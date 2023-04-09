@@ -339,10 +339,10 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public void WriteString() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             uint address = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BP);
             string str = MemoryUtils.GetZeroTerminatedString(_memory.Ram, address, _memory.Ram.Length - (int)address);
-            _loggerService.Verbose("WRITE STRING: {WrittenString}", str);
+            _loggerService.Debug("WRITE STRING: {WrittenString}", str);
         }
     }
 
@@ -714,7 +714,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 throw new NotSupportedException($"Video mode {id} is not supported.");
         }
 
-        _loggerService.Verbose("Setting video mode to {Mode}", id);
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Setting video mode to {Mode}", id);
+        }
 
         _gui?.SetResolution(mode.PixelWidth, mode.PixelHeight,
             MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));

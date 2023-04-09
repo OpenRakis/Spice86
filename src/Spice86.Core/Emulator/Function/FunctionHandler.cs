@@ -4,6 +4,7 @@ using Spice86.Shared.Interfaces;
 namespace Spice86.Core.Emulator.Function;
 
 using Serilog;
+using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 
@@ -226,16 +227,19 @@ public class FunctionHandler {
             if (!Equals(expectedReturnAddress, returnAddressOnCallTimeStack)) {
                 additionalInformation += "Return address on stack was modified";
             }
-            _loggerService.Verbose(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
                     Current function {CurrentFunctionInformation} return {CurrentFunctionReturn} will not go to the expected place:
                     - At {CallType} call time, return was supposed to be {ExpectedReturnAddress} stored at SS:SP {StackAddressAfterCall}. Value there is now {ReturnAddressOnCallTimeStack}
                     - On the stack it is now {ActualReturnAddress} stored at SS:SP {CurrentStackAddress}
                     {AdditionalInformation}
                 ",
-                currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
-                callType.ToString(), expectedReturnAddress?.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
-                actualReturnAddress.ToString(), currentStackAddress.ToString(),
-                additionalInformation);
+                    currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
+                    callType.ToString(), expectedReturnAddress?.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
+                    actualReturnAddress.ToString(), currentStackAddress.ToString(),
+                    additionalInformation);
+            }
         }
         return false;
     }
