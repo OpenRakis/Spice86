@@ -26,6 +26,7 @@ public class LoggerService : ILoggerService {
     }
     public LoggerConfiguration CreateLoggerConfiguration() {
         return new LoggerConfiguration()
+            .Enrich.FromLogContext()
             .Enrich.WithExceptionDetails()
             .WriteTo.Console(outputTemplate: LogFormat)
             .WriteTo.Debug(outputTemplate: LogFormat);
