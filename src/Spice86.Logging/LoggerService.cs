@@ -11,7 +11,7 @@ using Serilog.Enrichers;
 public class LoggerService : ILoggerService {
     private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
-    
+
     public bool AreLogsSilenced { get; set; }
 
     private readonly ILogger _logger;
@@ -25,7 +25,16 @@ public class LoggerService : ILoggerService {
         .MinimumLevel.ControlledBy(LogLevelSwitch)
         .CreateLogger();
     }
+
 #pragma warning disable Serilog004
+    
+    public void Forced(string messageTemplate, params object?[]? properties) {
+        LogEventLevel currentLogLevel = LogLevelSwitch.MinimumLevel;
+        LogLevelSwitch.MinimumLevel = LogEventLevel.Fatal;
+        Fatal(messageTemplate, properties);
+        LogLevelSwitch.MinimumLevel = currentLogLevel;
+    }
+    
     public void Information(string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
             return;
@@ -40,21 +49,21 @@ public class LoggerService : ILoggerService {
         _logger.Warning(message);
     }
     
-    public void Warning(Exception e, string messageTemplate, params object?[]? properties) {
+    public void Warning(Exception? e, string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
             return;
         }
         _logger.Warning(e, messageTemplate, properties);
     }
     
-    public void Error(Exception e, string messageTemplate, params object?[]? properties) {
+    public void Error(Exception? e, string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
             return;
         }
         _logger.Error(e, messageTemplate, properties);
     }
     
-    public void Fatal(Exception e, string messageTemplate, params object?[]? properties) {
+    public void Fatal(Exception? e, string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
             return;
         }
@@ -96,6 +105,10 @@ public class LoggerService : ILoggerService {
         _logger.Verbose(messageTemplate, properties);
     }
 #pragma warning restore Serilog004
+
+    public void Write(LogEvent logEvent) {
+        _logger.Write(logEvent);
+    }
 
     public bool IsEnabled(LogEventLevel level) {
         return _logger.IsEnabled(level);
