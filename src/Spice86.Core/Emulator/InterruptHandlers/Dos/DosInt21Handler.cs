@@ -110,7 +110,7 @@ public class DosInt21Handler : InterruptHandler {
                 break;
             default: //Set country code
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("{@MethodName}: subFunction is unsupported.");
+                    _loggerService.Warning("{@MethodName}: subFunction is unsupported", nameof(SetCountryCode));
                 }
                 _state.AX = 0;
                 SetCarryFlag(false, calledFromVm);

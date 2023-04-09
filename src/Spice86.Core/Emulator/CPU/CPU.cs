@@ -190,7 +190,7 @@ public class Cpu {
 
     private void HandleCpuException(CpuException cpuException) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(cpuException.ToString());
+            _loggerService.Debug(cpuException,"{@ExceptionType} in {@MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
         if (cpuException.Type is CpuExceptionType.Fault) {
             _instructions16Or32 = _instructions16;
