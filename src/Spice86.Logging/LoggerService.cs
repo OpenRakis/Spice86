@@ -8,9 +8,8 @@ using Serilog.Events;
 using Serilog.Exceptions;
 
 public class LoggerService : ILoggerService {
-    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3} {Properties:j}] {Message:lj}{NewLine}{Exception}";
+    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
-
     public bool AreLogsSilenced { get; set; }
 
     private readonly ILogger _logger;
