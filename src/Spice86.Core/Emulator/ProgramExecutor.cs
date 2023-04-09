@@ -127,7 +127,7 @@ public sealed class ProgramExecutor : IDisposable {
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("InitializeDOS parameter not provided. Guessed value is: {@InitializeDOS}", _configuration.InitializeDOS);
+                _loggerService.Information("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", _configuration.InitializeDOS);
             }
         }
 
@@ -164,7 +164,7 @@ public sealed class ProgramExecutor : IDisposable {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Override supplied: {@OverideSupplier}", supplier);
+                _loggerService.Information("Override supplied: {OverideSupplier}", supplier);
             }
 
             foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
@@ -236,7 +236,7 @@ public sealed class ProgramExecutor : IDisposable {
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Loading file {@FileName} with loader {@LoaderType}", executableFileName,
+            _loggerService.Information("Loading file {FileName} with loader {LoaderType}", executableFileName,
                 loader.GetType());
         }
 

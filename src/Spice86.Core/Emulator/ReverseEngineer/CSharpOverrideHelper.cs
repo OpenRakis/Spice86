@@ -142,7 +142,7 @@ public class CSharpOverrideHelper {
                 $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(
-                    "There is already a function defined at address {@Address} named {@ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.",
+                    "There is already a function defined at address {Address} named {ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.",
                     address, existingFunctionInformation.Name);
             }
 

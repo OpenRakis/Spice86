@@ -38,7 +38,7 @@ public class GdbCommandHandler {
 
     public void RunCommand(string command) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Received command {@Command}", command);
+            _loggerService.Information("Received command {Command}", command);
         }
         char first = command[0];
         string commandContent = command[1..];
@@ -67,7 +67,7 @@ public class GdbCommandHandler {
                 _ => _gdbIo.GenerateUnsupportedResponse()
             };
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Responded with {@Response}", response);
+                _loggerService.Information("Responded with {Response}", response);
             }
             if (response != null) {
                 _gdbIo.SendResponse(response);

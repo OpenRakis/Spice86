@@ -40,7 +40,7 @@ public abstract class ExecutableFileLoader {
         state.CS = cs;
         state.IP = ip;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Program entry point is {@ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
+            _loggerService.Information("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
     }
 }

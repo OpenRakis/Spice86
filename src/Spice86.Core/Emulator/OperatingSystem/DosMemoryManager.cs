@@ -28,7 +28,7 @@ public class DosMemoryManager {
         if (blockOptional is null) {
             // Nothing found
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Could not find any MCB to fit {@RequestedSize}.", requestedSize);
+                _loggerService.Error("Could not find any MCB to fit {RequestedSize}.", requestedSize);
             }
             return null;
         }
@@ -37,7 +37,7 @@ public class DosMemoryManager {
         if (!SplitBlock(block, requestedSize)) {
             // An issue occurred while splitting the block
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Could not spit block {@Block}.", block);
+                _loggerService.Error("Could not spit block {Block}.", block);
             }
             return null;
         }
@@ -95,14 +95,14 @@ public class DosMemoryManager {
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false)) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Could not join MCB {@Block}.", block);
+                _loggerService.Error("Could not join MCB {Block}.", block);
             }
             return false;
         }
 
         if (block.Size < requestedSize - 1) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("MCB {@Block} is too small for requested size {@RequestedSize}.", block, requestedSize);
+                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}.", block, requestedSize);
             }
             return false;
         }
@@ -118,7 +118,7 @@ public class DosMemoryManager {
     private bool CheckValidOrLogError(DosMemoryControlBlock? block) {
         if (block is null || !block.IsValid) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("MCB {@Block} is invalid.", block);
+                _loggerService.Error("MCB {Block} is invalid.", block);
             }
             return false;
         }
@@ -163,7 +163,7 @@ public class DosMemoryManager {
 
             if (!CheckValidOrLogError(next)) {
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _loggerService.Error("MCB {@NextBlock} is not valid.", next);
+                    _loggerService.Error("MCB {NextBlock} is not valid.", next);
                 }
                 return false;
             }
@@ -202,7 +202,7 @@ public class DosMemoryManager {
         int nextBlockSize = blockSize - size - 1;
         if (nextBlockSize < 0) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Cannot split block {@Block} with size {@Size} because it is too small.", block, size);
+                _loggerService.Error("Cannot split block {Block} with size {Size} because it is too small.", block, size);
             }
             return false;
         }

@@ -27,7 +27,7 @@ public class GdbCommandBreakpointHandler {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
+            _loggerService.Debug("Breakpoint added!\n{BreakPoint}", breakPoint);
         }
         return _gdbIo.GenerateResponse("OK");
     }
@@ -44,11 +44,11 @@ public class GdbCommandBreakpointHandler {
 
     public void OnBreakPointReached(BreakPoint breakPoint) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint reached!\n{@BreakPoint}", breakPoint);
+            _loggerService.Debug("Breakpoint reached!\n{BreakPoint}", breakPoint);
         }
         if (!_gdbIo.IsClientConnected) {
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("Breakpoint reached but client is not connected. Nothing to do.\n{@BreakPoint}", breakPoint);
+                _loggerService.Information("Breakpoint reached but client is not connected. Nothing to do.\n{BreakPoint}", breakPoint);
             }
             return;
         }
@@ -80,7 +80,7 @@ public class GdbCommandBreakpointHandler {
             };
             if (breakPointType == null) {
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("Cannot parse breakpoint type {@Type} for command {@Command}", type, command);
+                    _loggerService.Error("Cannot parse breakpoint type {Type} for command {Command}", type, command);
                 }
                 return null;
             }
@@ -88,7 +88,7 @@ public class GdbCommandBreakpointHandler {
         } catch (FormatException nfe) {
             nfe.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(nfe, "Cannot parse breakpoint {@Command}", command);
+                _loggerService.Error(nfe, "Cannot parse breakpoint {Command}", command);
             }
             return null;
         }
@@ -101,7 +101,7 @@ public class GdbCommandBreakpointHandler {
         }
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, false);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint removed!\n{@BreakPoint}", breakPoint);
+            _loggerService.Debug("Breakpoint removed!\n{BreakPoint}", breakPoint);
         }
         return _gdbIo.GenerateResponse("OK");
     }
@@ -113,7 +113,7 @@ public class GdbCommandBreakpointHandler {
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, OnBreakPointReached, true);
         _machine.MachineBreakpoints.ToggleBreakPoint(stepBreakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint added for step!\n{@StepBreakPoint}", stepBreakPoint);
+            _loggerService.Debug("Breakpoint added for step!\n{StepBreakPoint}", stepBreakPoint);
         }
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached

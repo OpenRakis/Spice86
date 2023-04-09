@@ -34,7 +34,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     public void GetSystemClockCounter() {
         uint value = _timerHandler.TickCounterValue;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("GET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+            _loggerService.Information("GET SYSTEM CLOCK COUNTER {SystemClockCounterValue}", value);
         }
 
         // let's say it never overflows
@@ -51,7 +51,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     public void SetSystemClockCounter() {
         uint value = (ushort)(_state.CX << 16 | _state.DX);
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("SET SYSTEM CLOCK COUNTER {@SystemClockCounterValue}", value);
+            _loggerService.Information("SET SYSTEM CLOCK COUNTER {SystemClockCounterValue}", value);
         }
         _timerHandler.TickCounterValue = value;
     }

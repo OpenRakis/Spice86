@@ -35,8 +35,8 @@ public sealed class GdbIo : IDisposable {
         _socket = _tcpListener.AcceptSocket();
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             int port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
-            _loggerService.Information("GDB Server listening on port {@Port}", port);
-            _loggerService.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
+            _loggerService.Information("GDB Server listening on port {Port}", port);
+            _loggerService.Information("Client connected: {CanonicalHostName}", _socket.RemoteEndPoint);
         }
         _stream = new NetworkStream(_socket);
     }
@@ -91,7 +91,7 @@ public sealed class GdbIo : IDisposable {
         }
         string payload = GetPayload(resBuilder);
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Received command from GDB {@GDBPayload}", payload);
+            _loggerService.Information("Received command from GDB {GDBPayload}", payload);
         }
         return payload;
     }
@@ -106,7 +106,7 @@ public sealed class GdbIo : IDisposable {
         }
         if (data != null) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("Sending response {@ResponseData}", data);
+                _loggerService.Information("Sending response {ResponseData}", data);
             }
             _stream?.Write(Encoding.UTF8.GetBytes(data));
         }

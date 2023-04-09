@@ -661,7 +661,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         byte topScanLine = _state.CH;
         byte bottomScanLine = _state.CL;
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("SET CURSOR TYPE, SCAN LINE TOP: {@Top} BOTTOM: {@Bottom}", topScanLine,
+            _loggerService.Information("SET CURSOR TYPE, SCAN LINE TOP: {Top} BOTTOM: {Bottom}", topScanLine,
                 bottomScanLine);
         }
     }
@@ -714,7 +714,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 throw new NotSupportedException($"Video mode {id} is not supported.");
         }
 
-        _loggerService.Information("Setting video mode to {@Mode}", id);
+        _loggerService.Information("Setting video mode to {Mode}", id);
 
         _gui?.SetResolution(mode.PixelWidth, mode.PixelHeight,
             MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
@@ -754,7 +754,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Dac.Reset();
         }
 
-        _loggerService.Information("Video mode changed to {@Mode}", mode.GetType().Name);
+        _loggerService.Information("Video mode changed to {Mode}", mode.GetType().Name);
         _presenter = GetPresenter();
         _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
     }
