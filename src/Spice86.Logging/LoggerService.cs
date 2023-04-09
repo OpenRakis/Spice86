@@ -3,6 +3,7 @@
 namespace Spice86.Logging;
 
 using Serilog;
+using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Exceptions;
@@ -12,12 +13,15 @@ public class LoggerService : ILoggerService {
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
     public bool AreLogsSilenced { get; set; }
 
-    private readonly ILogger _logger;
+    private ILogger _logger;
 
     private readonly ILogger _forcedLogger;
 
+    private LoggerConfiguration _loggerConfiguration;
+
     public LoggerService() {
-        _logger = CreateLoggerConfiguration()
+        _loggerConfiguration = CreateLoggerConfiguration();
+        _logger = _loggerConfiguration
             .MinimumLevel.ControlledBy(LogLevelSwitch)
             .CreateLogger();
         _forcedLogger = CreateLoggerConfiguration().CreateLogger();
@@ -27,6 +31,15 @@ public class LoggerService : ILoggerService {
             .Enrich.WithExceptionDetails()
             .WriteTo.Console(outputTemplate: LogFormat)
             .WriteTo.Debug(outputTemplate: LogFormat);
+    }
+    
+    public LoggerConfiguration Override(string source, LogEventLevel minimumLevel) {
+        _loggerConfiguration = _loggerConfiguration.MinimumLevel.Override(source, new LoggingLevelSwitch(minimumLevel));
+        ((IDisposable)_logger).Dispose();
+        _logger = _loggerConfiguration
+            .MinimumLevel.ControlledBy(LogLevelSwitch)
+            .CreateLogger();
+        return _loggerConfiguration;
     }
 
 #pragma warning disable Serilog004
