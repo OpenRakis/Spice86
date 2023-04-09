@@ -30,8 +30,8 @@ public class LoggerService : ILoggerService {
     
     public void Forced(string messageTemplate, params object?[]? properties) {
         LogEventLevel currentLogLevel = LogLevelSwitch.MinimumLevel;
-        LogLevelSwitch.MinimumLevel = LogEventLevel.Debug;
-        Debug(messageTemplate, properties);
+        LogLevelSwitch.MinimumLevel = LogEventLevel.Fatal;
+        Fatal(messageTemplate, properties);
         LogLevelSwitch.MinimumLevel = currentLogLevel;
     }
     
