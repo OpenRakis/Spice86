@@ -170,7 +170,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    public async Task DebugExecutableCommand() {
+    public async Task DebugExecutable() {
         _closeAppOnEmulatorExit = false;
         await StartNewExecutable();
         PauseEmulatorOnStart = true;
