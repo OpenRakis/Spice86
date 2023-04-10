@@ -172,7 +172,7 @@ First run your program and make sure everything works fine in Spice86. If you en
 
 When Spice86 exits, it should dump data in current folder or in folder specified by env variable 
 
-Open the data in [ghidra](https://github.com/NationalSecurityAgency/ghidra) with the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) and generate code. You can import the generated files in a template project you generate via the spice86-dotnet-templates:
+Open the data in [ghidra](https://github.com/NationalSecurityAgency/ghidra) with the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) and generate code. You can import the generated files in a template project you generate via the [spice86-dotnet-templates](https://github.com/OpenRakis/spice86-dotnet-templates):
 ```
 dotnet new spice86.project
 ```
