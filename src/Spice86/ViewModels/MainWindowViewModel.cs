@@ -159,7 +159,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public void AddBuffer(IVideoCard videoCard, uint address, double scale, int bufferWidth, int bufferHeight,
         bool isPrimaryDisplay = false) {
-        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(videoCard, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
+        IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(videoCard, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         Dispatcher.UIThread.Post(
             () => {
                 if(!VideoBuffers.Any(x => x.Address == videoBuffer.Address)) {
@@ -184,7 +184,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private async Task StartNewExecutable() {
         if (App.MainWindow is not null) {
-            OpenFileDialog ofd = new OpenFileDialog() {
+            OpenFileDialog ofd = new() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
                 Filters = new(){
