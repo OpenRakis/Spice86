@@ -16,6 +16,7 @@ namespace Spice86.Aeon.Emulator.Video
         public const int DacAddressReadIndex = 0x03C7;
         public const int DacAddressWriteIndex = 0x03C8;
         public const int DacData = 0x03C9;
+        public const int DacPelMask = 0x03C6;
         public const int FeatureControlRead = 0x03CA;
         public const int MiscOutputRead = 0x03CC;
         public const int GraphicsControllerAddress = 0x03CE;

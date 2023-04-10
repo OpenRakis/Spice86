@@ -38,12 +38,12 @@ public class VideoBiosInt10Handler : InterruptHandler {
         _dispatchTable.Add(0x0A, new Callback(0x0A, _vgaCard.WriteCharacterAtCursor));
         _dispatchTable.Add(0x0B, new Callback(0x0B, _vgaCard.SetColorPaletteOrBackGroundColor));
         _dispatchTable.Add(0x0E, new Callback(0x0E, _vgaCard.WriteTextInTeletypeMode));
-        _dispatchTable.Add(0x0F, new Callback(0x0F, _vgaCard.GetVideoMode));
-        _dispatchTable.Add(0x10, new Callback(0x10, _vgaCard.GetSetPaletteRegisters));
-        _dispatchTable.Add(0x11, new Callback(0x11, _vgaCard.CharacterGeneratorRoutine));
+        _dispatchTable.Add(0x0F, new Callback(0x0F, _vgaCard.GetVideoState));
+        _dispatchTable.Add(0x10, new Callback(0x10, _vgaCard.SetPaletteRegisters));
+        _dispatchTable.Add(0x11, new Callback(0x11, _vgaCard.LoadFontInfo));
         _dispatchTable.Add(0x12, new Callback(0x12, _vgaCard.VideoSubsystemConfiguration));
         _dispatchTable.Add(0x13, new Callback(0x13, _vgaCard.WriteString));
-        _dispatchTable.Add(0x1A, new Callback(0x1A, _vgaCard.VideoDisplayCombination));
+        _dispatchTable.Add(0x1A, new Callback(0x1A, _vgaCard.GetSetDisplayCombinationCode));
         _dispatchTable.Add(0x1B, new Callback(0x1B, () => _vgaCard.GetFunctionalityInfo()));
     }
 }

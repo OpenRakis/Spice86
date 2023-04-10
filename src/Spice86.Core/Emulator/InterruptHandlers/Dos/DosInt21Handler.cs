@@ -317,8 +317,9 @@ public class DosInt21Handler : InterruptHandler {
 
     public void GetInterruptVector() {
         byte vectorNumber = _state.AL;
-        ushort segment = _memory.GetUint16((uint)((4 * vectorNumber) + 2));
-        ushort offset = _memory.GetUint16((uint)(4 * vectorNumber));
+        int tableOffset = 4 * vectorNumber;
+        ushort segment = _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)(tableOffset + 2)];
+        ushort offset = _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)tableOffset];
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("GET INTERRUPT VECTOR INT {VectorInt}, got {SegmentedAddress}", ConvertUtils.ToHex8(vectorNumber),
                 ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
@@ -467,8 +468,9 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void SetInterruptVector(byte vectorNumber, ushort segment, ushort offset) {
-        _memory.SetUint16((ushort)((4 * vectorNumber) + 2), segment);
-        _memory.SetUint16((ushort)(4 * vectorNumber), offset);
+        ushort tableOffset = (ushort)(4 * vectorNumber);
+        _memory.UInt16[MemoryMap.InterruptVectorSegment, tableOffset] = offset;
+        _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)(tableOffset + 2)] = segment;
     }
 
     public void WriteFileUsingHandle(bool calledFromVm) {

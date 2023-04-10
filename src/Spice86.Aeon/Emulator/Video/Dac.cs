@@ -38,6 +38,10 @@ namespace Spice86.Aeon.Emulator.Video
                 }
             }
         }
+        public byte PalettePixelMask {
+            get;
+            set;
+        }
 
         /// <summary>
         /// Gets or sets the current palette read index.

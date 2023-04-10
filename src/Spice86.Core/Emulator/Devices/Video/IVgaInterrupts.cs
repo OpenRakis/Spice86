@@ -4,11 +4,11 @@ public interface IVgaInterrupts {
     void WriteString();
     void SetVideoMode();
     VideoFunctionalityInfo GetFunctionalityInfo();
-    void VideoDisplayCombination();
+    void GetSetDisplayCombinationCode();
     void VideoSubsystemConfiguration();
-    void CharacterGeneratorRoutine();
-    void GetSetPaletteRegisters();
-    void GetVideoMode();
+    void LoadFontInfo();
+    void SetPaletteRegisters();
+    void GetVideoState();
     void WriteTextInTeletypeMode();
     void SetColorPaletteOrBackGroundColor();
     void WriteCharacterAtCursor();

@@ -144,6 +144,7 @@ public class Machine : IDisposable {
         Register(DualPic);
         VgaCard = new AeonCard(this, loggerService, gui, configuration);
         Register(VgaCard as IIOPortHandler ?? throw new InvalidOperationException());
+
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
@@ -165,14 +166,18 @@ public class Machine : IDisposable {
         // Services
         CallbackHandler = new CallbackHandler(this, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
+        
+        VgaRom = new VgaRom();
+        Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, new VgaBios(this, loggerService));
+        Register(VideoBiosInt10Handler);
+        
         TimerInt8Handler = new TimerInt8Handler(this);
         Register(TimerInt8Handler);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this,
             loggerService,
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, (IVgaInterrupts)VgaCard);
-        Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
@@ -203,6 +208,11 @@ public class Machine : IDisposable {
         if(Ems is not null) {
             Register(Ems);
         }
+    }
+    public VgaRom VgaRom
+    {
+        get;
+        set;
     }
 
     public void Register(ICallback callback) {

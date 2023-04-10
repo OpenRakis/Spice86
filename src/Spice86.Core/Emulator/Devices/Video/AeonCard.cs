@@ -27,7 +27,7 @@ using System.Runtime.InteropServices;
 
 using Point = Spice86.Aeon.Emulator.Video.Point;
 
-public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposable, IVgaInterrupts {
+public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposable {
 
     // 4th bit is 1 when the CRT finished drawing and is returning to the beginning
     // of the screen (retrace).
@@ -71,7 +71,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _state = machine.Cpu.State;
         _logger = loggerService.CreateLoggerConfiguration()
             .WriteTo.File("aeon.log", outputTemplate: LogFormat)
-            .MinimumLevel.Verbose()
+            .MinimumLevel.Debug()
             .CreateLogger();
         _gui = gui;
 
@@ -79,12 +79,12 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             VideoRam = new nint(NativeMemory.AllocZeroed(TotalVramBytes));
         }
 
-        var memoryDevice = new VideoMemory(0x10000, this, 0xA0000);
-        _machine.Memory.RegisterMapping(0xA0000, 0x10000, memoryDevice);
+        var memoryDevice = new VideoMemory(0x20000, this, 0xA0000);
+        _machine.Memory.RegisterMapping(0xA0000, 0x20000, memoryDevice);
 
         InitializeStaticFunctionalityTable();
         TextConsole = new TextConsole(this, _bios.ScreenColumns, _bios.ScreenRows);
-        SetVideoModeInternal(VideoModeId.ColorText80X25X4);
+        // SetVideoModeInternal(VideoModeId.ColorText80X25X4);
 
         _presenter = GetPresenter();
     }
@@ -106,6 +106,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.DacAddressReadIndex,
             Ports.DacAddressWriteIndex,
             Ports.DacData,
+            Ports.DacPelMask,
             Ports.DacStateRead,
             Ports.FeatureControlRead,
             Ports.GraphicsControllerAddress,
@@ -133,6 +134,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.DacAddressReadIndex,
             Ports.DacAddressWriteIndex,
             Ports.DacData,
+            Ports.DacPelMask,
             Ports.FeatureControlWrite,
             Ports.FeatureControlWriteAlt,
             Ports.GraphicsControllerAddress,
@@ -180,6 +182,12 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                         break;
                 }
                 _dacReadIndex = (_dacReadIndex + 1) % 3;
+                break;
+            case Ports.DacPelMask:
+                value = Dac.PalettePixelMask;
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Read DAC Pel Mask: {Value:X2}", port, value);
+                }
                 break;
             case Ports.GraphicsControllerAddress:
                 value = (byte)_graphicsRegister;
@@ -309,6 +317,13 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                         break;
                 }
                 _dacWriteIndex = (_dacWriteIndex + 1) % 3;
+                break;
+            
+            case Ports.DacPelMask:
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Write to DacPelMask: {Value:X2}", port, value);
+                }
+                Dac.PalettePixelMask = value;
                 break;
 
             case Ports.GraphicsControllerAddress:
@@ -579,7 +594,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
     }
 
-    public void VideoDisplayCombination() {
+    public void GetSetDisplayCombinationCode() {
         if (_state.AL == 0x00) {
             _state.AL = 0x1A; // Function supported
             _state.BL = _bios.DisplayCombinationCode; // Primary display
@@ -634,7 +649,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         }
     }
 
-    public void CharacterGeneratorRoutine() {
+    public void LoadFontInfo() {
         switch (_state.AL) {
             case 0x30:
                 GetFontInformation();
@@ -694,7 +709,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         }
     }
 
-    public void GetSetPaletteRegisters() {
+    public void SetPaletteRegisters() {
         switch (_state.AL) {
             case Functions.Palette_SetSingleRegister:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -853,8 +868,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         }
     }
 
-    public void GetVideoMode() {
-        _state.AH = _bios.ScreenColumns;
+    public void GetVideoState() {
+        _state.AH = (byte)_bios.ScreenColumns;
         _state.AL = _bios.VideoMode;
         _state.BH = _bios.CurrentVideoPage;
     }
@@ -1038,7 +1053,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     private void ChangeVerticalEnd() {
         // TODO: Implement or remove
-        throw new NotImplementedException();
+        // throw new NotImplementedException();
     }
 
     private void EnterModeX() {

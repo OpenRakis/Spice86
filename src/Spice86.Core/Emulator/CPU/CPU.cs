@@ -31,7 +31,7 @@ public class Cpu {
     private readonly ILoggerService _loggerService;
 
     private static readonly HashSet<int> _stringOpCodes = new()
-        { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
+        {0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F};
 
     private readonly Machine _machine;
     private readonly Memory.Memory _memory;
@@ -57,7 +57,6 @@ public class Cpu {
     // Value used to read parts of the instruction.
     // CPU uses this internally and adjusts IP after instruction execution is done.
     private ushort _internalIp;
-    private string _userModeAddress = "Uninitialized";
 
     public IOPortDispatcher? IoPortDispatcher { get; set; }
 
@@ -83,34 +82,27 @@ public class Cpu {
     }
 
     public void ExecuteNextInstruction() {
-        using (LogContext.PushProperty("IP", _userModeAddress)) {
-            _internalIp = State.IP;
-            ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
-            byte opcode = ProcessPrefixes();
-            if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
-                // continueZeroFlag is either true or false if a rep prefix has been encountered
-                ProcessRep(opcode);
-            } else {
-                try {
-                    ExecOpcode(opcode);
-                }
-                catch (CpuException e) {
-                    HandleCpuException(e);
-                }
-            }
-
-            // Reset to 16 bit operand and address size
-            _instructions16Or32 = _instructions16;
-            AddressSize = 16;
-            State.ClearPrefixes();
-            State.IncCycles();
-            HandleExternalInterrupt();
-            State.IP = _internalIp;
-            if (State.CS < 0xF000) {
-                // Keep reporting last seen user-mode address when we're in BIOS code.
-                _userModeAddress = $"{State.CS:X4}:{State.IP:X4}";
+        _internalIp = State.IP;
+        ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
+        byte opcode = ProcessPrefixes();
+        if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
+            // continueZeroFlag is either true or false if a rep prefix has been encountered
+            ProcessRep(opcode);
+        } else {
+            try {
+                ExecOpcode(opcode);
+            } catch (CpuException e) {
+                HandleCpuException(e);
             }
         }
+
+        // Reset to 16 bit operand and address size
+        _instructions16Or32 = _instructions16;
+        AddressSize = 16;
+        State.ClearPrefixes();
+        State.IncCycles();
+        HandleExternalInterrupt();
+        State.IP = _internalIp;
     }
 
     public void ExternalInterrupt(byte vectorNumber) {
@@ -141,7 +133,7 @@ public class Cpu {
     public Stack Stack { get; }
 
     public State State { get; }
-    
+
     public void InterruptRet() {
         FunctionHandlerInUse.Ret(CallType.INTERRUPT);
         _internalIp = Stack.Pop16();
@@ -164,9 +156,9 @@ public class Cpu {
     public uint NextUint32() {
         uint res = _memory.GetUint32(InternalIpPhysicalAddress);
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+2));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+3));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort)(_internalIp + 1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort)(_internalIp + 2));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort)(_internalIp + 3));
         _internalIp += 4;
         return res;
     }
@@ -174,7 +166,7 @@ public class Cpu {
     public ushort NextUint16() {
         ushort res = _memory.GetUint16(InternalIpPhysicalAddress);
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort)(_internalIp + 1));
         _internalIp += 2;
         return res;
     }
@@ -200,7 +192,7 @@ public class Cpu {
 
     private void HandleCpuException(CpuException cpuException) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
+            _loggerService.Debug(cpuException, "{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
         if (cpuException.Type is CpuExceptionType.Fault) {
             _instructions16Or32 = _instructions16;
@@ -569,8 +561,8 @@ public class Cpu {
             case 0x61:
                 _instructions16Or32.Popa();
                 break;
-            case 0x62:// BOUND
-            case 0x63:// ARPL
+            case 0x62: // BOUND
+            case 0x63: // ARPL
                 HandleInvalidOpcode(opcode);
                 break;
             case 0x64:
@@ -921,41 +913,41 @@ public class Cpu {
                 break;
             case 0xE0:
             case 0xE1: {
-                    // zeroFlag==true => LOOPZ
-                    // zeroFlag==false =>  LOOPNZ
-                    bool zeroFlag = (opcode & 0x1) == 1;
-                    sbyte address = (sbyte)NextUint8();
-                    bool done = AddressSize switch {
-                        16 => --State.CX == 0,
-                        32 => --State.ECX == 0,
-                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                // zeroFlag==true => LOOPZ
+                // zeroFlag==false =>  LOOPNZ
+                bool zeroFlag = (opcode & 0x1) == 1;
+                sbyte address = (sbyte)NextUint8();
+                bool done = AddressSize switch {
+                    16 => --State.CX == 0,
+                    32 => --State.ECX == 0,
+                    _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
 
-                    };
-                    if (!done && State.ZeroFlag == zeroFlag) {
-                        ushort targetIp = (ushort)(_internalIp + address);
-                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
-                        _internalIp = targetIp;
-                    }
-
-                    break;
+                };
+                if (!done && State.ZeroFlag == zeroFlag) {
+                    ushort targetIp = (ushort)(_internalIp + address);
+                    ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                    _internalIp = targetIp;
                 }
+
+                break;
+            }
             case 0xE2: {
-                    // LOOP
-                    sbyte address = (sbyte)NextUint8();
-                    bool done = AddressSize switch {
-                        16 => --State.CX == 0,
-                        32 => --State.ECX == 0,
-                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
-                    };
+                // LOOP
+                sbyte address = (sbyte)NextUint8();
+                bool done = AddressSize switch {
+                    16 => --State.CX == 0,
+                    32 => --State.ECX == 0,
+                    _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                };
 
-                    if (!done) {
-                        ushort targetIp = (ushort)(_internalIp + address);
-                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
-                        _internalIp = targetIp;
-                    }
-
-                    break;
+                if (!done) {
+                    ushort targetIp = (ushort)(_internalIp + address);
+                    ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                    _internalIp = targetIp;
                 }
+
+                break;
+            }
             case 0xE3: // JCXZ, JECXZ
                 Jcc(TestJumpConditionCXZ());
                 break;
@@ -972,29 +964,29 @@ public class Cpu {
                 _instructions16Or32.OutImm8();
                 break;
             case 0xE8: {
-                    // CALL NEAR
-                    ushort nextInstruction = (ushort)(_internalIp + 2);
-                    short offset = (short)NextUint16();
-                    ushort callAddress = (ushort)(nextInstruction + offset);
-                    NearCall(nextInstruction, callAddress);
-                    break;
-                }
+                // CALL NEAR
+                ushort nextInstruction = (ushort)(_internalIp + 2);
+                short offset = (short)NextUint16();
+                ushort callAddress = (ushort)(nextInstruction + offset);
+                NearCall(nextInstruction, callAddress);
+                break;
+            }
             case 0xE9: {
-                    short offset = (short)NextUint16();
-                    JumpNear((ushort)(_internalIp + offset));
-                    break;
-                }
+                short offset = (short)NextUint16();
+                JumpNear((ushort)(_internalIp + offset));
+                break;
+            }
             case 0xEA: {
-                    ushort ip = NextUint16();
-                    ushort cs = NextUint16();
-                    JumpFar(cs, ip);
-                    break;
-                }
+                ushort ip = NextUint16();
+                ushort cs = NextUint16();
+                JumpFar(cs, ip);
+                break;
+            }
             case 0xEB: {
-                    sbyte offset = (sbyte)NextUint8();
-                    JumpNear((ushort)(_internalIp + offset));
-                    break;
-                }
+                sbyte offset = (sbyte)NextUint8();
+                JumpNear((ushort)(_internalIp + offset));
+                break;
+            }
             case 0xEC:
                 _instructions8.InDx();
                 break;
