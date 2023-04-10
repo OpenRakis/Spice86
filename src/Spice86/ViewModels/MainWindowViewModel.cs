@@ -27,27 +27,27 @@ using System.Linq;
 using System.Threading;
 using System.Diagnostics;
 
-/// <inheritdoc />
+/// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
     private Configuration _configuration = new();
     private bool _disposed;
     private Thread? _emulatorThread;
-    private bool _isSettingResolution = false;
+    private bool _isSettingResolution;
     private DebugWindow? _debugWindow;
     private PaletteWindow? _paletteWindow;
     private PerformanceWindow? _performanceWindow;
 
-    private bool _closeAppOnEmulatorExit = false;
+    private bool _closeAppOnEmulatorExit;
 
-    public bool PauseEmulatorOnStart { get; private set; } = false;
+    public bool PauseEmulatorOnStart { get; private set; }
 
     internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
 
     private ProgramExecutor? _programExecutor;
 
     [ObservableProperty]
-    private AvaloniaList<VideoBufferViewModel> _videoBuffers = new();
+    private AvaloniaList<IVideoBufferViewModel> _videoBuffers = new();
     private ManualResetEvent _okayToContinueEvent = new(true);
 
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
@@ -63,7 +63,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     public MainWindowViewModel(ILoggerService loggerService) {
         _loggerService = loggerService;
         if (App.MainWindow is not null) {
-            App.MainWindow.Closing += (s, e) => _isMainWindowClosing = true;
+            App.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
         }
     }
 
@@ -74,7 +74,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     
     public void HideMouseCursor() {
         Dispatcher.UIThread.Post(() => {
-                foreach (VideoBufferViewModel x in VideoBuffers) {
+                foreach (IVideoBufferViewModel x in VideoBuffers) {
                     x.ShowCursor = false;
                 }            
         });
@@ -82,7 +82,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public void ShowMouseCursor() {
         Dispatcher.UIThread.Post(() => {
-            foreach (VideoBufferViewModel x in VideoBuffers) {
+            foreach (IVideoBufferViewModel x in VideoBuffers) {
                 x.ShowCursor = true;
             }            
         });
@@ -159,7 +159,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public void AddBuffer(IVideoCard videoCard, uint address, double scale, int bufferWidth, int bufferHeight,
         bool isPrimaryDisplay = false) {
-        VideoBufferViewModel videoBuffer = new VideoBufferViewModel(videoCard, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
+        IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(videoCard, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         Dispatcher.UIThread.Post(
             () => {
                 if(!VideoBuffers.Any(x => x.Address == videoBuffer.Address)) {
@@ -170,7 +170,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    public async Task DebugExecutableCommand() {
+    public async Task DebugExecutable() {
         _closeAppOnEmulatorExit = false;
         await StartNewExecutable();
         PauseEmulatorOnStart = true;
@@ -184,7 +184,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private async Task StartNewExecutable() {
         if (App.MainWindow is not null) {
-            OpenFileDialog ofd = new OpenFileDialog() {
+            OpenFileDialog ofd = new() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
                 Filters = new(){
@@ -200,23 +200,28 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             };
             string[]? files = await ofd.ShowAsync(App.MainWindow);
             if (files?.Any() == true) {
-                _configuration.Exe = files[0];
-                _configuration.ExeArgs = "";
-                _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
-                Play();
-                Dispatcher.UIThread.Post(() => DisposeEmulator(), DispatcherPriority.MaxValue);
-                SetMainTitle();
-                _okayToContinueEvent = new(true);
-                _programExecutor?.Machine.ExitEmulationLoop();
-                while (_emulatorThread?.IsAlive == true) {
-                    Dispatcher.UIThread.RunJobs();
-                }
-
-                IsMachineRunning = false;
-                _closeAppOnEmulatorExit = false;
-                RunEmulator();
+                RestartEmulatorWithNewProgram(files[0]);
             }
         }
+    }
+
+    private void RestartEmulatorWithNewProgram(string filePath) {
+        _configuration.Exe = filePath;
+        _configuration.ExeArgs = "";
+        _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
+        Play();
+        Dispatcher.UIThread.Post(() => DisposeEmulator(), DispatcherPriority.MaxValue);
+        SetMainTitle();
+        _okayToContinueEvent = new(true);
+        _programExecutor?.Machine.ExitEmulationLoop();
+        while (_emulatorThread?.IsAlive == true)
+        {
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        IsMachineRunning = false;
+        _closeAppOnEmulatorExit = false;
+        RunEmulator();
     }
 
     private double _timeMultiplier = 1;
@@ -238,7 +243,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 DataContext = new PerformanceViewModel(
                     _programExecutor.Machine, this)
             };
-            _performanceWindow.Closed += (s, e) => _performanceWindow = null;
+            _performanceWindow.Closed += (_, _) => _performanceWindow = null;
             _performanceWindow.Show();
         } else {
             await MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("", "Please start a program first")
@@ -252,7 +257,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _debugWindow.Activate();
         } else if(_programExecutor is not null) {
             _debugWindow = new DebugWindow(_programExecutor.Machine);
-            _debugWindow.Closed += (s, e) => _debugWindow = null;
+            _debugWindow.Closed += (_, _) => _debugWindow = null;
             _debugWindow.Show();
         }
     }
@@ -263,7 +268,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _paletteWindow.Activate();
         } else if(_programExecutor is not null) {
             _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.Machine));
-            _paletteWindow.Closed += (s, e) => _paletteWindow = null;
+            _paletteWindow.Closed += (_, _) => _paletteWindow = null;
             _paletteWindow.Show();
         }
     }
@@ -276,7 +281,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         if (_disposed || _isSettingResolution) {
             return;
         }
-        foreach (VideoBufferViewModel videoBuffer in SortedBuffers()) {
+        foreach (IVideoBufferViewModel videoBuffer in SortedBuffers()) {
             videoBuffer.Draw();
         }
     }
@@ -292,7 +297,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             VideoBuffers
                 .ToDictionary(static x =>
                         x.Address,
-                    x => (IVideoBufferViewModel)x);
+                    x => x);
         set => throw new NotImplementedException();
     }
 
@@ -333,7 +338,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     public void RemoveBuffer(uint address) {
-        VideoBufferViewModel videoBuffer = VideoBuffers.First(x => x.Address == address);
+        IVideoBufferViewModel videoBuffer = VideoBuffers.First(x => x.Address == address);
         videoBuffer.Dispose();
         VideoBuffers.Remove(videoBuffer);
     }
@@ -352,7 +357,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private void DisposeBuffers() {
         for (int i = 0; i < VideoBuffers.Count; i++) {
-            VideoBufferViewModel buffer = VideoBuffers[i];
+            IVideoBufferViewModel buffer = VideoBuffers[i];
             buffer.Dispose();
         }
         VideoBuffers.Clear();
@@ -391,7 +396,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         return CommandLineParser.ParseCommandLine(args);
     }
 
-    private IEnumerable<VideoBufferViewModel> SortedBuffers() {
+    private IEnumerable<IVideoBufferViewModel> SortedBuffers() {
         return VideoBuffers.OrderBy(static x => x.Address).Select(static x => x);
     }
 
@@ -458,7 +463,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             }
         } catch (Exception e) {
             e.Demystify();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred during execution");
             }
             EmulatorErrorOccured += OnEmulatorErrorOccured;

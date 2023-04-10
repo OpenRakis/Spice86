@@ -1,4 +1,6 @@
-﻿using Serilog.Events;
+﻿namespace Spice86.Core.Emulator.CPU;
+
+using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -10,10 +12,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Utils;
 using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.CPU;
-
-using Serilog.Context;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
@@ -34,7 +32,7 @@ public class Cpu {
         {0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F};
 
     private readonly Machine _machine;
-    private readonly Memory.Memory _memory;
+    private readonly Memory _memory;
     private readonly ModRM _modRM;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
@@ -91,7 +89,8 @@ public class Cpu {
         } else {
             try {
                 ExecOpcode(opcode);
-            } catch (CpuException e) {
+            }
+            catch (CpuException e) {
                 HandleCpuException(e);
             }
         }
@@ -103,6 +102,13 @@ public class Cpu {
         State.IncCycles();
         HandleExternalInterrupt();
         State.IP = _internalIp;
+        
+        // Keep reporting last seen user-mode address when we're in BIOS code.
+        if (State.CS >= 0xF000) {
+            return;
+        }
+        _loggerService.LoggerPropertyBag.CodeSegment = State.CS;
+        _loggerService.LoggerPropertyBag.InstructionPointer = State.IP;
     }
 
     public void ExternalInterrupt(byte vectorNumber) {

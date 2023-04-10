@@ -15,8 +15,10 @@ public interface ILoggerService : ILogger {
     /// </summary>
     LoggingLevelSwitch LogLevelSwitch { get; set; }
     
+    ILoggerPropertyBag LoggerPropertyBag { get; }
+    
     /// <summary>
-    /// Whether logs (except forced logs) are ignored.
+    /// Whether logs are ignored.
     /// </summary>
     bool AreLogsSilenced { get; set; }
 
@@ -31,13 +33,6 @@ public interface ILoggerService : ILogger {
     /// </summary>
     /// <returns>The new <see cref="LoggerConfiguration"/></returns>
     LoggerConfiguration CreateLoggerConfiguration();
-
-    /// <summary>
-    /// Forced logs. Ignores <see cref="LogLevelSwitch"/>.
-    /// </summary>
-    /// <param name="messageTemplate">The message string with custom properties names, such as {CustomVariableName}</param>
-    /// <param name="properties">The properties that are serialized into the message template</param>
-    void Forced(string messageTemplate, params object?[]? properties);
 
     /// <summary>
     /// Override the minimum level for events from a specific namespace or type name.
