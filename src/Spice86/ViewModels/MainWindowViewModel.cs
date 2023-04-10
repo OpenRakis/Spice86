@@ -200,23 +200,28 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             };
             string[]? files = await ofd.ShowAsync(App.MainWindow);
             if (files?.Any() == true) {
-                _configuration.Exe = files[0];
-                _configuration.ExeArgs = "";
-                _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
-                Play();
-                Dispatcher.UIThread.Post(() => DisposeEmulator(), DispatcherPriority.MaxValue);
-                SetMainTitle();
-                _okayToContinueEvent = new(true);
-                _programExecutor?.Machine.ExitEmulationLoop();
-                while (_emulatorThread?.IsAlive == true) {
-                    Dispatcher.UIThread.RunJobs();
-                }
-
-                IsMachineRunning = false;
-                _closeAppOnEmulatorExit = false;
-                RunEmulator();
+                RestartEmulatorWithNewProgram(files[0]);
             }
         }
+    }
+
+    private void RestartEmulatorWithNewProgram(string filePath) {
+        _configuration.Exe = filePath;
+        _configuration.ExeArgs = "";
+        _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
+        Play();
+        Dispatcher.UIThread.Post(() => DisposeEmulator(), DispatcherPriority.MaxValue);
+        SetMainTitle();
+        _okayToContinueEvent = new(true);
+        _programExecutor?.Machine.ExitEmulationLoop();
+        while (_emulatorThread?.IsAlive == true)
+        {
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        IsMachineRunning = false;
+        _closeAppOnEmulatorExit = false;
+        RunEmulator();
     }
 
     private double _timeMultiplier = 1;
