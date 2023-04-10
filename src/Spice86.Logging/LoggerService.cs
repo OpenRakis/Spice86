@@ -15,7 +15,10 @@ public class LoggerService : ILoggerService {
 
     private LoggerConfiguration _loggerConfiguration;
 
-    public LoggerService() {
+    public ILoggerPropertyBag LoggerPropertyBag { get; }
+
+    public LoggerService(ILoggerPropertyBag loggerPropertyBag) {
+        LoggerPropertyBag = loggerPropertyBag;
         _loggerConfiguration = CreateLoggerConfiguration();
         _loggerConfiguration
             .MinimumLevel.ControlledBy(LogLevelSwitch);
@@ -27,7 +30,11 @@ public class LoggerService : ILoggerService {
     /// <returns>The ILogger instance.</returns>
     private ILogger GetLogger() {
         _logger ??= _loggerConfiguration.CreateLogger();
-        return _logger;
+        return AddProperties(_logger);
+    }
+
+    private ILogger AddProperties(ILogger logger) {
+        return logger.ForContext("IP", $"{LoggerPropertyBag.CodeSegment:X4}:{LoggerPropertyBag.InstructionPointer:X4}");
     }
     
     public LoggerConfiguration CreateLoggerConfiguration() {

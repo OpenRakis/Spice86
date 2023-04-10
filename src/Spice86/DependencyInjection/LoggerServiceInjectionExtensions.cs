@@ -8,6 +8,7 @@ namespace Spice86.DependencyInjection;
 
 public static class LoggerServiceInjectionExtensions {
     public static IServiceCollection AddLogging(this IServiceCollection services) {
+        services.TryAddSingleton<ILoggerPropertyBag, LoggerPropertyBag>();
         services.TryAddSingleton<ILoggerService, LoggerService>();
         return services;
     }

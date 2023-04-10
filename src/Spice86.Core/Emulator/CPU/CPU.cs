@@ -57,7 +57,6 @@ public class Cpu {
     // Value used to read parts of the instruction.
     // CPU uses this internally and adjusts IP after instruction execution is done.
     private ushort _internalIp;
-    private string _userModeAddress = "Uninitialized";
 
     public IOPortDispatcher? IoPortDispatcher { get; set; }
 
@@ -83,7 +82,6 @@ public class Cpu {
     }
 
     public void ExecuteNextInstruction() {
-        using IDisposable property = LogContext.PushProperty("IP", _userModeAddress);
         _internalIp = State.IP;
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
         byte opcode = ProcessPrefixes();
@@ -106,10 +104,13 @@ public class Cpu {
         State.IncCycles();
         HandleExternalInterrupt();
         State.IP = _internalIp;
-        if (State.CS < 0xF000) {
-            // Keep reporting last seen user-mode address when we're in BIOS code.
-            _userModeAddress = $"{State.CS:X4}:{State.IP:X4}";
+        
+        // Keep reporting last seen user-mode address when we're in BIOS code.
+        if (State.CS >= 0xF000) {
+            return;
         }
+        _loggerService.LoggerPropertyBag.CodeSegment = State.CS;
+        _loggerService.LoggerPropertyBag.InstructionPointer = State.IP;
     }
 
     public void ExternalInterrupt(byte vectorNumber) {
