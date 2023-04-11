@@ -27,7 +27,7 @@ public class MachineCreator {
             InitializeDOS = false
         };
 
-        ILoggerService loggerService = new Mock<LoggerService>(new Mock<ILoggerPropertyBag>().Object).Object;
+        ILoggerService loggerService = new Mock<LoggerService>(new LoggerPropertyBag()).Object;
         ProgramExecutor programExecutor = new ProgramExecutor(
             loggerService,
             null, null, configuration);
