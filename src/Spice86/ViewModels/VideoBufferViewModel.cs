@@ -19,8 +19,8 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-/// <inheritdoc />
-public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel>, IDisposable {
+/// <inheritdoc cref="Spice86.Shared.Interfaces.IVideoBufferViewModel" />
+public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel> {
     private bool _disposedValue;
 
     private Thread? _drawThread;
