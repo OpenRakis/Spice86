@@ -3,9 +3,19 @@
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.Callback;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 
 public class SystemBiosInt15Handler : InterruptHandler {
-    public SystemBiosInt15Handler(Machine machine) : base(machine) {
+    private readonly ILoggerService _loggerService;
+    
+    public SystemBiosInt15Handler(Machine machine, ILoggerService loggerService) : base(machine) {
+        _loggerService = loggerService;
+        FillDispatchTable();
+    }
+
+    private void FillDispatchTable() {
         _dispatchTable.Add(0x6, new Callback(0x6, Unsupported));
         _dispatchTable.Add(0xC0, new Callback(0xC0, Unsupported));
         _dispatchTable.Add(0xC2, new Callback(0xC2, Unsupported));
@@ -16,6 +26,11 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public override byte Index => 0x15;
 
     public override void Run() {
+        SegmentedAddress? csIp = _machine.Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
+        if (csIp is not null) {
+            _loggerService.LoggerPropertyBag.CodeSegment = csIp.Segment;
+            _loggerService.LoggerPropertyBag.InstructionPointer = csIp.Offset;
+        }
         byte operation = _state.AH;
         Run(operation);
     }

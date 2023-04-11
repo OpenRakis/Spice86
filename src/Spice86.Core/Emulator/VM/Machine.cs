@@ -170,7 +170,7 @@ public class Machine : IDisposable {
         Register(VideoBiosInt10Handler);
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
         Register(BiosEquipmentDeterminationInt11Handler);
-        SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
+        SystemBiosInt15Handler = new SystemBiosInt15Handler(this, loggerService);
         Register(SystemBiosInt15Handler);
         KeyboardInt16Handler = new KeyboardInt16Handler(
             this,

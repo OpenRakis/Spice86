@@ -81,6 +81,10 @@ public class Cpu {
 
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
+        
+        _loggerService.LoggerPropertyBag.CodeSegment = State.CS;
+        _loggerService.LoggerPropertyBag.InstructionPointer = State.IP;
+
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
         byte opcode = ProcessPrefixes();
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
@@ -102,13 +106,6 @@ public class Cpu {
         State.IncCycles();
         HandleExternalInterrupt();
         State.IP = _internalIp;
-        
-        // Keep reporting last seen user-mode address when we're in BIOS code.
-        if (State.CS >= 0xF000) {
-            return;
-        }
-        _loggerService.LoggerPropertyBag.CodeSegment = State.CS;
-        _loggerService.LoggerPropertyBag.InstructionPointer = State.IP;
     }
 
     public void ExternalInterrupt(byte vectorNumber) {
