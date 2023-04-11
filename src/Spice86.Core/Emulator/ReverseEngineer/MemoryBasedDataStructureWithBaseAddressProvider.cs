@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Errors;
+using Spice86.Shared.Emulator.Errors;
 
 using System.Text;
 

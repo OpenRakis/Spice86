@@ -8,7 +8,7 @@ using Serilog;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// PC speaker implementation.

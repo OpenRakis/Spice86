@@ -10,8 +10,8 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System;
 using System.IO;
@@ -36,7 +36,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosFileManager _dosFileManager;
     private readonly List<IVirtualDevice> _devices;
 
-    public DosInt21Handler(Machine machine, ILoggerService loggerService, Dos dos) : base(machine) {
+    public DosInt21Handler(Machine machine, ILoggerService loggerService, Dos dos) : base(machine, loggerService) {
         _loggerService = loggerService;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");

@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.VM;
 using Serilog;
 
 using Spice86.Core.Emulator.Errors;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;

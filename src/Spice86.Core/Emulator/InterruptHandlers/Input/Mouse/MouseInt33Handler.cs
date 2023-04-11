@@ -23,7 +23,7 @@ public class MouseInt33Handler : InterruptHandler {
     private ushort _userCallbackOffset;
     private ushort _userCallbackSegment;
 
-    public MouseInt33Handler(Machine machine, ILoggerService loggerService, IGui? gui) : base(machine) {
+    public MouseInt33Handler(Machine machine, ILoggerService loggerService, IGui? gui) : base(machine, loggerService) {
         _loggerService = loggerService;
         _gui = gui;
         _dispatchTable.Add(0x00, new Callback(0x00, MouseInstalledFlag));

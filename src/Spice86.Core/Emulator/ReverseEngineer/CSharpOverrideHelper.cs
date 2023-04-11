@@ -8,12 +8,15 @@ using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Utils;
 using Spice86.Shared.Interfaces;
 
 using System.Linq;
 
 namespace Spice86.Core.Emulator.ReverseEngineer;
+
+using Spice86.Shared;
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Utils;
 
 public class CSharpOverrideHelper {
     protected readonly ILoggerService _loggerService;

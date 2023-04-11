@@ -4,7 +4,7 @@ using System;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
+using Spice86.Shared.Utils;
 
 /// <summary> Thrown when an unhandled IO Port is accessed. </summary>
 [Serializable]

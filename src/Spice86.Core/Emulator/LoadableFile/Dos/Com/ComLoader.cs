@@ -5,6 +5,8 @@ using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.LoadableFile.Dos.Com;
 
+using Spice86.Shared.Utils;
+
 public class ComLoader : DosFileLoader {
     private const ushort ComOffset = 0x100;
     private readonly ushort _startSegment;

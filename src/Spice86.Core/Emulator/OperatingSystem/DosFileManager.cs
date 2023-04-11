@@ -6,12 +6,12 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog;
 
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Utils;
-
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Utils;
 
 using System;
 using System.Collections.Generic;

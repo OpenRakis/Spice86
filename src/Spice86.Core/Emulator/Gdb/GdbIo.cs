@@ -6,7 +6,7 @@ namespace Spice86.Core.Emulator.Gdb;
 using Serilog;
 using Serilog.Events;
 
-using Spice86.Core.Utils;
+using Spice86.Shared.Utils;
 
 using System;
 using System.Collections.Generic;

@@ -1,4 +1,4 @@
-namespace Spice86.Core.Utils;
+namespace Spice86.Shared.Utils;
 
 using System.Collections.Generic;
 

@@ -7,9 +7,9 @@ using Serilog;
 using System.IO;
 using Spice86.Logging;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Utils;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Base class for loading executable files in the VM like exe, bios, ...

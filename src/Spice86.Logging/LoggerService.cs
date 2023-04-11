@@ -34,7 +34,7 @@ public class LoggerService : ILoggerService {
     }
 
     private ILogger AddProperties(ILogger logger) {
-        return logger.ForContext("IP", $"{LoggerPropertyBag.CodeSegment:X4}:{LoggerPropertyBag.InstructionPointer:X4}");
+        return logger.ForContext("IP", $"{LoggerPropertyBag.CsIp}");
     }
     
     public LoggerConfiguration CreateLoggerConfiguration() {

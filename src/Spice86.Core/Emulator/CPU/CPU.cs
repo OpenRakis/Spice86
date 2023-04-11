@@ -10,8 +10,9 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
+using Spice86.Shared;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
@@ -81,9 +82,9 @@ public class Cpu {
 
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
-        
-        _loggerService.LoggerPropertyBag.CodeSegment = State.CS;
-        _loggerService.LoggerPropertyBag.InstructionPointer = State.IP;
+
+        _loggerService.LoggerPropertyBag.CsIp.Segment = State.CS;
+        _loggerService.LoggerPropertyBag.CsIp.Offset = State.IP;
 
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
         byte opcode = ProcessPrefixes();

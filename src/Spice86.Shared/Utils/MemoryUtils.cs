@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Shared.Utils;
 
-using Spice86.Core.Emulator.Errors;
+using Spice86.Shared.Emulator.Errors;
 
 using System.Text;
 

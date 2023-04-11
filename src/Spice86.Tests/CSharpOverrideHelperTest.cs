@@ -13,6 +13,8 @@ using System.Collections.Generic;
 using Xunit;
 using Moq;
 
+using Spice86.Shared;
+
 public class CSharpOverrideHelperTest {
     private readonly Mock<ILoggerService> _loggerServiceMock = new();
     

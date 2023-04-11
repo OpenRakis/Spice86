@@ -7,6 +7,7 @@ using Serilog;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared;
+using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
 /// <summary>

@@ -1,4 +1,4 @@
-﻿namespace Spice86.Shared;
+﻿namespace Spice86.Shared.Emulator.Video;
 
 /// <summary>
 /// RGB representation of a color.
