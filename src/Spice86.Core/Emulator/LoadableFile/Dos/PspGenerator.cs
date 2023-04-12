@@ -4,6 +4,7 @@ using System.Text;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Utils;
 
 public class PspGenerator {
     private const ushort DTA_OR_COMMAND_LINE_OFFSET = 0x80;

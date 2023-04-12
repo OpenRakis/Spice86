@@ -10,8 +10,9 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
+using Spice86.Shared;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
@@ -29,7 +30,7 @@ public class Cpu {
     private readonly ILoggerService _loggerService;
 
     private static readonly HashSet<int> _stringOpCodes = new()
-        {0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F};
+        { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Machine _machine;
     private readonly Memory _memory;
@@ -81,6 +82,10 @@ public class Cpu {
 
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
+
+        _loggerService.LoggerPropertyBag.CsIp.Segment = State.CS;
+        _loggerService.LoggerPropertyBag.CsIp.Offset = State.IP;
+
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
         byte opcode = ProcessPrefixes();
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
@@ -102,13 +107,6 @@ public class Cpu {
         State.IncCycles();
         HandleExternalInterrupt();
         State.IP = _internalIp;
-        
-        // Keep reporting last seen user-mode address when we're in BIOS code.
-        if (State.CS >= 0xF000) {
-            return;
-        }
-        _loggerService.LoggerPropertyBag.CodeSegment = State.CS;
-        _loggerService.LoggerPropertyBag.InstructionPointer = State.IP;
     }
 
     public void ExternalInterrupt(byte vectorNumber) {

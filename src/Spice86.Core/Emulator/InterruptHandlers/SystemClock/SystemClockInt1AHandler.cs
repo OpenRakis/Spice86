@@ -17,7 +17,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     private readonly ILoggerService _loggerService;
     private readonly TimerInt8Handler _timerHandler;
 
-    public SystemClockInt1AHandler(Machine machine, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(machine) {
+    public SystemClockInt1AHandler(Machine machine, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(machine, loggerService) {
         _loggerService = loggerService;
         _timerHandler = timerHandler;
         _dispatchTable.Add(0x00, new Callback(0x00, SetSystemClockCounter));

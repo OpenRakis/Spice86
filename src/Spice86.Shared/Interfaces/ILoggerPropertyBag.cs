@@ -1,4 +1,4 @@
-namespace Spice86.Shared.Interfaces; 
+namespace Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Contains properties used internally by the <see cref="ILoggerService"/> to enrich logs. <br/>
@@ -6,12 +6,7 @@ namespace Spice86.Shared.Interfaces;
 /// </summary>
 public interface ILoggerPropertyBag {
     /// <summary>
-    /// From Cpu.State.CS
+    /// From Cpu.State.CS and Cpu.State.IP
     /// </summary>
-    ushort CodeSegment { get; set; }
-    
-    /// <summary>
-    /// From Cpu.State.IP
-    /// </summary>
-    ushort InstructionPointer { get; set; }
+    SegmentedAddress CsIp { get; set; }
 }

@@ -5,6 +5,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Loader for bios files.<br/>

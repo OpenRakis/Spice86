@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
+using Spice86.Shared.Utils;
+
 using System.Text.Json;
 
 /// <summary> Represents a range in memory. </summary>

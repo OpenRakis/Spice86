@@ -1,9 +1,10 @@
 ﻿using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Utils;
 
 using System.Text;
 
 namespace Spice86.Core.Emulator.CPU;
+
+using Spice86.Shared.Utils;
 
 public class State {
     // Accumulator

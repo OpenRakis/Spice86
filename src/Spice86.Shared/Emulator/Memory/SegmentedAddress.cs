@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Shared;
 
-using Spice86.Core.Utils;
+using Spice86.Shared.Utils;
 
 using System;
 
@@ -42,9 +42,9 @@ public class SegmentedAddress : IComparable<SegmentedAddress> {
         return (int)ToPhysical();
     }
 
-    public ushort Offset { get; private set; }
+    public ushort Offset { get; set; }
 
-    public ushort Segment { get; private set; }
+    public ushort Segment { get; set; }
 
     public uint ToPhysical() {
         return MemoryUtils.ToPhysicalAddress(Segment, Offset);

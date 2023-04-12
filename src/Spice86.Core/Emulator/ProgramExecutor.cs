@@ -12,7 +12,6 @@ using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.LoadableFile.Bios;
@@ -27,6 +26,9 @@ using System.Security.Cryptography;
 using System.Diagnostics;
 
 using Spice86.Core.CLI;
+using Spice86.Shared;
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>

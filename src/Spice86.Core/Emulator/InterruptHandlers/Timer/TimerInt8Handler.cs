@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Implementation of int8 that just updates a value in the bios data area.
@@ -13,7 +14,7 @@ public class TimerInt8Handler : InterruptHandler {
     private readonly DualPic _dualPic;
     private readonly Timer _timer;
 
-    public TimerInt8Handler(Machine machine) : base(machine) {
+    public TimerInt8Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _timer = machine.Timer;
         _memory = machine.Memory;
         _dualPic = machine.DualPic;

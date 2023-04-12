@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
-using Spice86.Core.Utils;
+using Spice86.Shared.Utils;
 
 public class GdbFormatter {
     public string FormatValueAsHex32(uint value) {

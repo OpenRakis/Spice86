@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
     protected State _state;
@@ -18,7 +19,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
 
     private bool _interruptStackPresent = true;
 
-    protected InterruptHandler(Machine machine) {
+    protected InterruptHandler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _machine = machine;
         _memory = machine.Memory;
         _cpu = machine.Cpu;

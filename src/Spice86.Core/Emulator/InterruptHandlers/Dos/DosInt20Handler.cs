@@ -15,7 +15,7 @@ using Spice86.Logging;
 public class DosInt20Handler : InterruptHandler {
     private readonly ILoggerService _loggerService;
 
-    public DosInt20Handler(Machine machine, ILoggerService loggerService) : base(machine) {
+    public DosInt20Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService;
     }
 

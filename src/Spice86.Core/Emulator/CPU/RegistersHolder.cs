@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
-using Spice86.Core.Utils;
+using Spice86.Shared.Utils;
 
 using System;
 using System.Collections.Generic;

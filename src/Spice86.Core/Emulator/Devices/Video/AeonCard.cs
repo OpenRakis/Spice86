@@ -19,7 +19,9 @@ using Spice86.Core.Emulator.Devices.Video.Fonts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System.Drawing;
 using System.Linq;

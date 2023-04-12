@@ -3,11 +3,12 @@ namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 public class VideoBiosInt10Handler : InterruptHandler {
     private readonly IVgaInterrupts _vgaCard;
 
-    public VideoBiosInt10Handler(Machine machine, IVgaInterrupts vgaCard) : base(machine) {
+    public VideoBiosInt10Handler(Machine machine, ILoggerService loggerService, IVgaInterrupts vgaCard) : base(machine, loggerService) {
         _vgaCard = vgaCard;
         FillDispatchTable();
     }

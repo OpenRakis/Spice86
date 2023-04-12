@@ -7,8 +7,9 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Utils;
 using Spice86.Logging;
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Utils;
 
 using System;
 using System.Diagnostics;
