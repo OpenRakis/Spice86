@@ -9,7 +9,9 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -63,7 +65,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
     public ushort GetFreePages() => Math.Min((ushort) 0x7FFF, (ushort) (GetFreeMemoryTotal() / 4));
 
-    public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
+    public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService;
         MemorySizeInMb = Math.Max((ushort)8, (ushort) (_memory.Size / 1024 / 1024));
         _ram = new Ram((uint) (MemorySizeInMb * 1024 * 1024));

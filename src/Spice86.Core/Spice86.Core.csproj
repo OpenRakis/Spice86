@@ -73,7 +73,4 @@
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Utils\" />
-	</ItemGroup>
 </Project>
