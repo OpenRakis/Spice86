@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Errors;
+﻿namespace Spice86.Shared.Emulator.Errors;
 
 using System;
 

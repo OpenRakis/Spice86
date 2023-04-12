@@ -3,13 +3,14 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Utils;
 using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
 namespace Spice86.Core.Emulator.Gdb;
+
+using Spice86.Shared.Utils;
 
 public class GdbCommandBreakpointHandler {
     private readonly ILoggerService _loggerService;

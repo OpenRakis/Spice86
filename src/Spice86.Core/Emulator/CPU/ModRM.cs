@@ -4,6 +4,8 @@ using Spice86.Core.Emulator.VM;
 
 namespace Spice86.Core.Emulator.CPU;
 
+using Spice86.Shared.Utils;
+
 public class ModRM {
     private readonly Cpu _cpu;
     private readonly Machine _machine;

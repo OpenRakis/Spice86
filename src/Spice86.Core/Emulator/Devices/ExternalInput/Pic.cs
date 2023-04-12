@@ -7,7 +7,8 @@ using Serilog;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Emulates a PIC8259 Programmable Interrupt Controller.<br/>

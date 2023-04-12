@@ -1,4 +1,6 @@
-﻿using Serilog.Events;
+﻿namespace Spice86.Core.Emulator.CPU;
+
+using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -8,12 +10,9 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
+using Spice86.Shared;
 using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.CPU;
-
-using Serilog.Context;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
@@ -34,7 +33,7 @@ public class Cpu {
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Machine _machine;
-    private readonly Memory.Memory _memory;
+    private readonly Memory _memory;
     private readonly ModRM _modRM;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
@@ -57,7 +56,6 @@ public class Cpu {
     // Value used to read parts of the instruction.
     // CPU uses this internally and adjusts IP after instruction execution is done.
     private ushort _internalIp;
-    private string _userModeAddress = "Uninitialized";
 
     public IOPortDispatcher? IoPortDispatcher { get; set; }
 
@@ -83,34 +81,32 @@ public class Cpu {
     }
 
     public void ExecuteNextInstruction() {
-        using (LogContext.PushProperty("IP", _userModeAddress)) {
-            _internalIp = State.IP;
-            ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
-            byte opcode = ProcessPrefixes();
-            if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
-                // continueZeroFlag is either true or false if a rep prefix has been encountered
-                ProcessRep(opcode);
-            } else {
-                try {
-                    ExecOpcode(opcode);
-                }
-                catch (CpuException e) {
-                    HandleCpuException(e);
-                }
-            }
+        _internalIp = State.IP;
 
-            // Reset to 16 bit operand and address size
-            _instructions16Or32 = _instructions16;
-            AddressSize = 16;
-            State.ClearPrefixes();
-            State.IncCycles();
-            HandleExternalInterrupt();
-            State.IP = _internalIp;
-            if (State.CS < 0xF000) {
-                // Keep reporting last seen user-mode address when we're in BIOS code.
-                _userModeAddress = $"{State.CS:X4}:{State.IP:X4}";
+        _loggerService.LoggerPropertyBag.CsIp.Segment = State.CS;
+        _loggerService.LoggerPropertyBag.CsIp.Offset = State.IP;
+
+        ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
+        byte opcode = ProcessPrefixes();
+        if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
+            // continueZeroFlag is either true or false if a rep prefix has been encountered
+            ProcessRep(opcode);
+        } else {
+            try {
+                ExecOpcode(opcode);
+            }
+            catch (CpuException e) {
+                HandleCpuException(e);
             }
         }
+
+        // Reset to 16 bit operand and address size
+        _instructions16Or32 = _instructions16;
+        AddressSize = 16;
+        State.ClearPrefixes();
+        State.IncCycles();
+        HandleExternalInterrupt();
+        State.IP = _internalIp;
     }
 
     public void ExternalInterrupt(byte vectorNumber) {

@@ -8,6 +8,9 @@ namespace Spice86.Core.Emulator.Function;
 
 using Memory;
 
+using Spice86.Shared;
+using Spice86.Shared.Utils;
+
 using System.Collections.Generic;
 
 public class ExecutionFlowRecorder {

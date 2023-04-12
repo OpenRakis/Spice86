@@ -4,6 +4,8 @@ using Spice86.Core.Emulator.VM;
 
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
+using Spice86.Shared.Utils;
+
 public abstract class Instructions {
     protected readonly Machine Machine;
     protected readonly Alu Alu;

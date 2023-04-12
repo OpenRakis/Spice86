@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;

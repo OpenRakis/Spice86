@@ -18,7 +18,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
     private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
-    public BiosKeyboardInt9Handler(Machine machine, ILoggerService loggerService, IKeyScanCodeConverter? keyScanCodeConverter) : base(machine) {
+    public BiosKeyboardInt9Handler(Machine machine, ILoggerService loggerService, IKeyScanCodeConverter? keyScanCodeConverter) : base(machine, loggerService) {
         _loggerService = loggerService;
         _keyboard = machine.Keyboard;
         _keyScanCodeConverter = keyScanCodeConverter;

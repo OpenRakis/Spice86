@@ -22,8 +22,8 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -38,8 +38,8 @@ public class Machine : IDisposable {
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly Thread _dmaThread;
-    private bool _exitDmaLoop = false;
-    private bool _dmaThreadStarted = false;
+    private bool _exitDmaLoop;
+    private bool _dmaThreadStarted;
     private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private bool _disposed;
@@ -158,19 +158,19 @@ public class Machine : IDisposable {
         Register(Midi);
 
         // Services
-        CallbackHandler = new CallbackHandler(this, MemoryMap.InterruptHandlersSegment);
+        CallbackHandler = new CallbackHandler(this, loggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
-        TimerInt8Handler = new TimerInt8Handler(this);
+        TimerInt8Handler = new TimerInt8Handler(this, loggerService);
         Register(TimerInt8Handler);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this,
             loggerService,
             keyScanCodeConverter);
         Register(BiosKeyboardInt9Handler);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, (IVgaInterrupts)VgaCard);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, loggerService, (IVgaInterrupts)VgaCard);
         Register(VideoBiosInt10Handler);
-        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this);
+        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, loggerService);
         Register(BiosEquipmentDeterminationInt11Handler);
-        SystemBiosInt15Handler = new SystemBiosInt15Handler(this);
+        SystemBiosInt15Handler = new SystemBiosInt15Handler(this, loggerService);
         Register(SystemBiosInt15Handler);
         KeyboardInt16Handler = new KeyboardInt16Handler(
             this,

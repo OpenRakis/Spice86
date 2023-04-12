@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Shared.Utils;
 
 using System.Text;
 

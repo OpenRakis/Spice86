@@ -7,7 +7,7 @@ using Serilog;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Utils;
+using Spice86.Shared.Utils;
 
 public class Counter {
     public const long HardwareFrequency = 1193182;

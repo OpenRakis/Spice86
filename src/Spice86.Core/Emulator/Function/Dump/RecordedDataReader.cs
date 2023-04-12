@@ -4,6 +4,7 @@ using Spice86.Shared.Interfaces;
 using Memory;
 
 using Spice86.Core.Emulator.Function;
+using Spice86.Shared;
 
 public class RecordedDataReader : RecordedDataIoHandler {
     private readonly ILoggerService _loggerService;

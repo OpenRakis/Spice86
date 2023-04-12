@@ -8,6 +8,7 @@ using Avalonia.Collections;
 using Avalonia.Controls.Shapes;
 
 using Spice86.Shared;
+using Spice86.Shared.Emulator.Video;
 
 public partial class PaletteUserControl : UserControl {
     public PaletteUserControl() {

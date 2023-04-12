@@ -9,6 +9,9 @@ using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 
+using Spice86.Shared;
+using Spice86.Shared.Utils;
+
 /// <summary>
 /// Loads a DOS 16 bits EXE file in memory.
 /// </summary>

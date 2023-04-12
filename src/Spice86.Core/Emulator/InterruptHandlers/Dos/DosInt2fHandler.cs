@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Reimplementation of int2f
@@ -18,7 +19,7 @@ using Spice86.Core.Emulator.VM;
 public class DosInt2fHandler : InterruptHandler {
     private readonly ILoggerService _loggerService;
 
-    public DosInt2fHandler(Machine machine, ILoggerService loggerService) : base(machine) {
+    public DosInt2fHandler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService;
         FillDispatchTable();
     }

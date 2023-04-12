@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Errors;
 
 public class DualPic : DefaultIOPortHandler {
     private const int MasterCommand = 0x20;

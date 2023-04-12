@@ -15,6 +15,8 @@ public interface ILoggerService : ILogger {
     /// </summary>
     LoggingLevelSwitch LogLevelSwitch { get; set; }
     
+    ILoggerPropertyBag LoggerPropertyBag { get; }
+    
     /// <summary>
     /// Whether logs are ignored.
     /// </summary>

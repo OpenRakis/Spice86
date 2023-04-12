@@ -11,6 +11,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Logging;
+using Spice86.Shared.Emulator.Errors;
 
 using System;
 using System.Diagnostics;

@@ -1,6 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared;
+using Spice86.Shared.Utils;
 
 using System;
 using System.Collections.Generic;

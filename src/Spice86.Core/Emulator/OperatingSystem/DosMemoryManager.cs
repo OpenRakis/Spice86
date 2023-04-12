@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 public class DosMemoryManager {
     private readonly ILoggerService _loggerService;

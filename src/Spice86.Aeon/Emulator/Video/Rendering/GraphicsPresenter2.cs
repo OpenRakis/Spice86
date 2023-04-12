@@ -5,7 +5,6 @@ namespace Spice86.Aeon.Emulator.Video.Rendering
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphicsPresenter2"/> class.
         /// </summary>
-        /// <param name="dest">Pointer to destination bitmap.</param>
         /// <param name="videoMode">VideoMode instance describing the video mode.</param>
         public GraphicsPresenter2(VideoMode videoMode) : base(videoMode)
         {

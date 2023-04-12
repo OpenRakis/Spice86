@@ -10,6 +10,8 @@ using System;
 
 using Moq;
 
+using Spice86.Logging;
+
 public class MachineCreator {
     public ProgramExecutor CreateProgramExecutorFromBinName(string binName) {
         return CreateProgramExecutorForBin($"Resources/cpuTests/{binName}.bin");
@@ -25,8 +27,9 @@ public class MachineCreator {
             InitializeDOS = false
         };
 
+        ILoggerService loggerService = new Mock<LoggerService>(new LoggerPropertyBag()).Object;
         ProgramExecutor programExecutor = new ProgramExecutor(
-            new Mock<ILoggerService>().Object,
+            loggerService,
             null, null, configuration);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;

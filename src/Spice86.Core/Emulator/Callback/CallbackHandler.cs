@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared;
+using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 public class CallbackHandler : IndexBasedDispatcher {
     private const ushort CallbackSize = 4;
@@ -23,7 +26,7 @@ public class CallbackHandler : IndexBasedDispatcher {
 
     private readonly Memory _memory;
 
-    public CallbackHandler(Machine machine, ushort interruptHandlerSegment) {
+    public CallbackHandler(Machine machine, ILoggerService loggerService, ushort interruptHandlerSegment) : base(machine, loggerService) {
         _machine = machine;
         _memory = machine.Memory;
         _callbackHandlerSegment = interruptHandlerSegment;
