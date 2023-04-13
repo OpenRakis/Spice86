@@ -3,7 +3,6 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
-using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -100,7 +99,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         /* Check for enough free pages */
         if ((GetFreeMemoryTotal() / 4) < pages) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning))
-                _loggerService.Warning("EMS: Not enough free pages to allocate system handle. Free pages: {0}, requested pages: {1}", GetFreeMemoryTotal() / 4, pages);
+                _loggerService.Warning("EMS: Not enough free pages to allocate system handle. {FreePages}, {RequestedPages}", GetFreeMemoryTotal() / 4, pages);
             return EmmStatus.EmmOutOfLogicalPages;
         }
 
@@ -907,13 +906,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     /// </summary>
     /// <param name="operation">0: Get all handle names. 1: Search for a handle name. 2: Get total number of handles. Other values: invalid subFunction.s</param>
     public byte HandleFunctions(byte operation) {
-        string name;
-        ushort handle = 0;
-        uint data;
+        ushort handle;
         switch (operation) {
             case 0x00:    /* Get all handle names */
                 _state.AL = 0;
-                data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
                 for (handle = 0; handle < EmmMaxHandles; handle++) {
                     if (EmmHandles[handle].Pages == EmmNullHandle) {
                         continue;
@@ -925,7 +922,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 }
                 break;
             case 0x01: /* Search for a handle name */
-                name = MemoryUtils.GetZeroTerminatedString(_memory.Ram,
+                string name = MemoryUtils.GetZeroTerminatedString(_memory.Ram,
                     MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
                 for (handle = 0; handle < EmmMaxHandles; handle++) {
                     if (EmmHandles[handle].Pages == EmmNullHandle ||
@@ -942,7 +939,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 break;
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                    _loggerService.Error("{@MethodName}: EMS subFunction number {@SubFunction} not implemented",
                         nameof(HandleFunctions), operation);
                 }
                 return EmmStatus.EmmInvalidSubFunction;
