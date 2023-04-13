@@ -574,8 +574,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 _state.AH = EmmStatus.EmmNoError;
             break;
             default:
-            if (_loggerService.IsEnabled(LogEventLevel.Error))
-            {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(
                     "{@MethodName} subFunction number {@SubFunctionId} not supported",
                     nameof(SaveOrRestorePageMap), operation);
@@ -623,21 +622,25 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 for (; count > 0; count--) {
                     ushort segment = _memory.GetUint16(list);
                     list += 2;
-                    if (segment is >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000) {
-                        ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageFrameSegment >> 4));
-                        _memory.SetUint16(data, segment);
-                        data += 2;
-                        _memory.LoadData(
-                            data, BitConverter.GetBytes(EmmMappings[page].Handle).Union(BitConverter.GetBytes(EmmMappings[page].LogicalPage)).ToArray(), EmmMappings.Length);
-                        data += (uint)EmmMappings.Length;
-                    } else if (segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
-                        _memory.SetUint16(data, segment);
-                        data += 2;
-                        _memory.LoadData(
-                            data, BitConverter.GetBytes(EmmSegmentMappings[segment >> 10].Handle).Union(BitConverter.GetBytes(EmmSegmentMappings[segment >> 10].LogicalPage)).ToArray(), EmmSegmentMappings.Length);
-                        data += (uint)EmmMappings.Length;
-                    } else {
-                        return EmmStatus.EmsIllegalPhysicalPage;
+                    switch (segment) {
+                        case >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000: {
+                            ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageFrameSegment >> 4));
+                            _memory.SetUint16(data, segment);
+                            data += 2;
+                            _memory.LoadData(
+                                data, BitConverter.GetBytes(EmmMappings[page].Handle).Union(BitConverter.GetBytes(EmmMappings[page].LogicalPage)).ToArray(), EmmMappings.Length);
+                            data += (uint)EmmMappings.Length;
+                            break;
+                        }
+                        case >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000:
+                            _memory.SetUint16(data, segment);
+                            data += 2;
+                            _memory.LoadData(
+                                data, BitConverter.GetBytes(EmmSegmentMappings[segment >> 10].Handle).Union(BitConverter.GetBytes(EmmSegmentMappings[segment >> 10].LogicalPage)).ToArray(), EmmSegmentMappings.Length);
+                            data += (uint)EmmMappings.Length;
+                            break;
+                        default:
+                            return EmmStatus.EmsIllegalPhysicalPage;
                     }
                 }
                 break;
@@ -648,15 +651,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 for (; count > 0; count--) {
                     ushort segment = _memory.GetUint16(data);
                     data += 2;
-                    if (segment is >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000) {
-                        ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageSize >> 4));
-                        EmmMappings[page].Handle = _memory.GetUint16(data);
-                        EmmMappings[page].LogicalPage = _memory.GetUint16(data + sizeof(ushort));
-                    } else if (segment is >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000) {
-                        EmmSegmentMappings[segment >> 10].Handle = _memory.GetUint16(data);
-                        EmmSegmentMappings[segment >> 10].LogicalPage = _memory.GetUint16(data + sizeof(ushort));
-                    } else {
-                        return EmmStatus.EmsIllegalPhysicalPage;
+                    switch (segment) {
+                        case >= EmmPageFrameSegment and < EmmPageFrameSegment + 0x1000: {
+                            ushort page = (ushort) ((segment - EmmPageFrameSegment) / (EmmPageSize >> 4));
+                            EmmMappings[page].Handle = _memory.GetUint16(data);
+                            EmmMappings[page].LogicalPage = _memory.GetUint16(data + sizeof(ushort));
+                            break;
+                        }
+                        case >= EmmPageFrameSegment - 0x1000 and < EmmPageFrameSegment or >= 0xa000 and < 0xb000:
+                            EmmSegmentMappings[segment >> 10].Handle = _memory.GetUint16(data);
+                            EmmSegmentMappings[segment >> 10].LogicalPage = _memory.GetUint16(data + sizeof(ushort));
+                            break;
+                        default:
+                            return EmmStatus.EmsIllegalPhysicalPage;
                     }
                     data += (uint)EmmMappings.Length;
                 }
@@ -665,8 +672,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 _state.AL = (byte)(2 + _state.BX * 2 * EmmMappings.Length);
                 break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Error))
-                {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error(
                         "{@MethodName} subFunction number {@SubFunctionId} not supported",
                         nameof(SaveOrRestorePartialPageMap), operation);
@@ -691,11 +697,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         }
 
         _state.AH = EmmStatus.EmmNoError;
-        switch (operation)
-        {
+        switch (operation) {
             case 0x00: // use physical page numbers
-                for (int i = 0; i < numberOfPages; i++)
-                {
+                for (int i = 0; i < numberOfPages; i++) {
                     ushort logicalPage = _memory.GetUint16(mapAddress);
                     mapAddress += 2;
                     ushort physicalPage = _memory.GetUint16(mapAddress);
@@ -708,8 +712,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 }
 
                 break;
-            case 0x01: // use segment address
-            {
+            // use segment address
+            case 0x01: {
                 for (int i = 0; i < numberOfPages; i++)
                 {
                     ushort logicalPage = _memory.GetUint16(mapAddress);
@@ -725,8 +729,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             }
                 break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Error))
-                {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error(
                         "{@MethodName} subFunction number {@SubFunctionId} not supported",
                         nameof(MapOrUnmapMultipleHandlePages), operation);
@@ -867,8 +870,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     /// <returns>The state of the operation</returns>
     public byte GetSetHandleName(ushort handle, byte operation)
     {
-        switch (operation)
-        {
+        switch (operation) {
             case EmsSubFunctions.HandleNameGet:
                 if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
                     return EmmStatus.EmmInvalidHandle;
@@ -1062,12 +1064,15 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         ushort handle = 1;
         // Check for a free handle
         while (EmmHandles[handle].Pages != EmmNullHandle) {
-            if (++handle >= EmmHandles.Length) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning))
-                    _loggerService.Warning("{@MethodName}: Attempt to allocate {@Pages} pages, but no free handles are available",
-                        nameof(EmmAllocateMemory), pages);
-                return EmmStatus.EmmOutOfHandles;
+            ++handle;
+            if (handle < EmmHandles.Length) {
+                continue;
             }
+
+            if (_loggerService.IsEnabled(LogEventLevel.Warning))
+                _loggerService.Warning("{@MethodName}: Attempt to allocate {@Pages} pages, but no free handles are available",
+                    nameof(EmmAllocateMemory), pages);
+            return EmmStatus.EmmOutOfHandles;
         }
 
         if (pages == 0) {
