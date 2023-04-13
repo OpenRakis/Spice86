@@ -41,8 +41,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     public const ushort EmmPageFrameSegment = 0xE000;
 
     public const ushort EmmPageSize = 16384;
-
-    public override ushort? InterruptHandlerSegment => 0xF100;
     
     public override byte Index => 0x67;
 
