@@ -67,7 +67,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         MemorySizeInMb = Math.Max((ushort)8, (ushort) (_memory.Size / 1024 / 1024));
         _ram = new Ram((uint) (MemorySizeInMb * 1024 * 1024));
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
-        machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
+        machine.Dos.AddDevice(device);
         for (int i = 0; i < EmmHandles.Length; i++) {
             EmmHandles[i] = new EmmHandle();
         }
@@ -117,15 +117,33 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     public uint Size => _ram.Size;
     
     public byte Read(uint address) {
-        return _ram.Read(address - MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0));
+        uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
+        uint physicalAddress = address - emmPageFrameAddress;
+        ThrowIfOutOfRangeForPageFrame(physicalAddress, emmPageFrameAddress);
+        return _ram.Read(physicalAddress);
+    }
+
+    private static void ThrowIfOutOfRangeForPageFrame(uint physicalAddress, uint emmPageFrameAddress) {
+        if (physicalAddress < emmPageFrameAddress || physicalAddress > emmPageFrameAddress + EmmPageFrameSize) {
+            throw new UnrecoverableException($"address {physicalAddress} is out of range for the EMM pageframe !",
+                new ArgumentOutOfRangeException(nameof(physicalAddress)));
+        }
     }
 
     public void Write(uint address, byte value) {
-        _ram.Write(address - MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0), value);
+        uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
+        uint physicalAddress = address - emmPageFrameAddress;
+        ThrowIfOutOfRangeForPageFrame(physicalAddress, emmPageFrameAddress);
+        _ram.Write(physicalAddress, value);
     }
 
     public Span<byte> GetSpan(int address, int length) {
-        return _ram.GetSpan((int)(address - MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0)), length);
+        uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
+        int physicalAddress = (int)(address - emmPageFrameAddress);
+        if (physicalAddress < emmPageFrameAddress || physicalAddress + length > emmPageFrameAddress + EmmPageFrameSize) {
+            throw new UnrecoverableException($"address {physicalAddress} is out of range for the EMM pageframe !", new ArgumentOutOfRangeException(nameof(address)));
+        }
+        return _ram.GetSpan(physicalAddress, length);
     }
 
     private void FillDispatchTable() {
