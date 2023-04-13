@@ -543,7 +543,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         switch (operation) {
             case 0x00:	/* Save Page Map */
             uint physicalAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
-            // TODO: Remove this, use Span
             foreach (EmmMapping mapping in EmmMappings) {
                 _memory.SetUint16(physicalAddress, mapping.Handle);
             }
@@ -551,7 +550,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             break;
             case 0x01:	/* Restore Page Map */
                 uint address = MemoryUtils.ToPhysicalAddress(_state.DS, _state.ES);
-                // TODO: Remove this, use Span
                 for (int i = 0; i < EmmMappings.Length; i++) {
                     EmmMappings[i].Handle = _memory.GetUint16((uint) (address + i));
                     EmmMappings[i].LogicalPage = _memory.GetUint16((uint) (address + i + sizeof(ushort)));
@@ -561,7 +559,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 break;
             case 0x02:	/* Save and Restore Page Map */
                 uint offset = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
-                // TODO: Remove this, use Span
                 for (int i = 0; i < EmmMappings.Length; i++) {
                     EmmMapping item = EmmMappings[i];
                     _memory.LoadData((uint)(offset + i * EmmMappings.Length),
