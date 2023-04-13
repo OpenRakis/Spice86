@@ -565,8 +565,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 for (int i = 0; i < EmmMappings.Length; i++) {
                     EmmMapping item = EmmMappings[i];
                     _memory.LoadData((uint)(offset + i * EmmMappings.Length),
-                        BitConverter.GetBytes(item.Handle).Union(BitConverter.GetBytes(item.LogicalPage))
-                            .ToArray());
+                        BitConverter.GetBytes(item.Handle).Concat(BitConverter.GetBytes(item.LogicalPage)).ToArray());
                 }
                 offset = MemoryUtils.ToPhysicalAddress(_state.DS, _state.ES);
                 for (int i = 0; i < EmmMappings.Length; i++) {
