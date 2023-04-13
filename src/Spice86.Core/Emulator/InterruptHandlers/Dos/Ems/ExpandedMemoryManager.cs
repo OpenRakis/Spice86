@@ -121,8 +121,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
         uint relativeAddress = address - emmPageFrameAddress;
         ThrowIfOutOfRangeForPageFrame(address, emmPageFrameAddress);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("EMS: {@MethodName}: Read within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("EMS: {@MethodName}: Read within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
                 nameof(Read), address, relativeAddress);
         }
         return _ram.Read(relativeAddress);
@@ -139,8 +139,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
         uint relativeAddress = address - emmPageFrameAddress;
         ThrowIfOutOfRangeForPageFrame(address, emmPageFrameAddress);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("EMS: {@MethodName}: Write within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("EMS: {@MethodName}: Write within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
                 nameof(Write), address, relativeAddress);
         }
         _ram.Write(relativeAddress, value);
@@ -152,8 +152,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         if (address < emmPageFrameAddress || address + length > emmPageFrameAddress + EmmPageFrameSize) {
             throw new UnrecoverableException($"address {relativeAddress} is out of range for the EMM pageframe !", new ArgumentOutOfRangeException(nameof(address)));
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("EMS: {@MethodName}: within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("EMS: {@MethodName}: within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
                 nameof(GetSpan), address, relativeAddress);
         }
         return _ram.GetSpan(relativeAddress, length);
