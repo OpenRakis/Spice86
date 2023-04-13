@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
@@ -44,7 +45,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     
     public override byte Index => 0x67;
 
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     
     public MemoryBlock MemoryBlock { get; }
 
@@ -63,7 +64,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     public ushort GetFreePages() => Math.Min((ushort) 0x7FFF, (ushort) (GetFreeMemoryTotal() / 4));
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _loggerService = loggerService;
+        _loggerService = loggerService.CreateLoggerConfiguration().MinimumLevel.Debug().CreateLogger().ForContext<ExpandedMemoryManager>();
         MemorySizeInMb = Math.Max((ushort)8, (ushort) (_memory.Size / 1024 / 1024));
         _ram = new Ram((uint) (MemorySizeInMb * 1024 * 1024));
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
@@ -119,7 +120,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     public byte Read(uint address) {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
         uint relativeAddress = address - emmPageFrameAddress;
-        ThrowIfOutOfRangeForPageFrame(relativeAddress, emmPageFrameAddress);
+        ThrowIfOutOfRangeForPageFrame(address, emmPageFrameAddress);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Read within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
                 nameof(Read), address, relativeAddress);
@@ -127,17 +128,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         return _ram.Read(relativeAddress);
     }
 
-    private static void ThrowIfOutOfRangeForPageFrame(uint physicalAddress, uint emmPageFrameAddress) {
-        if (physicalAddress < emmPageFrameAddress || physicalAddress > emmPageFrameAddress + EmmPageFrameSize) {
-            throw new UnrecoverableException($"address {physicalAddress} is out of range for the EMM pageframe !",
-                new ArgumentOutOfRangeException(nameof(physicalAddress)));
+    private static void ThrowIfOutOfRangeForPageFrame(uint absoluteAddress, uint emmPageFrameAddress) {
+        if (absoluteAddress < emmPageFrameAddress || absoluteAddress > emmPageFrameAddress + EmmPageFrameSize) {
+            throw new UnrecoverableException($"address {absoluteAddress} is out of range for the EMM pageframe !",
+                new ArgumentOutOfRangeException(nameof(absoluteAddress)));
         }
     }
 
     public void Write(uint address, byte value) {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
         uint relativeAddress = address - emmPageFrameAddress;
-        ThrowIfOutOfRangeForPageFrame(relativeAddress, emmPageFrameAddress);
+        ThrowIfOutOfRangeForPageFrame(address, emmPageFrameAddress);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Write within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
                 nameof(Write), address, relativeAddress);
@@ -147,11 +148,15 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
     public Span<byte> GetSpan(int address, int length) {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
-        int physicalAddress = (int)(address - emmPageFrameAddress);
-        if (physicalAddress < emmPageFrameAddress || physicalAddress + length > emmPageFrameAddress + EmmPageFrameSize) {
-            throw new UnrecoverableException($"address {physicalAddress} is out of range for the EMM pageframe !", new ArgumentOutOfRangeException(nameof(address)));
+        int relativeAddress = (int)(address - emmPageFrameAddress);
+        if (address < emmPageFrameAddress || address + length > emmPageFrameAddress + EmmPageFrameSize) {
+            throw new UnrecoverableException($"address {relativeAddress} is out of range for the EMM pageframe !", new ArgumentOutOfRangeException(nameof(address)));
         }
-        return _ram.GetSpan(physicalAddress, length);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("EMS: {@MethodName}: within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
+                nameof(GetSpan), address, relativeAddress);
+        }
+        return _ram.GetSpan(relativeAddress, length);
     }
 
     private void FillDispatchTable() {
@@ -259,21 +264,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     /// Maps data from a logical page to a physical page.
     /// </summary>
     /// <param name="physicalPage">Physical page id.</param>
-    private void MapEmmPage(int physicalPage) {
+    private void RegisterEmmMapping(int physicalPage) {
         uint destAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * physicalPage));
         EmmMapping mapping = EmmMappings[physicalPage];
         mapping.DestAddress = destAddress;
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Map of {@EmmMapping}",
-                nameof(UnmapEmmPage), mapping);
+                nameof(RegisterEmmMapping), mapping);
         }
-        RegisterMapping(destAddress, mapping);
+        RegisterMapping(physicalPage, destAddress, mapping);
     }
 
-    private void RegisterMapping(uint destAddress, EmmMapping mapping) {
-        if (mapping.DestAddress == destAddress) {
-            return;
-        }
+    private void RegisterMapping(int physicalPage, uint destAddress, EmmMapping mapping) {
+        UnregisterEmmMapping(physicalPage);
         _memory.RegisterMapping(destAddress, EmmPageSize, this);
     }
 
@@ -281,11 +284,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     /// Removes an EMM page mapping
     /// </summary>
     /// <param name="physicalPage">Physical page id.</param>
-    private void UnmapEmmPage(int physicalPage) {
+    private void UnregisterEmmMapping(int physicalPage) {
         EmmMapping mapping = EmmMappings[physicalPage];
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Unmap of {@EmmMapping}",
-                nameof(UnmapEmmPage), mapping);
+                nameof(UnregisterEmmMapping), mapping);
         }
         UnregisterMapping(mapping.DestAddress);
     }
@@ -312,7 +315,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             /* Unmapping */
             EmmMappings[physicalPage].Handle = EmmNullHandle;
             EmmMappings[physicalPage].LogicalPage = EmmNullPage;
-            UnmapEmmPage(physicalPage);
             return EmmStatus.EmmNoError;
         }
         /* Check for valid handle */
@@ -327,7 +329,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             /* Mapping it is */
             EmmMappings[physicalPage].Handle = handle;
             EmmMappings[physicalPage].LogicalPage = logicalPage;
-            MapEmmPage(physicalPage);
+            RegisterEmmMapping(physicalPage);
             return EmmStatus.EmmNoError;
         } else {
             /* Illegal logical page it is */
@@ -478,11 +480,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             if (physicalPage is >= 0 and < EmmMaxPhysicalPages) {
                 EmmMappings[physicalPage].Handle = EmmNullHandle;
                 EmmMappings[physicalPage].LogicalPage = EmmNullPage;
-                UnmapEmmPage(physicalPage);
+                UnregisterEmmMapping(physicalPage);
             } else {
                 EmmSegmentMappings[segment >> 10].Handle = EmmNullHandle;
                 EmmSegmentMappings[segment >> 10].LogicalPage = EmmNullPage;
-                UnmapEmmPage(segment >> 10);
+                UnregisterEmmMapping(segment >> 10);
             }
             return EmmStatus.EmmNoError;
         }
@@ -498,11 +500,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         if (physicalPage is >= 0 and < EmmMaxPhysicalPages) {
             EmmMappings[physicalPage].Handle = handle;
             EmmMappings[physicalPage].LogicalPage = logicalPage;
-            MapEmmPage(physicalPage);
+            RegisterEmmMapping(physicalPage);
         } else {
             EmmSegmentMappings[segment >> 10].Handle = handle;
             EmmSegmentMappings[segment >> 10].LogicalPage = logicalPage;
-            MapEmmPage(segment >> 10);
+            RegisterEmmMapping(segment >> 10);
         }
 
         return EmmStatus.EmmNoError;
