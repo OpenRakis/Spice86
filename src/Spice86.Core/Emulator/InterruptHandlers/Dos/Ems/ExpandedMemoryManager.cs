@@ -118,9 +118,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     
     public byte Read(uint address) {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
-        uint physicalAddress = address - emmPageFrameAddress;
-        ThrowIfOutOfRangeForPageFrame(physicalAddress, emmPageFrameAddress);
-        return _ram.Read(physicalAddress);
+        uint relativeAddress = address - emmPageFrameAddress;
+        ThrowIfOutOfRangeForPageFrame(relativeAddress, emmPageFrameAddress);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("EMS: {@MethodName}: Read within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
+                nameof(Read), address, relativeAddress);
+        }
+        return _ram.Read(relativeAddress);
     }
 
     private static void ThrowIfOutOfRangeForPageFrame(uint physicalAddress, uint emmPageFrameAddress) {
@@ -132,9 +136,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
     public void Write(uint address, byte value) {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
-        uint physicalAddress = address - emmPageFrameAddress;
-        ThrowIfOutOfRangeForPageFrame(physicalAddress, emmPageFrameAddress);
-        _ram.Write(physicalAddress, value);
+        uint relativeAddress = address - emmPageFrameAddress;
+        ThrowIfOutOfRangeForPageFrame(relativeAddress, emmPageFrameAddress);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("EMS: {@MethodName}: Write within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
+                nameof(Write), address, relativeAddress);
+        }
+        _ram.Write(relativeAddress, value);
     }
 
     public Span<byte> GetSpan(int address, int length) {
@@ -255,6 +263,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         uint destAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * physicalPage));
         EmmMapping mapping = EmmMappings[physicalPage];
         mapping.DestAddress = destAddress;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("EMS: {@MethodName}: Map of {@EmmMapping}",
+                nameof(UnmapEmmPage), mapping);
+        }
         RegisterMapping(destAddress, mapping);
     }
 
@@ -271,6 +283,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     /// <param name="physicalPage">Physical page id.</param>
     private void UnmapEmmPage(int physicalPage) {
         EmmMapping mapping = EmmMappings[physicalPage];
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("EMS: {@MethodName}: Unmap of {@EmmMapping}",
+                nameof(UnmapEmmPage), mapping);
+        }
         UnregisterMapping(mapping.DestAddress);
     }
 
