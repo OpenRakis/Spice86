@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
+using Spice86.Shared.Utils;
+
 /// <summary>
 /// Provides access to emulated memory mapped BIOS values.
 /// </summary>

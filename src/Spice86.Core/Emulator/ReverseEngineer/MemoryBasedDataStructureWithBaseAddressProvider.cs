@@ -1,11 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
 using Spice86.Core.Emulator.Memory;
-
-using Spice86.Core.Emulator.Errors;
-using Spice86.Shared.Emulator.Errors;
-
-using System.Text;
+using Spice86.Shared.Utils;
 
 public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBasedDataStructure {
     protected MemoryBasedDataStructureWithBaseAddressProvider(Memory memory) : base(memory) {

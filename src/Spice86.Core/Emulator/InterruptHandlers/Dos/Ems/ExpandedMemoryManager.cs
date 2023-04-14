@@ -3,13 +3,13 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
-using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -60,7 +60,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public ushort GetFreePages() => Math.Min((ushort) 0x7FFF, (ushort) (GetFreeMemoryTotal() / 4));
 
-    public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine) {
+    public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService;
         MemorySizeInMb = Math.Max((ushort)8, (ushort) (_memory.Size / 1024 / 1024));
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
