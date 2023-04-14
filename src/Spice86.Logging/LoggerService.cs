@@ -44,10 +44,11 @@ public class LoggerService : ILoggerService {
             .WriteTo.Console(outputTemplate: LogFormat)
             .WriteTo.Debug(outputTemplate: LogFormat);
     }
-    
-    public LoggerConfiguration Override(string source, LogEventLevel minimumLevel) {
-        _loggerConfiguration.MinimumLevel.Override(source, new LoggingLevelSwitch(minimumLevel));
-        return _loggerConfiguration;
+
+    public ILoggerService WithLogLevel(LogEventLevel minimumLevel) {
+        var logger = new LoggerService(LoggerPropertyBag) {LogLevelSwitch = new LoggingLevelSwitch(minimumLevel)};
+        logger._loggerConfiguration.MinimumLevel.ControlledBy(new LoggingLevelSwitch(minimumLevel));
+        return logger;
     }
 
 #pragma warning disable Serilog004
