@@ -294,7 +294,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     /// <summary>
     /// Removes an EMM page mapping
     /// </summary>
-    /// <param name="emmMapping">The EMM Mapping to map in main memory</param>
+    /// <param name="emmMapping">The EMM Mapping to unmap from main memory</param>
     private void UnregisterEmmMapping(EmmMapping emmMapping) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Unmap of {@EmmMapping}",
@@ -317,10 +317,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         }
 
         /* unmapping doesn't need valid handle (as handle isn't used) */
+        EmmMapping mapping = EmmMappings[physicalPage];
         if (logicalPage == EmmNullPage) {
             /* Unmapping */
-            EmmMappings[physicalPage].Handle = EmmNullHandle;
-            EmmMappings[physicalPage].LogicalPage = EmmNullPage;
+            mapping.Handle = EmmNullHandle;
+            mapping.LogicalPage = EmmNullPage;
+            UnregisterEmmMapping(mapping);
             return EmmStatus.EmmNoError;
         }
         /* Check for valid handle */
@@ -333,8 +335,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
         if (logicalPage < EmmHandles[handle].LogicalPage) {
             /* Mapping it is */
-            EmmMappings[physicalPage].Handle = handle;
-            EmmMappings[physicalPage].LogicalPage = logicalPage;
+            mapping.Handle = handle;
+            mapping.LogicalPage = logicalPage;
             RegisterEmmMapping(physicalPage);
             return EmmStatus.EmmNoError;
         } else {
