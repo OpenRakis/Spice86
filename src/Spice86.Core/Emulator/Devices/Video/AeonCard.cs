@@ -4,9 +4,6 @@
 
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Serilog;
-using Serilog.Core;
-
 using Spice86.Aeon.Emulator.Video;
 using Spice86.Aeon.Emulator.Video.Modes;
 using Spice86.Aeon.Emulator.Video.Rendering;
@@ -59,7 +56,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private int _verticalTextResolution = 16;
     private bool _disposed;
     private readonly State _state;
-    private readonly Logger _logger;
+    private readonly ILoggerService _logger;
     private Color _dacReadColor = Color.Black;
     private int _dacReadIndex;
     private int _dacWriteIndex;
@@ -69,12 +66,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
         base(machine, configuration, loggerService) {
+        _logger = loggerService.WithLogLevel(LogEventLevel.Verbose);
         _bios = machine.Bios;
         _state = machine.Cpu.State;
-        _logger = loggerService.CreateLoggerConfiguration()
-            .WriteTo.File("aeon.log", outputTemplate: LogFormat)
-            .MinimumLevel.Debug()
-            .CreateLogger();
         _gui = gui;
 
         unsafe {

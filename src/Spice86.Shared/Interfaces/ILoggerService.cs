@@ -3,7 +3,6 @@ using Serilog.Core;
 namespace Spice86.Shared.Interfaces;
 
 using Serilog;
-using Serilog.Configuration;
 using Serilog.Events;
 
 using System.Diagnostics;
@@ -35,14 +34,7 @@ public interface ILoggerService : ILogger {
     LoggerConfiguration CreateLoggerConfiguration();
 
     /// <summary>
-    /// Override the minimum level for events from a specific namespace or type name.
-    /// This API is not supported for configuring sub-loggers (created through <see cref="Logger"/>). Use <see cref="LoggerConfiguration.Filter"/> or <see cref="LoggerSinkConfiguration.Conditional(Func{LogEvent, bool}, Action{LoggerSinkConfiguration})"/> instead.
-    /// You also might consider using https://github.com/serilog/serilog-filters-expressions.
-    /// </summary>
-    /// <param name="source">The (partial) namespace or type name to set the override for.</param>
-    /// <param name="minimumLevel">The minimum level applied to loggers for matching sources.</param>
-    /// <returns>Configuration object allowing method chaining.</returns>
-    /// <exception cref="ArgumentNullException">When <paramref name="source"/> is <code>null</code></exception>
-    LoggerConfiguration Override(string source, LogEventLevel minimumLevel);
-
+    /// Returns a new <see cref="ILoggerService"/> with the specified minimum log level.
+    /// </summary> 
+    ILoggerService WithLogLevel(LogEventLevel minimumLevel);
 }
