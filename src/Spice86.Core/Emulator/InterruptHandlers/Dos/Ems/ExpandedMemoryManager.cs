@@ -103,14 +103,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         }
 
         /* Release memory if already allocated */
-        if (EmmHandles[EmmSystemHandle].Pages != EmmNullHandle) {
+        if (EmmHandles[EmmSystemHandle].LogicalPage != EmmNullHandle) {
             ReleasePages(EmmHandles[EmmSystemHandle].MemHandle);
         }
         int mem = AllocatePages((ushort) (pages * 4), false);
         if (mem == 0) {
             FailFastWithLogMessage("EMS: System handle memory allocation failure");
         }
-        EmmHandles[EmmSystemHandle].Pages = pages;
+        EmmHandles[EmmSystemHandle].LogicalPage = pages;
         EmmHandles[EmmSystemHandle].MemHandle = mem;
         return EmmStatus.EmmNoError;
     }
@@ -325,7 +325,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             return EmmStatus.EmmInvalidHandle;
         }
 
-        if (logicalPage < EmmHandles[handle].Pages) {
+        if (logicalPage < EmmHandles[handle].LogicalPage) {
             /* Mapping it is */
             EmmMappings[physicalPage].Handle = handle;
             EmmMappings[physicalPage].LogicalPage = logicalPage;
@@ -344,7 +344,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         if (handle >= EmmHandles.Length) {
             return false;
         }
-        return EmmHandles[handle].Pages != EmmNullHandle;
+        return EmmHandles[handle].LogicalPage != EmmNullHandle;
     }
     
     /// <summary>
@@ -360,13 +360,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             return EmmStatus.EmmInvalidHandle;
         }
 
-        if (EmmHandles[handle].Pages != 0) {
+        if (EmmHandles[handle].LogicalPage != 0) {
             ReleasePages(EmmHandles[handle].MemHandle);
         }
         /* Reset handle */
         EmmHandles[handle].MemHandle = 0;
         // OS handle is NEVER deallocated
-        EmmHandles[handle].Pages = handle == 0 ? (ushort) 0 : EmmNullHandle;
+        EmmHandles[handle].LogicalPage = handle == 0 ? (ushort) 0 : EmmNullHandle;
         EmmHandles[handle].SavePageMap = false;
         EmmHandles[handle].Name = string.Empty;
         return EmmStatus.EmmNoError;
@@ -399,7 +399,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
     public byte SavePageMap(ushort handle) {
         /* Check for valid handle */
-        if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
+        if (handle >= EmmHandles.Length || EmmHandles[handle].LogicalPage == EmmNullHandle) {
             if (handle != 0) {
                 return EmmStatus.EmmInvalidHandle;
             }
@@ -426,7 +426,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
     public byte RestorePageMap(ushort handle) {
         /* Check for valid handle */
-        if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
+        if (handle >= EmmHandles.Length || EmmHandles[handle].LogicalPage == EmmNullHandle) {
             if (handle != 0) {
                 return EmmStatus.EmmInvalidHandle;
             }
@@ -492,7 +492,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             return EmmStatus.EmmInvalidHandle;
         }
 
-        if (logicalPage >= EmmHandles[handle].Pages) {
+        if (logicalPage >= EmmHandles[handle].LogicalPage) {
             return EmmStatus.EmsLogicalPageOutOfRange;
         }
 
@@ -525,7 +525,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         ushort count = 0;
         foreach (EmmHandle handle in EmmHandles)
         {
-            if (handle.Pages != EmmNullHandle) {
+            if (handle.LogicalPage != EmmNullHandle) {
                 count++;
             }
         }
@@ -541,7 +541,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             return;
         }
 
-        _state.BX = EmmHandles[_state.DX].Pages;
+        _state.BX = EmmHandles[_state.DX].LogicalPage;
         _state.AH = EmmStatus.EmmNoError;
     }
 
@@ -554,7 +554,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     private byte GetPagesForAllHandles(uint table, ref ushort handles) {
         handles = 0;
         for (byte i = 0; i < EmmMaxHandles; i++) {
-            if (EmmHandles[i].Pages == EmmNullHandle) {
+            if (EmmHandles[i].LogicalPage == EmmNullHandle) {
                 continue;
             }
             handles++;
@@ -787,7 +787,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         if (!IsValidHandle(handle)) {
             return EmmStatus.EmmInvalidHandle;
         }
-        if (EmmHandles[handle].Pages != 0) {
+        if (EmmHandles[handle].LogicalPage != 0) {
             /* Check for enough pages */
             int mem = EmmHandles[handle].MemHandle;
             if (!ReallocatePages(ref mem, (ushort) (pages * 4), false)) {
@@ -802,7 +802,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             EmmHandles[handle].MemHandle = mem;
         }
         /* Update size */
-        EmmHandles[handle].Pages = pages;
+        EmmHandles[handle].LogicalPage = pages;
         return EmmStatus.EmmNoError;
     }
 
@@ -908,14 +908,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     {
         switch (operation) {
             case EmsSubFunctions.HandleNameGet:
-                if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
+                if (handle >= EmmHandles.Length || EmmHandles[handle].LogicalPage == EmmNullHandle) {
                     return EmmStatus.EmmInvalidHandle;
                 }
                 GetHandleName(handle);
                 break;
 
             case EmsSubFunctions.HandleNameSet:
-                if (handle >= EmmHandles.Length || EmmHandles[handle].Pages == EmmNullHandle) {
+                if (handle >= EmmHandles.Length || EmmHandles[handle].LogicalPage == EmmNullHandle) {
                     return EmmStatus.EmmInvalidHandle;
                 }
                 SetHandleName(handle,
@@ -948,7 +948,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 _state.AL = 0;
                 uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
                 for (handle = 0; handle < EmmMaxHandles; handle++) {
-                    if (EmmHandles[handle].Pages == EmmNullHandle) {
+                    if (EmmHandles[handle].LogicalPage == EmmNullHandle) {
                         continue;
                     }
                     _state.AL++;
@@ -961,7 +961,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 string name = MemoryUtils.GetZeroTerminatedString(_memory.Ram,
                     MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
                 for (handle = 0; handle < EmmMaxHandles; handle++) {
-                    if (EmmHandles[handle].Pages == EmmNullHandle ||
+                    if (EmmHandles[handle].LogicalPage == EmmNullHandle ||
                         !name.Equals(EmmHandles[handle].Name, StringComparison.InvariantCultureIgnoreCase)) {
                         continue;
                     }
@@ -1099,7 +1099,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
         ushort handle = 1;
         // Check for a free handle
-        while (EmmHandles[handle].Pages != EmmNullHandle) {
+        while (EmmHandles[handle].LogicalPage != EmmNullHandle) {
             ++handle;
             if (handle < EmmHandles.Length) {
                 continue;
@@ -1120,7 +1120,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             throw new UnrecoverableException("EMS: Memory allocation failure");
         }
 
-        EmmHandles[handle].Pages = pages;
+        EmmHandles[handle].LogicalPage = pages;
         EmmHandles[handle].MemHandle = memHandle;
         // Change handle only if there is no error.
         dhandle = handle;

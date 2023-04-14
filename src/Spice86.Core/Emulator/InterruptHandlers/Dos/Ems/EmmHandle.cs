@@ -4,7 +4,7 @@
 /// Represents a handle for allocated EMS memory.
 /// </summary>
 public sealed class EmmHandle {
-    public ushort Pages { get; set; } = ExpandedMemoryManager.EmmNullHandle;
+    public ushort LogicalPage { get; set; } = ExpandedMemoryManager.EmmNullHandle;
     
     public int MemHandle { get; set; }
     
