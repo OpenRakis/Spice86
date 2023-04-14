@@ -260,19 +260,25 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         _state.AH = EmmMapPage(physicalPage, handle, logicalPage);
         _state.DX = handle;
     }
-    
+
     /// <summary>
     /// Maps data from a logical page to a physical page.
     /// </summary>
     /// <param name="physicalPage">Physical page id.</param>
-    private void RegisterEmmMapping(int physicalPage) {
+    /// <param name="handle">The assigned handle id.</param>
+    /// <param name="logicalPage">The logical page id.</param>
+    private void RegisterEmmMapping(int physicalPage, ushort handle, ushort logicalPage) {
         uint destAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * physicalPage));
         EmmMapping mapping = EmmMappings[physicalPage];
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Map of {@EmmMapping}",
                 nameof(RegisterEmmMapping), mapping);
         }
+        mapping.Handle = handle;
+        mapping.LogicalPage = logicalPage;
         RegisterMapping(physicalPage, destAddress, mapping);
+        mapping.DestAddress = destAddress;
+        mapping.PhysicalPage = physicalPage;
     }
 
     /// <summary>
@@ -287,20 +293,20 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             UnregisterEmmMapping(existingMapping);
         }
         _memory.RegisterMapping(destAddress, EmmPageSize, this);
-        mapping.DestAddress = destAddress;
-        mapping.PhysicalPage = physicalPage;
     }
 
     /// <summary>
     /// Removes an EMM page mapping
     /// </summary>
-    /// <param name="emmMapping">The EMM Mapping to unmap from main memory</param>
-    private void UnregisterEmmMapping(EmmMapping emmMapping) {
+    /// <param name="mapping">The EMM Mapping to unmap from main memory</param>
+    private void UnregisterEmmMapping(EmmMapping mapping) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Unmap of {@EmmMapping}",
-                nameof(UnregisterEmmMapping), emmMapping);
+                nameof(UnregisterEmmMapping), mapping);
         }
-        _memory.UnregisterMapping(emmMapping.DestAddress, EmmPageSize, this);
+        mapping.Handle = EmmNullHandle;
+        mapping.LogicalPage = EmmNullPage;
+        _memory.UnregisterMapping(mapping.DestAddress, EmmPageSize, this);
     }
 
     private byte EmmMapPage(ushort physicalPage, ushort handle, ushort logicalPage) {
@@ -320,8 +326,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         EmmMapping mapping = EmmMappings[physicalPage];
         if (logicalPage == EmmNullPage) {
             /* Unmapping */
-            mapping.Handle = EmmNullHandle;
-            mapping.LogicalPage = EmmNullPage;
             UnregisterEmmMapping(mapping);
             return EmmStatus.EmmNoError;
         }
@@ -335,9 +339,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
         if (logicalPage < EmmHandles[handle].LogicalPage) {
             /* Mapping it is */
-            mapping.Handle = handle;
-            mapping.LogicalPage = logicalPage;
-            RegisterEmmMapping(physicalPage);
+            RegisterEmmMapping(physicalPage, handle, logicalPage);
             return EmmStatus.EmmNoError;
         } else {
             /* Illegal logical page it is */
@@ -488,15 +490,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         EmmMapping emmSegmentMapping = EmmSegmentMappings[segmentMapping];
         if (logicalPage == EmmNullPage) {
             /* Unmapping */
-            if (physicalPage is >= 0 and < EmmMaxPhysicalPages) {
-                mapping.Handle = EmmNullHandle;
-                mapping.LogicalPage = EmmNullPage;
-                UnregisterEmmMapping(mapping);
-            } else {
-                emmSegmentMapping.Handle = EmmNullHandle;
-                emmSegmentMapping.LogicalPage = EmmNullPage;
-                UnregisterEmmMapping(emmSegmentMapping);
-            }
+            UnregisterEmmMapping(physicalPage is >= 0 and < EmmMaxPhysicalPages ? mapping : emmSegmentMapping);
             return EmmStatus.EmmNoError;
         }
         if (!IsValidHandle(handle)) {
@@ -508,16 +502,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         }
 
         // Mapping
-        if (physicalPage is >= 0 and < EmmMaxPhysicalPages) {
-            mapping.Handle = handle;
-            mapping.LogicalPage = logicalPage;
-            RegisterEmmMapping(physicalPage);
-        } else {
-            emmSegmentMapping.Handle = handle;
-            emmSegmentMapping.LogicalPage = logicalPage;
-            RegisterEmmMapping(segmentMapping);
-        }
-
+        RegisterEmmMapping(physicalPage is >= 0 and < EmmMaxPhysicalPages ? physicalPage : segmentMapping, handle, logicalPage);
         return EmmStatus.EmmNoError;
     }
 
