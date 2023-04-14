@@ -274,25 +274,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             _loggerService.Debug("EMS: {@MethodName}: Map of {@EmmMapping}",
                 nameof(RegisterEmmMapping), mapping);
         }
+        _memory.RegisterMapping(destAddress, EmmPageSize, this);
         mapping.Handle = handle;
         mapping.LogicalPage = logicalPage;
-        RegisterMapping(physicalPage, destAddress, mapping);
         mapping.DestAddress = destAddress;
         mapping.PhysicalPage = physicalPage;
-    }
-
-    /// <summary>
-    /// Registers an EMM Mapping in main memory
-    /// </summary>
-    /// <param name="physicalPage">The physical page id of the emm mapping.</param>
-    /// <param name="destAddress">The dest address of the emm mapping.</param>
-    /// <param name="mapping">The EMM Mapping to map.</param>
-    private void RegisterMapping(int physicalPage, uint destAddress, EmmMapping mapping) {
-        EmmMapping existingMapping = EmmMappings[physicalPage];
-        if (existingMapping != mapping && existingMapping.DestAddress == destAddress) {
-            UnregisterEmmMapping(existingMapping);
-        }
-        _memory.RegisterMapping(destAddress, EmmPageSize, this);
     }
 
     /// <summary>
@@ -306,6 +292,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         }
         mapping.Handle = EmmNullHandle;
         mapping.LogicalPage = EmmNullPage;
+        mapping.PhysicalPage = -1;
+        mapping.DestAddress = 0;
         _memory.UnregisterMapping(mapping.DestAddress, EmmPageSize, this);
     }
 
