@@ -64,7 +64,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     public ushort GetFreePages() => Math.Min((ushort) 0x7FFF, (ushort) (GetFreeMemoryTotal() / 4));
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _loggerService = loggerService.CreateLoggerConfiguration().MinimumLevel.Debug().CreateLogger().ForContext<ExpandedMemoryManager>();
+        _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
         MemorySizeInMb = Math.Max((ushort)8, (ushort) (_memory.Size / 1024 / 1024));
         _ram = new Ram((uint) (MemorySizeInMb * 1024 * 1024));
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
