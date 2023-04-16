@@ -169,7 +169,8 @@ public class Machine : IDisposable {
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, new VgaBios(this, loggerService));
+        var vgaInterrupts = new VgaBios(this, loggerService);
+        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, loggerService, vgaInterrupts);
         Register(VideoBiosInt10Handler);
         
         TimerInt8Handler = new TimerInt8Handler(this, loggerService);

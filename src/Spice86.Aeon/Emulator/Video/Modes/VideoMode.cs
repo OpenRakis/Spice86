@@ -14,8 +14,8 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         public const int DisplayPageSize = 0x1000 / 2;
 
-        private readonly CrtController crtController;
-        internal readonly AttributeController attributeController;
+        private readonly CrtControllerRegisters _crtControllerRegisters;
+        internal readonly AttributeControllerRegisters AttributeControllerRegisters;
         internal readonly Dac dac;
         private readonly uint vramSize;
 
@@ -30,8 +30,8 @@ namespace Spice86.Aeon.Emulator.Video
             FontHeight = fontHeight;
             VideoModeType = modeType;
             dac = video.Dac;
-            crtController = video.CrtController;
-            attributeController = video.AttributeController;
+            _crtControllerRegisters = video.CrtControllerRegisters;
+            AttributeControllerRegisters = video.AttributeControllerRegisters;
             VideoRam = GetVideoRamPointer(video);
             vramSize = video.TotalVramBytes;
         }
@@ -44,8 +44,8 @@ namespace Spice86.Aeon.Emulator.Video
             FontHeight = baseMode.FontHeight;
             VideoModeType = baseMode.VideoModeType;
             dac = baseMode.dac;
-            crtController = baseMode.crtController;
-            attributeController = baseMode.attributeController;
+            _crtControllerRegisters = baseMode._crtControllerRegisters;
+            AttributeControllerRegisters = baseMode.AttributeControllerRegisters;
             VideoRam = baseMode.VideoRam;
         }
 
@@ -84,27 +84,27 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets the number of bytes between rows of pixels.
         /// </summary>
-        public virtual int Stride => crtController.Offset * 2;
+        public virtual int Stride => _crtControllerRegisters.Offset * 2;
         /// <summary>
         /// Gets the number of bytes from the beginning of video memory where the display data starts.
         /// </summary>
-        public virtual int StartOffset => crtController.StartAddress;
+        public virtual int StartOffset => _crtControllerRegisters.StartAddress;
         /// <summary>
         /// Gets the number of pixels to shift the output display horizontally.
         /// </summary>
-        public int HorizontalPanning => attributeController.HorizontalPixelPanning;
+        public int HorizontalPanning => AttributeControllerRegisters.HorizontalPixelPanning;
         /// <summary>
         /// Gets the value to add to StartOffest.
         /// </summary>
-        public int BytePanning => (crtController.PresetRowScan >> 5) & 0x3;
+        public int BytePanning => (_crtControllerRegisters.PresetRowScan >> 5) & 0x3;
         /// <summary>
         /// Gets the value of the LineCompare register.
         /// </summary>
-        public int LineCompare => crtController.LineCompare | ((crtController.Overflow & (1 << 4)) << 4) | ((crtController.MaximumScanLine & (1 << 6)) << 3);
+        public int LineCompare => _crtControllerRegisters.LineCompare | ((_crtControllerRegisters.Overflow & (1 << 4)) << 4) | ((_crtControllerRegisters.MaximumScanLine & (1 << 6)) << 3);
         /// <summary>
         /// Gets the value of the StartVerticalBlanking register.
         /// </summary>
-        public int StartVerticalBlanking => crtController.StartVerticalBlanking | ((crtController.Overflow & (1 << 3)) << 5) | ((crtController.MaximumScanLine & (1 << 5)) << 4);
+        public int StartVerticalBlanking => _crtControllerRegisters.StartVerticalBlanking | ((_crtControllerRegisters.Overflow & (1 << 3)) << 5) | ((_crtControllerRegisters.MaximumScanLine & (1 << 5)) << 4);
         /// <summary>
         /// Gets a pointer to the emulated video RAM.
         /// </summary>
@@ -112,7 +112,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets the current EGA/VGA compatibility map.
         /// </summary>
-        public ReadOnlySpan<byte> InternalPalette => attributeController.InternalPalette;
+        public ReadOnlySpan<byte> InternalPalette => AttributeControllerRegisters.InternalPalette;
         /// <summary>
         /// Gets the current VGA color palette.
         /// </summary>
@@ -193,8 +193,8 @@ namespace Spice86.Aeon.Emulator.Video
         /// Performs any necessary initialization upon entering the video mode.
         /// </summary>
         /// <param name="video">The video device.</param>
-        public virtual void InitializeMode(IAeonVgaCard video)
-        {
+        public virtual void InitializeMode(IAeonVgaCard video) {
+            return;
             // video.VirtualMachine.PhysicalMemory.Bios.CharacterPointHeight = (ushort)FontHeight;
 
             unsafe
@@ -205,14 +205,14 @@ namespace Spice86.Aeon.Emulator.Video
             }
 
             int stride;
-            crtController.MaximumScanLine = 0x40;
+            _crtControllerRegisters.MaximumScanLine = 0x40;
 
             if (VideoModeType == VideoModeType.Text)
             {
                 video.TextConsole.Width = Width;
                 video.TextConsole.Height = Height;
                 stride = Width * 2;
-                crtController.MaximumScanLine |= 0x0F;
+                _crtControllerRegisters.MaximumScanLine |= 0x0F;
             }
             else
             {
@@ -224,12 +224,12 @@ namespace Spice86.Aeon.Emulator.Video
                     stride = Width;
             }
 
-            crtController.Overflow = 0x1F;
-            crtController.LineCompare = 0xFF;
-            crtController.Offset = (byte)(stride / 2u);
-            crtController.StartAddress = 0;
+            _crtControllerRegisters.Overflow = 0x1F;
+            _crtControllerRegisters.LineCompare = 0xFF;
+            _crtControllerRegisters.Offset = (byte)(stride / 2u);
+            _crtControllerRegisters.StartAddress = 0;
             // video.Sequencer.MapMask = 0x0F;
-            video.Graphics.BitMask = 0xFF;
+            video.GraphicsControllerRegisters.BitMask = 0xFF;
         }
 
         /// <summary>

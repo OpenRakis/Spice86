@@ -3,15 +3,15 @@ namespace Spice86.Aeon.Emulator.Video
     /// <summary>
     /// Emulates the VGA Attribute Controller registers.
     /// </summary>
-    public sealed class AttributeController
+    public sealed class AttributeControllerRegisters
     {
         private readonly unsafe byte* internalPalette;
         private readonly UnsafeBuffer<byte> internalPaletteBuffer = new(16);
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AttributeController"/> class.
+        /// Initializes a new instance of the <see cref="AttributeControllerRegisters"/> class.
         /// </summary>
-        public AttributeController()
+        public AttributeControllerRegisters()
         {
             unsafe
             {

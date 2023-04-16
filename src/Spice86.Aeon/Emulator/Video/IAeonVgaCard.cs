@@ -9,17 +9,17 @@ public interface IAeonVgaCard {
     /// <summary>
     /// Gets the VGA graphics controller.
     /// </summary>
-    public Graphics Graphics { get; }
+    public GraphicsControllerRegisters GraphicsControllerRegisters { get; }
 
     /// <summary>
     /// Gets the VGA sequencer.
     /// </summary>
-    public Sequencer Sequencer { get; }
+    public SequencerRegisters SequencerRegisters { get; }
 
     /// <summary>
     /// Gets the VGA CRT controller.
     /// </summary>
-    public CrtController CrtController { get; }
+    public CrtControllerRegisters CrtControllerRegisters { get; }
 
     /// <summary>
     /// Gets the current display mode.
@@ -29,7 +29,7 @@ public interface IAeonVgaCard {
     /// <summary>
     /// Gets the VGA attribute controller.
     /// </summary>
-    public AttributeController AttributeController { get; }
+    public AttributeControllerRegisters AttributeControllerRegisters { get; }
     
     /// <summary>
     /// Gets a pointer to the emulated video RAM.

@@ -3,12 +3,12 @@ namespace Spice86.Aeon.Emulator.Video
     /// <summary>
     /// Emulates the VGA CRT Controller registers.
     /// </summary>
-    public sealed class CrtController
+    public sealed class CrtControllerRegisters
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="CrtController"/> class.
+        /// Initializes a new instance of the <see cref="CrtControllerRegisters"/> class.
         /// </summary>
-        public CrtController()
+        public CrtControllerRegisters()
         {
         }
 

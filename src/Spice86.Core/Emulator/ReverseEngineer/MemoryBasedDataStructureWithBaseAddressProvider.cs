@@ -30,7 +30,7 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
     }
 
     public string GetZeroTerminatedString(uint start, int maxLength) {
-        return MemoryUtils.GetZeroTerminatedString(this.Memory.Ram, BaseAddress + start, maxLength);
+        return Memory.GetZeroTerminatedString(BaseAddress + start, maxLength);
     }
 
     public void SetUint16(int offset, ushort value) {
@@ -46,6 +46,6 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
     }
 
     public void SetZeroTerminatedString(uint start, string value, int maxLength) {
-        MemoryUtils.SetZeroTerminatedString(this.Memory.Ram, BaseAddress + start, value, maxLength);
+        Memory.SetZeroTerminatedString(BaseAddress + start, value, maxLength);
     }
 }

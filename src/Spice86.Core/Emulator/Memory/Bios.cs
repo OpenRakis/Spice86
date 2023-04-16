@@ -127,20 +127,12 @@ public sealed class Bios {
     /// Gets or sets the VideoCtl.
     /// </summary>
     public byte VideoCtl {
-        get => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0086];
-        set => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0086] = value;
-    }
-
-    /// <summary>
-    /// Gets or sets the BIOS video mode options.
-    /// </summary>
-    public byte VideoModeOptions {
         get => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0087];
         set => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0087] = value;
     }
 
     /// <summary>
-    /// Gets or sets the EGA feature switch values.
+    /// Gets or sets the BIOS video mode options.
     /// </summary>
     public byte FeatureSwitches {
         get => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0088];
@@ -148,9 +140,9 @@ public sealed class Bios {
     }
 
     /// <summary>
-    /// Gets or sets the video display data value.
+    /// Gets or sets the EGA feature switch values.
     /// </summary>
-    public byte VideoDisplayData {
+    public byte ModesetCtl {
         get => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0089];
         set => _memory.UInt8[MemoryMap.BiosDataSegment, 0x0089] = value;
     }

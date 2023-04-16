@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared;
 
 public class VgaRom : IMemoryDevice {
 

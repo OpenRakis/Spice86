@@ -8,10 +8,9 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         private const uint BaseAddress = 0x18000;
 
         private readonly UnsafeBuffer<nint> planesBuffer = new(4);
-        private readonly unsafe byte* videoRam;
         private readonly unsafe byte** planes;
-        private readonly Graphics graphics;
-        private readonly Sequencer sequencer;
+        private readonly GraphicsControllerRegisters _graphicsControllerRegisters;
+        private readonly SequencerRegisters _sequencerRegisters;
         private readonly uint vramSize;
 
         public TextMode(int width, int height, int fontHeight, IAeonVgaCard video)
@@ -19,7 +18,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         {
             unsafe
             {
-                videoRam = (byte*)video.VideoRam.ToPointer();
+                byte* videoRam = (byte*)video.VideoRam.ToPointer();
                 byte* vram = videoRam;
                 planes = (byte**)planesBuffer.ToPointer();
 
@@ -29,8 +28,8 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 planes[3] = vram + PlaneSize * 3;
             }
 
-            graphics = video.Graphics;
-            sequencer = video.Sequencer;
+            _graphicsControllerRegisters = video.GraphicsControllerRegisters;
+            _sequencerRegisters = video.SequencerRegisters;
             vramSize = video.TotalVramBytes;
         }
 
@@ -42,11 +41,11 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         /// <summary>
         /// Gets a value indicating whether odd-even write addressing is enabled.
         /// </summary>
-        private bool IsOddEvenWriteEnabled => (sequencer.SequencerMemoryMode & SequencerMemoryMode.OddEvenWriteAddressingDisabled) == 0;
+        private bool IsOddEvenWriteEnabled => _sequencerRegisters.MemoryModeRegister.OddEvenMode;
         /// <summary>
         /// Gets a value indicating whether odd-even read addressing is enabled.
         /// </summary>
-        private bool IsOddEvenReadEnabled => (graphics.GraphicsMode & 0x10) != 0;
+        private bool IsOddEvenReadEnabled => (_graphicsControllerRegisters.GraphicsMode & 0x10) != 0;
 
         public override byte GetVramByte(uint offset)
         {
@@ -62,7 +61,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                     return planes[address & 1][address >> 1];
                 }
 
-                var map = graphics.ReadMapSelect & 0x3;
+                var map = _graphicsControllerRegisters.ReadMapSelect & 0x3;
                 if (map == 0 || map == 1)
                     return planes[map][address];
                 if (map == 3)
@@ -86,7 +85,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 }
                 else
                 {
-                    uint mapMask = sequencer.MapMask.Packed;
+                    uint mapMask = _sequencerRegisters.MapMaskRegister.Value;
                     if ((mapMask & 0x01) != 0)
                         planes[0][address] = value;
                     if ((mapMask & 0x02) != 0)
@@ -128,14 +127,14 @@ namespace Spice86.Aeon.Emulator.Video.Modes
             SetVramWord((uint)((y * Stride) + (x * 2)) + BaseAddress, (ushort)value);
         }
 
-        public override void InitializeMode(IAeonVgaCard video)
-        {
-            base.InitializeMode(video);
-            graphics.GraphicsMode = 0x10; // OddEven mode
-            graphics.MiscellaneousGraphics = 0b00000001;
-            sequencer.SequencerMemoryMode = SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
-            sequencer.MapMask = 0x03;
-        }
+        // public override void InitializeMode(IAeonVgaCard video)
+        // {
+        //     base.InitializeMode(video);
+        //     _graphicsControllerRegisters.GraphicsMode = 0x10; // OddEven mode
+        //     _graphicsControllerRegisters.MiscellaneousGraphics = 0b00000001;
+        //     _sequencerRegisters.SequencerMemoryMode = SequencerMemoryMode.ExtendedMemory | SequencerMemoryMode.OddEvenWriteAddressingDisabled;
+        //     _sequencerRegisters.MapMaskRegister.Value = 0x03;
+        // }
         /// <summary>
         /// Clears all of the characters and attributes on the active display page.
         /// </summary>

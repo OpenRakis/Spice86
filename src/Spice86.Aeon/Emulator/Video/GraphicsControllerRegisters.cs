@@ -3,7 +3,7 @@ namespace Spice86.Aeon.Emulator.Video
     /// <summary>
     /// Emulates the VGA Graphics registers.
     /// </summary>
-    public sealed class Graphics : VideoComponent
+    public sealed class GraphicsControllerRegisters
     {
         /// <summary>
         /// Gets the Set/Reset register.
@@ -68,7 +68,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         /// <param name="address">Address of register to write.</param>
         /// <param name="value">Value to write to register.</param>
-        public void WriteRegister(GraphicsRegister address, byte value)
+        public void Write(GraphicsRegister address, byte value)
         {
             switch (address)
             {

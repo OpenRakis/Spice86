@@ -1,6 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Errors;
+
+using System.Text;
 
 /// <summary>
 ///     Represents the memory bus of the IBM PC.
@@ -88,7 +91,7 @@ public class Memory {
         }
         throw new InvalidOperationException($"No Memory Device supports a span from {address} to {address + length}");
     }
-    public byte[] GetData(uint address, uint length) {
+    public byte[] GetData(uint address, int length) {
         byte[] data = new byte[length];
         for (uint i = 0; i < length; i++) {
             data[i] = Read(address + i);
@@ -275,6 +278,32 @@ public class Memory {
             }
         }
         _devices.Add(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
+    }
+    
+    public string GetZeroTerminatedString(uint address, int maxLength) {
+        StringBuilder res = new();
+        for (int i = 0; i < maxLength; i++) {
+            byte characterByte = Read((uint)(address + i));
+            if (characterByte == 0) {
+                break;
+            }
+            char character = Convert.ToChar(characterByte);
+            res.Append(character);
+        }
+        return res.ToString();
+    }
+
+    public void SetZeroTerminatedString(uint address, string value, int maxLength) {
+        if (value.Length + 1 > maxLength) {
+            throw new UnrecoverableException($"String {value} is more than {maxLength} cannot write it at offset {address}");
+        }
+        int i = 0;
+        for (; i < value.Length; i++) {
+            char character = value[i];
+            byte charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
+            Write((uint)(address + i), charFirstByte);
+        }
+        Write((uint)(address + i), 0);
     }
     
     /// <summary>

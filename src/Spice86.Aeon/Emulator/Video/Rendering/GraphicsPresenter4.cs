@@ -71,12 +71,12 @@ namespace Spice86.Aeon.Emulator.Video.Rendering {
         }
         private uint GetColor(int nibbleFromMemory4Bits) {
             // Palette RAM uses incoming 4-bit pixel values to look up one of the 16-bit registers, then sends the contents of that register out.
-            int fromPaletteRam6Bits = VideoMode.attributeController.InternalPalette[nibbleFromMemory4Bits];
+            int fromPaletteRam6Bits = VideoMode.AttributeControllerRegisters.InternalPalette[nibbleFromMemory4Bits];
             int bits0To3 = fromPaletteRam6Bits & 0b00001111;
-            int bits4And5 = (VideoMode.attributeController.AttributeModeControl & 0x80) == 0
+            int bits4And5 = (VideoMode.AttributeControllerRegisters.AttributeModeControl & 0x80) == 0
                 ? fromPaletteRam6Bits & 0b00110000
-                : (VideoMode.attributeController.ColorSelect & 0b00000011) << 4;
-            int bits6And7 = (VideoMode.attributeController.ColorSelect & 0b00001100) << 4;
+                : (VideoMode.AttributeControllerRegisters.ColorSelect & 0b00000011) << 4;
+            int bits6And7 = (VideoMode.AttributeControllerRegisters.ColorSelect & 0b00001100) << 4;
             int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
             int index =dacIndex8Bits & VideoMode.dac.PalettePixelMask;
             return VideoMode.dac.Palette[index];

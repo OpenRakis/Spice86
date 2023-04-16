@@ -47,9 +47,12 @@ public class DosInt21Handler : InterruptHandler {
     }
     
     private void FillDispatchTable() {
+        _dispatchTable.Add(0x01, new Callback(0x01, KeyboardInputWithEcho));
         _dispatchTable.Add(0x02, new Callback(0x02, DisplayOutput));
         _dispatchTable.Add(0x06, new Callback(0x06, () => DirectConsoleIo(true)));
+        _dispatchTable.Add(0x08, new Callback(0x08, ConsoleInputWithoutEcho));
         _dispatchTable.Add(0x09, new Callback(0x09, PrintString));
+        _dispatchTable.Add(0x0B, new Callback(0x0B, CheckStdInStatus));
         _dispatchTable.Add(0x0C, new Callback(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction));
         _dispatchTable.Add(0x0D, new Callback(0x0D, DiskReset));
         _dispatchTable.Add(0x0E, new Callback(0x0E, SelectDefaultDrive));
@@ -84,6 +87,39 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x4F, new Callback(0x4F, () => FindNextMatchingFile(true)));
         _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
+    }
+
+    private void CheckStdInStatus() {
+        _state.AL = _machine.Dos.FileManager.ReadByteFromFileHandle(0);
+    }
+
+    private void ConsoleInputWithoutEcho() {
+        // if (_loggerService.IsEnabled(LogEventLevel.Information))
+        _loggerService.Fatal("INT 21: ConsoleInputWithoutEcho Waiting for key...");
+        ushort? key;
+        do {
+            _machine.BiosKeyboardInt9Handler.Run();
+            key = _machine.KeyboardInt16Handler.GetNextKeyCode();
+        } while (key == null);
+        
+        // if (_loggerService.IsEnabled(LogEventLevel.Debug))
+        _loggerService.Fatal("INT 21: ConsoleInputWithoutEcho Key pressed: {Key}", (char)key);
+    }
+
+    private void KeyboardInputWithEcho() {
+        // if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Fatal("INT 21: KeyboardInputWithEcho Waiting for key...");
+        ushort? key;
+        _machine.KeyboardInt16Handler.GetNextKeyCode();
+        do {
+            _machine.BiosKeyboardInt9Handler.Run();
+            key = _machine.KeyboardInt16Handler.GetNextKeyCode();
+        } while (key == null);
+        
+        // if (_loggerService.IsEnabled(LogEventLevel.Debug))
+            _loggerService.Fatal("INT 21: KeyboardInputWithEcho Key pressed: {Key}", (char)key);
+        
+        _machine.Dos.FileManager.WriteByteToFileHandle(1, (byte)key);
     }
 
     public void GetAllocationInfoForDefaultDrive() {
@@ -410,6 +446,13 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PRINT STRING: {String}", str);
         }
+        _state.BL = 0x07;
+        _state.ES = _state.DS;
+        _state.BP = _state.DX;
+        _state.CX = (ushort)str.Length;
+        _state.AL = 3;
+        _state.AH = 0x13;
+        _machine.CallbackHandler.Run(0x10);
     }
 
     public void QuitWithExitCode() {
