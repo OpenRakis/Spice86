@@ -34,18 +34,11 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
     }
 
     public string GetZeroTerminatedString(int start, int maxLength) {
-        StringBuilder res = new();
-        uint physicalStart = (uint)(BaseAddress + start);
-        for (int i = 0; i < maxLength; i++) {
-            byte characterByte = GetUint8(physicalStart, i);
-            if (characterByte == 0) {
-                break;
-            }
-            char character = Convert.ToChar(characterByte);
-            res.Append(character);
-        }
+        return Memory.GetZeroTerminatedString((uint)(BaseAddress + start), maxLength);
+    }
 
-        return res.ToString();
+    public void SetZeroTerminatedString(int start, string value, int maxLength) {
+        Memory.SetZeroTerminatedString((uint)(BaseAddress + start), value, maxLength);
     }
 
     public void SetUint16(int offset, ushort value) {
@@ -60,19 +53,4 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         SetUint8(BaseAddress, offset, value);
     }
 
-    public void SetZeroTerminatedString(int start, string value, int maxLength) {
-        if (value.Length + 1 > maxLength) {
-            throw new UnrecoverableException($"String {value} is more than {maxLength} cannot write it at offset {start}");
-        }
-
-        uint physicalStart = (uint)(BaseAddress + start);
-        int i = 0;
-        for (; i < value.Length; i++) {
-            char character = value[i];
-            byte charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
-            SetUint8(physicalStart, i, charFirstByte);
-        }
-
-        SetUint8(physicalStart, i, 0);
-    }
 }
