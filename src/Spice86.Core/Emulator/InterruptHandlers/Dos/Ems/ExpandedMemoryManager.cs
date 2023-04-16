@@ -294,7 +294,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         mapping.LogicalPage = EmmNullPage;
         mapping.PhysicalPage = -1;
         mapping.DestAddress = 0;
-        _memory.UnregisterMapping(mapping.DestAddress, EmmPageSize, this);
+        //_memory.UnregisterMapping(mapping.DestAddress, EmmPageSize, this);
     }
 
     private byte EmmMapPage(ushort physicalPage, ushort handle, ushort logicalPage) {
