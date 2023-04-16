@@ -343,7 +343,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public void WriteString() {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             uint address = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BP);
-            string str = MemoryUtils.GetZeroTerminatedString(_memory.Ram, address, _memory.Ram.Length - (int)address);
+            string str = _memory.GetZeroTerminatedString(address, _memory.Ram.Length - (int)address);
             _loggerService.Debug("WRITE STRING: {WrittenString}", str);
         }
     }
