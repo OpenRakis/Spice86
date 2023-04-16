@@ -903,7 +903,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                     return EmmStatus.EmmInvalidHandle;
                 }
                 SetHandleName(handle,
-                    MemoryUtils.GetZeroTerminatedString(_memory.Ram, MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
+                    _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
                         8));
                 break;
 
@@ -942,8 +942,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
                 }
                 break;
             case 0x01: /* Search for a handle name */
-                string name = MemoryUtils.GetZeroTerminatedString(_memory.Ram,
-                    MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
+                string name = _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI), 8);
                 for (handle = 0; handle < EmmMaxHandles; handle++) {
                     if (EmmHandles[handle].LogicalPage == EmmNullHandle ||
                         !name.Equals(EmmHandles[handle].Name, StringComparison.InvariantCultureIgnoreCase)) {
@@ -1222,8 +1221,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
     /// Gets the name of a handle.
     /// </summary>
     public string GetHandleName(ushort handle) {
-        MemoryUtils.SetZeroTerminatedString(
-            _memory.Ram, MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), EmmHandles[handle].Name, 8);
+        EmmHandles[handle].Name = _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), 8);
         return EmmHandles[handle].Name;
     }
 
