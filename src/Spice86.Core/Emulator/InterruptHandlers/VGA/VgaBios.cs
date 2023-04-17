@@ -532,51 +532,11 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
             case MM.DIRECT:
                 gfx_direct(op);
                 break;
-            default:
-                break;
         }
     }
 
     private void gfx_direct(gfx_op op) {
         throw new NotSupportedException("SVGA not supported");
-        // void *fb = (void*)GET_GLOBAL(VBE_framebuffer);
-        // if (!fb)
-        //     return;
-        // int depth = GET_GLOBAL(op->vmode_g->depth);
-        // int bypp = DIV_ROUND_UP(depth, 8);
-        // void *dest_far = (fb + op->displaystart + op->y * op->linelength
-        //     + op->x * bypp);
-        // u8 data[64];
-        // int i;
-        // switch (op->op) {
-        //     default:
-        //     case GO_READ8:
-        //         memcpy_high(MAKE_FLATPTR(GET_SEG(SS), data), dest_far, bypp * 8);
-        //         for (i=0; i<8; i++)
-        //             op->pixels[i] = reverse_color(depth, *(u32*)&data[i*bypp]);
-        //         break;
-        //     case GO_WRITE8:
-        //         for (i=0; i<8; i++)
-        //             *(u32*)&data[i*bypp] = get_color(depth, op->pixels[i]);
-        //         memcpy_high(dest_far, MAKE_FLATPTR(GET_SEG(SS), data), bypp * 8);
-        //         break;
-        //     case GO_MEMSET: ;
-        //         u32 color = get_color(depth, op->pixels[0]);
-        //         for (i=0; i<8; i++)
-        //             *(u32*)&data[i*bypp] = color;
-        //         memcpy_high(dest_far, MAKE_FLATPTR(GET_SEG(SS), data), bypp * 8);
-        //         memcpy_high(dest_far + bypp * 8, dest_far, op->xlen * bypp - bypp * 8);
-        //         for (i=1; i < op->ylen; i++)
-        //             memcpy_high(dest_far + op->linelength * i
-        //                 , dest_far, op->xlen * bypp);
-        //         break;
-        //     case GO_MEMMOVE: ;
-        //         void *src_far = (fb + op->displaystart + op->srcy * op->linelength
-        //             + op->x * bypp);
-        //         memmove_stride_high(dest_far, src_far
-        //             , op->xlen * bypp, op->linelength, op->ylen);
-        //         break;
-        // }
     }
 
     private void gfx_packed(gfx_op op) {
@@ -593,7 +553,6 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
                 memset_stride(SEG_GRAPH, dest_far, op.pixels[0], op.xlen, op.linelength, op.ylen);
                 break;
             case GO.MEMMOVE:
-                ;
                 ushort src_far = (ushort)(op.srcy * op.linelength + op.x);
                 memmove_stride(SEG_GRAPH, dest_far, src_far, op.xlen, op.linelength, op.ylen);
                 break;
@@ -697,7 +656,6 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
                 }
                 break;
             case GO.MEMMOVE:
-                ;
                 ushort src_far = (ushort)(op.srcy * op.linelength + op.x / 8);
                 for (plane = 0; plane < 4; plane++) {
                     stdvga_planar4_plane(plane);
@@ -768,9 +726,9 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         ushort dest_far = text_address(cp);
         if (ca.use_attr) {
             ushort dummy = (ushort)(ca.attr << 8 | ca.car);
-            _memory.UInt16[(ushort)vmode_g.sstart, dest_far] = dummy;
+            _memory.UInt16[vmode_g.sstart, dest_far] = dummy;
         } else {
-            _memory.UInt16[(ushort)vmode_g.sstart, dest_far] = ca.car;
+            _memory.UInt16[vmode_g.sstart, dest_far] = ca.car;
         }
     }
 
@@ -987,43 +945,217 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     public void GetVideoState() {
-        throw new NotImplementedException();
+        _state.BH = _bios.CurrentVideoPage;
+        _state.AL = (byte)(_bios.VideoMode | _bios.VideoCtl & 0x80);
+        _state.AH = (byte)_bios.ScreenColumns;
     }
 
     public void WriteTextInTeletypeMode() {
-        throw new NotImplementedException();
+        carattr ca = new((char)_state.AL, _state.BL, false);
+        cursorpos cp = get_cursor_pos(_bios.CurrentVideoPage);
+        write_teletype(cp, ca);
+        set_cursor_pos(cp);
+    }
+
+    private cursorpos get_cursor_pos(byte page) {
+        if (page > 7)
+            return new cursorpos(0, 0, 0);
+        ushort xy = _bios.CursorPosition[page];
+        return new cursorpos(xy, xy >> 8, page);
     }
 
     public void SetColorPaletteOrBackGroundColor() {
-        throw new NotImplementedException();
+        switch (_state.BH) {
+            case 0x00:
+                stdvga_set_border_color(_state.BL);
+                break;
+            case 0x01:
+                stdvga_set_palette(_state.BL);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(_state.BH), _state.BH, $"INT 10: {nameof(SetColorPaletteOrBackGroundColor)} Invalid subfunction 0x{_state.BH:X2}");
+        }
+    }
+
+    private void stdvga_set_palette(byte palid) {
+        byte i;
+        for (i = 1; i < 4; i++)
+            stdvga_attr_mask(i, 0x01, (byte)(palid & 0x01));
+    }
+
+    private void stdvga_set_border_color(byte color) {
+        byte v1 = (byte)(color & 0x0f);
+        if ((v1 & 0x08) != 0)
+            v1 += 0x08;
+        stdvga_attr_write(0x00, v1);
+
+        byte i;
+        for (i = 1; i < 4; i++)
+            stdvga_attr_mask(i, 0x10, (byte)(color & 0x10));
     }
 
     public void WriteCharacterAtCursor() {
-        throw new NotImplementedException();
+        carattr ca = new((char)_state.AL, _state.BL, false);
+        cursorpos cp = get_cursor_pos(_state.BH);
+        int count = _state.CX;
+        while (count-- > 0)
+            write_char(cp, ca);
     }
 
     public void WriteCharacterAndAttributeAtCursor() {
-        throw new NotImplementedException();
+        carattr ca = new((char)_state.AL, _state.BL, true);
+        cursorpos cp = get_cursor_pos(_state.BH);
+        int count = _state.CX;
+        while (count-- > 0)
+            write_char(cp, ca);
     }
 
     public void ReadCharacterAndAttributeAtCursor() {
-        throw new NotImplementedException();
+        carattr ca = vgafb_read_char(get_cursor_pos(_state.BH));
+        _state.AL = (byte)ca.car;
+        _state.AH = ca.attr;
+    }
+
+    private carattr vgafb_read_char(cursorpos cp) {
+        vgamode_s vmode_g = get_current_mode();
+
+        if (vmode_g.memmodel != MM.TEXT)
+            return gfx_read_char(vmode_g, cp);
+
+        ushort dest_far = text_address(cp);
+        ushort v = _memory.UInt16[vmode_g.sstart, dest_far];
+        return new carattr((char)v, (byte)(v >> 8), false);
+    }
+
+    private carattr gfx_read_char(vgamode_s vmode_g, cursorpos cp) {
+        byte[] lines = new byte[16];
+        int cheight = _bios.CharacterPointHeight;
+        if (cp.x >= _bios.ScreenColumns || cheight > lines.Length)
+            goto fail;
+
+        // Read cell from screen
+        gfx_op op;
+        init_gfx_op(out op, vmode_g);
+        op.op = GO.READ8;
+        op.x = (ushort)(cp.x * 8);
+        op.y = (ushort)(cp.y * cheight);
+        char car = (char)0;
+        byte fgattr = 0x00, bgattr = 0x00;
+        if (vga_emulate_text()) {
+            // Read bottom right pixel of the cell to guess bg color
+            op.y += (ushort)(cheight - 1);
+            handle_gfx_op(op);
+            op.y -= (ushort)(cheight - 1);
+            bgattr = op.pixels[7];
+            fgattr = (byte)(bgattr ^ 0x7);
+            // Report space character for blank cells (skip null character check)
+            car = ' ';
+        }
+        byte i, j;
+        for (i = 0; i < cheight; i++, op.y++) {
+            byte line = 0;
+            handle_gfx_op(op);
+            for (j = 0; j < 8; j++)
+                if (op.pixels[j] != bgattr) {
+                    line |= (byte)(0x80 >> j);
+                    fgattr = op.pixels[j];
+                }
+            lines[i] = line;
+        }
+
+        // Determine font
+        for (; car < 256; car++) {
+            segoff_s font = get_font_data(car);
+            if (memcmp_far(lines, font.seg, font.offset, cheight) == 0)
+                return new carattr(car, (byte)(fgattr | (bgattr << 4)), false);
+        }
+        fail:
+        return new carattr((char)0, 0, false);
+    }
+
+    private int memcmp_far(byte[] s1, ushort s2seg, ushort s2, int n) {
+        int i = 0;
+        while (n-- > 0) {
+            int d = s1[i] - _memory.UInt8[s2seg, s2];
+            if (d != 0)
+                return d < 0 ? -1 : 1;
+            i++;
+            s2++;
+        }
+        return 0;
     }
 
     public void ScrollPageDown() {
-        throw new NotImplementedException();
+        verify_scroll(-1);
+    }
+
+    private void verify_scroll(int dir) {
+        // Verify parameters
+        byte ulx = _state.CL, uly = _state.CH, lrx = _state.DL, lry = _state.DH;
+        ushort nbrows = (ushort)(_bios.ScreenRows + 1);
+        if (lry >= nbrows)
+            lry = (byte)(nbrows - 1);
+        ushort nbcols = _bios.ScreenColumns;
+        if (lrx >= nbcols)
+            lrx = (byte)(nbcols - 1);
+        int wincols = lrx - ulx + 1, winrows = lry - uly + 1;
+        if (wincols <= 0 || winrows <= 0)
+            return;
+        int lines = _state.AL;
+        if (lines >= winrows)
+            lines = 0;
+        lines *= dir;
+
+        // Scroll (or clear) window
+        cursorpos win = new(ulx, uly, _bios.CurrentVideoPage);
+        cursorpos winsize = new(wincols, winrows, 0);
+        carattr attr = new(' ', _state.BH, true);
+        vgafb_scroll(win, winsize, lines, attr);
     }
 
     public void ScrollPageUp() {
-        throw new NotImplementedException();
+        verify_scroll(1);
     }
 
     public void SelectActiveDisplayPage() {
-        throw new NotImplementedException();
+        set_active_page(_state.AL);
+    }
+
+    private void set_active_page(byte page) {
+        if (page > 7)
+            return;
+
+        // Get the mode
+        vgamode_s vmode_g = get_current_mode();
+
+        // Calculate memory address of start of page
+        cursorpos cp = new(0, 0, page);
+        int address = text_address(cp);
+        vgahw_set_displaystart(vmode_g, address);
+
+        // And change the BIOS page
+        _bios.VideoPageStart = (ushort)address;
+        _bios.CurrentVideoPage = page;
+
+        if (_logger.IsEnabled(LogEventLevel.Information))
+            _logger.Information("INT 10 Set active page {Page:X2} address {Address:X4}", page, address);
+
+        // Display the cursor, now the page is active
+        set_cursor_pos(get_cursor_pos(page));
+    }
+
+    private void vgahw_set_displaystart(vgamode_s vmode_g, int val) {
+        VGAREG crtc_addr = stdvga_get_crtc();
+        val = val * stdvga_vram_ratio(vmode_g) / 4;
+        stdvga_crtc_write(crtc_addr, 0x0c, (byte)(val >> 8));
+        stdvga_crtc_write(crtc_addr, 0x0d, (byte)val);
     }
 
     public void GetCursorPosition() {
-        throw new NotImplementedException();
+        _state.CX = _bios.CursorType;
+        cursorpos cp = get_cursor_pos(_state.BH);
+        _state.DL = (byte)cp.x;
+        _state.DH = (byte)cp.y;
     }
 
     public void SetCursorPosition() {
@@ -1032,7 +1164,37 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     public void SetCursorType() {
-        throw new NotImplementedException();
+        set_cursor_shape(_state.CX);
+    }
+
+    private void set_cursor_shape(ushort cursor_type) {
+        _bios.CursorType = cursor_type;
+        
+        stdvga_set_cursor_shape(get_cursor_shape());
+    }
+
+    private void stdvga_set_cursor_shape(ushort cursor_type) {
+        VGAREG crtc_addr = stdvga_get_crtc();
+        stdvga_crtc_write(crtc_addr, 0x0a, (byte)(cursor_type >> 8));
+        stdvga_crtc_write(crtc_addr, 0x0b, (byte)cursor_type);
+    }
+
+    private ushort get_cursor_shape() {
+        ushort cursor_type = _bios.CursorType;
+        bool emulate_cursor = (_bios.VideoCtl & 1) == 0;
+        if (!emulate_cursor)
+            return cursor_type;
+        byte start = (byte)((cursor_type >> 8) & 0x3f);
+        byte end = (byte)(cursor_type & 0x1f);
+        ushort cheight = _bios.CharacterPointHeight;
+        if (cheight <= 8 || end >= 8 || start >= 0x20)
+            return cursor_type;
+        if (end != (start + 1))
+            start = (byte)(((start + 1) * cheight / 8) - 1);
+        else
+            start = (byte)(((end + 1) * cheight / 8) - 2);
+        end = (byte)(((end + 1) * cheight / 8) - 1);
+        return (ushort)((start << 8) | end);
     }
 
     private void init_bios_area() {
@@ -1090,20 +1252,57 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void ReadDot() {
-        throw new NotImplementedException();
+        _state.AL = vgafb_read_pixel(_state.CX, _state.DX);
+    }
+
+    private byte vgafb_read_pixel(ushort x, ushort y) {
+        vgamode_s vmode_g = get_current_mode();
+
+        gfx_op op;
+        init_gfx_op(out op, vmode_g);
+        op.x = ALIGN_DOWN(x, 8);
+        op.y = y;
+        op.op = GO.READ8;
+        handle_gfx_op(op);
+
+        return op.pixels[x & 0x07];
+    }
+
+    private ushort ALIGN_DOWN(ushort value, int alignment) {
+        int mask = alignment - 1;
+        return (ushort)(value & ~mask);
     }
 
     private void WriteDot() {
-        throw new NotImplementedException();
+        vgafb_write_pixel(_state.AL, _state.CX, _state.DX);
+    }
+
+    private void vgafb_write_pixel(byte color, ushort x, ushort y) {
+        vgamode_s vmode_g = get_current_mode();
+
+        gfx_op op;
+        init_gfx_op(out op, vmode_g);
+        op.x = ALIGN_DOWN(x, 8);
+        op.y = y;
+        op.op = GO.READ8;
+        handle_gfx_op(op);
+
+        bool usexor = (color & 0x80) != 0 && vmode_g.depth < 8;
+        if (usexor)
+            op.pixels[x & 0x07] ^= (byte)(color & 0x7f);
+        else
+            op.pixels[x & 0x07] = color;
+        op.op = GO.WRITE8;
+        handle_gfx_op(op);
     }
 
     private void ReadLightPenPosition() {
-        throw new NotImplementedException();
+        _state.AX = _state.BX = _state.CX = _state.DX = 0;
     }
 
     private void SetMode() {
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("INT 10: Set video mode to {0:X2}", _state.AL);
+            _logger.Debug("INT 10: Set video mode to {AL:X2}", _state.AL);
         }
         int mode = _state.AL & 0x7f;
         ModeFlags flags = ModeFlags.Legacy | (ModeFlags)_bios.ModesetCtl & (ModeFlags.NoPalette | ModeFlags.GraySum);
