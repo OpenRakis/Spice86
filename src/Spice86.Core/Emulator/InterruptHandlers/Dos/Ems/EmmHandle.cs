@@ -9,11 +9,6 @@ public sealed class EmmHandle {
     public ushort LogicalPage { get; set; } = ExpandedMemoryManager.EmmNullHandle;
     
     public int MemHandle { get; set; }
-    
-    /// <summary>
-    /// 4 16 KB pages in PageFrame
-    /// </summary>
-    public const byte EmmMaxPhysicalPages = 4;
 
     private const string NullHandleName = "";
 
@@ -31,7 +26,7 @@ public sealed class EmmHandle {
     /// <summary>
     /// Gets or sets the saved page map for the handle.
     /// </summary>
-    public EmmMapping[] PageMap { get; } = new EmmMapping[EmmMaxPhysicalPages];
+    public EmmMapping[] PageMap { get; } = new EmmMapping[ExpandedMemoryManager.EmmMaxPhysicalPages];
 
     public bool SavePageMap { get; set; }
 
