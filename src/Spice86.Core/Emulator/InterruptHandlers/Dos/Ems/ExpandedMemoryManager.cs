@@ -13,6 +13,7 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -51,7 +52,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
     public EmmMapping[] EmmSegmentMappings { get; } = new EmmMapping[64];
 
-    public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmmHandle.EmmMaxPhysicalPages];
+    public EmmMapping[] EmmMappings { get; } = new EmmMapping[EmmMaxPhysicalPages];
     
     public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmMaxHandles];
     
@@ -59,14 +60,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
     public int TotalPages => MemoryBlock.Pages;
 
-    private readonly Ram _ram;
-
     public ushort GetFreePages() => Math.Min((ushort) 0x7FFF, (ushort) (GetFreeMemoryTotal() / 4));
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
         MemorySizeInMb = Math.Max((ushort)8, (ushort) (_memory.Size / 1024 / 1024));
-        _ram = new Ram((uint) (MemorySizeInMb * 1024 * 1024));
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
         machine.Dos.AddDevice(device);
         for (int i = 0; i < EmmHandles.Length; i++) {
@@ -85,6 +83,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
 
         FillDispatchTable();
         
+        _memory.RegisterMapping(MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0), EmmPageSize * EmmMaxPhysicalPages, this);
+
         _state.AH = EmmAllocateSystemHandle(8);
     }
     
@@ -102,11 +102,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             }
             return EmmStatus.EmmOutOfLogicalPages;
         }
-
-        /* Release memory if already allocated */
-        if (EmmHandles[EmmSystemHandle].LogicalPage != EmmNullHandle) {
-            ReleasePages(EmmHandles[EmmSystemHandle].MemHandle);
-        }
+        
         int mem = AllocatePages((ushort) (logicalPage * 4), false);
         if (mem == 0) {
             FailFastWithLogMessage("EMS: System handle memory allocation failure");
@@ -116,7 +112,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         return EmmStatus.EmmNoError;
     }
 
-    public uint Size => _ram.Size;
+    public uint Size => EmmPageSize * EmmMaxPhysicalPages;
     
     public byte Read(uint address) {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
@@ -126,7 +122,27 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             _loggerService.Verbose("EMS: {@MethodName}: Read within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
                 nameof(Read), address, relativeAddress);
         }
-        return _ram.Read(relativeAddress);
+
+        uint physicalPageNumber = GetPhysicalPageNumberFromAbsoluteAddress(address, emmPageFrameAddress);
+        uint offset = GetOffsetIntoPhysicalPage(address, emmPageFrameAddress, physicalPageNumber);
+        return EmmMappings[physicalPageNumber].Read(offset);
+    }
+
+    private static uint GetPhysicalPageNumberFromAbsoluteAddress(uint address, uint emmPageFrameAddress) {
+        uint physicalPageNumber = 0;
+        for (int i = 1; i <= EmmMaxPhysicalPages; i++) {
+            if (address < emmPageFrameAddress || address >= emmPageFrameAddress + (EmmPageSize * i)) {
+                physicalPageNumber++;
+            } else {
+                break;
+            }
+        }
+        return physicalPageNumber;
+    }
+
+    private static uint GetOffsetIntoPhysicalPage(uint address, uint emmPageFrameAddress, uint physicalPageNumber) {
+        uint offset = (address - emmPageFrameAddress) - (physicalPageNumber * EmmPageSize);
+        return offset;
     }
 
     private static void ThrowIfOutOfRangeForPageFrame(uint absoluteAddress, uint emmPageFrameAddress) {
@@ -144,12 +160,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             _loggerService.Verbose("EMS: {@MethodName}: Write within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
                 nameof(Write), address, relativeAddress);
         }
-        _ram.Write(relativeAddress, value);
+        uint physicalPageNumber = GetPhysicalPageNumberFromAbsoluteAddress(address, emmPageFrameAddress);
+        if (physicalPageNumber > EmmMappings.Length) {
+            Debugger.Break();
+        }
+        uint offset = GetOffsetIntoPhysicalPage(address, emmPageFrameAddress, physicalPageNumber);
+        EmmMappings[physicalPageNumber].Write(offset, value);
     }
 
     public Span<byte> GetSpan(int address, int length) {
         uint emmPageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
-        int relativeAddress = (int)(address - emmPageFrameAddress);
+        int relativeAddress = (int)(address - emmPageFrameAddress) - 1;
         if (address < emmPageFrameAddress || address + length > emmPageFrameAddress + EmmPageFrameSize) {
             throw new UnrecoverableException($"address {relativeAddress} is out of range for the EMM pageframe !", new ArgumentOutOfRangeException(nameof(address)));
         }
@@ -157,7 +178,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             _loggerService.Verbose("EMS: {@MethodName}: within EMM Page frame at {AbsoluteAddress} {RelativeAddress}",
                 nameof(GetSpan), address, relativeAddress);
         }
-        return _ram.GetSpan(relativeAddress, length);
+        uint physicalPageNumber = GetPhysicalPageNumberFromAbsoluteAddress((uint)address, emmPageFrameAddress);
+        uint offset = GetOffsetIntoPhysicalPage((uint)address, emmPageFrameAddress, physicalPageNumber);
+        return EmmMappings[physicalPageNumber].GetSpan((int)offset, length);
     }
 
     private void FillDispatchTable() {
@@ -274,7 +297,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
             _loggerService.Debug("EMS: {@MethodName}: Map of {@EmmMapping}",
                 nameof(RegisterEmmMapping), mapping);
         }
-        _memory.RegisterMapping(destAddress, EmmPageSize, this);
         mapping.Handle = handle;
         mapping.LogicalPage = logicalPage;
         mapping.DestAddress = destAddress;
@@ -294,7 +316,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IMemoryDevice {
         mapping.LogicalPage = EmmNullPage;
         mapping.PhysicalPage = -1;
         mapping.DestAddress = 0;
-        //_memory.UnregisterMapping(mapping.DestAddress, EmmPageSize, this);
     }
 
     private byte EmmMapPage(ushort physicalPage, ushort handle, ushort logicalPage) {
