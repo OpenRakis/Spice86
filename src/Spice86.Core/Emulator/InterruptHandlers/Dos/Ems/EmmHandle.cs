@@ -1,15 +1,19 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 /// <summary>
-/// Represents a handle for allocated EMS memory.
+/// Represents a handle for allocated EMM memory to a DOS program.
 /// </summary>
 public sealed class EmmHandle {
-    public bool IsSytemHandle => LogicalPage == 0;
-    
-    public ushort LogicalPage { get; set; } = ExpandedMemoryManager.EmmNullHandle;
-    
-    public int MemHandle { get; set; }
+    /// <summary>
+    /// The EMM page or raw page number. 
+    /// </summary>
+    public ushort PageNumber { get; set; } = ExpandedMemoryManager.EmmNullPage;
 
+    /// <summary>
+    /// The EMM handle number.
+    /// </summary>
+    public ushort HandleNumber { get; set; } = ExpandedMemoryManager.EmmNullHandle;
+    
     private const string NullHandleName = "";
 
     public EmmHandle() {
