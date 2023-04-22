@@ -1,5 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
+using System.Linq;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
+
 using Serilog;
 using Serilog.Events;
 
@@ -13,11 +20,6 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 
 /// <summary>
 /// Provides DOS applications with EMS memory. <br/>
@@ -119,8 +121,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
         //_dispatchTable.Add(0x47, new Callback(0x47, SavePageMap));
         //_dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
-        //_dispatchTable.Add(0x4B, new Callback(0x4B, GetHandleCount));
-        //_dispatchTable.Add(0x4C, new Callback(0x4C, GetPagesForOneHandle));
+        _dispatchTable.Add(0x4B, new Callback(0x4B, GetEmmHandleCount));
+        _dispatchTable.Add(0x4C, new Callback(0x4C, GetHandlePages));
         //_dispatchTable.Add(0x4D, new Callback(0x4D, GetPageForAllHandles));
         //_dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
         //_dispatchTable.Add(0x4F, new Callback(0x4F, SaveOrRestorePartialPageMap));
@@ -158,9 +160,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
     
     /// <summary>
-    /// The Get Unallocated Page Count function returns the number of
+    /// The Get Unallocated Page Count function returns in _state.BX the number of
     /// unallocated pages (pages available to your program),
-    /// and the total number of pages in expanded memory.
+    /// and the total number of pages in expanded memory, in _state.DX.
     /// </summary>
     public void GetNumberOfPages() {
         // Return total number of pages in DX.
@@ -169,8 +171,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.BX = EmmMemory.GetFreePages();
         // Set good status.
         _state.AH = EmmStatus.EmmNoError;
-        if (_loggerService.IsEnabled(LogEventLevel.Debug))
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Total: {@Total} Free: {@Free}", nameof(GetNumberOfPages), _state.DX, _state.BX);
+        }
     }
 
     /// <summary>
@@ -185,6 +188,40 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _loggerService.Debug("EMS: {@MethodName}: 0x{Version:X2}", nameof(GetEmmVersion), _state.AL);
         }
     }
+
+    /// <summary>
+    /// Returns in _state.BX the number of open EMM handles.
+    /// </summary>
+    /// <remarks>This number will not exceed 255.</remarks>
+    public void GetEmmHandleCount() {
+        _state.BX = 0;
+        _state.BX = GetAllocatedHandleCount();
+        // Return good status.
+        _state.AH = EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
+    /// The Get Handle Pages function returns in _state.BX, the number of pages allocated to
+    /// a specific EMM handle. <br/>
+    /// Params: <br/>
+    /// _state.DX: The EMM Handle.
+    /// </summary>
+    /// <remarks>
+    /// _state.BX contains the number of logical pages allocated to the
+    /// specified EMM handle.  This number never exceeds 512
+    /// because the memory manager allows a maximum of 512 pages
+    /// (8 MB) of expanded memory.
+    /// </remarks>
+    public void GetHandlePages() {
+        _state.BX = (ushort)EmmHandles[_state.DX].PageMap.Count(static x => x.PageNumber != EmmNullPage);
+        _state.AX = EmmStatus.EmmNoError;
+    }
+    
+    /// <summary>
+    /// Returns the number of open EMM handles
+    /// </summary>
+    /// <returns>The number of open EMM handles</returns>
+    public ushort GetAllocatedHandleCount() => (ushort) EmmHandles.SelectMany(static x => x.PageMap).Count(static y => y.PageNumber != EmmNullPage);
 
     public override void Run() {
         byte operation = _state.AH;

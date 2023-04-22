@@ -12,5 +12,5 @@ public class EmmPage {
     /// <summary>
     /// The page number. Initially set as EmmNullPage.
     /// </summary>
-    public ushort PageNumber { get; init; } = ExpandedMemoryManager.EmmNullPage;
+    public ushort PageNumber { get; set; } = ExpandedMemoryManager.EmmNullPage;
 }
