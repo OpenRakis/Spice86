@@ -123,7 +123,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         //_dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
         _dispatchTable.Add(0x4B, new Callback(0x4B, GetEmmHandleCount));
         _dispatchTable.Add(0x4C, new Callback(0x4C, GetHandlePages));
-        //_dispatchTable.Add(0x4D, new Callback(0x4D, GetPageForAllHandles));
+        _dispatchTable.Add(0x4D, new Callback(0x4D, GetAllHandlePages));
         //_dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
         //_dispatchTable.Add(0x4F, new Callback(0x4F, SaveOrRestorePartialPageMap));
         //_dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultipleHandlePages));
@@ -131,7 +131,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         //_dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
         //_dispatchTable.Add(0x54, new Callback(0x54, HandleFunctions));
         //_dispatchTable.Add(0x58, new Callback(0x58, GetMappablePhysicalArrayAddressArray));
-        //_dispatchTable.Add(0x59, new Callback(0x59, GetHardwareInformation));
+        _dispatchTable.Add(0x59, new Callback(0x59, GetExpandedMemoryHardwareInformation));
         //_dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
     }
 
@@ -215,6 +215,72 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public void GetHandlePages() {
         _state.BX = (ushort)EmmHandles[_state.DX].PageMap.Count(static x => x.PageNumber != EmmNullPage);
         _state.AX = EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
+    /// The Get All Handle Pages function returns an array of the open EMM
+    /// handles and the number of pages allocated to each one.
+    /// </summary>
+    public void GetAllHandlePages() {
+        _state.BX = GetAllocatedHandleCount();
+        ushort handles = _state.BX;
+        _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), _state.BX);
+        _state.BX = handles;
+
+        _state.AX = EmmStatus.EmmNoError;
+    }
+    
+    private byte GetPagesForAllHandles(uint table, ushort allocatedHandlesCount) {
+        for (byte i = 0; i < EmmMaxHandles; i++) {
+            if (EmmHandles[i].HandleNumber == EmmNullHandle) {
+                continue;
+            }
+            _memory.SetUint8(table, i);
+            _memory.SetUint16(table, allocatedHandlesCount);
+        }
+        return EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
+    /// This function is for use by operating systems only.  This function can
+    /// be disabled at any time by the operating system. <br/>
+    /// Refer to Function 30 for a description of how an operating system does this.
+    /// </summary>
+    public void GetExpandedMemoryHardwareInformation() {
+        switch (_state.AL) {
+            case EmsSubFunctions.GetHardwareConfigurationArray:
+                uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+                // 1 page is 1K paragraphs (16KB)
+                _memory.SetUint16(data,0x0400);
+                data+=2;
+                // No alternate register sets
+                _memory.SetUint16(data,0x0000);
+                data+=2;
+                // Context save area size
+                _memory.SetUint16(data, (ushort)EmmHandles.SelectMany(static x => x.PageMap).Count());
+                data+=2;
+                // No DMA channels
+                _memory.SetUint16(data,0x0000);
+                data+=2;
+                // Always 0 for LIM standard
+                _memory.SetUint16(data,0x0000);
+                break;
+            case EmsSubFunctions.GetUnallocatedRawPages:
+                // Return number of pages available in BX.
+                _state.BX = EmmMemory.GetFreePages();
+                // Return total number of pages in DX.
+                _state.DX = EmmMemory.TotalPages;
+                // Set good status.
+                _state.AH = EmmStatus.EmmNoError;
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                        nameof(GetExpandedMemoryHardwareInformation), _state.AL);
+                }
+                break;
+        }
+
     }
     
     /// <summary>
