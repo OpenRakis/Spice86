@@ -5,11 +5,6 @@
 /// </summary>
 public sealed class EmmHandle {
     /// <summary>
-    /// The EMM page or raw page number. 
-    /// </summary>
-    public ushort PageNumber { get; set; } = ExpandedMemoryManager.EmmNullPage;
-
-    /// <summary>
     /// The EMM handle number.
     /// </summary>
     public ushort HandleNumber { get; set; } = ExpandedMemoryManager.EmmNullHandle;
