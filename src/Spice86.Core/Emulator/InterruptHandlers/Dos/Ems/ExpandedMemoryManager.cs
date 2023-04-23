@@ -118,10 +118,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x4D, new Callback(0x4D, GetAllHandlePages));
         //_dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
         _dispatchTable.Add(0x50, new Callback(0x50, MapUnmapMultipleHandlePages));
-        //_dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
+        _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         _dispatchTable.Add(0x53, new Callback(0x53, GetSetHandleName));
         _dispatchTable.Add(0x59, new Callback(0x59, GetExpandedMemoryHardwareInformation));
-        //_dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
     }
 
     /// <summary>
@@ -245,7 +244,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return;
         }
 
-        if (!AllocatedEmmHandles.ContainsKey(handleId)) {
+        if (!IsValidHandle(handleId)) {
             _state.AH = EmmStatus.EmmInvalidHandle;
             return;
         }
@@ -273,7 +272,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         _state.AH = EmmStatus.EmmNoError;
     }
-    
+
+    private bool IsValidHandle(ushort handleId) => AllocatedEmmHandles.ContainsKey(handleId);
+
     private void EmmMapSegment(ushort logicalPage, ushort segment, ushort handleId) {
         uint address = MemoryUtils.ToPhysicalAddress(segment, 0);
         uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
@@ -298,7 +299,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </remarks>
     public void DeallocatePages() {
         ushort handleId = _state.DX;
-        if (!AllocatedEmmHandles.ContainsKey(handleId)) {
+        if (!IsValidHandle(handleId)) {
             _state.AH = EmmStatus.EmmInvalidHandle;
             return;
         }
@@ -422,6 +423,54 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     /// <summary>
+    /// This function allows an application program to increase or decrease
+    /// (reallocate) the number of logical pages allocated to an EMM handle.
+    /// </summary>
+    public void ReallocatePages() {
+        ushort handleId = _state.DX;
+        ushort reallocationCount = _state.BX;
+        if (!IsValidHandle(handleId)) {
+            _state.AH = EmmStatus.EmmInvalidHandle;
+            return;
+        }
+        
+        if (AllocatedEmmHandles.Count == EmmMemory.TotalPages) {
+            _state.AH = EmmStatus.EmmOutOfHandles;
+            return;
+        }
+        if (reallocationCount > EmmMemory.TotalPages) {
+            _state.AH = EmmStatus.NotEnoughEmmPages;
+            return;
+        }
+        
+        EmmHandle handle = AllocatedEmmHandles[handleId];
+
+        if (handle.PageMap.Count == reallocationCount) {
+            _state.AH = EmmStatus.EmmNoError;
+            return;
+        }
+        
+        if (reallocationCount == 0) {
+            EmmMemory.FreeLogicalPages(handle);
+        }
+
+        if (reallocationCount > handle.PageMap.Count) {
+            ushort addedPages = (ushort)(reallocationCount - handle.PageMap.Count);
+            AllocatePages(addedPages, false);
+        }
+
+        if (reallocationCount < handle.PageMap.Count) {
+            ushort removedPages = (ushort) (handle.PageMap.Count - reallocationCount);
+            while (removedPages > 0) {
+                EmmMemory.FreeLogicalPages(handle);
+                removedPages--;
+            }
+        }
+
+        _state.AH = EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
     /// This subFunction gets the eight character name currently assigned to a handle.
     /// There is no restriction on the characters which may be used
     /// in the handle name (that is, anything from 00h through FFh). <br/>
@@ -440,21 +489,21 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// Gets or Set a handle name, depending on the <paramref name="operation"/>
     /// </summary>
-    /// <param name="handle">The handle reference</param>
+    /// <param name="handleId">The handle reference</param>
     /// <param name="operation">Get: 0, Set: 1</param>
     /// <returns>The state of the operation</returns>
-    public byte GetSetHandleName(ushort handle, byte operation)
+    public byte GetSetHandleName(ushort handleId, byte operation)
     {
-        if (handle >= AllocatedEmmHandles.Count || !AllocatedEmmHandles.ContainsKey(handle)) {
+        if (!IsValidHandle(handleId)) {
             return EmmStatus.EmmInvalidHandle;
         }
         switch (operation) {
             case EmsSubFunctions.HandleNameGet:
-                GetHandleName(handle);
+                GetHandleName(handleId);
                 break;
 
             case EmsSubFunctions.HandleNameSet:
-                SetHandleName(handle,
+                SetHandleName(handleId,
                     _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
                         8));
                 break;
