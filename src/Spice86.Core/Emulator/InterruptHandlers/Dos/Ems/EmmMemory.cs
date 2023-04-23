@@ -40,7 +40,8 @@ public class EmmMemory {
         return LogicalPages.First(x => x.Value.PageNumber is ExpandedMemoryManager.EmmNullPage).Key;
     }
 
-    public ushort AllocateLogicalPage(ushort index) {
+    public ushort AllocateLogicalPage() {
+        ushort index = GetNextFreeLogicalPageId();
         LogicalPages[index].PageNumber = index;
         return index;
     }

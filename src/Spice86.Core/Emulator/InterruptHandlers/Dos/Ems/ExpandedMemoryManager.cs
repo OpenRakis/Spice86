@@ -177,21 +177,37 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// _state.DX: The number of pages to allocate to the handle.
     /// </summary>
     public void AllocatePages() {
-        ushort handleCount = _state.BX;
-        if (handleCount is 0) {
-            _state.AH = EmmStatus.EmsLogicalPageOutOfRange;
+        ushort numberOfPagesToAlloc = _state.BX;
+        AllocatePages(numberOfPagesToAlloc, false);
+    }
+
+    private void AllocatePages(ushort numberOfPagesToAlloc, bool canAllocateZeroPages) {
+        if (numberOfPagesToAlloc is 0 && !canAllocateZeroPages) {
+            _state.AH = EmmStatus.TriedTOAllocateZeroPages;
             return;
         }
+        if (AllocatedEmmHandles.Count == EmmMemory.TotalPages) {
+            _state.AH = EmmStatus.EmmOutOfHandles;
+            return;
+        }
+        if (numberOfPagesToAlloc > EmmMemory.TotalPages) {
+            _state.AH = EmmStatus.NotEnoughEmmPages;
+            return;
+        }
+        
         EmmHandle newHandle = new();
         int key = AllocatedEmmHandles.Count + 1;
-        newHandle.HandleNumber = (ushort)key;
-        while (handleCount > 0) {
-            ushort allocatedPageNumber = EmmMemory.AllocateLogicalPage(EmmMemory.GetNextFreeLogicalPageId());
-            newHandle.PageMap.Add(new EmmMapping {
+        newHandle.HandleNumber = (ushort) key;
+        while (numberOfPagesToAlloc > 0)
+        {
+            ushort allocatedPageNumber = EmmMemory.AllocateLogicalPage();
+            newHandle.PageMap.Add(new()
+            {
                 PageNumber = allocatedPageNumber
             });
-            handleCount--;
+            numberOfPagesToAlloc--;
         }
+
         AllocatedEmmHandles.Add(key, newHandle);
         _state.AH = EmmStatus.EmmNoError;
     }
