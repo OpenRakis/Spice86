@@ -17,7 +17,7 @@ public class EmmHandle {
     public string Name { get; set; } = NullHandleName;
 
     /// <summary>
-    /// Gets or sets the saved page map for the handle.
+    /// Gets or sets the page map for the handle.
     /// </summary>
     public List<EmmMapping> PageMap { get; } = new();
     

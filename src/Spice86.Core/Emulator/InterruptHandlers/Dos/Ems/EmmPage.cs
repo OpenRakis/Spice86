@@ -7,7 +7,7 @@ public class EmmPage {
     /// <summary>
     /// The page's memory content
     /// </summary>
-    public EmmPageMemory PageMemory { get; } = new();
+    public EmmPageMemory PageMemory { get; set; } = new();
 
     /// <summary>
     /// The page number. Initially set as EmmNullPage.

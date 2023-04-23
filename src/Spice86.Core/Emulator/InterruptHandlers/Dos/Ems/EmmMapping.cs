@@ -7,5 +7,5 @@ public class EmmMapping {
     /// <summary>
     /// The logical page number
     /// </summary>
-    public ushort PageNumber { get; set; } = ExpandedMemoryManager.EmmNullPage;
+    public ushort LogicalPageNumber { get; set; } = ExpandedMemoryManager.EmmNullPage;
 }
