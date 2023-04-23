@@ -211,6 +211,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         AllocatedEmmHandles.Add(key, newHandle);
+        _state.DX = newHandle.HandleNumber;
         _state.AH = EmmStatus.EmmNoError;
     }
 
