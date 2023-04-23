@@ -3,7 +3,6 @@
 using System.Linq;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -27,7 +26,9 @@ using Spice86.Shared.Utils;
 /// specification supports up to 32M bytes of expanded memory.  Because <br/>
 /// the 8086, 8088, and 80286 (in real mode) microprocessors can <br/>
 /// physically address only 1M byte of memory, they access expanded memory <br/>
-/// through a window in their physical address range. 
+/// through a window in their physical address range.
+/// <remarks>This is a LIM standard implementation. Which means there's no
+/// difference between EMM pages and raw pages. They're both 16 KB.</remarks>
 /// </summary>
 public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
@@ -36,12 +37,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// (this is one, of two, methods to do so).
     /// </summary>
     public const string EmsIdentifier = "EMMXXXX0";
-    
-    /// <summary>
-    /// The maximum number of handles we can have allocated at the same time. <br/>
-    /// A handle corresponds to one or more logical pages.
-    /// </summary>
-    public const byte EmmMaxHandles = 16;
 
     /// <summary>
     /// The Emm Page Frame is 64 KB of EMM Memory, available at 0xE000 (segmented address).
@@ -95,7 +90,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <summary>
     /// The links between EMM handles given to the DOS program, and on or more logical pages.
     /// </summary>
-    public EmmHandle[] EmmHandles { get; } = new EmmHandle[EmmMaxHandles];
+    public Dictionary<int, EmmHandle> AllocatedEmmHandles { get; } = new();
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
@@ -115,7 +110,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
         _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameSegment));
         _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfPages));
-        //_dispatchTable.Add(0x43, new Callback(0x43, GetHandleAndAllocatePages));
+        _dispatchTable.Add(0x43, new Callback(0x43, AllocatePages));
         //_dispatchTable.Add(0x44, new Callback(0x44, MapExpandedMemoryPage));
         //_dispatchTable.Add(0x45, new Callback(0x45, ReleaseHandleAndFreePages));
         _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
@@ -125,12 +120,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x4C, new Callback(0x4C, GetHandlePages));
         _dispatchTable.Add(0x4D, new Callback(0x4D, GetAllHandlePages));
         //_dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
-        //_dispatchTable.Add(0x4F, new Callback(0x4F, SaveOrRestorePartialPageMap));
         //_dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultipleHandlePages));
         //_dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         //_dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
-        //_dispatchTable.Add(0x54, new Callback(0x54, HandleFunctions));
-        //_dispatchTable.Add(0x58, new Callback(0x58, GetMappablePhysicalArrayAddressArray));
         _dispatchTable.Add(0x59, new Callback(0x59, GetExpandedMemoryHardwareInformation));
         //_dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
     }
@@ -166,7 +158,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void GetNumberOfPages() {
         // Return total number of pages in DX.
-        _state.DX = (ushort) (EmmMemory.TotalPages / 4);
+        _state.DX = EmmMemory.TotalPages;
         // Return number of pages available in BX.
         _state.BX = EmmMemory.GetFreePages();
         // Set good status.
@@ -174,6 +166,34 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: Total: {@Total} Free: {@Free}", nameof(GetNumberOfPages), _state.DX, _state.BX);
         }
+    }
+
+    /// <summary>
+    /// The Allocate Pages function allocates the number of pages requested
+    /// and assigns a unique EMM handle to these pages.  The EMM handle owns
+    /// these pages until the DOS application deallocates them. <br/>
+    /// It returns an unique EMM handle in _state.BX, &gt; 0 and &lt; 256. <br/>
+    /// Parameters: <br/>
+    /// _state.DX: The number of pages to allocate to the handle.
+    /// </summary>
+    public void AllocatePages() {
+        ushort handleCount = _state.BX;
+        if (handleCount is 0) {
+            _state.AH = EmmStatus.EmsLogicalPageOutOfRange;
+            return;
+        }
+        EmmHandle newHandle = new();
+        int key = AllocatedEmmHandles.Count + 1;
+        newHandle.HandleNumber = (ushort)key;
+        while (handleCount > 0) {
+            ushort allocatedPageNumber = EmmMemory.AllocateLogicalPage(EmmMemory.GetNextFreeLogicalPageId());
+            newHandle.PageMap.Add(new EmmMapping {
+                PageNumber = allocatedPageNumber
+            });
+            handleCount--;
+        }
+        AllocatedEmmHandles.Add(key, newHandle);
+        _state.AH = EmmStatus.EmmNoError;
     }
 
     /// <summary>
@@ -213,7 +233,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// (8 MB) of expanded memory.
     /// </remarks>
     public void GetHandlePages() {
-        _state.BX = (ushort)EmmHandles[_state.DX].PageMap.Count(static x => x.PageNumber != EmmNullPage);
+        _state.BX = (ushort)AllocatedEmmHandles[_state.DX].PageMap.Count;
         _state.AX = EmmStatus.EmmNoError;
     }
 
@@ -223,20 +243,16 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void GetAllHandlePages() {
         _state.BX = GetAllocatedHandleCount();
-        ushort handles = _state.BX;
-        _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), _state.BX);
-        _state.BX = handles;
-
+        _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI));
         _state.AX = EmmStatus.EmmNoError;
     }
     
-    private byte GetPagesForAllHandles(uint table, ushort allocatedHandlesCount) {
-        for (byte i = 0; i < EmmMaxHandles; i++) {
-            if (EmmHandles[i].HandleNumber == EmmNullHandle) {
-                continue;
-            }
-            _memory.SetUint8(table, i);
-            _memory.SetUint16(table, allocatedHandlesCount);
+    private byte GetPagesForAllHandles(uint table) {
+        foreach(KeyValuePair<int, EmmHandle> allocatedHandle in AllocatedEmmHandles) {
+            _memory.SetUint16(table, allocatedHandle.Value.HandleNumber);
+            table += 2;
+            _memory.SetUint16(table, (ushort)allocatedHandle.Value.PageMap.Count);
+            table += 2;
         }
         return EmmStatus.EmmNoError;
     }
@@ -257,7 +273,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 _memory.SetUint16(data,0x0000);
                 data+=2;
                 // Context save area size
-                _memory.SetUint16(data, (ushort)EmmHandles.SelectMany(static x => x.PageMap).Count());
+                _memory.SetUint16(data, (ushort)AllocatedEmmHandles.SelectMany(static x => x.Value.PageMap).Count());
                 data+=2;
                 // No DMA channels
                 _memory.SetUint16(data,0x0000);
@@ -287,7 +303,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Returns the number of open EMM handles
     /// </summary>
     /// <returns>The number of open EMM handles</returns>
-    public ushort GetAllocatedHandleCount() => (ushort) EmmHandles.SelectMany(static x => x.PageMap).Count(static y => y.PageNumber != EmmNullPage);
+    public ushort GetAllocatedHandleCount() => (ushort) AllocatedEmmHandles.SelectMany(static x => x.Value.PageMap).Count();
 
     public override void Run() {
         byte operation = _state.AH;
@@ -315,14 +331,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Gets the name of a handle.
     /// </summary>
     public string GetHandleName(ushort handle) {
-        EmmHandles[handle].Name = _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), 8);
-        return EmmHandles[handle].Name;
+        AllocatedEmmHandles[handle].Name = _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI), 8);
+        return AllocatedEmmHandles[handle].Name;
     }
 
     /// <summary>
     /// Set the name of a handle.
     /// </summary>
     public void SetHandleName(ushort handle, string name) {
-        EmmHandles[handle].Name = name;
+        AllocatedEmmHandles[handle].Name = name;
     }
 }

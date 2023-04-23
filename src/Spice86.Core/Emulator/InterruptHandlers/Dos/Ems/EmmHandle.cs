@@ -3,20 +3,14 @@
 /// <summary>
 /// Represents a handle for allocated EMM memory to a DOS program.
 /// </summary>
-public sealed class EmmHandle {
+public class EmmHandle {
     /// <summary>
     /// The EMM handle number.
     /// </summary>
     public ushort HandleNumber { get; set; } = ExpandedMemoryManager.EmmNullHandle;
     
     private const string NullHandleName = "";
-
-    public EmmHandle() {
-        for (int i = 0; i < PageMap.Length; i++) {
-            PageMap[i] = new EmmMapping();
-        }
-    }
-
+    
     /// <summary>
     /// Gets or sets the handle name.
     /// </summary>
@@ -25,9 +19,12 @@ public sealed class EmmHandle {
     /// <summary>
     /// Gets or sets the saved page map for the handle.
     /// </summary>
-    public EmmMapping[] PageMap { get; } = new EmmMapping[ExpandedMemoryManager.EmmMaxPhysicalPages];
-
-    public bool SavePageMap { get; set; }
+    public List<EmmMapping> PageMap { get; } = new();
+    
+    /// <summary>
+    /// Whether we need to save the page map or not.
+    /// </summary>
+    public bool MustSavePageMap { get; set; }
 
     /// <summary>
     /// Returns a string containing the handle name.
