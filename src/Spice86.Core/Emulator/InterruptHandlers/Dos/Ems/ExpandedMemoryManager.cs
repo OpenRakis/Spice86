@@ -1,17 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using System.Linq;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
@@ -120,7 +117,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x4C, new Callback(0x4C, GetHandlePages));
         _dispatchTable.Add(0x4D, new Callback(0x4D, GetAllHandlePages));
         //_dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
-        //_dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultipleHandlePages));
+        _dispatchTable.Add(0x50, new Callback(0x50, MapUnmapMultipleHandlePages));
         //_dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         _dispatchTable.Add(0x53, new Callback(0x53, GetSetHandleName));
         _dispatchTable.Add(0x59, new Callback(0x59, GetExpandedMemoryHardwareInformation));
@@ -234,14 +231,20 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         ushort physicalPageNumber = _state.AL;
         ushort logicalPageNumber = _state.BX;
         ushort handleId = _state.DX;
+        EmmMapPage(logicalPageNumber, physicalPageNumber, handleId);
+    }
+
+    private void EmmMapPage(ushort logicalPageNumber, ushort physicalPageNumber, ushort handleId) {
         if (logicalPageNumber > EmmMemory.TotalPages) {
             _state.AH = EmmStatus.EmsLogicalPageOutOfRange;
             return;
         }
+
         if (physicalPageNumber > EmmPageFrame.Count) {
             _state.AH = EmmStatus.EmsIllegalPhysicalPage;
             return;
         }
+
         if (!AllocatedEmmHandles.ContainsKey(handleId)) {
             _state.AH = EmmStatus.EmmInvalidHandle;
             return;
@@ -251,23 +254,33 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         // Unmapping
         if (logicalPageNumber == EmmNullPage) {
-            EmmMemory.LogicalPages[emmPage.PageNumber].PageMemory =  emmPage.PageMemory;
+            EmmMemory.LogicalPages[emmPage.PageNumber].PageMemory = emmPage.PageMemory;
             emmPage.PageNumber = EmmNullPage;
             _state.AH = EmmStatus.EmmNoError;
             return;
         }
-        
+
         // Mapping
         if (emmPage.PageNumber != EmmNullPage) {
             EmmMemory.LogicalPages[emmPage.PageNumber].PageMemory = emmPage.PageMemory;
         }
+
         emmPage = new() {
             PageNumber = emmPage.PageNumber,
             PageMemory = EmmMemory.LogicalPages[logicalPageNumber].PageMemory
         };
         EmmPageFrame[physicalPageNumber] = emmPage;
-        
+
         _state.AH = EmmStatus.EmmNoError;
+    }
+    
+    private void EmmMapSegment(ushort logicalPage, ushort segment, ushort handleId) {
+        uint address = MemoryUtils.ToPhysicalAddress(segment, 0);
+        uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
+        uint pageFrameAddressEnd = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, EmmPageSize);
+        if (address >= pageFrameAddress && address < pageFrameAddressEnd) {
+            EmmMapPage(logicalPage, (ushort) ((address - pageFrameAddress) / EmmPageSize), handleId);
+        }
     }
 
     /// <summary>
@@ -348,6 +361,64 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.BX = GetAllocatedHandleCount();
         _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI));
         _state.AX = EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
+    /// This function can, in a single invocation, map (or unmap) logical
+    /// pages into as many physical pages as the system supports. <br/>
+    /// Consequently, it has less execution overhead than mapping pages one at
+    /// a time.  For applications which do a lot of page mapping, this is the
+    /// preferred mapping method.
+    /// </summary>
+    public void MapUnmapMultipleHandlePages() {
+        byte operation = _state.AL;
+        ushort handleId = _state.DX;
+        ushort numberOfPages = _state.CX;
+        uint mapAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "EMS: {@MethodName} Map {@NumberOfPages} pages from handle {@Handle} according to the map at address 0x{@MapAddress:X6}",
+                nameof(MapUnmapMultipleHandlePages), numberOfPages, handleId, mapAddress);
+        }
+
+        _state.AH = EmmStatus.EmmNoError;
+        switch (operation) {
+            case 0x00: // use physical page numbers
+                for (int i = 0; i < numberOfPages; i++) {
+                    ushort logicalPage = _memory.GetUint16(mapAddress);
+                    mapAddress += 2;
+                    ushort physicalPage = _memory.GetUint16(mapAddress);
+                    mapAddress += 2;
+                    EmmMapPage(logicalPage, physicalPage, handleId);
+                    if (_state.AH != EmmStatus.EmmNoError) {
+                        break;
+                    }
+                }
+
+                break;
+            // use segment address
+            case 0x01: {
+                for (int i = 0; i < numberOfPages; i++) {
+                    ushort logicalPage = _memory.GetUint16(mapAddress);
+                    mapAddress += 2;
+                    ushort segment = _memory.GetUint16(mapAddress);
+                    mapAddress += 2;
+                    EmmMapSegment(logicalPage, segment, handleId);
+                    if (_state.AH != EmmStatus.EmmNoError) {
+                        break;
+                    }
+                }
+            }
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error(
+                        "{@MethodName} subFunction number {@SubFunctionId} not supported",
+                        nameof(MapUnmapMultipleHandlePages), operation);
+                }
+                _state.AH = EmmStatus.EmmInvalidSubFunction;
+                break;
+        }
     }
 
     /// <summary>
