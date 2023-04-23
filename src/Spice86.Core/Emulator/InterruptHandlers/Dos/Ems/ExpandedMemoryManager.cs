@@ -85,7 +85,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// through a window in their physical address range. <br/>
     /// This is referred as the Emm Page Frame.
     /// </summary>
-    public IDictionary<byte, EmmPage> EmmPageFrame { get; init; } = new Dictionary<byte, EmmPage>();
+    public IDictionary<ushort, EmmPage> EmmPageFrame { get; init; } = new Dictionary<ushort, EmmPage>();
 
     /// <summary>
     /// The links between EMM handles given to the DOS program, and on or more logical pages.
@@ -98,7 +98,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         machine.Dos.AddDevice(device);
         FillDispatchTable();
 
-        for (byte i = 0; i < EmmMaxPhysicalPages; i++) {
+        for (ushort i = 0; i < EmmMaxPhysicalPages; i++) {
             EmmPageFrame.Add(i,new() {
                 PageNumber = i
             });
@@ -203,7 +203,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             ushort allocatedPageNumber = EmmMemory.AllocateLogicalPage();
             newHandle.PageMap.Add(new()
             {
-                PageNumber = allocatedPageNumber
+                LogicalPageNumber = allocatedPageNumber
             });
             numberOfPagesToAlloc--;
         }
@@ -233,7 +233,41 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public void MapUnmapHandlePage() {
         ushort physicalPageNumber = _state.AL;
         ushort logicalPageNumber = _state.BX;
-        ushort emmHandleId = _state.DX;
+        ushort handleId = _state.DX;
+        if (logicalPageNumber > EmmMemory.TotalPages) {
+            _state.AH = EmmStatus.EmsLogicalPageOutOfRange;
+            return;
+        }
+        if (physicalPageNumber > EmmPageFrame.Count) {
+            _state.AH = EmmStatus.EmsIllegalPhysicalPage;
+            return;
+        }
+        if (!AllocatedEmmHandles.ContainsKey(handleId)) {
+            _state.AH = EmmStatus.EmmInvalidHandle;
+            return;
+        }
+
+        EmmPage emmPage = EmmPageFrame[physicalPageNumber];
+
+        // Unmapping
+        if (logicalPageNumber == EmmNullPage) {
+            EmmMemory.LogicalPages[emmPage.PageNumber].PageMemory =  emmPage.PageMemory;
+            emmPage.PageNumber = EmmNullPage;
+            _state.AH = EmmStatus.EmmNoError;
+            return;
+        }
+        
+        // Mapping
+        if (emmPage.PageNumber != EmmNullPage) {
+            EmmMemory.LogicalPages[emmPage.PageNumber].PageMemory = emmPage.PageMemory;
+        }
+        emmPage = new() {
+            PageNumber = emmPage.PageNumber,
+            PageMemory = EmmMemory.LogicalPages[logicalPageNumber].PageMemory
+        };
+        EmmPageFrame[physicalPageNumber] = emmPage;
+        
+        _state.AH = EmmStatus.EmmNoError;
     }
 
     /// <summary>

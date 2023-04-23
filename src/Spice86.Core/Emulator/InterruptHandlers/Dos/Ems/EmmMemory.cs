@@ -48,7 +48,7 @@ public class EmmMemory {
 
     public void FreeLogicalPages(EmmHandle handle) {
         foreach (EmmMapping mapping in handle.PageMap) {
-            LogicalPages[mapping.PageNumber].PageNumber = ExpandedMemoryManager.EmmNullPage;
+            LogicalPages[mapping.LogicalPageNumber].PageNumber = ExpandedMemoryManager.EmmNullPage;
         }
     }
 }
