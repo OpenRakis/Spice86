@@ -7,7 +7,7 @@ using System.Linq;
 /// These pages are typically 16K-bytes of memory. <br/>
 /// Logical pages are accessed through a physical block of memory called a page frame. <br/>
 /// The page frame contains multiple physical pages, pages that the <br/>
-/// microprocessor can address directly.  Physical pages are also typically 16K bytes of memory.
+/// CPU can address directly.  Physical pages are also 16K bytes of memory.
 /// </summary>
 public class EmmMemory {
     /// <summary>
@@ -18,22 +18,30 @@ public class EmmMemory {
     /// <summary>
     /// All the logical pages stored in EMM memory.
     /// </summary>
-    public EmmPage[] LogicalPages { get; init; } = new EmmPage[EmmMemorySize / ExpandedMemoryManager.EmmPageSize];
+    public IDictionary<ushort, EmmPage> LogicalPages { get; init; } = new Dictionary<ushort, EmmPage>();
 
     public EmmMemory() {
-        for (ushort i = 0; i < LogicalPages.Length; i++) {
-            LogicalPages[i] = new() {
-                PageNumber = i
-            };
+        for (ushort i = 0; i < EmmMemorySize / ExpandedMemoryManager.EmmPageSize; i++) {
+            EmmPage page = new();
+            LogicalPages.Add(i, page);
         }
     }
 
     /// <summary>
     /// The total number of pages in expanded memory.
     /// </summary>
-    public ushort TotalPages => (ushort)LogicalPages.Length;
+    public ushort TotalPages => (ushort)LogicalPages.Count;
 
     public ushort GetFreePages() {
-        return (ushort)LogicalPages.Count(static x => x.PageNumber is ExpandedMemoryManager.EmmNullPage);
+        return (ushort)LogicalPages.Count(static x => x.Value.PageNumber is ExpandedMemoryManager.EmmNullPage);
+    }
+
+    public ushort GetNextFreeLogicalPageId() {
+        return LogicalPages.First(x => x.Value.PageNumber is ExpandedMemoryManager.EmmNullPage).Key;
+    }
+
+    public ushort AllocateLogicalPage(ushort index) {
+        LogicalPages[index].PageNumber = index;
+        return index;
     }
 }
