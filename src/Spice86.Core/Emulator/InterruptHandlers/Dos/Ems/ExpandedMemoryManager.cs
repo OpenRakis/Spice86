@@ -111,7 +111,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameSegment));
         _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfPages));
         _dispatchTable.Add(0x43, new Callback(0x43, AllocatePages));
-        //_dispatchTable.Add(0x44, new Callback(0x44, MapExpandedMemoryPage));
+        _dispatchTable.Add(0x44, new Callback(0x44, MapUnmapHandlePage));
         _dispatchTable.Add(0x45, new Callback(0x45, DeallocatePages));
         _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
         //_dispatchTable.Add(0x47, new Callback(0x47, SavePageMap));
@@ -122,7 +122,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         //_dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
         //_dispatchTable.Add(0x50, new Callback(0x50, MapOrUnmapMultipleHandlePages));
         //_dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
-        //_dispatchTable.Add(0x53, new Callback(0x53, SetGetHandleName));
+        _dispatchTable.Add(0x53, new Callback(0x53, GetSetHandleName));
         _dispatchTable.Add(0x59, new Callback(0x59, GetExpandedMemoryHardwareInformation));
         //_dispatchTable.Add(0x5A, new Callback(0x5A, AllocateStandardRawPages));
     }
@@ -213,9 +213,33 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     /// <summary>
+    /// The Map/Unmap Handle Page function maps a logical page at a specific
+    /// physical page anywhere in the mappable regions of system memory. <br/>
+    /// The lowest valued physical page numbers are associated with regions of
+    /// memory outside the conventional memory range.  Use Function 25 (Get Mappable Physical Address Array)
+    /// to determine which physical pages within a system are mappable and determine the segment addresses which
+    /// correspond to a specific physical page number.  Function 25 provides a
+    /// cross reference between physical page numbers and segment addresses. <br/>
+    /// This function can also unmap physical pages, making them inaccessible for reading or writing. <br/>
+    /// You unmap a physical page by setting its associated logical page to FFFFh.
+    /// </summary>
+    /// <remarks>
+    /// The handle determines what type of pages are being mapped. <br/>
+    /// Logical pages allocated by Function 4 and Function 27 (Allocate Standard Pages
+    /// subFunction) are referred to as pages and are 16K bytes long. <br/>
+    /// Logical pages allocated by Function 27 (Allocate Raw Pages subFunction) are
+    /// referred to as raw pages and might not be the same size as logical pages.
+    /// </remarks>
+    public void MapUnmapHandlePage() {
+        ushort physicalPageNumber = _state.AL;
+        ushort logicalPageNumber = _state.BX;
+        ushort emmHandleId = _state.DX;
+    }
+
+    /// <summary>
     /// Deallocate Pages deallocates the logical pages currently allocated to
     /// an EMM handle.  Only after the application deallocates these pages can
-    /// other applications use them.  When a handle is deallocated, it name is
+    /// other applications use them.  When a handle is deallocated, its name is
     /// set to all ASCII nulls (binary zeros).
     /// </summary>
     /// <remarks>
@@ -291,6 +315,54 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI));
         _state.AX = EmmStatus.EmmNoError;
     }
+
+    /// <summary>
+    /// This subFunction gets the eight character name currently assigned to a handle.
+    /// There is no restriction on the characters which may be used
+    /// in the handle name (that is, anything from 00h through FFh). <br/>
+    /// The handle name is initialized to ASCII nulls (binary zeros) three
+    /// times: when the memory manager is installed, when a handle is
+    /// allocated, and when a handle is deallocated. <br/>
+    /// A handle with a name which is all ASCII nulls, by definition, has no name. <br/>
+    /// When a handle is assigned a name, at least one character in the name must be a non-null character,
+    /// in order to distinguish it from a handle without a name.
+    /// </summary>
+    public void GetSetHandleName() {
+        ushort handle = _state.DX;
+        _state.AH = GetSetHandleName(handle, _state.AL);
+    }
+    
+    /// <summary>
+    /// Gets or Set a handle name, depending on the <paramref name="operation"/>
+    /// </summary>
+    /// <param name="handle">The handle reference</param>
+    /// <param name="operation">Get: 0, Set: 1</param>
+    /// <returns>The state of the operation</returns>
+    public byte GetSetHandleName(ushort handle, byte operation)
+    {
+        if (handle >= AllocatedEmmHandles.Count || !AllocatedEmmHandles.ContainsKey(handle)) {
+            return EmmStatus.EmmInvalidHandle;
+        }
+        switch (operation) {
+            case EmsSubFunctions.HandleNameGet:
+                GetHandleName(handle);
+                break;
+
+            case EmsSubFunctions.HandleNameSet:
+                SetHandleName(handle,
+                    _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
+                        8));
+                break;
+
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("{@MethodName}: subFunction {@FunctionId} invalid", nameof(GetSetHandleName), operation);
+                }
+                return EmmStatus.EmmInvalidSubFunction;
+        }
+        return EmmStatus.EmmNoError;
+    }
+
     
     private byte GetPagesForAllHandles(uint table) {
         foreach(KeyValuePair<int, EmmHandle> allocatedHandle in AllocatedEmmHandles) {
@@ -341,7 +413,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 }
                 break;
         }
-
     }
     
     /// <summary>
