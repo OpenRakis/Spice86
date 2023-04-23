@@ -103,10 +103,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         FillDispatchTable();
 
         for (ushort i = 0; i < EmmMaxPhysicalPages; i++) {
-            EmmPageFrame.Add(i,new() {
+            uint startAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * i));
+            EmmPageFrame.Add(i,new(startAddress) {
                 PageNumber = i
             });
-            _memory.RegisterMapping(MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * i)), EmmPageSize, EmmPageFrame[i].PageMemory);
+            _memory.RegisterMapping(startAddress, EmmPageSize, EmmPageFrame[i].PageMemory);
         }
     }
 
