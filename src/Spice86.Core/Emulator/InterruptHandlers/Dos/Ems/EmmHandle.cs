@@ -22,9 +22,9 @@ public class EmmHandle {
     public List<EmmMapping> PageMap { get; } = new();
     
     /// <summary>
-    /// Whether we need to save the page map or not.
+    /// Whether the DOS application saved the page map into its internal data structures, or not.
     /// </summary>
-    public bool MustSavePageMap { get; set; }
+    public bool SavedPageMap { get; set; }
 
     /// <summary>
     /// Returns a string containing the handle name.

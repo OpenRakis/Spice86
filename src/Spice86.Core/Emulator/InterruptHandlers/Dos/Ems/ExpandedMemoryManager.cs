@@ -112,7 +112,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfPages));
         _dispatchTable.Add(0x43, new Callback(0x43, AllocatePages));
         //_dispatchTable.Add(0x44, new Callback(0x44, MapExpandedMemoryPage));
-        //_dispatchTable.Add(0x45, new Callback(0x45, ReleaseHandleAndFreePages));
+        _dispatchTable.Add(0x45, new Callback(0x45, DeallocatePages));
         _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
         //_dispatchTable.Add(0x47, new Callback(0x47, SavePageMap));
         //_dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
@@ -209,6 +209,35 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         AllocatedEmmHandles.Add(key, newHandle);
+        _state.AH = EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
+    /// Deallocate Pages deallocates the logical pages currently allocated to
+    /// an EMM handle.  Only after the application deallocates these pages can
+    /// other applications use them.  When a handle is deallocated, it name is
+    /// set to all ASCII nulls (binary zeros).
+    /// </summary>
+    /// <remarks>
+    /// A program must perform this function before it exits to DOS. If it
+    /// doesn't, no other programs can use these pages or the EMM handle.
+    /// This means that a program using expanded memory should trap critical
+    /// errors and control-break if there is a chance that the program will
+    /// have allocated pages when either of these events occur.
+    /// </remarks>
+    public void DeallocatePages() {
+        ushort handleId = _state.DX;
+        if (!AllocatedEmmHandles.ContainsKey(handleId)) {
+            _state.AH = EmmStatus.EmmInvalidHandle;
+            return;
+        }
+        if (AllocatedEmmHandles[handleId].SavedPageMap) {
+            _state.AH = EmmStatus.EmmSaveMapError;
+            return;
+        }
+        EmmHandle handle = AllocatedEmmHandles[handleId];
+        EmmMemory.FreeLogicalPages(handle);
+        AllocatedEmmHandles.Remove(handleId);
         _state.AH = EmmStatus.EmmNoError;
     }
 
