@@ -22,7 +22,7 @@ public class EmmHandle {
     public List<EmmMapping> PageMap { get; } = new();
     
     /// <summary>
-    /// Whether the DOS application saved the page map into its internal data structures, or not.
+    /// Whether the EMM handler saved the page map into its internal data structures, or not.
     /// </summary>
     public bool SavedPageMap { get; set; }
 

@@ -83,6 +83,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// This is referred as the Emm Page Frame.
     /// </summary>
     public IDictionary<ushort, EmmPage> EmmPageFrame { get; init; } = new Dictionary<ushort, EmmPage>();
+    
+    /// <summary>
+    /// This is the copy of the page frame. <br/>
+    /// We copy the Emm Page Frame into it in the Save Page Map function. <br/>
+    /// We restore this copy into the Emm Page Frame in the Restore Page Map function.
+    /// </summary>
+    public IDictionary<ushort, EmmPage> EmmPageFrameSave { get; init; } = new Dictionary<ushort, EmmPage>();
 
     /// <summary>
     /// The links between EMM handles given to the DOS program, and on or more logical pages.
@@ -111,12 +118,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x44, new Callback(0x44, MapUnmapHandlePage));
         _dispatchTable.Add(0x45, new Callback(0x45, DeallocatePages));
         _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
-        //_dispatchTable.Add(0x47, new Callback(0x47, SavePageMap));
-        //_dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
+        _dispatchTable.Add(0x47, new Callback(0x47, SavePageMap)); 
+        _dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
         _dispatchTable.Add(0x4B, new Callback(0x4B, GetEmmHandleCount));
         _dispatchTable.Add(0x4C, new Callback(0x4C, GetHandlePages));
         _dispatchTable.Add(0x4D, new Callback(0x4D, GetAllHandlePages));
-        //_dispatchTable.Add(0x4E, new Callback(0x4E, SaveOrRestorePageMap));
         _dispatchTable.Add(0x50, new Callback(0x50, MapUnmapMultipleHandlePages));
         _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         _dispatchTable.Add(0x53, new Callback(0x53, GetSetHandleName));
@@ -324,6 +330,100 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("EMS: {@MethodName}: 0x{Version:X2}", nameof(GetEmmVersion), _state.AL);
         }
+    }
+    
+    /// <summary>
+    /// Save Page Map saves the contents of the page mapping registers on all
+    /// expanded memory boards in an internal save area.  The function is
+    /// typically used to save the memory mapping context of the EMM handle
+    /// that was active when a software or hardware interrupt occurred.  (See
+    /// Function 9, Restore Page Map, for the restore operation.) <br/>
+    /// If you're writing a resident program, an interrupt service, or a device driver
+    /// that uses expanded memory, you must save the state of the mapping
+    /// hardware.  You must save this state because application software using
+    /// expanded memory may be running when your program is invoked by a
+    /// hardware interrupt, a software interrupt, or DOS. <br/>
+    /// The Save Page Map function requires the EMM handle that was assigned
+    /// to your resident program, interrupt service routine, or device driver
+    /// at the time it was initialized. This is not the EMM handle that the
+    /// application software was using when your software interrupted it. <br/>
+    /// The Save Page Map function saves the state of the map registers for
+    /// only the 64K-byte page frame defined in versions 3.x of this
+    /// specification.  Since all applications written to LIM versions 3.x
+    /// require saving the map register state of only this 64K-byte page
+    /// frame, saving the entire mapping state for a large number of mappable
+    /// pages would be inefficient use of memory. <br/>
+    /// </summary>
+    public void SavePageMap() {
+        _state.AH = SavePageMap(_state.DX);
+    }
+
+    public byte SavePageMap(ushort handleId) {
+        if (!IsValidHandle(handleId)) {
+            if (handleId != 0) {
+                return EmmStatus.EmmInvalidHandle;
+            }
+        }
+
+        if (AllocatedEmmHandles[handleId].SavedPageMap) {
+            return EmmStatus.EmmPageMapSaved;
+        }
+        
+        EmmPageFrameSave.Clear();
+
+        foreach (KeyValuePair<ushort, EmmPage> item in EmmPageFrame) {
+            EmmPageFrameSave.Add(item);
+        }
+
+        AllocatedEmmHandles[handleId].SavedPageMap = true;
+        return EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
+    /// The Restore Page Map function restores the page mapping register
+    /// contents on the expanded memory boards for a particular EMM handle. <br/>
+    /// This function lets your program restore the contents of the mapping
+    /// registers its EMM handle saved. (See Function 8, Save Page Map for the
+    /// save operation.) <br/>
+    /// If you're writing a resident program, an interrupt service routine, or
+    /// a device driver that uses expanded memory, you must restore the
+    /// mapping hardware to the state it was in before your program took over. <br/>
+    /// You must save this state because application software using expanded
+    /// memory might have been running when your program was invoked. <br/>
+    /// The Restore Page Map function requires the EMM handle that was
+    /// assigned to your resident program, interrupt service routine, or
+    /// device driver at the time it was initialized.  This is not the EMM
+    /// handle that the application software was using when your software interrupted it. <br/>
+    /// The Restore Page Map function restores the state of the map registers
+    /// for only the 64K-byte page frame defined in versions 3.x of this
+    /// specification.  <br/>
+    /// Since all applications written to LIM versions 3.x require restoring the map
+    /// register state of only this 64K-byte page frame, restoring the entire mapping state
+    /// for a large number of mappable pages would be inefficient use of memory.
+    /// </summary>
+    public void RestorePageMap() {
+        _state.AH = RestorePageMap(_state.DX);
+    }
+
+    public byte RestorePageMap(ushort handleId) {
+        if (!IsValidHandle(handleId)) {
+            if (handleId != 0) {
+                return EmmStatus.EmmInvalidHandle;
+            }
+        }
+
+        if (AllocatedEmmHandles[handleId].SavedPageMap) {
+            return EmmStatus.EmmPageMapSaved;
+        }
+        
+        EmmPageFrame.Clear();
+
+        foreach (KeyValuePair<ushort, EmmPage> item in EmmPageFrameSave) {
+            EmmPageFrame.Add(item);
+        }
+
+        AllocatedEmmHandles[handleId].SavedPageMap = true;
+        return EmmStatus.EmmNoError;
     }
 
     /// <summary>
