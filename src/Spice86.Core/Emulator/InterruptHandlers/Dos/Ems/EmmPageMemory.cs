@@ -11,22 +11,22 @@ public class EmmPageMemory : IMemoryDevice {
 
     private Ram _ram;
 
-    private uint _offset;
+    public uint Offset { get; set; }
 
-    public EmmPageMemory(uint offset) {
-        _offset = offset;
+    public EmmPageMemory(uint offset = 0) {
+        Offset = offset;
         _ram = new Ram(Size);
     }
     
     public byte Read(uint address) {
-        return _ram.Read(address - _offset);
+        return _ram.Read(address - Offset);
     }
 
     public void Write(uint address, byte value) {
-        _ram.Write(address - _offset, value);
+        _ram.Write(address - Offset, value);
     }
 
     public Span<byte> GetSpan(int address, int length) {
-        return _ram.GetSpan((int) (address - _offset), length);
+        return _ram.GetSpan((int) (address - Offset), length);
     }
 }

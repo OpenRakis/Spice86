@@ -263,19 +263,24 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         if (logicalPageNumber == EmmNullPage) {
             EmmMemory.LogicalPages[emmPage.PageNumber].PageMemory = emmPage.PageMemory;
             emmPage.PageNumber = EmmNullPage;
+            emmPage.PageMemory.Offset = 0;
             _state.AH = EmmStatus.EmmNoError;
             return;
         }
 
         // Mapping
+        
+        // Save register memory
         if (emmPage.PageNumber != EmmNullPage) {
             EmmMemory.LogicalPages[emmPage.PageNumber].PageMemory = emmPage.PageMemory;
         }
-
-        emmPage = new() {
+        // Map new logical page into physical page
+        EmmPage mappedEmmPage = new() {
             PageNumber = emmPage.PageNumber,
             PageMemory = EmmMemory.LogicalPages[logicalPageNumber].PageMemory
         };
+        // TODO: Find a better fix for physical pages out of range access.
+        mappedEmmPage.PageMemory.Offset = emmPage.PageMemory.Offset;
         EmmPageFrame[physicalPageNumber] = emmPage;
 
         _state.AH = EmmStatus.EmmNoError;
