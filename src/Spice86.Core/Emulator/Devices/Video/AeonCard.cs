@@ -59,7 +59,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
         base(machine, configuration, loggerService) {
-        _logger = loggerService.WithLogLevel(LogEventLevel.Information);
+        _logger = loggerService.WithLogLevel(LogEventLevel.Debug);
         _bios = machine.Bios;
         _state = machine.Cpu.State;
         _gui = gui;
@@ -698,7 +698,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
         _state.ES = address.Segment;
         _state.BP = address.Offset;
-        _state.CX = _machine.Bios.CharacterPointHeight;
+        _state.CX = _machine.Bios.CharacterHeight;
         _state.DL = _machine.Bios.ScreenRows;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("INT 10: GetFontInformation - {0:X4}:{1:X4} {2} {3}", _state.ES, _state.BP, _state.CX, _state.DL);

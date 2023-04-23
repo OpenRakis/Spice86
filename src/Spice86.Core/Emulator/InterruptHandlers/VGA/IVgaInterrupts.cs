@@ -20,4 +20,6 @@ public interface IVgaInterrupts {
     void GetCursorPosition();
     void SetCursorPosition();
     void SetCursorType();
+    void WriteDot();
+    void ReadDot();
 }

@@ -98,6 +98,14 @@ public class Memory {
         }
         return data;
     }
+    
+    public ushort[] GetDataW(uint address, int length) {
+        ushort[] data = new ushort[length];
+        for (uint i = 0; i < length; i++) {
+            data[i] = GetUint16(address + i);
+        }
+        return data;
+    }
 
     /// <summary>
     ///     Read a 2-byte value from ram.
@@ -135,6 +143,26 @@ public class Memory {
     public void LoadData(uint address, byte[] data, int length) {
         for (int i = 0; i < length; i++) {
             Write((uint)(address + i), data[i]);
+        }
+    }
+    /// <summary>
+    ///     Load data from a words array into memory.
+    /// </summary>
+    /// <param name="address">The memory address to start writing</param>
+    /// <param name="data">The array of words to write</param>
+    public void LoadData(uint address, ushort[] data) {
+        LoadData(address, data, data.Length);
+    }
+
+    /// <summary>
+    ///     Load data from a word array into memory.
+    /// </summary>
+    /// <param name="address">The memory address to start writing</param>
+    /// <param name="data">The array of words to write</param>
+    /// <param name="length">How many words to read from the byte array</param>
+    public void LoadData(uint address, ushort[] data, int length) {
+        for (int i = 0; i < length; i++) {
+            SetUint16((uint)(address + i), data[i]);
         }
     }
 
@@ -279,7 +307,7 @@ public class Memory {
         }
         _devices.Add(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
     }
-    
+
     public string GetZeroTerminatedString(uint address, int maxLength) {
         StringBuilder res = new();
         for (int i = 0; i < maxLength; i++) {
@@ -288,6 +316,15 @@ public class Memory {
                 break;
             }
             char character = Convert.ToChar(characterByte);
+            res.Append(character);
+        }
+        return res.ToString();
+    }
+    
+    public string GetString(uint address, int length) {
+        StringBuilder res = new();
+        for (int i = 0; i < length; i++) {
+            char character = (char)Read((uint)(address + i));
             res.Append(character);
         }
         return res.ToString();

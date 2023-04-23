@@ -35,6 +35,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
+using Action = System.Action;
+using SegmentedAddress = Spice86.Shared.SegmentedAddress;
+
 /// <summary>
 /// Emulates an IBM PC
 /// </summary>
@@ -98,7 +101,7 @@ public class Machine : IDisposable {
 
     public IVideoCard VgaCard { get; }
     
-    public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
+    public VgaBios VideoBiosInt10Handler { get; }
 
     public ExpandedMemoryManager? Ems { get; set; }
 
@@ -169,8 +172,7 @@ public class Machine : IDisposable {
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        var vgaInterrupts = new VgaBios(this, loggerService);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, loggerService, vgaInterrupts);
+        VideoBiosInt10Handler = new VgaBios(this, loggerService);
         Register(VideoBiosInt10Handler);
         
         TimerInt8Handler = new TimerInt8Handler(this, loggerService);
@@ -241,8 +243,7 @@ public class Machine : IDisposable {
     /// </summary>
     private void DmaLoop() {
         while (Cpu.IsRunning && !_exitDmaLoop && !_exitEmulationLoop && !_disposed) {
-            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                DmaChannel dmaChannel = _dmaDeviceChannels[i];
+            foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
                 if (Gui?.IsPaused == true || IsPaused) {
                     Gui?.WaitForContinue();
                 }

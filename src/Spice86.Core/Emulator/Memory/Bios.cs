@@ -68,10 +68,10 @@ public sealed class Bios {
     }
 
     /// <summary>
-    /// Gets or sets the 8 bytes representing the cursor position on each text page.
+    /// Gets or sets the 8 words representing the cursor position on each text page.
     /// </summary>
-    public byte[] CursorPosition {
-        get => _memory.GetData(MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0x0050), 8);
+    public ushort[] CursorPosition {
+        get => _memory.GetDataW(MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0x0050), 8);
         set => _memory.LoadData(MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0x0050), value);
     }
     
@@ -118,7 +118,7 @@ public sealed class Bios {
     /// <summary>
     /// Gets or sets the character point height.
     /// </summary>
-    public ushort CharacterPointHeight {
+    public ushort CharacterHeight {
         get => _memory.UInt16[MemoryMap.BiosDataSegment, 0x0085];
         set => _memory.UInt16[MemoryMap.BiosDataSegment, 0x0085] = value;
     }

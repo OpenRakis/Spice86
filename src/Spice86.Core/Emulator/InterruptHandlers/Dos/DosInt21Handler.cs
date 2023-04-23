@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -98,8 +99,9 @@ public class DosInt21Handler : InterruptHandler {
         _loggerService.Fatal("INT 21: ConsoleInputWithoutEcho Waiting for key...");
         ushort? key;
         do {
-            _machine.BiosKeyboardInt9Handler.Run();
             key = _machine.KeyboardInt16Handler.GetNextKeyCode();
+            _machine.Timer.Tick();
+            _machine.BiosKeyboardInt9Handler.Run();
         } while (key == null);
         
         // if (_loggerService.IsEnabled(LogEventLevel.Debug))
@@ -110,12 +112,12 @@ public class DosInt21Handler : InterruptHandler {
         // if (_loggerService.IsEnabled(LogEventLevel.Information))
             _loggerService.Fatal("INT 21: KeyboardInputWithEcho Waiting for key...");
         ushort? key;
-        _machine.KeyboardInt16Handler.GetNextKeyCode();
         do {
             _machine.BiosKeyboardInt9Handler.Run();
             key = _machine.KeyboardInt16Handler.GetNextKeyCode();
+            _machine.Timer.Tick();
         } while (key == null);
-        
+_machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.Init();        
         // if (_loggerService.IsEnabled(LogEventLevel.Debug))
             _loggerService.Fatal("INT 21: KeyboardInputWithEcho Key pressed: {Key}", (char)key);
         
@@ -442,17 +444,23 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void PrintString() {
-        string str = GetDosString(_memory, _state.DS, _state.DX, '$');
+        ushort segment = _state.DS;
+        ushort offset = _state.DX;
+        string str = GetDosString(_memory, segment, offset, '$');
+
+        _state.BL = 0x0F; // white on black
+        _state.ES = segment;
+        _state.BP = offset;
+        _state.CX = (ushort)str.Length;
+        _state.AL = 0x00; // no attribute, no cursor movement
+        _state.BH = _machine.Bios.CurrentVideoPage;
+        _state.DX = _machine.Bios.CursorPosition[_state.BH];
+        _state.AH = 0x13; // Write string
+        _machine.CallbackHandler.Run(0x10);
+        
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PRINT STRING: {String}", str);
         }
-        _state.BL = 0x07;
-        _state.ES = _state.DS;
-        _state.BP = _state.DX;
-        _state.CX = (ushort)str.Length;
-        _state.AL = 3;
-        _state.AH = 0x13;
-        _machine.CallbackHandler.Run(0x10);
     }
 
     public void QuitWithExitCode() {

@@ -4,56 +4,10 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared;
 
 public class VgaRom : IMemoryDevice {
-
-    private readonly byte[] _storage;
     private const int BaseAddress = Segment << 4;
     public const int Segment = 0xC000;
 
-    public VgaRom() {
-        // Create some storage.
-        Size = (uint)(64 + vgafont8.Length + vgafont14.Length + vgafont16.Length);
-        _storage = new byte[Size];
-
-        // Populate the addresses to the fonts.
-        VgaFont8Address = new SegmentedAddress(Segment, 64);
-        VgaFont8Address2 = new SegmentedAddress(Segment, (ushort)(VgaFont8Address.Offset + vgafont8.Length / 2));
-        VgaFont14Address = new SegmentedAddress(Segment, (ushort)(VgaFont8Address.Offset + vgafont8.Length));
-        VgaFont16Address = new SegmentedAddress(Segment, (ushort)(VgaFont14Address.Offset + vgafont14.Length));
-
-        // Copy the fonts into the storage.
-        vgafont8.CopyTo(_storage, 64);
-        vgafont14.CopyTo(_storage, 64 + vgafont8.Length);
-        vgafont16.CopyTo(_storage, 64 + vgafont8.Length + vgafont14.Length);
-    }
-    public SegmentedAddress VgaFont8Address {
-        get;
-    }
-    public SegmentedAddress VgaFont8Address2 {
-        get;
-    }
-    public SegmentedAddress VgaFont14Address {
-        get;
-    }
-    public SegmentedAddress VgaFont16Address {
-        get;
-    }
-
-    public uint Size {
-        get;
-    }
-    public byte Read(uint address) {
-        return _storage[address - BaseAddress];
-    }
-
-    public void Write(uint address, byte value) {
-        _storage[address - BaseAddress] = value;
-    }
-
-    public Span<byte> GetSpan(int address, int length) {
-        return _storage.AsSpan(address - BaseAddress, length);
-    }
-
-    internal static byte[] vgafont8 = {
+    internal static readonly byte[] VgaFont8 = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x7e, 0x81, 0xa5, 0x81, 0xbd, 0x99, 0x81, 0x7e,
         0x7e, 0xff, 0xdb, 0xff, 0xc3, 0xe7, 0xff, 0x7e,
@@ -312,7 +266,7 @@ public class VgaRom : IMemoryDevice {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
 
-    internal static byte[] vgafont14 = {
+    internal static byte[] VgaFont14 = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x7e, 0x81, 0xa5, 0x81, 0x81, 0xbd, 0x99, 0x81, 0x7e, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x7e, 0xff, 0xdb, 0xff, 0xff, 0xc3, 0xe7, 0xff, 0x7e, 0x00, 0x00, 0x00,
@@ -571,7 +525,7 @@ public class VgaRom : IMemoryDevice {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
 
-    internal static byte[] vgafont16 = {
+    internal static byte[] VgaFont16 = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x7e, 0x81, 0xa5, 0x81, 0x81, 0xbd, 0x99, 0x81, 0x81, 0x7e, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x7e, 0xff, 0xdb, 0xff, 0xff, 0xc3, 0xe7, 0xff, 0xff, 0x7e, 0x00, 0x00, 0x00, 0x00,
@@ -829,4 +783,41 @@ public class VgaRom : IMemoryDevice {
         0x00, 0x00, 0x00, 0x00, 0x7c, 0x7c, 0x7c, 0x7c, 0x7c, 0x7c, 0x7c, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
+
+    private readonly byte[] _storage;
+
+    public VgaRom() {
+        // Create some storage.
+        Size = (uint)(64 + VgaFont8.Length + VgaFont14.Length + VgaFont16.Length);
+        _storage = new byte[Size];
+
+        // Populate the addresses to the fonts.
+        VgaFont8Address = new SegmentedAddress(Segment, 64);
+        VgaFont8Address2 = new SegmentedAddress(Segment, (ushort)(VgaFont8Address.Offset + VgaFont8.Length / 2));
+        VgaFont14Address = new SegmentedAddress(Segment, (ushort)(VgaFont8Address.Offset + VgaFont8.Length));
+        VgaFont16Address = new SegmentedAddress(Segment, (ushort)(VgaFont14Address.Offset + VgaFont14.Length));
+
+        // Copy the fonts into the storage.
+        VgaFont8.CopyTo(_storage, 64);
+        VgaFont14.CopyTo(_storage, 64 + VgaFont8.Length);
+        VgaFont16.CopyTo(_storage, 64 + VgaFont8.Length + VgaFont14.Length);
+    }
+
+    public SegmentedAddress VgaFont8Address { get; }
+    public SegmentedAddress VgaFont8Address2 { get; }
+    public SegmentedAddress VgaFont14Address { get; }
+    public SegmentedAddress VgaFont16Address { get; }
+    public uint Size { get; }
+
+    public byte Read(uint address) {
+        return _storage[address - BaseAddress];
+    }
+
+    public void Write(uint address, byte value) {
+        throw new NotSupportedException("Video BIOS ROM is read-only.");
+    }
+
+    public Span<byte> GetSpan(int address, int length) {
+        return _storage.AsSpan(address - BaseAddress, length);
+    }
 }
