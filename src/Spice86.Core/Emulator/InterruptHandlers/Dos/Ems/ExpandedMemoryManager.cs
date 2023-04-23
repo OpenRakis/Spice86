@@ -85,12 +85,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// through a window in their physical address range. <br/>
     /// This is referred as the Emm Page Frame.
     /// </summary>
-    public EmmPage[] EmmPageFrame { get; init; } = new EmmPage[EmmMaxPhysicalPages];
+    public IDictionary<byte, EmmPage> EmmPageFrame { get; init; } = new Dictionary<byte, EmmPage>();
 
     /// <summary>
     /// The links between EMM handles given to the DOS program, and on or more logical pages.
     /// </summary>
-    public Dictionary<int, EmmHandle> AllocatedEmmHandles { get; } = new();
+    public IDictionary<int, EmmHandle> AllocatedEmmHandles { get; } = new Dictionary<int, EmmHandle>();
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
@@ -98,10 +98,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         machine.Dos.AddDevice(device);
         FillDispatchTable();
 
-        for (ushort i = 0; i < EmmMaxPhysicalPages; i++) {
-            EmmPageFrame[i] = new() {
+        for (byte i = 0; i < EmmMaxPhysicalPages; i++) {
+            EmmPageFrame.Add(i,new() {
                 PageNumber = i
-            };
+            });
             _memory.RegisterMapping(MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * i)), EmmPageSize, EmmPageFrame[i].PageMemory);
         }
     }
