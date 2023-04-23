@@ -185,7 +185,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private void AllocatePages(ushort numberOfPagesToAlloc, bool canAllocateZeroPages) {
         if (numberOfPagesToAlloc is 0 && !canAllocateZeroPages) {
-            _state.AH = EmmStatus.TriedTOAllocateZeroPages;
+            _state.AH = EmmStatus.TriedToAllocateZeroPages;
             return;
         }
         if (AllocatedEmmHandles.Count == EmmMemory.TotalPages) {
@@ -592,8 +592,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="handleId">The handle reference</param>
     /// <param name="operation">Get: 0, Set: 1</param>
     /// <returns>The state of the operation</returns>
-    public byte GetSetHandleName(ushort handleId, byte operation)
-    {
+    public byte GetSetHandleName(ushort handleId, byte operation) {
         if (!IsValidHandle(handleId)) {
             return EmmStatus.EmmInvalidHandle;
         }
