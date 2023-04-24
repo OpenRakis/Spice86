@@ -432,7 +432,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmPageFrame.Add(item);
         }
 
-        AllocatedEmmHandles[handleId].SavedPageMap = true;
+        AllocatedEmmHandles[handleId].SavedPageMap = false;
         return EmmStatus.EmmNoError;
     }
 
