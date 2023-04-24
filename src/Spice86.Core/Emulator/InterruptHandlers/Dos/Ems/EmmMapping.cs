@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 /// <summary>
 /// The link between the EMM handle and a logical page.
 /// </summary>
-public class EmmMapping {
+public record EmmMapping {
     /// <summary>
     /// The logical page number
     /// </summary>

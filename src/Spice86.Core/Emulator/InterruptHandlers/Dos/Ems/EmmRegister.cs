@@ -10,7 +10,7 @@ public class EmmRegister : IMemoryDevice {
     /// <summary>
     /// The physical page mapped in main memory, set to a logical page reference.
     /// </summary>
-    public EmmPage PhysicalPage { get; set; }
+    public IEmmPage PhysicalPage { get; set; }
     
     /// <summary>
     /// The start address of the register, in main memory. <br/>
@@ -18,7 +18,7 @@ public class EmmRegister : IMemoryDevice {
     /// </summary>
     public uint Offset { get; init; }
     
-    public EmmRegister(EmmPage logicalPage, uint offset) {
+    public EmmRegister(IEmmPage logicalPage, uint offset) {
         PhysicalPage = logicalPage;
         Offset = offset;
     }

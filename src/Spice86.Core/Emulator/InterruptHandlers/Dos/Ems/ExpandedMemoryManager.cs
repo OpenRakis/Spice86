@@ -7,7 +7,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
@@ -89,9 +88,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public IDictionary<ushort, EmmRegister> EmmPageFrameSave { get; init; } = new Dictionary<ushort, EmmRegister>();
 
     /// <summary>
-    /// The links between EMM handles given to the DOS program, and on or more logical pages.
+    /// The EMM handles given to the DOS program. An EMM Handle can be related to one or more logical pages.
     /// </summary>
     public IDictionary<int, EmmHandle> AllocatedEmmHandles { get; } = new Dictionary<int, EmmHandle>();
+
+    /// <summary>
+    /// An EMM Page set to raise a fatal exception whe the DOS program attempts to read or write into an unmapped physical page
+    /// </summary>
+    private EmmNullPage _emmNullPage = new();
 
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
@@ -100,11 +104,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         FillDispatchTable();
 
         // Allocation of system handle 0.
-        AllocatePages(4);
+        var systemHandle = AllocatePages(4);
+        AllocatedEmmHandles.Add(0, systemHandle);
 
         for (ushort i = 0; i < EmmMaxPhysicalPages; i++) {
             uint startAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * i));
-            EmmRegister emmRegister = new(EmmMemory.LogicalPages[i], startAddress);
+            EmmRegister emmRegister = new(_emmNullPage, startAddress);
             EmmPageFrame.Add(i, emmRegister);
             _memory.RegisterMapping(startAddress, EmmPageSize, emmRegister);
         }
@@ -200,11 +205,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         EmmHandle newHandle = new();
         int key = AllocatedEmmHandles.Count + 1;
         newHandle.HandleNumber = (ushort) key;
-        while (numberOfPagesToAlloc > 0)
-        {
+        while (numberOfPagesToAlloc > 0) {
             ushort allocatedPageNumber = EmmMemory.AllocateLogicalPage();
-            newHandle.PageMap.Add(new()
-            {
+            newHandle.PageMap.Add(new() {
                 LogicalPageNumber = allocatedPageNumber
             });
             numberOfPagesToAlloc--;
@@ -236,49 +239,64 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         ushort physicalPageNumber = _state.AL;
         ushort logicalPageNumber = _state.BX;
         ushort handleId = _state.DX;
-        EmmMapPage(logicalPageNumber, physicalPageNumber, handleId);
+        _state.AH = MapUnmapHandlePage(logicalPageNumber, physicalPageNumber, handleId);
     }
 
-    private void EmmMapPage(ushort logicalPageNumber, ushort physicalPageNumber, ushort handleId) {
+    public byte MapUnmapHandlePage(ushort logicalPageNumber, ushort physicalPageNumber, ushort handleId) {
         if (logicalPageNumber > EmmMemory.TotalPages) {
-            _state.AH = EmmStatus.EmsLogicalPageOutOfRange;
-            return;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Logical page {LogicalPage} out of range",
+                    logicalPageNumber);
+            }
+            return EmmStatus.EmsLogicalPageOutOfRange;
         }
 
         if (physicalPageNumber > EmmPageFrame.Count) {
-            _state.AH = EmmStatus.EmsIllegalPhysicalPage;
-            return;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Logical page {PhysicalPage} out of range",
+                    physicalPageNumber);
+            }
+            return EmmStatus.EmsIllegalPhysicalPage;
         }
 
         if (!IsValidHandle(handleId)) {
-            _state.AH = EmmStatus.EmmInvalidHandle;
-            return;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Invalid Handle {InvalidHandle}", handleId);
+            }
+            return EmmStatus.EmmInvalidHandle;
         }
 
         EmmRegister emmRegister = EmmPageFrame[physicalPageNumber];
 
         // Unmapping
         if (logicalPageNumber == EmmNullPage) {
-            emmRegister.PhysicalPage.PageNumber = EmmNullPage;
-            _state.AH = EmmStatus.EmmNoError;
-            return;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Unmapped physical page: {PhysicalPage}",
+                    emmRegister.PhysicalPage);
+            }
+            emmRegister.PhysicalPage = _emmNullPage;
+            return EmmStatus.EmmNoError;
         }
 
         // Mapping
         emmRegister.PhysicalPage = EmmMemory.LogicalPages[logicalPageNumber];
-        emmRegister.PhysicalPage.PageNumber = EmmMemory.LogicalPages[logicalPageNumber].PageNumber;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Mapped logical page {LogicalPage} to physical page {PhysicalPage}", 
+                logicalPageNumber,
+                physicalPageNumber);
+        }
 
-        _state.AH = EmmStatus.EmmNoError;
+        return EmmStatus.EmmNoError;
     }
 
     private bool IsValidHandle(ushort handleId) => AllocatedEmmHandles.ContainsKey(handleId);
 
-    private void EmmMapSegment(ushort logicalPage, ushort segment, ushort handleId) {
+    private void MapSegment(ushort logicalPage, ushort segment, ushort handleId) {
         uint address = MemoryUtils.ToPhysicalAddress(segment, 0);
         uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
         uint pageFrameAddressEnd = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, EmmPageSize);
         if (address >= pageFrameAddress && address < pageFrameAddressEnd) {
-            EmmMapPage(logicalPage, (ushort) ((address - pageFrameAddress) / EmmPageSize), handleId);
+            MapUnmapHandlePage(logicalPage, (ushort) ((address - pageFrameAddress) / EmmPageSize), handleId);
         }
     }
 
@@ -482,7 +500,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     mapAddress += 2;
                     ushort physicalPage = _memory.GetUint16(mapAddress);
                     mapAddress += 2;
-                    EmmMapPage(logicalPage, physicalPage, handleId);
+                    MapUnmapHandlePage(logicalPage, physicalPage, handleId);
                     if (_state.AH != EmmStatus.EmmNoError) {
                         break;
                     }
@@ -496,7 +514,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                     mapAddress += 2;
                     ushort segment = _memory.GetUint16(mapAddress);
                     mapAddress += 2;
-                    EmmMapSegment(logicalPage, segment, handleId);
+                    MapSegment(logicalPage, segment, handleId);
                     if (_state.AH != EmmStatus.EmmNoError) {
                         break;
                     }
@@ -589,11 +607,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return EmmStatus.EmmInvalidHandle;
         }
         switch (operation) {
-            case EmsSubFunctions.HandleNameGet:
+            case EmmSubFunctions.HandleNameGet:
                 GetHandleName(handleId);
                 break;
 
-            case EmsSubFunctions.HandleNameSet:
+            case EmmSubFunctions.HandleNameSet:
                 SetHandleName(handleId,
                     _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI),
                         8));
@@ -626,7 +644,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void GetExpandedMemoryHardwareInformation() {
         switch (_state.AL) {
-            case EmsSubFunctions.GetHardwareConfigurationArray:
+            case EmmSubFunctions.GetHardwareConfigurationArray:
                 uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
                 // 1 page is 1K paragraphs (16KB)
                 _memory.SetUint16(data,0x0400);
@@ -643,7 +661,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 // Always 0 for LIM standard
                 _memory.SetUint16(data,0x0000);
                 break;
-            case EmsSubFunctions.GetUnallocatedRawPages:
+            case EmmSubFunctions.GetUnallocatedRawPages:
                 // Return number of pages available in BX.
                 _state.BX = EmmMemory.GetFreePages();
                 // Return total number of pages in DX.
