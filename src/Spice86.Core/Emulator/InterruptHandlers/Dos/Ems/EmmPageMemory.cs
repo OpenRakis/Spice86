@@ -10,23 +10,20 @@ public class EmmPageMemory : IMemoryDevice {
     public uint Size => ExpandedMemoryManager.EmmPageSize;
 
     private Ram _ram;
-
-    public uint Offset { get; set; }
-
-    public EmmPageMemory(uint offset = 0) {
-        Offset = offset;
+    
+    public EmmPageMemory() {
         _ram = new Ram(Size);
     }
     
     public byte Read(uint address) {
-        return _ram.Read(address - Offset);
+        return _ram.Read(address);
     }
 
     public void Write(uint address, byte value) {
-        _ram.Write(address - Offset, value);
+        _ram.Write(address, value);
     }
 
     public Span<byte> GetSpan(int address, int length) {
-        return _ram.GetSpan((int) (address - Offset), length);
+        return _ram.GetSpan(address, length);
     }
 }

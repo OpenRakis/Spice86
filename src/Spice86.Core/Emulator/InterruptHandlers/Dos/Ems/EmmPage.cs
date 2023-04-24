@@ -4,8 +4,8 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 /// A representation of an EMM Physical or Logical Page
 /// </summary>
 public class EmmPage {
-    public EmmPage(uint offset = 0) {
-        PageMemory = new(offset);
+    public EmmPage() {
+        PageMemory = new();
     }
     
     /// <summary>
