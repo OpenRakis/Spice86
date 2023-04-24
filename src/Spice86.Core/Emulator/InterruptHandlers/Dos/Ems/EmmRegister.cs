@@ -16,23 +16,23 @@ public class EmmRegister : IMemoryDevice {
     /// The start address of the register, in main memory. <br/>
     /// This is an absolute address within the EMM Page Frame.
     /// </summary>
-    public uint StartAddress { get; init; }
-
-    public EmmRegister(EmmPage logicalPage, uint startAddress) {
+    public uint Offset { get; init; }
+    
+    public EmmRegister(EmmPage logicalPage, uint offset) {
         PhysicalPage = logicalPage;
-        StartAddress = startAddress;
+        Offset = offset;
     }
 
     public uint Size => ExpandedMemoryManager.EmmPageSize;
     public byte Read(uint address) {
-        return PhysicalPage.PageMemory.Read(address - StartAddress);
+        return PhysicalPage.PageMemory.Read(address - Offset);
     }
 
     public void Write(uint address, byte value) {
-        PhysicalPage.PageMemory.Write(address - StartAddress, value);
+        PhysicalPage.PageMemory.Write(address - Offset, value);
     }
 
     public Span<byte> GetSpan(int address, int length) {
-        return PhysicalPage.PageMemory.GetSpan((int)(address - StartAddress), length);
+        return PhysicalPage.PageMemory.GetSpan((int)(address - Offset), length);
     }
 }

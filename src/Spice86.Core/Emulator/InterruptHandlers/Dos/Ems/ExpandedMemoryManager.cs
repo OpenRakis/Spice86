@@ -7,6 +7,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
@@ -105,7 +106,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             uint startAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * i));
             EmmRegister emmRegister = new(EmmMemory.LogicalPages[i], startAddress);
             EmmPageFrame.Add(i, emmRegister);
-            _memory.RegisterMapping(startAddress, EmmPageSize, EmmPageFrame[i]);
+            _memory.RegisterMapping(startAddress, EmmPageSize, emmRegister);
         }
     }
 
@@ -264,7 +265,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         // Mapping
-        EmmPageFrame[physicalPageNumber].PhysicalPage = EmmMemory.LogicalPages[logicalPageNumber];
+        emmRegister.PhysicalPage = EmmMemory.LogicalPages[logicalPageNumber];
+        emmRegister.PhysicalPage.PageNumber = EmmMemory.LogicalPages[logicalPageNumber].PageNumber;
 
         _state.AH = EmmStatus.EmmNoError;
     }

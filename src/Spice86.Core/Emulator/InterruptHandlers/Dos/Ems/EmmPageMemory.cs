@@ -9,7 +9,7 @@ public class EmmPageMemory : IMemoryDevice {
     
     public uint Size => ExpandedMemoryManager.EmmPageSize;
 
-    private Ram _ram;
+    private readonly Ram _ram;
     
     public EmmPageMemory() {
         _ram = new Ram(Size);
