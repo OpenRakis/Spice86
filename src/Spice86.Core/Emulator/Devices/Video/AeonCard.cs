@@ -612,8 +612,11 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     public void WriteTextInTeletypeMode() {
-        // TODO: Implement or remove
-        throw new NotImplementedException();
+        byte chr = _state.AL;
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Write Text in Teletype Mode ascii code {@AsciiCode}, chr {@Character}", ConvertUtils.ToHex(chr), ConvertUtils.ToChar(chr));
+        }
+        Console.Out.Write(ConvertUtils.ToChar(chr));
     }
 
     public void SetColorPaletteOrBackGroundColor() {
