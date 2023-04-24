@@ -29,8 +29,12 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
         return GetUint8Array(BaseAddress, start, length);
     }
 
-    public string GetZeroTerminatedString(uint start, int maxLength) {
-        return Memory.GetZeroTerminatedString(BaseAddress + start, maxLength);
+    public string GetZeroTerminatedString(int start, int maxLength) {
+        return Memory.GetZeroTerminatedString((uint)(BaseAddress + start), maxLength);
+    }
+
+    public void SetZeroTerminatedString(int start, string value, int maxLength) {
+        Memory.SetZeroTerminatedString((uint)(BaseAddress + start), value, maxLength);
     }
 
     public void SetUint16(int offset, ushort value) {

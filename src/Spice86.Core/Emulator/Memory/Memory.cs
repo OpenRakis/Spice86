@@ -308,28 +308,33 @@ public class Memory {
         _devices.Add(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
     }
 
+    /// <summary>
+    /// Read a string from memory.
+    /// </summary>
+    /// <param name="address">The address in memory from where to read</param>
+    /// <param name="maxLength">The maximum string length</param>
+    /// <returns></returns>
     public string GetZeroTerminatedString(uint address, int maxLength) {
         StringBuilder res = new();
         for (int i = 0; i < maxLength; i++) {
-            byte characterByte = Read((uint)(address + i));
+            byte characterByte = GetUint8((uint)(address + i));
             if (characterByte == 0) {
                 break;
             }
             char character = Convert.ToChar(characterByte);
             res.Append(character);
         }
-        return res.ToString();
-    }
-    
-    public string GetString(uint address, int length) {
-        StringBuilder res = new();
-        for (int i = 0; i < length; i++) {
-            char character = (char)Read((uint)(address + i));
-            res.Append(character);
-        }
+
         return res.ToString();
     }
 
+    /// <summary>
+    /// Writes a string directly to memory.
+    /// </summary>
+    /// <param name="address">The address at which to write the string</param>
+    /// <param name="value">The string to write</param>
+    /// <param name="maxLength">The maximum length to write</param>
+    /// <exception cref="UnrecoverableException"></exception>
     public void SetZeroTerminatedString(uint address, string value, int maxLength) {
         if (value.Length + 1 > maxLength) {
             throw new UnrecoverableException($"String {value} is more than {maxLength} cannot write it at offset {address}");
@@ -338,21 +343,10 @@ public class Memory {
         for (; i < value.Length; i++) {
             char character = value[i];
             byte charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
-            Write((uint)(address + i), charFirstByte);
+            SetUint8((uint)(address + i), charFirstByte);
         }
-        Write((uint)(address + i), 0);
-    }
-    
-    /// <summary>
-    /// Allow a class to unregister for a certain memory range.
-    /// </summary>
-    /// <param name="baseAddress">The start of the frame</param>
-    /// <param name="size">The size of the window</param>
-    /// <param name="memoryDevice">The memory device to use</param>
-    public void UnregisterMapping(uint baseAddress, uint size, IMemoryDevice memoryDevice) {
-        _memoryDevices.RemoveRange((int) baseAddress, (int) size);
-        uint endAddress = baseAddress + size;
-        _devices.Remove(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
+
+        SetUint8((uint)(address + i), 0);
     }
 
     private void Write(uint address, byte value) {
@@ -368,6 +362,7 @@ public class Memory {
     private void MonitorReadAccess(uint address) {
         _readBreakPoints.TriggerMatchingBreakPoints(address);
     }
+
     private void MonitorWriteAccess(uint address, byte value) {
         CurrentlyWritingByte = value;
         _writeBreakPoints.TriggerMatchingBreakPoints(address);
@@ -382,5 +377,6 @@ public class Memory {
     }
 
     private record DeviceRegistration(uint StartAddress, uint EndAddress, IMemoryDevice Device);
+
 }
 
