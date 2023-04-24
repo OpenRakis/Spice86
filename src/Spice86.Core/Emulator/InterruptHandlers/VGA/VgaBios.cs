@@ -19,6 +19,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     private readonly ILoggerService _logger;
     private readonly VgaRom _vgaRom;
     private VgaMode _currentVgaMode;
+    private readonly VgaFunctions _vgaFunctions;
+
 
     public VgaBios(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _bios = _machine.Bios;
@@ -27,18 +29,14 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         _logger.Debug("Initializing VGA BIOS");
         FillDispatchTable();
 
-        init_bios_area();
-        VgaFunctions = new VgaFunctions(machine.Memory, machine.IoPortDispatcher);
+        InitializeBiosArea();
+        _vgaFunctions = new VgaFunctions(machine.Memory, machine.IoPortDispatcher);
     }
 
     /// <summary>
     ///     The interrupt vector this class handles.
     /// </summary>
     public override byte Index => 0x10;
-
-    private VgaFunctions VgaFunctions {
-        get;
-    }
 
     public void WriteString() {
         CursorPosition cursorPosition = new(_state.DL, _state.DH, _state.BH);
@@ -150,7 +148,11 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
                 LoadGraphicsRom8X16Font(_state.BL, _state.DL);
                 break;
             case 0x30:
-                GetFontInformation();
+                SegmentedAddress address = GetFontAddress(_state.BH);
+                _state.ES = address.Segment;
+                _state.BP = address.Offset;
+                _state.CX = (ushort)(_bios.CharacterHeight & 0xFF);
+                _state.DL = _bios.ScreenRows;
                 break;
 
             default:
@@ -165,64 +167,64 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
         switch (_state.AL) {
             case 0x00:
-                VgaFunctions.SetEgaPaletteRegister(_state.BL, _state.BH);
+                _vgaFunctions.SetEgaPaletteRegister(_state.BL, _state.BH);
                 break;
             case 0x01:
-                VgaFunctions.stdvga_set_overscan_border_color(_state.BH);
+                _vgaFunctions.SetOverscanBorderColor(_state.BH);
                 break;
             case 0x02:
-                VgaFunctions.stdvga_set_all_palette_reg(_state.ES, _state.DX);
+                _vgaFunctions.SetAllPaletteRegisters(_state.ES, _state.DX);
                 break;
             case 0x03:
-                VgaFunctions.stdvga_toggle_intensity(_state.BL);
+                _vgaFunctions.ToggleIntensity(_state.BL);
                 break;
             case 0x07:
                 if (_state.BL > 0x14) {
                     return;
                 }
-                _state.BH = VgaFunctions.stdvga_attr_read(_state.BL);
+                _state.BH = _vgaFunctions.ReadAttributeController(_state.BL);
                 break;
             case 0x08:
-                _state.BH = VgaFunctions.stdvga_get_overscan_border_color();
+                _state.BH = _vgaFunctions.GetOverscanBorderColor();
                 break;
             case 0x09:
-                VgaFunctions.stdvga_get_all_palette_reg(_state.ES, _state.DX);
+                _vgaFunctions.GetAllPaletteRegisters(_state.ES, _state.DX);
                 break;
             case 0x10:
-                VgaFunctions.stdvga_dac_write(new[] {_state.DH, _state.CH, _state.CL}, (byte)_state.BX, 1);
+                _vgaFunctions.WriteToDac(new[] {_state.DH, _state.CH, _state.CL}, (byte)_state.BX, 1);
                 break;
             case 0x12:
-                VgaFunctions.stdvga_dac_write(_state.ES, _state.DX, (byte)_state.BX, _state.CX);
+                _vgaFunctions.WriteToDac(_state.ES, _state.DX, (byte)_state.BX, _state.CX);
                 break;
             case 0x13:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("{ClassName} INT 10 10 {MethodName} - Select color page, mode '{Mode}', value 0x{Value:X2} ",
                         nameof(VgaBios), nameof(SetPaletteRegisters), _state.BL == 0 ? "set Mode Control register bit 7" : "set color select register", _state.BH);
                 }
-                VgaFunctions.stdvga_select_video_dac_color_page(_state.BL, _state.BH);
+                _vgaFunctions.SelectVideoDacColorPage(_state.BL, _state.BH);
                 break;
             case 0x15:
-                byte[] rgb = VgaFunctions.stdvga_dac_read((byte)_state.BX, 1);
+                byte[] rgb = _vgaFunctions.ReadFromDac((byte)_state.BX, 1);
                 _state.DH = rgb[0];
                 _state.CH = rgb[1];
                 _state.CL = rgb[2];
                 break;
             case 0x17:
-                VgaFunctions.stdvga_dac_read(_state.ES, _state.DX, (byte)_state.BX, _state.CX);
+                _vgaFunctions.ReadFromDac(_state.ES, _state.DX, (byte)_state.BX, _state.CX);
                 break;
             case 0x18:
-                VgaFunctions.stdvga_pelmask_write(_state.BL);
+                _vgaFunctions.WriteToPixelMask(_state.BL);
                 break;
             case 0x19:
-                _state.BL = VgaFunctions.stdvga_pelmask_read();
+                _state.BL = _vgaFunctions.ReadPixelMask();
                 break;
             case 0x1a:
-                VgaFunctions.stdvga_read_video_dac_state(out byte pMode, out byte curPage);
+                _vgaFunctions.ReadVideoDacState(out byte pMode, out byte curPage);
                 _state.BH = curPage;
                 _state.BL = pMode;
                 break;
             case 0x1b:
-                VgaFunctions.stdvga_perform_gray_scale_summing((byte)_state.BX, _state.CX);
+                _vgaFunctions.PerformGrayScaleSumming((byte)_state.BX, _state.CX);
                 break;
             default:
                 throw new NotSupportedException($"0x{_state.AL:X2} is not a valid palette register subFunction");
@@ -253,14 +255,14 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     public void SetColorPaletteOrBackGroundColor() {
         switch (_state.BH) {
             case 0x00:
-                VgaFunctions.stdvga_set_border_color(_state.BL);
+                _vgaFunctions.SetBorderColor(_state.BL);
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
                         nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), _state.BL);
                 }
                 break;
             case 0x01:
-                VgaFunctions.stdvga_set_palette(_state.BL);
+                _vgaFunctions.SetPalette(_state.BL);
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set palette id {PaletteId}",
                         nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), _state.BL);
@@ -377,7 +379,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     public void SetVideoMode() {
-        int modeId = _state.AL & 0x7f;
+        int modeId = _state.AL & 0x7F;
         ModeFlags flags = ModeFlags.Legacy | (ModeFlags)_bios.ModesetCtl & (ModeFlags.NoPalette | ModeFlags.GraySum);
         if ((_state.AL & 0x80) != 0) {
             flags |= ModeFlags.NoClearMem;
@@ -387,12 +389,13 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         if (modeId > 7) {
             _state.AL = 0x20;
         } else if (modeId == 6) {
-            _state.AL = 0x3f;
+            _state.AL = 0x3F;
         } else {
             _state.AL = 0x30;
         }
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("INT 10: Set video mode to {ModeId:X2}, {Flags}", modeId, flags);
+            _logger.Debug("{ClassName} INT 10 00 {MethodName} - mode {ModeId:X2}, {Flags}",
+                nameof(VgaBios), nameof(WriteDot), modeId, flags);
         }
         VgaSetMode(modeId, flags);
     }
@@ -423,67 +426,67 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         if (cursorPosition.Y > numberOfRows) {
             cursorPosition.Y--;
 
-            CursorPosition win = new(0, 0, cursorPosition.Page);
+            CursorPosition position = new(0, 0, cursorPosition.Page);
             Area area = new(_bios.ScreenColumns, numberOfRows + 1);
-            vgafb_scroll(win, area, 1, new CharacterPlusAttribute(' ', 0, false));
+            Scroll(position, area, 1, new CharacterPlusAttribute(' ', 0, false));
         }
         return cursorPosition;
     }
 
-    private void vgafb_scroll(CursorPosition position, Area area, int lines, CharacterPlusAttribute ca) {
+    private void Scroll(CursorPosition position, Area area, int lines, CharacterPlusAttribute characterPlusAttribute) {
         if (lines == 0) {
             // Clear window
-            vgafb_clear_chars(position, area, ca);
+            ClearChars(position, area, characterPlusAttribute);
         } else if (lines > 0) {
             // Scroll the window up (eg, from page down key)
             area.Height -= lines;
-            vgafb_move_chars(position, area, lines);
+            MoveChars(position, area, lines);
 
             position.Y += area.Height;
             area.Height = lines;
-            vgafb_clear_chars(position, area, ca);
+            ClearChars(position, area, characterPlusAttribute);
         } else {
             // Scroll the window down (eg, from page up key)
             position.Y -= lines;
             area.Height += lines;
-            vgafb_move_chars(position, area, lines);
+            MoveChars(position, area, lines);
 
             position.Y += lines;
             area.Height = -lines;
-            vgafb_clear_chars(position, area, ca);
+            ClearChars(position, area, characterPlusAttribute);
         }
     }
 
-    private void vgafb_move_chars(CursorPosition dest, Area area, int lines) {
+    private void MoveChars(CursorPosition dest, Area area, int lines) {
         VgaMode vgaMode = _currentVgaMode;
 
         if (vgaMode.MemoryModel != MemoryModel.Text) {
-            gfx_move_chars(vgaMode, dest, area, lines);
+            GraphicalMoveChars(vgaMode, dest, area, lines);
             return;
         }
 
         int stride = _bios.ScreenColumns * 2;
-        ushort destinationAddress = text_address(dest), sourceAddress = (ushort)(destinationAddress + lines * stride);
-        memmove_stride(vgaMode.StartSegment, destinationAddress, sourceAddress, area.Width * 2, stride, (ushort)area.Height);
+        ushort destinationAddress = TextAddress(dest), sourceAddress = (ushort)(destinationAddress + lines * stride);
+        MemMoveStride(vgaMode.StartSegment, destinationAddress, sourceAddress, area.Width * 2, stride, (ushort)area.Height);
     }
 
-    private void vgafb_clear_chars(CursorPosition startPosition, Area area, CharacterPlusAttribute characterPlusAttribute) {
+    private void ClearChars(CursorPosition startPosition, Area area, CharacterPlusAttribute characterPlusAttribute) {
         VgaMode vgaMode = _currentVgaMode;
 
         if (vgaMode.MemoryModel != MemoryModel.Text) {
-            gfx_clear_chars(vgaMode, startPosition, area, characterPlusAttribute);
+            GraphicalClearChars(vgaMode, startPosition, area, characterPlusAttribute);
             return;
         }
 
         int attribute = (characterPlusAttribute.UseAttribute ? characterPlusAttribute.Attribute : 0x07) << 8 | characterPlusAttribute.Character;
         int stride = _bios.ScreenColumns * 2;
-        ushort offset = text_address(startPosition);
+        ushort offset = TextAddress(startPosition);
         for (int lines = area.Height; lines > 0; lines--, offset += (ushort)stride) {
-            VgaFunctions.memset16_far(vgaMode.StartSegment, offset, (ushort)attribute, area.Width * 2);
+            _vgaFunctions.MemSet16(vgaMode.StartSegment, offset, (ushort)attribute, area.Width * 2);
         }
     }
 
-    private void gfx_move_chars(VgaMode vgaMode, CursorPosition destination, Area area, int lines) {
+    private void GraphicalMoveChars(VgaMode vgaMode, CursorPosition destination, Area area, int lines) {
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
         operation.X = area.Width * 8;
         operation.Width = destination.X * 8;
@@ -492,29 +495,29 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         operation.Height = destination.Y * characterHeight;
         operation.Lines = operation.Y + lines * characterHeight;
         operation.Action = Action.MemMove;
-        handle_gfx_op(operation);
+        HandleGraphicsOperation(operation);
     }
 
     private void LoadGraphicsRom8X16Font(byte rowSpecifier, byte userSpecified) {
         SegmentedAddress address = _vgaRom.VgaFont16Address;
-        load_gfx_font(address.Segment, address.Offset, 16, rowSpecifier, userSpecified);
+        LoadGraphicsFont(address.Segment, address.Offset, 16, rowSpecifier, userSpecified);
     }
 
     private void LoadRom8X8Font(byte rowSpecifier, byte userSpecified) {
         SegmentedAddress address = _vgaRom.VgaFont8Address;
-        load_gfx_font(address.Segment, address.Offset, 8, rowSpecifier, userSpecified);
+        LoadGraphicsFont(address.Segment, address.Offset, 8, rowSpecifier, userSpecified);
     }
 
     private void LoadRom8X14Font(byte rowSpecifier, byte userSpecified) {
         SegmentedAddress address = _vgaRom.VgaFont14Address;
-        load_gfx_font(address.Segment, address.Offset, 14, rowSpecifier, userSpecified);
+        LoadGraphicsFont(address.Segment, address.Offset, 14, rowSpecifier, userSpecified);
     }
 
     private void LoadUserGraphicsCharacters(ushort segment, ushort offset, byte height, byte rowSpecifier, byte userSpecified) {
-        load_gfx_font(segment, offset, height, rowSpecifier, userSpecified);
+        LoadGraphicsFont(segment, offset, height, rowSpecifier, userSpecified);
     }
 
-    private void load_gfx_font(ushort segment, ushort offset, byte height, byte rowSpecifier, byte userSpecified) {
+    private void LoadGraphicsFont(ushort segment, ushort offset, byte height, byte rowSpecifier, byte userSpecified) {
         SetInterruptVectorAddress(0x43, segment, offset);
         byte rows = rowSpecifier switch {
             0 => userSpecified,
@@ -537,34 +540,34 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void LoadRom8X16Font2(byte fontBlock) {
-        VgaFunctions.stdvga_load_font(VgaRom.VgaFont16, 0x100, 0, fontBlock, 16);
-        set_scan_lines(16);
+        _vgaFunctions.LoadFont(VgaRom.VgaFont16, 0x100, 0, fontBlock, 16);
+        SetScanLines(16);
     }
 
     private void LoadRom8X8DoubleDotFont2(byte fontBlock) {
-        VgaFunctions.stdvga_load_font(VgaRom.VgaFont8, 0x100, 0, fontBlock, 8);
-        set_scan_lines(8);
+        _vgaFunctions.LoadFont(VgaRom.VgaFont8, 0x100, 0, fontBlock, 8);
+        SetScanLines(8);
     }
 
     private void LoadRomMonochromeFont2(byte fontBlock) {
-        VgaFunctions.stdvga_load_font(VgaRom.VgaFont14, 0x100, 0, fontBlock, 14);
-        set_scan_lines(14);
+        _vgaFunctions.LoadFont(VgaRom.VgaFont14, 0x100, 0, fontBlock, 14);
+        SetScanLines(14);
     }
 
     private void LoadUserFont2(ushort segment, ushort offset, ushort length, ushort start, byte fontBlock, byte height) {
         byte[] bytes = _memory.GetData(MemoryUtils.ToPhysicalAddress(segment, offset), length);
-        VgaFunctions.stdvga_load_font(bytes, length, start, fontBlock, height);
-        set_scan_lines(height);
+        _vgaFunctions.LoadFont(bytes, length, start, fontBlock, height);
+        SetScanLines(height);
     }
 
-    private void set_scan_lines(byte lines) {
-        VgaFunctions.stdvga_set_scan_lines(lines);
+    private void SetScanLines(byte lines) {
+        _vgaFunctions.SetScanLines(lines);
         _bios.CharacterHeight = lines;
-        ushort vde = VgaFunctions.stdvga_get_vde();
+        ushort vde = _vgaFunctions.get_vde();
         byte rows = (byte)(vde / lines);
         _bios.ScreenRows = (byte)(rows - 1);
         ushort columns = _bios.ScreenColumns;
-        _bios.VideoPageSize = calc_page_size(MemoryModel.Text, columns, rows);
+        _bios.VideoPageSize = (ushort)CalculatePageSize(MemoryModel.Text, columns, rows);
         if (lines == 8) {
             set_cursor_shape(0x0607);
         } else {
@@ -573,24 +576,24 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void LoadRom8X16Font(byte fontBlock) {
-        VgaFunctions.stdvga_load_font(VgaRom.VgaFont16, 0x100, 0, fontBlock, 16);
+        _vgaFunctions.LoadFont(VgaRom.VgaFont16, 0x100, 0, fontBlock, 16);
     }
 
     private void SetBlockSpecifier(byte fontBlock) {
-        VgaFunctions.stdvga_set_text_block_specifier(fontBlock);
+        _vgaFunctions.SetTextBlockSpecifier(fontBlock);
     }
 
     private void LoadRom8X8DoubleDotFont(byte fontBlock) {
-        VgaFunctions.stdvga_load_font(VgaRom.VgaFont8, 0x100, 0, fontBlock, 8);
+        _vgaFunctions.LoadFont(VgaRom.VgaFont8, 0x100, 0, fontBlock, 8);
     }
 
     private void LoadRomMonochromeFont(byte fontBlock) {
-        VgaFunctions.stdvga_load_font(VgaRom.VgaFont14, 0x100, 0, fontBlock, 14);
+        _vgaFunctions.LoadFont(VgaRom.VgaFont14, 0x100, 0, fontBlock, 14);
     }
 
     private void LoadUserFont(ushort segment, ushort offset, ushort length, ushort start, byte fontBlock, byte height) {
         byte[] bytes = _memory.GetData(MemoryUtils.ToPhysicalAddress(segment, offset), length);
-        VgaFunctions.stdvga_load_font(bytes, length, start, fontBlock, height);
+        _vgaFunctions.LoadFont(bytes, length, start, fontBlock, height);
     }
 
     private void SetCursorPosition(CursorPosition cursorPosition) {
@@ -601,20 +604,20 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
         if (cursorPosition.Page == _bios.CurrentVideoPage) {
             // Update cursor in hardware
-            VgaFunctions.stdvga_set_cursor_pos(text_address(cursorPosition));
+            _vgaFunctions.SetCursorPosition(TextAddress(cursorPosition));
         }
 
         // Update BIOS cursor pos
         _bios.CursorPosition[cursorPosition.Page] = (ushort)(cursorPosition.Y << 8 | cursorPosition.X);
     }
 
-    private ushort text_address(CursorPosition cursorPosition) {
+    private ushort TextAddress(CursorPosition cursorPosition) {
         int stride = _bios.ScreenColumns * 2;
         int pageOffset = _bios.VideoPageSize * cursorPosition.Page;
         return (ushort)(pageOffset + cursorPosition.Y * stride + cursorPosition.X * 2);
     }
 
-    private void gfx_clear_chars(VgaMode vgaMode, CursorPosition startPosition, Area area, CharacterPlusAttribute ca) {
+    private void GraphicalClearChars(VgaMode vgaMode, CursorPosition startPosition, Area area, CharacterPlusAttribute ca) {
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
         operation.X = startPosition.X * 8;
         operation.Width = area.Width * 8;
@@ -622,27 +625,22 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         operation.Y = startPosition.Y * characterHeight;
         operation.Height = area.Height * characterHeight;
         operation.Pixels[0] = ca.Attribute;
-        if (false) {
-            operation.Pixels[0] = (byte)(ca.Attribute >> 4);
-        }
         operation.Action = Action.MemSet;
-        handle_gfx_op(operation);
+        HandleGraphicsOperation(operation);
     }
 
-    private void handle_gfx_op(GraphicsOperation operation) {
+    private void HandleGraphicsOperation(GraphicsOperation operation) {
         switch (operation.VgaMode.MemoryModel) {
             case MemoryModel.Planar:
-                gfx_planar(operation);
+                HandlePlanarGraphicsOperation(operation);
                 break;
             case MemoryModel.Cga:
-                gfx_cga(operation);
+                HandleCgaGraphicsOperation(operation);
                 break;
             case MemoryModel.Packed:
-                gfx_packed(operation);
+                HandlePackedGraphicsOperation(operation);
                 break;
             case MemoryModel.Direct:
-                gfx_direct(operation);
-                break;
             case MemoryModel.Text:
             case MemoryModel.Hercules:
             case MemoryModel.NonChain4X256:
@@ -652,118 +650,148 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
-    private void gfx_direct(GraphicsOperation _) {
-        throw new NotSupportedException("SVGA not supported");
-    }
-
-    private void gfx_cga(GraphicsOperation operation) {
+    private void HandleCgaGraphicsOperation(GraphicsOperation operation) {
         int bitsPerPixel = operation.VgaMode.BitsPerPixel;
         ushort offset = (ushort)(operation.Y / 2 * operation.LineLength + operation.X / 8 * bitsPerPixel);
         switch (operation.Action) {
             default:
-            case Action.Read8:
-                if ((operation.Y & 1) != 0) {
-                    offset += 0x2000;
-                }
-                if (bitsPerPixel == 1) {
-                    byte uint8 = _memory.UInt8[ColorTextSegment, offset];
-                    int pixel;
-                    for (pixel = 0; pixel < 8; pixel++) {
-                        operation.Pixels[pixel] = (byte)(uint8 >> 7 - pixel & 1);
-                    }
-                } else {
-                    ushort uint16 = _memory.UInt16[ColorTextSegment, offset];
-                    uint16 = (ushort)(uint16 << 8 | uint16 >> 8);
-                    int pixel;
-                    for (pixel = 0; pixel < 8; pixel++) {
-                        operation.Pixels[pixel] = (byte)(uint16 >> (7 - pixel) * 2 & 3);
-                    }
-                }
+            case Action.ReadByte:
+                ReadByteOperationCga(operation, offset, bitsPerPixel);
                 break;
-            case Action.Write8:
-                if ((operation.Y & 1) != 0) {
-                    offset += 0x2000;
-                }
-                if (bitsPerPixel == 1) {
-                    byte uint8 = 0;
-                    int pixel;
-                    for (pixel = 0; pixel < 8; pixel++) {
-                        uint8 |= (byte)((operation.Pixels[pixel] & 1) << 7 - pixel);
-                    }
-                    _memory.UInt8[ColorTextSegment, offset] = uint8;
-                } else {
-                    ushort uint16 = 0;
-                    int pixel;
-                    for (pixel = 0; pixel < 8; pixel++) {
-                        uint16 |= (byte)((operation.Pixels[pixel] & 3) << (7 - pixel) * 2);
-                    }
-                    uint16 = (ushort)(uint16 << 8 | uint16 >> 8);
-                    _memory.UInt16[ColorTextSegment, offset] = uint16;
-                }
+            case Action.WriteByte:
+                WriteByteOperationCga(operation, offset, bitsPerPixel);
                 break;
             case Action.MemSet:
-                byte data = operation.Pixels[0];
-                if (bitsPerPixel == 1) {
-                    data = (byte)(data & 1 | (data & 1) << 1);
-                }
-                data &= 3;
-                data |= (byte)(data << 2 | data << 4 | data << 6);
-                memset_stride(ColorTextSegment, offset, data, operation.Width / 8 * bitsPerPixel, operation.LineLength, (ushort)(operation.Height / 2));
-                memset_stride(ColorTextSegment, (ushort)(offset + 0x2000), data, operation.Width / 8 * bitsPerPixel, operation.LineLength, (ushort)(operation.Height / 2));
+                MemSetOperationCga(operation, offset, bitsPerPixel);
                 break;
             case Action.MemMove:
-                ushort source = (ushort)(operation.Lines / 2 * operation.LineLength + operation.X / 8 * bitsPerPixel);
-                memmove_stride(ColorTextSegment, offset, source, operation.Width / 8 * bitsPerPixel, operation.LineLength, (ushort)(operation.Height / 2));
-                memmove_stride(ColorTextSegment, (ushort)(offset + 0x2000), (ushort)(source + 0x2000), operation.Width / 8 * bitsPerPixel, operation.LineLength, (ushort)(operation.Height / 2));
+                MemMoveOperationCga(operation, offset, bitsPerPixel);
                 break;
         }
     }
 
-    private void gfx_planar(GraphicsOperation operation) {
-        ushort destination = (ushort)(operation.Y * operation.LineLength + operation.X / 8);
+    private void MemMoveOperationCga(GraphicsOperation operation, ushort offset, int bitsPerPixel) {
+        ushort source = (ushort)(operation.Lines / 2 * operation.LineLength + operation.X / 8 * bitsPerPixel);
+        MemMoveStride(ColorTextSegment, offset, source, operation.Width / 8 * bitsPerPixel, operation.LineLength, (ushort)(operation.Height / 2));
+        MemMoveStride(ColorTextSegment, (ushort)(offset + 0x2000), (ushort)(source + 0x2000), operation.Width / 8 * bitsPerPixel, operation.LineLength, (ushort)(operation.Height / 2));
+    }
+
+    private void MemSetOperationCga(GraphicsOperation operation, ushort offset, int bitsPerPixel) {
+        byte data = operation.Pixels[0];
+        if (bitsPerPixel == 1) {
+            data = (byte)(data & 1 | (data & 1) << 1);
+        }
+        data &= 3;
+        data |= (byte)(data << 2 | data << 4 | data << 6);
+        MemSetStride(ColorTextSegment, offset, data, operation.Width / 8 * bitsPerPixel, operation.LineLength, (ushort)(operation.Height / 2));
+        MemSetStride(ColorTextSegment, (ushort)(offset + 0x2000), data, operation.Width / 8 * bitsPerPixel, operation.LineLength, (ushort)(operation.Height / 2));
+    }
+
+    private void WriteByteOperationCga(GraphicsOperation operation, ushort offset, int bitsPerPixel) {
+        if ((operation.Y & 1) != 0) {
+            offset += 0x2000;
+        }
+        if (bitsPerPixel == 1) {
+            byte uint8 = 0;
+            for (int pixel = 0; pixel < 8; pixel++) {
+                uint8 |= (byte)((operation.Pixels[pixel] & 1) << 7 - pixel);
+            }
+            _memory.UInt8[ColorTextSegment, offset] = uint8;
+        } else {
+            ushort uint16 = 0;
+            for (int pixel = 0; pixel < 8; pixel++) {
+                uint16 |= (byte)((operation.Pixels[pixel] & 3) << (7 - pixel) * 2);
+            }
+            uint16 = (ushort)(uint16 << 8 | uint16 >> 8);
+            _memory.UInt16[ColorTextSegment, offset] = uint16;
+        }
+    }
+
+    private void ReadByteOperationCga(GraphicsOperation operation, ushort offset, int bitsPerPixel) {
+        if ((operation.Y & 1) != 0) {
+            offset += 0x2000;
+        }
+        if (bitsPerPixel == 1) {
+            byte uint8 = _memory.UInt8[ColorTextSegment, offset];
+            int pixel;
+            for (pixel = 0; pixel < 8; pixel++) {
+                operation.Pixels[pixel] = (byte)(uint8 >> 7 - pixel & 1);
+            }
+        } else {
+            ushort uint16 = _memory.UInt16[ColorTextSegment, offset];
+            uint16 = (ushort)(uint16 << 8 | uint16 >> 8);
+            int pixel;
+            for (pixel = 0; pixel < 8; pixel++) {
+                operation.Pixels[pixel] = (byte)(uint16 >> (7 - pixel) * 2 & 3);
+            }
+        }
+    }
+
+    private void HandlePlanarGraphicsOperation(GraphicsOperation operation) {
+        ushort offset = (ushort)(operation.Y * operation.LineLength + operation.X / 8);
         int plane;
         switch (operation.Action) {
             default:
-            case Action.Read8:
-                operation.Pixels = new byte[8];
-                for (plane = 0; plane < 4; plane++) {
-                    VgaFunctions.stdvga_planar4_plane(plane);
-                    byte data = _memory.UInt8[GraphicsSegment, destination];
-                    int pixel;
-                    for (pixel = 0; pixel < 8; pixel++) {
-                        operation.Pixels[pixel] |= (byte)((data >> 7 - pixel & 1) << plane);
-                    }
-                }
+            case Action.ReadByte:
+                ReadByteOperationPlanar(operation, offset);
                 break;
-            case Action.Write8:
-                for (plane = 0; plane < 4; plane++) {
-                    VgaFunctions.stdvga_planar4_plane(plane);
-                    byte data = 0;
-                    for (int pixel = 0; pixel < 8; pixel++) {
-                        data |= (byte)((operation.Pixels[pixel] >> plane & 1) << 7 - pixel);
-                    }
-                    _memory.UInt8[GraphicsSegment, destination] = data;
-                }
+            case Action.WriteByte:
+                WriteByteOperationPlanar(operation, offset);
                 break;
             case Action.MemSet:
-                for (plane = 0; plane < 4; plane++) {
-                    VgaFunctions.stdvga_planar4_plane(plane);
-                    byte data = (byte)((operation.Pixels[0] & 1 << plane) != 0 ? 0xFF : 0x00);
-                    memset_stride(GraphicsSegment, destination, data, operation.Width / 8, operation.LineLength, operation.Height);
-                }
+                MemSetOperationPlanar(operation, offset);
                 break;
             case Action.MemMove:
-                ushort source = (ushort)(operation.Lines * operation.LineLength + operation.X / 8);
-                for (plane = 0; plane < 4; plane++) {
-                    VgaFunctions.stdvga_planar4_plane(plane);
-                    memmove_stride(GraphicsSegment, destination, source, operation.Width / 8, operation.LineLength, operation.Height);
-                }
+                MemMoveOperationPlanar(operation, offset);
                 break;
         }
-        VgaFunctions.stdvga_planar4_plane(-1);
+        _vgaFunctions.planar4_plane(-1);
     }
 
-    public void memmove_stride(ushort segment, ushort destination, ushort source, int length, int stride, int lines) {
+    private void MemMoveOperationPlanar(GraphicsOperation operation, ushort offset) {
+        int plane;
+        ushort source = (ushort)(operation.Lines * operation.LineLength + operation.X / 8);
+        for (plane = 0; plane < 4; plane++) {
+            _vgaFunctions.planar4_plane(plane);
+            MemMoveStride(GraphicsSegment, offset, source, operation.Width / 8, operation.LineLength, operation.Height);
+        }
+    }
+
+    private void MemSetOperationPlanar(GraphicsOperation operation, ushort offset) {
+        int plane;
+        for (plane = 0; plane < 4; plane++) {
+            _vgaFunctions.planar4_plane(plane);
+            byte data = (byte)((operation.Pixels[0] & 1 << plane) != 0 ? 0xFF : 0x00);
+            MemSetStride(GraphicsSegment, offset, data, operation.Width / 8, operation.LineLength, operation.Height);
+        }
+    }
+
+    private void WriteByteOperationPlanar(GraphicsOperation operation, ushort offset) {
+        int plane;
+        for (plane = 0; plane < 4; plane++) {
+            _vgaFunctions.planar4_plane(plane);
+            byte data = 0;
+            for (int pixel = 0; pixel < 8; pixel++) {
+                data |= (byte)((operation.Pixels[pixel] >> plane & 1) << 7 - pixel);
+            }
+            _memory.UInt8[GraphicsSegment, offset] = data;
+        }
+    }
+
+    private void ReadByteOperationPlanar(GraphicsOperation operation, ushort offset) {
+        int plane;
+        operation.Pixels = new byte[8];
+        for (plane = 0; plane < 4; plane++) {
+            _vgaFunctions.planar4_plane(plane);
+            byte data = _memory.UInt8[GraphicsSegment, offset];
+            int pixel;
+            for (pixel = 0; pixel < 8; pixel++) {
+                operation.Pixels[pixel] |= (byte)((data >> 7 - pixel & 1) << plane);
+            }
+        }
+    }
+
+    private void MemMoveStride(ushort segment, ushort destination, ushort source, int length, int stride, int lines) {
         if (source < destination) {
             destination += (ushort)(stride * (lines - 1));
             source += (ushort)(stride * (lines - 1));
@@ -776,7 +804,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
-    public void memset_stride(ushort segment, ushort destination, byte value, int length, int stride, int lines) {
+    private void MemSetStride(ushort segment, ushort destination, byte value, int length, int stride, int lines) {
         for (; lines > 0; lines--, destination += (ushort)stride) {
             _memory.Memset(MemoryUtils.ToPhysicalAddress(segment, destination), value, (uint)length);
         }
@@ -788,7 +816,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         if (vgaMode.MemoryModel != MemoryModel.Text) {
             WriteCharacterGraphics(cursorPosition, characterPlusAttribute, vgaMode);
         } else {
-            ushort offset = text_address(cursorPosition);
+            ushort offset = TextAddress(cursorPosition);
             if (characterPlusAttribute.UseAttribute) {
                 _memory.UInt16[vgaMode.StartSegment, offset] = (ushort)(characterPlusAttribute.Attribute << 8 | characterPlusAttribute.Character);
             } else {
@@ -822,8 +850,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         for (int i = 0; i < characterHeight; i++, operation.Y++) {
             byte fontLine = _memory.UInt8[font.Segment, (ushort)(font.Offset + i)];
             if (useXor) {
-                operation.Action = Action.Read8;
-                handle_gfx_op(operation);
+                operation.Action = Action.ReadByte;
+                HandleGraphicsOperation(operation);
                 for (int j = 0; j < 8; j++) {
                     operation.Pixels[j] ^= (byte)((fontLine & 0x80 >> j) != 0 ? foregroundAttribute : 0x00);
                 }
@@ -832,8 +860,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
                     operation.Pixels[j] = (byte)((fontLine & 0x80 >> j) != 0 ? foregroundAttribute : 0x00);
                 }
             }
-            operation.Action = Action.Write8;
-            handle_gfx_op(operation);
+            operation.Action = Action.WriteByte;
+            HandleGraphicsOperation(operation);
         }
     }
 
@@ -841,13 +869,13 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         return new GraphicsOperation {
             Pixels = new byte[8],
             VgaMode = vgaMode,
-            LineLength = VgaFunctions.stdvga_get_linelength(vgaMode),
-            DisplayStart = VgaFunctions.vgahw_get_displaystart(vgaMode),
+            LineLength = _vgaFunctions.GetLineLength(vgaMode),
+            DisplayStart = _vgaFunctions.GetDisplaystart(vgaMode),
             Width = 0,
             Height = 0,
             X = 0,
             Y = 0,
-            Action = Action.Read8
+            Action = Action.ReadByte
         };
     }
 
@@ -886,7 +914,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
             return ReadGraphicsCharacter(vgaMode, cp);
         }
 
-        ushort offset = text_address(cp);
+        ushort offset = TextAddress(cp);
         ushort value = _memory.UInt16[vgaMode.StartSegment, offset];
         return new CharacterPlusAttribute((char)value, (byte)(value >> 8), false);
     }
@@ -899,7 +927,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
         // Read cell from screen
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
-        operation.Action = Action.Read8;
+        operation.Action = Action.ReadByte;
         operation.X = (ushort)(cursorPosition.X * 8);
         operation.Y = (ushort)(cursorPosition.Y * characterHeight);
 
@@ -909,7 +937,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
         for (byte i = 0; i < characterHeight; i++, operation.Y++) {
             byte line = 0;
-            handle_gfx_op(operation);
+            HandleGraphicsOperation(operation);
             for (byte j = 0; j < 8; j++) {
                 if (operation.Pixels[j] == backgroundAttribute) {
                     continue;
@@ -969,7 +997,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         CursorPosition cursorPosition = new(upperLeftX, upperLeftY, _bios.CurrentVideoPage);
         Area area = new(width, height);
         CharacterPlusAttribute attr = new(' ', attribute, true);
-        vgafb_scroll(cursorPosition, area, lines, attr);
+        Scroll(cursorPosition, area, lines, attr);
     }
 
     private void set_active_page(byte page) {
@@ -978,8 +1006,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
         // Calculate memory address of start of page
         CursorPosition cursorPosition = new(0, 0, page);
-        int address = text_address(cursorPosition);
-        VgaFunctions.vgahw_set_displaystart(_currentVgaMode, address);
+        int address = TextAddress(cursorPosition);
+        _vgaFunctions.SetDisplayStart(_currentVgaMode, address);
 
         // And change the BIOS page
         _bios.VideoPageStart = (ushort)address;
@@ -995,7 +1023,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
     private void set_cursor_shape(ushort cursorType) {
         _bios.CursorType = cursorType;
-        VgaFunctions.stdvga_set_cursor_shape(get_cursor_shape());
+        _vgaFunctions.SetCursorShape(get_cursor_shape());
     }
 
     private ushort get_cursor_shape() {
@@ -1019,7 +1047,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         return (ushort)(start << 8 | end);
     }
 
-    private void init_bios_area() {
+    private void InitializeBiosArea() {
         // init detected hardware BIOS Area
         // set 80x25 color (not clear from RBIL but usual)
         set_equipment_flags(0x30, 0x20);
@@ -1074,8 +1102,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
         operation.X = ALIGN_DOWN(x, 8);
         operation.Y = y;
-        operation.Action = Action.Read8;
-        handle_gfx_op(operation);
+        operation.Action = Action.ReadByte;
+        HandleGraphicsOperation(operation);
 
         return operation.Pixels[x & 0x07];
     }
@@ -1091,8 +1119,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
         operation.X = ALIGN_DOWN(x, 8);
         operation.Y = y;
-        operation.Action = Action.Read8;
-        handle_gfx_op(operation);
+        operation.Action = Action.ReadByte;
+        HandleGraphicsOperation(operation);
 
         bool useXor = (color & 0x80) != 0 && vgaMode.BitsPerPixel < 8;
         if (useXor) {
@@ -1100,8 +1128,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         } else {
             operation.Pixels[x & 0x07] = color;
         }
-        operation.Action = Action.Write8;
-        handle_gfx_op(operation);
+        operation.Action = Action.WriteByte;
+        HandleGraphicsOperation(operation);
     }
 
     public void ReadLightPenPosition() {
@@ -1109,9 +1137,9 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void VgaSetMode(int modeId, ModeFlags flags) {
-        VideoMode videoMode = VgaHwFindMode(modeId);
+        VideoMode videoMode = GetVideoMode(modeId);
 
-        VgaFunctions.VgahwSetMode(videoMode, flags);
+        _vgaFunctions.SetMode(videoMode, flags);
         VgaMode vgaMode = videoMode.VgaMode;
 
         // Set the BIOS mem
@@ -1136,8 +1164,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
             _bios.ScreenRows = (byte)(height / vgaMode.CharacterHeight - 1);
             _bios.CursorType = 0x0000;
         }
-        _bios.VideoPageSize = calc_page_size(memoryModel, width, height);
-        _bios.CrtControllerBaseAddress = (ushort)VgaFunctions.stdvga_get_crtc();
+        _bios.VideoPageSize = (ushort)CalculatePageSize(memoryModel, width, height);
+        _bios.CrtControllerBaseAddress = (ushort)_vgaFunctions.GetCrtControllerAddress();
         _bios.CharacterHeight = characterHeight;
         _bios.VideoCtl = (byte)(0x60 | (flags.HasFlag(ModeFlags.NoClearMem) ? 0x80 : 0x00));
         _bios.FeatureSwitches = 0xF9;
@@ -1168,13 +1196,12 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         SetInterruptVectorAddress(0x43, address.Segment, address.Offset);
     }
 
-    private static ushort calc_page_size(MemoryModel memoryModel, int width, int height) {
-        int result = memoryModel switch {
+    private static int CalculatePageSize(MemoryModel memoryModel, int width, int height) {
+        return memoryModel switch {
             MemoryModel.Text => Align(width * height * 2, 2 * 1024),
             MemoryModel.Cga => 16 * 1024,
             _ => Align(width * height / 8, 8 * 1024)
         };
-        return (ushort)result;
     }
 
     private static int Align(int alignment, int value) {
@@ -1182,20 +1209,17 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         return value + mask & ~mask;
     }
 
-    private static VideoMode VgaHwFindMode(int mode) {
-        foreach (VideoMode standardVgaMode in RegisterValueSet.VgaModes) {
-            if (standardVgaMode.ModeId == mode) {
-                return standardVgaMode;
+    private static VideoMode GetVideoMode(int modeId) {
+        foreach (VideoMode mode in RegisterValueSet.VgaModes) {
+            if (mode.ModeId == modeId) {
+                return mode;
             }
         }
-        throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown mode");
+        throw new ArgumentOutOfRangeException(nameof(modeId), modeId, "Unknown mode");
     }
 
-    private void GetFontInformation() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("INT 10: GetFontInformation 0x{FontNr:X2}", _state.BH);
-        }
-        SegmentedAddress address = _state.BH switch {
+    private SegmentedAddress GetFontAddress(byte fontNumber) {
+        SegmentedAddress address = fontNumber switch {
             0x00 => GetInterruptVectorAddress(0x1F),
             0x01 => GetInterruptVectorAddress(0x43),
             0x02 => _vgaRom.VgaFont14Address,
@@ -1204,35 +1228,33 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
             0x05 => _vgaRom.VgaFont14Address,
             0x06 => _vgaRom.VgaFont16Address,
             0x07 => _vgaRom.VgaFont16Address,
-            _ => throw new NotSupportedException($"{_state.BH} is not a valid font number")
+            _ => throw new NotSupportedException($"{fontNumber} is not a valid font number")
         };
 
-        _state.ES = address.Segment;
-        _state.BP = address.Offset;
-        _state.CX = (ushort)(_bios.CharacterHeight & 0xFF);
-        _state.DL = _bios.ScreenRows;
-
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10: GetFontInformation - Address: {Segment:X4}:{Offset:X4}, CharacterHeight: {Height}, Rows: {Rows}", nameof(VgaBios), _state.ES, _state.BP, _state.CX, _state.DL);
+            _logger.Debug("{ClassName} INT 10: GetFontInformation - FontNr {FontNr}, Address: {Segment:X4}:{Offset:X4}",
+                nameof(VgaBios), fontNumber, address.Segment, address.Offset);
         }
+
+        return address;
     }
 
-    public void gfx_packed(GraphicsOperation operation) {
+    private void HandlePackedGraphicsOperation(GraphicsOperation operation) {
         ushort destination = (ushort)(operation.Y * operation.LineLength + operation.X);
         switch (operation.Action) {
             default:
-            case Action.Read8:
+            case Action.ReadByte:
                 operation.Pixels = _memory.GetData(MemoryUtils.ToPhysicalAddress(GraphicsSegment, destination), 8);
                 break;
-            case Action.Write8:
+            case Action.WriteByte:
                 _memory.LoadData(MemoryUtils.ToPhysicalAddress(GraphicsSegment, destination), operation.Pixels, 8);
                 break;
             case Action.MemSet:
-                memset_stride(GraphicsSegment, destination, operation.Pixels[0], operation.Width, operation.LineLength, operation.Height);
+                MemSetStride(GraphicsSegment, destination, operation.Pixels[0], operation.Width, operation.LineLength, operation.Height);
                 break;
             case Action.MemMove:
                 ushort source = (ushort)(operation.Lines * operation.LineLength + operation.X);
-                memmove_stride(GraphicsSegment, destination, source, operation.Width, operation.LineLength, operation.Height);
+                MemMoveStride(GraphicsSegment, destination, source, operation.Width, operation.LineLength, operation.Height);
                 break;
         }
     }
@@ -1249,8 +1271,8 @@ public record struct Area(int Width, int Height);
 public record struct VideoMode(ushort ModeId, VgaMode VgaMode, byte PixelMask, byte[] Dac, byte[] SequencerRegisterValues, byte MiscellaneousRegisterValue, byte[] CrtControllerRegisterValues, byte[] AttributeControllerRegisterValues, byte[] GraphicsControllerRegisterValues);
 
 public enum Action {
-    Read8,
-    Write8,
+    ReadByte,
+    WriteByte,
     MemSet,
     MemMove
 }
@@ -1261,10 +1283,7 @@ public enum ModeFlags {
     Legacy = 0x0001,
     GraySum = 0x0002,
     NoPalette = 0x0008,
-    CustomCrtc = 0x0800,
-    LinearFb = 0x4000,
     NoClearMem = 0x8000,
-    VbeFlags = 0xfe00
 }
 
 public enum MemoryModel {
@@ -1279,39 +1298,17 @@ public enum MemoryModel {
 }
 
 internal enum VgaPort {
-    // VGA registers
-    ACTL_ADDRESS = 0x3c0,
-    ACTL_WRITE_DATA = 0x3c0,
-    ACTL_READ_DATA = 0x3c1,
-
-    INPUT_STATUS = 0x3c2,
-    WRITE_MISC_OUTPUT = 0x3c2,
-    VIDEO_ENABLE = 0x3c3,
-    SEQU_ADDRESS = 0x3c4,
-    SEQU_DATA = 0x3c5,
-
-    PEL_MASK = 0x3c6,
-    DAC_STATE = 0x3c7,
-    DAC_READ_ADDRESS = 0x3c7,
-    DAC_WRITE_ADDRESS = 0x3c8,
-    DAC_DATA = 0x3c9,
-
-    READ_FEATURE_CTL = 0x3ca,
-    READ_MISC_OUTPUT = 0x3cc,
-
-    GRDC_ADDRESS = 0x3ce,
-    GRDC_DATA = 0x3cf,
-
-    MDA_CRTC_ADDRESS = 0x3b4,
-    MDA_CRTC_DATA = 0x3b5,
-    VGA_CRTC_ADDRESS = 0x3d4,
-    VGA_CRTC_DATA = 0x3d5,
-
-    MDA_WRITE_FEATURE_CTL = 0x3ba,
-    VGA_WRITE_FEATURE_CTL = 0x3da,
-    ACTL_RESET = 0x3da,
-
-    MDA_MODECTL = 0x3b8,
-    CGA_MODECTL = 0x3d8,
-    CGA_PALETTE = 0x3d9
+    AttributeAddress = 0x3C0,
+    AttributeData = 0x3C1,
+    MiscOutputWrite = 0x3C2,
+    SequencerAddress = 0x3C4,
+    DacPelMask = 0x3C6,
+    DacAddressReadIndex = 0x3C7,
+    DacAddressWriteIndex = 0x3C8,
+    DacData = 0x3C9,
+    MiscOutputRead = 0x3CC,
+    GraphicsControllerAddress = 0x3CE,
+    CrtControllerAddress = 0x3B4,
+    CrtControllerAddressAlt = 0x3D4,
+    InputStatus1ReadAlt = 0x3DA,
 }

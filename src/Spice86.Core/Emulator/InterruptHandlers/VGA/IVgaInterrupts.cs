@@ -22,4 +22,5 @@ public interface IVgaInterrupts {
     void SetCursorType();
     void WriteDot();
     void ReadDot();
+    void ReadLightPenPosition();
 }
