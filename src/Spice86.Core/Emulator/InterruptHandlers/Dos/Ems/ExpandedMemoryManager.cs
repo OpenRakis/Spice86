@@ -442,7 +442,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <remarks>This number will not exceed 255.</remarks>
     public void GetEmmHandleCount() {
         _state.BX = 0;
-        _state.BX = GetAllocatedHandleCount();
+        _state.BX = (ushort)AllocatedEmmHandles.Count;
         // Return good status.
         _state.AH = EmmStatus.EmmNoError;
     }
@@ -469,7 +469,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// handles and the number of pages allocated to each one.
     /// </summary>
     public void GetAllHandlePages() {
-        _state.BX = GetAllocatedHandleCount();
+        _state.BX = GetAllocatedHandlePagesCount();
         _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI));
         _state.AX = EmmStatus.EmmNoError;
     }
@@ -682,7 +682,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Returns the number of open EMM handles
     /// </summary>
     /// <returns>The number of open EMM handles</returns>
-    public ushort GetAllocatedHandleCount() => (ushort) AllocatedEmmHandles.SelectMany(static x => x.Value.PageMap).Count();
+    public ushort GetAllocatedHandlePagesCount() => (ushort) AllocatedEmmHandles.SelectMany(static x => x.Value.PageMap).Count();
 
     public override void Run() {
         byte operation = _state.AH;
