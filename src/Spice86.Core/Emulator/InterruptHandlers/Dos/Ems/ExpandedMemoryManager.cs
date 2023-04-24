@@ -201,7 +201,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         int key = AllocatedEmmHandles.Count + 1;
         newHandle.HandleNumber = (ushort) key;
         while (numberOfPagesToAlloc > 0) {
-            ushort allocatedPageNumber = EmmMemory.AllocateLogicalPage();
+            ushort allocatedPageNumber = EmmMemory.AllocateLogicalPage(newHandle);
             newHandle.PageMap.Add(new() {
                 LogicalPageNumber = allocatedPageNumber
             });
@@ -273,7 +273,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
 
         // Mapping
-        emmRegister.PhysicalPage = EmmMemory.LogicalPages[logicalPageNumber];
+        EmmHandle allocatedEmmHandle = AllocatedEmmHandles[handleId];
+        emmRegister.PhysicalPage = EmmMemory.LogicalPages[allocatedEmmHandle];
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Mapped logical page {LogicalPage} to physical page {PhysicalPage}", 
                 logicalPageNumber,
