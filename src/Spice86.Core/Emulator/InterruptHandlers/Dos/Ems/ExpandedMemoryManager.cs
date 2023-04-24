@@ -92,11 +92,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public IDictionary<int, EmmHandle> AllocatedEmmHandles { get; } = new Dictionary<int, EmmHandle>();
 
-    /// <summary>
-    /// An EMM Page set to raise a fatal exception whe the DOS program attempts to read or write into an unmapped physical page
-    /// </summary>
-    private EmmNullPage _emmNullPage = new();
-
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
@@ -109,7 +104,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         for (ushort i = 0; i < EmmMaxPhysicalPages; i++) {
             uint startAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * i));
-            EmmRegister emmRegister = new(_emmNullPage, startAddress);
+            EmmRegister emmRegister = new(new EmmPage(EmmPageSize), startAddress);
             EmmPageFrame.Add(i, emmRegister);
             _memory.RegisterMapping(startAddress, EmmPageSize, emmRegister);
         }
@@ -274,7 +269,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 _loggerService.Debug("Unmapped physical page: {PhysicalPage}",
                     emmRegister.PhysicalPage);
             }
-            emmRegister.PhysicalPage = _emmNullPage;
             return EmmStatus.EmmNoError;
         }
 

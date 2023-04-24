@@ -22,7 +22,7 @@ public class EmmMemory {
 
     public EmmMemory() {
         for (ushort i = 0; i < EmmMemorySize / ExpandedMemoryManager.EmmPageSize; i++) {
-            EmmPage page = new();
+            EmmPage page = new(ExpandedMemoryManager.EmmPageSize);
             LogicalPages.Add(i, page);
         }
     }
