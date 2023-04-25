@@ -15,9 +15,9 @@ using Spice86.Shared.Utils;
 
 /// <summary>
 /// Provides DOS applications with EMS memory. <br/>
-/// Expanded memory is memory beyond DOS's 640K-byte limit.  The LIM <br/>
-/// specification supports up to 32M bytes of expanded memory.  Because <br/>
-/// the 8086, 8088, and 80286 (in real mode) microprocessors can <br/>
+/// Expanded memory is memory beyond DOS's 640K-byte limit.  This LIM <br/>
+/// implementation supports 8 MB of expanded memory. <br/>
+/// Because the 8086, 8088, and 80286 (in real mode) microprocessors can <br/>
 /// physically address only 1M byte of memory, they access expanded memory <br/>
 /// through a window in their physical address range.
 /// <remarks>This is a LIM standard implementation. Which means there's no
