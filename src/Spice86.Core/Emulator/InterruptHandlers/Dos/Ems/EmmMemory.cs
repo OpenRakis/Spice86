@@ -15,7 +15,7 @@ public static class EmmMemory {
     public const uint EmmMemorySize = 8 * 1024 * 1024;
 
     /// <summary>
-    /// The total number of logical pages possible in 8 MB of RAM of expanded memory.
+    /// The total number of logical pages possible in 8 MB of expanded memory.
     /// </summary>
     public const ushort TotalPages = 512;
 }
