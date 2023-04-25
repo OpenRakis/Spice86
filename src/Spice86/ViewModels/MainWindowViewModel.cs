@@ -1,9 +1,12 @@
 ﻿namespace Spice86.ViewModels;
 
+using Avalonia;
+
 using Serilog.Events;
 
 using Avalonia.Collections;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Threading;
 
@@ -62,8 +65,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public MainWindowViewModel(ILoggerService loggerService) {
         _loggerService = loggerService;
-        if (App.MainWindow is not null) {
-            App.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+            desktop.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
         }
     }
 
@@ -110,8 +113,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             ofd.Directory = _configuration.RecordedDataDirectory;
         }
         string? dir = _configuration.RecordedDataDirectory;
-        if (App.MainWindow is not null) {
-            dir = await ofd.ShowAsync(App.MainWindow);
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+            dir = await ofd.ShowAsync(desktop.MainWindow);
         }
         if (string.IsNullOrWhiteSpace(dir)
         && !string.IsNullOrWhiteSpace(_configuration.RecordedDataDirectory)) {
@@ -183,7 +186,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private async Task StartNewExecutable() {
-        if (App.MainWindow is not null) {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             OpenFileDialog ofd = new() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
@@ -198,7 +201,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                     }
                 }
             };
-            string[]? files = await ofd.ShowAsync(App.MainWindow);
+            string[]? files = await ofd.ShowAsync(desktop.MainWindow);
             if (files?.Any() == true) {
                 RestartEmulatorWithNewProgram(files[0]);
             }
@@ -245,9 +248,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             };
             _performanceWindow.Closed += (_, _) => _performanceWindow = null;
             _performanceWindow.Show();
-        } else {
+        } else if(Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             await MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("", "Please start a program first")
-                .ShowDialog(App.MainWindow);
+                .ShowDialog(desktop.MainWindow);
         }
     }
 
@@ -403,8 +406,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private async Task ShowEmulationErrorMessage(Exception e) {
         IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
             .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
-        if (!_disposed && !_isMainWindowClosing) {
-            await errorMessage.ShowDialog(App.MainWindow);
+        if (!_disposed && !_isMainWindowClosing && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+            await errorMessage.ShowDialog(desktop.MainWindow);
         }
     }
 
@@ -458,8 +461,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             Dispatcher.UIThread.Post(() => ShowVideo = true);
             _programExecutor.Run();
             Dispatcher.UIThread.Post(() => IsMachineRunning = false);
-            if(_closeAppOnEmulatorExit) {
-                Dispatcher.UIThread.Post(() => App.MainWindow?.Close());
+            if(_closeAppOnEmulatorExit && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
+                   {MainWindow: MainWindow mainWindow}) {
+                Dispatcher.UIThread.Post(() => mainWindow.Close());
             }
         } catch (Exception e) {
             e.Demystify();
