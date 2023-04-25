@@ -63,6 +63,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public const ushort EmmPageSize = 16384;
     
+    /// <summary>
+    /// This is required so EMS can be detected by DOS applications. <br/>
+    /// (this is one, of two, methods to do so).
+    /// </summary>
     public override ushort? InterruptHandlerSegment => 0xF100;
 
     public override byte Index => 0x67;
