@@ -220,7 +220,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         };
         while (numberOfPagesToAlloc > 0) {
             ushort pageNumber = (ushort)newHandle.PageMap.Count;
-            newHandle.PageMap.Add(pageNumber, new EmmPage(EmmPageSize){
+            newHandle.PageMap.Add(new EmmPage(EmmPageSize){
                 PageNumber = pageNumber
             });
             numberOfPagesToAlloc--;

@@ -19,7 +19,7 @@ public class EmmHandle {
     /// <summary>
     /// The logical pages assigned to the handle.
     /// </summary>
-    public IDictionary<ushort, EmmPage> PageMap { get; } = new Dictionary<ushort, EmmPage>();
+    public IList<EmmPage> PageMap { get; } = new List<EmmPage>();
     
     /// <summary>
     /// Whether the EMM handler saved the page map into its internal data structures, or not.
