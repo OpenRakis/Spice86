@@ -113,7 +113,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     private void FillDispatchTable() {
         _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
         _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameSegment));
-        _dispatchTable.Add(0x42, new Callback(0x42, GetNumberOfPages));
+        _dispatchTable.Add(0x42, new Callback(0x42, GetUnallocatedPageCount));
         _dispatchTable.Add(0x43, new Callback(0x43, AllocatePages));
         _dispatchTable.Add(0x44, new Callback(0x44, MapUnmapHandlePage));
         _dispatchTable.Add(0x45, new Callback(0x45, DeallocatePages));
@@ -127,6 +127,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
         _dispatchTable.Add(0x53, new Callback(0x53, GetSetHandleName));
         _dispatchTable.Add(0x59, new Callback(0x59, GetExpandedMemoryHardwareInformation));
+    }
+    
+    public override void Run() {
+        byte operation = _state.AH;
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose))
+            _loggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, _state.AL);
+        if (!_dispatchTable.ContainsKey(operation)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EMS function not provided: {@Function}", operation);
+            }
+            _state.AH = EmmStatus.EmmFuncNoSup;
+        }
+        Run(operation);
     }
 
     /// <summary>
@@ -158,19 +171,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// unallocated pages (pages available to your program),
     /// and the total number of pages in expanded memory, in _state.DX.
     /// </summary>
-    public void GetNumberOfPages() {
+    public void GetUnallocatedPageCount() {
         // Return total number of pages in DX.
         _state.DX = EmmMemory.TotalPages;
         // Return number of pages available in BX.
-        _state.BX = GetFreePages();
+        _state.BX = GetFreePageCount();
         // Set good status.
         _state.AH = EmmStatus.EmmNoError;
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("{MethodName}: Total pages: {TotalPages} Free pages: {FreePages}", nameof(GetNumberOfPages), _state.DX, _state.BX);
+            _loggerService.Debug("{MethodName}: Total pages: {TotalPages} Free pages: {FreePages}", nameof(GetUnallocatedPageCount), _state.DX, _state.BX);
         }
     }
 
-    public ushort GetFreePages() {
+    public ushort GetFreePageCount() {
         return (ushort) Math.Max(0, EmmMemory.TotalPages - EmmHandles.SelectMany(static x => x.Value.PageMap).Count());
     }
 
@@ -292,7 +305,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private bool IsValidHandle(ushort handleId) => EmmHandles.ContainsKey(handleId);
 
-    private void MapSegment(ushort logicalPage, ushort segment, ushort handleId) {
+    public void MapSegment(ushort logicalPage, ushort segment, ushort handleId) {
         uint address = MemoryUtils.ToPhysicalAddress(segment, 0);
         uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
         uint pageFrameAddressEnd = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, EmmPageSize);
@@ -469,7 +482,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void GetAllHandlePages() {
         _state.BX = GetAllocatedHandlePagesCount();
-        _state.AH = GetPagesForAllHandles(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI));
+        _state.AH = GetAllHandlePages(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI));
         _state.AX = EmmStatus.EmmNoError;
     }
 
@@ -493,7 +506,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
         _state.AH = EmmStatus.EmmNoError;
         switch (operation) {
-            case 0x00: // use physical page numbers
+            case EmmSubFunctions.UsePhysicalPageNumbers:
                 for (int i = 0; i < numberOfPages; i++) {
                     ushort logicalPage = _memory.GetUint16(mapAddress);
                     mapAddress += 2;
@@ -504,10 +517,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                         break;
                     }
                 }
-
                 break;
-            // use segment address
-            case 0x01: {
+            case EmmSubFunctions.UseSegmentedAddress:
                 for (int i = 0; i < numberOfPages; i++) {
                     ushort logicalPage = _memory.GetUint16(mapAddress);
                     mapAddress += 2;
@@ -518,7 +529,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                         break;
                     }
                 }
-            }
                 break;
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -628,7 +638,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     }
 
     
-    private byte GetPagesForAllHandles(uint table) {
+    private byte GetAllHandlePages(uint table) {
         foreach(KeyValuePair<int, EmmHandle> allocatedHandle in EmmHandles) {
             _memory.SetUint16(table, allocatedHandle.Value.HandleNumber);
             table += 2;
@@ -664,7 +674,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
             case EmmSubFunctions.GetUnallocatedRawPages:
                 // Return number of pages available in BX.
-                _state.BX = GetFreePages();
+                _state.BX = GetFreePageCount();
                 // Return total number of pages in DX.
                 _state.DX = EmmMemory.TotalPages;
                 // Set good status.
@@ -684,19 +694,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     /// <returns>The number of open EMM handles</returns>
     public ushort GetAllocatedHandlePagesCount() => (ushort) EmmHandles.SelectMany(static x => x.Value.PageMap).Count();
-
-    public override void Run() {
-        byte operation = _state.AH;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose))
-            _loggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, _state.AL);
-        if (!_dispatchTable.ContainsKey(operation)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("EMS function not provided: {@Function}", operation);
-            }
-            _state.AH = EmmStatus.EmmFuncNoSup;
-        }
-        Run(operation);
-    }
 
     /// <summary>
     /// Gets the name of a handle.
