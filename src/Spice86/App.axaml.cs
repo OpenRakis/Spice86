@@ -45,11 +45,10 @@ internal partial class App : Application {
             throw new InvalidOperationException("Could not get logging service from DI !");
         }
 
+        desktop.MainWindow = new MainWindow();
         MainWindowViewModel mainViewModel = new MainWindowViewModel(loggerService);
+        desktop.MainWindow.DataContext = mainViewModel;
         mainViewModel.SetConfiguration(desktop.Args);
-        desktop.MainWindow = new MainWindow {
-            DataContext = mainViewModel,
-        };
         desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();
         desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
         base.OnFrameworkInitializationCompleted();
