@@ -63,6 +63,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public const ushort EmmPageSize = 16384;
     
+    public override ushort? InterruptHandlerSegment => 0xF100;
+
     public override byte Index => 0x67;
 
     private readonly ILogger _loggerService;
@@ -90,7 +92,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService;
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
-        machine.Dos.AddDevice(device);
+        machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
         FillDispatchTable();
 
         // Allocation of system handle 0.
