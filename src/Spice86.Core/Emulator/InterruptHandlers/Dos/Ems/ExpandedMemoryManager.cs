@@ -259,16 +259,16 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     public byte MapUnmapHandlePage(ushort logicalPageNumber, ushort physicalPageNumber, ushort handleId) {
         if (physicalPageNumber > EmmPageFrame.Count) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Logical page {PhysicalPage} out of range",
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Logical page {PhysicalPage} out of range",
                     physicalPageNumber);
             }
             return EmmStatus.EmsIllegalPhysicalPage;
         }
 
         if (!IsValidHandle(handleId)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Invalid Handle {InvalidHandle}", handleId);
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Invalid Handle {InvalidHandle}", handleId);
             }
             return EmmStatus.EmmInvalidHandle;
         }
@@ -288,8 +288,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         // Mapping
         EmmHandle allocatedEmmHandle = EmmHandles[handleId];
         if (logicalPageNumber > allocatedEmmHandle.PageMap.Count - 1) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Logical page {LogicalPage} out of range",
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Logical page {LogicalPage} out of range",
                     logicalPageNumber);
             }
             return EmmStatus.EmsLogicalPageOutOfRange;
