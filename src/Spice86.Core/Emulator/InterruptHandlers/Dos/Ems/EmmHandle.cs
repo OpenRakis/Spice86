@@ -17,9 +17,9 @@ public class EmmHandle {
     public string Name { get; set; } = NullHandleName;
 
     /// <summary>
-    /// Gets or sets the page map for the handle.
+    /// The logical pages assigned to the handle.
     /// </summary>
-    public List<EmmMapping> PageMap { get; } = new();
+    public IDictionary<ushort, EmmPage> PageMap { get; } = new Dictionary<ushort, EmmPage>();
     
     /// <summary>
     /// Whether the EMM handler saved the page map into its internal data structures, or not.
