@@ -431,7 +431,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
     public void ReadCharacterAndAttributeAtCursor() {
         CursorPosition cursorPosition = GetCursorPosition(_state.BH);
-        CharacterPlusAttribute characterPlusAttribute = vgafb_read_char(cursorPosition);
+        CharacterPlusAttribute characterPlusAttribute = ReadChar(cursorPosition);
         _state.AL = (byte)characterPlusAttribute.Character;
         _state.AH = characterPlusAttribute.Attribute;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -441,7 +441,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     public void ScrollPageDown() {
-        verify_scroll(-1, _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
+        VerifyScroll(-1, _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 07 {MethodName} - from {X},{Y} to {X2},{Y2}, {Lines} lines, attribute {Attribute}",
                 nameof(VgaBios), nameof(ScrollPageDown), _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
@@ -449,7 +449,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     public void ScrollPageUp() {
-        verify_scroll(1, _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
+        VerifyScroll(1, _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 06 {MethodName} - from {X},{Y} to {X2},{Y2}, {Lines} lines, attribute {Attribute}",
                 nameof(VgaBios), nameof(ScrollPageUp), _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
@@ -457,7 +457,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     public void SelectActiveDisplayPage() {
-        set_active_page(_state.AL);
+        SetActivePage(_state.AL);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 05 {MethodName} - page {Page}",
                 nameof(VgaBios), nameof(SelectActiveDisplayPage), _state.AL);
@@ -485,7 +485,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     public void SetCursorType() {
-        set_cursor_shape(_state.CX);
+        SetCursorShape(_state.CX);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 01 {MethodName} - CX: {CX}",
                 nameof(VgaBios), nameof(SetCursorType), _state.CX);
@@ -699,9 +699,9 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         ushort columns = _bios.ScreenColumns;
         _bios.VideoPageSize = (ushort)CalculatePageSize(MemoryModel.Text, columns, rows);
         if (lines == 8) {
-            set_cursor_shape(0x0607);
+            SetCursorShape(0x0607);
         } else {
-            set_cursor_shape((ushort)(lines - 3 << 8 | lines - 2));
+            SetCursorShape((ushort)(lines - 3 << 8 | lines - 2));
         }
     }
 
@@ -1037,7 +1037,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         return new CursorPosition(xy, xy >> 8, page);
     }
 
-    private CharacterPlusAttribute vgafb_read_char(CursorPosition cp) {
+    private CharacterPlusAttribute ReadChar(CursorPosition cp) {
         VgaMode vgaMode = _currentVgaMode;
 
         if (vgaMode.MemoryModel != MemoryModel.Text) {
@@ -1081,7 +1081,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         // Determine font
         for (char character = (char)0; character < 256; character++) {
             SegmentedAddress font = GetFontAddress(character);
-            if (memcmp_far(lines, font.Segment, font.Offset, characterHeight) == 0) {
+            if (MemCmp(lines, font.Segment, font.Offset, characterHeight) == 0) {
                 return new CharacterPlusAttribute(character, foregroundAttribute, false);
             }
         }
@@ -1089,7 +1089,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         return new CharacterPlusAttribute((char)0, 0, false);
     }
 
-    private int memcmp_far(IReadOnlyList<byte> bytes, ushort segment, ushort offset, int length) {
+    private int MemCmp(IReadOnlyList<byte> bytes, ushort segment, ushort offset, int length) {
         int i = 0;
         while (length-- > 0 && i < bytes.Count) {
             int difference = bytes[i] - _memory.UInt8[segment, offset];
@@ -1102,7 +1102,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         return 0;
     }
 
-    private void verify_scroll(int direction, byte upperLeftX, byte upperLeftY, byte lowerRightX, byte lowerRightY, int lines, byte attribute) {
+    private void VerifyScroll(int direction, byte upperLeftX, byte upperLeftY, byte lowerRightX, byte lowerRightY, int lines, byte attribute) {
         // Verify parameters
         ushort numberOfRows = (ushort)(_bios.ScreenRows + 1);
         if (lowerRightY >= numberOfRows) {
@@ -1130,7 +1130,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         Scroll(cursorPosition, area, lines, attr);
     }
 
-    private void set_active_page(byte page) {
+    private void SetActivePage(byte page) {
         if (page > 7) {
             return;
         }
@@ -1151,12 +1151,12 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         SetCursorPosition(GetCursorPosition(page));
     }
 
-    private void set_cursor_shape(ushort cursorType) {
+    private void SetCursorShape(ushort cursorType) {
         _bios.CursorType = cursorType;
-        _vgaFunctions.SetCursorShape(get_cursor_shape());
+        _vgaFunctions.SetCursorShape(GetCursorShape());
     }
 
-    private ushort get_cursor_shape() {
+    private ushort GetCursorShape() {
         ushort cursorType = _bios.CursorType;
         bool emulateCursor = (_bios.VideoCtl & 1) == 0;
         if (!emulateCursor) {

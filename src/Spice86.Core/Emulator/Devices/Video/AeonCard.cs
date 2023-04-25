@@ -13,19 +13,15 @@ using Serilog.Events;
 using Spice86.Aeon;
 using Spice86.Aeon.Emulator.Video.Registers;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Video.Fonts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
-
-using Point = Spice86.Aeon.Emulator.Video.Point;
 
 public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposable {
 
@@ -35,17 +31,14 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public uint TotalVramBytes => 0x40000;
 
     private readonly Bios _bios;
-    private readonly LazyConcurrentDictionary<FontType, SegmentedAddress> _fonts = new();
     private readonly IGui? _gui;
     private bool _attributeDataMode;
     private AttributeControllerRegister _attributeRegister;
     private CrtControllerRegister _crtRegister;
     private byte _crtStatusRegister;
     private GraphicsRegister _graphicsRegister;
-    private ushort _nextFontOffset;
     private Presenter? _presenter;
-    private SequencerRegister _sequencerRegister;
-    private int _verticalTextResolution = 16;
+    private const int VerticalTextResolution = 16;
     private bool _disposed;
     private readonly State _state;
     private readonly ILoggerService _logger;
@@ -590,338 +583,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
     }
 
-    public void VideoSubsystemConfiguration() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("INT 10: VideoSubsystemConfiguration {0:X2}", _state.BL);
-        }
-        switch (_state.BL) {
-            case Functions.EGA_GetInfo:
-                _state.BX = 0x03; // 256k installed
-                _state.CX = 0x09; // EGA switches set
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: VideoSubsystemConfiguration - EGA_GetInfo");
-                }
-                break;
-
-            case Functions.EGA_SelectVerticalResolution:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: VideoSubsystemConfiguration - EGA_SelectVerticalResolution {0:X2}", _state.AL);
-                }
-                _verticalTextResolution = _state.AL switch {
-                    0 => 8,
-                    1 => 14,
-                    _ => 16
-                };
-                _state.AL = 0x12; // Success
-                break;
-
-            case Functions.EGA_PaletteLoading:
-                DefaultPaletteLoading = _state.AL == 0;
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: VideoSubsystemConfiguration - EGA_PaletteLoading {0}", DefaultPaletteLoading);
-                }
-                break;
-
-            default:
-                _logger.Error("Video command {0:X2}, BL={1:X2}h not implemented.", Functions.EGA, _state.BL);
-                break;
-        }
-    }
-
-    public void LoadFontInfo() {
-        switch (_state.AL) {
-            case 0x30:
-                GetFontInformation();
-                break;
-
-            default:
-                throw new NotImplementedException($"Video command 11{_state.AL:X2}h not implemented.");
-        }
-    }
-
-    /// <summary>
-    ///     Returns the address in memory where the specified font is stored.
-    /// </summary>
-    /// <param name="fontType">One of the <see cref="FontType" />s</param>
-    /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public SegmentedAddress GetFontAddress(FontType fontType) {
-        return _fonts.GetOrAdd(fontType, LoadFont);
-    }
-
-    private SegmentedAddress LoadFont(FontType type) {
-        byte[] bytes = type switch {
-            FontType.Ega8X14 => Font.Ega8X14,
-            FontType.Ibm8X8 => Font.Ibm8X8,
-            FontType.Vga8X16 => Font.Vga8X16,
-            _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown font")
-        };
-        int length = bytes.Length;
-        var address = new SegmentedAddress(MemoryMap.VideoBiosSegment, _nextFontOffset);
-        _memory.LoadData(address.ToPhysical(), bytes);
-        _nextFontOffset += (ushort)length;
-
-        return address;
-    }
-
-    private void GetFontInformation() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("INT 10: GetFontInformation {0:X2}", _state.BH);
-        }
-        SegmentedAddress address = _state.BH switch {
-            0x00 => new SegmentedAddress(_memory.GetUint16((0x1F * 4) + 2), _memory.GetUint16(0x1F * 4)),
-            0x01 => new SegmentedAddress(_memory.GetUint16((0x43 * 4) + 2), _memory.GetUint16(0x43 * 4)),
-            0x02 => GetFontAddress(FontType.Ega8X14),
-            0x03 => GetFontAddress(FontType.Ibm8X8),
-            0x04 => GetFontAddress(FontType.Ibm8X8) + (128 * 8), // 2nd half
-            0x05 => throw new NotImplementedException("No 9x14 font available"),
-            0x06 => GetFontAddress(FontType.Vga8X16),
-            0x07 => throw new NotImplementedException("No 9x16 font available"),
-            _ => throw new NotImplementedException($"Video command 1130_{_state.BH:X2}h not implemented.")
-        };
-
-        _state.ES = address.Segment;
-        _state.BP = address.Offset;
-        _state.CX = _machine.Bios.CharacterHeight;
-        _state.DL = _machine.Bios.ScreenRows;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("INT 10: GetFontInformation - {0:X4}:{1:X4} {2} {3}", _state.ES, _state.BP, _state.CX, _state.DL);
-        }
-    }
-
-    public void SetPaletteRegisters() {
-        switch (_state.AL) {
-            case Functions.Palette_SetSingleRegister:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: SetSinglePaletteRegister {0:X2} {1:X2}", _state.BL, _state.BH);
-                }
-                SetEgaPaletteRegister(_state.BL, _state.BH);
-                break;
-
-            case Functions.Palette_SetBorderColor:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: SetBorderColor UNIMPLEMENTED");
-                }
-                // TODO: Implement, ignore or remove
-                break;
-
-            case Functions.Palette_SetAllRegisters:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: SetAllPaletteRegisters");
-                }
-                SetAllEgaPaletteRegisters();
-                break;
-
-            case Functions.Palette_ReadSingleDacRegister:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: ReadSingleDacRegister {0:X2}", _state.BL);
-                }
-                _state.DH = (byte)((Dac.Palette[_state.BL] >> 18) & 0x3F);
-                _state.CH = (byte)((Dac.Palette[_state.BL] >> 10) & 0x3F);
-                _state.CL = (byte)((Dac.Palette[_state.BL] >> 2) & 0x3F);
-                break;
-
-            case Functions.Palette_SetSingleDacRegister:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: SetSingleDacRegister {0:X2} {1:X2} {2:X2} {3:X2}", _state.BL, _state.DH, _state.CH, _state.CL);
-                }
-                Dac.SetColor(_state.BL, _state.DH, _state.CH, _state.CL);
-                break;
-
-            case Functions.Palette_SetDacRegisters:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: SetDacRegisters");
-                }
-                SetDacRegisters();
-                break;
-
-            case Functions.Palette_ReadDacRegisters:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: ReadDacRegisters");
-                }
-                ReadDacRegisters();
-                break;
-
-            case Functions.Palette_ToggleBlink:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: ToggleBlink UNIMPLEMENTED");
-                }
-                // TODO: Implement, ignore or remove
-                throw new NotImplementedException("INT 10: 3 ToggleBlink");
-                break;
-
-            case Functions.Palette_SelectDacColorPage:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("INT 10: Select DAC color page");
-                }
-                SelectDacColorPage(_state.BL, _state.BH);
-                break;
-
-            default:
-                throw new NotImplementedException($"Video command 10 {_state.AL:X2} not implemented.");
-        }
-    }
-    private void SelectDacColorPage(byte subFunction, byte value) {
-        switch (subFunction) {
-            case 0x00:
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("INT 10: Set AttributeModeControl bit 7 to {Value:X2}", value);
-                }
-                AttributeControllerRegisters.AttributeModeControl = (byte)(value == 0 ? AttributeControllerRegisters.AttributeModeControl & 0b01111111u : AttributeControllerRegisters.AttributeModeControl | 0b10000000u);
-                break;
-            case 0x01:
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("INT 10: Set ColorSelect to {Value:X2}", value);
-                }
-                AttributeControllerRegisters.ColorSelect = value;
-                break;
-            default:
-                throw new NotImplementedException($"SelectDacColorPage SubFunction {subFunction:X2} not implemented.");
-        }
-    }
-
-    /// <summary>
-    ///   Reads DAC color registers to emulated RAM.
-    /// </summary>
-    private void ReadDacRegisters() {
-        ushort segment = _state.ES;
-        ushort offset = _state.DX;
-        int start = _state.BX;
-        int count = _state.CX;
-
-        for (int i = start; i < count; i++) {
-            uint r = (Dac.Palette[start + i] >> 18) & 0x3F;
-            uint g = (Dac.Palette[start + i] >> 10) & 0x3F;
-            uint b = (Dac.Palette[start + i] >> 2) & 0x3F;
-
-            _memory.UInt8[segment, offset++] = (byte)r;
-            _memory.UInt8[segment, offset++] = (byte)g;
-            _memory.UInt8[segment, offset++] = (byte)b;
-        }
-    }
-
-    /// <summary>
-    ///   Sets DAC color registers to values in emulated RAM.
-    /// </summary>
-    private void SetDacRegisters() {
-        ushort segment = _state.ES;
-        ushort offset = _state.DX;
-        int start = _state.BX;
-        int count = _state.CX;
-
-        if (_logger.IsEnabled(LogEventLevel.Debug))
-            _logger.Debug("INT 10: SetDacRegisters, Memory: {0:X4}:{1:X4} StartIndex: {2} Count: {3}", segment, offset, start, count);
-        for (int i = 0; i < count + start; i++) {
-            byte r = _memory.UInt8[segment, offset++];
-            byte g = _memory.UInt8[segment, offset++];
-            byte b = _memory.UInt8[segment, offset++];
-            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("INT 10: SetDacRegisters, Index: {0} R:{1:X2} G:{2:X2} B:{3:X2}", i, r, g, b);
-            }
-            Dac.SetColor((byte)(start + i), r, g, b);
-        }
-    }
-
-    /// <summary>
-    ///   Sets all of the EGA color palette registers to values in emulated RAM.
-    /// </summary>
-    private void SetAllEgaPaletteRegisters() {
-        ushort segment = _state.ES;
-        ushort offset = _state.DX;
-        for (int i = 0; i < 16u; i++, offset++) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose))
-                _loggerService.Verbose("INT 10: SetAllPaletteRegisters {0:X2} {1:X2}", i, _memory.UInt8[segment, offset]);
-            SetEgaPaletteRegister(i, _memory.UInt8[segment, offset]);
-        }
-    }
-
-    /// <summary>
-    ///   Gets a specific EGA color palette register.
-    /// </summary>
-    /// <param name="index">Index of palette to set.</param>
-    /// <param name="value">New value on that index the palette register.</param>
-    private void SetEgaPaletteRegister(int index, byte value) {
-        if (_bios.VideoMode == (byte)VideoModeId.ColorGraphics320X200X4) {
-            AttributeControllerRegisters.InternalPalette[index & 0x0F] = (byte)(value & 0x0F);
-        } else {
-            AttributeControllerRegisters.InternalPalette[index & 0x0F] = value;
-        }
-    }
-
-    public void GetVideoState() {
-        _state.AH = (byte)_bios.ScreenColumns;
-        _state.AL = _bios.VideoMode;
-        _state.BH = _bios.CurrentVideoPage;
-    }
-
-    public void WriteTextInTeletypeMode() {
-        byte chr = _state.AL;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Write Text in Teletype Mode ascii code {@AsciiCode}, chr {@Character}", ConvertUtils.ToHex(chr), ConvertUtils.ToChar(chr));
-        }
-        Console.Out.Write(ConvertUtils.ToChar(chr));
-    }
-
-    public void SetColorPaletteOrBackGroundColor() {
-        // TODO: Implement or remove
-        throw new NotImplementedException();
-    }
-
-    public void WriteCharacterAtCursor() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug))
-            _loggerService.Debug("INT 10: WriteCharacterAtCursor {0:X2}", _state.AL);
-        TextConsole.Write(_state.AL);
-    }
-
-    public void WriteCharacterAndAttributeAtCursor() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug))
-            _loggerService.Debug("INT 10: WriteCharacterAndAttributeAtCursor {0:X2} {1:X2}", _state.AL, _state.BL);
-        TextConsole.Write(_state.AL, (byte)(_state.BL & 0x0F), (byte)(_state.BL >> 4), false);
-    }
-
-    public void ReadCharacterAndAttributeAtCursor() {
-        _state.AX = TextConsole.GetCharacter(TextConsole.CursorPosition.X, TextConsole.CursorPosition.Y);
-    }
-
-    public void ScrollPageDown() {
-        // TODO: Implement or remove
-        throw new NotImplementedException();
-    }
-
-    public void ScrollPageUp() {
-        byte foreground = (byte)((_state.BX >> 8) & 0x0F);
-        byte background = (byte)((_state.BX >> 12) & 0x0F);
-        TextConsole.ScrollTextUp(_state.CL, _state.CH, _state.DL, _state.DH, _state.AL, foreground, background);
-    }
-
-    public void SelectActiveDisplayPage() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug))
-            _loggerService.Debug("INT 10: SelectActiveDisplayPage {0:X2}", _state.AL);
-        CurrentMode.ActiveDisplayPage = _state.AL;
-        _bios.CurrentVideoPage = _state.AL;
-    }
-
-    public void GetCursorPosition() {
-        _state.CH = 14;
-        _state.CL = 15;
-        _state.DH = (byte)TextConsole.CursorPosition.Y;
-        _state.DL = (byte)TextConsole.CursorPosition.X;
-    }
-
-    public void SetCursorPosition() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug))
-            _loggerService.Debug("INT 10: SetCursorPosition {0:X2} {1:X2}", _state.DH, _state.DL);
-        TextConsole.CursorPosition = new Point(_state.DL, _state.DH);
-    }
-
-    public void SetCursorType() {
-        byte topScanLine = _state.CH;
-        byte bottomScanLine = _state.CL;
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("SET CURSOR TYPE, SCAN LINE TOP: {Top} BOTTOM: {Bottom}", topScanLine,
-                bottomScanLine);
-        }
-    }
-
     private void SetVideoModeInternal(VideoModeId id) {
         VideoMode mode = ConvertIdToMode(id);
 
@@ -953,7 +614,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case VideoModeId.ColorText80X25X4:
             case VideoModeId.MonochromeText80X25X4:
-                mode = new TextMode(80, 25, _verticalTextResolution, this);
+                mode = new TextMode(80, 25, VerticalTextResolution, this);
                 break;
 
             case VideoModeId.ColorGraphics320X200X2A:
