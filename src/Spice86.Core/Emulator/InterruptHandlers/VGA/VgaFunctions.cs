@@ -431,4 +431,13 @@ internal class VgaFunctions {
             _memory.SetUint16((uint)(address + i), value);
         }
     }
+
+    public void EnableVideoAddressing(byte disable) {
+        byte value = (byte)((disable & 1) != 0 ? 0x00 : 0x02);
+        WriteMaskedToMiscellaneousRegister(0x02, value);
+    }
+
+    private void WriteMaskedToMiscellaneousRegister(byte offBits, byte onBits) {
+        WriteToMiscellaneousOutput((byte)((ReadMiscellaneousOutput() & ~offBits) | onBits));
+    }
 }

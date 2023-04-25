@@ -24,9 +24,9 @@ public interface IVideoRegisters {
     public CrtControllerRegisters CrtControllerRegisters { get; }
     public GraphicsControllerRegisters GraphicsControllerRegisters { get; }
     public AttributeControllerRegisters AttributeControllerRegisters { get; }
-    public VideoDACPaletteRegisters VideoDACPaletteRegisters { get; }
+    public VideoDacPaletteRegisters VideoDacPaletteRegisters { get; }
  
 }
 
-public class VideoDACPaletteRegisters {
+public class VideoDacPaletteRegisters {
 }

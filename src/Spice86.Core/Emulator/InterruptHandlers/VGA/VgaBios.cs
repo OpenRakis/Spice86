@@ -96,12 +96,142 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     public void VideoSubsystemConfiguration() {
-        throw new NotImplementedException();
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
+                nameof(VgaBios), nameof(LoadFontInfo), _state.BL);
+        }
+        switch (_state.BL) {
+            case 0x10:
+                EgaVgaInformation();
+                break;
+            case 0x30:
+                SelectScanLines();
+                break;
+            case 0x31:
+                DefaultPaletteLoading();
+                break;
+            case 0x32:
+                VideoEnableDisable();
+                break;
+            case 0x33:
+                SummingToGrayScales();
+                break;
+            case 0x34:
+                CursorEmulation();
+                break;
+            case 0x35:
+                DisplaySwitch();
+                break;
+            case 0x36:
+                VideoScreenOnOff();
+                break;
+            default:
+                throw new NotSupportedException($"BL=0x{_state.BL:X2} is not a valid subFunction for INT 10 12");
+        }
+    }
+
+    private void VideoScreenOnOff() {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 12 36 {MethodName} - Ignored",
+                nameof(VgaBios), nameof(VideoScreenOnOff));
+        }
+        _state.AL = 0x12;
+    }
+
+    private void DisplaySwitch() {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 12 35 {MethodName} - Ignored",
+                nameof(VgaBios), nameof(DisplaySwitch));
+        }
+        _state.AL = 0x12;
+    }
+
+    private void CursorEmulation() {
+        _bios.VideoCtl = (byte)(_bios.VideoCtl & ~0x01 | _state.AL & 0x01);
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 12 34 {MethodName} - {Result}",
+                nameof(VgaBios), nameof(CursorEmulation), (_state.AL & 0x01) == 0 ? "Enabled" : "Disabled");
+        }
+        _state.AL = 0x12;
+    }
+
+    private void SummingToGrayScales() {
+        byte v = (byte)(_state.AL << 1 & 0x02 ^ 0x02);
+        byte v2 = (byte)(_bios.ModesetCtl & ~0x02);
+        _bios.ModesetCtl = (byte)(v | v2);
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 12 33 {MethodName} - {Result}",
+                nameof(VgaBios), nameof(SummingToGrayScales), (_state.AL & 0x01) == 0 ? "Enabled" : "Disabled");
+        }
+        _state.AL = 0x12;
+        
+    }
+
+    private void VideoEnableDisable() {
+        _vgaFunctions.EnableVideoAddressing(_state.AL);
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 12 32 {MethodName} - {Result}",
+                nameof(VgaBios), nameof(VideoEnableDisable), (_state.AL & 0x01) == 0 ? "Enabled" : "Disabled");
+        }
+        _state.AL = 0x12;
+    }
+
+    private void DefaultPaletteLoading() {
+        byte value = (byte)((_state.AL & 0x01) << 3);
+        byte videoCtl = (byte)(_bios.VideoCtl & ~0x08);
+        _bios.VideoCtl = (byte)(videoCtl | value);
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 12 31 {MethodName} - 0x{Al:X2}",
+                nameof(VgaBios), nameof(DefaultPaletteLoading), _state.AL);
+        }
+        _state.AL = 0x12;
+    }
+
+    private void SelectScanLines() {
+        byte modeSetCtl = _bios.ModesetCtl;
+        byte featureSwitches = _bios.FeatureSwitches;
+        int lines;
+        switch (_state.AL) {
+            case 0x00:
+                lines = 200;
+                modeSetCtl = (byte)((modeSetCtl & ~0x10) | 0x80);
+                featureSwitches = (byte)((featureSwitches & ~0x0F) | 0x08);
+                break;
+            case 0x01:
+                lines = 350;
+                modeSetCtl = (byte)(modeSetCtl & ~0x90);
+                featureSwitches = (byte)((featureSwitches & ~0x0f) | 0x09);
+                break;
+            case 0x02:
+                lines = 400;
+                modeSetCtl = (byte)((modeSetCtl & ~0x80) | 0x10);
+                featureSwitches = (byte)((featureSwitches & ~0x0f) | 0x09);
+                break;
+            default:
+                throw new NotSupportedException($"AL=0x{_state.AL:X2} is not a valid subFunction for INT 10 12 30");
+        }
+        _bios.ModesetCtl = modeSetCtl;
+        _bios.FeatureSwitches = featureSwitches;
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 12 30 {MethodName} - {Lines} lines",
+                nameof(VgaBios), nameof(SelectScanLines), lines);
+        }
+        _state.AL = 0x12;
+    }
+
+    private void EgaVgaInformation() {
+        var port = (VgaPort)_bios.CrtControllerBaseAddress;
+        _state.BX = (ushort)(port == VgaPort.CrtControllerAddress ? 0x0103 : 0x0003);
+        _state.CX = (ushort)(_bios.FeatureSwitches & 0x0f);
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 12 10 {MethodName} - ColorMode 0x{ColorMode:X2}, Memory: 0x{Memory:X2}",
+                nameof(VgaBios), nameof(EgaVgaInformation), _state.BH, _state.BL);
+        }
     }
 
     public void LoadFontInfo() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 11 {MethodName} - Sub function 0x{SubFunction:X2}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT 10 11 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(LoadFontInfo), _state.AL);
         }
         switch (_state.AL) {

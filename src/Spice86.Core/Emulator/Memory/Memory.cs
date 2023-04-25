@@ -307,6 +307,18 @@ public class Memory {
         }
         _devices.Add(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
     }
+    
+    /// <summary>
+    /// Allow a class to unregister for a certain memory range.
+    /// </summary>
+    /// <param name="baseAddress">The start of the frame</param>
+    /// <param name="size">The size of the window</param>
+    /// <param name="memoryDevice">The memory device to use</param>
+    public void UnregisterMapping(uint baseAddress, uint size, IMemoryDevice memoryDevice) {
+        _memoryDevices.RemoveRange((int) baseAddress, (int) size);
+        uint endAddress = baseAddress + size;
+        _devices.Remove(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
+    }
 
     /// <summary>
     /// Read a string from memory.
@@ -347,6 +359,16 @@ public class Memory {
         }
 
         SetUint8((uint)(address + i), 0);
+    }
+    
+        
+    public string GetString(uint address, int length) {
+        StringBuilder res = new();
+        for (int i = 0; i < length; i++) {
+            char character = (char)Read((uint)(address + i));
+            res.Append(character);
+        }
+        return res.ToString();
     }
 
     private void Write(uint address, byte value) {

@@ -59,20 +59,7 @@ public class LoggerService : ILoggerService {
     private ILogger AddProperties(ILogger logger) {
         return logger.ForContext("IP", $"{LoggerPropertyBag.CsIp}");
     }
-    
-    public LoggerConfiguration CreateLoggerConfiguration() {
-        return new LoggerConfiguration()
-            .Enrich.FromLogContext()
-            .Enrich.WithExceptionDetails()
-            .WriteTo.Console(outputTemplate: LogFormat)
-            .WriteTo.Debug(outputTemplate: LogFormat);
-    }
 
-    public ILoggerService WithLogLevel(LogEventLevel minimumLevel) {
-        var logger = new LoggerService(LoggerPropertyBag) {LogLevelSwitch = new LoggingLevelSwitch(minimumLevel)};
-        logger._loggerConfiguration.MinimumLevel.ControlledBy(new LoggingLevelSwitch(minimumLevel));
-        return logger;
-    }
 
 #pragma warning disable Serilog004
 

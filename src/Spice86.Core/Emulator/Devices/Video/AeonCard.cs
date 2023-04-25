@@ -590,23 +590,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
     }
 
-    public void GetSetDisplayCombinationCode() {
-        if (_state.AL == 0x00) {
-            _state.AL = 0x1A; // Function supported
-            _state.BL = _bios.DisplayCombinationCode; // Primary display
-            _state.BH = 0x00; // No secondary display
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("INT 10: Get display combination {0:X2}", _state.BL);
-            }
-        } else if (_state.AL == 0x01) {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("INT 10: Set display combination {0:X2}", _state.BL);
-            }
-            _state.AL = 0x1A; // Function supported
-            _bios.DisplayCombinationCode = _state.BL;
-        }
-    }
-
     public void VideoSubsystemConfiguration() {
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("INT 10: VideoSubsystemConfiguration {0:X2}", _state.BL);
