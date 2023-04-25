@@ -281,6 +281,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 _loggerService.Debug("Unmapped physical page: {PhysicalPage}",
                     emmRegister.PhysicalPage.PageNumber);
             }
+            emmRegister.PhysicalPage.PageNumber = EmmNullPage;
             return EmmStatus.EmmNoError;
         }
 
