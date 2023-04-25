@@ -1,37 +1,30 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 /// <summary>
-/// Represents a handle for allocated EMS memory.
+/// Represents a handle for allocated EMM memory to a DOS program.
 /// </summary>
-public sealed class EmmHandle {
-    public ushort Pages { get; set; } = ExpandedMemoryManager.EmmNullHandle;
-    
-    public int MemHandle { get; set; }
-    
+public class EmmHandle {
     /// <summary>
-    /// 4 16 KB pages in PageFrame
+    /// The EMM handle number.
     /// </summary>
-    public const byte EmmMaxPhysicalPages = 4;
-
+    public ushort HandleNumber { get; set; } = ExpandedMemoryManager.EmmNullHandle;
+    
     private const string NullHandleName = "";
-
-    public EmmHandle() {
-        for (int i = 0; i < PageMap.Length; i++) {
-            PageMap[i] = new EmmMapping();
-        }
-    }
-
+    
     /// <summary>
     /// Gets or sets the handle name.
     /// </summary>
     public string Name { get; set; } = NullHandleName;
 
     /// <summary>
-    /// Gets or sets the saved page map for the handle.
+    /// The logical pages assigned to the handle.
     /// </summary>
-    public EmmMapping[] PageMap { get; } = new EmmMapping[EmmMaxPhysicalPages];
-
-    public bool SavePageMap { get; set; }
+    public IDictionary<ushort, EmmPage> PageMap { get; } = new Dictionary<ushort, EmmPage>();
+    
+    /// <summary>
+    /// Whether the EMM handler saved the page map into its internal data structures, or not.
+    /// </summary>
+    public bool SavedPageMap { get; set; }
 
     /// <summary>
     /// Returns a string containing the handle name.

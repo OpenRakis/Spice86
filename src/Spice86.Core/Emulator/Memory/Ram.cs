@@ -23,5 +23,4 @@ public class Ram : IMemoryDevice {
     public Span<byte> GetSpan(int address, int length) {
         return _memory.AsSpan(address, length);
     }
-
 }
