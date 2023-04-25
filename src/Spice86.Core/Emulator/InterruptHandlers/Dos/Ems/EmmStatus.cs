@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems; 
 
+/// <summary>
+/// All the possible status returned in _state.AH by the Expanded Memory Manager.
+/// </summary>
 public static class EmmStatus {
     public const byte EmmNoError = 0x00;
     public const byte EmmInvalidHandle = 0x83;
