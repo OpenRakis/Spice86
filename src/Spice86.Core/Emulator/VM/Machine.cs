@@ -112,14 +112,14 @@ public class Machine : IDisposable {
     public event Action? Resumed;
 
     public Configuration Configuration { get; }
-
+    
     public Machine(ProgramExecutor programExecutor, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
         Configuration = configuration;
         Gui = gui;
         RecordData = recordData;
 
-        IMemoryDevice ram = new Ram((uint)Configuration.Kilobytes * 1024);
+        IMemoryDevice ram = new Ram(Memory.MemoryBusSize);
         Memory = new Memory(ram);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);

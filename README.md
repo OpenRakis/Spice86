@@ -49,7 +49,6 @@ If there are already data there the emulator will load them first and complete t
 ## More command line options
 
 ```
-  -k  --Kilobytes                    The amount of main emulator memory, in kilobytes. Defaults to 1 MB
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
   -c, --CDrive                       Path to C drive, default is exe parent
   -r, --RecordedDataDirectory        Directory to dump data to when not specified otherwise. Working directory if blank
@@ -288,7 +287,8 @@ CPU:
 Memory:
 - Segmented addressing is implemented.
 - Helpers are available in order to convert a segmented address into a physical address, and vice-versa.
-- EMS and XMS are not implemented.
+- EMS (Expanded Memory) 3.2 is partially implemented.
+- XMS (Extended Memory) is not implemeented.
 - X86 Paging (virtual memory) is not implemented.
 
 Graphics:
