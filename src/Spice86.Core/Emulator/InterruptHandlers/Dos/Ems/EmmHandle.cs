@@ -17,9 +17,9 @@ public class EmmHandle {
     public string Name { get; set; } = NullHandleName;
 
     /// <summary>
-    /// The logical pages assigned to the handle.
+    /// The logical pages unique to this handle.
     /// </summary>
-    public IList<EmmPage> PageMap { get; } = new List<EmmPage>();
+    public IList<EmmPage> LogicalPages { get; } = new List<EmmPage>();
     
     /// <summary>
     /// Whether the EMM handler saved the page map into its internal data structures, or not.
