@@ -6,28 +6,24 @@ using Spice86.Shared.Utils;
 using System;
 using System.Collections.Generic;
 
-public class FunctionInformation : IComparable<FunctionInformation> {
+public record FunctionInformation : IComparable<FunctionInformation> {
     private readonly SegmentedAddress _address;
 
     private ISet<FunctionInformation>? _callers;
 
-    private readonly string _name;
-
-    public Func<int, Action>? FuntionOverride { get; set; }
+    public Func<int, Action>? FunctionOverride { get; }
 
     private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _returns;
 
     private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _unalignedReturns;
 
-    private int _calledCount;
-
     public FunctionInformation(SegmentedAddress address, string name) : this(address, name, null) {
     }
 
-    public FunctionInformation(SegmentedAddress address, string name, Func<int, Action>? funtionOverride) {
+    public FunctionInformation(SegmentedAddress address, string name, Func<int, Action>? functionOverride) {
         _address = address;
-        _name = name;
-        FuntionOverride = funtionOverride;
+        Name = name;
+        FunctionOverride = functionOverride;
     }
 
     public void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
@@ -40,7 +36,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
 
     public void CallOverride() {
         if (HasOverride) {
-            Action? retHandler = FuntionOverride?.Invoke(0);
+            Action? retHandler = FunctionOverride?.Invoke(0);
             // The override returns what to do when going back to emu mode, so let's do it!
             retHandler?.Invoke();
         }
@@ -55,22 +51,12 @@ public class FunctionInformation : IComparable<FunctionInformation> {
             Callers.Add(caller);
         }
 
-        _calledCount++;
-    }
-
-    public override bool Equals(object? obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj is not FunctionInformation other) {
-            return false;
-        }
-        return _address.Equals(other._address);
+        CalledCount++;
     }
 
     public SegmentedAddress Address => _address;
 
-    public int CalledCount => _calledCount;
+    public int CalledCount { get; private set; }
 
     public ISet<FunctionInformation> Callers {
         get {
@@ -83,7 +69,7 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         return _address.GetHashCode();
     }
 
-    public string Name => _name;
+    public string Name { get; }
 
     public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
         get {
@@ -99,10 +85,10 @@ public class FunctionInformation : IComparable<FunctionInformation> {
         }
     }
 
-    public bool HasOverride => FuntionOverride != null;
+    public bool HasOverride => FunctionOverride != null;
 
     public override string ToString() {
-        return $"{_name}_{ConvertUtils.ToCSharpStringWithPhysical(_address)}";
+        return $"{Name}_{ConvertUtils.ToCSharpStringWithPhysical(_address)}";
     }
 
     private static void AddReturn(Dictionary<FunctionReturn, ISet<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress? target) {
