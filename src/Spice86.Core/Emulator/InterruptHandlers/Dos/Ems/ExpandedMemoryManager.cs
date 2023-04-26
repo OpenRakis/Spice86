@@ -137,7 +137,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("EMS function not provided: {@Function}", operation);
             }
-            _state.AH = EmmStatus.EmmFuncNoSup;
+            _state.AH = EmmStatus.EmmFunctionNotSupported;
         }
         Run(operation);
     }
@@ -198,7 +198,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     public void AllocatePages() {
         ushort numberOfPagesToAlloc = _state.BX;
         if (numberOfPagesToAlloc is 0) {
-            _state.AH = EmmStatus.TriedToAllocateZeroPages;
+            _state.AH = EmmStatus.EmmTriedToAllocateZeroPages;
             return;
         }
         if (EmmHandles.Count == EmmMemory.TotalPages) {
@@ -206,7 +206,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return;
         }
         if (numberOfPagesToAlloc > EmmMemory.TotalPages) {
-            _state.AH = EmmStatus.NotEnoughEmmPages;
+            _state.AH = EmmStatus.EmmNotEnoughPages;
             return;
         }
         _state.DX = AllocatePages(numberOfPagesToAlloc).HandleNumber;
@@ -263,7 +263,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 _loggerService.Warning("Physical page {PhysicalPage} out of range",
                     physicalPageNumber);
             }
-            return EmmStatus.EmsIllegalPhysicalPage;
+            return EmmStatus.EmmIllegalPhysicalPage;
         }
 
         if (!IsValidHandle(handleId)) {
@@ -292,7 +292,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 _loggerService.Warning("Logical page {LogicalPage} out of range",
                     logicalPageNumber);
             }
-            return EmmStatus.EmsLogicalPageOutOfRange;
+            return EmmStatus.EmmLogicalPageOutOfRange;
         }
         emmRegister.PhysicalPage = allocatedEmmHandle.LogicalPages[logicalPageNumber];
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -569,7 +569,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             return;
         }
         if (reallocationCount > EmmMemory.TotalPages) {
-            _state.AH = EmmStatus.NotEnoughEmmPages;
+            _state.AH = EmmStatus.EmmNotEnoughPages;
             return;
         }
         
