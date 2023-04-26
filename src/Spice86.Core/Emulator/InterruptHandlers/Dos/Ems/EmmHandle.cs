@@ -7,7 +7,7 @@ public class EmmHandle {
     /// <summary>
     /// The EMM handle number.
     /// </summary>
-    public ushort HandleNumber { get; set; } = ExpandedMemoryManager.EmmNullHandle;
+    public ushort HandleNumber { get; init; } = ExpandedMemoryManager.EmmNullHandle;
     
     private const string NullHandleName = "";
     
@@ -17,9 +17,9 @@ public class EmmHandle {
     public string Name { get; set; } = NullHandleName;
 
     /// <summary>
-    /// The logical pages assigned to the handle.
+    /// The logical pages unique to this handle.
     /// </summary>
-    public IDictionary<ushort, EmmPage> PageMap { get; } = new Dictionary<ushort, EmmPage>();
+    public IList<EmmPage> LogicalPages { get; } = new List<EmmPage>();
     
     /// <summary>
     /// Whether the EMM handler saved the page map into its internal data structures, or not.

@@ -30,6 +30,11 @@ public class Memory {
     }
 
     /// <summary>
+    /// The Memory Bus size, in real mode.
+    /// </summary>
+    public const uint MemoryBusSize = 0x10FFEF;
+
+    /// <summary>
     /// Gets a copy of the current memory state.
     /// </summary>
     public byte[] Ram {

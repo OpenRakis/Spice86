@@ -1,5 +1,8 @@
 namespace Spice86.Views;
+
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
 using Spice86.ViewModels;
@@ -24,19 +27,22 @@ internal partial class VideoBufferView : UserControl {
     private bool _appClosing;
 
     private void VideoBufferView_DataContextChanged(object? sender, EventArgs e) {
-        if (DataContext is VideoBufferViewModel vm) {
-            _image = this.FindControl<Image>(nameof(Image));
-            if (vm.IsPrimaryDisplay && _image is not null && App.MainWindow?.DataContext is MainWindowViewModel mainVm) {
-                App.MainWindow.SetPrimaryDisplayControl(_image);
-                _image.PointerMoved -= (s, e) => mainVm.OnMouseMoved(e, _image);
-                _image.PointerPressed -= (s, e) => mainVm.OnMouseClick(e, true);
-                _image.PointerReleased -= (s, e) => mainVm.OnMouseClick(e, false);
-                _image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, _image);
-                _image.PointerPressed += (s, e) => mainVm.OnMouseClick(e, true);
-                _image.PointerReleased += (s, e) => mainVm.OnMouseClick(e, false);
-            }
-            vm.SetUIUpdateMethod(InvalidateImage);
+        if (DataContext is not VideoBufferViewModel vm ||
+            Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
+            return;
         }
+
+        _image = this.FindControl<Image>(nameof(Image));
+        if (vm.IsPrimaryDisplay && _image is not null && desktop.MainWindow is MainWindow mainWindow && desktop.MainWindow.DataContext is MainWindowViewModel mainVm) {
+            mainWindow.SetPrimaryDisplayControl(_image);
+            _image.PointerMoved -= (s, e) => mainVm.OnMouseMoved(e, _image);
+            _image.PointerPressed -= (s, e) => mainVm.OnMouseClick(e, true);
+            _image.PointerReleased -= (s, e) => mainVm.OnMouseClick(e, false);
+            _image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, _image);
+            _image.PointerPressed += (s, e) => mainVm.OnMouseClick(e, true);
+            _image.PointerReleased += (s, e) => mainVm.OnMouseClick(e, false);
+        }
+        vm.SetUIUpdateMethod(InvalidateImage);
     }
 
     private void InvalidateImage() {

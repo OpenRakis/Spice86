@@ -10,14 +10,13 @@
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
 	</PropertyGroup>
-
 	<!-- Properties geared towards NuGet -->
 	<PropertyGroup>
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>4.0.3</version>
-		<PackageReleaseNotes>fixed VGA palette bug, improved Debug window, fixed video functions Show/Hide Cursor</PackageReleaseNotes>
+		<version>4.1.0</version>
+		<PackageReleaseNotes>Expanded Memory support</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>

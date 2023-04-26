@@ -25,8 +25,6 @@ internal partial class App : Application {
 
     private const string RegistryValueName = "AppsUseLightTheme";
 
-    public static MainWindow? MainWindow { get; private set; }
-
     public override void Initialize() {
         AvaloniaXamlLoader.Load(this);
     }
@@ -47,14 +45,12 @@ internal partial class App : Application {
             throw new InvalidOperationException("Could not get logging service from DI !");
         }
 
+        desktop.MainWindow = new MainWindow();
         MainWindowViewModel mainViewModel = new MainWindowViewModel(loggerService);
+        desktop.MainWindow.DataContext = mainViewModel;
         mainViewModel.SetConfiguration(desktop.Args);
-        desktop.MainWindow = new MainWindow {
-            DataContext = mainViewModel,
-        };
         desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();
         desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
-        MainWindow = (MainWindow)desktop.MainWindow;
         base.OnFrameworkInitializationCompleted();
     }
 
