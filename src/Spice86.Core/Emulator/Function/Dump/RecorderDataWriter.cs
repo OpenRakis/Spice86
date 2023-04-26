@@ -27,7 +27,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
     private void DumpGhidraSymbols() {
-        new GhidraSymbolsDumper(_loggerService).Dump(_machine, GetSymbolsFile());
+        new GhidraSymbolsDumper(_loggerService).Dump(_machine, SymbolsFile);
     }
     
     public void DumpCpuRegisters(string suffix) {
@@ -48,6 +48,6 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     }
 
     private void DumpExecutionFlow() {
-        new ExecutionFlowDumper(_loggerService).Dump(_machine.Cpu.ExecutionFlowRecorder, GetExecutionFlowFile());
+        new ExecutionFlowDumper(_loggerService).Dump(_machine.Cpu.ExecutionFlowRecorder, ExecutionFlowFile);
     }
 }

@@ -16,12 +16,12 @@ public class RecordedDataReader : RecordedDataIoHandler {
         ExecutionFlowRecorder executionFlowRecorder =
             new ExecutionFlowDumper(
                 _loggerService)
-                    .ReadFromFileOrCreate(GetExecutionFlowFile());
+                    .ReadFromFileOrCreate(ExecutionFlowFile);
         executionFlowRecorder.RecordData = recordData;
         return executionFlowRecorder;
     }
 
     public IDictionary<SegmentedAddress, FunctionInformation> ReadGhidraSymbolsFromFileOrCreate() {
-        return new GhidraSymbolsDumper(_loggerService).ReadFromFileOrCreate(GetSymbolsFile());
+        return new GhidraSymbolsDumper(_loggerService).ReadFromFileOrCreate(SymbolsFile);
     }
 }

@@ -13,13 +13,9 @@ public abstract class RecordedDataIoHandler {
         DumpDirectory = dumpDirectory;
     }
 
-    protected string GetExecutionFlowFile() {
-        return GenerateDumpFileName("ExecutionFlow.json");
-    }
+    protected string ExecutionFlowFile => GenerateDumpFileName("ExecutionFlow.json");
 
-    protected string GetSymbolsFile() {
-        return GenerateDumpFileName("GhidraSymbols.txt");
-    }
+    protected string SymbolsFile => GenerateDumpFileName("GhidraSymbols.txt");
 
     protected string GenerateDumpFileName(string suffix) {
         return $"{DumpDirectory}/spice86dump{suffix}";
