@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -96,13 +97,14 @@ public class Machine : IDisposable {
     
     public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
 
+    public ExpandedMemoryManager? Ems { get; set; }
+
     public DmaController DmaController { get; }
 
     /// <summary>
     /// Gets the current DOS environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
-
     public OPL3FM OPL3FM { get; }
 
     public event Action? Paused;
@@ -110,14 +112,14 @@ public class Machine : IDisposable {
     public event Action? Resumed;
 
     public Configuration Configuration { get; }
-
+    
     public Machine(ProgramExecutor programExecutor, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
         Configuration = configuration;
         Gui = gui;
         RecordData = recordData;
 
-        IMemoryDevice ram = new Ram((uint)Configuration.Kilobytes * 1024);
+        IMemoryDevice ram = new Ram(Memory.MemoryBusSize);
         Memory = new Memory(ram);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
@@ -189,9 +191,19 @@ public class Machine : IDisposable {
         
         MouseInt33Handler = new MouseInt33Handler(this, loggerService, gui);
         Register(MouseInt33Handler);
+        
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
+        
+        if(configuration.Ems) {
+            Ems = new(this, loggerService);
+            Register(Ems);
+        }
+    }
+
+    public void Register(ICallback callback) {
+        CallbackHandler.AddCallback(callback);
     }
 
     public void Register(IIOPortHandler ioPortHandler) {
@@ -207,10 +219,6 @@ public class Machine : IDisposable {
 
         DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
         _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    public void Register(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
     }
 
     /// <summary>
