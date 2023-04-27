@@ -51,13 +51,10 @@ public class Timer : DefaultIOPortHandler {
                 i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         }
         // screen refresh is 60hz regardless of the configuration
-        _vgaScreenRefreshCounter = new Counter(machine,
-            _loggerService, 4, new TimeCounterActivator(1));
+        _vgaScreenRefreshCounter = new Counter(machine, _loggerService, 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
         // retrace 60 times per seconds
-        _vgaRetraceCounter = new Counter(machine,
-            _loggerService,
-            5, counterConfigurator.InstanciateCounterActivator(_cpu.State));
+        _vgaRetraceCounter = new Counter(machine, _loggerService, 5, counterConfigurator.InstanciateCounterActivator(_cpu.State));
         _vgaRetraceCounter.SetValue((int)(Counter.HardwareFrequency / 60));
     }
 

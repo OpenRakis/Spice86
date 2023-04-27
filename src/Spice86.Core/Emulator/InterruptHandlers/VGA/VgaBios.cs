@@ -21,7 +21,6 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     private VgaMode _currentVgaMode;
     private readonly VgaFunctions _vgaFunctions;
 
-
     public VgaBios(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _bios = _machine.Bios;
         _vgaRom = machine.VgaRom;
@@ -31,6 +30,31 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
         InitializeBiosArea();
         _vgaFunctions = new VgaFunctions(machine.Memory, machine.IoPortDispatcher);
+    }
+
+    private void FillDispatchTable() {
+        _dispatchTable.Add(0x00, new Callback(0x00, SetVideoMode));
+        _dispatchTable.Add(0x01, new Callback(0x01, SetCursorType));
+        _dispatchTable.Add(0x02, new Callback(0x02, SetCursorPosition));
+        _dispatchTable.Add(0x03, new Callback(0x03, GetCursorPosition));
+        _dispatchTable.Add(0x04, new Callback(0x04, ReadLightPenPosition));
+        _dispatchTable.Add(0x05, new Callback(0x05, SelectActiveDisplayPage));
+        _dispatchTable.Add(0x06, new Callback(0x06, ScrollPageUp));
+        _dispatchTable.Add(0x07, new Callback(0x07, ScrollPageDown));
+        _dispatchTable.Add(0x08, new Callback(0x08, ReadCharacterAndAttributeAtCursor));
+        _dispatchTable.Add(0x09, new Callback(0x09, WriteCharacterAndAttributeAtCursor));
+        _dispatchTable.Add(0x0A, new Callback(0x0A, WriteCharacterAtCursor));
+        _dispatchTable.Add(0x0B, new Callback(0x0B, SetColorPaletteOrBackGroundColor));
+        _dispatchTable.Add(0x0C, new Callback(0x0C, WriteDot));
+        _dispatchTable.Add(0x0D, new Callback(0x0D, ReadDot));
+        _dispatchTable.Add(0x0E, new Callback(0x0E, WriteTextInTeletypeMode));
+        _dispatchTable.Add(0x0F, new Callback(0x0F, GetVideoState));
+        _dispatchTable.Add(0x10, new Callback(0x10, SetPaletteRegisters));
+        _dispatchTable.Add(0x11, new Callback(0x11, LoadFontInfo));
+        _dispatchTable.Add(0x12, new Callback(0x12, VideoSubsystemConfiguration));
+        _dispatchTable.Add(0x13, new Callback(0x13, WriteString));
+        _dispatchTable.Add(0x1A, new Callback(0x1A, GetSetDisplayCombinationCode));
+        _dispatchTable.Add(0x1B, new Callback(0x1B, () => GetFunctionalityInfo()));
     }
 
     /// <summary>
@@ -1201,31 +1225,6 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         Run(operation);
     }
 
-    private void FillDispatchTable() {
-        _dispatchTable.Add(0x00, new Callback(0x00, SetVideoMode));
-        _dispatchTable.Add(0x01, new Callback(0x01, SetCursorType));
-        _dispatchTable.Add(0x02, new Callback(0x02, SetCursorPosition));
-        _dispatchTable.Add(0x03, new Callback(0x03, GetCursorPosition));
-        _dispatchTable.Add(0x04, new Callback(0x04, ReadLightPenPosition));
-        _dispatchTable.Add(0x05, new Callback(0x05, SelectActiveDisplayPage));
-        _dispatchTable.Add(0x06, new Callback(0x06, ScrollPageUp));
-        _dispatchTable.Add(0x07, new Callback(0x07, ScrollPageDown));
-        _dispatchTable.Add(0x08, new Callback(0x08, ReadCharacterAndAttributeAtCursor));
-        _dispatchTable.Add(0x09, new Callback(0x09, WriteCharacterAndAttributeAtCursor));
-        _dispatchTable.Add(0x0A, new Callback(0x0A, WriteCharacterAtCursor));
-        _dispatchTable.Add(0x0B, new Callback(0x0B, SetColorPaletteOrBackGroundColor));
-        _dispatchTable.Add(0x0C, new Callback(0x0C, WriteDot));
-        _dispatchTable.Add(0x0D, new Callback(0x0D, ReadDot));
-        _dispatchTable.Add(0x0E, new Callback(0x0E, WriteTextInTeletypeMode));
-        _dispatchTable.Add(0x0F, new Callback(0x0F, GetVideoState));
-        _dispatchTable.Add(0x10, new Callback(0x10, SetPaletteRegisters));
-        _dispatchTable.Add(0x11, new Callback(0x11, LoadFontInfo));
-        _dispatchTable.Add(0x12, new Callback(0x12, VideoSubsystemConfiguration));
-        _dispatchTable.Add(0x13, new Callback(0x13, WriteString));
-        _dispatchTable.Add(0x1A, new Callback(0x1A, GetSetDisplayCombinationCode));
-        _dispatchTable.Add(0x1B, new Callback(0x1B, () => GetFunctionalityInfo()));
-    }
-
     private byte vgafb_read_pixel(ushort x, ushort y) {
         VgaMode vgaMode = _currentVgaMode;
 
@@ -1340,11 +1339,10 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private static VideoMode GetVideoMode(int modeId) {
-        foreach (VideoMode mode in RegisterValueSet.VgaModes) {
-            if (mode.ModeId == modeId) {
-                return mode;
-            }
-        }
+        if (RegisterValueSet.VgaModes.TryGetValue(modeId, out VideoMode mode)) {
+            return mode;
+        };
+
         throw new ArgumentOutOfRangeException(nameof(modeId), modeId, "Unknown mode");
     }
 
@@ -1398,7 +1396,7 @@ public record struct CursorPosition(int X, int Y, int Page);
 
 public record struct Area(int Width, int Height);
 
-public record struct VideoMode(ushort ModeId, VgaMode VgaMode, byte PixelMask, byte[] Dac, byte[] SequencerRegisterValues, byte MiscellaneousRegisterValue, byte[] CrtControllerRegisterValues, byte[] AttributeControllerRegisterValues, byte[] GraphicsControllerRegisterValues);
+public record struct VideoMode(VgaMode VgaMode, byte PixelMask, byte[] Dac, byte[] SequencerRegisterValues, byte MiscellaneousRegisterValue, byte[] CrtControllerRegisterValues, byte[] AttributeControllerRegisterValues, byte[] GraphicsControllerRegisterValues);
 
 public enum Action {
     ReadByte,

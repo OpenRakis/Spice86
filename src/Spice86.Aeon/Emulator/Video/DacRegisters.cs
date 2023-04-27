@@ -3,7 +3,7 @@ namespace Spice86.Aeon.Emulator.Video
     /// <summary>
     /// Emulates the VGA DAC which provides access to the palette.
     /// </summary>
-    public sealed class Dac
+    public sealed class DacRegisters
     {
         private readonly unsafe uint* palette;
         private readonly UnsafeBuffer<uint> paletteBuffer = new(256);
@@ -13,9 +13,9 @@ namespace Spice86.Aeon.Emulator.Video
         private byte writeIndex;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Dac"/> class.
+        /// Initializes a new instance of the <see cref="DacRegisters"/> class.
         /// </summary>
-        public Dac()
+        public DacRegisters()
         {
             unsafe
             {

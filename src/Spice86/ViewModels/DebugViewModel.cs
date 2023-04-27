@@ -46,8 +46,8 @@ public partial class DebugViewModel : ObservableObject {
             return;
         }
 
-        VideoCard.DacReadIndex = aeonCard.Dac.ReadIndex;
-        VideoCard.DacWriteIndex = aeonCard.Dac.WriteIndex;
+        VideoCard.DacReadIndex = aeonCard.DacRegisters.ReadIndex;
+        VideoCard.DacWriteIndex = aeonCard.DacRegisters.WriteIndex;
 
         VideoCard.AttributeControllerColorSelect = aeonCard.AttributeControllerRegisters.ColorSelect;
         VideoCard.AttributeControllerOverscanColor = aeonCard.AttributeControllerRegisters.OverscanColor;

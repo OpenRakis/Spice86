@@ -62,7 +62,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <returns>Current value of the register.</returns>
         public byte ReadRegister(AttributeControllerRegister address)
         {
-            if (address >= AttributeControllerRegister.FirstPaletteEntry && address <= AttributeControllerRegister.LastPaletteEntry)
+            if (address is >= AttributeControllerRegister.FirstPaletteEntry and <= AttributeControllerRegister.LastPaletteEntry)
                 return InternalPalette[(byte)address];
 
             return address switch

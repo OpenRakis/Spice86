@@ -4,7 +4,7 @@ public interface IAeonVgaCard {
     /// <summary>
     /// Gets the VGA DAC.
     /// </summary>
-    public Dac Dac { get; }
+    public DacRegisters DacRegisters { get; }
 
     /// <summary>
     /// Gets the VGA graphics controller.

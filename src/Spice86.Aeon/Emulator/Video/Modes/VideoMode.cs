@@ -16,7 +16,7 @@ namespace Spice86.Aeon.Emulator.Video
 
         private readonly CrtControllerRegisters _crtControllerRegisters;
         internal readonly AttributeControllerRegisters AttributeControllerRegisters;
-        internal readonly Dac dac;
+        internal readonly DacRegisters DacRegisters;
         private readonly uint vramSize;
 
         private protected VideoMode(int width, int height, int bpp, bool planar, int fontHeight, VideoModeType modeType,
@@ -29,7 +29,7 @@ namespace Spice86.Aeon.Emulator.Video
             IsPlanar = planar;
             FontHeight = fontHeight;
             VideoModeType = modeType;
-            dac = video.Dac;
+            DacRegisters = video.DacRegisters;
             _crtControllerRegisters = video.CrtControllerRegisters;
             AttributeControllerRegisters = video.AttributeControllerRegisters;
             VideoRam = GetVideoRamPointer(video);
@@ -43,7 +43,7 @@ namespace Spice86.Aeon.Emulator.Video
             IsPlanar = baseMode.IsPlanar;
             FontHeight = baseMode.FontHeight;
             VideoModeType = baseMode.VideoModeType;
-            dac = baseMode.dac;
+            DacRegisters = baseMode.DacRegisters;
             _crtControllerRegisters = baseMode._crtControllerRegisters;
             AttributeControllerRegisters = baseMode.AttributeControllerRegisters;
             VideoRam = baseMode.VideoRam;
@@ -116,7 +116,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets the current VGA color palette.
         /// </summary>
-        public ReadOnlySpan<uint> Palette => dac.Palette;
+        public ReadOnlySpan<uint> Palette => DacRegisters.Palette;
         /// <summary>
         /// Gets a value indicating whether the display mode is planar.
         /// </summary>

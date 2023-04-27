@@ -78,8 +78,8 @@ namespace Spice86.Aeon.Emulator.Video.Rendering {
                 : (VideoMode.AttributeControllerRegisters.ColorSelect & 0b00000011) << 4;
             int bits6And7 = (VideoMode.AttributeControllerRegisters.ColorSelect & 0b00001100) << 4;
             int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
-            int index =dacIndex8Bits & VideoMode.dac.PalettePixelMask;
-            return VideoMode.dac.Palette[index];
+            int index =dacIndex8Bits & VideoMode.DacRegisters.PalettePixelMask;
+            return VideoMode.DacRegisters.Palette[index];
         }
 
         // it's important for this to get inlined
