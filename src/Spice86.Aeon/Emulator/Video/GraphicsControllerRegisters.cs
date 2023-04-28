@@ -1,42 +1,50 @@
-namespace Spice86.Aeon.Emulator.Video
-{
+namespace Spice86.Aeon.Emulator.Video {
+    using Spice86.Aeon.Emulator.Video.Registers.Graphics;
+
     /// <summary>
     /// Emulates the VGA Graphics registers.
     /// </summary>
-    public sealed class GraphicsControllerRegisters
-    {
+    public sealed class GraphicsControllerRegisters {
         /// <summary>
         /// Gets the Set/Reset register.
         /// </summary>
         public MaskValue SetReset { get; private set; }
+
         /// <summary>
         /// Gets the Enable Set/Reset register.
         /// </summary>
         public MaskValue EnableSetReset { get; private set; }
+
         /// <summary>
         /// Gets the Color Compare register.
         /// </summary>
         public byte ColorCompare { get; private set; }
+
         /// <summary>
         /// Gets the Data Rotate register.
         /// </summary>
-        public byte DataRotate { get; private set; }
+        public DataRotateRegister DataRotateRegister { get; } = new();
+
         /// <summary>
         /// Gets the Read Map Select register.
         /// </summary>
-        public byte ReadMapSelect { get; private set; }
+        public ReadMapSelectRegister ReadMapSelectRegister { get; } = new();
+
         /// <summary>
         /// Gets or sets the Graphics Mode register.
         /// </summary>
-        public byte GraphicsMode { get; set; }
+        public GraphicsModeRegister GraphicsModeRegister { get; } = new();
+
         /// <summary>
         /// Gets or sets the Miscellaneous Graphics register.
         /// </summary>
-        public byte MiscellaneousGraphics { get; set; }
+        public MiscellaneousGraphicsRegister MiscellaneousGraphicsRegister { get; } = new();
+
         /// <summary>
         /// Gets the Color Don't Care register.
         /// </summary>
-        public MaskValue ColorDontCare { get; private set; }
+        public byte ColorDontCare { get; private set; }
+
         /// <summary>
         /// Gets or sets the Bit Mask register.
         /// </summary>
@@ -47,31 +55,28 @@ namespace Spice86.Aeon.Emulator.Video
         /// </summary>
         /// <param name="address">Address of register to read.</param>
         /// <returns>Current value of the register.</returns>
-        public byte ReadRegister(GraphicsRegister address)
-        {
-            return address switch
-            {
+        public byte ReadRegister(GraphicsRegister address) {
+            return address switch {
                 GraphicsRegister.SetReset => SetReset.Packed,
                 GraphicsRegister.EnableSetReset => EnableSetReset.Packed,
                 GraphicsRegister.ColorCompare => ColorCompare,
-                GraphicsRegister.DataRotate => DataRotate,
-                GraphicsRegister.ReadMapSelect => ReadMapSelect,
-                GraphicsRegister.GraphicsMode => GraphicsMode,
-                GraphicsRegister.MiscellaneousGraphics => MiscellaneousGraphics,
-                GraphicsRegister.ColorDontCare => ColorDontCare.Packed,
+                GraphicsRegister.DataRotate => DataRotateRegister.Value,
+                GraphicsRegister.ReadMapSelect => ReadMapSelectRegister.Value,
+                GraphicsRegister.GraphicsMode => GraphicsModeRegister.Value,
+                GraphicsRegister.MiscellaneousGraphics => MiscellaneousGraphicsRegister.Value,
+                GraphicsRegister.ColorDontCare => ColorDontCare,
                 GraphicsRegister.BitMask => BitMask,
                 _ => 0
             };
         }
+
         /// <summary>
         /// Writes to a graphics register.
         /// </summary>
         /// <param name="address">Address of register to write.</param>
         /// <param name="value">Value to write to register.</param>
-        public void Write(GraphicsRegister address, byte value)
-        {
-            switch (address)
-            {
+        public void Write(GraphicsRegister address, byte value) {
+            switch (address) {
                 case GraphicsRegister.SetReset:
                     SetReset = value;
                     break;
@@ -85,19 +90,19 @@ namespace Spice86.Aeon.Emulator.Video
                     break;
 
                 case GraphicsRegister.DataRotate:
-                    DataRotate = value;
+                    DataRotateRegister.Value = value;
                     break;
 
                 case GraphicsRegister.ReadMapSelect:
-                    ReadMapSelect = value;
+                    ReadMapSelectRegister.Value = value;
                     break;
 
                 case GraphicsRegister.GraphicsMode:
-                    GraphicsMode = value;
+                    GraphicsModeRegister.Value = value;
                     break;
 
                 case GraphicsRegister.MiscellaneousGraphics:
-                    MiscellaneousGraphics = value;
+                    MiscellaneousGraphicsRegister.Value = value;
                     break;
 
                 case GraphicsRegister.ColorDontCare:

@@ -25,7 +25,7 @@ namespace Spice86.Aeon.Emulator.Video {
         /// <summary>
         /// Gets the Map Mask register.
         /// </summary>
-        public MapMaskRegister MapMaskRegister { get; } = new();
+        public PlaneMaskRegister PlaneMaskRegister { get; } = new();
 
         /// <summary>
         /// Gets the Character Map Select register.
@@ -45,7 +45,7 @@ namespace Spice86.Aeon.Emulator.Video {
             return SequencerAddress switch {
                 SequencerRegister.Reset => ResetRegister.Value,
                 SequencerRegister.ClockingMode => ClockingModeRegister.Value,
-                SequencerRegister.MapMask => MapMaskRegister.Value,
+                SequencerRegister.PlaneMask => PlaneMaskRegister.Value,
                 SequencerRegister.CharacterMapSelect => CharacterMapSelectRegister.Value,
                 SequencerRegister.SequencerMemoryMode => MemoryModeRegister.Value,
                 _ => 0
@@ -64,8 +64,8 @@ namespace Spice86.Aeon.Emulator.Video {
                 case SequencerRegister.ClockingMode:
                     ClockingModeRegister.Value = value;
                     break;
-                case SequencerRegister.MapMask:
-                    MapMaskRegister.MaskValue = value;
+                case SequencerRegister.PlaneMask:
+                    PlaneMaskRegister.MaskValue = value;
                     break;
                 case SequencerRegister.CharacterMapSelect:
                     CharacterMapSelectRegister.Value = value;
@@ -74,7 +74,7 @@ namespace Spice86.Aeon.Emulator.Video {
                     MemoryModeRegister.Value = value;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(SequencerAddress), SequencerAddress, null);
+                    throw new ArgumentOutOfRangeException(nameof(SequencerAddress), SequencerAddress, "Unknown sequencer register");
             }
         }
 

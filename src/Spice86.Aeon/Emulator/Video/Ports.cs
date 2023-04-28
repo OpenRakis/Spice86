@@ -48,7 +48,7 @@ namespace Spice86.Aeon.Emulator.Video
     {
         Reset,
         ClockingMode,
-        MapMask,
+        PlaneMask,
         CharacterMapSelect,
         SequencerMemoryMode
     }
@@ -67,15 +67,15 @@ namespace Spice86.Aeon.Emulator.Video
     public enum CrtControllerRegister
     {
         HorizontalTotal,
-        EndHorizontalDisplay,
-        StartHorizontalBlanking,
-        EndHorizontalBlanking,
-        StartHorizontalRetrace,
-        EndHorizontalRetrace,
+        HorizontalDisplayEnd,
+        HorizontalBlankingStart,
+        HorizontalBlankingEnd,
+        HorizontalRetraceStart,
+        HorizontalRetraceEnd,
         VerticalTotal,
         Overflow,
         PresetRowScan,
-        MaximumScanLine,
+        CharacterCellHeight,
         CursorStart,
         CursorEnd,
         StartAddressHigh,
@@ -87,8 +87,8 @@ namespace Spice86.Aeon.Emulator.Video
         VerticalDisplayEnd,
         Offset,
         UnderlineLocation,
-        StartVerticalBlanking,
-        EndVerticalBlanking,
+        VerticalBlankingStart,
+        VerticalBlankingEnd,
         CrtModeControl,
         LineCompare
     }

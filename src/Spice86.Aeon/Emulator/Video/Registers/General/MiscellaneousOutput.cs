@@ -20,7 +20,7 @@ public class MiscellaneousOutput {
     /// </summary>
     public bool EnableRam {
         get => (Value & 0x02) != 0;
-        set => Value = (byte)(Value & 0xFD | (value ? 0x02 : 0x00));
+        set => Value = (byte)(Value & 0xFD | (value ? 0x02 : 0x00));    
     }
 
     /// <summary>
@@ -34,12 +34,21 @@ public class MiscellaneousOutput {
     }
 
     /// <summary>
+    /// This bit affects the meaning of the LSB of display memory address when in Even/Odd modes (SR4[2] = 1). If this bit is programmed to ‘0’,
+    /// only odd memory locations are selected. If this bit is programmed to ‘1’, only even memory locations are selected.
+    /// </summary>
+    public bool OddPageSelect {
+        get => (Value & 0x20) == 0;
+        set => Value = (byte)(Value & ~0x20 | (value ? 0x00 : 0x20));    
+    }
+
+    /// <summary>
     /// When set to 0, the Horizontal Sync Polarity field (bit 6) selects a positive ‘horizontal retrace’ signal. Bits 7 and
     /// 6 select the vertical size
     /// </summary>
     public Polarity HorizontalSyncPolarity {
-        get => (Value & 0x40) != 0 ? Polarity.Positive : Polarity.Negative;
-        set => Value = (byte)(Value & 0xBF | (value == Polarity.Positive ? 0x40 : 0x00));
+        get => (Value & 0x40) != 0 ? Polarity.Negative : Polarity.Positive;
+        set => Value = (byte)(Value & 0xBF | (value == Polarity.Negative ? 0x40 : 0x00));
     }
 
     /// <summary>
@@ -47,14 +56,14 @@ public class MiscellaneousOutput {
     /// works with bit 6 to determine the vertical size.
     /// </summary>
     public Polarity VerticalSyncPolarity {
-        get => (Value & 0x80) != 0 ? Polarity.Positive : Polarity.Negative;
-        set => Value = (byte)(Value & 0x7F | (value == Polarity.Positive ? 0x80 : 0x00));
+        get => (Value & 0x80) != 0 ? Polarity.Negative : Polarity.Positive;
+        set => Value = (byte)(Value & 0x7F | (value == Polarity.Negative ? 0x80 : 0x00));
     }
 
     public int VerticalSize => HorizontalSyncPolarity switch {
-        Polarity.Positive when VerticalSyncPolarity == Polarity.Negative => 400,
-        Polarity.Negative when VerticalSyncPolarity == Polarity.Positive => 350,
-        Polarity.Positive when VerticalSyncPolarity == Polarity.Positive => 480,
+        Polarity.Negative when VerticalSyncPolarity == Polarity.Positive => 400,
+        Polarity.Positive when VerticalSyncPolarity == Polarity.Negative => 350,
+        Polarity.Negative when VerticalSyncPolarity == Polarity.Negative => 480,
         _ => 0
     };
 

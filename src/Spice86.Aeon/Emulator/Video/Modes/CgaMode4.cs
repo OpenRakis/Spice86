@@ -1,8 +1,8 @@
 namespace Spice86.Aeon.Emulator.Video.Modes
 {
-    public sealed class CgaMode4 : VideoMode
-    {
-        private const uint BaseAddress = 0x18000;
+    public sealed class CgaMode4 : VideoMode {
+        // private const uint BaseAddress = 0x180000;
+        private const uint BaseAddress = 0;
         private unsafe readonly byte* videoRam;
 
         public CgaMode4(IAeonVgaCard video) : base(320, 200, 2, false, 8, VideoModeType.Graphics, video)

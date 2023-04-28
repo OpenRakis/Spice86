@@ -2,6 +2,8 @@ using System.Runtime.CompilerServices;
 
 namespace Spice86.Aeon.Emulator.Video.Modes
 {
+    using Spice86.Aeon.Emulator.Video.Registers.Graphics;
+
     using System.Runtime.Intrinsics.X86;
 
     /// <summary>
@@ -34,13 +36,13 @@ namespace Spice86.Aeon.Emulator.Video.Modes
             {
                 latches = videoRam[offset];
 
-                if ((_graphicsControllerRegisters.GraphicsMode & 1 << 3) == 0)
+                if (_graphicsControllerRegisters.GraphicsModeRegister.ReadMode == ReadMode.ReadMode0)
                 {
-                    return ReadByte(latches, _graphicsControllerRegisters.ReadMapSelect & 0x3u);
+                    return ReadByte(latches, _graphicsControllerRegisters.ReadMapSelectRegister.PlaneSelect);
                 }
 
                 byte result = 0;
-                int colorDontCare = ~_graphicsControllerRegisters.ColorDontCare.Packed;
+                int colorDontCare = ~_graphicsControllerRegisters.ColorDontCare;
                 int colorCompare = _graphicsControllerRegisters.ColorCompare | colorDontCare;
                 for (int i = 0; i < 8; i++) {
                     int extracted = Bmi2.IsSupported 
@@ -59,18 +61,18 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         {
             offset %= 65536u;
 
-            uint writeMode = _graphicsControllerRegisters.GraphicsMode & 0x3u;
-            if (writeMode == 0)
+            WriteMode writeMode = _graphicsControllerRegisters.GraphicsModeRegister.WriteMode;
+            if (writeMode == WriteMode.WriteMode0)
             {
                 SetByteMode0(offset, value);
             }
-            else if (writeMode == 1)
+            else if (writeMode == WriteMode.WriteMode1)
             {
                 // when mapMask = 0 keep value in vram
                 // whem mapMask = 1 take value from latches
                 // input value is not used at all
 
-                uint mapMask = _sequencerRegisters.MapMaskRegister.MaskValue.Expanded;
+                uint mapMask = _sequencerRegisters.PlaneMaskRegister.MaskValue.Expanded;
 
                 unsafe
                 {
@@ -79,7 +81,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                     videoRam[offset] = current;
                 }
             }
-            else if (writeMode == 2)
+            else if (writeMode == WriteMode.WriteMode2)
             {
                 SetByteMode2(offset, value);
             }
@@ -142,13 +144,13 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         {
             unsafe
             {
-                if (_graphicsControllerRegisters.DataRotate == 0)
+                if (_graphicsControllerRegisters.DataRotateRegister.Value == 0)
                 {
                     uint source = (uint)input * 0x01010101;
                     uint mask = (uint)_graphicsControllerRegisters.BitMask * 0x01010101;
 
                     // when mapMask is set, use computed value; otherwise keep vram value
-                    uint mapMask = _sequencerRegisters.MapMaskRegister.MaskValue.Expanded;
+                    uint mapMask = _sequencerRegisters.PlaneMaskRegister.MaskValue.Expanded;
 
                     uint original = videoRam[offset];
 
@@ -185,7 +187,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 uint mask = (uint)_graphicsControllerRegisters.BitMask * 0x01010101;
 
                 // when mapMask is set, use computed value; otherwise keep vram value
-                uint mapMask = _sequencerRegisters.MapMaskRegister.MaskValue.Expanded;
+                uint mapMask = _sequencerRegisters.PlaneMaskRegister.MaskValue.Expanded;
                 uint original = videoRam[offset];
 
                 uint setResetEnabled = _graphicsControllerRegisters.EnableSetReset.Expanded;
@@ -194,10 +196,10 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 source = Intrinsics.AndNot(source, setResetEnabled);
                 source |= setReset & setResetEnabled;
 
-                int rotateCount = _graphicsControllerRegisters.DataRotate & 0x07;
+                int rotateCount = _graphicsControllerRegisters.DataRotateRegister.RotateCount;
                 source = RotateBytes(source, rotateCount);
 
-                uint logicalOp = Intrinsics.ExtractBits(_graphicsControllerRegisters.DataRotate, 3, 2, 0b11000);
+                uint logicalOp = Intrinsics.ExtractBits(_graphicsControllerRegisters.DataRotateRegister.Value, 3, 2, 0b11000);
 
                 if (logicalOp == 0)
                 {
@@ -233,7 +235,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
             {
                 uint values = new MaskValue(input).Expanded;
 
-                uint logicalOp = Intrinsics.ExtractBits(_graphicsControllerRegisters.DataRotate, 3, 2, 0b11000);
+                uint logicalOp = Intrinsics.ExtractBits(_graphicsControllerRegisters.DataRotateRegister.Value, 3, 2, 0b11000);
 
                 if (logicalOp == 0)
                 {
@@ -260,7 +262,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 // whem mapMask = 1 take value from latches
                 // input value is not used at all
 
-                uint mapMask = _sequencerRegisters.MapMaskRegister.MaskValue.Expanded;
+                uint mapMask = _sequencerRegisters.PlaneMaskRegister.MaskValue.Expanded;
                 uint current = Intrinsics.AndNot(videoRam[offset], mapMask); // read value and clear mask bits
                 current |= values & mapMask; // set value bits
                 videoRam[offset] = current;
@@ -270,7 +272,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         {
             unsafe
             {
-                int rotateCount = _graphicsControllerRegisters.DataRotate & 0x07;
+                int rotateCount = _graphicsControllerRegisters.DataRotateRegister.RotateCount;
                 uint source = (byte)(((uint)input >> rotateCount) | ((uint)input << (8 - rotateCount)));
                 source &= _graphicsControllerRegisters.BitMask;
                 source *= 0x01010101;

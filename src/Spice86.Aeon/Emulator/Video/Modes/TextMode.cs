@@ -45,7 +45,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         /// <summary>
         /// Gets a value indicating whether odd-even read addressing is enabled.
         /// </summary>
-        private bool IsOddEvenReadEnabled => (_graphicsControllerRegisters.GraphicsMode & 0x10) != 0;
+        private bool IsOddEvenReadEnabled => _graphicsControllerRegisters.GraphicsModeRegister.OddEven;
 
         public override byte GetVramByte(uint offset)
         {
@@ -61,7 +61,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                     return planes[address & 1][address >> 1];
                 }
 
-                var map = _graphicsControllerRegisters.ReadMapSelect & 0x3;
+                var map = _graphicsControllerRegisters.ReadMapSelectRegister.PlaneSelect;
                 if (map == 0 || map == 1)
                     return planes[map][address];
                 if (map == 3)
@@ -85,7 +85,7 @@ namespace Spice86.Aeon.Emulator.Video.Modes
                 }
                 else
                 {
-                    uint mapMask = _sequencerRegisters.MapMaskRegister.Value;
+                    uint mapMask = _sequencerRegisters.PlaneMaskRegister.Value;
                     if ((mapMask & 0x01) != 0)
                         planes[0][address] = value;
                     if ((mapMask & 0x02) != 0)

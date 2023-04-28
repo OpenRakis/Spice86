@@ -19,23 +19,23 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets or sets the End Horizontal Display register.
         /// </summary>
-        public byte EndHorizontalDisplay { get; set; }
+        public byte HorizontalDisplayEnd { get; set; }
         /// <summary>
         /// Gets or sets the Start Horizontal Blanking register.
         /// </summary>
-        public byte StartHorizontalBlanking { get; set; }
+        public byte HorizontalBlankingStart { get; set; }
         /// <summary>
         /// Gets or sets the End Horizontal Blanking register.
         /// </summary>
-        public byte EndHorizontalBlanking { get; set; }
+        public byte HorizontalBlankingEnd { get; set; }
         /// <summary>
         /// Gets or sets the Start Horizontal Retrace register.
         /// </summary>
-        public byte StartHorizontalRetrace { get; set; }
+        public byte HorizontalRetraceStart { get; set; }
         /// <summary>
         /// Gets or sets the End Horizontal Retrace register.
         /// </summary>
-        public byte EndHorizontalRetrace { get; set; }
+        public byte HorizontalRetraceEnd { get; set; }
         /// <summary>
         /// Gets or sets the Vertical Total register.
         /// </summary>
@@ -51,7 +51,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets or sets the Maximum Scan Line register.
         /// </summary>
-        public byte MaximumScanLine { get; set; }
+        public byte CharacterCellHeight { get; set; }
         /// <summary>
         /// Gets or sets the Cursor Start register.
         /// </summary>
@@ -91,11 +91,11 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets or sets the Start Vertical Blanking register.
         /// </summary>
-        public byte StartVerticalBlanking { get; set; }
+        public byte VerticalBlankingStart { get; set; }
         /// <summary>
         /// Gets or sets the End Vertical Blanking register.
         /// </summary>
-        public byte EndVerticalBlanking { get; set; }
+        public byte VerticalBlankingEnd { get; set; }
         /// <summary>
         /// Gets or sets the CRT Mode Control register.
         /// </summary>
@@ -115,15 +115,15 @@ namespace Spice86.Aeon.Emulator.Video
             return address switch
             {
                 CrtControllerRegister.HorizontalTotal => HorizontalTotal,
-                CrtControllerRegister.EndHorizontalDisplay => EndHorizontalDisplay,
-                CrtControllerRegister.StartHorizontalBlanking => StartHorizontalBlanking,
-                CrtControllerRegister.EndHorizontalBlanking => EndHorizontalBlanking,
-                CrtControllerRegister.StartHorizontalRetrace => StartHorizontalRetrace,
-                CrtControllerRegister.EndHorizontalRetrace => EndHorizontalRetrace,
+                CrtControllerRegister.HorizontalDisplayEnd => HorizontalDisplayEnd,
+                CrtControllerRegister.HorizontalBlankingStart => HorizontalBlankingStart,
+                CrtControllerRegister.HorizontalBlankingEnd => HorizontalBlankingEnd,
+                CrtControllerRegister.HorizontalRetraceStart => HorizontalRetraceStart,
+                CrtControllerRegister.HorizontalRetraceEnd => HorizontalRetraceEnd,
                 CrtControllerRegister.VerticalTotal => VerticalTotal,
                 CrtControllerRegister.Overflow => Overflow,
                 CrtControllerRegister.PresetRowScan => PresetRowScan,
-                CrtControllerRegister.MaximumScanLine => MaximumScanLine,
+                CrtControllerRegister.CharacterCellHeight => CharacterCellHeight,
                 CrtControllerRegister.CursorStart => CursorStart,
                 CrtControllerRegister.CursorEnd => CursorEnd,
                 CrtControllerRegister.StartAddressHigh => (byte)(StartAddress >> 8),
@@ -135,8 +135,8 @@ namespace Spice86.Aeon.Emulator.Video
                 CrtControllerRegister.VerticalDisplayEnd => VerticalDisplayEnd,
                 CrtControllerRegister.Offset => Offset,
                 CrtControllerRegister.UnderlineLocation => UnderlineLocation,
-                CrtControllerRegister.StartVerticalBlanking => StartVerticalBlanking,
-                CrtControllerRegister.EndVerticalBlanking => EndVerticalBlanking,
+                CrtControllerRegister.VerticalBlankingStart => VerticalBlankingStart,
+                CrtControllerRegister.VerticalBlankingEnd => VerticalBlankingEnd,
                 CrtControllerRegister.CrtModeControl => CrtModeControl,
                 CrtControllerRegister.LineCompare => LineCompare,
                 _ => 0
@@ -155,24 +155,24 @@ namespace Spice86.Aeon.Emulator.Video
                     HorizontalTotal = value;
                     break;
 
-                case CrtControllerRegister.EndHorizontalDisplay:
-                    EndHorizontalDisplay = value;
+                case CrtControllerRegister.HorizontalDisplayEnd:
+                    HorizontalDisplayEnd = value;
                     break;
 
-                case CrtControllerRegister.StartHorizontalBlanking:
-                    StartHorizontalBlanking = value;
+                case CrtControllerRegister.HorizontalBlankingStart:
+                    HorizontalBlankingStart = value;
                     break;
 
-                case CrtControllerRegister.EndHorizontalBlanking:
-                    EndHorizontalBlanking = value;
+                case CrtControllerRegister.HorizontalBlankingEnd:
+                    HorizontalBlankingEnd = value;
                     break;
 
-                case CrtControllerRegister.StartHorizontalRetrace:
-                    StartHorizontalRetrace = value;
+                case CrtControllerRegister.HorizontalRetraceStart:
+                    HorizontalRetraceStart = value;
                     break;
 
-                case CrtControllerRegister.EndHorizontalRetrace:
-                    EndHorizontalRetrace = value;
+                case CrtControllerRegister.HorizontalRetraceEnd:
+                    HorizontalRetraceEnd = value;
                     break;
 
                 case CrtControllerRegister.VerticalTotal:
@@ -187,8 +187,8 @@ namespace Spice86.Aeon.Emulator.Video
                     PresetRowScan = value;
                     break;
 
-                case CrtControllerRegister.MaximumScanLine:
-                    MaximumScanLine = value;
+                case CrtControllerRegister.CharacterCellHeight:
+                    CharacterCellHeight = value;
                     break;
 
                 case CrtControllerRegister.CursorStart:
@@ -239,12 +239,12 @@ namespace Spice86.Aeon.Emulator.Video
                     UnderlineLocation = value;
                     break;
 
-                case CrtControllerRegister.StartVerticalBlanking:
-                    StartVerticalBlanking = value;
+                case CrtControllerRegister.VerticalBlankingStart:
+                    VerticalBlankingStart = value;
                     break;
 
-                case CrtControllerRegister.EndVerticalBlanking:
-                    EndVerticalBlanking = value;
+                case CrtControllerRegister.VerticalBlankingEnd:
+                    VerticalBlankingEnd = value;
                     break;
 
                 case CrtControllerRegister.CrtModeControl:

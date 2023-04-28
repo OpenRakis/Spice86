@@ -1,6 +1,6 @@
 namespace Spice86.Aeon.Emulator.Video.Registers.Sequencer;
 
-public class MapMaskRegister {
+public class PlaneMaskRegister {
     public byte Value { get; set; } = 0xF;
 
     public bool Plane0Enabled {

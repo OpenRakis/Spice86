@@ -67,15 +67,15 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.CrtControllerUnderlineLocation = aeonCard.CrtControllerRegisters.UnderlineLocation;
         VideoCard.CrtControllerVerticalTotal = aeonCard.CrtControllerRegisters.VerticalTotal;
         VideoCard.CrtControllerCrtModeControl = aeonCard.CrtControllerRegisters.CrtModeControl;
-        VideoCard.CrtControllerEndHorizontalBlanking = aeonCard.CrtControllerRegisters.EndHorizontalBlanking;
-        VideoCard.CrtControllerEndHorizontalDisplay = aeonCard.CrtControllerRegisters.EndHorizontalDisplay;
-        VideoCard.CrtControllerEndHorizontalRetrace = aeonCard.CrtControllerRegisters.EndHorizontalRetrace;
-        VideoCard.CrtControllerEndVerticalBlanking = aeonCard.CrtControllerRegisters.EndVerticalBlanking;
-        VideoCard.CrtControllerMaximumScanLine = aeonCard.CrtControllerRegisters.MaximumScanLine;
+        VideoCard.CrtControllerEndHorizontalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingEnd;
+        VideoCard.CrtControllerEndHorizontalDisplay = aeonCard.CrtControllerRegisters.HorizontalDisplayEnd;
+        VideoCard.CrtControllerEndHorizontalRetrace = aeonCard.CrtControllerRegisters.HorizontalRetraceEnd;
+        VideoCard.CrtControllerEndVerticalBlanking = aeonCard.CrtControllerRegisters.VerticalBlankingEnd;
+        VideoCard.CrtControllerMaximumScanLine = aeonCard.CrtControllerRegisters.CharacterCellHeight;
         VideoCard.CrtControllerPresetRowScan = aeonCard.CrtControllerRegisters.PresetRowScan;
-        VideoCard.CrtControllerStartHorizontalBlanking = aeonCard.CrtControllerRegisters.StartHorizontalBlanking;
-        VideoCard.CrtControllerStartHorizontalRetrace = aeonCard.CrtControllerRegisters.StartHorizontalRetrace;
-        VideoCard.CrtControllerStartVerticalBlanking = aeonCard.CrtControllerRegisters.StartHorizontalBlanking;
+        VideoCard.CrtControllerStartHorizontalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingStart;
+        VideoCard.CrtControllerStartHorizontalRetrace = aeonCard.CrtControllerRegisters.HorizontalRetraceStart;
+        VideoCard.CrtControllerStartVerticalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingStart;
         VideoCard.CrtControllerVerticalDisplayEnd = aeonCard.CrtControllerRegisters.VerticalDisplayEnd;
         VideoCard.CrtControllerVerticalRetraceEnd = aeonCard.CrtControllerRegisters.VerticalRetraceEnd;
         VideoCard.CrtControllerVerticalRetraceStart = aeonCard.CrtControllerRegisters.VerticalRetraceStart;
@@ -99,17 +99,17 @@ public partial class DebugViewModel : ObservableObject {
 
         VideoCard.GraphicsBitMask = aeonCard.GraphicsControllerRegisters.BitMask;
         VideoCard.GraphicsColorCompare = aeonCard.GraphicsControllerRegisters.ColorCompare;
-        VideoCard.GraphicsGraphicsMode = aeonCard.GraphicsControllerRegisters.GraphicsMode;
-        VideoCard.GraphicsMiscellaneousGraphics = aeonCard.GraphicsControllerRegisters.MiscellaneousGraphics;
-        VideoCard.GraphicsReadMapSelect = aeonCard.GraphicsControllerRegisters.ReadMapSelect;
+        VideoCard.GraphicsGraphicsMode = aeonCard.GraphicsControllerRegisters.GraphicsModeRegister.Value;
+        VideoCard.GraphicsMiscellaneousGraphics = aeonCard.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.Value;
+        VideoCard.GraphicsReadMapSelect = aeonCard.GraphicsControllerRegisters.ReadMapSelectRegister.Value;
         VideoCard.GraphicsSetResetExpanded = aeonCard.GraphicsControllerRegisters.SetReset.Expanded;
-        VideoCard.GraphicsColorDontCareExpanded = aeonCard.GraphicsControllerRegisters.ColorDontCare.Expanded;
+        VideoCard.GraphicsColorDontCareExpanded = aeonCard.GraphicsControllerRegisters.ColorDontCare;
         VideoCard.GraphicsEnableSetResetExpanded = aeonCard.GraphicsControllerRegisters.EnableSetReset.Expanded;
 
         VideoCard.SequencerReset = aeonCard.SequencerRegisters.ResetRegister.Value;
         VideoCard.SequencerClockingMode = aeonCard.SequencerRegisters.ClockingModeRegister.Value;
         VideoCard.SequencerCharacterMapSelect = aeonCard.SequencerRegisters.CharacterMapSelectRegister.Value;
-        VideoCard.SequencerMapMaskExpanded = aeonCard.SequencerRegisters.MapMaskRegister.MaskValue.Expanded;
+        VideoCard.SequencerMapMaskExpanded = aeonCard.SequencerRegisters.PlaneMaskRegister.MaskValue.Expanded;
         VideoCard.SequencerSequencerMemoryMode = aeonCard.SequencerRegisters.MemoryModeRegister.Value;
 
         VideoCard.TextConsoleHeight = aeonCard.TextConsole.Height;

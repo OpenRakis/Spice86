@@ -48,8 +48,8 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private Color _dacWriteColor;
     private bool _internalPaletteAccessDisabled;
     private VideoModeId _previousVideoMode;
-    public GeneralRegisters GeneralRegisters => _vgaRegisters.GeneralRegisters;
-    private readonly VgaRegisters _vgaRegisters;
+    public GeneralRegisters GeneralRegisters => _videoState.GeneralRegisters;
+    private readonly VideoState _videoState;
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
         base(machine, configuration, loggerService) {
@@ -58,14 +58,19 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _state = machine.Cpu.State;
         _gui = gui;
 
-        _vgaRegisters = new VgaRegisters();
-
+        
+        // Initialize registers and other state.
+        _videoState = new VideoState();
+        
+        // Initialize video memory
+        var memoryDevice = new VideoMemory(0x20000, this, 0xA0000, _videoState);
+        _machine.Memory.RegisterMapping(0xA0000, 0x20000, memoryDevice);
+        
+        
+        
         unsafe {
             VideoRam = new nint(NativeMemory.AllocZeroed(TotalVramBytes));
         }
-
-        var memoryDevice = new VideoMemory(0x20000, this, 0xA0000);
-        _machine.Memory.RegisterMapping(0xA0000, 0x20000, memoryDevice);
 
         // InitializeStaticFunctionalityTable();
         TextConsole = new TextConsole(this, _bios.ScreenColumns, _bios.ScreenRows);
@@ -351,7 +356,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case Ports.SequencerData:
                 bool previousChain4Mode = SequencerRegisters.MemoryModeRegister.Chain4Mode;
-                if (SequencerRegisters.SequencerAddress == SequencerRegister.MapMask) {
+                if (SequencerRegisters.SequencerAddress == SequencerRegister.PlaneMask) {
                     if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                         _logger.Verbose("[{Port:X4}] Write to Sequencer register {Register}: {Value:X2} {Explained}", port, SequencerRegisters.SequencerAddress, value, SequencerRegisters.Explain(value));
                     }
@@ -404,12 +409,12 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case Ports.CrtControllerData or Ports.CrtControllerDataAlt or Ports.CrtControllerDataAltMirror1 or Ports.CrtControllerDataAltMirror2:
                 int previousVerticalEnd = CrtControllerRegisters.VerticalDisplayEnd;
-                int previousMaximumScanLine = CrtControllerRegisters.MaximumScanLine & 0x1F;
+                int previousMaximumScanLine = CrtControllerRegisters.CharacterCellHeight & 0x1F;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Write to CRT register {Register}: {Value:X2} {Explained}", port, _crtRegister, value, _crtRegister.Explain(value));
                 }
                 CrtControllerRegisters.WriteRegister(_crtRegister, value);
-                if (previousMaximumScanLine != (CrtControllerRegisters.MaximumScanLine & 0x1F)) {
+                if (previousMaximumScanLine != (CrtControllerRegisters.CharacterCellHeight & 0x1F)) {
                     ChangeMaximumScanLine(previousMaximumScanLine);
                 }
                 if (previousVerticalEnd != CrtControllerRegisters.VerticalDisplayEnd) {
@@ -460,17 +465,17 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     /// <summary>
     ///     Gets the VGA graphics controller.
     /// </summary>
-    public GraphicsControllerRegisters GraphicsControllerRegisters => _vgaRegisters.GraphicsControllerRegisters;
+    public GraphicsControllerRegisters GraphicsControllerRegisters => _videoState.GraphicsControllerRegisters;
 
     /// <summary>
     ///     Gets the VGA sequencer.
     /// </summary>
-    public SequencerRegisters SequencerRegisters => _vgaRegisters.SequencerRegisters;
+    public SequencerRegisters SequencerRegisters => _videoState.SequencerRegisters;
 
     /// <summary>
     ///     Gets the VGA CRT controller.
     /// </summary>
-    public CrtControllerRegisters CrtControllerRegisters => _vgaRegisters.CrtControllerRegisters;
+    public CrtControllerRegisters CrtControllerRegisters => _videoState.CrtControllerRegisters;
 
     /// <summary>
     ///     Gets the current display mode.
@@ -480,7 +485,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     /// <summary>
     ///     Gets the VGA attribute controller.
     /// </summary>
-    public AttributeControllerRegisters AttributeControllerRegisters => _vgaRegisters.AttributeControllerRegisters;
+    public AttributeControllerRegisters AttributeControllerRegisters => _videoState.AttributeControllerRegisters;
 
     /// <summary>
     ///     Gets a pointer to the emulated video RAM.
@@ -690,22 +695,4 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         _gui?.SetResolution(CurrentMode.PixelWidth, CurrentMode.PixelHeight, MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0));
     }
 
-}
-
-public class VgaRegisters : IVideoRegisters {
-    public VgaRegisters() {
-        DacRegisters = new DacRegisters();
-        GeneralRegisters = new GeneralRegisters();
-        SequencerRegisters = new SequencerRegisters();
-        CrtControllerRegisters = new CrtControllerRegisters();
-        GraphicsControllerRegisters = new GraphicsControllerRegisters();
-        AttributeControllerRegisters = new AttributeControllerRegisters();
-    }
-
-    public DacRegisters DacRegisters { get; }
-    public GeneralRegisters GeneralRegisters { get; }
-    public SequencerRegisters SequencerRegisters { get; }
-    public CrtControllerRegisters CrtControllerRegisters { get; }
-    public GraphicsControllerRegisters GraphicsControllerRegisters { get; }
-    public AttributeControllerRegisters AttributeControllerRegisters { get; }
 }

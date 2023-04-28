@@ -100,11 +100,11 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets the value of the LineCompare register.
         /// </summary>
-        public int LineCompare => _crtControllerRegisters.LineCompare | ((_crtControllerRegisters.Overflow & (1 << 4)) << 4) | ((_crtControllerRegisters.MaximumScanLine & (1 << 6)) << 3);
+        public int LineCompare => _crtControllerRegisters.LineCompare | ((_crtControllerRegisters.Overflow & (1 << 4)) << 4) | ((_crtControllerRegisters.CharacterCellHeight & (1 << 6)) << 3);
         /// <summary>
         /// Gets the value of the StartVerticalBlanking register.
         /// </summary>
-        public int StartVerticalBlanking => _crtControllerRegisters.StartVerticalBlanking | ((_crtControllerRegisters.Overflow & (1 << 3)) << 5) | ((_crtControllerRegisters.MaximumScanLine & (1 << 5)) << 4);
+        public int StartVerticalBlanking => _crtControllerRegisters.VerticalBlankingStart | ((_crtControllerRegisters.Overflow & (1 << 3)) << 5) | ((_crtControllerRegisters.CharacterCellHeight & (1 << 5)) << 4);
         /// <summary>
         /// Gets a pointer to the emulated video RAM.
         /// </summary>
@@ -205,14 +205,14 @@ namespace Spice86.Aeon.Emulator.Video
             }
 
             int stride;
-            _crtControllerRegisters.MaximumScanLine = 0x40;
+            _crtControllerRegisters.CharacterCellHeight = 0x40;
 
             if (VideoModeType == VideoModeType.Text)
             {
                 video.TextConsole.Width = Width;
                 video.TextConsole.Height = Height;
                 stride = Width * 2;
-                _crtControllerRegisters.MaximumScanLine |= 0x0F;
+                _crtControllerRegisters.CharacterCellHeight |= 0x0F;
             }
             else
             {

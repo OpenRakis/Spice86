@@ -30,16 +30,16 @@ namespace Spice86.Aeon.Emulator.Video
         public override string ToString() => $"0x{Packed:x2}";
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint Unpack(uint v) {
+        private static uint Unpack(uint value) {
             if (Bmi2.IsSupported)
-                return Bmi2.ParallelBitDeposit(v, 0x01010101);
-            return (v | (v << 7) | (v << 14) | (v << 21)) & 0x01010101u;
+                return Bmi2.ParallelBitDeposit(value, 0x01010101);
+            return (value | (value << 7) | (value << 14) | (value << 21)) & 0x1010101u;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint Pack(uint v) {
+        private static uint Pack(uint value) {
             if (Bmi2.IsSupported)
-                return Bmi2.ParallelBitExtract(v, 0x01010101);
-            return v & 0x1 | (v & 0x100) >> 7 | (v & 0x10000) >> 14 | (v & 0x1000000) >> 21;
+                return Bmi2.ParallelBitExtract(value, 0x01010101);
+            return value & 0x1 | (value & 0x100) >> 7 | (value & 0x10000) >> 14 | (value & 0x1000000) >> 21;
         }
     }
 }

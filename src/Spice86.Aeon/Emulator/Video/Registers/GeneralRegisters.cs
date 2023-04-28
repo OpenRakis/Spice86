@@ -20,8 +20,8 @@ public class GeneralRegisters {
 }
 
 public enum Polarity {
-    Positive,
-    Negative
+    Negative,
+    Positive
 }
 
 public enum ClockSelect {

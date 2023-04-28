@@ -68,8 +68,8 @@ public static class RegisterExtensions {
                 break;
             case SequencerRegister.ClockingMode:
                 break;
-            case SequencerRegister.MapMask:
-                return string.Format("Planes: {0}{1}{2}{3}", (value & 0x01) == 0x01 ? "." : "#", (value & 0x02) == 0x02 ? "." : "#", (value & 0x04) == 0x04 ? "." : "#", (value & 0x08) == 0x08 ? "." : "#");
+            case SequencerRegister.PlaneMask:
+                return $"Planes: {((value & 0x01) == 0x01 ? "." : "#")}{((value & 0x02) == 0x02 ? "." : "#")}{((value & 0x04) == 0x04 ? "." : "#")}{((value & 0x08) == 0x08 ? "." : "#")}";
             case SequencerRegister.CharacterMapSelect:
                 break;
             case SequencerRegister.SequencerMemoryMode:
@@ -88,15 +88,15 @@ public static class RegisterExtensions {
         switch (register) {
             case CrtControllerRegister.HorizontalTotal:
                 break;
-            case CrtControllerRegister.EndHorizontalDisplay:
+            case CrtControllerRegister.HorizontalDisplayEnd:
                 break;
-            case CrtControllerRegister.StartHorizontalBlanking:
+            case CrtControllerRegister.HorizontalBlankingStart:
                 break;
-            case CrtControllerRegister.EndHorizontalBlanking:
+            case CrtControllerRegister.HorizontalBlankingEnd:
                 break;
-            case CrtControllerRegister.StartHorizontalRetrace:
+            case CrtControllerRegister.HorizontalRetraceStart:
                 break;
-            case CrtControllerRegister.EndHorizontalRetrace:
+            case CrtControllerRegister.HorizontalRetraceEnd:
                 break;
             case CrtControllerRegister.VerticalTotal:
                 break;
@@ -104,7 +104,7 @@ public static class RegisterExtensions {
                 break;
             case CrtControllerRegister.PresetRowScan:
                 break;
-            case CrtControllerRegister.MaximumScanLine:
+            case CrtControllerRegister.CharacterCellHeight:
                 return string.Format(
                     "[0-4]Maximum scan line: {0}, [5]Start Vertical Blanking bit9: {1}, [6]Line Compare bit9: {2}, [7]Scan Doubling: {3}",
                     value & 0x1F,
@@ -139,9 +139,9 @@ public static class RegisterExtensions {
                     (value & 0x20) == 0x20 ? "Enabled" : "Disabled",
                     (value & 0x40) == 0x40 ? "Enabled" : "Disabled"
                 );
-            case CrtControllerRegister.StartVerticalBlanking:
+            case CrtControllerRegister.VerticalBlankingStart:
                 break;
-            case CrtControllerRegister.EndVerticalBlanking:
+            case CrtControllerRegister.VerticalBlankingEnd:
                 break;
             case CrtControllerRegister.CrtModeControl:
                 return string.Format(
