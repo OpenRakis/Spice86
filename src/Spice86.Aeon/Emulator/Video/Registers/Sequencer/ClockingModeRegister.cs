@@ -3,9 +3,7 @@ namespace Spice86.Aeon.Emulator.Video.Registers.Sequencer;
 /// <summary>
 /// This read/write register has an index of hex 01; its address is hex 03C5.
 /// </summary>
-public class ClockingModeRegister {
-    public byte Value { get; set; } = 0b000011;
-        
+public class ClockingModeRegister : VgaRegisterBase {
     /// <summary>
     /// When set to 0, the 8/9 Dot Clocks field (bit 0) directs the sequencer to generate character clocks 9 dots wide;
     /// when set to 1, it directs the sequencer to generate character clocks 8 dots wide. The 9-dot mode is for
@@ -13,8 +11,8 @@ public class ClockingModeRegister {
     /// through DF. All other modes must use 8 dots per character clock.
     /// </summary>
     public int DotsPerClock {
-        get => (Value & 0x1) != 0 ? 8 : 9;
-        set => Value = (byte)(Value & 0xFE | (value == 8 ? 0x1 : 0));
+        get => GetBit(0) ? 8 : 9;
+        set => SetBit(0, value == 8);
     }
 
     /// <summary>
@@ -24,8 +22,8 @@ public class ClockingModeRegister {
     /// registers
     /// </summary>
     public bool ShiftLoad {
-        get => (Value & 0x4) != 0;
-        set => Value = (byte)(Value & 0xFB | (value ? 0x4 : 0));
+        get => GetBit(2);
+        set => SetBit(2, value);
     }
 
     /// <summary>
@@ -35,8 +33,8 @@ public class ClockingModeRegister {
     /// horizontal PEL modes.
     /// </summary>
     public bool DotClock {
-        get => (Value & 0x8) != 0;
-        set => Value = (byte)(Value & 0xF7 | (value ? 0x8 : 0));
+        get => GetBit(3);
+        set => SetBit(3, value);
     }
 
     /// <summary>
@@ -45,8 +43,8 @@ public class ClockingModeRegister {
     /// clock, which is useful when 32 bits are fetched per cycle and chained together in the shift registers.
     /// </summary>
     public bool Shift4 {
-        get => (Value & 0x10) != 0;
-        set => Value = (byte)(Value & 0xEF | (value ? 0x10 : 0));
+        get => GetBit(4);
+        set => SetBit(4, value);
     }
 
     /// <summary>
@@ -55,8 +53,7 @@ public class ClockingModeRegister {
     /// used for rapid full-screen updates.
     /// </summary>
     public bool ScreenOff {
-        get => (Value & 0x20) != 0;
-        set => Value = (byte)(Value & 0xDF | (value ? 0x20 : 0));
+        get => GetBit(5);
+        set => SetBit(5, value);
     }
-        
 }

@@ -19,13 +19,13 @@ namespace Spice86.Aeon.Emulator.Video.Modes
         public Planar4(int width, int height, int bpp, int fontHeight, VideoModeType modeType, IAeonVgaCard video)
             : base(width, height, bpp, true, fontHeight, modeType, video)
         {
-            unsafe
-            {
-                videoRam = (uint*)video.VideoRam.ToPointer();
-            }
-
-            _graphicsControllerRegisters = video.GraphicsControllerRegisters;
-            _sequencerRegisters = video.SequencerRegisters;
+            // unsafe
+            // {
+            //     videoRam = (uint*)video.VideoRam.ToPointer();
+            // }
+            //
+            // _graphicsControllerRegisters = video.GraphicsControllerRegisters;
+            // _sequencerRegisters = video.SequencerRegisters;
         }
 
         public override byte GetVramByte(uint offset)

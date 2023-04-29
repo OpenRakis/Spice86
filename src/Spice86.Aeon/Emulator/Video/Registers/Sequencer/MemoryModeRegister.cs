@@ -1,15 +1,13 @@
 namespace Spice86.Aeon.Emulator.Video.Registers.Sequencer;
 
-public class MemoryModeRegister {
-    public byte Value { get; set; } = 0b0010;
-
+public class MemoryModeRegister : VgaRegisterBase {
     /// <summary>
     /// When set to 1, the Extended Memory field (bit 1) enables the video memory from 64KB to 256KB. This
     /// bit must be set to 1 to enable the character map selection.
     /// </summary>
     public bool ExtendedMemory {
-        get => (Value & 0x02) != 0;
-        set => Value = (byte)(Value & 0xFD | (value ? 0x02 : 0x00));
+        get => GetBit(1);
+        set => SetBit(1, value);
     }
 
     /// <summary>
@@ -18,8 +16,8 @@ public class MemoryModeRegister {
     /// and the maps are accessed according to the value in the Map Mask register (hex 02).
     /// </summary>
     public bool OddEvenMode {
-        get => (Value & 0x04) == 0;
-        set => Value = (byte)(Value & 0xFB | (value ? 0x00 : 0x04));
+        get => GetBit(2);
+        set => SetBit(2, value);
     }
 
     /// <summary>
@@ -28,8 +26,7 @@ public class MemoryModeRegister {
     /// set to 1, this bit causes the 2 low-order bits to select the map accessed
     /// </summary>
     public bool Chain4Mode {
-        get => (Value & 0x08) != 0;
-        set => Value = (byte)(Value & 0xF7 | (value ? 0x08 : 0x00));
+        get => GetBit(3);
+        set => SetBit(3, value);
     }
-
 }

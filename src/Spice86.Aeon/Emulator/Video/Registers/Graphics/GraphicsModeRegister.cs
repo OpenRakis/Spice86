@@ -1,8 +1,6 @@
 namespace Spice86.Aeon.Emulator.Video.Registers.Graphics;
 
-public class GraphicsModeRegister {
-    public byte Value { get; set; }
-
+public class GraphicsModeRegister : VgaRegisterBase {
     /// <summary>
     /// Write Mode 0:
     ///   Each of the four display memory planes is written with the CPU data rotated by the number of counts in GR3[2:0]. If a bit in GR1[3:0] is
@@ -20,8 +18,8 @@ public class GraphicsModeRegister {
     ///   logical AND of GR8 and the rotated CPU data. The SR and Function Select fields are ignored in Write mode 3.
     /// </summary>
     public WriteMode WriteMode {
-        get => (WriteMode)(Value & 0x7);
-        set => Value = (byte)(Value & ~0x7 | (int)value & 0x7);
+        get => (WriteMode)GetBits(2, 0);
+        set => SetBits(2, 0, (byte)value);
     }
 
     /// <summary>
@@ -36,8 +34,8 @@ public class GraphicsModeRegister {
     ///   the corresponding plane comparison is forced to match.
     /// </summary>
     public ReadMode ReadMode {
-        get => (Value & 0x08) == 0 ? ReadMode.ReadMode0 : ReadMode.ReadMode1;
-        set => Value = (byte)(value == ReadMode.ReadMode0 ? Value & ~0x08 : Value | 0x08);
+        get => GetBit(3) ? ReadMode.ReadMode1 : ReadMode.ReadMode0;
+        set => SetBit(3, value == ReadMode.ReadMode1);
     }
 
     /// <summary>
@@ -45,8 +43,8 @@ public class GraphicsModeRegister {
     /// to the opposite value as Spice86.Aeon.Emulator.Video.Registers.Sequencer.MemoryModeRegister.OddEvenMode.
     /// </summary>
     public bool OddEven {
-        get => (Value & 0x10) != 0;
-        set => Value = (byte)(value ? Value | 0x10 : Value & ~0x10);
+        get => GetBit(4);
+        set => SetBit(4, value);
     }
 
     /// <summary>
@@ -54,8 +52,8 @@ public class GraphicsModeRegister {
     /// this bit is programmed to ‘0’, the Video Shift registers are configured for EGA compatibility.
     /// </summary>
     public ShiftRegisterMode ShiftRegisterMode {
-        get => (Value & 0x20) == 0 ? ShiftRegisterMode.Cga : ShiftRegisterMode.Ega;
-        set => Value = (byte)(value == ShiftRegisterMode.Cga ? Value & ~0x20 : Value | 0x20);
+        get => GetBit(5) ? ShiftRegisterMode.Cga : ShiftRegisterMode.Ega;
+        set => SetBit(5, value == ShiftRegisterMode.Cga);
     }
 
     /// <summary>
@@ -63,8 +61,8 @@ public class GraphicsModeRegister {
     ///  programmed to ‘0’, the Video Shift registers are configured for 16-, 4-, or 2-color modes.
     /// </summary>
     public bool In256ColorMode {
-        get => (Value & 0x40) != 0;
-        set => Value = (byte)(value ? Value | 0x40 : Value & ~0x40);
+        get => GetBit(6);
+        set => SetBit(6, value);
     }
 }
 

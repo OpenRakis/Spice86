@@ -1,15 +1,13 @@
 namespace Spice86.Aeon.Emulator.Video.Registers.Graphics;
 
-public class MiscellaneousGraphicsRegister {
-    public byte Value { get; set; } = 0b0010;
-
+public class MiscellaneousGraphicsRegister : VgaRegisterBase {
     /// <summary>
     /// If this bit is programmed to ‘1’, the CL-GD542X functions in Graphics (A.P.A.) modes. If this bit is programmed to ‘0’,
     /// the device functions in Text (A.N.) modes.
     /// </summary>
     public bool GraphicsMode {
-        get => (Value & 0x01) != 0;
-        set => Value = (byte)(Value & ~0x01 | (value ? 0x01 : 0));
+        get => GetBit(0);
+        set => SetBit(0, value);
     }
 
     /// <summary>
@@ -17,8 +15,8 @@ public class MiscellaneousGraphicsRegister {
     /// addresses to access Planes 0 and 2, and odd host addresses to access Planes 1 and 3. This mode is useful for MDA emulation.
     /// </summary>
     public bool ChainOddMapsToEven {
-        get => (Value & 0x02) != 0;
-        set => Value = (byte)(Value & ~0x02 | (value ? 0x02 : 0));
+        get => GetBit(1);
+        set => SetBit(1, value);
     }
 
     /// <summary>
@@ -29,8 +27,8 @@ public class MiscellaneousGraphicsRegister {
     /// | 2   | 0xB000       |  32K   |
     /// | 3   | 0xB800       |  32K   |
     /// </summary>
-    public int MemoryMap {
-        get => (Value & 0b00001100) >> 2;
-        set => Value = (byte)(Value & 0b11110011 | (value & 0x03) << 2);
+    public byte MemoryMap {
+        get => GetBits(3, 2);
+        set => SetBits(3, 2, value);
     }
 }

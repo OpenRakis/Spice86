@@ -4,16 +4,15 @@ namespace Spice86.Aeon.Emulator.Video.Registers.General;
 /// The address for this read-only register is address hex 03DA or 03BA.
 /// Do not write to this register.
 /// </summary>
-public class InputStatusRegister1 {
-    public byte Value { get; set; }
+public class InputStatusRegister1 : VgaRegisterBase {
 
     /// <summary>
     /// When the Vertical Retrace field (bit 3) is 1, it indicates a vertical retrace interval. This bit can be programmed,
     /// through the Vertical Retrace End register, to generate an interrupt at the start of the vertical retrace.
     /// </summary>
     public bool VerticalRetrace {
-        get => (Value & 0x08) != 0;
-        set => Value = (byte)(Value & 0xF7 | (value ? 0x08 : 0x00));
+        get => GetBit(3);
+        set => SetBit(3, value);
     }
 
     /// <summary>
@@ -24,7 +23,7 @@ public class InputStatusRegister1 {
     /// degradation.
     /// </summary>
     public bool DisplayEnable {
-        get => (Value & 0x01) != 0;
-        set => Value = (byte)(Value & 0xFE | (value ? 0x01 : 0x00));
+        get => GetBit(0);
+        set => SetBit(0, value);
     }
 }

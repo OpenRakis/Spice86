@@ -88,7 +88,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets the number of bytes from the beginning of video memory where the display data starts.
         /// </summary>
-        public virtual int StartOffset => _crtControllerRegisters.StartAddress;
+        public virtual int StartOffset => _crtControllerRegisters.ScreenStartAddress;
         /// <summary>
         /// Gets the number of pixels to shift the output display horizontally.
         /// </summary>
@@ -96,15 +96,15 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets the value to add to StartOffest.
         /// </summary>
-        public int BytePanning => (_crtControllerRegisters.PresetRowScan >> 5) & 0x3;
+        public int BytePanning => _crtControllerRegisters.PresetRowScanRegister.BytePanning;
         /// <summary>
         /// Gets the value of the LineCompare register.
         /// </summary>
-        public int LineCompare => _crtControllerRegisters.LineCompare | ((_crtControllerRegisters.Overflow & (1 << 4)) << 4) | ((_crtControllerRegisters.CharacterCellHeight & (1 << 6)) << 3);
+        public int LineCompare => _crtControllerRegisters.LineCompareValue;
         /// <summary>
         /// Gets the value of the StartVerticalBlanking register.
         /// </summary>
-        public int StartVerticalBlanking => _crtControllerRegisters.VerticalBlankingStart | ((_crtControllerRegisters.Overflow & (1 << 3)) << 5) | ((_crtControllerRegisters.CharacterCellHeight & (1 << 5)) << 4);
+        public int StartVerticalBlanking => _crtControllerRegisters.VerticalBlankingStartValue;
         /// <summary>
         /// Gets a pointer to the emulated video RAM.
         /// </summary>
@@ -189,48 +189,48 @@ namespace Spice86.Aeon.Emulator.Video
         /// <param name="background">Background color of character to write.</param>
         internal abstract void WriteCharacter(int x, int y, int index, byte foreground, byte background);
 
-        /// <summary>
-        /// Performs any necessary initialization upon entering the video mode.
-        /// </summary>
-        /// <param name="video">The video device.</param>
-        public virtual void InitializeMode(IAeonVgaCard video) {
-            return;
-            // video.VirtualMachine.PhysicalMemory.Bios.CharacterPointHeight = (ushort)FontHeight;
-
-            unsafe
-            {
-                byte* ptr = (byte*)VideoRam.ToPointer();
-                for (int i = 0; i < vramSize; i++)
-                    ptr[i] = 0;
-            }
-
-            int stride;
-            _crtControllerRegisters.CharacterCellHeight = 0x40;
-
-            if (VideoModeType == VideoModeType.Text)
-            {
-                video.TextConsole.Width = Width;
-                video.TextConsole.Height = Height;
-                stride = Width * 2;
-                _crtControllerRegisters.CharacterCellHeight |= 0x0F;
-            }
-            else
-            {
-                video.TextConsole.Width = Width / 8;
-                video.TextConsole.Height = Height / FontHeight;
-                if (BitsPerPixel < 8)
-                    stride = Width / 8;
-                else
-                    stride = Width;
-            }
-
-            _crtControllerRegisters.Overflow = 0x1F;
-            _crtControllerRegisters.LineCompare = 0xFF;
-            _crtControllerRegisters.Offset = (byte)(stride / 2u);
-            _crtControllerRegisters.StartAddress = 0;
-            // video.Sequencer.MapMask = 0x0F;
-            video.GraphicsControllerRegisters.BitMask = 0xFF;
-        }
+        // /// <summary>
+        // /// Performs any necessary initialization upon entering the video mode.
+        // /// </summary>
+        // /// <param name="video">The video device.</param>
+        // public virtual void InitializeMode(IAeonVgaCard video) {
+        //     return;
+        //     // video.VirtualMachine.PhysicalMemory.Bios.CharacterPointHeight = (ushort)FontHeight;
+        //
+        //     unsafe
+        //     {
+        //         byte* ptr = (byte*)VideoRam.ToPointer();
+        //         for (int i = 0; i < vramSize; i++)
+        //             ptr[i] = 0;
+        //     }
+        //
+        //     int stride;
+        //     _crtControllerRegisters.CharacterCellHeightRegister = 0x40;
+        //
+        //     if (VideoModeType == VideoModeType.Text)
+        //     {
+        //         video.TextConsole.Width = Width;
+        //         video.TextConsole.Height = Height;
+        //         stride = Width * 2;
+        //         _crtControllerRegisters.CharacterCellHeightRegister |= 0x0F;
+        //     }
+        //     else
+        //     {
+        //         video.TextConsole.Width = Width / 8;
+        //         video.TextConsole.Height = Height / FontHeight;
+        //         if (BitsPerPixel < 8)
+        //             stride = Width / 8;
+        //         else
+        //             stride = Width;
+        //     }
+        //
+        //     _crtControllerRegisters.OverflowRegister = 0x1F;
+        //     _crtControllerRegisters.LineCompare = 0xFF;
+        //     _crtControllerRegisters.Offset = (byte)(stride / 2u);
+        //     _crtControllerRegisters.ScreenStartAddressHigh = 0;
+        //     // video.Sequencer.MapMask = 0x0F;
+        //     video.GraphicsControllerRegisters.BitMask = 0xFF;
+        // }
 
         /// <summary>
         /// Returns a pointer to video RAM for the display mode.

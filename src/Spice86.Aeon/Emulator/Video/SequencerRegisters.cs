@@ -25,7 +25,7 @@ namespace Spice86.Aeon.Emulator.Video {
         /// <summary>
         /// Gets the Map Mask register.
         /// </summary>
-        public PlaneMaskRegister PlaneMaskRegister { get; } = new();
+        public PlaneMaskRegister PlaneMaskRegister { get; } = new(0x0F);
 
         /// <summary>
         /// Gets the Character Map Select register.
@@ -65,7 +65,7 @@ namespace Spice86.Aeon.Emulator.Video {
                     ClockingModeRegister.Value = value;
                     break;
                 case SequencerRegister.PlaneMask:
-                    PlaneMaskRegister.MaskValue = value;
+                    PlaneMaskRegister.Value = value;
                     break;
                 case SequencerRegister.CharacterMapSelect:
                     CharacterMapSelectRegister.Value = value;

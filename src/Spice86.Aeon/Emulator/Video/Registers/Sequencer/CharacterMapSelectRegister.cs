@@ -1,4 +1,4 @@
-namespace Spice86.Aeon.Emulator.Video;
+namespace Spice86.Aeon.Emulator.Video.Registers.Sequencer;
 
 /// <summary>
 /// This register has an index of hex 03; its address is hex 03C5. In alphanumeric modes, bit 3 of the attribute byte normally defines
@@ -8,8 +8,7 @@ namespace Spice86.Aeon.Emulator.Video;
 /// 2. Select different values for character map A and character map B.
 /// This function is supported by BIOS and is a function call within the character generator routines.
 /// </summary>
-public class CharacterMapSelectRegister {
-    public byte Value { get; set; }
+public class CharacterMapSelectRegister : VgaRegisterBase {
 
     /// <summary>
     /// Map A is the area of plane 2 containing the character font table used to generate characters when attribute bit 3 is set to 1.

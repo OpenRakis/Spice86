@@ -1,156 +1,269 @@
-namespace Spice86.Aeon.Emulator.Video
-{
+namespace Spice86.Aeon.Emulator.Video {
+    using Spice86.Aeon.Emulator.Video.Registers.CrtController;
+
     /// <summary>
     /// Emulates the VGA CRT Controller registers.
     /// </summary>
-    public sealed class CrtControllerRegisters
-    {
+    public sealed class CrtControllerRegisters {
+        private int _screenStartAddress;
+        private int _textCursorLocation;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CrtControllerRegisters"/> class.
         /// </summary>
-        public CrtControllerRegisters()
-        {
+        public CrtControllerRegisters() {
         }
 
         /// <summary>
-        /// Gets or sets the Horizontal Total register.
+        /// This eight-bit field specifies the total number of character clocks per horizontal period. The Character
+        /// Clock (derived from the VCLK according to the character width) is counted in the Character Counter. The
+        /// value of the Character Counter is compared with the value in this register to provide the basic horizontal
+        /// timing. All horizontal and vertical timing is eventually derived from the register. The value in the
+        /// register is ‘Total number of character times minus five’.
         /// </summary>
         public byte HorizontalTotal { get; set; }
+
         /// <summary>
-        /// Gets or sets the End Horizontal Display register.
+        /// This register specifies the number of character clocks during horizontal display time. For text modes, this
+        /// is the number of characters; for graphics modes, this is the number of pixels per scan lines divided by the
+        /// number of pixels per character clock.The value in the register is the number of character clocks minus one.
         /// </summary>
         public byte HorizontalDisplayEnd { get; set; }
+
         /// <summary>
-        /// Gets or sets the Start Horizontal Blanking register.
+        /// The contents of this register specify the Character Count where Horizontal Blanking starts. For text modes,
+        /// this is the number of characters; for graphics modes, this is the number of pixels per scanline divided by
+        /// the number of pixels per character clock. The value programmed into CR2 must always be larger than the
+        /// value programmed into CR1.
         /// </summary>
         public byte HorizontalBlankingStart { get; set; }
+
         /// <summary>
         /// Gets or sets the End Horizontal Blanking register.
         /// </summary>
-        public byte HorizontalBlankingEnd { get; set; }
+        public HorizontalBlankingEndRegister HorizontalBlankingEndRegister { get; } = new();
+
         /// <summary>
-        /// Gets or sets the Start Horizontal Retrace register.
+        /// Gets the full 6-bit value of the Horizontal Blanking End register.
         /// </summary>
-        public byte HorizontalRetraceStart { get; set; }
+        public byte HorizontalBlankingEndValue => (byte)(HorizontalBlankingEndRegister.HorizontalBlankingEnd | HorizontalSyncEndRegister.HorizontalBlankingEnd5);
+
+        /// <summary>
+        /// This field specifies the Character Count where HSYNC (Horizontal Sync) becomes active. Adjusting the value
+        /// in this field moves the display horizontally on the screen. The Horizontal Sync Start must be programmed to
+        /// a value equal to or greater than Horizontal Display End. The time from Horizontal Sync Start to Horizontal
+        /// Total must be equal to or greater than four character times.
+        /// </summary>
+        public byte HorizontalSyncStart { get; set; }
+
         /// <summary>
         /// Gets or sets the End Horizontal Retrace register.
         /// </summary>
-        public byte HorizontalRetraceEnd { get; set; }
+        public HorizontalSyncEndRegister HorizontalSyncEndRegister { get; set; } = new();
+
         /// <summary>
-        /// Gets or sets the Vertical Total register.
+        /// This field is the low-order eight bits of a ten-bit field that defines the total number of scan lines per
+        /// frame. This field is extended with CR5[7] and CR5[0]. The value programmed into the Vertical Total field
+        /// is the total number of scan lines minus two.
         /// </summary>
         public byte VerticalTotal { get; set; }
+
+        /// <summary>
+        /// Gets the full 10-bit value of the Vertical Total register.
+        /// </summary>
+        public int VerticalTotalValue => VerticalTotal | OverflowRegister.VerticalTotal89;
+
         /// <summary>
         /// Gets or sets the Overflow register.
         /// </summary>
-        public byte Overflow { get; set; }
+        public OverflowRegister OverflowRegister { get; set; } = new();
+
         /// <summary>
         /// Gets or sets the Preset Row Scan register.
         /// </summary>
-        public byte PresetRowScan { get; set; }
+        public PresetRowScanRegister PresetRowScanRegister { get; set; } = new();
+
         /// <summary>
         /// Gets or sets the Maximum Scan Line register.
         /// </summary>
-        public byte CharacterCellHeight { get; set; }
+        public CharacterCellHeightRegister CharacterCellHeightRegister { get; set; } = new();
+
         /// <summary>
         /// Gets or sets the Cursor Start register.
         /// </summary>
-        public byte CursorStart { get; set; }
+        public TextCursorStartRegister TextCursorStartRegister { get; set; } = new();
+
         /// <summary>
         /// Gets or sets the Cursor End register.
         /// </summary>
-        public byte CursorEnd { get; set; }
+        public TextCursorEndRegister TextCursorEndRegister { get; set; } = new();
+
         /// <summary>
-        /// Gets or sets the Start Address register.
+        /// Gets or sets the Start Address High register.
         /// </summary>
-        public ushort StartAddress { get; set; }
+        public byte ScreenStartAddressHigh {
+            get => (byte)(_screenStartAddress >> 8);
+            set => _screenStartAddress = _screenStartAddress & 0xFF | value << 8;
+        }
+
         /// <summary>
-        /// Gets or sets the Cursor Location register.
+        /// Gets or sets the Start Address Low register.
         /// </summary>
-        public ushort CursorLocation { get; set; }
+        public byte ScreenStartAddressLow {
+            get => (byte)(_screenStartAddress & 0xFF);
+            set => _screenStartAddress = _screenStartAddress & 0xFF00 | value;
+        }
+
         /// <summary>
-        /// Gets or sets the Vertical Retrace Start register.
+        /// Gets or sets the Start Address of memory to be displayed.
         /// </summary>
-        public byte VerticalRetraceStart { get; set; }
+        public int ScreenStartAddress {
+            get => _screenStartAddress;
+            set {
+                ScreenStartAddressHigh = (byte)((value >> 8) & 0xFF);
+                ScreenStartAddressLow = (byte)(value & 0xFF);
+            }
+        }
+
         /// <summary>
-        /// Gets or sets the Vertical Retrace End register.
+        /// Gets or sets the Text Cursor Location High register.
         /// </summary>
-        public byte VerticalRetraceEnd { get; set; }
+        public byte TextCursorLocationHigh {
+            get => (byte)(_textCursorLocation >> 8);
+            set => _textCursorLocation = _textCursorLocation & 0xFF | value << 8;
+        }
+
+        /// <summary>
+        /// Gets or sets the Text Cursor Location Low register.
+        /// </summary>
+        public byte TextCursorLocationLow {
+            get => (byte)(_screenStartAddress & 0xFF);
+            set => _textCursorLocation = _textCursorLocation & 0xFF00 | value;
+        }
+
+        /// <summary>
+        /// Gets or sets the Address of the Text Cursor Location.
+        /// </summary>
+        public int TextCursorLocation {
+            get => _textCursorLocation;
+            set {
+                TextCursorLocationHigh = (byte)((value >> 8) & 0xFF);
+                TextCursorLocationLow = (byte)(value & 0xFF);
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the Vertical Sync Start register.
+        /// </summary>
+        public byte VerticalSyncStart { get; set; }
+
+        /// <summary>
+        /// Gets the full 10-bit value of the Vertical Sync Start register.
+        /// </summary>
+        public int VerticalSyncStartValue => VerticalSyncStart | OverflowRegister.VerticalSyncStart89;
+
+        /// <summary>
+        /// Gets or sets the Vertical Sync End register.
+        /// </summary>
+        public VerticalSyncEndRegister VerticalSyncEndRegister { get; set; } = new();
+
         /// <summary>
         /// Gets or sets the Vertical Display End register.
         /// </summary>
         public byte VerticalDisplayEnd { get; set; }
+
         /// <summary>
-        /// Gets or sets the Offset register.
+        /// Gets the full 10-bit value of the Vertical Display End register.
+        /// </summary>
+        public int VerticalDisplayEndValue => VerticalDisplayEnd | OverflowRegister.VerticalDisplayEnd89;
+
+        /// <summary>
+        /// This register specifies the distance in display memory between the beginnings of adjacent character rows or
+        /// scan lines. At the beginning of each scanline (except the first), the address where data fetching begins is
+        /// calculated by adding the contents of this register to the beginning address of the previous scanline or
+        /// character row. The offset is left-shifted one or two bit positions, depending on CR17[6].
         /// </summary>
         public byte Offset { get; set; }
+
         /// <summary>
         /// Gets or sets the Underline Location register.
         /// </summary>
-        public byte UnderlineLocation { get; set; }
+        public UnderlineRowScanlineRegister UnderlineRowScanlineRegister { get; set; } = new();
+
         /// <summary>
-        /// Gets or sets the Start Vertical Blanking register.
+        /// The Vertical Blank Start field specifies the scanline where Vertical Blank is to begin. The low-order eight
+        /// bits of that field are in this register.
         /// </summary>
         public byte VerticalBlankingStart { get; set; }
+
+        /// <summary>
+        /// Gets the full 10-bit value of the Vertical Blanking Start register.
+        /// </summary>
+        public int VerticalBlankingStartValue => VerticalBlankingStart | OverflowRegister.VerticalBlankingStart8 | CharacterCellHeightRegister.VerticalBlankStart9;
+
         /// <summary>
         /// Gets or sets the End Vertical Blanking register.
         /// </summary>
         public byte VerticalBlankingEnd { get; set; }
+
         /// <summary>
         /// Gets or sets the CRT Mode Control register.
         /// </summary>
-        public byte CrtModeControl { get; set; }
+        public CrtModeControlRegister CrtModeControlRegister { get; set; } = new();
+
         /// <summary>
         /// Gets or sets the Line Compare register.
         /// </summary>
         public byte LineCompare { get; set; }
 
         /// <summary>
+        /// Gets the full 10-bit value of the Line Compare register.
+        /// </summary>
+        public int LineCompareValue => LineCompare | OverflowRegister.LineCompare8 | CharacterCellHeightRegister.LineCompare9;
+
+        /// <summary>
         /// Returns the current value of a CRT controller register.
         /// </summary>
         /// <param name="address">Address of register to read.</param>
         /// <returns>Current value of the register.</returns>
-        public byte ReadRegister(CrtControllerRegister address)
-        {
-            return address switch
-            {
+        public byte ReadRegister(CrtControllerRegister address) {
+            return address switch {
                 CrtControllerRegister.HorizontalTotal => HorizontalTotal,
                 CrtControllerRegister.HorizontalDisplayEnd => HorizontalDisplayEnd,
                 CrtControllerRegister.HorizontalBlankingStart => HorizontalBlankingStart,
-                CrtControllerRegister.HorizontalBlankingEnd => HorizontalBlankingEnd,
-                CrtControllerRegister.HorizontalRetraceStart => HorizontalRetraceStart,
-                CrtControllerRegister.HorizontalRetraceEnd => HorizontalRetraceEnd,
+                CrtControllerRegister.HorizontalBlankingEnd => HorizontalBlankingEndRegister.Value,
+                CrtControllerRegister.HorizontalRetraceStart => HorizontalSyncStart,
+                CrtControllerRegister.HorizontalRetraceEnd => HorizontalSyncEndRegister.Value,
                 CrtControllerRegister.VerticalTotal => VerticalTotal,
-                CrtControllerRegister.Overflow => Overflow,
-                CrtControllerRegister.PresetRowScan => PresetRowScan,
-                CrtControllerRegister.CharacterCellHeight => CharacterCellHeight,
-                CrtControllerRegister.CursorStart => CursorStart,
-                CrtControllerRegister.CursorEnd => CursorEnd,
-                CrtControllerRegister.StartAddressHigh => (byte)(StartAddress >> 8),
-                CrtControllerRegister.StartAddressLow => (byte)StartAddress,
-                CrtControllerRegister.CursorLocationHigh => (byte)(CursorLocation >> 8),
-                CrtControllerRegister.CursorLocationLow => (byte)CursorLocation,
-                CrtControllerRegister.VerticalRetraceStart => VerticalRetraceStart,
-                CrtControllerRegister.VerticalRetraceEnd => VerticalRetraceEnd,
+                CrtControllerRegister.Overflow => OverflowRegister.Value,
+                CrtControllerRegister.PresetRowScan => PresetRowScanRegister.Value,
+                CrtControllerRegister.CharacterCellHeight => CharacterCellHeightRegister.Value,
+                CrtControllerRegister.CursorStart => TextCursorStartRegister.Value,
+                CrtControllerRegister.CursorEnd => TextCursorEndRegister.Value,
+                CrtControllerRegister.StartAddressHigh => ScreenStartAddressHigh,
+                CrtControllerRegister.StartAddressLow => ScreenStartAddressLow,
+                CrtControllerRegister.CursorLocationHigh => TextCursorLocationHigh,
+                CrtControllerRegister.CursorLocationLow => TextCursorLocationLow,
+                CrtControllerRegister.VerticalRetraceStart => VerticalSyncStart,
+                CrtControllerRegister.VerticalRetraceEnd => VerticalSyncEndRegister.Value,
                 CrtControllerRegister.VerticalDisplayEnd => VerticalDisplayEnd,
                 CrtControllerRegister.Offset => Offset,
-                CrtControllerRegister.UnderlineLocation => UnderlineLocation,
+                CrtControllerRegister.UnderlineLocation => UnderlineRowScanlineRegister.Value,
                 CrtControllerRegister.VerticalBlankingStart => VerticalBlankingStart,
                 CrtControllerRegister.VerticalBlankingEnd => VerticalBlankingEnd,
-                CrtControllerRegister.CrtModeControl => CrtModeControl,
+                CrtControllerRegister.CrtModeControl => CrtModeControlRegister.Value,
                 CrtControllerRegister.LineCompare => LineCompare,
                 _ => 0
             };
         }
+
         /// <summary>
         /// Writes to a CRT controller register.
         /// </summary>
         /// <param name="address">Address of register to write.</param>
         /// <param name="value">Value to write to register.</param>
-        public void WriteRegister(CrtControllerRegister address, byte value)
-        {
-            switch (address)
-            {
+        public void WriteRegister(CrtControllerRegister address, byte value) {
+            switch (address) {
                 case CrtControllerRegister.HorizontalTotal:
                     HorizontalTotal = value;
                     break;
@@ -164,15 +277,15 @@ namespace Spice86.Aeon.Emulator.Video
                     break;
 
                 case CrtControllerRegister.HorizontalBlankingEnd:
-                    HorizontalBlankingEnd = value;
+                    HorizontalBlankingEndRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.HorizontalRetraceStart:
-                    HorizontalRetraceStart = value;
+                    HorizontalSyncStart = value;
                     break;
 
                 case CrtControllerRegister.HorizontalRetraceEnd:
-                    HorizontalRetraceEnd = value;
+                    HorizontalSyncEndRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.VerticalTotal:
@@ -180,51 +293,47 @@ namespace Spice86.Aeon.Emulator.Video
                     break;
 
                 case CrtControllerRegister.Overflow:
-                    Overflow = value;
+                    OverflowRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.PresetRowScan:
-                    PresetRowScan = value;
+                    PresetRowScanRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.CharacterCellHeight:
-                    CharacterCellHeight = value;
+                    CharacterCellHeightRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.CursorStart:
-                    CursorStart = value;
+                    TextCursorStartRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.CursorEnd:
-                    CursorEnd = value;
+                    TextCursorEndRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.StartAddressHigh:
-                    StartAddress &= 0x000000FF;
-                    StartAddress |= (ushort)(value << 8);
+                    ScreenStartAddressHigh = value;
                     break;
 
                 case CrtControllerRegister.StartAddressLow:
-                    StartAddress &= 0x0000FF00;
-                    StartAddress |= value;
+                    ScreenStartAddressLow = value;
                     break;
 
                 case CrtControllerRegister.CursorLocationHigh:
-                    CursorLocation &= 0x000000FF;
-                    CursorLocation |= (ushort)(value << 8);
+                    TextCursorLocationHigh = value;
                     break;
 
                 case CrtControllerRegister.CursorLocationLow:
-                    CursorLocation &= 0x0000FF00;
-                    CursorLocation |= value;
+                    TextCursorLocationLow = value;
                     break;
 
                 case CrtControllerRegister.VerticalRetraceStart:
-                    VerticalRetraceStart = value;
+                    VerticalSyncStart = value;
                     break;
 
                 case CrtControllerRegister.VerticalRetraceEnd:
-                    VerticalRetraceEnd = value;
+                    VerticalSyncEndRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.VerticalDisplayEnd:
@@ -236,7 +345,7 @@ namespace Spice86.Aeon.Emulator.Video
                     break;
 
                 case CrtControllerRegister.UnderlineLocation:
-                    UnderlineLocation = value;
+                    UnderlineRowScanlineRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.VerticalBlankingStart:
@@ -248,7 +357,7 @@ namespace Spice86.Aeon.Emulator.Video
                     break;
 
                 case CrtControllerRegister.CrtModeControl:
-                    CrtModeControl = value;
+                    CrtModeControlRegister.Value = value;
                     break;
 
                 case CrtControllerRegister.LineCompare:

@@ -50,10 +50,11 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private VideoModeId _previousVideoMode;
     public GeneralRegisters GeneralRegisters => _videoState.GeneralRegisters;
     private readonly VideoState _videoState;
+    private IVgaRenderer _renderer;
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
         base(machine, configuration, loggerService) {
-        _logger = loggerService.WithLogLevel(LogEventLevel.Debug);
+        _logger = loggerService.WithLogLevel(LogEventLevel.Information);
         _bios = machine.Bios;
         _state = machine.Cpu.State;
         _gui = gui;
@@ -66,7 +67,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
         var memoryDevice = new VideoMemory(0x20000, this, 0xA0000, _videoState);
         _machine.Memory.RegisterMapping(0xA0000, 0x20000, memoryDevice);
         
-        
+        _renderer = new Renderer(_videoState, memoryDevice);
         
         unsafe {
             VideoRam = new nint(NativeMemory.AllocZeroed(TotalVramBytes));
@@ -409,12 +410,12 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
             case Ports.CrtControllerData or Ports.CrtControllerDataAlt or Ports.CrtControllerDataAltMirror1 or Ports.CrtControllerDataAltMirror2:
                 int previousVerticalEnd = CrtControllerRegisters.VerticalDisplayEnd;
-                int previousMaximumScanLine = CrtControllerRegisters.CharacterCellHeight & 0x1F;
+                int previousMaximumScanLine = CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Write to CRT register {Register}: {Value:X2} {Explained}", port, _crtRegister, value, _crtRegister.Explain(value));
                 }
                 CrtControllerRegisters.WriteRegister(_crtRegister, value);
-                if (previousMaximumScanLine != (CrtControllerRegisters.CharacterCellHeight & 0x1F)) {
+                if (previousMaximumScanLine != CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight) {
                     ChangeMaximumScanLine(previousMaximumScanLine);
                 }
                 if (previousVerticalEnd != CrtControllerRegisters.VerticalDisplayEnd) {
@@ -498,6 +499,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public TextConsole TextConsole { get; }
 
     public byte GetVramByte(uint address) {
+        // throw new NotSupportedException();
         return CurrentMode.GetVramByte(address);
     }
     public void SetVramByte(uint address, byte value) {
@@ -507,6 +509,11 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public void Render(uint address, object width, object height, nint pixelsAddress) {
         _presenter ??= GetPresenter();
         _presenter.Update(pixelsAddress);
+    }
+
+    public void Render(uint address, IntPtr buffer, int size) {
+        _renderer.Render(buffer, size);
+        
     }
 
     public void TickRetrace() {

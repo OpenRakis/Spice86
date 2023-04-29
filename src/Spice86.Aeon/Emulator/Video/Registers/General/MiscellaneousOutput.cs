@@ -1,8 +1,6 @@
 namespace Spice86.Aeon.Emulator.Video.Registers.General;
 
-public class MiscellaneousOutput {
-    public byte Value { get; set; }
-
+public class MiscellaneousOutput : VgaRegisterBase {
     /// <summary>
     /// The I/O Address Select field (bit 0) selects the CRT controller addresses. When set to 0, this bit sets the
     /// CRT controller addresses to hex 03Bx and the address for the Input Status Register 1 to hex 03BA for
@@ -11,16 +9,16 @@ public class MiscellaneousOutput {
     /// addresses to the Feature Control register are affected in the same manner.
     /// </summary>
     public IoAddressSelect IoAddressSelect {
-        get => (Value & 0x01) != 0 ? IoAddressSelect.Color : IoAddressSelect.Monochrome;
-        set => Value = (byte)(Value & 0xFE | (value == IoAddressSelect.Color ? 0x01 : 0x00));
+        get => GetBit(0) ? IoAddressSelect.Color : IoAddressSelect.Monochrome;
+        set => SetBit(0, value == IoAddressSelect.Color);
     }
 
     /// <summary>
     /// When set to 0, the Enable RAM field (bit 1) disables address decode for the display buffer from the system
     /// </summary>
     public bool EnableRam {
-        get => (Value & 0x02) != 0;
-        set => Value = (byte)(Value & 0xFD | (value ? 0x02 : 0x00));    
+        get => GetBit(1);
+        set => SetBit(1, value);
     }
 
     /// <summary>
@@ -29,8 +27,8 @@ public class MiscellaneousOutput {
     /// 28.4 MHz.
     /// </summary>
     public ClockSelect ClockSelect {
-        get => (ClockSelect)((Value & 0x0C) >> 2);
-        set => Value = (byte)(Value & 0xF3 | (int)value << 2);
+        get => (ClockSelect)GetBits(3, 2);
+        set => SetBits(3, 2, (byte)value);
     }
 
     /// <summary>
@@ -38,8 +36,8 @@ public class MiscellaneousOutput {
     /// only odd memory locations are selected. If this bit is programmed to ‘1’, only even memory locations are selected.
     /// </summary>
     public bool OddPageSelect {
-        get => (Value & 0x20) == 0;
-        set => Value = (byte)(Value & ~0x20 | (value ? 0x00 : 0x20));    
+        get => GetBit(5);
+        set => SetBit(5, value);
     }
 
     /// <summary>
@@ -47,8 +45,8 @@ public class MiscellaneousOutput {
     /// 6 select the vertical size
     /// </summary>
     public Polarity HorizontalSyncPolarity {
-        get => (Value & 0x40) != 0 ? Polarity.Negative : Polarity.Positive;
-        set => Value = (byte)(Value & 0xBF | (value == Polarity.Negative ? 0x40 : 0x00));
+        get => GetBit(6) ? Polarity.Negative : Polarity.Positive;
+        set => SetBit(6, value == Polarity.Negative);
     }
 
     /// <summary>
@@ -56,8 +54,8 @@ public class MiscellaneousOutput {
     /// works with bit 6 to determine the vertical size.
     /// </summary>
     public Polarity VerticalSyncPolarity {
-        get => (Value & 0x80) != 0 ? Polarity.Negative : Polarity.Positive;
-        set => Value = (byte)(Value & 0x7F | (value == Polarity.Negative ? 0x80 : 0x00));
+        get => GetBit(7) ? Polarity.Negative : Polarity.Positive;
+        set => SetBit(7, value == Polarity.Negative);
     }
 
     public int VerticalSize => HorizontalSyncPolarity switch {
@@ -66,5 +64,4 @@ public class MiscellaneousOutput {
         Polarity.Negative when VerticalSyncPolarity == Polarity.Negative => 480,
         _ => 0
     };
-
 }

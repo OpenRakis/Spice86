@@ -56,29 +56,29 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.AttributeControllerHorizontalPixelPanning = aeonCard.AttributeControllerRegisters.HorizontalPixelPanning;
 
         VideoCard.CrtControllerOffset = aeonCard.CrtControllerRegisters.Offset;
-        VideoCard.CrtControllerOverflow = aeonCard.CrtControllerRegisters.Overflow;
-        VideoCard.CrtControllerCrtModeControl = aeonCard.CrtControllerRegisters.CrtModeControl;
-        VideoCard.CrtControllerCursorEnd = aeonCard.CrtControllerRegisters.CursorEnd;
-        VideoCard.CrtControllerCursorLocation = aeonCard.CrtControllerRegisters.CursorLocation;
-        VideoCard.CrtControllerCursorStart = aeonCard.CrtControllerRegisters.CursorStart;
+        VideoCard.CrtControllerOverflow = aeonCard.CrtControllerRegisters.OverflowRegister.Value;
+        VideoCard.CrtControllerCrtModeControl = aeonCard.CrtControllerRegisters.CrtModeControlRegister.Value;
+        VideoCard.CrtControllerCursorEnd = aeonCard.CrtControllerRegisters.TextCursorEndRegister.Value;
+        VideoCard.CrtControllerCursorLocation = (ushort)aeonCard.CrtControllerRegisters.TextCursorLocation;
+        VideoCard.CrtControllerCursorStart = aeonCard.CrtControllerRegisters.TextCursorStartRegister.Value;
         VideoCard.CrtControllerHorizontalTotal = aeonCard.CrtControllerRegisters.HorizontalTotal;
         VideoCard.CrtControllerLineCompare = aeonCard.CrtControllerRegisters.LineCompare;
-        VideoCard.CrtControllerStartAddress = aeonCard.CrtControllerRegisters.StartAddress;
-        VideoCard.CrtControllerUnderlineLocation = aeonCard.CrtControllerRegisters.UnderlineLocation;
+        VideoCard.CrtControllerStartAddress = aeonCard.CrtControllerRegisters.ScreenStartAddressHigh;
+        VideoCard.CrtControllerUnderlineLocation = aeonCard.CrtControllerRegisters.UnderlineRowScanlineRegister.Value;
         VideoCard.CrtControllerVerticalTotal = aeonCard.CrtControllerRegisters.VerticalTotal;
-        VideoCard.CrtControllerCrtModeControl = aeonCard.CrtControllerRegisters.CrtModeControl;
-        VideoCard.CrtControllerEndHorizontalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingEnd;
+        VideoCard.CrtControllerCrtModeControl = aeonCard.CrtControllerRegisters.CrtModeControlRegister.Value;
+        VideoCard.CrtControllerEndHorizontalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingEndRegister.Value;
         VideoCard.CrtControllerEndHorizontalDisplay = aeonCard.CrtControllerRegisters.HorizontalDisplayEnd;
-        VideoCard.CrtControllerEndHorizontalRetrace = aeonCard.CrtControllerRegisters.HorizontalRetraceEnd;
+        VideoCard.CrtControllerEndHorizontalRetrace = aeonCard.CrtControllerRegisters.HorizontalSyncEndRegister.Value;
         VideoCard.CrtControllerEndVerticalBlanking = aeonCard.CrtControllerRegisters.VerticalBlankingEnd;
-        VideoCard.CrtControllerMaximumScanLine = aeonCard.CrtControllerRegisters.CharacterCellHeight;
-        VideoCard.CrtControllerPresetRowScan = aeonCard.CrtControllerRegisters.PresetRowScan;
+        VideoCard.CrtControllerMaximumScanLine = aeonCard.CrtControllerRegisters.CharacterCellHeightRegister.Value;
+        VideoCard.CrtControllerPresetRowScan = aeonCard.CrtControllerRegisters.PresetRowScanRegister.Value;
         VideoCard.CrtControllerStartHorizontalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingStart;
-        VideoCard.CrtControllerStartHorizontalRetrace = aeonCard.CrtControllerRegisters.HorizontalRetraceStart;
+        VideoCard.CrtControllerStartHorizontalRetrace = aeonCard.CrtControllerRegisters.HorizontalSyncStart;
         VideoCard.CrtControllerStartVerticalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingStart;
         VideoCard.CrtControllerVerticalDisplayEnd = aeonCard.CrtControllerRegisters.VerticalDisplayEnd;
-        VideoCard.CrtControllerVerticalRetraceEnd = aeonCard.CrtControllerRegisters.VerticalRetraceEnd;
-        VideoCard.CrtControllerVerticalRetraceStart = aeonCard.CrtControllerRegisters.VerticalRetraceStart;
+        VideoCard.CrtControllerVerticalRetraceEnd = aeonCard.CrtControllerRegisters.VerticalSyncEndRegister.Value;
+        VideoCard.CrtControllerVerticalRetraceStart = aeonCard.CrtControllerRegisters.VerticalSyncStart;
         
         VideoCard.CurrentModeHeight = aeonCard.CurrentMode.Height;
         VideoCard.CurrentModeWidth = aeonCard.CurrentMode.Width;
@@ -109,7 +109,7 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.SequencerReset = aeonCard.SequencerRegisters.ResetRegister.Value;
         VideoCard.SequencerClockingMode = aeonCard.SequencerRegisters.ClockingModeRegister.Value;
         VideoCard.SequencerCharacterMapSelect = aeonCard.SequencerRegisters.CharacterMapSelectRegister.Value;
-        VideoCard.SequencerMapMaskExpanded = aeonCard.SequencerRegisters.PlaneMaskRegister.MaskValue.Expanded;
+        VideoCard.SequencerMapMaskExpanded = aeonCard.SequencerRegisters.PlaneMaskRegister.Value;
         VideoCard.SequencerSequencerMemoryMode = aeonCard.SequencerRegisters.MemoryModeRegister.Value;
 
         VideoCard.TextConsoleHeight = aeonCard.TextConsole.Height;

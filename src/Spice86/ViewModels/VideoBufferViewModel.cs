@@ -181,7 +181,9 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         _drawAction ??= () => {
             _frameRenderTimeWatch.Restart();
             using ILockedFramebuffer pixels = Bitmap.Lock();
-            _videoCard?.Render(Address, Width, Height, pixels.Address);
+            // _videoCard?.Render(Address, Width, Height, pixels.Address);
+            _videoCard?.Render(Address, pixels.Address, pixels.RowBytes * pixels.Size.Height);
+            
 
             Dispatcher.UIThread.Post(() => {
                 UIUpdateMethod?.Invoke();

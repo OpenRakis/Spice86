@@ -1,31 +1,28 @@
 namespace Spice86.Aeon.Emulator.Video.Registers.Sequencer;
 
-public class PlaneMaskRegister {
-    public byte Value { get; set; } = 0xF;
+public sealed class PlaneMaskRegister : VgaRegisterBase {
+    private byte _value;
 
-    public bool Plane0Enabled {
-        get => (Value & 0x1) != 0;
-        set => Value = (byte)(Value & 0xFE | (value ? 0x1 : 0));
-    }
-        
-    public bool Plane1Enabled {
-        get => (Value & 0x2) != 0;
-        set => Value = (byte)(Value & 0xFD | (value ? 0x2 : 0));
-    }
-        
-    public bool Plane2Enabled {
-        get => (Value & 0x4) != 0;
-        set => Value = (byte)(Value & 0xFB | (value ? 0x4 : 0));
-    }
-        
-    public bool Plane3Enabled {
-        get => (Value & 0x8) != 0;
-        set => Value = (byte)(Value & 0xF7 | (value ? 0x8 : 0));
+    public override byte Value {
+        get => _value;
+        set {
+            _value = value;
+            for (int i = 0; i < 8; i++) {
+                PlanesEnabled[i] = (value & 1 << i) != 0;
+            }
+        }
     }
 
+    public PlaneMaskRegister(byte value) {
+        Value = value;
+        PlanesEnabled = new bool[8];
+    }
+
+    public bool[] PlanesEnabled { get; }
+
+    [Obsolete("old aeon code")]
     public MaskValue MaskValue {
         get => Value;
         set => Value = value.Packed;
     }
-        
 }

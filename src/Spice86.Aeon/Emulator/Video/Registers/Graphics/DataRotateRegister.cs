@@ -1,14 +1,12 @@
 namespace Spice86.Aeon.Emulator.Video.Registers.Graphics;
 
-public class DataRotateRegister {
-    public byte Value { get; set; }
-
+public class DataRotateRegister : VgaRegisterBase {
     /// <summary>
     /// This field allows data from the CPU bus to be rotated up to seven bit positions prior to being altered by the SR logic. 
     /// </summary>
     public byte RotateCount {
-        get => Value;
-        set => Value = (byte)(value & 7);
+        get => GetBits(2, 0);
+        set => SetBits(2, 0, value);
     }
 
     /// <summary>
@@ -16,10 +14,9 @@ public class DataRotateRegister {
     /// result of this operation is written into display memory. This field is used for  Write mode 0 only.
     /// </summary>
     public FunctionSelect FunctionSelect {
-        get => (FunctionSelect)(Value >> 3 & 3);
-        set => Value = (byte)(Value & 7 | (byte)value << 3);
+        get => (FunctionSelect)GetBits(4, 3);
+        set => SetBits(4, 3, (byte)value);
     }
-    
 }
 
 public enum FunctionSelect {
