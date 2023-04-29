@@ -84,8 +84,8 @@ internal class VgaFunctions {
     }
 
     public VgaPort GetCrtControllerAddress() {
-        return (ReadMiscellaneousOutput() & 1) != 0 
-            ? VgaPort.CrtControllerAddressAlt 
+        return (ReadMiscellaneousOutput() & 1) != 0
+            ? VgaPort.CrtControllerAddressAlt
             : VgaPort.CrtControllerAddress;
     }
 
@@ -377,8 +377,8 @@ internal class VgaFunctions {
 
         // Set CRTC address VGA or MDA
         byte miscellaneousRegisterValue = videoMode.MiscellaneousRegisterValue;
-        VgaPort crtControllerPort = (miscellaneousRegisterValue & 1) == 0 
-            ? VgaPort.CrtControllerAddress 
+        VgaPort crtControllerPort = (miscellaneousRegisterValue & 1) == 0
+            ? VgaPort.CrtControllerAddress
             : VgaPort.CrtControllerAddressAlt;
 
         // Disable CRTC write protection
@@ -426,8 +426,9 @@ internal class VgaFunctions {
     }
 
     public void MemSet16(ushort segment, ushort offset, ushort value, int amount) {
+        amount /= 2;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-        for (int i = 0; i < amount >> 1; i++) {
+        for (int i = 0; i < amount; i += 2) {
             _memory.SetUint16((uint)(address + i), value);
         }
     }

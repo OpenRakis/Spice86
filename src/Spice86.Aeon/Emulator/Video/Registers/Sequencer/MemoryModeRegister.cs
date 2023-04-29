@@ -16,8 +16,8 @@ public class MemoryModeRegister : VgaRegisterBase {
     /// and the maps are accessed according to the value in the Map Mask register (hex 02).
     /// </summary>
     public bool OddEvenMode {
-        get => GetBit(2);
-        set => SetBit(2, value);
+        get => !GetBit(2);
+        set => SetBit(2, !value);
     }
 
     /// <summary>

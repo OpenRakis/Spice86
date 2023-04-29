@@ -13,8 +13,7 @@ public sealed class PlaneMaskRegister : VgaRegisterBase {
         }
     }
 
-    public PlaneMaskRegister(byte value) {
-        Value = value;
+    public PlaneMaskRegister() {
         PlanesEnabled = new bool[8];
     }
 

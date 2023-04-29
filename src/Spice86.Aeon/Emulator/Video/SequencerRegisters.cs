@@ -25,7 +25,7 @@ namespace Spice86.Aeon.Emulator.Video {
         /// <summary>
         /// Gets the Map Mask register.
         /// </summary>
-        public PlaneMaskRegister PlaneMaskRegister { get; } = new(0x0F);
+        public PlaneMaskRegister PlaneMaskRegister { get; } = new();
 
         /// <summary>
         /// Gets the Character Map Select register.
