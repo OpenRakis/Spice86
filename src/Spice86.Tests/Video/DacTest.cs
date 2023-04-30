@@ -3,7 +3,7 @@ namespace Spice86.Tests.Video;
 using FluentAssertions;
 
 using Spice86.Aeon.Emulator.Video;
-using Spice86.Aeon.Emulator.Video.Registers;
+using Spice86.Core.Emulator.Devices.Video.Registers;
 
 using System.Drawing;
 

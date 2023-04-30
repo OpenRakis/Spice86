@@ -41,83 +41,83 @@ public partial class DebugViewModel : ObservableObject {
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        AeonCard? aeonCard = _emulatorMachine?.VgaCard as AeonCard;
-        if (aeonCard is null) {
+        VideoState? videoState = _emulatorMachine?.VgaRegisters;
+        if (videoState is null) {
             return;
         }
 
-        VideoCard.DacReadIndex = aeonCard.DacRegisters.IndexRegisterReadMode;
-        VideoCard.DacWriteIndex = aeonCard.DacRegisters.IndexRegisterWriteMode;
+        VideoCard.DacReadIndex = videoState.DacRegisters.IndexRegisterReadMode;
+        VideoCard.DacWriteIndex = videoState.DacRegisters.IndexRegisterWriteMode;
 
-        VideoCard.AttributeControllerColorSelect = aeonCard.AttributeControllerRegisters.ColorSelectRegister.Value;
-        VideoCard.AttributeControllerOverscanColor = aeonCard.AttributeControllerRegisters.OverscanColor;
-        VideoCard.AttributeControllerAttributeModeControl = aeonCard.AttributeControllerRegisters.AttributeControllerModeRegister.Value;
-        VideoCard.AttributeControllerColorPlaneEnable = aeonCard.AttributeControllerRegisters.ColorPlaneEnableRegister.Value;
-        VideoCard.AttributeControllerHorizontalPixelPanning = aeonCard.AttributeControllerRegisters.HorizontalPixelPanning;
+        VideoCard.AttributeControllerColorSelect = videoState.AttributeControllerRegisters.ColorSelectRegister.Value;
+        VideoCard.AttributeControllerOverscanColor = videoState.AttributeControllerRegisters.OverscanColor;
+        VideoCard.AttributeControllerAttributeModeControl = videoState.AttributeControllerRegisters.AttributeControllerModeRegister.Value;
+        VideoCard.AttributeControllerColorPlaneEnable = videoState.AttributeControllerRegisters.ColorPlaneEnableRegister.Value;
+        VideoCard.AttributeControllerHorizontalPixelPanning = videoState.AttributeControllerRegisters.HorizontalPixelPanning;
 
-        VideoCard.CrtControllerOffset = aeonCard.CrtControllerRegisters.Offset;
-        VideoCard.CrtControllerOverflow = aeonCard.CrtControllerRegisters.OverflowRegister.Value;
-        VideoCard.CrtControllerCrtModeControl = aeonCard.CrtControllerRegisters.CrtModeControlRegister.Value;
-        VideoCard.CrtControllerCursorEnd = aeonCard.CrtControllerRegisters.TextCursorEndRegister.Value;
-        VideoCard.CrtControllerCursorLocation = (ushort)aeonCard.CrtControllerRegisters.TextCursorLocation;
-        VideoCard.CrtControllerCursorStart = aeonCard.CrtControllerRegisters.TextCursorStartRegister.Value;
-        VideoCard.CrtControllerHorizontalTotal = aeonCard.CrtControllerRegisters.HorizontalTotal;
-        VideoCard.CrtControllerLineCompare = aeonCard.CrtControllerRegisters.LineCompare;
-        VideoCard.CrtControllerStartAddress = aeonCard.CrtControllerRegisters.ScreenStartAddressHigh;
-        VideoCard.CrtControllerUnderlineLocation = aeonCard.CrtControllerRegisters.UnderlineRowScanlineRegister.Value;
-        VideoCard.CrtControllerVerticalTotal = aeonCard.CrtControllerRegisters.VerticalTotal;
-        VideoCard.CrtControllerCrtModeControl = aeonCard.CrtControllerRegisters.CrtModeControlRegister.Value;
-        VideoCard.CrtControllerEndHorizontalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingEndRegister.Value;
-        VideoCard.CrtControllerEndHorizontalDisplay = aeonCard.CrtControllerRegisters.HorizontalDisplayEnd;
-        VideoCard.CrtControllerEndHorizontalRetrace = aeonCard.CrtControllerRegisters.HorizontalSyncEndRegister.Value;
-        VideoCard.CrtControllerEndVerticalBlanking = aeonCard.CrtControllerRegisters.VerticalBlankingEnd;
-        VideoCard.CrtControllerMaximumScanLine = aeonCard.CrtControllerRegisters.CharacterCellHeightRegister.Value;
-        VideoCard.CrtControllerPresetRowScan = aeonCard.CrtControllerRegisters.PresetRowScanRegister.Value;
-        VideoCard.CrtControllerStartHorizontalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingStart;
-        VideoCard.CrtControllerStartHorizontalRetrace = aeonCard.CrtControllerRegisters.HorizontalSyncStart;
-        VideoCard.CrtControllerStartVerticalBlanking = aeonCard.CrtControllerRegisters.HorizontalBlankingStart;
-        VideoCard.CrtControllerVerticalDisplayEnd = aeonCard.CrtControllerRegisters.VerticalDisplayEnd;
-        VideoCard.CrtControllerVerticalRetraceEnd = aeonCard.CrtControllerRegisters.VerticalSyncEndRegister.Value;
-        VideoCard.CrtControllerVerticalRetraceStart = aeonCard.CrtControllerRegisters.VerticalSyncStart;
+        VideoCard.CrtControllerOffset = videoState.CrtControllerRegisters.Offset;
+        VideoCard.CrtControllerOverflow = videoState.CrtControllerRegisters.OverflowRegister.Value;
+        VideoCard.CrtControllerCrtModeControl = videoState.CrtControllerRegisters.CrtModeControlRegister.Value;
+        VideoCard.CrtControllerCursorEnd = videoState.CrtControllerRegisters.TextCursorEndRegister.Value;
+        VideoCard.CrtControllerCursorLocation = (ushort)videoState.CrtControllerRegisters.TextCursorLocation;
+        VideoCard.CrtControllerCursorStart = videoState.CrtControllerRegisters.TextCursorStartRegister.Value;
+        VideoCard.CrtControllerHorizontalTotal = videoState.CrtControllerRegisters.HorizontalTotal;
+        VideoCard.CrtControllerLineCompare = videoState.CrtControllerRegisters.LineCompare;
+        VideoCard.CrtControllerStartAddress = videoState.CrtControllerRegisters.ScreenStartAddressHigh;
+        VideoCard.CrtControllerUnderlineLocation = videoState.CrtControllerRegisters.UnderlineRowScanlineRegister.Value;
+        VideoCard.CrtControllerVerticalTotal = videoState.CrtControllerRegisters.VerticalTotal;
+        VideoCard.CrtControllerCrtModeControl = videoState.CrtControllerRegisters.CrtModeControlRegister.Value;
+        VideoCard.CrtControllerEndHorizontalBlanking = videoState.CrtControllerRegisters.HorizontalBlankingEndRegister.Value;
+        VideoCard.CrtControllerEndHorizontalDisplay = videoState.CrtControllerRegisters.HorizontalDisplayEnd;
+        VideoCard.CrtControllerEndHorizontalRetrace = videoState.CrtControllerRegisters.HorizontalSyncEndRegister.Value;
+        VideoCard.CrtControllerEndVerticalBlanking = videoState.CrtControllerRegisters.VerticalBlankingEnd;
+        VideoCard.CrtControllerMaximumScanLine = videoState.CrtControllerRegisters.CharacterCellHeightRegister.Value;
+        VideoCard.CrtControllerPresetRowScan = videoState.CrtControllerRegisters.PresetRowScanRegister.Value;
+        VideoCard.CrtControllerStartHorizontalBlanking = videoState.CrtControllerRegisters.HorizontalBlankingStart;
+        VideoCard.CrtControllerStartHorizontalRetrace = videoState.CrtControllerRegisters.HorizontalSyncStart;
+        VideoCard.CrtControllerStartVerticalBlanking = videoState.CrtControllerRegisters.HorizontalBlankingStart;
+        VideoCard.CrtControllerVerticalDisplayEnd = videoState.CrtControllerRegisters.VerticalDisplayEnd;
+        VideoCard.CrtControllerVerticalRetraceEnd = videoState.CrtControllerRegisters.VerticalSyncEndRegister.Value;
+        VideoCard.CrtControllerVerticalRetraceStart = videoState.CrtControllerRegisters.VerticalSyncStart;
         
-        VideoCard.CurrentModeHeight = aeonCard.CurrentMode.Height;
-        VideoCard.CurrentModeWidth = aeonCard.CurrentMode.Width;
-        VideoCard.CurrentModeStride = aeonCard.CurrentMode.Stride;
-        VideoCard.CurrentModeBytePanning = aeonCard.CurrentMode.BytePanning;
-        VideoCard.CurrentModeFontHeight = aeonCard.CurrentMode.FontHeight;
-        VideoCard.CurrentModeBitsPerPixel = aeonCard.CurrentMode.BitsPerPixel;
-        VideoCard.CurrentModeHorizontalPanning = aeonCard.CurrentMode.HorizontalPanning;
-        VideoCard.CurrentModeIsPlanar = aeonCard.CurrentMode.IsPlanar;
-        VideoCard.CurrentModeLineCompare = aeonCard.CurrentMode.LineCompare;
-        VideoCard.CurrentModeMouseWidth = aeonCard.CurrentMode.MouseWidth;
-        VideoCard.CurrentModeOriginalHeight = aeonCard.CurrentMode.OriginalHeight;
-        VideoCard.CurrentModePixelHeight = aeonCard.CurrentMode.PixelHeight;
-        VideoCard.CurrentModeStartOffset = aeonCard.CurrentMode.StartOffset;
-        VideoCard.CurrentModeActiveDisplayPage = aeonCard.CurrentMode.ActiveDisplayPage;
-        VideoCard.CurrentModeStartVerticalBlanking = aeonCard.CurrentMode.StartVerticalBlanking;
-        VideoCard.CurrentModeVideoModeType = (byte)aeonCard.CurrentMode.VideoModeType;
+        VideoCard.CurrentModeHeight = videoState.CurrentMode.Height;
+        VideoCard.CurrentModeWidth = videoState.CurrentMode.Width;
+        // VideoCard.CurrentModeStride = videoState.CurrentMode.Stride;
+        // VideoCard.CurrentModeBytePanning = videoState.CurrentMode.BytePanning;
+        // VideoCard.CurrentModeFontHeight = videoState.CurrentMode.FontHeight;
+        VideoCard.CurrentModeBitsPerPixel = videoState.CurrentMode.BitsPerPixel;
+        // VideoCard.CurrentModeHorizontalPanning = videoState.CurrentMode.HorizontalPanning;
+        // VideoCard.CurrentModeIsPlanar = videoState.CurrentMode.IsPlanar;
+        // VideoCard.CurrentModeLineCompare = videoState.CurrentMode.LineCompare;
+        // VideoCard.CurrentModeMouseWidth = videoState.CurrentMode.MouseWidth;
+        // VideoCard.CurrentModeOriginalHeight = videoState.CurrentMode.OriginalHeight;
+        // VideoCard.CurrentModePixelHeight = videoState.CurrentMode.PixelHeight;
+        // VideoCard.CurrentModeStartOffset = videoState.CurrentMode.StartOffset;
+        // VideoCard.CurrentModeActiveDisplayPage = videoState.CurrentMode.ActiveDisplayPage;
+        // VideoCard.CurrentModeStartVerticalBlanking = videoState.CurrentMode.StartVerticalBlanking;
+        // VideoCard.CurrentModeVideoModeType = (byte)videoState.CurrentMode.VideoModeType;
 
-        VideoCard.GraphicsBitMask = aeonCard.GraphicsControllerRegisters.BitMask;
-        VideoCard.GraphicsColorCompare = aeonCard.GraphicsControllerRegisters.ColorCompare;
-        VideoCard.GraphicsGraphicsMode = aeonCard.GraphicsControllerRegisters.GraphicsModeRegister.Value;
-        VideoCard.GraphicsMiscellaneousGraphics = aeonCard.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.Value;
-        VideoCard.GraphicsReadMapSelect = aeonCard.GraphicsControllerRegisters.ReadMapSelectRegister.Value;
-        VideoCard.GraphicsSetResetExpanded = aeonCard.GraphicsControllerRegisters.SetReset.Expanded;
-        VideoCard.GraphicsColorDontCareExpanded = aeonCard.GraphicsControllerRegisters.ColorDontCare;
-        VideoCard.GraphicsEnableSetResetExpanded = aeonCard.GraphicsControllerRegisters.EnableSetReset.Expanded;
+        VideoCard.GraphicsBitMask = videoState.GraphicsControllerRegisters.BitMask;
+        VideoCard.GraphicsColorCompare = videoState.GraphicsControllerRegisters.ColorCompare;
+        VideoCard.GraphicsGraphicsMode = videoState.GraphicsControllerRegisters.GraphicsModeRegister.Value;
+        VideoCard.GraphicsMiscellaneousGraphics = videoState.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.Value;
+        VideoCard.GraphicsReadMapSelect = videoState.GraphicsControllerRegisters.ReadMapSelectRegister.Value;
+        VideoCard.GraphicsSetResetExpanded = videoState.GraphicsControllerRegisters.SetReset.Expanded;
+        VideoCard.GraphicsColorDontCareExpanded = videoState.GraphicsControllerRegisters.ColorDontCare;
+        VideoCard.GraphicsEnableSetResetExpanded = videoState.GraphicsControllerRegisters.EnableSetReset.Expanded;
 
-        VideoCard.SequencerReset = aeonCard.SequencerRegisters.ResetRegister.Value;
-        VideoCard.SequencerClockingMode = aeonCard.SequencerRegisters.ClockingModeRegister.Value;
-        VideoCard.SequencerCharacterMapSelect = aeonCard.SequencerRegisters.CharacterMapSelectRegister.Value;
-        VideoCard.SequencerMapMaskExpanded = aeonCard.SequencerRegisters.PlaneMaskRegister.Value;
-        VideoCard.SequencerSequencerMemoryMode = aeonCard.SequencerRegisters.MemoryModeRegister.Value;
+        VideoCard.SequencerReset = videoState.SequencerRegisters.ResetRegister.Value;
+        VideoCard.SequencerClockingMode = videoState.SequencerRegisters.ClockingModeRegister.Value;
+        VideoCard.SequencerCharacterMapSelect = videoState.SequencerRegisters.CharacterMapSelectRegister.Value;
+        VideoCard.SequencerMapMaskExpanded = videoState.SequencerRegisters.PlaneMaskRegister.Value;
+        VideoCard.SequencerSequencerMemoryMode = videoState.SequencerRegisters.MemoryModeRegister.Value;
 
-        VideoCard.TextConsoleHeight = aeonCard.TextConsole.Height;
-        VideoCard.TextConsoleWidth = aeonCard.TextConsole.Width;
-        VideoCard.TextConsoleAnsiEnabled = aeonCard.TextConsole.AnsiEnabled;
-        VideoCard.TextConsoleBackgroundColor = aeonCard.TextConsole.BackgroundColor;
-        VideoCard.TextConsoleCursorPosition = aeonCard.TextConsole.CursorPosition.ToString();
-        VideoCard.TextConsoleForegroundColor = aeonCard.TextConsole.ForegroundColor;
+        // VideoCard.TextConsoleHeight = videoState.TextConsole.Height;
+        // VideoCard.TextConsoleWidth = videoState.TextConsole.Width;
+        // VideoCard.TextConsoleAnsiEnabled = videoState.TextConsole.AnsiEnabled;
+        // VideoCard.TextConsoleBackgroundColor = videoState.TextConsole.BackgroundColor;
+        // VideoCard.TextConsoleCursorPosition = videoState.TextConsole.CursorPosition.ToString();
+        // VideoCard.TextConsoleForegroundColor = videoState.TextConsole.ForegroundColor;
 
         if (_emulatorMachine is not null) {
             Machine.VideoBiosInt10HandlerIndex = _emulatorMachine.VideoBiosInt10Handler.Index;

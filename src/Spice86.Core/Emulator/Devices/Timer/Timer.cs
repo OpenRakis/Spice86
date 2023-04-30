@@ -34,14 +34,14 @@ public class Timer : DefaultIOPortHandler {
     private readonly Counter[] _counters = new Counter[3];
     private readonly DualPic _dualPic;
 
-    private readonly IVideoCard _vgaCard;
+    private readonly IVideoCard? _vgaCard;
 
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
     // retrace is in a separate counter because it needs to be controlled by the time multiplier unlike screen refresh
     private readonly Counter _vgaRetraceCounter;
 
-    public Timer(Machine machine, ILoggerService loggerService, DualPic dualPic, IVideoCard vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration, loggerService) {
+    public Timer(Machine machine, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration, loggerService) {
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         _cpu = machine.Cpu;
@@ -124,10 +124,10 @@ public class Timer : DefaultIOPortHandler {
         }
 
         if (_vgaRetraceCounter.ProcessActivation(cycles)) {
-            _vgaCard.TickRetrace();
+            _vgaCard?.TickRetrace();
         }
         if (_vgaScreenRefreshCounter.ProcessActivation(cycles)) {
-            _vgaCard.UpdateScreen();
+            _vgaCard?.UpdateScreen();
         }
     }
 

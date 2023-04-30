@@ -370,7 +370,8 @@ Supported custom commands:
                     return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
                 }
 
-                gui?.AddBuffer(_machine.VgaCard, address, scale, resolution[0], resolution[1]);
+                // Todo: Fix this
+                // gui?.AddBuffer(_machine.VgaIoPortHandler, address, scale, resolution[0], resolution[1]);
                 return _gdbIo.GenerateMessageToDisplayResponse($"Added buffer to view address {address}");
             } else {
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand action {action}");

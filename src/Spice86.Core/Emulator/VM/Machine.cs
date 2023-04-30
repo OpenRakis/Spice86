@@ -95,10 +95,9 @@ public class Machine : IDisposable {
 
     public TimerInt8Handler TimerInt8Handler { get; }
 
-    public IVideoCard VgaCard { get; }
-    
+    public VideoState VgaRegisters { get; set; }
+    public IIOPortHandler VgaIoPortHandler { get; }
     public VgaBios VideoBiosInt10Handler { get; }
-    
     public VgaRom VgaRom { get; }
 
     public ExpandedMemoryManager? Ems { get; set; }
@@ -144,10 +143,12 @@ public class Machine : IDisposable {
 
         DualPic = new DualPic(this, configuration, loggerService);
         Register(DualPic);
-        VgaCard = new AeonCard(this, loggerService, gui, configuration);
-        Register(VgaCard as IIOPortHandler ?? throw new InvalidOperationException());
 
-        Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
+        VgaRegisters = new VideoState();
+        VgaIoPortHandler = new VgaIoPortHandler(this, loggerService, configuration, VgaRegisters);
+        Register(VgaIoPortHandler);
+
+        Timer = new Timer(this, loggerService, DualPic, null, counterConfigurator, configuration);
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
         Register(Keyboard);

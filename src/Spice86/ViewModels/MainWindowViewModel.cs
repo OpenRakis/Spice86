@@ -456,7 +456,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 _loggerService,
                 this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
-            _videoCard = _programExecutor.Machine.VgaCard;
+            _videoCard = _programExecutor.Machine.VgaIoPortHandler;
             Dispatcher.UIThread.Post(() => IsMachineRunning = true);
             Dispatcher.UIThread.Post(() => ShowVideo = true);
             _programExecutor.Run();

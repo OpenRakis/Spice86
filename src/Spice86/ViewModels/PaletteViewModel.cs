@@ -9,7 +9,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Aeon.Emulator.Video;
-using Spice86.Aeon.Emulator.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared;
@@ -45,7 +44,7 @@ public partial class PaletteViewModel : ObservableObject {
     /// <param name="sender">Source of the event.</param>
     /// <param name="e">Unused EventArgs instance.</param>
     private void UpdateColors(object? sender, EventArgs e) {
-        AeonCard? videoCard = _machine?.VgaCard as AeonCard;
+        VgaIoPortHandler? videoCard = _machine?.VgaIoPortHandler as VgaIoPortHandler;
         if (videoCard is null) {
             return;
         }

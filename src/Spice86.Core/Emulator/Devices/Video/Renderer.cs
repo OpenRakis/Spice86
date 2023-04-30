@@ -1,26 +1,21 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Spice86.Aeon.Emulator.Video;
-using Spice86.Aeon.Emulator.Video.Registers;
-using Spice86.Aeon.Emulator.Video.Rendering;
-using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Memory;
-
-using System.Runtime.InteropServices;
 
 public class Renderer : IVgaRenderer {
     private readonly IMemoryDevice _memory;
     private readonly IVideoState _state;
-    public int Width { get; set; }
-    public int Height { get; set; }
-    public int BitsPerPixel { get; set; }
-    public int Stride => BitsPerPixel * Width;
-    public int Size => Stride * Height;
 
     public Renderer(IVideoState state, IMemoryDevice memory) {
         _state = state;
         _memory = memory;
     }
+
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public int BitsPerPixel { get; set; }
+    public int Stride => BitsPerPixel * Width;
+    public int Size => Stride * Height;
 
     public void Render(IntPtr bufferAddress, int size) {
         // int characterWidth = _state.SequencerRegisters.ClockingModeRegister.DotsPerClock;
@@ -44,15 +39,4 @@ public class Renderer : IVgaRenderer {
         // }
         // Marshal.Copy(frameBuffer, 0, bufferAddress, size);
     }
-}
-
-public interface IVideoState {
-    public DacRegisters DacRegisters { get; }
-    public GeneralRegisters GeneralRegisters { get; }
-    public SequencerRegisters SequencerRegisters { get; }
-    public CrtControllerRegisters CrtControllerRegisters { get; }
-    public GraphicsControllerRegisters GraphicsControllerRegisters { get; }
-    public AttributeControllerRegisters AttributeControllerRegisters { get; }
-
-    public VgaMode VideoMode { get; }
 }
