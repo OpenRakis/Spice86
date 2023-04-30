@@ -1,5 +1,7 @@
 namespace Spice86.Aeon.Emulator.Video
 {
+    using Spice86.Aeon.Emulator.Video.Registers;
+
     /// <summary>
     /// Provides information about an emulated video mode.
     /// </summary>
@@ -116,7 +118,7 @@ namespace Spice86.Aeon.Emulator.Video
         /// <summary>
         /// Gets the current VGA color palette.
         /// </summary>
-        public ReadOnlySpan<uint> Palette => DacRegisters.Palette;
+        public ArgbPalette Palette => DacRegisters.ArgbPalette;
         /// <summary>
         /// Gets a value indicating whether the display mode is planar.
         /// </summary>

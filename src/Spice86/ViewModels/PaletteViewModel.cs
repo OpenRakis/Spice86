@@ -8,6 +8,8 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Aeon.Emulator.Video;
+using Spice86.Aeon.Emulator.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared;
@@ -48,7 +50,7 @@ public partial class PaletteViewModel : ObservableObject {
             return;
         }
 
-        ReadOnlySpan<uint> palette = videoCard.CurrentMode.Palette;
+        ArgbPalette palette = videoCard.CurrentMode.Palette;
         for(int i = 0; i < Palette.Count; i++) {
             Rectangle rectangle = Palette[i];
             uint source = palette[i];

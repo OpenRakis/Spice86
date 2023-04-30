@@ -1,5 +1,7 @@
 namespace Spice86.Aeon.Emulator.Video.Modes
 {
+    using Spice86.Aeon.Emulator.Video.Registers;
+
     /// <summary>
     /// Implements functionality for text video modes.
     /// </summary>

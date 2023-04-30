@@ -1,5 +1,7 @@
 namespace Spice86.Aeon.Emulator.Video;
 
+using Spice86.Aeon.Emulator.Video.Registers;
+
 public interface IAeonVgaCard {
     /// <summary>
     /// Gets the VGA DAC.

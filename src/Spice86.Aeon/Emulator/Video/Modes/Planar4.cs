@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace Spice86.Aeon.Emulator.Video.Modes
 {
+    using Spice86.Aeon.Emulator.Video.Registers;
     using Spice86.Aeon.Emulator.Video.Registers.Graphics;
 
     using System.Runtime.Intrinsics.X86;

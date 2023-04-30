@@ -54,7 +54,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public AeonCard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) :
         base(machine, configuration, loggerService) {
-        _logger = loggerService.WithLogLevel(LogEventLevel.Information);
+        _logger = loggerService.WithLogLevel(LogEventLevel.Debug);
         _bios = machine.Bios;
         _state = machine.Cpu.State;
         _gui = gui;
@@ -94,7 +94,6 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
             Ports.CrtControllerDataAlt,
             Ports.CrtControllerDataAltMirror1,
             Ports.CrtControllerDataAltMirror2,
-            Ports.DacAddressReadIndex,
             Ports.DacAddressWriteIndex,
             Ports.DacData,
             Ports.DacPelMask,
@@ -144,38 +143,26 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     public override byte ReadByte(int port) {
         byte value;
         switch (port) {
-            case Ports.DacAddressReadIndex:
-                value = DacRegisters.ReadIndex;
+            case Ports.DacStateRead:
+                value = DacRegisters.State;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("[{Port:X4}] Read DAC Read Index: {Value:X2}", port, value);
+                    _logger.Debug("[{Port:X4}] Read DAC State: {Value:X2}", port, value);
                 }
                 break;
             case Ports.DacAddressWriteIndex:
-                value = DacRegisters.WriteIndex;
+                value = DacRegisters.IndexRegisterWriteMode;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Read DAC Write Index: {Value:X2}", port, value);
                 }
                 break;
             case Ports.DacData:
-                value = DacRegisters.Read();
-                switch (_dacReadIndex) {
-                    case 0:
-                        _dacReadColor = Color.FromArgb(0xFF, value, _dacReadColor.G, _dacReadColor.B);
-                        break;
-                    case 1:
-                        _dacReadColor = Color.FromArgb(0xFF, _dacReadColor.R, value, _dacReadColor.B);
-                        break;
-                    case 2:
-                        _dacReadColor = Color.FromArgb(0xFF, _dacReadColor.R, _dacReadColor.G, value);
-                        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                            _logger.Debug("[{Port:X4}] Read DAC: {Color}", port, _dacReadColor);
-                        }
-                        break;
+                value = DacRegisters.DataRegister;
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                    _logger.Verbose("[{Port:X4}] Read DAC Data Register: {Value:X2}", port, value);
                 }
-                _dacReadIndex = (_dacReadIndex + 1) % 3;
                 break;
             case Ports.DacPelMask:
-                value = DacRegisters.PalettePixelMask;
+                value = DacRegisters.PixelMask;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Read DAC Pel Mask: {Value:X2}", port, value);
                 }
@@ -291,43 +278,28 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Write to DacAddressReadIndex: {Value}", port, value);
                 }
-                DacRegisters.ReadIndex = value;
+                DacRegisters.IndexRegisterReadMode = value;
                 break;
 
             case Ports.DacAddressWriteIndex:
                 if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                     _logger.Verbose("[{Port:X4}] Write to DacAddressWriteIndex: {Value}", port, value);
                 }
-                DacRegisters.WriteIndex = value;
+                DacRegisters.IndexRegisterWriteMode = value;
                 break;
 
             case Ports.DacData:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                     _loggerService.Verbose("[{Port:X4}] Write to DacData: {Value:X2}", port, value);
                 }
-                DacRegisters.Write(value);
-                switch (_dacWriteIndex) {
-                    case 0:
-                        _dacWriteColor = Color.FromArgb(0xFF, value, _dacWriteColor.G, _dacWriteColor.B);
-                        break;
-                    case 1:
-                        _dacWriteColor = Color.FromArgb(0xFF, _dacWriteColor.R, value, _dacWriteColor.B);
-                        break;
-                    case 2:
-                        _dacWriteColor = Color.FromArgb(0xFF, _dacWriteColor.R, _dacWriteColor.G, value);
-                        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                            _logger.Verbose("[{Port:X4}] Write DAC[{Index}]: #{Color:X6}", port, (byte)(DacRegisters.WriteIndex - 1), _dacWriteColor.ToArgb() & 0x00FFFFFF);
-                        }
-                        break;
-                }
-                _dacWriteIndex = (_dacWriteIndex + 1) % 3;
+                DacRegisters.DataRegister = value;
                 break;
             
             case Ports.DacPelMask:
                 if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                     _logger.Verbose("[{Port:X4}] Write to DacPelMask: {Value:X2}", port, value);
                 }
-                DacRegisters.PalettePixelMask = value;
+                DacRegisters.PixelMask = value;
                 break;
 
             case Ports.GraphicsControllerAddress:

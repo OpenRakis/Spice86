@@ -46,13 +46,13 @@ public partial class DebugViewModel : ObservableObject {
             return;
         }
 
-        VideoCard.DacReadIndex = aeonCard.DacRegisters.ReadIndex;
-        VideoCard.DacWriteIndex = aeonCard.DacRegisters.WriteIndex;
+        VideoCard.DacReadIndex = aeonCard.DacRegisters.IndexRegisterReadMode;
+        VideoCard.DacWriteIndex = aeonCard.DacRegisters.IndexRegisterWriteMode;
 
-        VideoCard.AttributeControllerColorSelect = aeonCard.AttributeControllerRegisters.ColorSelect;
+        VideoCard.AttributeControllerColorSelect = aeonCard.AttributeControllerRegisters.ColorSelectRegister.Value;
         VideoCard.AttributeControllerOverscanColor = aeonCard.AttributeControllerRegisters.OverscanColor;
-        VideoCard.AttributeControllerAttributeModeControl = aeonCard.AttributeControllerRegisters.AttributeModeControl;
-        VideoCard.AttributeControllerColorPlaneEnable = aeonCard.AttributeControllerRegisters.ColorPlaneEnable;
+        VideoCard.AttributeControllerAttributeModeControl = aeonCard.AttributeControllerRegisters.AttributeControllerModeRegister.Value;
+        VideoCard.AttributeControllerColorPlaneEnable = aeonCard.AttributeControllerRegisters.ColorPlaneEnableRegister.Value;
         VideoCard.AttributeControllerHorizontalPixelPanning = aeonCard.AttributeControllerRegisters.HorizontalPixelPanning;
 
         VideoCard.CrtControllerOffset = aeonCard.CrtControllerRegisters.Offset;

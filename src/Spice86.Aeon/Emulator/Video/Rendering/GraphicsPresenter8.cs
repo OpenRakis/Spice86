@@ -19,7 +19,7 @@ namespace Spice86.Aeon.Emulator.Video.Rendering
         protected override void DrawFrame(nint destination)
         {
             uint totalPixels = (uint)VideoMode.Width * (uint)VideoMode.Height;
-            ReadOnlySpan<uint> palette = VideoMode.Palette;
+            ArgbPalette palette = VideoMode.Palette;
 
             unsafe
             {

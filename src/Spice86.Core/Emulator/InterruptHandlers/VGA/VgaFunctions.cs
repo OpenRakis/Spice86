@@ -350,10 +350,9 @@ internal class VgaFunctions {
 
             // Always 256*3 values
             WriteToDac(palette, 0, paletteSize);
-            byte[] empty = new byte[3];
-            for (int i = paletteSize; i < 256; i++) {
-                WriteToDac(empty, (byte)i, 1);
-            }
+            ushort remainder = (ushort)(256 * 3 - palette.Length);
+            byte[] empty = new byte[remainder];
+            WriteToDac(empty, paletteSize, (ushort)(remainder / 3));
 
             if (flags.HasFlag(ModeFlags.GraySum)) {
                 PerformGrayScaleSumming(0x00, 0x100);

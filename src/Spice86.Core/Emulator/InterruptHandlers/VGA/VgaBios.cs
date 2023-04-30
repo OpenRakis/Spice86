@@ -549,7 +549,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 00 {MethodName} - mode {ModeId:X2}, {Flags}",
-                nameof(VgaBios), nameof(WriteDot), modeId, flags);
+                nameof(VgaBios), nameof(SetVideoMode), modeId, flags);
         }
         VgaSetMode(modeId, flags);
     }

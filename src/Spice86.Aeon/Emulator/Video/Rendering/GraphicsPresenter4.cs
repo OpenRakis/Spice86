@@ -30,7 +30,6 @@ namespace Spice86.Aeon.Emulator.Video.Rendering {
                 uint* srcPtr = (uint*)VideoMode.VideoRam.ToPointer();
                 uint* destPtr = (uint*)destination.ToPointer();
 
-
                 int destStart = 0;
 
                 for (int split = 0; split < 2; split++) {
@@ -38,10 +37,12 @@ namespace Spice86.Aeon.Emulator.Video.Rendering {
                         int srcPos = (stride * y + startOffset + horizontalPan / 8) & 0xFFFF;
                         int destPos = width * y + destStart;
 
-                        for (int i = bitPan; i < 8; i++)
-                            destPtr[destPos++] = GetColor(UnpackIndex(srcPtr[srcPos], 7 - i));
-
-                        srcPos++;
+                        uint packedIndex = srcPtr[srcPos++];
+                        for (int i = bitPan; i < 8; i++) {
+                            int index = UnpackIndex(packedIndex, 7 - i);
+                            uint color = GetColor(index);
+                            destPtr[destPos++] = color;
+                        }
 
                         for (int xb = 1; xb < safeWidth; xb++) {
                             uint source = srcPtr[srcPos++ & 0xFFFF];
@@ -53,8 +54,11 @@ namespace Spice86.Aeon.Emulator.Video.Rendering {
 
                         srcPos &= 0xFFFF;
 
-                        for (int i = 0; i < bitPan; i++)
-                            destPtr[destPos++] = GetColor(UnpackIndex(srcPtr[srcPos], 7 - i));
+                        packedIndex = srcPtr[srcPos];
+                        for (int i = 0; i < bitPan; i++) {
+                            int index = UnpackIndex(packedIndex, 7 - i);
+                            destPtr[destPos++] = GetColor(index);
+                        }
                     }
 
                     // Split screen functionality
@@ -69,17 +73,18 @@ namespace Spice86.Aeon.Emulator.Video.Rendering {
                 }
             }
         }
+
         private uint GetColor(int nibbleFromMemory4Bits) {
             // Palette RAM uses incoming 4-bit pixel values to look up one of the 16-bit registers, then sends the contents of that register out.
             int fromPaletteRam6Bits = VideoMode.AttributeControllerRegisters.InternalPalette[nibbleFromMemory4Bits];
             int bits0To3 = fromPaletteRam6Bits & 0b00001111;
-            int bits4And5 = (VideoMode.AttributeControllerRegisters.AttributeModeControl & 0x80) == 0
-                ? fromPaletteRam6Bits & 0b00110000
-                : (VideoMode.AttributeControllerRegisters.ColorSelect & 0b00000011) << 4;
-            int bits6And7 = (VideoMode.AttributeControllerRegisters.ColorSelect & 0b00001100) << 4;
+            int bits4And5 = VideoMode.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
+                ? VideoMode.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
+                : fromPaletteRam6Bits & 0b00110000;
+            int bits6And7 = VideoMode.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
             int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
-            int index =dacIndex8Bits & VideoMode.DacRegisters.PalettePixelMask;
-            return VideoMode.DacRegisters.Palette[index];
+            int index = dacIndex8Bits & VideoMode.DacRegisters.PixelMask;
+            return VideoMode.DacRegisters.ArgbPalette[index];
         }
 
         // it's important for this to get inlined
