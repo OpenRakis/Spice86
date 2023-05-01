@@ -53,6 +53,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [ObservableProperty]
     private AvaloniaList<IVideoBufferViewModel> _videoBuffers = new();
+    
     private ManualResetEvent _okayToContinueEvent = new(true);
 
     internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, new((Key) e.Key));

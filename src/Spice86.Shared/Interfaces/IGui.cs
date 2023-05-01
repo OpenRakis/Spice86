@@ -79,6 +79,9 @@ public interface IGui {
     /// <param name="isPrimaryDisplay">Indicates if this is the videoBuffer that will receive input (mouse, keyboard, gamepad) events. False by default.</param>
     void AddBuffer(IVideoCard videoCard, uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false);
 
+    /// <summary>
+    /// All the video buffers displayed in the UI, copied over to an <see cref="IDictionary{TKey,TValue}"/>
+    /// </summary>
     IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary { get; }
 
     /// <summary>
