@@ -47,7 +47,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public bool PauseEmulatorOnStart { get; private set; }
 
-    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, new((Key) e.Key));
+    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, new((Key) e.Key, false));
 
     private ProgramExecutor? _programExecutor;
 
@@ -56,7 +56,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     
     private ManualResetEvent _okayToContinueEvent = new(true);
 
-    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, new((Key) e.Key));
+    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, new((Key) e.Key, true));
 
     [ObservableProperty]
     private bool _isPaused;

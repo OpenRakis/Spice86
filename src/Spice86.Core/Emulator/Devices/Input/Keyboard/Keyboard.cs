@@ -1,12 +1,7 @@
-﻿using Spice86.Logging;
-
-namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
@@ -28,7 +23,7 @@ public class Keyboard : DefaultIOPortHandler {
     }
 
     private void OnKeyDown(object? sender, KeyboardEventArgs e) {
-        LastKeyboardInput = new(e, true);
+        LastKeyboardInput = e;
         RaiseIrq();
     }
 
@@ -37,13 +32,11 @@ public class Keyboard : DefaultIOPortHandler {
     }
 
     private void OnKeyUp(object? sender, KeyboardEventArgs e) {
-        LastKeyboardInput = new(e, false);
+        LastKeyboardInput = e;
         RaiseIrq();
     }
 
-    public KeyboardInput? LastKeyboardInput { get; private set; } = null;
-
-    public int LastKeyRepeatCount { get; private set; }
+    public KeyboardEventArgs? LastKeyboardInput { get; private set; }
 
     public byte? GetScanCode() {
         if (_gui == null) {
@@ -51,16 +44,16 @@ public class Keyboard : DefaultIOPortHandler {
         }
         byte? scancode = null;
         if (LastKeyboardInput is not null) {
-            KeyboardInput lastKeyboardInput = (KeyboardInput)LastKeyboardInput;
+            KeyboardEventArgs lastKeyboardInput = (KeyboardEventArgs)LastKeyboardInput;
             if (lastKeyboardInput.IsPressed) {
                 scancode = _keyScanCodeConverter?.GetKeyPressedScancode(lastKeyboardInput);
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("Getting scancode. Key pressed {KeyCode} scancode {ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
+                    _loggerService.Verbose("Getting scancode. Key pressed {KeyCode} scancode {ScanCode}", LastKeyboardInput.Value, scancode);
                 }
             } else {
                 scancode = _keyScanCodeConverter?.GetKeyReleasedScancode(lastKeyboardInput);
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("Getting scancode. Key released {KeyCode} scancode {ScanCode}", LastKeyboardInput.Value.EventArgs, scancode);
+                    _loggerService.Verbose("Getting scancode. Key released {KeyCode} scancode {ScanCode}", LastKeyboardInput.Value, scancode);
                 }
             }
 

@@ -171,14 +171,14 @@ public class AvaloniaKeyScanCodeConverter : IKeyScanCodeConverter {
         return _scanCodeToAscii[keypressedScancode];
     }
 
-    public byte? GetKeyPressedScancode(KeyboardInput keyInput) {
-        if (!_keyPressedScanCode.ContainsKey((keyInput.EventArgs).Key)) {
+    public byte? GetKeyPressedScancode(KeyboardEventArgs keyInput) {
+        if (!_keyPressedScanCode.ContainsKey(keyInput.Key)) {
             return null;
         }
-        return _keyPressedScanCode[(keyInput.EventArgs).Key];
+        return _keyPressedScanCode[keyInput.Key];
     }
 
-    public byte? GetKeyReleasedScancode(KeyboardInput keyInput) {
+    public byte? GetKeyReleasedScancode(KeyboardEventArgs keyInput) {
         byte? pressed = GetKeyPressedScancode(keyInput);
         if (pressed != null) {
             return (byte)(pressed + 0x80);
