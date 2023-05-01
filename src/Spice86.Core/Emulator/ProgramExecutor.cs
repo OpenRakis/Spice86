@@ -41,10 +41,10 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly GdbServer? _gdbServer;
     private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
 
-    public ProgramExecutor(ILoggerService loggerService, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, Configuration configuration) {
+    public ProgramExecutor(ILoggerService loggerService, IGui? gui, Configuration configuration) {
         _loggerService = loggerService;
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        Machine = CreateMachine(gui, keyScanCodeConverter);
+        Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer();
     }
 
@@ -118,11 +118,11 @@ public sealed class ProgramExecutor : IDisposable {
         return new BiosLoader(Machine, _loggerService);
     }
 
-    private Machine CreateMachine(IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter) {
+    private Machine CreateMachine(IGui? gui) {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
-        Machine = new Machine(this, gui, keyScanCodeConverter, _loggerService, counterConfigurator, executionFlowRecorder,
+        Machine = new Machine(this, gui, _loggerService, counterConfigurator, executionFlowRecorder,
             _configuration, RecordData);
         InitializeCpu();
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);

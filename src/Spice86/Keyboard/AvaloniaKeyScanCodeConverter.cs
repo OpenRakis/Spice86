@@ -5,7 +5,7 @@ using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
 
-public class AvaloniaKeyScanCodeConverter : IKeyScanCodeConverter {
+public class AvaloniaKeyScanCodeConverter {
     private static readonly Dictionary<Key, byte> _keyPressedScanCode;
     private static readonly Dictionary<byte, byte> _scanCodeToAscii;
 
@@ -160,26 +160,25 @@ public class AvaloniaKeyScanCodeConverter : IKeyScanCodeConverter {
         };
     }
 
-    public byte? GetAsciiCode(byte scancode) {
-        byte keypressedScancode = scancode;
-        if (keypressedScancode > 0x7F) {
-            keypressedScancode -= 0x80;
+    public byte? GetAsciiCode(byte? keyPressedScanCode) {
+        if (keyPressedScanCode > 0x7F) {
+            keyPressedScanCode = (byte?) (keyPressedScanCode - 0x80);
         }
-        if (!_scanCodeToAscii.ContainsKey(keypressedScancode)) {
+        if (keyPressedScanCode is null || !_scanCodeToAscii.ContainsKey((byte)keyPressedScanCode)) {
             return null;
         }
-        return _scanCodeToAscii[keypressedScancode];
+        return _scanCodeToAscii[(byte)keyPressedScanCode];
     }
 
-    public byte? GetKeyPressedScancode(KeyboardEventArgs keyInput) {
-        if (!_keyPressedScanCode.ContainsKey(keyInput.Key)) {
+    public byte? GetKeyPressedScancode(Key key) {
+        if (!_keyPressedScanCode.ContainsKey(key)) {
             return null;
         }
-        return _keyPressedScanCode[keyInput.Key];
+        return _keyPressedScanCode[key];
     }
 
-    public byte? GetKeyReleasedScancode(KeyboardEventArgs keyInput) {
-        byte? pressed = GetKeyPressedScancode(keyInput);
+    public byte? GetKeyReleasedScancode(Key key) {
+        byte? pressed = GetKeyPressedScancode(key);
         if (pressed != null) {
             return (byte)(pressed + 0x80);
         }

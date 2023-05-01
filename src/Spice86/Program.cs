@@ -50,7 +50,7 @@ public class Program {
             
             ProgramExecutor programExecutor = new ProgramExecutor(
                 loggerService,
-                null, null, configuration);
+                null, configuration);
             programExecutor.Run();
         }
     }

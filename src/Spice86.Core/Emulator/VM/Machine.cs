@@ -113,7 +113,7 @@ public class Machine : IDisposable {
 
     public Configuration Configuration { get; }
     
-    public Machine(ProgramExecutor programExecutor, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+    public Machine(ProgramExecutor programExecutor, IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
         Configuration = configuration;
         Gui = gui;
@@ -143,7 +143,7 @@ public class Machine : IDisposable {
         Register(VgaCard as IIOPortHandler ?? throw new InvalidOperationException());
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
-        Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
+        Keyboard = new Keyboard(this, loggerService, gui, configuration);
         Register(Keyboard);
         Joystick = new Joystick(this, configuration, loggerService);
         Register(Joystick);
@@ -164,9 +164,7 @@ public class Machine : IDisposable {
         Cpu.CallbackHandler = CallbackHandler;
         TimerInt8Handler = new TimerInt8Handler(this, loggerService);
         Register(TimerInt8Handler);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this,
-            loggerService,
-            keyScanCodeConverter);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, loggerService);
         Register(BiosKeyboardInt9Handler);
         VideoBiosInt10Handler = new VideoBiosInt10Handler(this, loggerService, (IVgaInterrupts)VgaCard);
         Register(VideoBiosInt10Handler);

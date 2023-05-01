@@ -35,6 +35,7 @@ using Key = Spice86.Shared.Emulator.Keyboard.Key;
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
+    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
     private Configuration _configuration = new();
     private bool _disposed;
     private Thread? _emulatorThread;
@@ -47,7 +48,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public bool PauseEmulatorOnStart { get; private set; }
 
-    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, new((Key) e.Key, false));
+    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, 
+        new((Key) e.Key, 
+            false,
+            _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
+            _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
 
     private ProgramExecutor? _programExecutor;
 
@@ -56,7 +61,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     
     private ManualResetEvent _okayToContinueEvent = new(true);
 
-    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, new((Key) e.Key, true));
+    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, 
+        new((Key) e.Key, 
+            true,
+            _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
+            _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
 
     [ObservableProperty]
     private bool _isPaused;
@@ -455,9 +464,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             if(!_disposed) {
                 _okayToContinueEvent.Set();
             }
-            _programExecutor = new ProgramExecutor(
-                _loggerService,
-                this, new AvaloniaKeyScanCodeConverter(), _configuration);
+            _programExecutor = new ProgramExecutor(_loggerService, this, _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _videoCard = _programExecutor.Machine.VgaCard;
             Dispatcher.UIThread.Post(() => IsMachineRunning = true);
