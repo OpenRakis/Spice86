@@ -1,8 +1,5 @@
 ﻿namespace Spice86.Keyboard;
 
-using Avalonia.Input;
-
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
@@ -175,10 +172,10 @@ public class AvaloniaKeyScanCodeConverter : IKeyScanCodeConverter {
     }
 
     public byte? GetKeyPressedScancode(KeyboardInput keyInput) {
-        if (!_keyPressedScanCode.ContainsKey(((KeyEventArgs)keyInput.EventArgs).Key)) {
+        if (!_keyPressedScanCode.ContainsKey((keyInput.EventArgs).Key)) {
             return null;
         }
-        return _keyPressedScanCode[((KeyEventArgs)keyInput.EventArgs).Key];
+        return _keyPressedScanCode[(keyInput.EventArgs).Key];
     }
 
     public byte? GetKeyReleasedScancode(KeyboardInput keyInput) {

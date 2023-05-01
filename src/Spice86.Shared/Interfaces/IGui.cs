@@ -1,8 +1,6 @@
 ﻿namespace Spice86.Shared.Interfaces;
 
-using Spice86.Shared;
-
-using System.Collections.Generic;
+using Spice86.Shared.Emulator.Keyboard;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -31,12 +29,12 @@ public interface IGui {
     /// <summary>
     /// Indicates whether a keyboard key is up.
     /// </summary>
-    public event EventHandler<EventArgs>? KeyUp;
+    public event EventHandler<KeyboardEventArgs>? KeyUp;
 
     /// <summary>
     /// Indicates whether a keyboard key is down.
     /// </summary>
-    public event EventHandler<EventArgs>? KeyDown;
+    public event EventHandler<KeyboardEventArgs>? KeyDown;
 
     /// <summary>
     /// Pauses the Emulator, displays the Play button.

@@ -27,7 +27,7 @@ public class Keyboard : DefaultIOPortHandler {
         }
     }
 
-    private void OnKeyDown(object? sender, EventArgs e) {
+    private void OnKeyDown(object? sender, KeyboardEventArgs e) {
         LastKeyboardInput = new(e, true);
         RaiseIrq();
     }
@@ -36,7 +36,7 @@ public class Keyboard : DefaultIOPortHandler {
         _machine.DualPic.ProcessInterruptRequest(1);
     }
 
-    private void OnKeyUp(object? sender, EventArgs e) {
+    private void OnKeyUp(object? sender, KeyboardEventArgs e) {
         LastKeyboardInput = new(e, false);
         RaiseIrq();
     }

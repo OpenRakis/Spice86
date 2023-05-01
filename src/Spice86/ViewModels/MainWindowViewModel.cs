@@ -1,5 +1,11 @@
 ﻿namespace Spice86.ViewModels;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Diagnostics;
+
 using Avalonia;
 
 using Serilog.Events;
@@ -16,19 +22,15 @@ using CommunityToolkit.Mvvm.Input;
 using MessageBox.Avalonia.BaseWindows.Base;
 using MessageBox.Avalonia.Enums;
 
-using Spice86;
 using Spice86.Keyboard;
 using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Diagnostics;
+using Key = Spice86.Shared.Emulator.Keyboard.Key;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
@@ -45,7 +47,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public bool PauseEmulatorOnStart { get; private set; }
 
-    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
+    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, new((Key) e.Key));
 
     private ProgramExecutor? _programExecutor;
 
@@ -53,13 +55,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private AvaloniaList<IVideoBufferViewModel> _videoBuffers = new();
     private ManualResetEvent _okayToContinueEvent = new(true);
 
-    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
+    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, new((Key) e.Key));
 
     [ObservableProperty]
     private bool _isPaused;
 
-    public event EventHandler<EventArgs>? KeyUp;
-    public event EventHandler<EventArgs>? KeyDown;
+    public event EventHandler<KeyboardEventArgs>? KeyUp;
+    public event EventHandler<KeyboardEventArgs>? KeyDown;
 
     private bool _isMainWindowClosing;
 
