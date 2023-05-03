@@ -15,8 +15,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>4.1.0</version>
-		<PackageReleaseNotes>Expanded Memory support</PackageReleaseNotes>
+		<version>4.1.1</version>
+		<PackageReleaseNotes>Fixed keyboard behavior</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>

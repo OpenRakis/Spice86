@@ -14,7 +14,7 @@
 	<PropertyGroup>
 		<NoWarn>CS1591</NoWarn>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>4.1.0</version>
+		<version>4.1.1</version>
 		<Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
