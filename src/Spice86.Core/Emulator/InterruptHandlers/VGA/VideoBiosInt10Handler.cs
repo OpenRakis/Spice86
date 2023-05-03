@@ -27,24 +27,62 @@ public class VideoBiosInt10Handler : InterruptHandler {
     }
 
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x00, new Callback(0x00, _vgaCard.SetVideoMode));
-        _dispatchTable.Add(0x01, new Callback(0x01, _vgaCard.SetCursorType));
-        _dispatchTable.Add(0x02, new Callback(0x02, _vgaCard.SetCursorPosition));
-        _dispatchTable.Add(0x03, new Callback(0x03, _vgaCard.GetCursorPosition));
-        _dispatchTable.Add(0x05, new Callback(0x05, _vgaCard.SelectActiveDisplayPage));
-        _dispatchTable.Add(0x06, new Callback(0x06, _vgaCard.ScrollPageUp));
-        _dispatchTable.Add(0x07, new Callback(0x07, _vgaCard.ScrollPageDown));
-        _dispatchTable.Add(0x08, new Callback(0x08, _vgaCard.ReadCharacterAndAttributeAtCursor));
-        _dispatchTable.Add(0x09, new Callback(0x09, _vgaCard.WriteCharacterAndAttributeAtCursor));
-        _dispatchTable.Add(0x0A, new Callback(0x0A, _vgaCard.WriteCharacterAtCursor));
-        _dispatchTable.Add(0x0B, new Callback(0x0B, _vgaCard.SetColorPaletteOrBackGroundColor));
-        _dispatchTable.Add(0x0E, new Callback(0x0E, _vgaCard.WriteTextInTeletypeMode));
-        _dispatchTable.Add(0x0F, new Callback(0x0F, _vgaCard.GetVideoMode));
-        _dispatchTable.Add(0x10, new Callback(0x10, _vgaCard.GetSetPaletteRegisters));
-        _dispatchTable.Add(0x11, new Callback(0x11, _vgaCard.CharacterGeneratorRoutine));
-        _dispatchTable.Add(0x12, new Callback(0x12, _vgaCard.VideoSubsystemConfiguration));
-        _dispatchTable.Add(0x13, new Callback(0x13, _vgaCard.WriteString));
-        _dispatchTable.Add(0x1A, new Callback(0x1A, _vgaCard.VideoDisplayCombination));
-        _dispatchTable.Add(0x1B, new Callback(0x1B, () => _vgaCard.GetFunctionalityInfo()));
+        _dispatchTable.Add(0x00, new Callback(0x00, SetVideoMode));
+        _dispatchTable.Add(0x01, new Callback(0x01, SetCursorType));
+        _dispatchTable.Add(0x02, new Callback(0x02, SetCursorPosition));
+        _dispatchTable.Add(0x03, new Callback(0x03, GetCursorPosition));
+        _dispatchTable.Add(0x05, new Callback(0x05, SelectActiveDisplayPage));
+        _dispatchTable.Add(0x06, new Callback(0x06, ScrollPageUp));
+        _dispatchTable.Add(0x07, new Callback(0x07, ScrollPageDown));
+        _dispatchTable.Add(0x08, new Callback(0x08, ReadCharacterAndAttributeAtCursor));
+        _dispatchTable.Add(0x09, new Callback(0x09, WriteCharacterAndAttributeAtCursor));
+        _dispatchTable.Add(0x0A, new Callback(0x0A, WriteCharacterAtCursor));
+        _dispatchTable.Add(0x0B, new Callback(0x0B, SetColorPaletteOrBackGroundColor));
+        _dispatchTable.Add(0x0E, new Callback(0x0E, WriteTextInTeletypeMode));
+        _dispatchTable.Add(0x0F, new Callback(0x0F, GetVideoMode));
+        _dispatchTable.Add(0x10, new Callback(0x10, GetSetPaletteRegisters));
+        _dispatchTable.Add(0x11, new Callback(0x11, CharacterGeneratorRoutine));
+        _dispatchTable.Add(0x12, new Callback(0x12, VideoSubsystemConfiguration));
+        _dispatchTable.Add(0x13, new Callback(0x13, WriteString));
+        _dispatchTable.Add(0x1A, new Callback(0x1A, VideoDisplayCombination));
+        _dispatchTable.Add(0x1B, new Callback(0x1B, GetFunctionalityInfo));
     }
+
+    public void SetVideoMode() => _vgaCard.SetVideoMode();
+
+    public void SetCursorType() => _vgaCard.SetCursorType();
+
+    public void SetCursorPosition() => _vgaCard.SetCursorPosition();
+
+    public void GetCursorPosition() => _vgaCard.GetCursorPosition();
+
+    public void SelectActiveDisplayPage() => _vgaCard.SelectActiveDisplayPage();
+
+    public void ScrollPageUp() => _vgaCard.ScrollPageUp();
+
+    public void ScrollPageDown() => _vgaCard.ScrollPageDown();
+
+    public void ReadCharacterAndAttributeAtCursor() => _vgaCard.ReadCharacterAndAttributeAtCursor();
+
+    public void WriteCharacterAndAttributeAtCursor() => _vgaCard.WriteCharacterAndAttributeAtCursor();
+
+    public void WriteCharacterAtCursor() => _vgaCard.WriteCharacterAtCursor();
+
+    public void SetColorPaletteOrBackGroundColor() => _vgaCard.SetColorPaletteOrBackGroundColor();
+
+    public void WriteTextInTeletypeMode() => _vgaCard.WriteTextInTeletypeMode();
+
+    public void GetVideoMode() => _vgaCard.GetVideoMode();
+
+    public void GetSetPaletteRegisters() => _vgaCard.GetSetPaletteRegisters();
+
+    public void CharacterGeneratorRoutine() => _vgaCard.CharacterGeneratorRoutine();
+
+    public void VideoSubsystemConfiguration() => _vgaCard.VideoSubsystemConfiguration();
+
+    public void WriteString() => _vgaCard.WriteString();
+
+    public void VideoDisplayCombination() => _vgaCard.VideoDisplayCombination();
+
+    public void GetFunctionalityInfo() => _vgaCard.GetFunctionalityInfo();
 }
