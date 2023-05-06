@@ -10,6 +10,7 @@ using Spice86.Shared.Interfaces;
 namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 
 using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>

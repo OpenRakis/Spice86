@@ -21,6 +21,12 @@ using System.Reflection;
 /// Displays help when configuration could not be parsed.
 /// </summary>
 public static class CommandLineParser {
+    /// <summary>
+    /// Parses the command line into a <see cref="Configuration"/> object.
+    /// </summary>
+    /// <param name="args">The application command line arguments</param>
+    /// <returns>A <see cref="Configuration"/> object representing the command line arguments</returns>
+    /// <exception cref="UnreachableException">When the command line arguments are unrecognized.</exception>
     public static Configuration ParseCommandLine(string[] args) {
         ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(args);
         return result.MapResult(initialConfig => {

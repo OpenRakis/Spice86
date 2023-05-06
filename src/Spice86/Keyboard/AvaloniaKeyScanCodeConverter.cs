@@ -5,10 +5,23 @@ using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
 
+/// <summary>
+/// A utility class that provides mapping from AvaloniaUI <see cref="Key"/> values to keyboard scan codes.
+/// </summary>
 public class AvaloniaKeyScanCodeConverter {
+    /// <summary>
+    /// A dictionary that maps <see cref="Key"/> values to their corresponding keyboard scan codes.
+    /// </summary>
     private static readonly Dictionary<Key, byte> _keyPressedScanCode;
+    
+    /// <summary>
+    /// A dictionary that maps keyboard scan codes to their corresponding ASCII codes.
+    /// </summary>
     private static readonly Dictionary<byte, byte> _scanCodeToAscii;
 
+    /// <summary>
+    /// Initializes static members of the <see cref="AvaloniaKeyScanCodeConverter"/> class.
+    /// </summary>
     static AvaloniaKeyScanCodeConverter() {
         // Some keys are not supported by AvaloniaUI so not putting them.
         _keyPressedScanCode = new Dictionary<Key, byte>()
@@ -170,6 +183,11 @@ public class AvaloniaKeyScanCodeConverter {
         return _scanCodeToAscii[(byte)keyPressedScanCode];
     }
 
+    /// <summary>
+    /// Retrieves the scancode of a pressed key, if it exists in the _keyPressedScanCode dictionary.
+    /// </summary>
+    /// <param name="key">The key for which to retrieve the scancode.</param>
+    /// <returns>The scancode of the pressed key, or null if the key is not present in the dictionary.</returns>
     public byte? GetKeyPressedScancode(Key key) {
         if (!_keyPressedScanCode.ContainsKey(key)) {
             return null;
@@ -177,6 +195,11 @@ public class AvaloniaKeyScanCodeConverter {
         return _keyPressedScanCode[key];
     }
 
+    /// <summary>
+    /// Retrieves the scancode of a released key, if it exists in the _keyPressedScanCode dictionary.
+    /// </summary>
+    /// <param name="key">The key for which to retrieve the scancode.</param>
+    /// <returns>The scancode of the released key, or null if the key is not present in the dictionary.</returns>
     public byte? GetKeyReleasedScancode(Key key) {
         byte? pressed = GetKeyPressedScancode(key);
         if (pressed != null) {

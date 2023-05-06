@@ -2,6 +2,7 @@
 
 using System;
 using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 
 public record FunctionReturn(CallType ReturnCallType, SegmentedAddress Address) : IComparable<FunctionReturn> {
     public int CompareTo(FunctionReturn? other) {

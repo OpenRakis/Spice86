@@ -1,8 +1,7 @@
-using Serilog.Core;
-
 namespace Spice86.Shared.Interfaces;
 
 using Serilog;
+using Serilog.Core;
 using Serilog.Events;
 
 using System.Diagnostics;
@@ -14,6 +13,9 @@ public interface ILoggerService : ILogger {
     /// </summary>
     LoggingLevelSwitch LogLevelSwitch { get; set; }
     
+    /// <summary>
+    /// A set of properties that will be inlined with every log statement.
+    /// </summary>
     ILoggerPropertyBag LoggerPropertyBag { get; }
     
     /// <summary>
@@ -24,7 +26,6 @@ public interface ILoggerService : ILogger {
     /// <summary>
     /// Returns a new <see cref="LoggerConfiguration"/> from which a new instance of <see cref="ILogger"/> can be created, with <see cref="LoggerConfiguration.CreateLogger"/>. <br/>
     /// This <see cref="LoggerConfiguration"/> will output to the standard console, and debug console.
-    /// You can also add a Context to it, with <see cref="Logger.ForContext"/>, for example.
     /// It will be detached from this logger anyway, which means: <br/>
     /// - <see cref="LogLevelSwitch"/> won't affect it. <br/>
     /// - <see cref="AreLogsSilenced"/> will not affect it. <br/>

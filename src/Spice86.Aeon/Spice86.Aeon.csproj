@@ -17,7 +17,6 @@
     </ItemGroup>
     <!-- Properties geared towards NuGet -->
     <PropertyGroup>
-        <NoWarn>CS1591</NoWarn>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <version>4.1.1</version>
         <Authors>Greg Divis</Authors>

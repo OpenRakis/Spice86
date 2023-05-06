@@ -16,6 +16,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer;
 
 using Spice86.Shared;
 using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 public class CSharpOverrideHelper {

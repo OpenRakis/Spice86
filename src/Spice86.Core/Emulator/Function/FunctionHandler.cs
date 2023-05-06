@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
 using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System;

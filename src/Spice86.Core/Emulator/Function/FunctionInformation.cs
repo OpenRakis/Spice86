@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System;

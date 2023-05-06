@@ -5,14 +5,12 @@
     <RootNamespace>Bufdio.Spice86</RootNamespace>
     <Copyright>Luthfi Tri Atmaja</Copyright>
     <Description>Only for Spice86 usage. A cross platform audio playback library for .NET based on PortAudio, forked from the original Bufdio by Luthfi Tri Atmaja.</Description>
-    <NoWarn>IDE0090</NoWarn>
     <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
   </PropertyGroup>
   <!-- Properties geared towards NuGet -->
 	<PropertyGroup>
-		<NoWarn>CS1591</NoWarn>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<version>4.1.1</version>
 		<Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
