@@ -50,10 +50,7 @@ public class FunctionHandler {
 
             FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, recordReturn);
             _callerStack.Push(currentFunctionCall);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                // _loggerService.Debug("{Address} Calling {@CurrentFunction} from {@Caller}", expectedReturnAddress, currentFunction.ToString(), caller?.ToString());
-            }
-            else if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Calling {CurrentFunction} from {Caller}", currentFunction, caller);
             }
 
@@ -114,34 +111,29 @@ public class FunctionHandler {
 
     public SegmentedAddress? PeekReturnAddressOnMachineStackForCurrentFunction() {
         FunctionCall? currentFunctionCall = CurrentFunctionCall;
-        if (currentFunctionCall == null) {
-            return null;
-        }
-
-        return PeekReturnAddressOnMachineStack(currentFunctionCall.CallType);
+        return currentFunctionCall == null ? null : PeekReturnAddressOnMachineStack(currentFunctionCall.CallType);
     }
 
     public bool Ret(CallType returnCallType) {
-        if (_recordData) {
-            if (_callerStack.TryPop(out FunctionCall? currentFunctionCall) == false) {
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                    _loggerService.Warning("Returning but no call was done before!!");
-                }
-                return false;
-            }
-            FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
-            bool returnAddressAlignedWithCallStack = AddReturn(returnCallType, currentFunctionCall, currentFunctionInformation);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                // _loggerService.Debug("Returning from {CurrentFunctionInformation} to {CurrentFunctionCall}", currentFunctionInformation?.ToString(), GetFunctionInformation(CurrentFunctionCall)?.ToString());
-            }
-            else if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Returning from {@CurrentFunctionInformation} to {@CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
-            }
+        if (!_recordData) {
+            return true;
+        }
 
-            if (!returnAddressAlignedWithCallStack) {
-                // Put it back in the stack, we did a jump not a return
-                _callerStack.Push(currentFunctionCall);
+        if (_callerStack.TryPop(out FunctionCall? currentFunctionCall) == false) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _loggerService.Warning("Returning but no call was done before!!");
             }
+            return false;
+        }
+        FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
+        bool returnAddressAlignedWithCallStack = AddReturn(returnCallType, currentFunctionCall, currentFunctionInformation);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Returning from {CurrentFunctionInformation} to {CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
+        }
+
+        if (!returnAddressAlignedWithCallStack) {
+            // Put it back in the stack, we did a jump not a return
+            _callerStack.Push(currentFunctionCall);
         }
         return true;
     }

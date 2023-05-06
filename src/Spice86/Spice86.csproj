@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -15,8 +15,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>4.1.0</version>
-		<PackageReleaseNotes>Expanded Memory support</PackageReleaseNotes>
+		<version>4.1.1</version>
+		<PackageReleaseNotes>Fixed keyboard behavior</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
@@ -45,7 +45,7 @@
 	<ItemGroup>
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
 		<PackageReference Include="MessageBox.Avalonia" Version="1.7.1" />
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0" />
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

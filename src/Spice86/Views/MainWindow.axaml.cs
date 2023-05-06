@@ -24,27 +24,31 @@ internal partial class MainWindow : Window {
     public void SetPrimaryDisplayControl(Image image) {
         if(_primaryDisplay != image) {
             _primaryDisplay = image;
+            FocusOnPrimaryVideoBuffer();
+            _primaryDisplay.KeyUp -= OnPrimaryDisplayOnKeyUp;
+            _primaryDisplay.KeyDown -= OnPrimaryDisplayOnKeyDown;
+            _primaryDisplay.KeyUp += OnPrimaryDisplayOnKeyUp;
+            _primaryDisplay.KeyDown += OnPrimaryDisplayOnKeyDown;
+        }
+    }
+
+    void OnPrimaryDisplayOnKeyUp(object? _, KeyEventArgs e) => (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+    void OnPrimaryDisplayOnKeyDown(object? _, KeyEventArgs e) => (DataContext as MainWindowViewModel)?.OnKeyDown(e);
+    
+    private void FocusOnPrimaryVideoBuffer() {
+        if (_primaryDisplay is not null) {
+            _primaryDisplay.IsEnabled = false;
+            FocusManager.Instance?.Focus(_primaryDisplay);
+            _primaryDisplay.IsEnabled = true;
         }
     }
 
     protected override void OnKeyUp(KeyEventArgs e) {
         FocusOnPrimaryVideoBuffer();
-        if (DataContext is MainWindowViewModel vm) {
-            vm.OnKeyUp(e);
-        }
-    }
-
-    private void FocusOnPrimaryVideoBuffer() {
-        if (_primaryDisplay is not null) {
-            FocusManager.Instance?.Focus(_primaryDisplay);
-        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
         FocusOnPrimaryVideoBuffer();
-        if (DataContext is MainWindowViewModel vm) {
-            vm.OnKeyDown(e);
-        }
     }
 
     public static event EventHandler<CancelEventArgs>? AppClosing;

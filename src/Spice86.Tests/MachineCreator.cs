@@ -28,9 +28,7 @@ public class MachineCreator {
         };
 
         ILoggerService loggerService = new Mock<LoggerService>(new LoggerPropertyBag()).Object;
-        ProgramExecutor programExecutor = new ProgramExecutor(
-            loggerService,
-            null, null, configuration);
+        ProgramExecutor programExecutor = new ProgramExecutor(loggerService, null, configuration);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
         // Disabling custom IO handling

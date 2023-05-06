@@ -1,5 +1,11 @@
 ﻿namespace Spice86.ViewModels;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Diagnostics;
+
 using Avalonia;
 
 using Serilog.Events;
@@ -16,23 +22,20 @@ using CommunityToolkit.Mvvm.Input;
 using MessageBox.Avalonia.BaseWindows.Base;
 using MessageBox.Avalonia.Enums;
 
-using Spice86;
 using Spice86.Keyboard;
 using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Diagnostics;
+using Key = Spice86.Shared.Emulator.Keyboard.Key;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
+    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
     private Configuration _configuration = new();
     private bool _disposed;
     private Thread? _emulatorThread;
@@ -45,21 +48,30 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public bool PauseEmulatorOnStart { get; private set; }
 
-    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, e);
+    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, 
+        new((Key) e.Key, 
+            false,
+            _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
+            _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
 
     private ProgramExecutor? _programExecutor;
 
     [ObservableProperty]
     private AvaloniaList<IVideoBufferViewModel> _videoBuffers = new();
+    
     private ManualResetEvent _okayToContinueEvent = new(true);
 
-    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, e);
+    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, 
+        new((Key) e.Key, 
+            true,
+            _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
+            _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
 
     [ObservableProperty]
     private bool _isPaused;
 
-    public event EventHandler<EventArgs>? KeyUp;
-    public event EventHandler<EventArgs>? KeyDown;
+    public event EventHandler<KeyboardEventArgs>? KeyUp;
+    public event EventHandler<KeyboardEventArgs>? KeyDown;
 
     private bool _isMainWindowClosing;
 
@@ -452,9 +464,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             if(!_disposed) {
                 _okayToContinueEvent.Set();
             }
-            _programExecutor = new ProgramExecutor(
-                _loggerService,
-                this, new AvaloniaKeyScanCodeConverter(), _configuration);
+            _programExecutor = new ProgramExecutor(_loggerService, this, _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _videoCard = _programExecutor.Machine.VgaCard;
             Dispatcher.UIThread.Post(() => IsMachineRunning = true);

@@ -222,7 +222,7 @@ public class CSharpOverrideHelper {
             return null;
         }
 
-        return functionInformation.FuntionOverride;
+        return functionInformation.FunctionOverride;
     }
 
     private void ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
@@ -248,10 +248,10 @@ public class CSharpOverrideHelper {
             }
 
             message += " Found " + actualTarget.Name + " there.";
-            if (actualTarget.FuntionOverride != null) {
+            if (actualTarget.FunctionOverride != null) {
                 message += " Calling it.";
                 _loggerService.Warning("{Message}", message);
-                ExecuteCall(actualTarget.FuntionOverride, () => actualTarget.FuntionOverride.Invoke(0).Invoke());
+                ExecuteCall(actualTarget.FunctionOverride, () => actualTarget.FunctionOverride.Invoke(0).Invoke());
                 actualStackAddress = State.StackPhysicalAddress;
                 actualReturnCs = State.CS;
                 actualReturnIp = State.IP;

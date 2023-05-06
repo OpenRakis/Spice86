@@ -1,12 +1,11 @@
 namespace Spice86.Models.Performance;
 
-public class Measurement
-    {
-        public double Time { get; set; }
-        public double Value { get; set; }
+public readonly record struct Measurement {
+    public double Time { get; init; }
+    public double Value { get; init; }
 
-        public override string ToString()
-        {
-            return $"{Time:#0.0} {Value:##0.0}";
-        }
+    public override string ToString()
+    {
+        return $"{Time:#0.0} {Value:##0.0}";
     }
+}

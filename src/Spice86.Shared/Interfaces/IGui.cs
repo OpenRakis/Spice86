@@ -1,8 +1,6 @@
 ﻿namespace Spice86.Shared.Interfaces;
 
-using Spice86.Shared;
-
-using System.Collections.Generic;
+using Spice86.Shared.Emulator.Keyboard;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -31,12 +29,12 @@ public interface IGui {
     /// <summary>
     /// Indicates whether a keyboard key is up.
     /// </summary>
-    public event EventHandler<EventArgs>? KeyUp;
+    public event EventHandler<KeyboardEventArgs>? KeyUp;
 
     /// <summary>
     /// Indicates whether a keyboard key is down.
     /// </summary>
-    public event EventHandler<EventArgs>? KeyDown;
+    public event EventHandler<KeyboardEventArgs>? KeyDown;
 
     /// <summary>
     /// Pauses the Emulator, displays the Play button.
@@ -81,6 +79,9 @@ public interface IGui {
     /// <param name="isPrimaryDisplay">Indicates if this is the videoBuffer that will receive input (mouse, keyboard, gamepad) events. False by default.</param>
     void AddBuffer(IVideoCard videoCard, uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false);
 
+    /// <summary>
+    /// All the video buffers displayed in the UI, copied over to an <see cref="IDictionary{TKey,TValue}"/>
+    /// </summary>
     IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary { get; }
 
     /// <summary>

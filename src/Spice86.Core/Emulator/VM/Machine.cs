@@ -24,6 +24,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -116,8 +117,8 @@ public class Machine : IDisposable {
     public event Action? Resumed;
 
     public Configuration Configuration { get; }
-
-    public Machine(ProgramExecutor programExecutor, IGui? gui, IKeyScanCodeConverter? keyScanCodeConverter, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+    
+    public Machine(ProgramExecutor programExecutor, IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
         Configuration = configuration;
         Gui = gui;
@@ -156,7 +157,7 @@ public class Machine : IDisposable {
         
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
-        Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
+        Keyboard = new Keyboard(this, loggerService, gui, configuration);
         Register(Keyboard);
         Joystick = new Joystick(this, configuration, loggerService);
         Register(Joystick);
@@ -183,9 +184,7 @@ public class Machine : IDisposable {
         
         TimerInt8Handler = new TimerInt8Handler(this, loggerService);
         Register(TimerInt8Handler);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this,
-            loggerService,
-            keyScanCodeConverter);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, loggerService);
         Register(BiosKeyboardInt9Handler);
         
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, loggerService);

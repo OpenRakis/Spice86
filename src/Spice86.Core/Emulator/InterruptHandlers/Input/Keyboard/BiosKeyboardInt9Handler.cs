@@ -16,12 +16,10 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly ILoggerService _loggerService;
 
     private readonly Keyboard _keyboard;
-    private readonly IKeyScanCodeConverter? _keyScanCodeConverter;
 
-    public BiosKeyboardInt9Handler(Machine machine, ILoggerService loggerService, IKeyScanCodeConverter? keyScanCodeConverter) : base(machine, loggerService) {
+    public BiosKeyboardInt9Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService;
         _keyboard = machine.Keyboard;
-        _keyScanCodeConverter = keyScanCodeConverter;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
         BiosKeyboardBuffer.Init();
     }
@@ -31,12 +29,12 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     public override byte Index => 0x9;
 
     public override void Run() {
-        byte? scancode = _keyboard.GetScanCode();
+        byte? scancode = _keyboard.LastKeyboardInput.ScanCode;
         if (scancode is null) {
             return;
         }
 
-        byte ascii = (_keyScanCodeConverter?.GetAsciiCode(scancode.Value)) ?? 0;
+        byte ascii = _keyboard.LastKeyboardInput.AsciiCode ?? 0;
 
         if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("{BiosInt9KeyReceived}", ascii);
