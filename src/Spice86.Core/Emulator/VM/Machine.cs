@@ -148,7 +148,13 @@ public class Machine : IDisposable {
         VgaIoPortHandler = new VgaIoPortHandler(this, loggerService, configuration, VgaRegisters);
         Register(VgaIoPortHandler);
 
-        Timer = new Timer(this, loggerService, DualPic, null, counterConfigurator, configuration);
+        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
+        IVideoMemory vgaMemory = new VideoMemory(videoBaseAddress, VgaRegisters);
+        Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
+        IVgaRenderer vgaRenderer = new Renderer(VgaRegisters, vgaMemory, loggerService);
+        VgaCard = new VgaCard(gui, vgaRenderer);
+        
+        Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, keyScanCodeConverter, configuration);
         Register(Keyboard);
@@ -213,6 +219,8 @@ public class Machine : IDisposable {
             Register(Ems);
         }
     }
+
+    public IVideoCard VgaCard { get; set; }
 
     public void Register(ICallback callback) {
         CallbackHandler.AddCallback(callback);

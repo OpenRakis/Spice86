@@ -102,9 +102,9 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.GraphicsGraphicsMode = videoState.GraphicsControllerRegisters.GraphicsModeRegister.Value;
         VideoCard.GraphicsMiscellaneousGraphics = videoState.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.Value;
         VideoCard.GraphicsReadMapSelect = videoState.GraphicsControllerRegisters.ReadMapSelectRegister.Value;
-        VideoCard.GraphicsSetResetExpanded = videoState.GraphicsControllerRegisters.SetReset.Expanded;
+        VideoCard.GraphicsSetResetExpanded = videoState.GraphicsControllerRegisters.SetReset.Value;
         VideoCard.GraphicsColorDontCareExpanded = videoState.GraphicsControllerRegisters.ColorDontCare;
-        VideoCard.GraphicsEnableSetResetExpanded = videoState.GraphicsControllerRegisters.EnableSetReset.Expanded;
+        VideoCard.GraphicsEnableSetResetExpanded = videoState.GraphicsControllerRegisters.EnableSetReset.Value;
 
         VideoCard.SequencerReset = videoState.SequencerRegisters.ResetRegister.Value;
         VideoCard.SequencerClockingMode = videoState.SequencerRegisters.ClockingModeRegister.Value;

@@ -165,7 +165,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(videoCard, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         Dispatcher.UIThread.Post(
             () => {
-                if(!VideoBuffers.Any(x => x.Address == videoBuffer.Address)) {
+                if(VideoBuffers.All(x => x.Address != videoBuffer.Address)) {
                     VideoBuffers.Add(videoBuffer);
                 }
             }
@@ -456,7 +456,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 _loggerService,
                 this, new AvaloniaKeyScanCodeConverter(), _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
-            _videoCard = _programExecutor.Machine.VgaIoPortHandler;
+            _videoCard = _programExecutor.Machine.VgaCard;
             Dispatcher.UIThread.Post(() => IsMachineRunning = true);
             Dispatcher.UIThread.Post(() => ShowVideo = true);
             _programExecutor.Run();

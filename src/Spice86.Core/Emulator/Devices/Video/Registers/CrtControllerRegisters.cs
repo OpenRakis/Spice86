@@ -113,7 +113,7 @@ public sealed class CrtControllerRegisters {
     }
 
     /// <summary>
-    ///     Gets or sets the Start Address of memory to be displayed.
+    ///     Gets or sets the Start Address of video memory to be displayed.
     /// </summary>
     public int ScreenStartAddress {
         get => _screenStartAddress;

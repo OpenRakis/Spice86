@@ -3,27 +3,19 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 
 /// <summary>
 ///     A wrapper class for the video card that implements the IMemoryDevice interface.
 /// </summary>
-public class VideoMemory : IMemoryDevice {
+public class VideoMemory : IVideoMemory {
     private readonly uint _baseAddress;
     private readonly byte[] _latches;
-    private readonly byte[][] _planes;
     private readonly IVideoState _state;
-    private readonly IVideoCard _videoCard;
 
-    public VideoMemory(uint size, IVideoCard videoCard, uint baseAddress, IVideoState state) {
-        _videoCard = videoCard;
+    public VideoMemory(uint baseAddress, IVideoState state) {
         _baseAddress = baseAddress;
         _state = state;
-        _planes = new byte[4][];
-        _planes[0] = new byte[0x10000];
-        _planes[1] = new byte[0x10000];
-        _planes[2] = new byte[0x10000];
-        _planes[3] = new byte[0x10000];
+        Planes = new byte[0x10000, 4];
         _latches = new byte[4];
         Size = 0x40000;
     }
@@ -33,10 +25,10 @@ public class VideoMemory : IMemoryDevice {
     public byte Read(uint address) {
         (byte plane, uint offset) = DecodeReadAddress(address);
 
-        _latches[0] = _planes[0][offset];
-        _latches[1] = _planes[1][offset];
-        _latches[2] = _planes[2][offset];
-        _latches[3] = _planes[3][offset];
+        _latches[0] = Planes[offset, 0];
+        _latches[1] = Planes[offset, 1];
+        _latches[2] = Planes[offset, 2];
+        _latches[3] = Planes[offset, 3];
         byte result = 0;
         switch (_state.GraphicsControllerRegisters.GraphicsModeRegister.ReadMode) {
             case ReadMode.ReadMode0:
@@ -121,7 +113,7 @@ public class VideoMemory : IMemoryDevice {
                     value &= _state.GraphicsControllerRegisters.BitMask;
                     value |= (byte)(_latches[i] & ~_state.GraphicsControllerRegisters.BitMask);
                     // write the data
-                    _planes[i][offset] = value;
+                    Planes[offset, i] = value;
                 }
                 break;
             case WriteMode.WriteMode1:
@@ -131,7 +123,7 @@ public class VideoMemory : IMemoryDevice {
                     if (!planeEnable[i] || !writePlane[i]) {
                         continue;
                     }
-                    _planes[i][offset] = _latches[i];
+                    Planes[offset, i] = _latches[i];
                 }
                 break;
             case WriteMode.WriteMode2:
@@ -164,7 +156,7 @@ public class VideoMemory : IMemoryDevice {
                     value &= _state.GraphicsControllerRegisters.BitMask;
                     value |= (byte)(_latches[i] & ~_state.GraphicsControllerRegisters.BitMask);
                     // write the data
-                    _planes[i][offset] = value;
+                    Planes[offset, i] = value;
                 }
                 break;
             case WriteMode.WriteMode3:
@@ -183,7 +175,7 @@ public class VideoMemory : IMemoryDevice {
                     value &= bitMask;
                     value |= (byte)(_latches[i] & ~bitMask);
                     // write the data
-                    _planes[i][offset] = value;
+                    Planes[offset, i] = value;
                 }
                 break;
             default:
@@ -225,6 +217,8 @@ public class VideoMemory : IMemoryDevice {
         }
         return (plane, offset);
     }
+
+    public byte[,] Planes { get; }
 
     private (byte planes, uint offset) DecodeWriteAddress(uint address) {
         byte planes;

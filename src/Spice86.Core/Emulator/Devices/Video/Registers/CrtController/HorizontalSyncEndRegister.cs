@@ -6,8 +6,8 @@ public class HorizontalSyncEndRegister : Register8 {
     ///     Horizontal Blanking End Value.
     /// </summary>
     public byte HorizontalBlankingEnd5 {
-        get => (byte)(Value & 1 << 7);
-        set => SetBit(7, value != 0);
+        get => (byte)((Value & 0x80) >> 2); // Take bit 7 and move it to position 5.
+        set => SetBit(7, (value & 0x80) != 0);
     }
 
     /// <summary>

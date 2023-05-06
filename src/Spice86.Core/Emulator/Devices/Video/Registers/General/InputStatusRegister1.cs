@@ -21,7 +21,7 @@ public class InputStatusRegister1 : Register8 {
     ///     designed to eliminate this software requirement; screen updates may be made at any time without screen
     ///     degradation.
     /// </summary>
-    public bool DisplayEnable {
+    public bool DisplayDisabled {
         get => GetBit(0);
         set => SetBit(0, value);
     }
