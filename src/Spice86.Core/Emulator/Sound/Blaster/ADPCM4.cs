@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// 4-bit ADPCM decoder.
 /// </summary>
-internal sealed class ADPCM4 : ADPCMDecoder {
+public sealed class ADPCM4 : ADPCMDecoder {
     /// <summary>
     /// The limit value.
     /// </summary>

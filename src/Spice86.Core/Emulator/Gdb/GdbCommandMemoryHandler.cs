@@ -1,31 +1,39 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
+﻿namespace Spice86.Core.Emulator.Gdb;
 
-namespace Spice86.Core.Emulator.Gdb;
-
-using Serilog;
-
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Utils;
-
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
+
+/// <summary>
+/// Handles GDB memory-related commands such as reading and writing memory, and searching for patterns in memory.
+/// </summary>
 public class GdbCommandMemoryHandler {
     private readonly ILoggerService _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
-
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GdbCommandMemoryHandler"/> class.
+    /// </summary>
+    /// <param name="gdbIo">The GDB I/O handler.</param>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service.</param>
     public GdbCommandMemoryHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService) {
         _loggerService = loggerService;
         _gdbIo = gdbIo;
         _machine = machine;
     }
-
+    
+    /// <summary>
+    /// Reads memory from the machine being debugged.
+    /// </summary>
+    /// <param name="commandContent">The command content specifying the memory location and length to read.</param>
+    /// <returns>The response to send back to GDB.</returns>
     public string ReadMemory(string commandContent) {
         try {
             string[] commandContentSplit = commandContent.Split(",");
@@ -62,6 +70,11 @@ public class GdbCommandMemoryHandler {
         }
     }
 
+    /// <summary>
+    /// Searches for a pattern in memory.
+    /// </summary>
+    /// <param name="command">The command containing the memory location range and pattern to search for.</param>
+    /// <returns>The response to send back to GDB.</returns>
     public string SearchMemory(string command) {
         string[] parameters = command.Replace("Search:memory:", "").Split(";");
         uint start = ConvertUtils.ParseHex32(parameters[0]);
@@ -85,7 +98,12 @@ public class GdbCommandMemoryHandler {
 
         return _gdbIo.GenerateResponse("1," + _gdbFormatter.FormatValueAsHex32(address.Value));
     }
-
+    
+    /// <summary>
+    /// Writes data to the specified memory address.
+    /// </summary>
+    /// <param name="commandContent">The command content in the format "address,length:data".</param>
+    /// <returns>The GDB response.</returns>
     public string WriteMemory(string commandContent) {
         try {
             string[] commandContentSplit = commandContent.Split("[,:]");

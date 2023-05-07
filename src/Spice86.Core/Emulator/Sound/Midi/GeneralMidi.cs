@@ -124,6 +124,7 @@ public sealed class GeneralMidi : IDisposable {
         _midiMapper?.Resume();
     }
 
+    /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);

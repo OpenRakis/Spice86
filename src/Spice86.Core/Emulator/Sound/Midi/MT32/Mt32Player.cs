@@ -1,20 +1,14 @@
-﻿using Spice86.Shared.Interfaces;
+﻿namespace Spice86.Core.Emulator.Sound.Midi.MT32;
 
-namespace Spice86.Core.Emulator.Sound.Midi.MT32;
-
-using Mt32emu;
-
-using Serilog;
-
-using Spice86.Core.Backend.Audio;
-using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.Sound;
-using Spice86.Logging;
-
-using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+
+using Mt32emu;
+
+using Spice86.Shared.Interfaces;
+using Spice86.Core.Backend.Audio;
+using Spice86.Core.Emulator.Sound;
 
 internal sealed class Mt32Player : IDisposable {
     private readonly Mt32Context _context = new();
@@ -108,6 +102,7 @@ internal sealed class Mt32Player : IDisposable {
         //audioPlayer?.BeginPlayback(this.FillBuffer);
     }
 
+    /// <inheritdoc/>
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);

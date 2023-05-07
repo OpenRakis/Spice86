@@ -1,6 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi;
 using System;
 
+/// <summary>
+/// The base class for all classes talking to an external MIDI device.
+/// </summary>
 internal abstract class MidiDevice : IDisposable {
     private uint _currentMessage;
     private uint _bytesReceived;
@@ -9,6 +12,10 @@ internal abstract class MidiDevice : IDisposable {
     private int _sysexIndex = -1;
     private static readonly uint[] MessageLength = { 3, 3, 3, 3, 2, 2, 3, 1 };
 
+    /// <summary>
+    /// Sends a byte to the MIDI device.
+    /// </summary>
+    /// <param name="value">The value to send.</param>
     public void SendByte(byte value) {
         if (_sysexIndex == -1) {
             if (value == 0xF0 && _bytesExpected == 0) {
@@ -39,22 +46,46 @@ internal abstract class MidiDevice : IDisposable {
             _currentSysex[_sysexIndex++] = value;
 
             if (value == 0xF7) {
-                // do nothing for general midi
+                // do nothing for General MIDI
                 PlaySysex(_currentSysex.AsSpan(0, _sysexIndex));
                 _sysexIndex = -1;
             }
         }
     }
+    
+    /// <summary>
+    /// Invoked when the emulation is paused.
+    /// </summary>
     public abstract void Pause();
+    
+    /// <summary>
+    /// Invoked when the emulation resumes.
+    /// </summary>
     public abstract void Resume();
+    
+    /// <inheritdoc/>
     public void Dispose() {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Plays a short MIDI message.
+    /// </summary>
+    /// <param name="message">The message to play.</param>
     protected abstract void PlayShortMessage(uint message);
+    
+    
+    /// <summary>
+    /// Plays a SysEx MIDI message.
+    /// </summary>
+    /// <param name="data">The data to play.</param>
     protected abstract void PlaySysex(ReadOnlySpan<byte> data);
 
+    /// <summary>
+    /// Releases the unmanaged resources used by the MIDI device and optionally releases the managed resources.
+    /// </summary>
+    /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing) {
     }
 }

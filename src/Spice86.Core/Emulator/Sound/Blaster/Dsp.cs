@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.VM;
 /// <summary>
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
-internal sealed class Dsp {
+public sealed class Dsp {
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>

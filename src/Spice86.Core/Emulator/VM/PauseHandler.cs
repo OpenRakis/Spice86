@@ -1,15 +1,10 @@
-﻿using Spice86.Logging;
-
-namespace Spice86.Core.Emulator.VM;
-
-using Serilog;
-
-using Spice86.Core.Emulator.Errors;
-using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Interfaces;
+﻿namespace Spice86.Core.Emulator.VM;
 
 using System.Diagnostics;
 using System.Threading;
+
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Interfaces;
 
 public sealed class PauseHandler : IDisposable {
     private readonly ILoggerService _loggerService;

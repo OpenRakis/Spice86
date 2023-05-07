@@ -5,6 +5,9 @@ using Spice86.Shared.Interfaces;
 using System;
 using System.Linq;
 
+/// <summary>
+/// The class responsible for answering to custom GDB commands.
+/// </summary>
 public class GdbCommandHandler {
     private readonly ILoggerService _loggerService;
     private bool _isConnected = true;
@@ -15,6 +18,13 @@ public class GdbCommandHandler {
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
 
+    /// <summary>
+    /// Constructs a new instance of <see cref="GdbCommandHandler"/>
+    /// </summary>
+    /// <param name="gdbIo">The GDB I/O handler.</param>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="configuration">The configuration object containing GDB settings.</param>
     public GdbCommandHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
         _gdbIo = gdbIo;
@@ -27,15 +37,25 @@ public class GdbCommandHandler {
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }
 
+    /// <summary>
+    /// Are we connected to the GDB client or not.
+    /// </summary>
     public bool IsConnected => _isConnected;
 
-    public void PauseEmulator() {
+    internal void PauseEmulator() {
         _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = false;
         _machine.MachineBreakpoints.PauseHandler.RequestPause();
     }
 
+    /// <summary>
+    /// Executes a single CPU instruction.
+    /// </summary>
     public void Step() => _gdbCommandBreakpointHandler.Step();
 
+    /// <summary>
+    /// Runs a custom GDB command.
+    /// </summary>
+    /// <param name="command">The custom GDB command string</param>
     public void RunCommand(string command) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("Received command {Command}", command);

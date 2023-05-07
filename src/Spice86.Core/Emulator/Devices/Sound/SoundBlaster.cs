@@ -162,17 +162,17 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <inheritdoc />
     public override byte ReadByte(int port) {
         switch (port) {
-            case Ports.DspReadData:
+            case DspPorts.DspReadData:
                 if (_outputData.Count > 0) {
                     return _outputData.Dequeue();
                 } else {
                     return 0;
                 }
 
-            case Ports.DspWrite:
+            case DspPorts.DspWrite:
                 return 0x00;
 
-            case Ports.DspReadBufferStatus:
+            case DspPorts.DspReadBufferStatus:
                 if (_mixer.InterruptStatusRegister == InterruptStatus.Dma8) {
                     //System.Diagnostics.Debug.WriteLine("Sound Blaster 8-bit DMA acknowledged");
                 }
@@ -180,10 +180,10 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 _mixer.InterruptStatusRegister = InterruptStatus.None;
                 return _outputData.Count > 0 ? (byte)0x80 : (byte)0u;
 
-            case Ports.MixerAddress:
+            case DspPorts.MixerAddress:
                 return (byte)_mixer.CurrentAddress;
 
-            case Ports.MixerData:
+            case DspPorts.MixerData:
                 return _mixer.ReadData();
         }
         return 0;
@@ -196,7 +196,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             _playbackStarted = true;
         }
         switch (port) {
-            case Ports.DspReset:
+            case DspPorts.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
                 if (value == 1) {
                     _state = BlasterState.ResetRequest;
@@ -206,7 +206,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 }
                 break;
 
-            case Ports.DspWrite:
+            case DspPorts.DspWrite:
                 if (_state == BlasterState.WaitingForCommand) {
                     _currentCommand = value;
                     _state = BlasterState.ReadingCommand;
@@ -227,7 +227,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 }
                 break;
 
-            case Ports.MixerAddress:
+            case DspPorts.MixerAddress:
                 _mixer.CurrentAddress = value;
                 break;
         }
@@ -252,7 +252,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// The list of input ports.
     /// </summary>
-    public IEnumerable<int> InputPorts => new int[] { Ports.DspReadData, Ports.DspWrite, Ports.DspReadBufferStatus, Ports.MixerAddress, Ports.MixerData };
+    public IEnumerable<int> InputPorts => new int[] { DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData };
 
     /// <summary>
     /// Gets the hardware IRQ assigned to the device.
@@ -262,7 +262,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// The list of output ports.
     /// </summary>
-    public IEnumerable<int> OutputPorts => new int[] { Ports.DspReset, Ports.DspWrite, Ports.MixerAddress };
+    public IEnumerable<int> OutputPorts => new int[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress };
 
     /// <inheritdoc />
     public void Dispose() {

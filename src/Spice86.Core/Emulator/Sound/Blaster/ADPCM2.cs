@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// 2-bit ADPCM decoder.
 /// </summary>
-internal class ADPCM2 : ADPCMDecoder {
+public class ADPCM2 : ADPCMDecoder {
     /// <summary>
     /// The limit value.
     /// </summary>
