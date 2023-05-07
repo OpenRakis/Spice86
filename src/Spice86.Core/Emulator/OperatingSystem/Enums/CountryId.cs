@@ -1,9 +1,10 @@
-namespace Spice86.Core.Emulator.OperatingSystem.Enums; 
+namespace Spice86.Core.Emulator.OperatingSystem.Enums;
 
+#pragma warning disable CS1591
 public enum CountryId : ushort {
-    UnitedStates  = 1,
+    UnitedStates   = 1,
     CanadianFrench = 2,
-    LatinAmerica  = 3,
+    LatinAmerica   = 3,
     Russia         = 7,
     Greece         = 30,
     Netherlands    = 31,
@@ -15,9 +16,9 @@ public enum CountryId : ushort {
     Italy          = 39,
     Romania        = 40,
     Switzerland    = 41,
-    CzechSlovak   = 42,
+    CzechSlovak    = 42,
     Austria        = 43,
-    UnitedKingdom = 44,
+    UnitedKingdom  = 44,
     Denmark        = 45,
     Sweden         = 46,
     Norway         = 47,
@@ -31,7 +32,7 @@ public enum CountryId : ushort {
     Singapore      = 65,
     Kazakhstan     = 77,
     Japan          = 81,
-    SouthKorea    = 82,
+    SouthKorea     = 82,
     Vietnam        = 84,
     China          = 86,
     Turkey         = 90,
@@ -39,7 +40,7 @@ public enum CountryId : ushort {
     Niger          = 227,
     Benin          = 229,
     Nigeria        = 234,
-    FaeroeIslands = 298,
+    FaeroeIslands  = 298,
     Portugal       = 351,
     Iceland        = 354,
     Albania        = 355,
@@ -69,3 +70,4 @@ public enum CountryId : ushort {
     Kyrgyzstan     = 996,
     Uzbekistan     = 998,
 }
+#pragma warning restore CS1591

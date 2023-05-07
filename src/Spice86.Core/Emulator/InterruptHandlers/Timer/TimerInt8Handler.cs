@@ -25,7 +25,7 @@ public class TimerInt8Handler : InterruptHandler {
     public override void Run() {
         long numberOfTicks = _timer.NumberOfTicks;
         TickCounterValue = (uint)numberOfTicks;
-        _dualPic.AcknwowledgeInterrupt();
+        _dualPic.AcknowledgeInterrupt();
     }
 
     public uint TickCounterValue {
