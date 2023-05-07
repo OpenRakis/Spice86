@@ -2,6 +2,9 @@ namespace Spice86.Aeon.Emulator.Video.Rendering;
 
 using Spice86.Aeon.Emulator.Video.Modes;
 
+/// <summary>
+/// Renders 2-bit graphics to a bitmap.
+/// </summary>
 public sealed class GraphicsPresenter2 : Presenter
 {
     /// <summary>
@@ -12,6 +15,7 @@ public sealed class GraphicsPresenter2 : Presenter
     {
     }
 
+    /// <inheritdoc />
     protected override void DrawFrame(IntPtr destination)
     {
         int width = VideoMode.Width;

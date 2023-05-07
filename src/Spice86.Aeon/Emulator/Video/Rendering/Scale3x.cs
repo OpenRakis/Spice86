@@ -236,31 +236,39 @@ internal sealed class Scale3x : Scaler
         uint o8 = o1;
         uint o9 = o1;
 
-        if (d == b && d != h && b != f)
+        if (d == b && d != h && b != f) {
             o1 = d;
+        }
 
-        if ((d == b && d != h && b != f && e != c) || (b == f && b != d && f != h && e != a))
+        if ((d == b && d != h && b != f && e != c) || (b == f && b != d && f != h && e != a)) {
             o2 = b;
+        }
 
-        if (b == f && b != d && f != h)
+        if (b == f && b != d && f != h) {
             o3 = f;
+        }
 
-        if ((h == d && h != f && d != b && e != a) || (d == b && d != h && b != f && e != g))
+        if ((h == d && h != f && d != b && e != a) || (d == b && d != h && b != f && e != g)) {
             o4 = d;
+        }
 
         o5 = e;
 
-        if ((b == f && b != d && f != h && e != i) || (f == h && f != b && h != d && e != c))
+        if ((b == f && b != d && f != h && e != i) || (f == h && f != b && h != d && e != c)) {
             o6 = f;
+        }
 
-        if (h == d && h != f && d != b)
+        if (h == d && h != f && d != b) {
             o7 = d;
+        }
 
-        if ((f == h && f != b && h != d && e != g) || (h == d && h != f && d != b && e != i))
+        if ((f == h && f != b && h != d && e != g) || (h == d && h != f && d != b && e != i)) {
             o8 = h;
+        }
 
-        if (f == h && f != b && h != d)
+        if (f == h && f != b && h != d) {
             o9 = f;
+        }
 
         pdest[destIndex] = o1;
         pdest[destIndex + 1] = o2;

@@ -169,17 +169,21 @@ internal sealed class Scale2x : Scaler
         uint o3 = o1;
         uint o4 = o1;
 
-        if (c == a && c != d && a != b)
+        if (c == a && c != d && a != b) {
             o1 = a;
+        }
 
-        if (a == b && a != c && b != d)
+        if (a == b && a != c && b != d) {
             o2 = b;
+        }
 
-        if (d == c && d != b && c != a)
+        if (d == c && d != b && c != a) {
             o3 = c;
+        }
 
-        if (b == d && b != a && d != c)
+        if (b == d && b != a && d != c) {
             o4 = d;
+        }
 
         pdest[destIndex] = o1;
         pdest[destIndex + 1] = o2;

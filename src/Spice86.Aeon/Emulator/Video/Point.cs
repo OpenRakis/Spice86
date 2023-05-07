@@ -15,8 +15,21 @@ public struct Point : IEquatable<Point>
         X = x;
         Y = y;
     }
-
+    
+    /// <summary>
+    /// Determines whether two <see cref="Point"/> objects are equal.
+    /// </summary>
+    /// <param name="pointA">The first <see cref="Point"/> to compare.</param>
+    /// <param name="pointB">The second <see cref="Point"/> to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="pointA"/> and <paramref name="pointB"/> represent the same point; otherwise, <see langword="false"/>.</returns>
     public static bool operator ==(Point pointA, Point pointB) => pointA.Equals(pointB);
+
+    /// <summary>
+    /// Determines whether two <see cref="Point"/> objects are not equal.
+    /// </summary>
+    /// <param name="pointA">The first <see cref="Point"/> to compare.</param>
+    /// <param name="pointB">The second <see cref="Point"/> to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="pointA"/> and <paramref name="pointB"/> do not represent the same point; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(Point pointA, Point pointB) => !pointA.Equals(pointB);
 
     /// <summary>

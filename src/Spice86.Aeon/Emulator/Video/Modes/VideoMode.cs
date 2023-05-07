@@ -216,10 +216,11 @@ public abstract class VideoMode
         {
             video.TextConsole.Width = Width / 8;
             video.TextConsole.Height = Height / FontHeight;
-            if (BitsPerPixel < 8)
+            if (BitsPerPixel < 8) {
                 stride = Width / 8;
-            else
+            } else {
                 stride = Width;
+            }
         }
 
         _crtController.Overflow = 1 << 4;

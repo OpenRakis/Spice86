@@ -13,7 +13,14 @@ public sealed class TextMode : VideoMode
     private readonly Graphics graphics;
     private readonly Sequencer sequencer;
     private readonly uint vramSize;
-
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextMode"/> class.
+    /// </summary>
+    /// <param name="width">The width of the display in pixels.</param>
+    /// <param name="height">The height of the display in pixels.</param>
+    /// <param name="fontHeight">The height of the font in pixels.</param>
+    /// <param name="video">The VGA card object.</param>
     public TextMode(int width, int height, int fontHeight, IAeonVgaCard video)
         : base(width, height, 4, false, fontHeight, VideoModeType.Text, video)
     {
@@ -48,10 +55,12 @@ public sealed class TextMode : VideoMode
     /// </summary>
     private bool IsOddEvenReadEnabled => (graphics.GraphicsMode & 0x10) != 0;
 
+    /// <inheritdoc />
     public override byte GetVramByte(uint offset)
     {
-        if (offset - BaseAddress >= vramSize)
+        if (offset - BaseAddress >= vramSize) {
             return 0;
+        }
 
         unsafe
         {
@@ -63,18 +72,28 @@ public sealed class TextMode : VideoMode
             }
 
             var map = graphics.ReadMapSelect & 0x3;
-            if (map == 0 || map == 1)
+            if (map == 0 || map == 1) {
                 return planes[map][address];
-            if (map == 3)
+            }
+
+            if (map == 3) {
                 return Font[address % 4096];
+            }
+
             return 0;
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="offset"></param>
+    /// <param name="value"></param>
     public override void SetVramByte(uint offset, byte value)
     {
-        if (offset - BaseAddress >= vramSize)
+        if (offset - BaseAddress >= vramSize) {
             return;
+        }
 
         unsafe
         {
@@ -87,13 +106,17 @@ public sealed class TextMode : VideoMode
             else
             {
                 uint mapMask = sequencer.MapMask.Packed;
-                if ((mapMask & 0x01) != 0)
+                if ((mapMask & 0x01) != 0) {
                     planes[0][address] = value;
-                if ((mapMask & 0x02) != 0)
-                    planes[1][address] = value;
+                }
 
-                if ((mapMask & 0x04) != 0)
+                if ((mapMask & 0x02) != 0) {
+                    planes[1][address] = value;
+                }
+
+                if ((mapMask & 0x04) != 0) {
                     Font[(address / 32) * FontHeight + (address % 32)] = value;
+                }
             }
         }
     }
@@ -128,6 +151,7 @@ public sealed class TextMode : VideoMode
         SetVramWord((uint)((y * Stride) + (x * 2)) + BaseAddress, (ushort)value);
     }
 
+    /// <inheritdoc />
     public override void InitializeMode(IAeonVgaCard video)
     {
         base.InitializeMode(video);
@@ -159,8 +183,9 @@ public sealed class TextMode : VideoMode
     /// <param name="height">Height of the rectangle to clear.</param>
     public void Clear(Point offset, int width, int height)
     {
-        if (width <= 0 || height <= 0)
+        if (width <= 0 || height <= 0) {
             return;
+        }
 
         int pageOffset = DisplayPageSize * ActiveDisplayPage;
 

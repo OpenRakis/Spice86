@@ -37,8 +37,9 @@ public abstract class Presenter : IDisposable
         }
         set
         {
-            if (Scaler == value)
+            if (Scaler == value) {
                 return;
+            }
 
             if (value != ScalingAlgorithm.None && internalBuffer == null)
             {
@@ -78,9 +79,6 @@ public abstract class Presenter : IDisposable
     /// </summary>
     public int HeightRatio => scaler?.HeightRatio ?? 1;
 
-    public TimeSpan RenderTime { get; private set; }
-    public TimeSpan ScalerTime { get; private set; }
-
     /// <summary>
     /// Gets information about the video mode.
     /// </summary>
@@ -105,13 +103,12 @@ public abstract class Presenter : IDisposable
         }
     }
 
-    public virtual MemoryBitmap? Dump() => null;
-
     /// <summary>
     /// Updates the bitmap to match the current state of the video RAM.
     /// </summary>
     protected abstract void DrawFrame(IntPtr destination);
 
+    /// <inheritdoc />
     public void Dispose()
     {
         lock (syncLock)

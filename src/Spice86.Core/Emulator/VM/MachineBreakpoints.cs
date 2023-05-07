@@ -1,24 +1,49 @@
-﻿using Spice86.Logging;
-
-namespace Spice86.Core.Emulator.VM;
+﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
+/// <summary>
+/// A class for managing breakpoints in the machine.
+/// </summary>
 public sealed class MachineBreakpoints : IDisposable {
+    /// <summary>
+    /// A holder for cycle breakpoints.
+    /// </summary>
     private readonly BreakPointHolder _cycleBreakPoints = new();
 
+    /// <summary>
+    /// A holder for execution breakpoints.
+    /// </summary>
     private readonly BreakPointHolder _executionBreakPoints = new();
 
+    /// <summary>
+    /// The memory associated with the machine.
+    /// </summary>
     private readonly Memory _memory;
 
+    /// <summary>
+    /// The state associated with the machine.
+    /// </summary>
     private readonly State _state;
 
+    /// <summary>
+    /// The machine stop breakpoint.
+    /// </summary>
     private BreakPoint? _machineStopBreakPoint;
+
+    /// <summary>
+    /// True if the object has been disposed.
+    /// </summary>
     private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MachineBreakpoints"/> class.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public MachineBreakpoints(Machine machine, ILoggerService loggerService) {
         _state = machine.Cpu.State;
         _memory = machine.Memory;
@@ -27,13 +52,22 @@ public sealed class MachineBreakpoints : IDisposable {
             machine.Gui);
     }
 
+    /// <summary>
+    /// Checks the current breakpoints.
+    /// </summary>
     public void CheckBreakPoint() {
         CheckBreakPoints();
         PauseHandler.WaitIfPaused();
     }
 
+    /// <summary>
+    /// The pause handler associated with the breakpoints.
+    /// </summary>
     public PauseHandler PauseHandler { get; }
 
+    /// <summary>
+    /// Called when the machine stops.
+    /// </summary>
     public void OnMachineStop() {
         if (_machineStopBreakPoint is not null) {
             _machineStopBreakPoint.Trigger();
@@ -41,6 +75,11 @@ public sealed class MachineBreakpoints : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Toggles a breakpoint on or off.
+    /// </summary>
+    /// <param name="breakPoint">The breakpoint to toggle.</param>
+    /// <param name="on">True to turn the breakpoint on, false to turn it off.</param>
     public void ToggleBreakPoint(BreakPoint? breakPoint, bool on) {
         if (breakPoint is null) {
             return;
@@ -57,6 +96,9 @@ public sealed class MachineBreakpoints : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Checks the current breakpoints and triggers them if necessary.
+    /// </summary>
     private void CheckBreakPoints() {
         if (!_executionBreakPoints.IsEmpty) {
             uint address = _state.IpPhysicalAddress;
@@ -78,6 +120,7 @@ public sealed class MachineBreakpoints : IDisposable {
         }
     }
 
+    /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);

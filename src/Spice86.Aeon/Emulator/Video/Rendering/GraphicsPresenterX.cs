@@ -1,5 +1,3 @@
-using System.Buffers.Binary;
-
 namespace Spice86.Aeon.Emulator.Video.Rendering;
 
 using Spice86.Aeon.Emulator.Video.Modes;

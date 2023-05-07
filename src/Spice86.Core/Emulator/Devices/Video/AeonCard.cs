@@ -741,8 +741,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private void InternalDispose() {
         if (!_disposed) {
             unsafe {
-                if (VideoRam != IntPtr.Zero)
+                if (VideoRam != IntPtr.Zero) {
                     NativeMemory.Free(VideoRam.ToPointer());
+                }
             }
 
             _disposed = true;

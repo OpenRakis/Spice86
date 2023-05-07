@@ -14,6 +14,15 @@ public abstract class Planar4 : VideoMode
     private readonly Graphics graphics;
     private readonly Sequencer sequencer;
 
+    /// <summary>
+    /// Initializes a new instance of the Planar4 class.
+    /// </summary>
+    /// <param name="width">The width of the video mode.</param>
+    /// <param name="height">The height of the video mode.</param>
+    /// <param name="bpp">The number of bits per pixel.</param>
+    /// <param name="fontHeight">The height of the font to use in the video mode.</param>
+    /// <param name="modeType">The type of video mode.</param>
+    /// <param name="video">The VGA card to use.</param>
     public Planar4(int width, int height, int bpp, int fontHeight, VideoModeType modeType, IAeonVgaCard video)
         : base(width, height, bpp, true, fontHeight, modeType, video)
     {
@@ -26,6 +35,7 @@ public abstract class Planar4 : VideoMode
         sequencer = video.Sequencer;
     }
 
+    /// <inheritdoc />
     public override byte GetVramByte(uint offset)
     {
         offset %= 65536u;
@@ -47,12 +57,15 @@ public abstract class Planar4 : VideoMode
                     ? (int)Bmi2.ParallelBitExtract(latches, 0x01010101u << i) 
                     : (int)((latches & 1u << i) >> i | (latches & 0x100u << i) >> 7 + i | (latches & 0x10000u << i) >> 14 + i | (latches & 0x1000000u << i) >> 21 + i);
                 int color = extracted | colorDontCare;
-                if (color == colorCompare)
+                if (color == colorCompare) {
                     result |= (byte)(1 << i);
+                }
             }
             return result;
         }
     }
+
+    /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public override void SetVramByte(uint offset, byte value)
     {
@@ -124,10 +137,11 @@ public abstract class Planar4 : VideoMode
                 //uint bgMask = ~fgMask;
                 uint value = fg & fgMask;
 
-                if ((background & 0x08) == 0)
+                if ((background & 0x08) == 0) {
                     videoRam[startPos + (row * stride)] = value;
-                else
+                } else {
                     videoRam[startPos + (row * stride)] ^= value;
+                }
             }
         }
     }

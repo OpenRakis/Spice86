@@ -114,8 +114,10 @@ public sealed class GraphicsPresenter4 : Presenter
     // it's important for this to get inlined
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int UnpackIndex(uint value, int index) {
-        if (Bmi2.IsSupported)
+        if (Bmi2.IsSupported) {
             return (int)Bmi2.ParallelBitExtract(value, 0x01010101u << index);
+        }
+
         return (int)(((value & (1u << index)) >> index) | ((value & (0x100u << index)) >> (7 + index)) | ((value & (0x10000u << index)) >> (14 + index)) | ((value & (0x1000000u << index)) >> (21 + index)));
     }
 }

@@ -1,16 +1,13 @@
-using Spice86.Aeon.Emulator.Video.Modes;
+namespace Spice86.Aeon.Emulator.Video;
 
 using System.Text;
-
-namespace Spice86.Aeon.Emulator.Video;
 
 using Spice86.Aeon.Emulator.Video.Modes;
 
 /// <summary>
 /// Defines methods and properties for an emulated text console.
 /// </summary>
-public sealed class TextConsole
-{
+public sealed class TextConsole {
     private const byte ansiEscape = 0x1B;
     private readonly StringBuilder ansiCommand = new();
     private Point savedPosition = new(0, 24);
@@ -76,8 +73,9 @@ public sealed class TextConsole
     /// </summary>
     public void Clear()
     {
-        if (video.CurrentMode is TextMode mode)
+        if (video.CurrentMode is TextMode mode) {
             mode.Clear();
+        }
 
         CursorPosition = new Point(0, 0);
     }
@@ -89,8 +87,9 @@ public sealed class TextConsole
     /// <param name="height">Height of the rectangle to clear.</param>
     public void Clear(Point offset, int width, int height)
     {
-        if (video.CurrentMode is TextMode mode)
+        if (video.CurrentMode is TextMode mode) {
             mode.Clear(offset, width, height);
+        }
     }
     /// <summary>
     /// Copies a block of text in the console from one location to another
@@ -103,8 +102,9 @@ public sealed class TextConsole
     /// <param name="background">Background color of character to write.</param>
     public void MoveBlock(Point sourceOffset, Point destinationOffset, int width, int height, ushort background)
     {
-        if (video.CurrentMode is TextMode mode)
+        if (video.CurrentMode is TextMode mode) {
             mode.MoveBlock(sourceOffset, destinationOffset, width, height, 0, 0);
+        }
     }
     /// <summary>
     /// Writes a byte to the console.
@@ -112,12 +112,23 @@ public sealed class TextConsole
     /// <param name="b">Byte to write to the console.</param>
     public void Write(byte b)
     {
-        if (AnsiEnabled && (b == ansiEscape || ansiCommand.Length > 0))
+        if (AnsiEnabled && (b == ansiEscape || ansiCommand.Length > 0)) {
             WriteAnsiCommand((char)b);
-        else
+        } else {
             WriteByte(b, ForegroundColor, BackgroundColor, true);
+        }
     }
+    
+    
+    /// <summary>
+    /// Writes a byte to the console.
+    /// </summary>
+    /// <param name="b">Byte to write to the console.</param>
+    /// <param name="foreground">Foreground color of byte to write.</param>
+    /// <param name="background">Background color of byte to write.</param>
+    /// <param name="advanceCursor">Value indicating whether the cursor should be automatically advanced after writing the character.</param>
     public void Write(byte b, byte foreground, byte background, bool advanceCursor) => WriteByte(b, foreground, background, advanceCursor);
+    
     /// <summary>
     /// Writes a string to the console.
     /// </summary>
@@ -134,6 +145,7 @@ public sealed class TextConsole
             WriteString(s, ForegroundColor, BackgroundColor, true);
         }
     }
+    
     /// <summary>
     /// Scrolls lines of text up in a rectangle.
     /// </summary>
@@ -146,8 +158,9 @@ public sealed class TextConsole
     /// <param name="foreground">Foreground color to fill in bottom rows.</param>
     public void ScrollTextUp(int x1, int y1, int x2, int y2, int lines, byte foreground, byte background)
     {
-        if (video.CurrentMode is TextMode mode)
+        if (video.CurrentMode is TextMode mode) {
             mode.ScrollUp(x1, y1, x2, y2, lines, (byte)(foreground | (background << 4)));
+        }
     }
     /// <summary>
     /// Returns the character at the specified coordinates.
@@ -156,15 +169,22 @@ public sealed class TextConsole
     /// <param name="y">Vertical character coordinate.</param>
     /// <returns>Character and attribute at this specified position.</returns>
     public ushort GetCharacter(int x, int y) {
-        if (video.CurrentMode is TextMode mode)
+        if (video.CurrentMode is TextMode mode) {
             return mode.GetCharacter(x, y);
+        }
+
         return 0;
     }
-    public void SetCursorPosition(int offset)
-    {
+    
+    /// <summary>
+    /// Sets the cursor position to the specified offset relative to the beginning of the buffer.
+    /// </summary>
+    /// <param name="offset">The offset to set the cursor position to.</param>
+    public void SetCursorPosition(int offset) {
         var p = new Point(offset % Width, offset / Width);
-        if (p != CursorPosition)
+        if (p != CursorPosition) {
             CursorPosition = p;
+        }
     }
 
     /// <summary>
@@ -221,8 +241,9 @@ public sealed class TextConsole
             {
                 if (c == 8 && advanceCursor)
                 {
-                    if (cursorPos.X > 0)
+                    if (cursorPos.X > 0) {
                         cursorPos.X--;
+                    }
 
                     SendToProvider(cursorPos.X, cursorPos.Y, 0, foreground, background);
                 }
@@ -242,12 +263,14 @@ public sealed class TextConsole
                 }
             }
 
-            if (advanceCursor)
+            if (advanceCursor) {
                 CursorPosition = cursorPos;
+            }
         }
     }
 
-    private void SendToProvider(int x, int y, int index, byte foreground, byte background) => video.CurrentMode?.WriteCharacter(x, y, index, foreground, background);
+    private void SendToProvider(int x, int y, int index, byte foreground, byte background) => video.CurrentMode.WriteCharacter(x, y, index, foreground, background);
+    
     private void WriteAnsiCommand(char c)
     {
         ansiCommand.Append(c);
@@ -263,8 +286,9 @@ public sealed class TextConsole
         }
         else
         {
-            if (c >= 0x40 && c <= 0x7E)
+            if (c >= 0x40 && c <= 0x7E) {
                 ParseAnsiCommand();
+            }
         }
     }
     private void ParseAnsiCommand()
@@ -274,8 +298,9 @@ public sealed class TextConsole
 
         commandBody = commandBody[..^1];
         string[]? commandArgs = null;
-        if (commandBody.Length > 0)
+        if (commandBody.Length > 0) {
             commandArgs = commandBody.Split(';');
+        }
 
         switch (commandCode)
         {
@@ -345,8 +370,9 @@ public sealed class TextConsole
 
         if (args != null && args.Length >= 1)
         {
-            if (!int.TryParse(args[0].AsSpan().Trim(), out offset))
+            if (!int.TryParse(args[0].AsSpan().Trim(), out offset)) {
                 offset = 1;
+            }
         }
 
         var pos = CursorPosition;
@@ -377,8 +403,9 @@ public sealed class TextConsole
 
         if (args != null && args.Length > 0)
         {
-            if (!int.TryParse(args[0].AsSpan().Trim(), out offset))
+            if (!int.TryParse(args[0].AsSpan().Trim(), out offset)) {
                 offset = 1;
+            }
         }
 
         var pos = CursorPosition;
@@ -401,10 +428,11 @@ public sealed class TextConsole
         int column = 0;
         if (args != null && args.Length > 0)
         {
-            if (int.TryParse(args[0].AsSpan().Trim(), out column))
+            if (int.TryParse(args[0].AsSpan().Trim(), out column)) {
                 column--;
-            else
+            } else {
                 column = 0;
+            }
         }
 
         var pos = CursorPosition;
@@ -418,17 +446,19 @@ public sealed class TextConsole
 
         if (args != null && args.Length > 0)
         {
-            if (int.TryParse(args[0].AsSpan().Trim(), out row))
+            if (int.TryParse(args[0].AsSpan().Trim(), out row)) {
                 row--;
-            else
+            } else {
                 row = 0;
+            }
 
             if (args.Length > 1)
             {
-                if (int.TryParse(args[1].AsSpan().Trim(), out column))
+                if (int.TryParse(args[1].AsSpan().Trim(), out column)) {
                     column--;
-                else
+                } else {
                     column = 0;
+                }
             }
         }
 
@@ -439,8 +469,9 @@ public sealed class TextConsole
         int code = 0;
         if (args != null && args.Length > 0)
         {
-            if (!int.TryParse(args[0].AsSpan().Trim(), out code))
+            if (!int.TryParse(args[0].AsSpan().Trim(), out code)) {
                 code = 0;
+            }
         }
 
         Point pos;
@@ -469,8 +500,9 @@ public sealed class TextConsole
         int code = 0;
         if (args != null && args.Length > 0)
         {
-            if (!int.TryParse(args[0].AsSpan().Trim(), out code))
+            if (!int.TryParse(args[0].AsSpan().Trim(), out code)) {
                 code = 0;
+            }
         }
 
         var pos = CursorPosition;
@@ -495,16 +527,18 @@ public sealed class TextConsole
         int code = 0;
         if (args != null && args.Length > 0)
         {
-            if (!int.TryParse(args[0].AsSpan().Trim(), out code))
+            if (!int.TryParse(args[0].AsSpan().Trim(), out code)) {
                 code = 0;
+            }
         }
 
         RunGraphicsCommand(code);
 
         if (args != null && args.Length > 1)
         {
-            if (int.TryParse(args[1].AsSpan().Trim(), out code))
+            if (int.TryParse(args[1].AsSpan().Trim(), out code)) {
                 RunGraphicsCommand(code);
+            }
         }
     }
     private void RunGraphicsCommand(int code)

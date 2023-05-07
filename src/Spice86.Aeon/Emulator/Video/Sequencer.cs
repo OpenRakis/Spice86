@@ -3,13 +3,11 @@ namespace Spice86.Aeon.Emulator.Video;
 /// <summary>
 /// Emulates the VGA Sequencer registers.
 /// </summary>
-public sealed class Sequencer : VideoComponent
-{
+public sealed class Sequencer : VideoComponent {
     /// <summary>
     /// Initializes a new instance of the <see cref="Sequencer"/> class.
     /// </summary>
-    public Sequencer()
-    {
+    public Sequencer() {
     }
 
     /// <summary>

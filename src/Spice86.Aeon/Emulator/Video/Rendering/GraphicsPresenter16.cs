@@ -2,6 +2,9 @@ namespace Spice86.Aeon.Emulator.Video.Rendering;
 
 using Spice86.Aeon.Emulator.Video.Modes;
 
+/// <summary>
+/// Renders 16-bit graphics to a bitmap.
+/// </summary>
 public sealed class GraphicsPresenter16 : Presenter
 {
     private const double RedRatio = 255.0 / 31.0;

@@ -131,8 +131,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public override void Run() {
         byte operation = _state.AH;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose))
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, _state.AL);
+        }
+
         if (!_dispatchTable.ContainsKey(operation)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("EMS function not provided: {@Function}", operation);
