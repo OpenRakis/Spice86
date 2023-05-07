@@ -1,18 +1,11 @@
-﻿using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.Devices.Timer;
-
-using Serilog;
-
-using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
+﻿namespace Spice86.Core.Emulator.Devices.Timer;
 
 using System.Diagnostics;
+
+using Spice86.Shared.Interfaces;
+using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM;
 
 /// <summary>
 /// Emulates a PIT8254 Programmable Interval Timer.<br/>
@@ -80,6 +73,7 @@ public class Timer : DefaultIOPortHandler {
 
     public long NumberOfTicks => _counters[0].Ticks;
 
+    /// <inheritdoc />
     public override byte ReadByte(int port) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
@@ -92,6 +86,7 @@ public class Timer : DefaultIOPortHandler {
         return base.ReadByte(port);
     }
 
+    /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(ModeCommandeRegister, this);
         ioPortDispatcher.AddIOPortHandler(CounterRegisterZero, this);
@@ -99,6 +94,7 @@ public class Timer : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(CounterRegisterTwo, this);
     }
 
+    /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);

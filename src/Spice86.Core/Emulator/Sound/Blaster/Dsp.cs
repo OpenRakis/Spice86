@@ -12,7 +12,7 @@ using Spice86.Core.Emulator.VM;
 /// </summary>
 internal sealed class Dsp {
     /// <summary>
-    /// Initializes a new instance of the Dsp class.
+    /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
     /// <param name="vm">Virtual machine instance associated with the DSP.</param>
     /// <param name="dma8">8-bit DMA channel for the DSP device.</param>
@@ -60,19 +60,19 @@ internal sealed class Dsp {
     /// <param name="is16Bit">Value indicating whether this is a 16-bit transfer.</param>
     /// <param name="isStereo">Value indicating whether this is a stereo transfer.</param>
     /// <param name="autoInitialize">Value indicating whether the DMA controller is in auto-initialize mode.</param>
-    /// <param name="compression">Compression level of the expected data.</param>
+    /// <param name="compressionLevel">Compression level of the expected data.</param>
     /// <param name="referenceByte">Value indicating whether a reference byte is expected.</param>
-    public void Begin(bool is16Bit, bool isStereo, bool autoInitialize, CompressionLevel compression = CompressionLevel.None, bool referenceByte = false) {
+    public void Begin(bool is16Bit, bool isStereo, bool autoInitialize, CompressionLevel compressionLevel = CompressionLevel.None, bool referenceByte = false) {
         Is16Bit = is16Bit;
         IsStereo = isStereo;
         AutoInitialize = autoInitialize;
         referenceByteExpected = referenceByte;
-        this.compression = compression;
+        compression = compressionLevel;
         IsEnabled = true;
 
         decodeRemainderOffset = -1;
 
-        decoder = compression switch {
+        decoder = compressionLevel switch {
             CompressionLevel.ADPCM2 => new ADPCM2(),
             CompressionLevel.ADPCM3 => new ADPCM3(),
             CompressionLevel.ADPCM4 => new ADPCM4(),

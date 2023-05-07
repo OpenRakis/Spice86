@@ -1,9 +1,6 @@
-﻿using Spice86.Logging;
-
-namespace Spice86.Core.Emulator;
+﻿namespace Spice86.Core.Emulator;
 
 using Function.Dump;
-
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -16,9 +13,6 @@ using Spice86.Core.Emulator.LoadableFile.Dos.Com;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Shared.Interfaces;
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Security.Cryptography;
 using System.Diagnostics;
 
@@ -94,17 +88,12 @@ public sealed class ProgramExecutor : IDisposable {
             return;
         }
 
-        try {
-            byte[] actualHash = SHA256.HashData(file);
+        byte[] actualHash = SHA256.HashData(file);
 
-            if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
-                string error =
-                    $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
-                throw new UnrecoverableException(error);
-            }
-        } catch (UnauthorizedAccessException e) {
-            e.Demystify();
-            throw new UnrecoverableException("Executable file hash calculation failed", e);
+        if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
+            string error =
+                $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
+            throw new UnrecoverableException(error);
         }
     }
 

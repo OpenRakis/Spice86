@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
 /// </summary>
 internal class Channel2 : Channel
 {
-    public readonly Operator op1, op2;
+    public readonly Operator Op1, Op2;
 
     /// <summary>
     /// Initializes a new instance of the Channel2 class.
@@ -20,8 +20,8 @@ internal class Channel2 : Channel
     public Channel2(int baseAddress, Operator o1, Operator o2, FmSynthesizer opl)
         : base(baseAddress, opl)
     {
-        op1 = o1;
-        op2 = o2;
+        Op1 = o1;
+        Op2 = o2;
     }
 
     /// <summary>
@@ -31,66 +31,69 @@ internal class Channel2 : Channel
     public override void GetChannelOutput(Span<double> output)
     {
         double channelOutput = 0, op1Output = 0;
-        double feedbackOutput = (feedback0 + feedback1) / 2;
+        double feedbackOutput = (Feedback0 + Feedback1) / 2;
 
-        switch (cnt)
+        switch (Cnt)
         {
             // CNT = 0, the operators are in series, with the first in feedback.
             case 0:
-                if (op2.envelopeGenerator.State == AdsrState.Off)
+                if (Op2.EnvelopeGenerator.State == AdsrState.Off)
                 {
                     GetFourChannelOutput(0, output);
                     return;
                 }
 
-                op1Output = op1.GetOperatorOutput(feedbackOutput);
-                channelOutput = op2.GetOperatorOutput(op1Output * toPhase);
+                op1Output = Op1.GetOperatorOutput(feedbackOutput);
+                channelOutput = Op2.GetOperatorOutput(op1Output * ToPhase);
                 break;
 
             // CNT = 1, the operators are in parallel, with the first in feedback.    
             case 1:
-                if (op1.envelopeGenerator.State == AdsrState.Off && op2.envelopeGenerator.State == AdsrState.Off)
+                if (Op1.EnvelopeGenerator.State == AdsrState.Off && Op2.EnvelopeGenerator.State == AdsrState.Off)
                 {
                     GetFourChannelOutput(0, output);
                     return;
                 }
 
-                op1Output = op1.GetOperatorOutput(feedbackOutput);
-                double op2Output = op2.GetOperatorOutput(Operator.NoModulator);
+                op1Output = Op1.GetOperatorOutput(feedbackOutput);
+                double op2Output = Op2.GetOperatorOutput(Operator.NoModulator);
                 channelOutput = (op1Output + op2Output) / 2;
                 break;
         }
 
-        feedback0 = feedback1;
-        feedback1 = (op1Output * feedbackTable[fb]) % 1;
+        Feedback0 = Feedback1;
+        Feedback1 = (op1Output * FeedbackTable[Fb]) % 1;
         GetFourChannelOutput(channelOutput, output);
     }
+    
     /// <summary>
     /// Activates channel output.
     /// </summary>
     public override void KeyOn()
     {
-        op1.KeyOn();
-        op2.KeyOn();
-        feedback0 = 0;
-        feedback1 = 0;
+        Op1.KeyOn();
+        Op2.KeyOn();
+        Feedback0 = 0;
+        Feedback1 = 0;
     }
+    
     /// <summary>
     /// Disables channel output.
     /// </summary>
     public override void KeyOff()
     {
-        op1.KeyOff();
-        op2.KeyOff();
+        Op1.KeyOff();
+        Op2.KeyOff();
     }
+    
     /// <summary>
     /// Updates the state of all of the operators in the channel.
     /// </summary>
     public override void UpdateOperators()
     {
-        int keyScaleNumber = (block * 2) + ((fnumh >> opl.nts) & 0x01);
-        int f_number = (fnumh << 8) | fnuml;
-        op1.UpdateOperator(keyScaleNumber, f_number, block);
-        op2.UpdateOperator(keyScaleNumber, f_number, block);
+        int keyScaleNumber = (Block * 2) + ((Fnumh >> Opl.Nts) & 0x01);
+        int fNumber = (Fnumh << 8) | Fnuml;
+        Op1.UpdateOperator(keyScaleNumber, fNumber, Block);
+        Op2.UpdateOperator(keyScaleNumber, fNumber, Block);
     }
 }

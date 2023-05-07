@@ -1,14 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Sound.PCSpeaker;
 
 using Spice86.Core.Backend.Audio;
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Sound;
 
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Emulates a PC speaker.

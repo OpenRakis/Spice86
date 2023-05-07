@@ -1,14 +1,10 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.Devices.ExternalInput;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Utils;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Emulates a PIC8259 Programmable Interrupt Controller.<br/>
@@ -45,6 +41,12 @@ public class Pic {
     private bool _autoEoi = false;
     private SelectedReadRegister _selectedReadRegister = SelectedReadRegister.InterruptRequestRegister;
 
+    /// <summary>
+    /// Initializes a new instance of the PIC.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="master">Whether this is the so called 'master' PIC or not.</param>
     public Pic(Machine machine, ILoggerService loggerService, bool master) {
         _loggerService = loggerService;
         _master = master;
@@ -60,6 +62,9 @@ public class Pic {
         SetInterruptRequestRegister(irq);
     }
 
+    /// <summary>
+    /// Acknowledges an interrupt by clearing the highest priority interrupt in-service bit.
+    /// </summary>
     public void AcknwowledgeInterrupt() {
         ClearHighestInServiceIrq();
     }
@@ -159,13 +164,17 @@ public class Pic {
         return maxIrqInService;
     }
 
+    /// <summary>
+    /// Determines if the interrupt controller has any pending interrupt requests.
+    /// </summary>
+    /// <returns>True if there is at least one pending interrupt request, false otherwise.</returns>
     public bool HasPendingRequest() {
         return EnabledInterruptRequests != 0;
     }
 
     private byte EnabledInterruptRequests => (byte)(_interruptRequestRegister & ~_interruptMaskRegister);
 
-    public byte? ComputeVectorNumber() {
+    internal byte? ComputeVectorNumber() {
         byte enabledInterruptRequests = EnabledInterruptRequests;
         if (enabledInterruptRequests == 0) {
             // No requests
@@ -281,6 +290,10 @@ public class Pic {
         }
     }
 
+    /// <summary>
+    /// Processes the command byte write operation.
+    /// </summary>
+    /// <param name="value">The value to write.</param>
     public void ProcessCommandWrite(byte value) {
         if ((value & 0b1_0000) != 0) {
             ProcessICW1(value);
@@ -293,6 +306,10 @@ public class Pic {
         }
     }
 
+    /// <summary>
+    /// Processes the command byte write operation.
+    /// </summary>
+    /// <param name="value">The value to write.</param>
     public void ProcessDataWrite(byte value) {
         if (!_initialized) {
             // Process initialization commands
@@ -317,12 +334,17 @@ public class Pic {
         }
     }
 
+    
     private byte ReadPolledData() {
         ClearHighestInServiceIrq();
         _polled = false;
         return _currentIrq;
     }
 
+    /// <summary>
+    /// Reads data from the highest priority ISR and clears the corresponding bit in the In-Service Register.
+    /// </summary>
+    /// <returns>The ISR value that was read.</returns>
     public byte CommandRead() {
         if (_polled) {
             return ReadPolledData();
@@ -334,7 +356,11 @@ public class Pic {
 
         return _interruptRequestRegister;
     }
-
+    
+    /// <summary>
+    /// Reads a byte from the command register.
+    /// </summary>
+    /// <returns>The byte read from the command register.</returns>
     public byte DataRead() {
         if (_polled) {
             return ReadPolledData();
@@ -342,8 +368,4 @@ public class Pic {
 
         return _interruptMaskRegister;
     }
-}
-
-enum SelectedReadRegister {
-    InServiceRegister, InterruptRequestRegister
 }

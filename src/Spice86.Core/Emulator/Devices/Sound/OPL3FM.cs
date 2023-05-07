@@ -23,14 +23,19 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private volatile bool _endThread;
     private readonly Thread _playbackThread;
     private bool _initialized;
-    private bool _paused;
     private byte _statusByte;
     private byte _timer1Data;
     private byte _timer2Data;
     private byte _timerControlByte;
 
-    private bool _disposed = false;
+    private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the OPL3 FM synth chip.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public OPL3FM(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _audioPlayer = Audio.CreatePlayer(48000, 2048);
         if (_audioPlayer is not null) {
@@ -41,11 +46,13 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         };
     }
 
+    /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(0x388, this);
         ioPortDispatcher.AddIOPortHandler(0x389, this);
     }
 
+    /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
@@ -55,11 +62,9 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private void Dispose(bool disposing) {
         if(!_disposed) {
             if(disposing) {
-                if (!_paused) {
-                    _endThread = true;
-                    if (_playbackThread.IsAlive) {
-                        _playbackThread.Join();
-                    }
+                _endThread = true;
+                if (_playbackThread.IsAlive) {
+                    _playbackThread.Join();
                 }
                 _audioPlayer?.Dispose();
                 _initialized = false;
@@ -68,14 +73,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         }
     }
 
-    public void Pause() {
-        if (_initialized && !_paused && _playbackThread.IsAlive) {
-            _endThread = true;
-            _playbackThread.Join();
-            _paused = true;
-        }
-    }
-
+    /// <inheritdoc />
     public override byte ReadByte(int port) {
         if ((_timerControlByte & 0x01) != 0x00 && (_statusByte & Timer1Mask) == 0) {
             _timer1Data++;
@@ -94,18 +92,12 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         return _statusByte;
     }
 
+    /// <inheritdoc />
     public override ushort ReadWord(int port) {
         return _statusByte;
     }
 
-    public void Resume() {
-        if (_paused) {
-            _endThread = false;
-            StartPlaybackThread();
-            _paused = false;
-        }
-    }
-
+    /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         if (port == 0x388) {
             _currentAddress = value;
@@ -129,6 +121,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         }
     }
 
+    /// <inheritdoc />
     public override void WriteWord(int port, ushort value) {
         if (port == 0x388) {
             WriteByte(0x388, (byte)value);

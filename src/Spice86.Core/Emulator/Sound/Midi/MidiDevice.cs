@@ -7,10 +7,7 @@ internal abstract class MidiDevice : IDisposable {
     private uint _bytesExpected;
     private byte[] _currentSysex = new byte[128];
     private int _sysexIndex = -1;
-    private static readonly uint[] _messageLength = { 3, 3, 3, 3, 2, 2, 3, 1 };
-
-    protected MidiDevice() {
-    }
+    private static readonly uint[] MessageLength = { 3, 3, 3, 3, 2, 2, 3, 1 };
 
     public void SendByte(byte value) {
         if (_sysexIndex == -1) {
@@ -21,7 +18,7 @@ internal abstract class MidiDevice : IDisposable {
             } else if ((value & 0x80) != 0) {
                 _currentMessage = value;
                 _bytesReceived = 1;
-                _bytesExpected = _messageLength[(value & 0x70) >> 4];
+                _bytesExpected = MessageLength[(value & 0x70) >> 4];
             } else {
                 if (_bytesReceived < _bytesExpected) {
                     _currentMessage |= (uint)(value << (int)(_bytesReceived * 8u));

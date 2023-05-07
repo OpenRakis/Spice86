@@ -2,8 +2,16 @@
 
 using Spice86.Core.Emulator.VM;
 
+/// <summary>
+/// A class that generates a process's environment block.
+/// </summary>
 public class EnvironmentBlockGenerator {
     private readonly Machine _machine;
+    
+    /// <summary>
+    /// Initializes a new instance of the EnvironmentBlockGenerator class.
+    /// </summary>
+    /// <param name="machine">The Machine object to generate an environment block for.</param>
     public EnvironmentBlockGenerator(Machine machine) => _machine = machine;
 
     /// <summary>

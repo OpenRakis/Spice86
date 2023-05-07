@@ -154,7 +154,7 @@ public class Machine : IDisposable {
         Register(OPL3FM);
         SoundBlaster = new SoundBlaster(this, configuration, loggerService);
         Register(SoundBlaster);
-        SoundBlaster.AddEnvironnmentVariable();
+        SoundBlaster.AddEnvironmentVariable();
         GravisUltraSound = new GravisUltraSound(this, configuration, loggerService);
         Register(GravisUltraSound);
         Midi = new Midi(this, configuration, loggerService);

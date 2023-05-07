@@ -1,12 +1,11 @@
-namespace Spice86.Aeon.Emulator.Video
+namespace Spice86.Aeon.Emulator.Video; 
+
+public abstract class VideoComponent
 {
-    public abstract class VideoComponent
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VideoComponent"/> class.
+    /// </summary>
+    protected VideoComponent()
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="VideoComponent"/> class.
-        /// </summary>
-        protected VideoComponent()
-        {
-        }
     }
 }

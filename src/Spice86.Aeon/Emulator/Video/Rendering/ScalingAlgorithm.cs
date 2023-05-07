@@ -1,9 +1,8 @@
-namespace Spice86.Aeon.Emulator.Video.Rendering
+namespace Spice86.Aeon.Emulator.Video.Rendering; 
+
+public enum ScalingAlgorithm
 {
-    public enum ScalingAlgorithm
-    {
-        None,
-        Scale2x,
-        Scale3x
-    }
+    None,
+    Scale2x,
+    Scale3x
 }

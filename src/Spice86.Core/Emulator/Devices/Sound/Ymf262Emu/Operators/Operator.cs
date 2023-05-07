@@ -4,30 +4,29 @@ using System;
 /// <summary>
 /// Emulates a single OPL operator.
 /// </summary>
-internal class Operator
-{
-    public readonly AdsrCalculator envelopeGenerator;
-    public double phase;
-    public int mult, ar;
+internal class Operator {
+    public readonly AdsrCalculator EnvelopeGenerator;
+    public double Phase;
+    public int Mult, Ar;
 
-    protected double envelope;
-    protected readonly FmSynthesizer opl;
-    protected int am, egt, ws;
+    protected double Envelope;
+    protected readonly FmSynthesizer Opl;
+    protected int Am, Egt, Ws;
 
     protected static readonly double[] PhaseMultiplierTable = { 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15 };
 
-    private readonly int operatorBaseAddress;
-    private int ksr, ksl, tl, dr, sl, rr, vib;
-    private int keyScaleNumber, f_number, block;
-    private double phaseIncrement;
+    private readonly int _operatorBaseAddress;
+    private int _ksr, _ksl, _tl, _dr, _sl, _rr, _vib;
+    private int _keyScaleNumber, _fNumber, _block;
+    private double _phaseIncrement;
 
     public const double NoModulator = 0;
 
     private const int Wavelength = 1024;
-    private const int AM1_VIB1_EGT1_KSR1_MULT4_Offset = 0x20;
-    private const int KSL2_TL6_Offset = 0x40;
-    private const int AR4_DR4_Offset = 0x60;
-    private const int SL4_RR4_Offset = 0x80;
+    private const int Am1Vib1Egt1Ksr1Mult4Offset = 0x20;
+    private const int Ksl2Tl6Offset = 0x40;
+    private const int Ar4Dr4Offset = 0x60;
+    private const int Sl4Rr4Offset = 0x80;
     private const int _5_WS3_Offset = 0xE0;
 
     /// <summary>
@@ -35,76 +34,80 @@ internal class Operator
     /// </summary>
     /// <param name="baseAddress">Base operator register address.</param>
     /// <param name="opl">FmSynthesizer instance which owns the operator.</param>
-    public Operator(int baseAddress, FmSynthesizer opl)
-    {
-        operatorBaseAddress = baseAddress;
-        this.opl = opl;
-        envelopeGenerator = new AdsrCalculator(opl);
+    public Operator(int baseAddress, FmSynthesizer opl) {
+        _operatorBaseAddress = baseAddress;
+        this.Opl = opl;
+        EnvelopeGenerator = new AdsrCalculator(opl);
     }
 
     public void Update_AM1_VIB1_EGT1_KSR1_MULT4()
     {
-        int am1_vib1_egt1_ksr1_mult4 = opl.registers[operatorBaseAddress + AM1_VIB1_EGT1_KSR1_MULT4_Offset];
+        int am1Vib1Egt1Ksr1Mult4 = Opl.Registers[_operatorBaseAddress + Am1Vib1Egt1Ksr1Mult4Offset];
 
         // Amplitude Modulation. This register is used int EnvelopeGenerator.getEnvelope();
-        am = (am1_vib1_egt1_ksr1_mult4 & 0x80) >> 7;
+        Am = (am1Vib1Egt1Ksr1Mult4 & 0x80) >> 7;
         // Vibrato. This register is used in PhaseGenerator.getPhase();
-        vib = (am1_vib1_egt1_ksr1_mult4 & 0x40) >> 6;
+        _vib = (am1Vib1Egt1Ksr1Mult4 & 0x40) >> 6;
         // Envelope Generator Type. This register is used in EnvelopeGenerator.getEnvelope();
-        egt = (am1_vib1_egt1_ksr1_mult4 & 0x20) >> 5;
+        Egt = (am1Vib1Egt1Ksr1Mult4 & 0x20) >> 5;
         // Key Scale Rate. Sets the actual envelope rate together with rate and keyScaleNumber.
         // This register os used in EnvelopeGenerator.setActualAttackRate().
-        ksr = (am1_vib1_egt1_ksr1_mult4 & 0x10) >> 4;
+        _ksr = (am1Vib1Egt1Ksr1Mult4 & 0x10) >> 4;
         // Multiple. Multiplies the Channel.baseFrequency to get the Operator.operatorFrequency.
         // This register is used in PhaseGenerator.setFrequency().
-        mult = am1_vib1_egt1_ksr1_mult4 & 0x0F;
+        Mult = am1Vib1Egt1Ksr1Mult4 & 0x0F;
 
         UpdateFrequency();
-        envelopeGenerator.SetActualAttackRate(ar, ksr, keyScaleNumber);
-        envelopeGenerator.SetActualDecayRate(dr, ksr, keyScaleNumber);
-        envelopeGenerator.SetActualReleaseRate(rr, ksr, keyScaleNumber);
+        EnvelopeGenerator.SetActualAttackRate(Ar, _ksr, _keyScaleNumber);
+        EnvelopeGenerator.SetActualDecayRate(_dr, _ksr, _keyScaleNumber);
+        EnvelopeGenerator.SetActualReleaseRate(_rr, _ksr, _keyScaleNumber);
     }
+    
     public void Update_KSL2_TL6()
     {
-        int ksl2_tl6 = opl.registers[operatorBaseAddress + KSL2_TL6_Offset];
+        int ksl2Tl6 = Opl.Registers[_operatorBaseAddress + Ksl2Tl6Offset];
 
         // Key Scale Level. Sets the attenuation in accordance with the octave.
-        ksl = (ksl2_tl6 & 0xC0) >> 6;
+        _ksl = (ksl2Tl6 & 0xC0) >> 6;
         // Total Level. Sets the overall damping for the envelope.
-        tl = ksl2_tl6 & 0x3F;
+        _tl = ksl2Tl6 & 0x3F;
 
-        envelopeGenerator.SetAtennuation(f_number, block, ksl);
-        envelopeGenerator.TotalLevel = tl;
+        EnvelopeGenerator.SetAtennuation(_fNumber, _block, _ksl);
+        EnvelopeGenerator.TotalLevel = _tl;
     }
+    
     public void Update_AR4_DR4()
     {
-        int ar4_dr4 = opl.registers[operatorBaseAddress + AR4_DR4_Offset];
+        int ar4Dr4 = Opl.Registers[_operatorBaseAddress + Ar4Dr4Offset];
 
         // Attack Rate.
-        ar = (ar4_dr4 & 0xF0) >> 4;
+        Ar = (ar4Dr4 & 0xF0) >> 4;
         // Decay Rate.
-        dr = ar4_dr4 & 0x0F;
+        _dr = ar4Dr4 & 0x0F;
 
-        envelopeGenerator.SetActualAttackRate(ar, ksr, keyScaleNumber);
-        envelopeGenerator.SetActualDecayRate(dr, ksr, keyScaleNumber);
+        EnvelopeGenerator.SetActualAttackRate(Ar, _ksr, _keyScaleNumber);
+        EnvelopeGenerator.SetActualDecayRate(_dr, _ksr, _keyScaleNumber);
     }
+    
     public void Update_SL4_RR4()
     {
-        int sl4_rr4 = opl.registers[operatorBaseAddress + SL4_RR4_Offset];
+        int sl4Rr4 = Opl.Registers[_operatorBaseAddress + Sl4Rr4Offset];
 
         // Sustain Level.
-        sl = (sl4_rr4 & 0xF0) >> 4;
+        _sl = (sl4Rr4 & 0xF0) >> 4;
         // Release Rate.
-        rr = sl4_rr4 & 0x0F;
+        _rr = sl4Rr4 & 0x0F;
 
-        envelopeGenerator.SustainLevel = sl;
-        envelopeGenerator.SetActualReleaseRate(rr, ksr, keyScaleNumber);
+        EnvelopeGenerator.SustainLevel = _sl;
+        EnvelopeGenerator.SetActualReleaseRate(_rr, _ksr, _keyScaleNumber);
     }
+    
     public void Update_5_WS3()
     {
-        int _5_ws3 = opl.registers[operatorBaseAddress + _5_WS3_Offset];
-        ws = _5_ws3 & 0x07;
+        int _5_ws3 = Opl.Registers[_operatorBaseAddress + _5_WS3_Offset];
+        Ws = _5_ws3 & 0x07;
     }
+    
     /// <summary>
     /// Returns the current output value of the operator.
     /// </summary>
@@ -112,21 +115,22 @@ internal class Operator
     /// <returns>Current output value of the operator.</returns>
     public virtual double GetOperatorOutput(double modulator)
     {
-        if (envelopeGenerator.State == AdsrState.Off) {
+        if (EnvelopeGenerator.State == AdsrState.Off) {
             return 0;
         }
 
-        double envelopeInDB = envelopeGenerator.GetEnvelope(egt, am);
-        envelope = Math.Pow(10, envelopeInDB / 10.0);
+        double envelopeInDb = EnvelopeGenerator.GetEnvelope(Egt, Am);
+        Envelope = Math.Pow(10, envelopeInDb / 10.0);
 
         // If it is in OPL2 mode, use first four waveforms only:
-        ws &= (opl.IsOpl3Mode << 2) + 3;
+        Ws &= (Opl.IsOpl3Mode << 2) + 3;
 
         UpdatePhase();
 
-        double operatorOutput = GetOutput(modulator, phase, ws);
+        double operatorOutput = GetOutput(modulator, Phase, Ws);
         return operatorOutput;
     }
+    
     public virtual double GetOutput(double modulator, double outputPhase, int waveform)
     {
         outputPhase = (outputPhase + modulator) % 1;
@@ -138,29 +142,32 @@ internal class Operator
         }
 
         int sampleIndex = (int)(outputPhase * Wavelength);
-        return GetWaveformValue(waveform, sampleIndex) * envelope;
+        return GetWaveformValue(waveform, sampleIndex) * Envelope;
     }
+    
     public virtual void KeyOn()
     {
-        if (ar > 0)
+        if (Ar > 0)
         {
-            envelopeGenerator.KeyOn();
-            phase = 0;
+            EnvelopeGenerator.KeyOn();
+            Phase = 0;
         }
         else
         {
-            envelopeGenerator.State = AdsrState.Off;
+            EnvelopeGenerator.State = AdsrState.Off;
         }
     }
+    
     public virtual void KeyOff()
     {
-        envelopeGenerator.KeyOff();
+        EnvelopeGenerator.KeyOff();
     }
-    public virtual void UpdateOperator(int ksn, int f_num, int blk)
+    
+    public virtual void UpdateOperator(int ksn, int fNum, int blk)
     {
-        keyScaleNumber = ksn;
-        f_number = f_num;
-        block = blk;
+        _keyScaleNumber = ksn;
+        _fNumber = fNum;
+        _block = blk;
         Update_AM1_VIB1_EGT1_KSR1_MULT4();
         Update_KSL2_TL6();
         Update_AR4_DR4();
@@ -173,13 +180,13 @@ internal class Operator
     /// </summary>
     protected void UpdatePhase()
     {
-        if (vib == 1) {
-            phase += phaseIncrement * VibratoGenerator.GetValue(opl.dvb, opl.vibratoIndex);
+        if (_vib == 1) {
+            Phase += _phaseIncrement * VibratoGenerator.GetValue(Opl.Dvb, Opl.VibratoIndex);
         } else {
-            phase += phaseIncrement;
+            Phase += _phaseIncrement;
         }
 
-        phase %= 1;
+        Phase %= 1;
     }
 
     /// <summary>
@@ -187,10 +194,10 @@ internal class Operator
     /// </summary>
     private void UpdateFrequency()
     {
-        double baseFrequency = f_number * Math.Pow(2, block - 1) * opl.SampleRate / Math.Pow(2, 19);
-        double operatorFrequency = baseFrequency * PhaseMultiplierTable[mult];
+        double baseFrequency = _fNumber * Math.Pow(2, _block - 1) * Opl.SampleRate / Math.Pow(2, 19);
+        double operatorFrequency = baseFrequency * PhaseMultiplierTable[Mult];
 
-        phaseIncrement = operatorFrequency / opl.SampleRate;
+        _phaseIncrement = operatorFrequency / Opl.SampleRate;
     }
 
     private static double GetWaveformValue(int w, int i)
@@ -227,7 +234,6 @@ internal class Operator
             case 6:
                 return i < 512 ? 1 : -1;
 
-            case 7:
             default:
                 if (i < 512) {
                     return Math.Pow(2, -(i * xFactor));

@@ -31,7 +31,14 @@ public sealed class DmaController : DefaultIOPortHandler {
     private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
 
     private readonly List<DmaChannel> _channels = new(8);
-    internal DmaController(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DmaController"/> class.
+    /// </summary>
+    /// <param name="machine">Machine where the DMA controller is located.</param>
+    /// <param name="configuration">Configuration of the machine where the DMA controller is located.</param>
+    /// <param name="loggerService">Service used to log information about the DMA controller.</param>
+    public DmaController(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         for (int i = 0; i < 8; i++) {
             DmaChannel channel = new DmaChannel();
             _channels.Add(channel);
@@ -45,8 +52,14 @@ public sealed class DmaController : DefaultIOPortHandler {
     /// </summary>
     public ReadOnlyCollection<DmaChannel> Channels { get; }
 
+    /// <summary>
+    /// Gets the input ports for the DMA controller.
+    /// </summary>
     public IEnumerable<int> InputPorts => Array.AsReadOnly(AllPorts);
 
+    /// <summary>
+    /// Gets the output ports for the DMA controller.
+    /// </summary>
     public IEnumerable<int> OutputPorts {
         get {
             List<int> ports = new List<int>(AllPorts)
@@ -61,20 +74,24 @@ public sealed class DmaController : DefaultIOPortHandler {
         }
     }
 
+    /// <inheritdoc/>
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         foreach (int value in OutputPorts) {
             ioPortDispatcher.AddIOPortHandler(value, this);
         }
     }
 
+    /// <inheritdoc/>
     public override byte ReadByte(int port) {
         return GetPortValue(port);
     }
 
+    /// <inheritdoc/>
     public override ushort ReadWord(int port) {
         return GetPortValue(port);
     }
 
+    /// <inheritdoc/>
     public override void WriteByte(int port, byte value) {
         switch (port) {
             case ModeRegister8:
@@ -99,11 +116,9 @@ public sealed class DmaController : DefaultIOPortHandler {
         }
     }
 
+    /// <inheritdoc/>
     public override void WriteWord(int port, ushort value) {
         int index = Array.IndexOf(AllPorts, port);
-        if (index < 0) {
-            throw new ArgumentException("Invalid port.");
-        }
 
         switch (index % 3) {
             case 0:
@@ -117,6 +132,9 @@ public sealed class DmaController : DefaultIOPortHandler {
             case 2:
                 _channels[index / 3].Count = value;
                 _channels[index / 3].TransferBytesRemaining = value + 1;
+                break;
+            default:
+                base.WriteWord(port, value);
                 break;
         }
     }

@@ -4,8 +4,7 @@ using System;
 /// <summary>
 /// Emulates the top cymbal OPL operator.
 /// </summary>
-internal class TopCymbal : Operator
-{
+internal class TopCymbal : Operator {
     /// <summary>
     /// Initializes a new instance of the TopCymbal class.
     /// </summary>
@@ -15,6 +14,7 @@ internal class TopCymbal : Operator
         : base(baseAddress, opl)
     {
     }
+    
     /// <summary>
     /// Initializes a new instance of the TopCymbal class.
     /// </summary>
@@ -31,21 +31,22 @@ internal class TopCymbal : Operator
     /// <returns>Current output value of the operator.</returns>
     public override double GetOperatorOutput(double modulator)
     {
-        double highHatOperatorPhase = opl.highHatOperator.phase * PhaseMultiplierTable[opl.highHatOperator.mult];
+        double highHatOperatorPhase = Opl.HighHatOperator.Phase * PhaseMultiplierTable[Opl.HighHatOperator.Mult];
         // The Top Cymbal operator uses his own phase together with the High Hat phase.
         return GetOperatorOutput(modulator, highHatOperatorPhase);
     }
+    
     public double GetOperatorOutput(double modulator, double externalPhase)
     {
-        double envelopeInDB = envelopeGenerator.GetEnvelope(egt, am);
-        envelope = Math.Pow(10, envelopeInDB / 10.0);
+        double envelopeInDb = EnvelopeGenerator.GetEnvelope(Egt, Am);
+        Envelope = Math.Pow(10, envelopeInDb / 10.0);
 
         UpdatePhase();
 
-        int waveIndex = ws & ((opl.IsOpl3Mode << 2) + 3);
+        int waveIndex = Ws & ((Opl.IsOpl3Mode << 2) + 3);
 
         // Empirically tested multiplied phase for the Top Cymbal:
-        double carrierPhase = 8 * phase % 1;
+        double carrierPhase = 8 * Phase % 1;
         double modulatorPhase = externalPhase;
         double modulatorOutput = GetOutput(NoModulator, modulatorPhase, waveIndex);
         double carrierOutput = GetOutput(modulatorOutput, carrierPhase, waveIndex);
