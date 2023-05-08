@@ -2,11 +2,21 @@
 
 using Spice86.Core.Emulator.Memory;
 
+/// <summary>
+/// Base class for all classes that represent a memory based data structure.
+/// </summary>
 public class MemoryBasedDataStructure {
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus</param>
     public MemoryBasedDataStructure(Memory memory) {
         Memory = memory;
     }
 
+    /// <summary>
+    /// The memory bus.
+    /// </summary>
     public Memory Memory { get; private set; }
 
     public ushort GetUint16(uint baseAddress, int offset) {

@@ -29,6 +29,14 @@ public class GdbCustomCommandsHandler {
     private readonly Machine _machine;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="gdbIo">The GDB I/O handler.</param>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
+    /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
     public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;

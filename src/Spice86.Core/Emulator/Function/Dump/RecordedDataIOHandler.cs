@@ -1,11 +1,5 @@
 namespace Spice86.Core.Emulator.Function.Dump;
 
-using CPU;
-
-using Memory;
-
-using VM;
-
 public abstract class RecordedDataIoHandler {
     public string DumpDirectory { get; }
 

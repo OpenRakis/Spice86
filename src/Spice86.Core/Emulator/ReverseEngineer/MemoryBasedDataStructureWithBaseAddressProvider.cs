@@ -2,12 +2,6 @@
 
 using Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.Errors;
-using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Utils;
-
-using System.Text;
-
 public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBasedDataStructure {
     protected MemoryBasedDataStructureWithBaseAddressProvider(Memory memory) : base(memory) {
     }
