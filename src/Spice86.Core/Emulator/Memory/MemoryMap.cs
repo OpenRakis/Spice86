@@ -1,10 +1,8 @@
-﻿using Spice86.Core.Emulator.OperatingSystem;
-
-namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 
-/// <summary> Informations about memory mapping of an IBM PC </summary>
+/// <summary> Information about memory mapping of an IBM PC </summary>
 public static class MemoryMap {
     /// <summary>
     /// Segment that contains a list of addresses of interrupt handlers.
@@ -21,24 +19,54 @@ public static class MemoryMap {
     /// </summary>
     public const ushort BiosDataSegment = 0x0040;
     
+    /// <summary>
+    /// The length of the boot sector code.
+    /// </summary>
     public const int BootSectorCodeLength = 512;
 
+    /// <summary>
+    /// Segment where the boot sector code is stored.
+    /// </summary>
     public const int BootSectorCodeSegment = 0x07C0;
 
+    /// <summary>
+    /// The length of the color text video memory.
+    /// </summary>
     public const int ColorTextVideoMemoryLength = 32767;
 
+    /// <summary>
+    /// Segment of the color text video memory.
+    /// </summary>
     public const int ColorTextVideoMemorySegment = 0xB800;
 
+    /// <summary>
+    /// The start segment of the free memory area.
+    /// </summary>
     public const int FreeMemoryStartSegment = 0x50;
 
+    /// <summary>
+    /// The length of the graphic video memory.
+    /// </summary>
     public const int GraphicVideoMemorylength = 65535;
 
+    /// <summary>
+    /// Segment of the graphic video memory.
+    /// </summary>
     public const int GraphicVideoMemorySegment = 0xA000;
 
+    /// <summary>
+    /// The length of the interrupt vector table.
+    /// </summary>
     public const int InterruptVectorLength = 1024;
 
+    /// <summary>
+    /// The length of the monochrome text video memory.
+    /// </summary>
     public const int MonochromeTextVideoMemoryLength = 32767;
 
+    /// <summary>
+    /// Segment of the monochrome text video memory.
+    /// </summary>
     public const int MonochromeTextVideoMemorySegment = 0xB000;
 
     /// <summary>

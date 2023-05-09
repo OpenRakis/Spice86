@@ -1,29 +1,47 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
-/**
- * Out of function jumps can be reimplemented as call to function with the offset in parameter.
- * This class provides logic to avoid stack overflow when a() calls b() which calls a()
- * 
- */
+/// <summary>
+/// Out of function jumps can be reimplemented as call to function with the offset in parameter.
+/// This class provides logic to avoid stack overflow when a() calls b() which calls a()
+/// </summary>
 public class JumpDispatcher {
-    private static int InstanceCounter = 0;
-    // Caller needs to return this when the Jump method returns false
+    private static int _instanceCounter;
+    
+    /// <summary>
+    /// Caller needs to return this when the Jump method returns false
+    /// </summary>
     public Action? JumpAsmReturn { get; set; }
-    // Caller needs to jump to its entry point with gotoAddress = NextEntryAddress when Jump returns true
+    
+    /// <summary>
+    /// Caller needs to jump to its entry point with gotoAddress = NextEntryAddress when Jump returns true
+    /// </summary>
     public int NextEntryAddress { get; private set; }
-    private readonly int _instanceId = InstanceCounter++;
+    
+    private readonly int _instanceId = _instanceCounter++;
     private readonly Stack<Func<int, Action>> _jumpStack = new();
     private Func<int, Action>? _returnTo;
 
+    /// <summary>
+    /// Initializes the JumpDispatcher without an initial target function.
+    /// </summary>
     public JumpDispatcher() {
     }
 
+    /// <summary>
+    /// Initializes the JumpDispatcher with an initial target function.
+    /// </summary>
+    /// <param name="initialTarget">The initial target function.</param>
     public JumpDispatcher(Func<int, Action> initialTarget) {
         _jumpStack.Push(initialTarget);
     }
 
-    // Emulates a jump by calling target and jumping inside it at entryAddress.
-    // Maintains a stack of jumps so that if the same target is called twice without returning, it returns first to it and continues from there to avoid stack overflow
+    /// <summary>
+    /// Emulates a jump by calling target and jumping inside it at entryAddress.
+    /// Maintains a stack of jumps so that if the same target is called twice without returning, it returns first to it and continues from there to avoid stack overflow.
+    /// </summary>
+    /// <param name="target">The target function to jump to.</param>
+    /// <param name="entryAddress">The entry point address to jump to inside the target function.</param>
+    /// <returns>True if the jump was already on the stack and a return point has been set; false otherwise.</returns>
     public bool Jump(Func<int, Action> target, int entryAddress) {
         NextEntryAddress = entryAddress;
         if (!_jumpStack.Contains(target)) {

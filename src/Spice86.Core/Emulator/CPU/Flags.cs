@@ -4,8 +4,17 @@ using System.Text;
 
 /// <summary> Handles the CPU flag register. </summary>
 public class Flags {
+    /// <summary>
+    /// The carry flag bitmask
+    /// </summary>
     public const ushort Carry = 0b00000000_00000001; //0
+    /// <summary>
+    /// The parity flag bitmask
+    /// </summary>
     public const ushort Parity = 0b00000000_00000100; //2
+    /// <summary>
+    /// The auxiliary flag bitmask
+    /// </summary>
     public const ushort Auxiliary = 0b00000000_00010000; //4
     public const ushort Zero = 0b00000000_01000000; //6
     public const ushort Sign = 0b00000000_10000000; //7
@@ -14,7 +23,7 @@ public class Flags {
     public const ushort Direction = 0b00000100_00000000; //10
     public const ushort Overflow = 0b00001000_00000000; //11
 
-    // rflag mask to OR with flags, useful to compare values with dosbox which emulates
+    // rflag mask to OR with flags, useful to compare with values emulated by DOSBox.
     private ushort _additionalFlagMask;
     private uint _flagRegister;
     public Flags() {
@@ -53,6 +62,7 @@ public class Flags {
         }
     }
 
+    /// <inheritdoc />
     public override bool Equals(object? obj) {
         if (obj == this) {
             return true;
@@ -63,14 +73,17 @@ public class Flags {
         return FlagRegister == other.FlagRegister;
     }
 
+    /// <inheritdoc />
     public override int GetHashCode() {
         return (int)FlagRegister;
     }
-    
+
+    /// <inheritdoc />
     public override string ToString() {
         return DumpFlags(FlagRegister);
     }
 
+    
     public static string DumpFlags(uint flags) {
         StringBuilder res = new StringBuilder();
         res.Append(GetFlag(flags, Overflow, 'O'));

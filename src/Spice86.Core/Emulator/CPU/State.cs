@@ -1,11 +1,12 @@
-﻿using Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.CPU;
 
 using System.Text;
 
-namespace Spice86.Core.Emulator.CPU;
-
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Represents the state of the CPU
+/// </summary>
 public class State {
     // Accumulator
     public byte AH { get => Registers.GetRegister8H(Registers.AxIndex); set => Registers.SetRegister8H(Registers.AxIndex, value); }
@@ -61,9 +62,12 @@ public class State {
     // Stack Segment
     public ushort SS { get => SegmentRegisters.GetRegister16(SegmentRegisters.SsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.SsIndex, value); }
 
-    // Instruction pointer
+    /// <summary> Instruction pointer </summary>
     public ushort IP { get; set; }
 
+    /// <summary>
+    /// Flags register
+    /// </summary>
     public Flags Flags { get; } = new();
 
     public bool OverflowFlag { get => Flags.GetFlag(Flags.Overflow); set => Flags.SetFlag(Flags.Overflow, value); }
@@ -83,6 +87,9 @@ public class State {
     public bool? ContinueZeroFlagValue { get; set; }
     public int? SegmentOverrideIndex { get; set; }
 
+    /// <summary>
+    /// The number of CPU cycles, incremented on each new instruction.
+    /// </summary>
     public long Cycles { get; private set; }
     public uint IpPhysicalAddress => MemoryUtils.ToPhysicalAddress(CS, IP);
     public uint StackPhysicalAddress => MemoryUtils.ToPhysicalAddress(SS, SP);
@@ -95,10 +102,17 @@ public class State {
         SegmentOverrideIndex = null;
     }
 
+    /// <summary>
+    /// Increments the <see cref="Cycles"/> count.
+    /// </summary>
     public void IncCycles() {
         Cycles++;
     }
 
+    /// <summary>
+    /// Returns all the CPU registers dumped into a string
+    /// </summary>
+    /// <returns>All the CPU registers dumped into a string</returns>
     public string DumpedRegFlags {
         get {
             StringBuilder res = new StringBuilder();
@@ -126,6 +140,10 @@ public class State {
         }
     }
 
+    /// <summary>
+    /// Returns all the CPU registers dumped into a string
+    /// </summary>
+    /// <returns>All the CPU registers dumped into a string</returns>
     public override string ToString() {
         return DumpedRegFlags;
     }

@@ -1,32 +1,44 @@
-﻿using Serilog.Events;
+﻿namespace Spice86.Core.Emulator.ReverseEngineer;
+
+using System.Linq;
+
+using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
-
-using System.Linq;
-
-namespace Spice86.Core.Emulator.ReverseEngineer;
-
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// The helper for C# overrides of machine code.
+/// </summary>
 public class CSharpOverrideHelper {
+    /// <summary>
+    /// The service used for logging.
+    /// </summary>
     protected readonly ILoggerService _loggerService;
 
+    /// <summary>
+    /// The emulated CPU.
+    /// </summary>
     public Cpu Cpu => Machine.Cpu;
 
+    /// <summary>
+    /// The emulator machine.
+    /// </summary>
     public Machine Machine { get; }
 
-    public Memory.Memory Memory => Machine.Memory;
+    /// <summary>
+    /// The memory bus of the IBM PC.
+    /// </summary>
+    public Memory Memory => Machine.Memory;
 
     public UInt8Indexer UInt8 => Memory.UInt8;
     public UInt16Indexer UInt16 => Memory.UInt16;
@@ -83,6 +95,7 @@ public class CSharpOverrideHelper {
     public short Direction8 => State.Direction8;
     public short Direction16 => State.Direction16;
     public short Direction32 => State.Direction32;
+    
     protected readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     public JumpDispatcher JumpDispatcher { get; set; }
@@ -365,12 +378,24 @@ public class CSharpOverrideHelper {
         }
     }
 
+    /// <summary>
+    /// Call this to perform an interrupt request.
+    /// </summary>
+    /// <param name="vectorNumber">The vector number of the interrupt</param>
     public void Interrupt(byte vectorNumber) {
         Machine.CallbackHandler.RunFromOverriden(vectorNumber);
     }
 
+    /// <summary>
+    /// Halt the program.
+    /// </summary>
+    /// <returns>An <see cref="Action"/> that exits the program.</returns>
     public Action Hlt() => () => Exit();
 
+    /// <summary>
+    /// Exit the program.
+    /// </summary>
+    /// <exception cref="HaltRequestedException">The exception throw in order to exit the program.</exception>
     protected void Exit() {
         _loggerService.Verbose("Program requested exit. Terminating now.");
         throw new HaltRequestedException();
