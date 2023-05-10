@@ -94,7 +94,7 @@ public class Pic {
 
     private void ProcessICW3(byte value) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PIC COMMAND ICW3 {Value}.", ConvertUtils.ToHex8(value));
+            _loggerService.Verbose("PIC COMMAND ICW3 {Value}", ConvertUtils.ToHex8(value));
         }
 
         if (_initializationCommandsExpected == 3) {

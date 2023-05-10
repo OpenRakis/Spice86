@@ -13,16 +13,16 @@ internal readonly struct UnsafeBuffer<T> where T : unmanaged {
     /// Initializes a new instance of the <see cref="UnsafeBuffer{T}"/> class with the specified length.
     /// </summary>
     /// <param name="length">The length of the buffer to be allocated.</param>
-    public UnsafeBuffer(int length) => this.array = GC.AllocateArray<T>(length, pinned: true);
+    public UnsafeBuffer(int length) => array = GC.AllocateArray<T>(length, pinned: true);
 
     /// <summary>
     /// Returns a pointer to the first element in the buffer.
     /// </summary>
     /// <returns>A pointer to the first element in the buffer.</returns>
-    public unsafe T* ToPointer() => (T*)Unsafe.AsPointer(ref this.array[0]);
+    public unsafe T* ToPointer() => (T*)Unsafe.AsPointer(ref array[0]);
 
     /// <summary>
     /// Clears the contents of the buffer.
     /// </summary>
-    public void Clear() => Array.Clear(this.array, 0, this.array.Length);
+    public void Clear() => Array.Clear(array, 0, array.Length);
 }

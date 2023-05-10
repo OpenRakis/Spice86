@@ -15,7 +15,7 @@ public abstract partial class AudioPlayer {
         private readonly AudioPlayer _player;
         private TOutput[]? _conversionBuffer;
 
-        public InternalBufferWriter(AudioPlayer player) => this._player = player;
+        public InternalBufferWriter(AudioPlayer player) => _player = player;
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public override int WriteData<TInput>(Span<TInput> data) {

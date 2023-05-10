@@ -435,7 +435,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 break;
 
             default:
-                _loggerService.Error("Video command {0:X2}, BL={1:X2}h not implemented.", Functions.EGA, _state.BL);
+                _loggerService.Error("Video command {0:X2}, BL={1:X2}h not implemented", Functions.EGA, _state.BL);
                 break;
         }
     }
@@ -614,7 +614,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public void WriteTextInTeletypeMode() {
         byte chr = _state.AL;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Write Text in Teletype Mode ascii code {@AsciiCode}, chr {@Character}", ConvertUtils.ToHex(chr), ConvertUtils.ToChar(chr));
         }
         Console.Out.Write(ConvertUtils.ToChar(chr));

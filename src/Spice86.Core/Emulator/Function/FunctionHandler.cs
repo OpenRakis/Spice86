@@ -1,23 +1,15 @@
-﻿using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Shared.Interfaces;
+﻿namespace Spice86.Core.Emulator.Function;
 
-namespace Spice86.Core.Emulator.Function;
+using System.Text;
 
-using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
-using Spice86.Shared;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
-
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 public class FunctionHandler {
     private readonly ILoggerService _loggerService;
@@ -29,6 +21,7 @@ public class FunctionHandler {
     private readonly Machine _machine;
 
     private uint StackPhysicalAddress => _machine.Cpu.State.StackPhysicalAddress;
+    
     public FunctionHandler(Machine machine, ILoggerService loggerService, bool recordData) {
         _loggerService = loggerService;
         _machine = machine;
@@ -121,14 +114,14 @@ public class FunctionHandler {
         }
 
         if (_callerStack.TryPop(out FunctionCall? currentFunctionCall) == false) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Returning but no call was done before!!");
             }
             return false;
         }
         FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
         bool returnAddressAlignedWithCallStack = AddReturn(returnCallType, currentFunctionCall, currentFunctionInformation);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Returning from {CurrentFunctionInformation} to {CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
         }
 
@@ -139,6 +132,9 @@ public class FunctionHandler {
         return true;
     }
 
+    /// <summary>
+    /// Gets or sets whether we call the C# override or the original machine code.
+    /// </summary>
     public bool UseCodeOverride { get; set; }
 
     private bool AddReturn(CallType returnCallType, FunctionCall currentFunctionCall, FunctionInformation? currentFunctionInformation) {
@@ -212,7 +208,7 @@ public class FunctionHandler {
         cpu.ExecutionFlowRecorder.RegisterUnalignedReturn(state.CS, state.IP, actualReturnAddress.Segment,
             actualReturnAddress.Offset);
         FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose) && currentFunctionInformation != null
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose) && currentFunctionInformation != null
             && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {
             CallType callType = currentFunctionCall.CallType;
             SegmentedAddress stackAddressAfterCall = currentFunctionCall.StackAddressAfterCall;

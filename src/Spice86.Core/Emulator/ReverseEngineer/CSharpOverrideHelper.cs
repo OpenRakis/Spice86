@@ -159,7 +159,7 @@ public class CSharpOverrideHelper {
                 $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(
-                    "There is already a function defined at address {Address} named {ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates.",
+                    "There is already a function defined at address {Address} named {ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates",
                     address, existingFunctionInformation.Name);
             }
 
@@ -180,6 +180,10 @@ public class CSharpOverrideHelper {
         return () => Cpu.FarRet(numberOfBytesToPop);
     }
 
+    /// <summary>
+    /// Returns an <see cref="Action"/> than makes the CPU perform an IRET instruction when invoked.
+    /// </summary>
+    /// <returns>returns an <see cref="Action"/> that runs the <see cref="InterruptRet"/> method from the CPU when invoked.</returns>
     public Action InterruptRet() {
         return () => Cpu.InterruptRet();
     }
@@ -285,6 +289,12 @@ public class CSharpOverrideHelper {
         JumpDispatcher = currentJumpDispatcher;
     }
 
+    /// <summary>
+    /// Overrides the machine code at the specified segment and offset with a new implementation provided by the <paramref name="renamedOverride"/> function.
+    /// </summary>
+    /// <param name="segment">The segment of the instruction to override.</param>
+    /// <param name="offset">The offset of the instruction to override.</param>
+    /// <param name="renamedOverride">A function that returns an action that provides the new implementation to use for the instruction.</param>
     public void OverrideInstruction(ushort segment, ushort offset, Func<Action> renamedOverride) {
         AddressBreakPoint breakPoint = new(
             BreakPointType.EXECUTION,
@@ -295,7 +305,13 @@ public class CSharpOverrideHelper {
             , false);
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
-
+    
+    /// <summary>
+    /// Executes the specified action on top of the instruction at the specified segment and offset.
+    /// </summary>
+    /// <param name="segment">The segment of the instruction to execute the action on.</param>
+    /// <param name="offset">The offset of the instruction to execute the action on.</param>
+    /// <param name="action">The action to execute on top of the instruction.</param>
     public void DoOnTopOfInstruction(ushort segment, ushort offset, Action action) {
         AddressBreakPoint breakPoint = new(
             BreakPointType.EXECUTION,
@@ -315,15 +331,23 @@ public class CSharpOverrideHelper {
         foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackHandler.GetCallbackAddresses()) {
             byte callbackNumber = callbackAddressEntry.Key;
             SegmentedAddress callbackAddress = callbackAddressEntry.Value;
-            Func<int, Action> runnable = new Func<int, Action>(_ => {
+            Func<int, Action> runnable = _ => {
                 callbackHandler.Run(callbackNumber);
                 return InterruptRet();
-            });
+            };
             DefineFunction(callbackAddress.Segment, callbackAddress.Offset, runnable, false,
                 $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}");
         }
     }
 
+    /// <summary>
+    /// Checks if the vtable contains the expected segment and offset values.
+    /// </summary>
+    /// <param name="segmentRegisterIndex">The index of the segment register to use.</param>
+    /// <param name="offset">The offset of the vtable entry to check.</param>
+    /// <param name="expectedSegment">The expected segment value.</param>
+    /// <param name="expectedOffset">The expected offset value.</param>
+    /// <exception cref="UnrecoverableException">Thrown when the found segment or offset value doesn't match the expected values.</exception>
     public void CheckVtableContainsExpected(int segmentRegisterIndex,
         ushort offset,
         ushort expectedSegment,
@@ -337,6 +361,11 @@ public class CSharpOverrideHelper {
         }
     }
 
+    /// <summary>
+    /// Defines an executable area in memory by registering a memory write break point for every byte in the specified address range.
+    /// </summary>
+    /// <param name="startAddress">The start address of the executable area.</param>
+    /// <param name="endAddress">The end address of the executable area.</param>
     public void DefineExecutableArea(uint startAddress, uint endAddress) {
         for (uint address = startAddress; address <= endAddress; address++) {
             Cpu.ExecutionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Machine, address);
@@ -372,7 +401,8 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
-    /// Runs any pending interrupt requests. You must call this often enough in your machine code overrides.
+    /// Runs any pending interrupt requests. <br/>
+    /// As long as the target programs triggers interrupts, you must call this often enough so interrupts can run.
     /// </summary>
     /// <param name="expectedReturnCs">The excepted value of the CS register after the interruption is done.</param>
     /// <param name="expectedReturnIp">The excepted value of the IP register after the interruption is done</param>
@@ -394,7 +424,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Call this to perform an interrupt request.
     /// </summary>
-    /// <param name="vectorNumber">The vector number of the interrupt</param>
+    /// <param name="vectorNumber">The vector number to call</param>
     public void Interrupt(byte vectorNumber) {
         Machine.CallbackHandler.RunFromOverriden(vectorNumber);
     }

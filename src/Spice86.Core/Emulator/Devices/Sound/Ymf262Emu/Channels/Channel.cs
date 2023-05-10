@@ -33,7 +33,7 @@ internal abstract class Channel
     public Channel(int baseAddress, FmSynthesizer opl)
     {
         ChannelBaseAddress = baseAddress;
-        this.Opl = opl;
+        Opl = opl;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

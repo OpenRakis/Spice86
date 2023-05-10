@@ -36,7 +36,7 @@ internal class Operator {
     /// <param name="opl">FmSynthesizer instance which owns the operator.</param>
     public Operator(int baseAddress, FmSynthesizer opl) {
         _operatorBaseAddress = baseAddress;
-        this.Opl = opl;
+        Opl = opl;
         EnvelopeGenerator = new AdsrCalculator(opl);
     }
 

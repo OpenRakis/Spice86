@@ -20,7 +20,7 @@ internal sealed class AdsrCalculator
     {
         _x = DecibelsToX(-96);
         _envelope = -96;
-        this._opl = opl;
+        _opl = opl;
     }
 
     /// <summary>

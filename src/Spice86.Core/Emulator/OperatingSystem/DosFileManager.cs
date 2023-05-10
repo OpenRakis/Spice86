@@ -300,7 +300,7 @@ public class DosFileManager {
     public DosFileOperationResult WriteFileUsingHandle(ushort fileHandle, ushort writeLength, uint bufferAddress) {
         if (!IsValidFileHandle(fileHandle)) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing.", fileHandle);
+                _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing", fileHandle);
             }
 
             // Fake that we wrote, this could be used to write to stdout / stderr ...
