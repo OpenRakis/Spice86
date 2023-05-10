@@ -346,6 +346,8 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Call this in your override when you re-implement a function with a branch that seems never
     /// reached.
+    /// <param name="message">The error message for the <see cref="UnrecoverableException"/></param>
+    /// <returns>An new instance of <see cref="UnrecoverableException"/> that you should throw.</returns>
     /// </summary>
     public UnrecoverableException FailAsUntested(string message) {
         string error =
@@ -357,12 +359,23 @@ public class CSharpOverrideHelper {
         return new UnrecoverableException(error);
     }
 
+    /// <summary>
+    /// Throws an exception if the given value is not one of the possible values.
+    /// </summary>
+    /// <param name="value">The value to check for support.</param>
+    /// <param name="possibleValues">The list of possible values that are supported.</param>
+    /// <exception cref="UnrecoverableException">Thrown if the value is not in the list of supported values.</exception>
     public void FailIfValueIsNot(uint value, params uint[] possibleValues) {
         if (!possibleValues.Contains(value)) {
             throw FailAsUntested($"Value {value} not in list of supported values");
         }
     }
 
+    /// <summary>
+    /// Runs any pending interrupt requests. You must call this often enough in your machine code overrides.
+    /// </summary>
+    /// <param name="expectedReturnCs">The excepted value of the CS register after the interruption is done.</param>
+    /// <param name="expectedReturnIp">The excepted value of the IP register after the interruption is done</param>
     public void CheckExternalEvents(ushort expectedReturnCs, ushort expectedReturnIp) {
         if (!Cpu.IsRunning) {
             Exit();
@@ -397,7 +410,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <exception cref="HaltRequestedException">The exception throw in order to exit the program.</exception>
     protected void Exit() {
-        _loggerService.Verbose("Program requested exit. Terminating now.");
+        _loggerService.Verbose("Program requested exit. Terminating now");
         throw new HaltRequestedException();
     }
 }

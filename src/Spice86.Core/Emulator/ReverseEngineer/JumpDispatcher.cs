@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
 /// <summary>
-/// Out of function jumps can be reimplemented as call to function with the offset in parameter.
+/// Machine code that performs out of function jumps can be reimplemented as a call to function with the offset in parameter. <br/>
 /// This class provides logic to avoid stack overflow when a() calls b() which calls a()
 /// </summary>
 public class JumpDispatcher {
