@@ -2,6 +2,7 @@
 
 using System;
 using Spice86.Shared.Emulator.Memory;
+
 /// <summary>
 /// Represents a function return in the emulator, including information about the return call type and the return address.
 /// </summary>

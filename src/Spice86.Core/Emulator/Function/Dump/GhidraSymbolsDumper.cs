@@ -117,7 +117,8 @@ public class GhidraSymbolsDumper {
     }
 
     /// <summary>
-    /// Parses a function name with an associated address string into a <see cref="FunctionInformation"/> instance.
+    /// Parses a function name with an associated address string into a <see cref="FunctionInformation"/> instance. <br/>
+    /// Example of a valid function name: 'IncDialogueCount47A8_0x1ED_0xA1E8_0xC0B8'
     /// </summary>
     /// <param name="loggerService">The logger service to use for logging errors during parsing.</param>
     /// <param name="nameWithAddress">The function name with address to parse.</param>

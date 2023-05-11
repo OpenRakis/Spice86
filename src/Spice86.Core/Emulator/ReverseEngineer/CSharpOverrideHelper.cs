@@ -209,26 +209,69 @@ public class CSharpOverrideHelper {
     /// Gets or sets the value of the overflow flag.
     /// </summary>
     public bool OverflowFlag { get => State.OverflowFlag; set => State.OverflowFlag = value; }
-    public bool ParityFlag { get => State.ParityFlag; set => State.ParityFlag = value; }
-    public bool SignFlag { get => State.SignFlag; set => State.SignFlag = value; }
-    public bool TrapFlag { get => State.TrapFlag; set => State.TrapFlag = value; }
-    public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
-    public uint FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
-    public ushort FlagRegister16 { get => State.Flags.FlagRegister16; set => State.Flags.FlagRegister = value; }
 
+    /// <summary>
+    /// Gets or sets the value of the parity flag.
+    /// </summary>
+    public bool ParityFlag { get => State.ParityFlag; set => State.ParityFlag = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of the sign flag.
+    /// </summary>
+    public bool SignFlag { get => State.SignFlag; set => State.SignFlag = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the trap flag.
+    /// </summary>
+    public bool TrapFlag { get => State.TrapFlag; set => State.TrapFlag = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of the zero flag.
+    /// </summary>
+    public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of the flags register (32 bit value).
+    /// </summary>
+    public uint FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of the flags register (16 bit value).
+    /// </summary>
+    public ushort FlagRegister16 { get => State.Flags.FlagRegister16; set => State.Flags.FlagRegister = value; }
+    
+    
     public short Direction8 => State.Direction8;
+    
+    
     public short Direction16 => State.Direction16;
+    
+    
     public short Direction32 => State.Direction32;
     
+    
     protected readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
-
+    
     public JumpDispatcher JumpDispatcher { get; set; }
 
+    
+    /// <summary>
+    /// Gets or sets whether we register self modifying code.
+    /// </summary>
+    /// <remarks>
+    /// This is a shortcut to <see cref="ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled" />
+    /// </remarks>
     public bool IsRegisterExecutableCodeModificationEnabled {
         get => Machine.Cpu.ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled;
         set => Machine.Cpu.ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled = value;
     }
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILoggerService loggerService) {
         _loggerService = loggerService;
@@ -237,6 +280,15 @@ public class CSharpOverrideHelper {
         JumpDispatcher = new();
     }
 
+    /// <summary>
+    /// Registers a function at the specified segmented address. <br/>
+    /// </summary>
+    /// <param name="segment">The segment part of the segmented address.</param>
+    /// <param name="offset">The offset part of the segmented address.</param>
+    /// <param name="name">The name of the function.</param>
+    /// <remarks>
+    /// Example of a valid function name: 'IncDialogueCount47A8_0x1ED_0xA1E8_0xC0B8'
+    /// </remarks>
     public void DefineFunction(ushort segment, ushort offset, string name) {
         SegmentedAddress address = new(segment, offset);
         GetFunctionAtAddress(true, address);
@@ -244,6 +296,19 @@ public class CSharpOverrideHelper {
         _functionInformations.Add(address, functionInformation);
     }
 
+
+    /// <summary>
+    /// Registers a function at the specified segmented address. <br/>
+    /// </summary>
+    /// <param name="segment">The segment part of the segmented address.</param>
+    /// <param name="offset">The offset part of the segmented address.</param>
+    /// <param name="overrideFunc">The function to register.</param>
+    /// <param name="failOnExisting">Whether to fail if a function is already defined at the specified address. Default is true.</param>
+    /// <param name="name">The name of the function. If null, the name of the provided function will be parsed using the GhidraSymbolsDumper utility.</param>
+    /// <exception cref="UnrecoverableException">Thrown when <paramref name="name"/> is null and the name of the provided function cannot be parsed.</exception>
+    /// <remarks>
+    /// Example of a valid function name: 'IncDialogueCount47A8_0x1ED_0xA1E8_0xC0B8'
+    /// </remarks>
     public void DefineFunction(ushort segment,
         ushort offset,
         Func<int, Action> overrideFunc,
@@ -273,6 +338,13 @@ public class CSharpOverrideHelper {
         _functionInformations[address] = (new(address, functionName, overrideFunc));
     }
 
+    /// <summary>
+    /// Gets the function information for the function at the specified address.
+    /// </summary>
+    /// <param name="failOnExisting">A flag indicating whether to throw an exception if a function already exists at the specified address.</param>
+    /// <param name="address">The address of the function to retrieve.</param>
+    /// <returns>The function information for the function at the specified address, or null if no function exists at that address.</returns>
+    /// <exception cref="UnrecoverableException">Thrown if a function already exists at the specified address and failOnExisting is true.</exception>
     public FunctionInformation? GetFunctionAtAddress(bool failOnExisting, SegmentedAddress address) {
         if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
             if (!failOnExisting) {
@@ -293,6 +365,12 @@ public class CSharpOverrideHelper {
         return null;
     }
 
+    /// <summary>
+    /// Returns an <see cref="Action"/> that sets CS and IP to the provided values.
+    /// </summary>
+    /// <param name="cs">The value for the CS register.</param>
+    /// <param name="ip">The value for the IP register.</param>
+    /// <returns>The <see cref="Action"/> that will mutate CS and IP when invoked.</returns>
     public Action FarJump(ushort cs, ushort ip) {
         return () => {
             State.CS = cs;
@@ -312,6 +390,11 @@ public class CSharpOverrideHelper {
         return () => Cpu.InterruptRet();
     }
 
+    /// <summary>
+    /// Returns an <see cref="Action"/> that will modify the IP register to the provided value.
+    /// </summary>
+    /// <param name="ip">The target value for the IP register.</param>
+    /// <returns>The action that will modify the IP register when invoked.</returns>
     public Action NearJump(ushort ip) {
         return () => State.IP = ip;
     }
@@ -337,6 +420,12 @@ public class CSharpOverrideHelper {
         });
     }
 
+    /// <summary>
+    /// Performs an interrupt call by executing the given function and returning to the specified return address.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
+    /// <param name="function">The function to execute as part of the interrupt call.</param>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
             Stack.Push16(State.Flags.FlagRegister16);
@@ -348,6 +437,13 @@ public class CSharpOverrideHelper {
         });
     }
 
+    /// <summary>
+    /// Performs an interrupt call.
+    /// </summary>
+    /// <param name="expectedReturnCs">The excepted value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The excepted value of the IP register after the interrupt call.</param>
+    /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
+    /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, int vectorNumber) {
         ushort targetIP = Memory.GetUint16((ushort)(4 * vectorNumber));
         ushort targetCS = Memory.GetUint16((ushort)((4 * vectorNumber) + 2));
@@ -360,6 +456,11 @@ public class CSharpOverrideHelper {
         InterruptCall(expectedReturnCs, expectedReturnIp, function);
     }
 
+    /// <summary>
+    /// Returns the C# function override, or <c>null</c> if not found.
+    /// </summary>
+    /// <param name="target">The <see cref="SegmentedAddress"/> where the function is defined.</param>
+    /// <returns>The C# function override, or <c>null</c> if not found.</returns>
     public Func<int, Action>? SearchFunctionOverride(SegmentedAddress target) {
         if (!Machine.Cpu.FunctionHandler.FunctionInformations.TryGetValue(target,
                 out FunctionInformation? functionInformation)) {
@@ -404,7 +505,16 @@ public class CSharpOverrideHelper {
             }
         }
     }
-
+    
+    /// <summary>
+    /// Executes the given action with the specified function as starting point in the jump dispatcher.
+    /// </summary>
+    /// <param name="function">The function to set as starting point in the jump dispatcher.</param>
+    /// <param name="action">The action to execute.</param>
+    /// <remarks>
+    /// This method temporarily replaces the current jump dispatcher with a new instance that has the specified function
+    /// as its starting point. After the action has been executed, the original jump dispatcher is restored.
+    /// </remarks>
     private void ExecuteCall(Func<int, Action> function, Action action) {
         JumpDispatcher currentJumpDispatcher = JumpDispatcher;
         // Ensure the jump dispatcher has the function we are calling as starting point
