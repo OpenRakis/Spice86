@@ -11,6 +11,9 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Handles function calls for the emulator machine.
+/// </summary>
 public class FunctionHandler {
     private readonly ILoggerService _loggerService;
 
@@ -22,16 +25,40 @@ public class FunctionHandler {
 
     private uint StackPhysicalAddress => _machine.Cpu.State.StackPhysicalAddress;
     
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FunctionHandler"/> class.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="recordData">Whether we record execution data. If not, <see cref="Call"/> and <see cref="Ret"/> won't record execution flow.</param>
     public FunctionHandler(Machine machine, ILoggerService loggerService, bool recordData) {
         _loggerService = loggerService;
         _machine = machine;
         _recordData = recordData;
     }
 
+    /// <summary>
+    /// Calls a function.
+    /// </summary>
+    /// <param name="callType">The call type.</param>
+    /// <param name="entrySegment">The entry segment.</param>
+    /// <param name="entryOffset">The entry offset.</param>
+    /// <param name="expectedReturnSegment">The expected return segment.</param>
+    /// <param name="expectedReturnOffset">The expected return offset.</param>
     public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort expectedReturnSegment, ushort expectedReturnOffset) {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, null, true);
     }
-
+    
+    /// <summary>
+    /// Calls a function.
+    /// </summary>
+    /// <param name="callType">The call type.</param>
+    /// <param name="entrySegment">The entry segment.</param>
+    /// <param name="entryOffset">The entry offset.</param>
+    /// <param name="expectedReturnSegment">The expected return segment.</param>
+    /// <param name="expectedReturnOffset">The expected return offset.</param>
+    /// <param name="name">The function name.</param>
+    /// <param name="recordReturn">The record return flag.</param>
     public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort? expectedReturnSegment, ushort? expectedReturnOffset, string? name, bool recordReturn) {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
         FunctionInformation currentFunction = GetOrCreateFunctionInformation(entryAddress, name);
@@ -56,6 +83,12 @@ public class FunctionHandler {
         }
     }
 
+    /// <summary>
+    /// Gets or creates information about a machine code function.
+    /// </summary>
+    /// <param name="entryAddress">The address of the entry point for the function.</param>
+    /// <param name="name">The function name.</param>
+    /// <returns>The function information representation.</returns>
     public FunctionInformation GetOrCreateFunctionInformation(SegmentedAddress entryAddress, string? name) {
         if (!FunctionInformations.TryGetValue(entryAddress, out FunctionInformation? res)) {
             res = new FunctionInformation(entryAddress, string.IsNullOrWhiteSpace(name) ? "unknown" : name);
@@ -64,6 +97,10 @@ public class FunctionHandler {
         return res;
     }
 
+    /// <summary>
+    /// Returns a string representation of the call stack.
+    /// </summary>
+    /// <returns>A string representation of the call stack.</returns>
     public string DumpCallStack() {
         StringBuilder res = new();
         foreach (FunctionCall functionCall in _callerStack) {
@@ -79,17 +116,41 @@ public class FunctionHandler {
         return res.ToString();
     }
 
+    /// <summary>
+    /// Gets or sets the dictionary that contains information about functions.
+    /// </summary>
     public IDictionary<SegmentedAddress, FunctionInformation> FunctionInformations { get; set; } = new Dictionary<SegmentedAddress, FunctionInformation>();
 
+    /// <summary>
+    /// Calls an interrupt handler.
+    /// </summary>
+    /// <param name="callType">The type of the call.</param>
+    /// <param name="entrySegment">The segment of the entry point.</param>
+    /// <param name="entryOffset">The offset of the entry point.</param>
+    /// <param name="expectedReturnSegment">The expected segment of the return address.</param>
+    /// <param name="expectedReturnOffset">The expected offset of the return address.</param>
+    /// <param name="vectorNumber">The vector number of the interrupt handler.</param>
+    /// <param name="recordReturn">A value indicating whether to record the return.</param>
     public void Icall(CallType callType, ushort entrySegment, ushort entryOffset, ushort expectedReturnSegment, ushort expectedReturnOffset, byte vectorNumber, bool recordReturn) {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
     }
 
+    /// <summary>
+    /// Returns the return address of the specified call type from the machine stack without removing it.
+    /// </summary>
+    /// <param name="returnCallType">The type of the return call.</param>
+    /// <returns>The return address of the specified call type from the machine stack without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType) {
         uint stackPhysicalAddress = StackPhysicalAddress;
         return PeekReturnAddressOnMachineStack(returnCallType, stackPhysicalAddress);
     }
 
+    /// <summary>
+    /// Returns the return address of the specified call type from the machine stack at the specified physical address without removing it.
+    /// </summary>
+    /// <param name="returnCallType">The calling convention.</param>
+    /// <param name="stackPhysicalAddress">The physical address of the stack.</param>
+    /// <returns>The return address of the specified call type from the machine stack at the specified physical address without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
         Memory memory = _machine.Memory;
         State state = _machine.Cpu.State;
@@ -103,11 +164,20 @@ public class FunctionHandler {
         };
     }
 
+    /// <summary>
+    /// Returns the return address of the current function from the machine stack without removing it.
+    /// </summary>
+    /// <returns>The return address of the current function from the machine stack without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStackForCurrentFunction() {
         FunctionCall? currentFunctionCall = CurrentFunctionCall;
         return currentFunctionCall == null ? null : PeekReturnAddressOnMachineStack(currentFunctionCall.CallType);
     }
 
+    /// <summary>
+    /// Returns from a call.
+    /// </summary>
+    /// <param name="returnCallType">The calling convention.</param>
+    /// <returns>A value indicating whether the return was successful.</returns>
     public bool Ret(CallType returnCallType) {
         if (!_recordData) {
             return true;

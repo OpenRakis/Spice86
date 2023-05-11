@@ -17,7 +17,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// The helper for C# overrides of machine code.
+/// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
 /// </summary>
 public class CSharpOverrideHelper {
     /// <summary>
@@ -40,50 +40,174 @@ public class CSharpOverrideHelper {
     /// </summary>
     public Memory Memory => Machine.Memory;
 
+    /// <summary>
+    /// Gets the 8-bit indexer of the memory bus.
+    /// </summary>
     public UInt8Indexer UInt8 => Memory.UInt8;
+    
+    /// <summary>
+    /// Gets the 16-bit indexer of the memory bus.
+    /// </summary>
     public UInt16Indexer UInt16 => Memory.UInt16;
+    
+    /// <summary>
+    /// Gets the 32-bit indexer of the memory bus.
+    /// </summary>
     public UInt32Indexer UInt32 => Memory.UInt32;
+    
+    /// <summary>
+    /// Gets the stack of the CPU.
+    /// </summary>
     public Stack Stack => Cpu.Stack;
 
+    /// <summary>
+    /// Gets the state of the CPU.
+    /// </summary>
     public State State => Cpu.State;
 
+    /// <summary>
+    /// Gets the arithmetic-logic unit
+    /// </summary>
     public Alu Alu => Cpu.Alu;
 
+    /// <summary>
+    /// Gets or sets the value of AX register.
+    /// </summary>
     public ushort AX { get => State.AX; set => State.AX = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of AH register.
+    /// </summary>
     public byte AH { get => State.AH; set => State.AH = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of AL register.
+    /// </summary>
     public byte AL { get => State.AL; set => State.AL = value; }
 
+    /// <summary>
+    /// Gets or sets the value of BX register.
+    /// </summary>
     public ushort BX { get => State.BX; set => State.BX = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of BH register.
+    /// </summary>
     public byte BH { get => State.BH; set => State.BH = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of BL register.
+    /// </summary>
     public byte BL { get => State.BL; set => State.BL = value; }
 
+    /// <summary>
+    /// Gets or sets the value of CX register.
+    /// </summary>
     public ushort CX { get => State.CX; set => State.CX = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of CH register.
+    /// </summary>
     public byte CH { get => State.CH; set => State.CH = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of CL register.
+    /// </summary>
     public byte CL { get => State.CL; set => State.CL = value; }
 
+    /// <summary>
+    /// Gets or sets the value of DX register.
+    /// </summary>
     public ushort DX { get => State.DX; set => State.DX = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of DH register.
+    /// </summary>
     public byte DH { get => State.DH; set => State.DH = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of DL register.
+    /// </summary>
     public byte DL { get => State.DL; set => State.DL = value; }
 
+    /// <summary>
+    /// Gets or sets the value of SP register.
+    /// </summary>
     public ushort SP { get => State.SP; set => State.SP = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of BP register.
+    /// </summary>
     public ushort BP { get => State.BP; set => State.BP = value; }
 
+    /// <summary>
+    /// Gets or sets the value of SI register.
+    /// </summary>
     public ushort SI { get => State.SI; set => State.SI = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of DI register.
+    /// </summary>
     public ushort DI { get => State.DI; set => State.DI = value; }
 
+    /// <summary>
+    /// Gets or sets the value of CS register.
+    /// </summary>
     public ushort CS { get => State.CS; set => State.CS = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of DS register.
+    /// </summary>
     public ushort DS { get => State.DS; set => State.DS = value; }
+
+    /// <summary>
+    /// Gets or sets the value of ES register.
+    /// </summary>
     public ushort ES { get => State.ES; set => State.ES = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of FS register.
+    /// </summary>
     public ushort FS { get => State.FS; set => State.FS = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of GS register.
+    /// </summary>
     public ushort GS { get => State.GS; set => State.GS = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of SS register.
+    /// </summary>
     public ushort SS { get => State.SS; set => State.SS = value; }
 
+    /// <summary>
+    /// Gets or sets the value of IP register.
+    /// </summary>
     public ushort IP { get => State.IP; set => State.IP = value; }
 
+    /// <summary>
+    /// Gets or sets the value of the auxiliary flag.
+    /// </summary>
     public bool AuxiliaryFlag { get => State.AuxiliaryFlag; set => State.AuxiliaryFlag = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of the carry flag.
+    /// </summary>
     public bool CarryFlag { get => State.CarryFlag; set => State.CarryFlag = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of the direction flag.
+    /// </summary>
     public bool DirectionFlag { get => State.DirectionFlag; set => State.DirectionFlag = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the interrupt flag.
+    /// </summary>
     public bool InterruptFlag { get => State.InterruptFlag; set => State.InterruptFlag = value; }
+    
+    /// <summary>
+    /// Gets or sets the value of the overflow flag.
+    /// </summary>
     public bool OverflowFlag { get => State.OverflowFlag; set => State.OverflowFlag = value; }
     public bool ParityFlag { get => State.ParityFlag; set => State.ParityFlag = value; }
     public bool SignFlag { get => State.SignFlag; set => State.SignFlag = value; }

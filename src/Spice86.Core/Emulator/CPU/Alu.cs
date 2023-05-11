@@ -1,9 +1,10 @@
-﻿using Spice86.Core.Emulator.CPU.Exceptions;
+﻿namespace Spice86.Core.Emulator.CPU;
 
-namespace Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU.Exceptions;
 
+/// <summary>
+/// Arithmetic-logic unit
+/// </summary>
 public class Alu {
     /**
      * Shifting this by the number we want to test gives 1 if number of bit is even and 0 if odd.<br/>
@@ -44,6 +45,10 @@ public class Alu {
 
     private readonly State _state;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="state">The state of the CPU.</param>
     public Alu(State state) {
         _state = state;
     }

@@ -11,12 +11,25 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Provides functionality for dumping Ghidra symbols and labels to a file.
+/// </summary>
 public class GhidraSymbolsDumper {
     private readonly ILoggerService _loggerService;
+    
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="loggerService">The logger service implementation.</param>
     public GhidraSymbolsDumper(ILoggerService loggerService) {
         _loggerService = loggerService;
     }
 
+    /// <summary>
+    /// Dumps function information and labels to a file.
+    /// </summary>
+    /// <param name="machine">The machine instance to extract the function information and labels from.</param>
+    /// <param name="destinationFilePath">The path of the file to write the dumped information to.</param>
     public void Dump(Machine machine, string destinationFilePath) {
         ICollection<FunctionInformation> functionInformations = machine.Cpu.FunctionHandler.FunctionInformations.Values;
         List<string> lines = new();
@@ -64,6 +77,11 @@ public class GhidraSymbolsDumper {
         return $"{ConvertUtils.ToHex16WithoutX(address.Segment)}_{ConvertUtils.ToHex16WithoutX(address.Offset)}_{ConvertUtils.ToHex32WithoutX(address.ToPhysical())}";
     }
 
+    /// <summary>
+    /// Reads the symbols and labels from the specified file or creates an empty dictionary if the file does not exist.
+    /// </summary>
+    /// <param name="filePath">The path of the file to read the symbols and labels from.</param>
+    /// <returns>A dictionary containing the symbols and labels.</returns>
     public IDictionary<SegmentedAddress, FunctionInformation> ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -98,6 +116,12 @@ public class GhidraSymbolsDumper {
         return null;
     }
 
+    /// <summary>
+    /// Parses a function name with an associated address string into a <see cref="FunctionInformation"/> instance.
+    /// </summary>
+    /// <param name="loggerService">The logger service to use for logging errors during parsing.</param>
+    /// <param name="nameWithAddress">The function name with address to parse.</param>
+    /// <returns>A <see cref="FunctionInformation"/> instance representing the parsed function, or <c>null</c> if parsing failed.</returns>
     public static FunctionInformation? NameToFunctionInformation(ILoggerService loggerService, string nameWithAddress) {
         string[] nameSplit = nameWithAddress.Split("_");
         if (nameSplit.Length < 4) {

@@ -39,8 +39,10 @@ public record FunctionInformation : IComparable<FunctionInformation> {
         Name = name;
         FunctionOverride = functionOverride;
     }
-    
-    
+
+    /// <summary>
+    /// Gets or creates the dictionary of returns for the function.
+    /// </summary>
     public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
         get {
             _returns ??= new();
@@ -48,18 +50,30 @@ public record FunctionInformation : IComparable<FunctionInformation> {
         }
     }
 
+    /// <summary>
+    /// Gets or creates the dictionary of unaligned returns for the function.
+    /// </summary>
     public Dictionary<FunctionReturn, ISet<SegmentedAddress>> UnalignedReturns {
         get {
             _unalignedReturns ??= new();
             return _unalignedReturns;
         }
     }
-
-
+    
+    /// <summary>
+    /// Adds the specified function return and target to the <see cref="Returns"/> dictionary property.
+    /// </summary>
+    /// <param name="functionReturn">The function return to add to the Returns dictionary.</param>
+    /// <param name="target">The target address to add to the Returns dictionary.</param>
     public void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
         AddReturn(Returns, functionReturn, target);
     }
 
+    /// <summary>
+    /// Adds the specified function return and target to the <see cref="UnalignedReturns"/> dictionary property.
+    /// </summary>
+    /// <param name="functionReturn">The function return to add to the UnalignedReturns dictionary.</param>
+    /// <param name="target">The target address to add to the UnalignedReturns dictionary.</param>
     public void AddUnalignedReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
         AddReturn(UnalignedReturns, functionReturn, target);
     }
