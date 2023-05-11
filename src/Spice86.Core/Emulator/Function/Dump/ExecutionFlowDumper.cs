@@ -1,21 +1,14 @@
-﻿using Spice86.Shared.Interfaces;
+﻿namespace Spice86.Core.Emulator.Function.Dump;
 
-namespace Spice86.Core.Emulator.Function.Dump;
-
-using Errors;
+using System.Diagnostics;
+using System.IO;
 
 using Newtonsoft.Json;
-
-using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Errors;
-
-using System;
-using System.Diagnostics;
-using System.IO;
+using Spice86.Shared.Interfaces;
 
 public class ExecutionFlowDumper {
     private readonly ILoggerService _loggerService;

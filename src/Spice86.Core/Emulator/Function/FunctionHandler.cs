@@ -143,7 +143,7 @@ public class FunctionHandler {
         bool returnAddressAlignedWithCallStack = HandleUnalignedReturns(currentFunctionCall, actualReturnAddress, currentFunctionReturn);
         if (currentFunctionInformation != null && !UseOverride(currentFunctionInformation)) {
             SegmentedAddress? addressToRecord = actualReturnAddress;
-            if (!currentFunctionCall.IsRecordReturn) {
+            if (!currentFunctionCall.IsReturnRecorded) {
                 addressToRecord = null;
             }
 

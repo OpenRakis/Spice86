@@ -1,20 +1,15 @@
 namespace Spice86.Core.Emulator.Function.Dump;
 
-using Memory;
+using System.IO;
+using System.Linq;
 
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
-
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 
 public class GhidraSymbolsDumper {
     private readonly ILoggerService _loggerService;

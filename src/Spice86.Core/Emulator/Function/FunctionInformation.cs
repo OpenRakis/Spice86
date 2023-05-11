@@ -39,6 +39,22 @@ public record FunctionInformation : IComparable<FunctionInformation> {
         Name = name;
         FunctionOverride = functionOverride;
     }
+    
+    
+    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
+        get {
+            _returns ??= new();
+            return _returns;
+        }
+    }
+
+    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> UnalignedReturns {
+        get {
+            _unalignedReturns ??= new();
+            return _unalignedReturns;
+        }
+    }
+
 
     public void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
         AddReturn(Returns, functionReturn, target);
@@ -112,22 +128,8 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// </summary>
     public string Name { get; }
 
-    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
-        get {
-            _returns ??= new();
-            return _returns;
-        }
-    }
-
-    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> UnalignedReturns {
-        get {
-            _unalignedReturns ??= new();
-            return _unalignedReturns;
-        }
-    }
-
     /// <summary>
-    /// Whether the machine code was overriden by C# code.
+    /// Gets whether the machine code was overriden by C# code.
     /// </summary>
     public bool HasOverride => FunctionOverride != null;
 

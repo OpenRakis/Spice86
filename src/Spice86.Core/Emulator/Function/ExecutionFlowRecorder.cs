@@ -42,7 +42,7 @@ public class ExecutionFlowRecorder {
     private readonly ISet<ulong> _unalignedRetsEncountered = new HashSet<ulong>();
     
     /// <summary>
-    /// Gets a set of executed instructions.
+    /// Gets the set of executed instructions.
     /// </summary>
     public ISet<SegmentedAddress> ExecutedInstructions { get; }
     private readonly ISet<uint> _instructionsEncountered = new HashSet<uint>();
@@ -142,6 +142,12 @@ public class ExecutionFlowRecorder {
         return cache.Add(MemoryUtils.ToPhysicalAddress(segment, offset));
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="cs">The value of the CS register, for the segment.</param>
+    /// <param name="ip">The value of the IP register, for the offset.</param>
     public void RegisterExecutableByte(Machine machine, ushort cs, ushort ip) {
         // Note: this is not enough, instructions modified before they are discovered are not counted as rewritten.
         // If we saved the coverage to reload it each time, we would get a different picture of the rewritten code but that would come with other issues.
