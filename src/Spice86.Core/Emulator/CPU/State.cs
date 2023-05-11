@@ -80,8 +80,21 @@ public class State {
     public bool ParityFlag { get => Flags.GetFlag(Flags.Parity); set => Flags.SetFlag(Flags.Parity, value); }
     public bool CarryFlag { get => Flags.GetFlag(Flags.Carry); set => Flags.SetFlag(Flags.Carry, value); }
 
+    /// <summary>
+    /// Gets the offset value of the Direction Flag for 8 bit CPU instructions.
+    /// </summary>
+
     public short Direction8 => (short)(DirectionFlag ? -1 : 1);
+    
+    /// <summary>
+    /// Gets the offset value of the Direction Flag for 16 bit CPU instructions.
+    /// </summary>
+
     public short Direction16 => (short)(DirectionFlag ? -2 : 2);
+    
+    /// <summary>
+    /// Gets the offset value of the Direction Flag for 32 bit CPU instructions.
+    /// </summary>
     public short Direction32 => (short)(DirectionFlag ? -4 : 4);
 
     public bool? ContinueZeroFlagValue { get; set; }

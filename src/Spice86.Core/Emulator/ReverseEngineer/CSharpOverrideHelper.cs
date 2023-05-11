@@ -240,18 +240,30 @@ public class CSharpOverrideHelper {
     /// </summary>
     public ushort FlagRegister16 { get => State.Flags.FlagRegister16; set => State.Flags.FlagRegister = value; }
     
-    
+    /// <summary>
+    /// Gets the offset value of the Direction Flag for 8 bit CPU instructions.
+    /// </summary>
     public short Direction8 => State.Direction8;
     
-    
+    /// <summary>
+    /// Gets the offset value of the Direction Flag for 16 bit CPU instructions.
+    /// </summary>
     public short Direction16 => State.Direction16;
     
     
+    /// <summary>
+    /// Gets the offset value of the Direction Flag for 32 bit CPU instructions.
+    /// </summary>
     public short Direction32 => State.Direction32;
     
-    
+    /// <summary>
+    /// A dictionary that stores the function information of each function defined in memory.
+    /// </summary>
     protected readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
     
+    /// <summary>
+    /// Gets or sets the <see cref="JumpDispatcher"/>
+    /// </summary>
     public JumpDispatcher JumpDispatcher { get; set; }
 
     
@@ -378,6 +390,11 @@ public class CSharpOverrideHelper {
         };
     }
 
+
+    /// <summary>
+    /// Returns an <see cref="Action"/> than makes the CPU perform a <see cref="Cpu.FarRet"/> instruction when invoked.
+    /// </summary>
+    /// <returns>returns an <see cref="Action"/>than makes the CPU perform a <see cref="Cpu.FarRet"/> instruction when invoked.</returns>
     public Action FarRet(ushort numberOfBytesToPop = 0) {
         return () => Cpu.FarRet(numberOfBytesToPop);
     }
@@ -398,11 +415,21 @@ public class CSharpOverrideHelper {
     public Action NearJump(ushort ip) {
         return () => State.IP = ip;
     }
-
+    /// <summary>
+    /// Returns an action that performs a near return.
+    /// </summary>
+    /// <param name="numberOfBytesToPop">The number of bytes to remove from the stack.</param>
+    /// <returns>An action that performs a near return.</returns>
     public Action NearRet(ushort numberOfBytesToPop = 0) {
         return () => Cpu.NearRet(numberOfBytesToPop);
     }
 
+    /// <summary>
+    /// Performs a near call.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
     public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
             Stack.Push16(expectedReturnIp);
@@ -411,6 +438,12 @@ public class CSharpOverrideHelper {
         });
     }
 
+    /// <summary>
+    /// Performs a far call.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
     public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
             Stack.Push16(expectedReturnCs);
@@ -419,7 +452,6 @@ public class CSharpOverrideHelper {
             returnAction.Invoke();
         });
     }
-
     /// <summary>
     /// Performs an interrupt call by executing the given function and returning to the specified return address.
     /// </summary>
