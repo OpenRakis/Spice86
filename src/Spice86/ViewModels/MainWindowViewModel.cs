@@ -43,6 +43,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private DebugWindow? _debugWindow;
     private PaletteWindow? _paletteWindow;
     private PerformanceWindow? _performanceWindow;
+    private string _lastExecutableDirectory = string.Empty;
 
     private bool _closeAppOnEmulatorExit;
 
@@ -69,6 +70,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [ObservableProperty]
     private bool _isPaused;
+
+    [ObservableProperty]
+    private AvaloniaList<string> _mostRecentlyUsed = new();
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -213,9 +217,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                     }
                 }
             };
+            if (Directory.Exists(_lastExecutableDirectory)) {
+                ofd.Directory = _lastExecutableDirectory;
+            }
             string[]? files = await ofd.ShowAsync(desktop.MainWindow);
             if (files?.Any() == true) {
-                RestartEmulatorWithNewProgram(files[0]);
+                string filePath = files[0];
+                RestartEmulatorWithNewProgram(filePath);
             }
         }
     }
@@ -332,7 +340,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             string.IsNullOrWhiteSpace(_configuration.CDrive)) {
             return false;
         }
-
+        _lastExecutableDirectory = _configuration.CDrive;
         RunMachine();
         return true;
     }
