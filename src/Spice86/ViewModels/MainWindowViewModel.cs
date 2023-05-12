@@ -75,7 +75,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private bool _isPaused;
 
     [ObservableProperty]
-    private AvaloniaList<string> _mostRecentlyUsed = new();
+    private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -199,12 +199,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    public async Task StartExecutable() {
+    public async Task StartExecutable(string? filePath) {
         _closeAppOnEmulatorExit = false;
-        await StartNewExecutable();
+        await StartNewExecutable(filePath);
     }
 
-    private async Task StartNewExecutable() {
+    private async Task StartNewExecutable(string? filePath = null) {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             OpenFileDialog ofd = new() {
                 Title = "Start Executable...",
@@ -224,9 +224,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             if (Directory.Exists(_lastExecutableDirectory)) {
                 ofd.Directory = _lastExecutableDirectory;
             }
-            string[]? files = await ofd.ShowAsync(desktop.MainWindow);
-            if (files?.Any() == true) {
-                string filePath = files[0];
+
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
+                string[]? files = await ofd.ShowAsync(desktop.MainWindow);
+                if (files?.Any() == true) {
+                    filePath = files[0];
+                    RestartEmulatorWithNewProgram(filePath);
+                }
+            } else {
                 RestartEmulatorWithNewProgram(filePath);
             }
         }
@@ -336,11 +341,22 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
     }
 
+    private void AddOrReplaceMostRecentlyUsed(string filePath) {
+        if (MostRecentlyUsed.Any(x => x.FullName == filePath)) {
+            return;
+        }
+        MostRecentlyUsed.Insert(0,new FileInfo(filePath));
+        if (MostRecentlyUsed.Count > 3) {
+            MostRecentlyUsed.RemoveAt(3);
+        }
+    }
+
     private bool RunEmulator() {
         if (string.IsNullOrWhiteSpace(_configuration.Exe) ||
             string.IsNullOrWhiteSpace(_configuration.CDrive)) {
             return false;
         }
+        AddOrReplaceMostRecentlyUsed(_configuration.Exe);
         _lastExecutableDirectory = _configuration.CDrive;
         RunMachine();
         return true;

@@ -4,6 +4,7 @@
 		xmlns:local="using:Spice86.Views"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:converters="clr-namespace:Spice86.Converters"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Icon/Spice86.ico"
@@ -14,6 +15,9 @@
 		Height="768"
 		WindowStartupLocation="CenterScreen"
 		CanResize="True">
+	<Window.Resources>
+		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
+	</Window.Resources>
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
@@ -25,6 +29,10 @@
 						<MenuItem Header="Program">
 							<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
 							<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Start the executable paused, to be used with GDB"></MenuItem>
+							<Separator IsVisible="{Binding !!MostRecentlyUsed.Count}"/>
+							<MenuItem Command="{Binding StartExecutableCommand}" CommandParameter="{Binding MostRecentlyUsed[0].FullName}" Header="{Binding MostRecentlyUsed[0].Name}" IsVisible="{Binding !!MostRecentlyUsed.Count}" />
+							<MenuItem Header="{Binding MostRecentlyUsed[1].Name}" CommandParameter="{Binding MostRecentlyUsed[1].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" />
+							<MenuItem Header="{Binding MostRecentlyUsed[2].Name}" CommandParameter="{Binding MostRecentlyUsed[2].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=3}" />
 						</MenuItem>
 						<MenuItem Header="Debug">
 							<MenuItem Header="Debug Window" Command="{Binding ShowDebugWindowCommand}" />
