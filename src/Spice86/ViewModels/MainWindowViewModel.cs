@@ -426,7 +426,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private async Task ShowEmulationErrorMessage(Exception e) {
         IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
-            .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
+            .GetMessageBoxStandardWindow("An unhandled exception occured", 
+                $"""
+                Method name: {e.GetBaseException().TargetSite?.Name},
+                Exception message: {e.GetBaseException().Message},
+                Stack trace (first line): {e.GetBaseException().StackTrace?.Split(Environment.NewLine).FirstOrDefault()}
+                """);
         if (!_disposed && !_isMainWindowClosing && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             await errorMessage.ShowDialog(desktop.MainWindow);
         }
