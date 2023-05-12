@@ -125,8 +125,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             Title = "Dump emulator state to directory...",
             Directory = _configuration.RecordedDataDirectory
         };
-        if (Directory.Exists(_configuration.RecordedDataDirectory)) {
-            ofd.Directory = _configuration.RecordedDataDirectory;
+        if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
+            ofd.Directory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
         }
         string? dir = _configuration.RecordedDataDirectory;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
@@ -217,6 +217,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                     }
                 }
             };
+            ofd.Directory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
             if (Directory.Exists(_lastExecutableDirectory)) {
                 ofd.Directory = _lastExecutableDirectory;
             }
