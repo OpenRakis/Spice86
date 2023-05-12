@@ -69,6 +69,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
 
     [ObservableProperty]
+    private string _statusMessage = "Emulator: not started.";
+
+    [ObservableProperty]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -470,18 +473,21 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private void MachineThread() {
         try {
-            if(!_disposed) {
+            if (!_disposed) {
                 _okayToContinueEvent.Set();
             }
+
             _programExecutor = new ProgramExecutor(_loggerService, this, _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _videoCard = _programExecutor.Machine.VgaCard;
             Dispatcher.UIThread.Post(() => IsMachineRunning = true);
+            Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
             Dispatcher.UIThread.Post(() => ShowVideo = true);
             _programExecutor.Run();
-            Dispatcher.UIThread.Post(() => IsMachineRunning = false);
-            if(_closeAppOnEmulatorExit && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
-                   {MainWindow: MainWindow mainWindow}) {
+            if (_closeAppOnEmulatorExit &&
+                Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime {
+                    MainWindow: MainWindow mainWindow
+                }) {
                 Dispatcher.UIThread.Post(() => mainWindow.Close());
             }
         } catch (Exception e) {
@@ -489,9 +495,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred during execution");
             }
+
             EmulatorErrorOccured += OnEmulatorErrorOccured;
             EmulatorErrorOccured?.Invoke(e);
             EmulatorErrorOccured -= OnEmulatorErrorOccured;
+        } finally {
+            Dispatcher.UIThread.Post(() => IsMachineRunning = false);
+            Dispatcher.UIThread.Post(() => StatusMessage = "Emulator: stopped.");
         }
     }
 
