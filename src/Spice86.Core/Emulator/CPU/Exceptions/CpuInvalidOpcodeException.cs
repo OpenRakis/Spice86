@@ -9,6 +9,7 @@ namespace Spice86.Core.Emulator.CPU.Exceptions;
 /// The saved instruction pointer points to the instruction which caused the exception. 
 /// </summary>
 public class CpuInvalidOpcodeException : CpuException {
+    /// <inheritdoc />
     public CpuInvalidOpcodeException(string message)
         : base(message, 0x06, CpuExceptionType.Fault, "#UD") {
     }

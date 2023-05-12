@@ -128,7 +128,7 @@ public class State {
     /// <returns>All the CPU registers dumped into a string</returns>
     public string DumpedRegFlags {
         get {
-            StringBuilder res = new StringBuilder();
+            StringBuilder res = new();
             res.Append(nameof(Cycles)).Append('=');
             res.Append(Cycles);
             res.Append(" CS:IP=").Append(ConvertUtils.ToSegmentedAddressRepresentation(CS, IP)).Append('/').Append(ConvertUtils.ToHex(MemoryUtils.ToPhysicalAddress(CS, IP)));

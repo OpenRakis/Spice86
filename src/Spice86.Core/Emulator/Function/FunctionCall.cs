@@ -3,7 +3,7 @@
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
-/// Represents a function call in the emulator, including information about the call type, entry point address, expected return address, stack address after the call, and whether the return value should be recorded.
+/// Represents a function call in the emulator, including information about the call type, entry point address, expected return address, stack address after the call, and whether the function return is recorded for execution flow analysis
 /// </summary>
 public record FunctionCall(CallType CallType, SegmentedAddress EntryPointAddress, SegmentedAddress? ExpectedReturnAddress, SegmentedAddress StackAddressAfterCall, bool IsReturnRecorded) {
     /// <summary>

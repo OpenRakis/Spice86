@@ -8,6 +8,10 @@ namespace Spice86.Core.Emulator.CPU.Exceptions;
 /// The saved instruction pointer points to the DIV or IDIV instruction which caused the exception. 
 /// </summary>
 public class CpuDivisionErrorException : CpuException {
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="message">The message describing the exception.</param>
     public CpuDivisionErrorException(string message)
         : base(message, 0x00, CpuExceptionType.Fault, "#DE") {
     }

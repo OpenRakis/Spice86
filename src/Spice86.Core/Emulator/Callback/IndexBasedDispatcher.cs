@@ -2,13 +2,9 @@ namespace Spice86.Core.Emulator.Callback;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
-
-using System.Collections.Generic;
 
 /// <summary>
 /// Base class for most classes having to dispatch operations depending on a numeric value, like interrupts.

@@ -58,7 +58,7 @@ public class FunctionHandler {
     /// <param name="expectedReturnSegment">The expected return segment.</param>
     /// <param name="expectedReturnOffset">The expected return offset.</param>
     /// <param name="name">The function name.</param>
-    /// <param name="recordReturn">The record return flag.</param>
+    /// <param name="recordReturn">Whether the function return is recorded for execution flow analysis.</param>
     public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort? expectedReturnSegment, ushort? expectedReturnOffset, string? name, bool recordReturn) {
         SegmentedAddress entryAddress = new(entrySegment, entryOffset);
         FunctionInformation currentFunction = GetOrCreateFunctionInformation(entryAddress, name);
