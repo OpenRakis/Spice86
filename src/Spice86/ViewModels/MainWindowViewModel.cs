@@ -319,14 +319,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public int MouseY { get; set; }
 
-    public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary {
-        get =>
-            VideoBuffers
-                .ToDictionary(static x =>
-                        x.Address,
-                    x => x);
-        set => throw new NotImplementedException();
-    }
+    public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary =>
+        VideoBuffers
+            .ToDictionary(static x =>
+                    x.Address,
+                x => x);
 
     public int Width { get; private set; }
 
