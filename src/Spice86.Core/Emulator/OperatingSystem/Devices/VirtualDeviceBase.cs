@@ -2,8 +2,10 @@ namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 
+/// <summary>
+/// The abstract base class for all DOS virtual devices
+/// </summary>
 public abstract class VirtualDeviceBase : IVirtualDevice {
-    
     /// <summary>
     /// Create a new virtual device.
     /// </summary>
@@ -15,28 +17,19 @@ public abstract class VirtualDeviceBase : IVirtualDevice {
         StrategyEntryPoint = strategy;
         InterruptEntryPoint = interrupt;
     }
-
-    /// <summary>
-    /// The segment where the device driver header is stored. 
-    /// </summary>
+    
+    /// <inheritdoc />
     public ushort Segment { get; set; }
-    /// <summary>
-    /// The offset in the segment where the device driver header is stored.
-    /// </summary>
+    
+    /// <inheritdoc />
     public ushort Offset { get; set; }
-    /// <summary>
-    /// The device attributes.
-    /// <see href="https://github.com/microsoft/MS-DOS/blob/master/v2.0/bin/DEVDRIV.DOC#L125"/>
-    /// </summary>
+    
+    /// <inheritdoc />
     public DeviceAttributes Attributes { get; set; }
-    /// <summary>
-    /// This is the entrypoint for the strategy routine.
-    /// DOS will give this routine a Device Request Header when it wants the device to do something.
-    /// </summary>
+
+    /// <inheritdoc />
     public ushort StrategyEntryPoint { get; set; }
-    /// <summary>
-    /// This is the entrypoint for the interrupt routine.
-    /// DOS will call this routine immediately after calling the strategy endpoint.
-    /// </summary>
+
+    /// <inheritdoc />
     public ushort InterruptEntryPoint { get; set; }
 }
