@@ -26,8 +26,10 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     public BiosKeyboardBuffer BiosKeyboardBuffer { get; }
 
+    /// <inheritdoc />
     public override byte Index => 0x9;
 
+    /// <inheritdoc />
     public override void Run() {
         byte? scancode = _keyboard.LastKeyboardInput.ScanCode;
         if (scancode is null) {

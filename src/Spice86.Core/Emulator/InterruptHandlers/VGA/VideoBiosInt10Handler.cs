@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// INT10H video services
+/// BIOS interrupt 10h handler
 /// </summary>
 public class VideoBiosInt10Handler : InterruptHandler {
     private readonly IVgaInterrupts _vgaCard;
@@ -57,8 +57,14 @@ public class VideoBiosInt10Handler : InterruptHandler {
         _dispatchTable.Add(0x1B, new Callback(0x1B, GetFunctionalityInfo));
     }
 
+    /// <summary>
+    /// Change current video mode to any VGA mode.
+    /// </summary>
     public void SetVideoMode() => _vgaCard.SetVideoMode();
 
+    /// <summary>
+    /// Set text-mode cursor shape
+    /// </summary>
     public void SetCursorType() => _vgaCard.SetCursorType();
 
     public void SetCursorPosition() => _vgaCard.SetCursorPosition();

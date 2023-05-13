@@ -20,8 +20,10 @@ public class DosInt2fHandler : InterruptHandler {
         FillDispatchTable();
     }
 
+    /// <inheritdoc />
     public override byte Index => 0x2f;
 
+    /// <inheritdoc />
     public override void Run() {
         byte operation = _state.AH;
         Run(operation);

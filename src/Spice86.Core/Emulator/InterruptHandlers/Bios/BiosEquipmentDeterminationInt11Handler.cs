@@ -11,8 +11,10 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     public BiosEquipmentDeterminationInt11Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
     }
 
+    /// <inheritdoc />
     public override byte Index => 0x11;
 
+    /// <inheritdoc />
     public override void Run() {
         _state.AX = 0;
     }

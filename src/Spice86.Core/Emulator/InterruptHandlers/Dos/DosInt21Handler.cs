@@ -19,7 +19,7 @@ using System.Linq;
 using System.Text;
 
 /// <summary>
-/// Reimplementation of int21
+/// Reimplementation of INT21
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
     private readonly ILoggerService _loggerService;
@@ -36,6 +36,12 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosFileManager _dosFileManager;
     private readonly List<IVirtualDevice> _devices;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="dos">The DOS kernel.</param>
     public DosInt21Handler(Machine machine, ILoggerService loggerService, Dos dos) : base(machine, loggerService) {
         _loggerService = loggerService;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -601,6 +607,7 @@ public class DosInt21Handler : InterruptHandler {
             _loggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}", returnMessage, _state.ToString());
         }
     }
+    
     private void SetStateFromDosFileOperationResult(bool calledFromVm, DosFileOperationResult dosFileOperationResult) {
         if (dosFileOperationResult.IsError) {
             LogDosError(calledFromVm);
