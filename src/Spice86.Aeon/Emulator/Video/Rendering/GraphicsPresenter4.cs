@@ -25,7 +25,7 @@ public sealed class GraphicsPresenter4 : Presenter
     {
         int width = VideoMode.Width;
         int height = Math.Min(VideoMode.Height, VideoMode.LineCompare + 1);
-        var palette = VideoMode.Palette;
+        ReadOnlySpan<uint> palette = VideoMode.Palette;
         int stride = VideoMode.Stride;
         int horizontalPan = VideoMode.HorizontalPanning;
         int startOffset = VideoMode.StartOffset;

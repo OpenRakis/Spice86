@@ -117,7 +117,7 @@ public sealed class Dac
     /// </summary>
     public void Reset()
     {
-        var source = DefaultPalette;
+        ReadOnlySpan<byte> source = DefaultPalette;
         for (int i = 0; i < 256; i++)
         {
             uint r = source[i * 3];

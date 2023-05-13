@@ -1,23 +1,36 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using System.Linq;
+
 using Serilog.Events;
 
 using Spice86.Shared.Interfaces;
 
-using System.Linq;
-
+/// <summary>
+/// Provides a generic view of a sequence of bytes, for a DOS Device.
+/// </summary>
 public class DeviceStream : Stream {
     private readonly string _deviceName;
     private readonly ILoggerService _logger;
     private long _length = int.MaxValue;
 
+    /// <inheritdoc />
     public override bool CanRead { get; }
+
+    /// <inheritdoc />
     public override bool CanSeek => true;
+
+    /// <inheritdoc />
     public override bool CanWrite { get; }
+
+    /// <inheritdoc />
     public override long Length => _length;
+
+    /// <inheritdoc />
     public override long Position { get; set; }
 
 
+    /// <inheritdoc />
     public DeviceStream(string deviceName, string openMode, ILoggerService logger) {
         _deviceName = deviceName;
         _logger = logger;
@@ -25,9 +38,11 @@ public class DeviceStream : Stream {
         CanWrite = openMode.Contains('w');
     }
 
+    /// <inheritdoc />
     public override void Flush() {
     }
 
+    /// <inheritdoc />
     public override int Read(byte[] buffer, int offset, int count) {
         if (!CanRead) {
             throw new NotSupportedException();
@@ -42,6 +57,7 @@ public class DeviceStream : Stream {
         return count;
     }
 
+    /// <inheritdoc />
     public override long Seek(long offset, SeekOrigin origin) {
         if (!CanSeek) {
             throw new NotSupportedException();
@@ -63,10 +79,12 @@ public class DeviceStream : Stream {
         return Position;
     }
 
+    /// <inheritdoc />
     public override void SetLength(long value) {
         _length = value;
     }
 
+    /// <inheritdoc />
     public override void Write(byte[] buffer, int offset, int count) {
         if (!CanWrite) {
             throw new NotSupportedException();

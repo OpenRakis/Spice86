@@ -14,6 +14,11 @@ public class TimerInt8Handler : InterruptHandler {
     private readonly DualPic _dualPic;
     private readonly Timer _timer;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public TimerInt8Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _timer = machine.Timer;
         _memory = machine.Memory;

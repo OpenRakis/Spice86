@@ -545,7 +545,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Reads DAC color registers to emulated RAM.
+    /// Reads DAC color registers to emulated RAM.
     /// </summary>
     private void ReadDacRegisters() {
         ushort segment = _state.ES;
@@ -565,7 +565,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Sets DAC color registers to values in emulated RAM.
+    /// Sets DAC color registers to values in emulated RAM.
     /// </summary>
     private void SetDacRegisters() {
         ushort segment = _state.ES;
@@ -583,7 +583,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Sets all of the EGA color palette registers to values in emulated RAM.
+    /// Sets all of the EGA color palette registers to values in emulated RAM.
     /// </summary>
     private void SetAllEgaPaletteRegisters() {
         ushort segment = _state.ES;
@@ -594,7 +594,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Gets a specific EGA color palette register.
+    /// Gets a specific EGA color palette register.
     /// </summary>
     /// <param name="index">Index of color to set.</param>
     /// <param name="color">New value of the color.</param>
@@ -751,7 +751,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Initializes a new display mode.
+    /// Initializes a new display mode.
     /// </summary>
     /// <param name="mode">New display mode.</param>
     public void SetDisplayMode(VideoMode mode) {

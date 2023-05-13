@@ -22,7 +22,7 @@ public sealed class GraphicsPresenterX : Presenter
     {
         int width = VideoMode.Width;
         int height = VideoMode.Height;
-        var palette = VideoMode.Palette;
+        ReadOnlySpan<uint> palette = VideoMode.Palette;
         int startOffset = VideoMode.StartOffset;
         int stride = VideoMode.Stride;
         int lineCompare = VideoMode.LineCompare / 2;

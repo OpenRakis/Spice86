@@ -46,7 +46,7 @@ public sealed class TextPresenter : Presenter
     {
         unsafe
         {
-            var palette = VideoMode.Palette;
+            ReadOnlySpan<uint> palette = VideoMode.Palette;
             byte* internalPalette = stackalloc byte[16];
             VideoMode.InternalPalette.CopyTo(new Span<byte>(internalPalette, 16));
             uint displayPage = (uint)VideoMode.ActiveDisplayPage;
@@ -81,7 +81,7 @@ public sealed class TextPresenter : Presenter
         if (Vector.IsHardwareAccelerated)
         {
             ReadOnlySpan<uint> indexes = stackalloc uint[] { 1 << 7, 1 << 6, 1 << 5, 1 << 4, 1 << 3, 1 << 2, 1 << 1, 1 << 0 };
-            var indexVector = MemoryMarshal.Cast<uint, Vector<uint>>(indexes);
+            ReadOnlySpan<Vector<uint>> indexVector = MemoryMarshal.Cast<uint, Vector<uint>>(indexes);
             var foregroundVector = new Vector<uint>(foregroundColor);
             var backgroundVector = new Vector<uint>(backgroundColor);
 

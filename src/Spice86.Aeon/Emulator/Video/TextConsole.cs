@@ -217,7 +217,7 @@ public sealed class TextConsole {
     /// <param name="advanceCursor">Value indicating whether the cursor should be automatically advanced after writing the character.</param>
     private void WriteCharacter(char c, byte foreground, byte background, bool advanceCursor)
     {
-        var cursorPos = CursorPosition;
+        Point cursorPos = CursorPosition;
         if (cursorPos.X >= 0 && cursorPos.X < Width && cursorPos.Y >= 0 && cursorPos.Y < Height)
         {
             if (c == '\n')
@@ -375,7 +375,7 @@ public sealed class TextConsole {
             }
         }
 
-        var pos = CursorPosition;
+        Point pos = CursorPosition;
         switch (direction)
         {
             case Direction.Up:
@@ -408,7 +408,7 @@ public sealed class TextConsole {
             }
         }
 
-        var pos = CursorPosition;
+        Point pos = CursorPosition;
         pos.X = 0;
         switch (direction)
         {
@@ -435,7 +435,7 @@ public sealed class TextConsole {
             }
         }
 
-        var pos = CursorPosition;
+        Point pos = CursorPosition;
         pos.X = column;
         CursorPosition = pos;
     }
@@ -505,7 +505,7 @@ public sealed class TextConsole {
             }
         }
 
-        var pos = CursorPosition;
+        Point pos = CursorPosition;
 
         switch (code)
         {

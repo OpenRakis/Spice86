@@ -36,7 +36,7 @@ public static class CommandLineParser {
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
             return initialConfig;
         }, error => {
-            var message = "Unparseable command line";
+            string? message = "Unparseable command line";
             var exception = new UnreachableException(message);
             exception.Data.Add("Error", error);
             Environment.FailFast(message, exception);

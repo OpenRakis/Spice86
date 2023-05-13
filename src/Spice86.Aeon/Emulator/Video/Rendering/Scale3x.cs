@@ -105,15 +105,15 @@ internal sealed class Scale3x : Scaler
                 var hSpan = new ReadOnlySpan<uint>(psrc + srcIndex + width, width - 2);
                 var iSpan = new ReadOnlySpan<uint>(psrc + srcIndex + width + 1, width - 2);
 
-                var aVec = MemoryMarshal.Cast<uint, Vector<uint>>(aSpan);
-                var bVec = MemoryMarshal.Cast<uint, Vector<uint>>(bSpan);
-                var cVec = MemoryMarshal.Cast<uint, Vector<uint>>(cSpan);
-                var dVec = MemoryMarshal.Cast<uint, Vector<uint>>(dSpan);
-                var eVec = MemoryMarshal.Cast<uint, Vector<uint>>(eSpan);
-                var fVec = MemoryMarshal.Cast<uint, Vector<uint>>(fSpan);
-                var gVec = MemoryMarshal.Cast<uint, Vector<uint>>(gSpan);
-                var hVec = MemoryMarshal.Cast<uint, Vector<uint>>(hSpan);
-                var iVec = MemoryMarshal.Cast<uint, Vector<uint>>(iSpan);
+                ReadOnlySpan<Vector<uint>> aVec = MemoryMarshal.Cast<uint, Vector<uint>>(aSpan);
+                ReadOnlySpan<Vector<uint>> bVec = MemoryMarshal.Cast<uint, Vector<uint>>(bSpan);
+                ReadOnlySpan<Vector<uint>> cVec = MemoryMarshal.Cast<uint, Vector<uint>>(cSpan);
+                ReadOnlySpan<Vector<uint>> dVec = MemoryMarshal.Cast<uint, Vector<uint>>(dSpan);
+                ReadOnlySpan<Vector<uint>> eVec = MemoryMarshal.Cast<uint, Vector<uint>>(eSpan);
+                ReadOnlySpan<Vector<uint>> fVec = MemoryMarshal.Cast<uint, Vector<uint>>(fSpan);
+                ReadOnlySpan<Vector<uint>> gVec = MemoryMarshal.Cast<uint, Vector<uint>>(gSpan);
+                ReadOnlySpan<Vector<uint>> hVec = MemoryMarshal.Cast<uint, Vector<uint>>(hSpan);
+                ReadOnlySpan<Vector<uint>> iVec = MemoryMarshal.Cast<uint, Vector<uint>>(iSpan);
 
                 for (int i = 0; i < aVec.Length; i++)
                 {
@@ -155,7 +155,7 @@ internal sealed class Scale3x : Scaler
                     for (int j = 0; j < Vector<uint>.Count; j++)
                         pdest[destIndex + j * 3 + destPitch] = o4[j];
 
-                    var o5 = eVec[i];
+                    Vector<uint> o5 = eVec[i];
                     for (int j = 0; j < Vector<uint>.Count; j++)
                         pdest[destIndex + j * 3 + destPitch + 1] = o5[j];
 

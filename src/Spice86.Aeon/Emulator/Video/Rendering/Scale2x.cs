@@ -20,8 +20,8 @@ internal sealed class Scale2x : Scaler
         {
             int width = SourceWidth;
             int height = SourceHeight;
-            var psrc = (uint*)source.ToPointer();
-            var pdest = (uint*)destination.ToPointer();
+            uint* psrc = (uint*)source.ToPointer();
+            uint* pdest = (uint*)destination.ToPointer();
 
             int destPitch = width * 2;
 
@@ -65,8 +65,8 @@ internal sealed class Scale2x : Scaler
         {
             int width = SourceWidth;
             int height = SourceHeight;
-            var psrc = (uint*)source.ToPointer();
-            var pdest = (uint*)destinaton.ToPointer();
+            uint* psrc = (uint*)source.ToPointer();
+            uint* pdest = (uint*)destinaton.ToPointer();
 
             int destPitch = width * 2;
 
@@ -100,11 +100,11 @@ internal sealed class Scale2x : Scaler
                 var cSpan = new ReadOnlySpan<uint>(psrc + srcIndex - 1, width - 2);
                 var dSpan = new ReadOnlySpan<uint>(psrc + srcIndex + width, width - 2);
 
-                var srcVec = MemoryMarshal.Cast<uint, Vector<uint>>(srcSpan);
-                var aVec = MemoryMarshal.Cast<uint, Vector<uint>>(aSpan);
-                var bVec = MemoryMarshal.Cast<uint, Vector<uint>>(bSpan);
-                var cVec = MemoryMarshal.Cast<uint, Vector<uint>>(cSpan);
-                var dVec = MemoryMarshal.Cast<uint, Vector<uint>>(dSpan);
+                ReadOnlySpan<Vector<uint>> srcVec = MemoryMarshal.Cast<uint, Vector<uint>>(srcSpan);
+                ReadOnlySpan<Vector<uint>> aVec = MemoryMarshal.Cast<uint, Vector<uint>>(aSpan);
+                ReadOnlySpan<Vector<uint>> bVec = MemoryMarshal.Cast<uint, Vector<uint>>(bSpan);
+                ReadOnlySpan<Vector<uint>> cVec = MemoryMarshal.Cast<uint, Vector<uint>>(cSpan);
+                ReadOnlySpan<Vector<uint>> dVec = MemoryMarshal.Cast<uint, Vector<uint>>(dSpan);
 
                 for (int i = 0; i < aVec.Length; i++)
                 {

@@ -71,7 +71,7 @@ public sealed class TextMode : VideoMode
                 return planes[address & 1][address >> 1];
             }
 
-            var map = graphics.ReadMapSelect & 0x3;
+            int map = graphics.ReadMapSelect & 0x3;
             if (map == 0 || map == 1) {
                 return planes[map][address];
             }
@@ -165,7 +165,7 @@ public sealed class TextMode : VideoMode
     /// </summary>
     internal void Clear()
     {
-        var total = Width * Height;
+        int total = Width * Height;
         unsafe
         {
             for (int i = 0; i < total; i++)

@@ -5,21 +5,30 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
+/// <summary>
+/// INT10H video services
+/// </summary>
 public class VideoBiosInt10Handler : InterruptHandler {
     private readonly IVgaInterrupts _vgaCard;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="vgaCard">The VGA implementation.</param>
     public VideoBiosInt10Handler(Machine machine, ILoggerService loggerService, IVgaInterrupts vgaCard) : base(machine, loggerService) {
         _vgaCard = vgaCard;
         FillDispatchTable();
     }
 
     /// <summary>
-    ///   The interrupt vector this class handles.
+    /// The interrupt vector this class handles.
     /// </summary>
     public override byte Index => 0x10;
 
     /// <summary>
-    ///   Runs the specified video BIOS function.
+    /// Runs the specified video BIOS function.
     /// </summary>
     public override void Run() {
         byte operation = _state.AH;
