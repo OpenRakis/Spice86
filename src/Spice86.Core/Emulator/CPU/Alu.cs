@@ -6,27 +6,27 @@ using Spice86.Core.Emulator.CPU.Exceptions;
 /// Arithmetic-logic unit
 /// </summary>
 public class Alu {
-    /**
-     * Shifting this by the number we want to test gives 1 if number of bit is even and 0 if odd.<br/>
-     * Hardcoded numbers:<br/>
-     * 0 -> 0000: even -> 1<br/>
-     * 1 -> 0001: 1 bit so odd -> 0<br/>
-     * 2 -> 0010: 1 bit so odd -> 0<br/>
-     * 3 -> 0011: 2 bit so even -> 1<br/>
-     * 4 -> 0100: 1 bit so odd -> 0<br/>
-     * 5 -> 0101: even -> 1<br/>
-     * 6 -> 0110: even -> 1<br/>
-     * 7 -> 0111: odd -> 0<br/>
-     * 8 -> 1000: odd -> 0<br/>
-     * 9 -> 1001: even -> 1<br/>
-     * A -> 1010: even -> 1<br/>
-     * B -> 1011: odd -> 0<br/>
-     * C -> 1100: even -> 1<br/>
-     * D -> 1101: odd -> 0<br/>
-     * E -> 1110: odd -> 0<br/>
-     * F -> 1111: even -> 1<br/>
-     * => lookup table is 1001011001101001
-     */
+    /// <summary>
+    /// Shifting this by the number we want to test gives 1 if number of bit is even and 0 if odd.<br/>
+    /// Hardcoded numbers:<br/>
+    /// 0 -> 0000: even -> 1<br/>
+    /// 1 -> 0001: 1 bit so odd -> 0<br/>
+    /// 2 -> 0010: 1 bit so odd -> 0<br/>
+    /// 3 -> 0011: 2 bit so even -> 1<br/>
+    /// 4 -> 0100: 1 bit so odd -> 0<br/>
+    /// 5 -> 0101: even -> 1<br/>
+    /// 6 -> 0110: even -> 1<br/>
+    /// 7 -> 0111: odd -> 0<br/>
+    /// 8 -> 1000: odd -> 0<br/>
+    /// 9 -> 1001: even -> 1<br/>
+    /// A -> 1010: even -> 1<br/>
+    /// B -> 1011: odd -> 0<br/>
+    /// C -> 1100: even -> 1<br/>
+    /// D -> 1101: odd -> 0<br/>
+    /// E -> 1110: odd -> 0<br/>
+    /// F -> 1111: even -> 1<br/>
+    /// => lookup table is 1001011001101001
+    /// </summary>
     private const uint FourBitParityTable = 0b1001011001101001;
 
     private const uint BeforeMsbMask32 = 0x40000000;
