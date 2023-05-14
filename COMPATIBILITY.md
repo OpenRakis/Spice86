@@ -1,9 +1,8 @@
 A lot of programs are not running.
 
 This is mainly because:
- - The only currently supported display mode is VGA mode 13h
-    - Text mode is not supported (for option input at the beginning of the game for example).
-    - CGA / EGA games are not supported
+ - Some VGA features are not implemented.
+ - Quite a lot of DOS kernel interrupts are not implemented.
  - TSR / sub programs / Extended memory is not implemented
 
 Here is a list of old games I tested with what worked and what didn't:
