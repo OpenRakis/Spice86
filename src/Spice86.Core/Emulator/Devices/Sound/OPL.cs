@@ -125,11 +125,11 @@ public class Chip {
         // LOG(LOG_MISC,LOG_ERROR)("write adlib timer %X %X",reg,val);
         switch (reg) {
             case 0x02:
-                Timer0.Update(_machine.DualPic.Ticks.TotalMilliseconds);
+                Timer0.Update(TimeSpan.FromTicks(_machine.Timer.NumberOfTicks).TotalMilliseconds);
                 Timer0.SetCounter(val);
                 return true;
             case 0x03:
-                Timer1.Update(_machine.DualPic.Ticks.TotalMilliseconds);
+                Timer1.Update(TimeSpan.FromTicks(_machine.Timer.NumberOfTicks).TotalMilliseconds);
                 Timer1.SetCounter(val);
                 return true;
             case 0x04:
@@ -138,7 +138,7 @@ public class Chip {
                     Timer0.Reset();
                     Timer1.Reset();
                 } else {
-                    double time = _machine.DualPic.Ticks.TotalMilliseconds;
+                    double time = TimeSpan.FromTicks(_machine.Timer.NumberOfTicks).TotalMilliseconds;
                     if ((val & 0x1) > 0)
                         Timer0.Start(time);
                     else
@@ -160,7 +160,7 @@ public class Chip {
     /// Read the current timer state, will use current double
     /// </summary>
     public byte Read() {
-        TimeSpan time = _machine.DualPic.Ticks;
+        TimeSpan time = TimeSpan.FromTicks(_machine.Timer.NumberOfTicks);
         byte ret = 0;
 
         // Overflow won't be set if a channel is masked
