@@ -68,13 +68,19 @@ public sealed class Bios {
     }
 
     /// <summary>
-    /// Gets or sets the 8 words representing the cursor position on each text page.
+    /// Gets the word representing the cursor position on the specified text page.
     /// </summary>
-    public ushort[] CursorPosition {
-        get => _memory.GetDataW(MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0x0050), 8);
-        set => _memory.LoadData(MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0x0050), value);
+    public ushort GetCursorPosition(int page) {
+        return _memory.UInt16[MemoryMap.BiosDataSegment, (ushort)(0x0050 + page * 2)];
     }
-    
+
+    /// <summary>
+    /// Sets the word representing the cursor position on the specified text page.
+    /// </summary>
+    public void SetCursorPosition(int page, ushort value) {
+        _memory.UInt16[MemoryMap.BiosDataSegment, (ushort)(0x0050 + page * 2)] = value;
+    }
+
     /// <summary>
     /// Gets or sets the BIOS cursor type.
     /// </summary>

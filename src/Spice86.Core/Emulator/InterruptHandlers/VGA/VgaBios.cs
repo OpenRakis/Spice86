@@ -761,7 +761,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
 
         // Update BIOS cursor pos
-        _bios.CursorPosition[cursorPosition.Page] = (ushort)(cursorPosition.Y << 8 | cursorPosition.X);
+        int position = cursorPosition.Y << 8 | cursorPosition.X;
+        _bios.SetCursorPosition(cursorPosition.Page, (ushort)position);
     }
 
     private ushort TextAddress(CursorPosition cursorPosition) {
@@ -1056,7 +1057,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         if (page > 7) {
             return new CursorPosition(0, 0, 0);
         }
-        ushort xy = _bios.CursorPosition[page];
+        ushort xy = _bios.GetCursorPosition(page);
         return new CursorPosition(xy, xy >> 8, page);
     }
 
@@ -1299,7 +1300,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         _bios.FeatureSwitches = 0xF9;
         _bios.ModesetCtl &= 0x7F;
         for (int i = 0; i < 8; i++) {
-            _bios.CursorPosition[i] = 0x0000;
+            _bios.SetCursorPosition(i, 0x0000);
         }
         _bios.VideoPageStart = 0x0000;
         _bios.CurrentVideoPage = 0x00;
@@ -1341,7 +1342,6 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         if (RegisterValueSet.VgaModes.TryGetValue(modeId, out VideoMode mode)) {
             return mode;
         }
-        ;
 
         throw new ArgumentOutOfRangeException(nameof(modeId), modeId, "Unknown mode");
     }
@@ -1447,7 +1447,7 @@ public record struct CursorPosition(int X, int Y, int Page);
 
 public record struct Area(int Width, int Height);
 
-public record struct VideoMode(VgaMode VgaMode, byte PixelMask, byte[] Dac, byte[] SequencerRegisterValues, byte MiscellaneousRegisterValue, byte[] CrtControllerRegisterValues, byte[] AttributeControllerRegisterValues, byte[] GraphicsControllerRegisterValues);
+public record struct VideoMode(VgaMode VgaMode, byte PixelMask, byte[] Palette, byte[] SequencerRegisterValues, byte MiscellaneousRegisterValue, byte[] CrtControllerRegisterValues, byte[] AttributeControllerRegisterValues, byte[] GraphicsControllerRegisterValues);
 
 public enum Action {
     ReadByte,

@@ -454,7 +454,7 @@ _machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.Init();
         _state.CX = (ushort)str.Length;
         _state.AL = 0x00; // no attribute, no cursor movement
         _state.BH = _machine.Bios.CurrentVideoPage;
-        _state.DX = _machine.Bios.CursorPosition[_state.BH];
+        _state.DX = _machine.Bios.GetCursorPosition(_state.BH);
         _state.AH = 0x13; // Write string
         _machine.CallbackHandler.Run(0x10);
         

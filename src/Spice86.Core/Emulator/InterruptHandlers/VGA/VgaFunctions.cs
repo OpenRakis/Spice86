@@ -188,7 +188,7 @@ internal class VgaFunctions {
         return _ioPortDispatcher.ReadByte((int)port);
     }
 
-    public void WriteToDac(IReadOnlyList<byte> palette, byte startIndex, ushort count) {
+    public void WriteToDac(IReadOnlyList<byte> palette, byte startIndex, int count) {
         WriteByteToIoPort(startIndex, VgaPort.DacAddressWriteIndex);
         int i = 0;
         while (count > 0) {
@@ -345,14 +345,14 @@ internal class VgaFunctions {
             WriteToPixelMask(videoMode.PixelMask);
 
             // From which palette
-            byte[] palette = videoMode.Dac;
-            byte paletteSize = (byte)((videoMode.Dac.Length - 1) / 3);
+            byte[] palette = videoMode.Palette;
+            int paletteEntryCount = videoMode.Palette.Length / 3;
 
             // Always 256*3 values
-            WriteToDac(palette, 0, paletteSize);
-            ushort remainder = (ushort)(256 * 3 - palette.Length);
-            byte[] empty = new byte[remainder];
-            WriteToDac(empty, paletteSize, (ushort)(remainder / 3));
+            WriteToDac(palette, 0, paletteEntryCount);
+            int remainingEntryCount = 255 - paletteEntryCount;
+            byte[] empty = new byte[remainingEntryCount * 3];
+            WriteToDac(empty, (byte)paletteEntryCount, remainingEntryCount);
 
             if (flags.HasFlag(ModeFlags.GraySum)) {
                 PerformGrayScaleSumming(0x00, 0x100);

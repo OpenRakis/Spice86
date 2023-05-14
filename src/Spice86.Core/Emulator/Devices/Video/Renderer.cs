@@ -207,10 +207,6 @@ public class Renderer : IVgaRenderer {
                 verticalBlanking = false;
             }
 
-            // check double scanning
-            if (_state.CrtControllerRegisters.CharacterCellHeightRegister.CrtcScanDouble) {
-                rowCounter++; // todo: check
-            }
         } // End of Y loop
 
         _rendering = false;

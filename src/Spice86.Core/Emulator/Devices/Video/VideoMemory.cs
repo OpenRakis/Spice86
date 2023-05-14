@@ -75,110 +75,110 @@ public class VideoMemory : IVideoMemory {
         Register8 setResetEnable = _state.GraphicsControllerRegisters.EnableSetReset;
         switch (_state.GraphicsControllerRegisters.GraphicsModeRegister.WriteMode) {
             case WriteMode.WriteMode0:
-                if (_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount != 0) {
-                    value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
-                }
-                // Foreach plane
-                for (int i = 0; i < 4; i++) {
-                    // Skip if plane is disabled or we're not writing to it.
-                    if (!planeEnable[i]) {
-                        continue;
-                    }
-                    if (!writePlane[i]) {
-                        continue;
-                    }
-                    // Apply set/reset logic.
-                    if (setResetEnable[i]) {
-                        value = (byte)(setReset[i] ? 0xFF : 0x00);
-                    }
-                    // Apply ALU function
-                    switch (_state.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect) {
-                        case FunctionSelect.None:
-                            break;
-                        case FunctionSelect.And:
-                            value &= _latches[i];
-                            break;
-                        case FunctionSelect.Or:
-                            value |= _latches[i];
-                            break;
-                        case FunctionSelect.Xor:
-                            value ^= _latches[i];
-                            break;
-                        default:
-                            throw new InvalidOperationException($"Unknown functionSelect {_state.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect}");
-                    }
-                    // Apply bitmask. (0 = use latch, 1 = use value)
-                    value &= _state.GraphicsControllerRegisters.BitMask;
-                    value |= (byte)(_latches[i] & ~_state.GraphicsControllerRegisters.BitMask);
-                    // write the data
-                    Planes[offset, i] = value;
-                }
+                HandleWriteMode0(value, planeEnable, writePlane, setResetEnable, setReset, offset);
                 break;
             case WriteMode.WriteMode1:
-                // Foreach plane
-                for (int i = 0; i < 4; i++) {
-                    // Skip if plane is disabled or we're not writing to it.
-                    if (!planeEnable[i] || !writePlane[i]) {
-                        continue;
-                    }
-                    Planes[offset, i] = _latches[i];
-                }
+                HandleWriteMode1(planeEnable, writePlane, offset);
                 break;
             case WriteMode.WriteMode2:
-                // Foreach plane
-                bool[] unpacked = value.ToBits();
-                for (int i = 0; i < 4; i++) {
-                    // Skip if plane is disabled or we're not writing to it.
-                    if (!planeEnable[i] || !writePlane[i]) {
-                        continue;
-                    }
-                    // Apply set/reset logic.
-                    value = (byte)(unpacked[i] ? 0xFF : 0x00);
-                    // Apply ALU function
-                    switch (_state.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect) {
-                        case FunctionSelect.None:
-                            break;
-                        case FunctionSelect.And:
-                            value &= _latches[i];
-                            break;
-                        case FunctionSelect.Or:
-                            value |= _latches[i];
-                            break;
-                        case FunctionSelect.Xor:
-                            value ^= _latches[i];
-                            break;
-                        default:
-                            throw new InvalidOperationException($"Unknown functionSelect {_state.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect}");
-                    }
-                    // Apply bitmask. (0 = use latch, 1 = use value)
-                    value &= _state.GraphicsControllerRegisters.BitMask;
-                    value |= (byte)(_latches[i] & ~_state.GraphicsControllerRegisters.BitMask);
-                    // write the data
-                    Planes[offset, i] = value;
-                }
+                HandleWriteMode2(value, planeEnable, writePlane, offset);
                 break;
             case WriteMode.WriteMode3:
-                value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
-                byte bitMask = (byte)(value & _state.GraphicsControllerRegisters.BitMask);
-                // Foreach plane
-                for (int i = 0; i < 4; i++) {
-                    // Skip if plane is disabled or we're not writing to it.
-                    if (!planeEnable[i] || !writePlane[i]) {
-                        continue;
-                    }
-                    // Apply set/reset logic.
-                    value = (byte)(setReset[i] ? 0xFF : 0x00);
-
-                    // Apply bitmask. (0 = use latch, 1 = use value)
-                    value &= bitMask;
-                    value |= (byte)(_latches[i] & ~bitMask);
-                    // write the data
-                    Planes[offset, i] = value;
-                }
+                HandleWriteMode3(value, planeEnable, writePlane, setReset, offset);
                 break;
             default:
                 throw new InvalidOperationException($"Unknown writeMode {_state.GraphicsControllerRegisters.GraphicsModeRegister.WriteMode}");
         }
+    }
+
+    private void HandleWriteMode3(byte value, Register8 planeEnable, bool[] writePlane, Register8 setReset, uint offset) {
+        value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
+        byte bitMask = (byte)(value & _state.GraphicsControllerRegisters.BitMask);
+        for (int plane = 0; plane < 4; plane++) {
+            if (!planeEnable[plane] || !writePlane[plane]) {
+                continue;
+            }
+            // Apply set/reset logic.
+            byte tempValue = (byte)(setReset[plane] ? 0xFF : 0x00);
+
+            // Apply bitmask. (0 = use latch, 1 = use value)
+            tempValue &= bitMask;
+            tempValue |= (byte)(_latches[plane] & ~bitMask);
+            // write the data
+            Planes[offset, plane] = tempValue;
+        }
+    }
+
+    private void HandleWriteMode2(byte value, Register8 planeEnable, bool[] writePlane, uint offset) {
+        bool[] unpacked = value.ToBits();
+        for (int plane = 0; plane < 4; plane++) {
+            // Skip if plane is disabled or we're not writing to it.
+            if (!planeEnable[plane] || !writePlane[plane]) {
+                continue;
+            }
+            // Apply set/reset logic.
+            byte tempValue = (byte)(unpacked[plane] ? 0xFF : 0x00);
+            tempValue = ApplyAluFunction(tempValue, plane);
+            // Apply bitmask. (0 = use latch, 1 = use value)
+            tempValue &= _state.GraphicsControllerRegisters.BitMask;
+            tempValue |= (byte)(_latches[plane] & ~_state.GraphicsControllerRegisters.BitMask);
+            // write the data
+            Planes[offset, plane] = tempValue;
+        }
+    }
+
+    private void HandleWriteMode1(Register8 planeEnable, IReadOnlyList<bool> writePlane, uint offset) {
+        // Foreach plane
+        for (int plane = 0; plane < 4; plane++) {
+            if (planeEnable[plane] && writePlane[plane]) {
+                Planes[offset, plane] = _latches[plane];
+            }
+        }
+    }
+
+    private void HandleWriteMode0(byte value, Register8 planeEnable, IReadOnlyList<bool> writePlane, Register8 setResetEnable, Register8 setReset, uint offset) {
+        if (_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount != 0) {
+            value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
+        }
+        // Foreach plane
+        for (int plane = 0; plane < 4; plane++) {
+            // Skip if plane is disabled or we're not writing to it.
+            if (!planeEnable[plane] || !writePlane[plane]) {
+                continue;
+            }
+            byte tempValue = value;
+
+            // Apply set/reset logic.
+            if (setResetEnable[plane]) {
+                tempValue = (byte)(setReset[plane] ? 0xFF : 0x00);
+            }
+            tempValue = ApplyAluFunction(tempValue, plane);
+            // Apply bitmask. (0 = use latch, 1 = use value)
+            tempValue &= _state.GraphicsControllerRegisters.BitMask;
+            tempValue |= (byte)(_latches[plane] & ~_state.GraphicsControllerRegisters.BitMask);
+            // write the data
+            Planes[offset, plane] = tempValue;
+        }
+    }
+
+    private byte ApplyAluFunction(byte tempValue, int plane) {
+        // Apply ALU function
+        switch (_state.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect) {
+            case FunctionSelect.None:
+                break;
+            case FunctionSelect.And:
+                tempValue &= _latches[plane];
+                break;
+            case FunctionSelect.Or:
+                tempValue |= _latches[plane];
+                break;
+            case FunctionSelect.Xor:
+                tempValue ^= _latches[plane];
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown functionSelect {_state.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect}");
+        }
+        return tempValue;
     }
 
     public Span<byte> GetSpan(int address, int length) {
