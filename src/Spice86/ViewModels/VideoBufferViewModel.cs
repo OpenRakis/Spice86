@@ -17,6 +17,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IVideoBufferViewModel" />
@@ -179,17 +180,20 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
             _drawThread.Start();
         }
         _drawAction ??= () => {
-            _frameRenderTimeWatch.Restart();
-            using ILockedFramebuffer pixels = Bitmap.Lock();
-            // _videoCard?.Render(Address, Width, Height, pixels.Address);
-            _videoCard?.Render(Address, pixels.Address, pixels.RowBytes * pixels.Size.Height);
+            unsafe {
+                _frameRenderTimeWatch.Restart();
+                using ILockedFramebuffer pixels = Bitmap.Lock();
+                var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                // _videoCard?.Render(Address, Width, Height, pixels.Address);
+                _videoCard?.Render(buffer);
 
-            Dispatcher.UIThread.Post(() => {
-                UIUpdateMethod?.Invoke();
-                FramesRendered++;
-            }, DispatcherPriority.Render);
-            _frameRenderTimeWatch.Stop();
-            LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
+                Dispatcher.UIThread.Post(() => {
+                    UIUpdateMethod?.Invoke();
+                    FramesRendered++;
+                }, DispatcherPriority.Render);
+                _frameRenderTimeWatch.Stop();
+                LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
+            }
         };
         if (!_exitDrawThread) {
             _manualResetEvent.Set();

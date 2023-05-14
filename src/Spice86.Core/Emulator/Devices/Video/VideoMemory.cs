@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
-using Spice86.Core.Emulator.Memory;
 
 /// <summary>
 ///     A wrapper class for the video card that implements the IMemoryDevice interface.
@@ -17,14 +16,13 @@ public class VideoMemory : IVideoMemory {
         _state = state;
         Planes = new byte[0x10000, 4];
         _latches = new byte[4];
-        Size = 0x40000;
+        Size = 0x20000;
     }
 
     public uint Size { get; }
 
     public byte Read(uint address) {
         (byte plane, uint offset) = DecodeReadAddress(address);
-
         _latches[0] = Planes[offset, 0];
         _latches[1] = Planes[offset, 1];
         _latches[2] = Planes[offset, 2];

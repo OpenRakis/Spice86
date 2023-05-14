@@ -346,7 +346,7 @@ internal class VgaFunctions {
 
             // From which palette
             byte[] palette = videoMode.Dac;
-            byte paletteSize = (byte)(videoMode.Dac.Length / 3);
+            byte paletteSize = (byte)((videoMode.Dac.Length - 1) / 3);
 
             // Always 256*3 values
             WriteToDac(palette, 0, paletteSize);

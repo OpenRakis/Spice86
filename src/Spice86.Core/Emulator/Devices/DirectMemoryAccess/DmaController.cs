@@ -19,7 +19,7 @@ public sealed class DmaController : DefaultIOPortHandler {
     private const int MaskRegister8 = 0x0A;
     private const int MaskRegister16 = 0xD4;
     private const int AutoInitFlag = 1 << 4;
-    private const int ClearBytePointerFlipFlop = 0xC;
+    private const int ClearBytePointerFlipFlop = 0xC; // TODO: rewrite this class to make proper use of the flip-flop for 16-bit values.
 
     private static readonly int[] _otherOutputPorts = new int[] {
             ModeRegister8,

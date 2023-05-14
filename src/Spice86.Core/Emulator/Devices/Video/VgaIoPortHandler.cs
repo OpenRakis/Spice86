@@ -18,9 +18,9 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly SequencerRegisters _sequencerRegisters;
     private bool _attributeDataMode;
 
-    public VgaIoPortHandler(Machine machine, ILoggerService loggerService, Configuration configuration, VideoState videoState) :
+    public VgaIoPortHandler(Machine machine, ILoggerService loggerService, Configuration configuration, IVideoState videoState) :
         base(machine, configuration, loggerService) {
-        _logger = loggerService.WithLogLevel(LogEventLevel.Debug);
+        _logger = loggerService.WithLogLevel(LogEventLevel.Information);
 
         // Initialize registers.
         _attributeRegisters = videoState.AttributeControllerRegisters;

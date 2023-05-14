@@ -126,4 +126,11 @@ public interface IGui {
     /// Refresh the display with the content of the video ram.
     /// </summary>
     void UpdateScreen();
+
+    /// <summary>
+    /// On video mode change: Set Resolution of the video source for the GUI to display
+    /// </summary>
+    /// <param name="videoWidth">The width in pixels</param>
+    /// <param name="videoHeight">The height in pixels</param>
+    void SetResolution(int videoWidth, int videoHeight);
 }

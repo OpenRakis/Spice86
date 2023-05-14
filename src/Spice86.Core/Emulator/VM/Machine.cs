@@ -153,7 +153,7 @@ public class Machine : IDisposable {
         IVideoMemory vgaMemory = new VideoMemory(videoBaseAddress, VgaRegisters);
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         IVgaRenderer vgaRenderer = new Renderer(VgaRegisters, vgaMemory, loggerService);
-        VgaCard = new VgaCard(gui, vgaRenderer);
+        VgaCard = new VgaCard(gui, vgaRenderer, Bios);
         
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);

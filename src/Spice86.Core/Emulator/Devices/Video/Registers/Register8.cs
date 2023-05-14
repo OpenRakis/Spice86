@@ -47,4 +47,8 @@ public class Register8 {
         int mask = 1 << bit;
         Value = (byte)(Value & ~mask | (value ? mask : 0x00));
     }
+
+    public override string ToString() {
+        return Convert.ToString(Value, 2).PadLeft(8, '0'); 
+    }
 }

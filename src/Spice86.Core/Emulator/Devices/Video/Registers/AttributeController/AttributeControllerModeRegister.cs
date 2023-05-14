@@ -16,7 +16,7 @@ public class AttributeControllerModeRegister : Register8 {
     ///     True: Two 4-bit sets of video data are assembled to generate a-bit video data at half the frequency of the
     ///     internal dot clock (256 color mode).
     /// </summary>
-    public bool PixelDoubleClock {
+    public bool PixelWidth8 {
         get => GetBit(6);
         set => SetBit(6, value);
     }

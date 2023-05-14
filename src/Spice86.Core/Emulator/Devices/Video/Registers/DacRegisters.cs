@@ -2,14 +2,16 @@ namespace Spice86.Core.Emulator.Devices.Video.Registers;
 
 using Spice86.Aeon.Emulator.Video;
 
+using System.Diagnostics;
+
 public class DacRegisters {
-    private readonly byte[,] _palette = new byte[256, 3];
+    public readonly byte[,] Palette = new byte[256, 3];
     private int _indexRegister;
-    private int _internalIndex;
+    private byte _internalIndex;
     private int _tripletCounter;
 
     public DacRegisters() {
-        ArgbPalette = new ArgbPalette(_palette);
+        ArgbPalette = new ArgbPalette(Palette);
     }
 
     /// <summary>
@@ -53,7 +55,7 @@ public class DacRegisters {
     /// </summary>
     public byte DataRegister {
         get {
-            byte result = _palette[_internalIndex, _tripletCounter++];
+            byte result = Palette[_internalIndex, _tripletCounter++];
             if (_tripletCounter == 3) {
                 _indexRegister++;
                 _internalIndex++;
@@ -63,15 +65,23 @@ public class DacRegisters {
             return result;
         }
         set {
-            _palette[_internalIndex, _tripletCounter++] = (byte)(value & 0x3F);
-            if (_tripletCounter == 3) {
-                _indexRegister++;
-                _internalIndex++;
-                _tripletCounter = 0;
+            try {
+
+                Palette[_internalIndex, _tripletCounter++] = (byte)(value & 0x3F);
+                if (_tripletCounter == 3) {
+                    _indexRegister++;
+                    _internalIndex++;
+                    _tripletCounter = 0;
+                }
+                State = 0;
+            } catch (Exception e) {
+                Debug.WriteLine(e);
+                throw;
             }
-            State = 0;
         }
     }
+    
+    public byte DataPeek => Palette[_internalIndex, _tripletCounter];
 
     /// <summary>
     ///     Converts the internal palette to an array of ARGB values.

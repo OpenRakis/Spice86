@@ -3,19 +3,22 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Text;
 
 public class Renderer : IVgaRenderer {
     private readonly IVideoMemory _memory;
     private readonly IVideoState _state;
+
     private static bool _rendering;
-    private readonly byte[] _frameBuffer = new byte[2000000];
+
+    // private readonly byte[] _frameBuffer = new byte[2000000];
     private readonly ILoggerService _logger;
+    private int _previousDacIndex4Bits;
 
     public Renderer(IVideoState state, IVideoMemory memory, ILoggerService loggerService) {
         _state = state;
@@ -30,6 +33,10 @@ public class Renderer : IVgaRenderer {
     public int Size => Stride * Height;
 
     public void Render(IntPtr bufferAddress, int size) {
+        throw new NotImplementedException();
+    }
+
+    public void Render(Span<uint> frameBuffer) {
         if (_rendering) {
             return;
         }
@@ -58,7 +65,13 @@ public class Renderer : IVgaRenderer {
         int startAddress = _state.CrtControllerRegisters.ScreenStartAddress;
         int destinationAddress = 0;
 
-        int memoryAddressCounterIsCharacterClockDividedBy = _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo ? 2 : 1;
+        int characterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
+            ? 3
+            : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
+                ? 1
+                : 0;
+        int bytesAtAtime;
+
         bool horizontalBlanking = false;
         bool verticalBlanking = false;
         bool horizontalRetrace = false;
@@ -66,29 +79,39 @@ public class Renderer : IVgaRenderer {
         int memoryAddress = startAddress;
         int previousRowMemoryAddress = memoryAddress;
 
+        bool chain4 = _state.SequencerRegisters.MemoryModeRegister.Chain4Mode;
+
+        byte[,] palette = _state.DacRegisters.Palette;
+
         MemoryWidth memoryWidthMode;
-        int offsetShift;
         if (_state.CrtControllerRegisters.UnderlineRowScanlineRegister.DoubleWordMode) {
             memoryWidthMode = MemoryWidth.DoubleWord;
-            offsetShift = 4;
+            bytesAtAtime = 4;
         } else if (_state.CrtControllerRegisters.CrtModeControlRegister.ByteWordMode == ByteWordMode.Byte) {
             memoryWidthMode = MemoryWidth.Byte;
-            offsetShift = 1;
+            bytesAtAtime = 1;
         } else if (_state.CrtControllerRegisters.CrtModeControlRegister.AddressWrap) {
             memoryWidthMode = MemoryWidth.Word15;
-            offsetShift = 2;
+            bytesAtAtime = 2;
         } else {
             memoryWidthMode = MemoryWidth.Word13;
-            offsetShift = 2;
+            bytesAtAtime = 2;
         }
+        int scanLinesPerRowMask = _state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight;
+
+        int offsetShift = 1; //_state.CrtControllerRegisters.CrtModeControlRegister.ByteWordMode == ByteWordMode.Word ? 0 : 1;
+
+        const bool debug = false;
 
         /////////////////////////
         // Start Vertical loop //
         /////////////////////////
-        for (uint rowScanCounter = 0; rowScanCounter < totalHeight; rowScanCounter++) {
+        for (uint rowCounter = 0; rowCounter < totalHeight; rowCounter++) {
             ///////////////////////////
             // Start Horizontal loop //
             ///////////////////////////
+            StringBuilder sb;
+            if (debug) sb = new StringBuilder($"{memoryAddress:X6}|");
             for (int characterCounter = 0; characterCounter < totalWidth; characterCounter++) {
                 if (characterCounter == skew) {
                     overscan = false;
@@ -109,94 +132,106 @@ public class Renderer : IVgaRenderer {
                     horizontalBlanking = false;
                 }
                 _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = horizontalBlanking || verticalBlanking;
-                if (rowScanCounter < verticalDisplayEnd && characterCounter < horizontalDisplayEnd) {
+                if (rowCounter < verticalDisplayEnd && characterCounter < horizontalDisplayEnd && (rowCounter & _state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight) == 0) {
                     // draw
                     // Convert logical address to physical address.
                     ushort physicalAddress = memoryWidthMode switch {
                         MemoryWidth.Byte => (ushort)memoryAddress,
-                        MemoryWidth.Word13 => (ushort)(memoryAddress << 1 & 0x1FFF8 | memoryAddress >> 13 & 0x4 | memoryAddress & ~0x1FFFF),
-                        MemoryWidth.Word15 => (ushort)(memoryAddress << 1 & 0x1FFF8 | memoryAddress >> 15 & 0x4 | memoryAddress & ~0x1FFFF),
-                        MemoryWidth.DoubleWord => (ushort)(memoryAddress << 2 & 0x3FFF0 | memoryAddress >> 14 & 0xC | memoryAddress & ~0x3FFFF),
+                        MemoryWidth.Word13 => (ushort)(memoryAddress << 1 | memoryAddress >> 13 & 1),
+                        MemoryWidth.Word15 => (ushort)(memoryAddress << 1 | memoryAddress >> 15 & 1),
+                        MemoryWidth.DoubleWord => (ushort)(memoryAddress << 2 | memoryAddress >> 14 & 3),
                         _ => throw new InvalidOperationException($"Unknown memory width mode: {memoryWidthMode}")
                     };
                     if (!_state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport) {
                         // Use the row scan counter rather than the memory address counter for bit 13.
-                        physicalAddress = (ushort)(physicalAddress & ~0x8000 | ((rowScanCounter & 1) != 0 ? 0x8000 : 0));
+                        physicalAddress = (ushort)(physicalAddress & ~0x8000 | ((rowCounter & 1) != 0 ? 0x8000 : 0));
                     }
                     if (!_state.CrtControllerRegisters.CrtModeControlRegister.SelectRowScanCounter) {
                         // Use the row scan counter rather than the memory address counter for bit 14.
-                        physicalAddress = (ushort)(physicalAddress & ~0x10000 | ((rowScanCounter & 2) != 0 ? 0x10000 : 0));
+                        physicalAddress = (ushort)(physicalAddress & ~0x10000 | ((rowCounter & 2) != 0 ? 0x10000 : 0));
                     }
-                    
-                    // if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    //     _logger.Verbose("[{X:D3},{Y:D3}] Reading logical address 0x{LogicalAddress:X4} at physical address 0x{PhysicalAddress:X4}",
-                    //         characterCounter, rowScanCounter, memoryAddress, physicalAddress);
-                    // }
+                    if (destinationAddress >= frameBuffer.Length) {
+                        break;
+                    }
 
-                    // Read 1 byte from each plane.
+                    // Read 4 bytes from the 4 planes.
                     byte d0 = _memory.Planes[physicalAddress, 0];
                     byte d1 = _memory.Planes[physicalAddress, 1];
                     byte d2 = _memory.Planes[physicalAddress, 2];
                     byte d3 = _memory.Planes[physicalAddress, 3];
-                    // if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    //     _logger.Verbose("[{X:D3},{Y:D3}]  0x{PhysicalAddress:X4} Data from memory: 0x{D0:X2} 0x{D1:X2} 0x{D2:X2} 0x{D3:X2}",
-                    //         characterCounter, rowScanCounter,physicalAddress, d0, d1, d2,d3);
-                    // }
-                    // Loop through that byte and create an index from the 4 planes for each bit.
-                    for (int i = 7; i >= 0; i--) {
-                        int p0 = d0 >> i & 1;
-                        int p1 = d1 >> i & 1;
-                        int p2 = d2 >> i & 1;
-                        int p3 = d3 >> i & 1;
-                        int index = p3 << 3 | p2 << 2 | p1 << 1 | p0;
-                        // Lookup that index in the palette.
-                        var color = Color.FromArgb((int)_state.DacRegisters.ArgbPalette[index]);
-                        // if (index != 0)
-                        //     // Debugger.Break();
-                        // Write the color to the frame buffer.
-                        _frameBuffer[destinationAddress++] = color.R;
-                        _frameBuffer[destinationAddress++] = color.G;
-                        _frameBuffer[destinationAddress++] = color.B;
-                        _frameBuffer[destinationAddress++] = color.A;
+
+                    if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
+                        if (debug) {
+                            sb.Append(d0 == 0 ? '·' : '█');
+                            sb.Append(d1 == 0 ? '·' : '█');
+                            sb.Append(d2 == 0 ? '·' : '█');
+                            sb.Append(d3 == 0 ? '·' : '█');
+                        }
+                        // Create 4 pixels from them.
+                        frameBuffer[destinationAddress++] = GetDacPaletteColor(d0);
+                        frameBuffer[destinationAddress++] = GetDacPaletteColor(d1);
+                        frameBuffer[destinationAddress++] = GetDacPaletteColor(d2);
+                        frameBuffer[destinationAddress++] = GetDacPaletteColor(d3);
+                    } else {
+                        // Loop through those bytes and create an index from the 4 planes for each bit.
+                        // outputting 8 pixels.
+                        for (int i = 7; i >= 0; i--) {
+                            int index = (d3 >> i & 1) << 3 | (d2 >> i & 1) << 2 | (d1 >> i & 1) << 1 | d0 >> i & 1;
+                            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+                        }
                     }
-                    memoryAddress++;
+                    memoryAddress += (characterCounter & characterClockMask) == 0 ? 1 : 0;
                 }
             } // End of X loop
-            if (rowScanCounter == verticalDisplayEnd) {
+            if ((rowCounter & _state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight) == 0) {
+                if (debug) {
+                    sb.Append($"| {rowCounter}");
+                    Console.WriteLine(sb.ToString());
+                }
+                memoryAddress = previousRowMemoryAddress + (_state.CrtControllerRegisters.Offset << offsetShift);
+                previousRowMemoryAddress = memoryAddress;
+            }
+            if (rowCounter == verticalDisplayEnd) {
                 overscan = true;
             }
-            if (rowScanCounter == verticalBlankStart) {
+            if (rowCounter == verticalBlankStart) {
                 verticalBlanking = true;
             }
-            if (rowScanCounter == verticalSyncStart) {
+            if (rowCounter == verticalSyncStart) {
                 _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = true;
             }
-            if (verticalSyncEnd == (rowScanCounter & 0b1111)) {
+            if (verticalSyncEnd == (rowCounter & 0b1111)) {
                 _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = false;
             }
-            if (verticalBlankEnd == (rowScanCounter & 0b11111111)) {
+            if (verticalBlankEnd == (rowCounter & 0b11111111)) {
                 verticalBlanking = false;
             }
 
-            memoryAddress = previousRowMemoryAddress + (_state.CrtControllerRegisters.Offset << offsetShift);
-            previousRowMemoryAddress = memoryAddress;
+            // check double scanning
+            if (_state.CrtControllerRegisters.CharacterCellHeightRegister.CrtcScanDouble) {
+                rowCounter++; // todo: check
+            }
         } // End of Y loop
 
-        //
-        // Span<byte> vram = _memory.GetSpan((int)address, size);
-        // int vramIndex = 0;
-        // int pixelsIndex = 0;
-        // for (int y = 0; y < Height; y++) {
-        //     for (int x = 0; x < Width; x++) {
-        //         byte colorIndex = vram[vramIndex++];
-        //         var color = _state.GraphicsControllerRegisters.ReadPalette(colorIndex);
-        //         frameBuffer[pixelsIndex++] = color.R;
-        //         frameBuffer[pixelsIndex++] = color.G;
-        //         frameBuffer[pixelsIndex++] = color.B;
-        //     }
-        // }
-        Marshal.Copy(_frameBuffer, 0, bufferAddress, size);
         _rendering = false;
+    }
+
+    private uint GetDacPaletteColor(int index) {
+        switch (_state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelWidth8) {
+            case true:
+                return _state.DacRegisters.ArgbPalette[index];
+            default: {
+                int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index];
+                int bits0To3 = fromPaletteRam6Bits & 0b00001111;
+                int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
+                    ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
+                    : fromPaletteRam6Bits & 0b00110000;
+                int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
+                int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
+                int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
+                return _state.DacRegisters.ArgbPalette[paletteIndex];
+            }
+        }
     }
 }
 
@@ -205,8 +240,4 @@ public enum MemoryWidth {
     Word13,
     Word15,
     DoubleWord
-}
-
-public interface IVideoMemory : IMemoryDevice {
-    byte[,] Planes { get; }
 }
