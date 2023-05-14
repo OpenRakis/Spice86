@@ -350,7 +350,7 @@ internal class VgaFunctions {
 
             // Always 256*3 values
             WriteToDac(palette, 0, paletteEntryCount);
-            int remainingEntryCount = 255 - paletteEntryCount;
+            int remainingEntryCount = 256 - paletteEntryCount;
             byte[] empty = new byte[remainingEntryCount * 3];
             WriteToDac(empty, (byte)paletteEntryCount, remainingEntryCount);
 

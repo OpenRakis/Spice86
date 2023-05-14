@@ -42,6 +42,8 @@ public class VgaCard : IVideoCard {
     }
 
     public void UpdateScreen() {
+        Resolution resolution = _renderer.CalculateResolution();
+        
         byte biosVideoMode = _bios.VideoMode;
         if (biosVideoMode != _currentModeId) {
             (int width, int height) = Resolutions[biosVideoMode];

@@ -29,6 +29,53 @@
                 <TabItem Header="Video Card">
                     <WrapPanel>
                         <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Label HorizontalAlignment="Center" FontWeight="Bold">General registers</Label>
+                            <WrapPanel Grid.Row="1" Orientation="Vertical">
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralMiscellaneousOutputRegister, StringFormat='MiscellaneousOutputRegister: {0:X2}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralClockSelect, StringFormat='ClockSelect: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralEnableRam, StringFormat='EnableRam: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralVerticalSize, StringFormat='VerticalSize: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralHorizontalSyncPolarity, StringFormat='HorizontalSyncPolarity: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralVerticalSyncPolarity, StringFormat='VerticalSyncPolarity: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralIoAddressSelect, StringFormat='IoAddressSelect: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralOddPageSelect, StringFormat='OddPageSelect: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralInputStatusRegister0, StringFormat='InputStatusRegister0: {0:X2}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralCrtInterrupt, StringFormat='CrtInterrupt: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralSwitchSense, StringFormat='SwitchSense: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralInputStatusRegister1, StringFormat='InputStatusRegister1: {0:X2}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralDisplayDisabled, StringFormat='DisplayDisabled: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.GeneralVerticalRetrace, StringFormat='VerticalRetrace: {0}'}">
+                                </TextBlock>
+                            </WrapPanel>
+                        </Grid>
+                        <Grid RowDefinitions="Auto,*" Margin="5">
                             <Label HorizontalAlignment="Center" FontWeight="Bold">Dac</Label>
                             <WrapPanel Grid.Row="1" Orientation="Vertical">
                                 <TextBlock TextAlignment="Right"

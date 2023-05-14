@@ -2,10 +2,53 @@ namespace Spice86.Models.Debugging;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 
 public partial class VideoCardInfo : ObservableObject {
+    [ObservableProperty]
+    private byte _generalMiscellaneousOutputRegister;
+
+    [ObservableProperty]
+    private ClockSelect _generalClockSelect;
+
+    [ObservableProperty]
+    private bool _generalEnableRam;
+
+    [ObservableProperty]
+    private int _generalVerticalSize;
+
+    [ObservableProperty]
+    private Polarity _generalHorizontalSyncPolarity;
+
+    [ObservableProperty]
+    private Polarity _generalVerticalSyncPolarity;
+
+    [ObservableProperty]
+    private IoAddressSelect _generalIoAddressSelect;
+
+    [ObservableProperty]
+    private bool _generalOddPageSelect;
+
+    [ObservableProperty]
+    private byte _generalInputStatusRegister0;
+
+    [ObservableProperty]
+    private bool _generalCrtInterrupt;
+
+    [ObservableProperty]
+    private bool _generalSwitchSense;
+
+    [ObservableProperty]
+    private byte _generalInputStatusRegister1;
+
+    [ObservableProperty]
+    private bool _generalDisplayDisabled;
+
+    [ObservableProperty]
+    private bool _generalVerticalRetrace;
+
     [ObservableProperty]
     private byte _dacReadIndex;
 
@@ -162,64 +205,180 @@ public partial class VideoCardInfo : ObservableObject {
     [ObservableProperty]
     private byte _attributeControllerHorizontalPixelPanning;
 
-    [ObservableProperty] private bool _crtControllerAddressWrap;
-    [ObservableProperty] private bool _crtControllerClearVerticalInterrupt;
-    [ObservableProperty] private bool _crtControllerCompatibilityModeSupport;
-    [ObservableProperty] private bool _crtControllerCompatibleRead;
-    [ObservableProperty] private bool _crtControllerCountByFour;
-    [ObservableProperty] private bool _crtControllerCountByTwo;
-    [ObservableProperty] private bool _crtControllerCrtcScanDouble;
-    [ObservableProperty] private bool _crtControllerDisableTextCursor;
-    [ObservableProperty] private bool _crtControllerDisableVerticalInterrupt;
-    [ObservableProperty] private bool _crtControllerDoubleWordMode;
-    [ObservableProperty] private bool _crtControllerSelectRowScanCounter;
-    [ObservableProperty] private bool _crtControllerTimingEnable;
-    [ObservableProperty] private bool _crtControllerVerticalTimingHalved;
-    [ObservableProperty] private bool _crtControllerWriteProtect;
-    [ObservableProperty] private byte _crtControllerCrtModeControl;
-    [ObservableProperty] private byte _crtControllerCursorEnd;
-    [ObservableProperty] private byte _crtControllerCursorLocationHigh;
-    [ObservableProperty] private byte _crtControllerCursorLocationLow;
-    [ObservableProperty] private byte _crtControllerCursorStart;
-    [ObservableProperty] private byte _crtControllerEndHorizontalBlanking;
-    [ObservableProperty] private byte _crtControllerEndHorizontalDisplay;
-    [ObservableProperty] private byte _crtControllerEndHorizontalRetrace;
-    [ObservableProperty] private byte _crtControllerEndVerticalBlanking;
-    [ObservableProperty] private byte _crtControllerHorizontalTotal;
-    [ObservableProperty] private byte _crtControllerLineCompareRegister;
-    [ObservableProperty] private byte _crtControllerCharacterCellHeightRegister;
-    [ObservableProperty] private byte _crtControllerOffset;
-    [ObservableProperty] private byte _crtControllerOverflow;
-    [ObservableProperty] private byte _crtControllerPresetRowScanRegister;
-    [ObservableProperty] private byte _crtControllerStartAddressHigh;
-    [ObservableProperty] private byte _crtControllerStartAddressLow;
-    [ObservableProperty] private byte _crtControllerStartHorizontalBlanking;
-    [ObservableProperty] private byte _crtControllerStartHorizontalRetrace;
-    [ObservableProperty] private byte _crtControllerStartVerticalBlanking;
-    [ObservableProperty] private byte _crtControllerUnderlineLocation;
-    [ObservableProperty] private byte _crtControllerVerticalDisplayEndRegister;
-    [ObservableProperty] private byte _crtControllerVerticalRetraceEnd;
-    [ObservableProperty] private byte _crtControllerVerticalRetraceStart;
-    [ObservableProperty] private byte _crtControllerVerticalTotalRegister;
-    [ObservableProperty] private ByteWordMode _crtControllerByteWordMode;
-    [ObservableProperty] private int _crtControllerBytePanning;
-    [ObservableProperty] private int _crtControllerCharacterCellHeight;
-    [ObservableProperty] private int _crtControllerDisplayEnableSkew;
-    [ObservableProperty] private int _crtControllerHorizontalBlankingEnd;
-    [ObservableProperty] private int _crtControllerHorizontalSyncDelay;
-    [ObservableProperty] private int _crtControllerHorizontalSyncEnd;
-    [ObservableProperty] private int _crtControllerLineCompare;
-    [ObservableProperty] private int _crtControllerPresetRowScan;
-    [ObservableProperty] private int _crtControllerRefreshCyclesPerScanline;
-    [ObservableProperty] private int _crtControllerStartAddress;
-    [ObservableProperty] private int _crtControllerTextCursorEnd;
-    [ObservableProperty] private int _crtControllerTextCursorLocation;
-    [ObservableProperty] private int _crtControllerTextCursorSkew;
-    [ObservableProperty] private int _crtControllerTextCursorStart;
-    [ObservableProperty] private int _crtControllerUnderlineScanline;
-    [ObservableProperty] private int _crtControllerVerticalBlankingStart;
-    [ObservableProperty] private int _crtControllerVerticalDisplayEnd;
-    [ObservableProperty] private int _crtControllerVerticalSyncStart;
-    [ObservableProperty] private int _crtControllerVerticalTotal;
+    [ObservableProperty]
+    private bool _crtControllerAddressWrap;
 
+    [ObservableProperty]
+    private bool _crtControllerClearVerticalInterrupt;
+
+    [ObservableProperty]
+    private bool _crtControllerCompatibilityModeSupport;
+
+    [ObservableProperty]
+    private bool _crtControllerCompatibleRead;
+
+    [ObservableProperty]
+    private bool _crtControllerCountByFour;
+
+    [ObservableProperty]
+    private bool _crtControllerCountByTwo;
+
+    [ObservableProperty]
+    private bool _crtControllerCrtcScanDouble;
+
+    [ObservableProperty]
+    private bool _crtControllerDisableTextCursor;
+
+    [ObservableProperty]
+    private bool _crtControllerDisableVerticalInterrupt;
+
+    [ObservableProperty]
+    private bool _crtControllerDoubleWordMode;
+
+    [ObservableProperty]
+    private bool _crtControllerSelectRowScanCounter;
+
+    [ObservableProperty]
+    private bool _crtControllerTimingEnable;
+
+    [ObservableProperty]
+    private bool _crtControllerVerticalTimingHalved;
+
+    [ObservableProperty]
+    private bool _crtControllerWriteProtect;
+
+    [ObservableProperty]
+    private byte _crtControllerCrtModeControl;
+
+    [ObservableProperty]
+    private byte _crtControllerCursorEnd;
+
+    [ObservableProperty]
+    private byte _crtControllerCursorLocationHigh;
+
+    [ObservableProperty]
+    private byte _crtControllerCursorLocationLow;
+
+    [ObservableProperty]
+    private byte _crtControllerCursorStart;
+
+    [ObservableProperty]
+    private byte _crtControllerEndHorizontalBlanking;
+
+    [ObservableProperty]
+    private byte _crtControllerEndHorizontalDisplay;
+
+    [ObservableProperty]
+    private byte _crtControllerEndHorizontalRetrace;
+
+    [ObservableProperty]
+    private byte _crtControllerEndVerticalBlanking;
+
+    [ObservableProperty]
+    private byte _crtControllerHorizontalTotal;
+
+    [ObservableProperty]
+    private byte _crtControllerLineCompareRegister;
+
+    [ObservableProperty]
+    private byte _crtControllerCharacterCellHeightRegister;
+
+    [ObservableProperty]
+    private byte _crtControllerOffset;
+
+    [ObservableProperty]
+    private byte _crtControllerOverflow;
+
+    [ObservableProperty]
+    private byte _crtControllerPresetRowScanRegister;
+
+    [ObservableProperty]
+    private byte _crtControllerStartAddressHigh;
+
+    [ObservableProperty]
+    private byte _crtControllerStartAddressLow;
+
+    [ObservableProperty]
+    private byte _crtControllerStartHorizontalBlanking;
+
+    [ObservableProperty]
+    private byte _crtControllerStartHorizontalRetrace;
+
+    [ObservableProperty]
+    private byte _crtControllerStartVerticalBlanking;
+
+    [ObservableProperty]
+    private byte _crtControllerUnderlineLocation;
+
+    [ObservableProperty]
+    private byte _crtControllerVerticalDisplayEndRegister;
+
+    [ObservableProperty]
+    private byte _crtControllerVerticalRetraceEnd;
+
+    [ObservableProperty]
+    private byte _crtControllerVerticalRetraceStart;
+
+    [ObservableProperty]
+    private byte _crtControllerVerticalTotalRegister;
+
+    [ObservableProperty]
+    private ByteWordMode _crtControllerByteWordMode;
+
+    [ObservableProperty]
+    private int _crtControllerBytePanning;
+
+    [ObservableProperty]
+    private int _crtControllerCharacterCellHeight;
+
+    [ObservableProperty]
+    private int _crtControllerDisplayEnableSkew;
+
+    [ObservableProperty]
+    private int _crtControllerHorizontalBlankingEnd;
+
+    [ObservableProperty]
+    private int _crtControllerHorizontalSyncDelay;
+
+    [ObservableProperty]
+    private int _crtControllerHorizontalSyncEnd;
+
+    [ObservableProperty]
+    private int _crtControllerLineCompare;
+
+    [ObservableProperty]
+    private int _crtControllerPresetRowScan;
+
+    [ObservableProperty]
+    private int _crtControllerRefreshCyclesPerScanline;
+
+    [ObservableProperty]
+    private int _crtControllerStartAddress;
+
+    [ObservableProperty]
+    private int _crtControllerTextCursorEnd;
+
+    [ObservableProperty]
+    private int _crtControllerTextCursorLocation;
+
+    [ObservableProperty]
+    private int _crtControllerTextCursorSkew;
+
+    [ObservableProperty]
+    private int _crtControllerTextCursorStart;
+
+    [ObservableProperty]
+    private int _crtControllerUnderlineScanline;
+
+    [ObservableProperty]
+    private int _crtControllerVerticalBlankingStart;
+
+    [ObservableProperty]
+    private int _crtControllerVerticalDisplayEnd;
+
+    [ObservableProperty]
+    private int _crtControllerVerticalSyncStart;
+
+    [ObservableProperty]
+    private int _crtControllerVerticalTotal;
 }

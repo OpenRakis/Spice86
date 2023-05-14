@@ -448,6 +448,10 @@ _machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.Init();
         ushort offset = _state.DX;
         string str = GetDosString(_memory, segment, offset, '$');
 
+        // Store registers
+        ushort[] savedRegisters = {_state.ES, _state.BP, _state.AX, _state.BX, _state.CX, _state.DX};
+        
+        // Set up values for bios call
         _state.BL = 0x0F; // white on black
         _state.ES = segment;
         _state.BP = offset;
@@ -457,6 +461,9 @@ _machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.Init();
         _state.DX = _machine.Bios.GetCursorPosition(_state.BH);
         _state.AH = 0x13; // Write string
         _machine.CallbackHandler.Run(0x10);
+        
+        // Restore registers
+        (_state.ES, _state.BP, _state.AX, _state.BX, _state.CX, _state.DX) = (savedRegisters[0], savedRegisters[1], savedRegisters[2], savedRegisters[3], savedRegisters[4], savedRegisters[5]);
         
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PRINT STRING: {String}", str);

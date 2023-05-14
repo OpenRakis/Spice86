@@ -191,6 +191,9 @@ public class Renderer : IVgaRenderer {
                 memoryAddress = previousRowMemoryAddress + (_state.CrtControllerRegisters.Offset << offsetShift);
                 previousRowMemoryAddress = memoryAddress;
             }
+            if (rowCounter == _state.CrtControllerRegisters.LineCompareValue) {
+                previousRowMemoryAddress = memoryAddress = 0;
+            }
             if (rowCounter == verticalDisplayEnd) {
                 overscan = true;
             }
@@ -206,10 +209,17 @@ public class Renderer : IVgaRenderer {
             if (verticalBlankEnd == (rowCounter & 0b11111111)) {
                 verticalBlanking = false;
             }
-
         } // End of Y loop
 
         _rendering = false;
+    }
+
+    public Resolution CalculateResolution() {
+        var resolution = new Resolution {
+            Width = (_state.CrtControllerRegisters.HorizontalDisplayEnd + 1) * _state.SequencerRegisters.ClockingModeRegister.DotsPerClock,
+            Height = 1 + _state.CrtControllerRegisters.VerticalDisplayEndValue / (_state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight + 1)
+        };
+        return resolution;
     }
 
     private uint GetDacPaletteColor(int index) {
