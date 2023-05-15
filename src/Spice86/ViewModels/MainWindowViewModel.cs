@@ -229,20 +229,20 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                 string[]? files = await ofd.ShowAsync(desktop.MainWindow);
                 if (files?.Any() == true) {
                     filePath = files[0];
-                    RestartEmulatorWithNewProgram(filePath);
+                    await RestartEmulatorWithNewProgram(filePath);
                 }
             } else {
-                RestartEmulatorWithNewProgram(filePath);
+                await RestartEmulatorWithNewProgram(filePath);
             }
         }
     }
 
-    private void RestartEmulatorWithNewProgram(string filePath) {
+    private async Task RestartEmulatorWithNewProgram(string filePath) {
         _configuration.Exe = filePath;
         _configuration.ExeArgs = "";
         _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
         Play();
-        Dispatcher.UIThread.Post(() => DisposeEmulator(), DispatcherPriority.MaxValue);
+        await Dispatcher.UIThread.InvokeAsync(() => DisposeEmulator(), DispatcherPriority.MaxValue);
         SetMainTitle();
         _okayToContinueEvent = new(true);
         _programExecutor?.Machine.ExitEmulationLoop();
@@ -335,6 +335,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     public bool IsLeftButtonClicked { get; private set; }
 
     public bool IsRightButtonClicked { get; private set; }
+    
     public void OnMainWindowOpened(object? sender, EventArgs e) {
         if(RunEmulator()) {
             _closeAppOnEmulatorExit = true;
