@@ -10,7 +10,7 @@
         Icon="/Icon/Spice86.ico"
         CanResize="True"
         WindowStartupLocation="CenterOwner"
-        MinWidth="640" MinHeight="400" Width="800" Height="600">
+        MinWidth="768" MinHeight="1024" Width="1024" Height="768">
         <Design.DataContext>
                 <vm:DebugViewModel />
         </Design.DataContext>
@@ -23,122 +23,191 @@
                         <TextBlock HorizontalAlignment="Center" Grid.Row="1" Text="{Binding LastUpdate, StringFormat='Last update: {0}'}"></TextBlock>
                         <TabControl Grid.Row="2">
                                 <TabItem Header="Video Card">
-                                        <WrapPanel>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,Auto,Auto">
+                                                <Grid Grid.Row="0" Grid.Column="0" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">Dac</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding VideoCard.DacReadIndex, StringFormat='ReadIndex: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.DacWriteIndex, StringFormat='WriteIndex: {0:X2}'}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">DacReadIndex:</TextBlock>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.DacReadIndex, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">DacWriteIndex:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.DacWriteIndex, StringFormat=' {0:X2}'}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                                <Grid Grid.Row="0" Grid.Column="1" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">Graphics</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding VideoCard.GraphicsBitMask, StringFormat='BitMask: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.GraphicsColorCompare, StringFormat='ColorCompare: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.GraphicsGraphicsMode, StringFormat='GraphicsMode: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.GraphicsMiscellaneousGraphics, StringFormat='MiscellaneousGraphics: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.GraphicsSetResetExpanded, StringFormat='SetResetExpanded: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.GraphicsColorDontCareExpanded, StringFormat='ColorDontCareExpanded: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.GraphicsEnableSetResetExpanded, StringFormat='EnableSetResetExpanded: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.GraphicsReadMapSelect, StringFormat='ReadMapSelect: {0:X2}'}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">GraphicsBitMask:</TextBlock>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.GraphicsBitMask, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">GraphicsColorCompare:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.GraphicsColorCompare, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">GraphicsGraphicsMode:</TextBlock>
+                                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.GraphicsGraphicsMode, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">GraphicsMiscellaneousGraphics:</TextBlock>
+                                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.GraphicsMiscellaneousGraphics, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">GraphicsSetResetExpanded:</TextBlock>
+                                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.GraphicsSetResetExpanded, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="5" Grid.Column="0">GraphicsColorDontCareExpanded:</TextBlock>
+                                                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VideoCard.GraphicsColorDontCareExpanded, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="6" Grid.Column="0">GraphicsEnableSetResetExpanded:</TextBlock>
+                                                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding VideoCard.GraphicsEnableSetResetExpanded, StringFormat=': {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="7" Grid.Column="0">GraphicsReadMapSelect:</TextBlock>
+                                                                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding VideoCard.GraphicsReadMapSelect, StringFormat=' {0:X2}'}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                                <Grid Grid.Row="0" Grid.Column="2" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">Sequencer</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding VideoCard.SequencerReset, StringFormat='Reset: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.SequencerClockingMode, StringFormat='ClockingMode: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.SequencerMapMaskExpanded, StringFormat='MapMaskExpanded: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.SequencerCharacterMapSelect, StringFormat='CharacterMapSelect: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.SequencerSequencerMemoryMode, StringFormat='SequencerMemoryMode: {0:X2}'}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">SequencerReset:</TextBlock>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.SequencerReset, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">SequencerClockingMode:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.SequencerClockingMode, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">SequencerMapMaskExpanded:</TextBlock>
+                                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.SequencerMapMaskExpanded, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">SequencerCharacterMapSelect:</TextBlock>
+                                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.SequencerCharacterMapSelect, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">SequencerSequencerMemoryMode:</TextBlock>
+                                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.SequencerSequencerMemoryMode, StringFormat=' {0:X2}'}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                                <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">AttributeController</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding VideoCard.AttributeControllerColorSelect, StringFormat='ColorSelect: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.AttributeControllerOverscanColor, StringFormat='OverscanColor: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.AttributeControllerAttributeModeControl, StringFormat='AttributeModeControl: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.AttributeControllerColorPlaneEnable, StringFormat='ColorPlaneEnable: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.AttributeControllerHorizontalPixelPanning, StringFormat='HorizontalPixelPanning: {0:X2}'}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">AttributeControllerColorSelect:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerColorSelect, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">AttributeControllerOverscanColor:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerOverscanColor, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">AttributeControllerAttributeModeControl:</TextBlock>
+                                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerAttributeModeControl, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">AttributeControllerColorPlaneEnable:</TextBlock>
+                                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerColorPlaneEnable, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">AttributeControllerHorizontalPixelPanning:</TextBlock>
+                                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerHorizontalPixelPanning, StringFormat=' {0:X2}'}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                                <Grid  Grid.Row="1" Grid.Column="1" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerOffset, StringFormat='Offset: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerOverflow, StringFormat='Overflow: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerCursorEnd, StringFormat='CursorEnd: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerCursorLocation, StringFormat='CursorLocation: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerCursorStart, StringFormat='CursorStart: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerHorizontalTotal, StringFormat='HorizontalTotal: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerLineCompare, StringFormat='LineCompare: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerStartAddress, StringFormat='StartAddress: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerUnderlineLocation, StringFormat='UnderlineLocation: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerVerticalTotal, StringFormat='VerticalTotal: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerCrtModeControl, StringFormat='CrtModeControl: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerEndHorizontalBlanking, StringFormat='EndHorizontalBlanking: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerEndHorizontalDisplay, StringFormat='EndHorizontalDisplay: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerEndHorizontalRetrace, StringFormat='EndHorizontalRetrace: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerEndVerticalBlanking, StringFormat='EndVerticalBlanking: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerMaximumScanLine, StringFormat='MaximumScanLine: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerPresetRowScan, StringFormat='PresetRowScan: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerStartHorizontalBlanking, StringFormat='StartHorizontalBlanking: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerStartHorizontalRetrace, StringFormat='StartHorizontalRetrace: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerStartVerticalBlanking, StringFormat='StartVerticalBlanking: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerVerticalDisplayEnd, StringFormat='VerticalDisplayEnd: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerVerticalRetraceEnd, StringFormat='VerticalRetraceEnd: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CrtControllerVerticalRetraceStart, StringFormat='VerticalRetraceStart: {0:X2}'}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">CrtControllerOffset:</TextBlock>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.CrtControllerOffset, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">CrtControllerOverflow:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.CrtControllerOverflow, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">CrtControllerCursorEnd:</TextBlock>
+                                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.CrtControllerCursorEnd, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">CrtControllerCursorLocation:</TextBlock>
+                                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.CrtControllerCursorLocation, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">CrtControllerCursorStart:</TextBlock>
+                                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.CrtControllerCursorStart, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="5" Grid.Column="0">CrtControllerHorizontalTotal:</TextBlock>
+                                                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VideoCard.CrtControllerHorizontalTotal, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="6" Grid.Column="0">CrtControllerLineCompare:</TextBlock>
+                                                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding VideoCard.CrtControllerLineCompare, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="7" Grid.Column="0">CrtControllerStartAddress:</TextBlock>
+                                                                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding VideoCard.CrtControllerStartAddress, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="8" Grid.Column="0">CrtControllerUnderlineLocation:</TextBlock>
+                                                                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding VideoCard.CrtControllerUnderlineLocation, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="9" Grid.Column="0">CrtControllerVerticalTotal:</TextBlock>
+                                                                <TextBlock Grid.Row="9" Grid.Column="1" Text="{Binding VideoCard.CrtControllerVerticalTotal, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="10" Grid.Column="0">CrtControllerCrtModeControl:</TextBlock>
+                                                                <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding VideoCard.CrtControllerCrtModeControl, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="11" Grid.Column="0">CrtControllerEndHorizontalBlanking:</TextBlock>
+                                                                <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding VideoCard.CrtControllerEndHorizontalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="12" Grid.Column="0">CrtControllerEndHorizontalDisplay:</TextBlock>
+                                                                <TextBlock Grid.Row="12" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerEndHorizontalDisplay, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="13" Grid.Column="0">CrtControllerEndHorizontalRetrace:</TextBlock>
+                                                                <TextBlock Grid.Row="13" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerEndHorizontalRetrace, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="14" Grid.Column="0">CrtControllerEndVerticalBlanking:</TextBlock>
+                                                                <TextBlock Grid.Row="14" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerEndVerticalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="15" Grid.Column="0">CrtControllerMaximumScanLine:</TextBlock>
+                                                                <TextBlock Grid.Row="15" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerMaximumScanLine, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="16" Grid.Column="0">CrtControllerPresetRowScan:</TextBlock>
+                                                                <TextBlock Grid.Row="16" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerPresetRowScan, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="17" Grid.Column="0">CrtControllerStartHorizontalBlanking:</TextBlock>
+                                                                <TextBlock Grid.Row="17" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerStartHorizontalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="18" Grid.Column="0">CrtControllerStartHorizontalRetrace:</TextBlock>
+                                                                <TextBlock Grid.Row="18" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerStartHorizontalRetrace, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="19" Grid.Column="0">CrtControllerStartVerticalBlanking:</TextBlock>
+                                                                <TextBlock Grid.Row="19" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerStartVerticalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="20" Grid.Column="0">CrtControllerVerticalDisplayEnd:</TextBlock>
+                                                                <TextBlock Grid.Row="20" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerVerticalDisplayEnd, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="21" Grid.Column="0">CrtControllerVerticalRetraceEnd:</TextBlock>
+                                                                <TextBlock Grid.Row="21" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerVerticalRetraceEnd, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="22" Grid.Column="0">CrtControllerVerticalRetraceStart:</TextBlock>
+                                                                <TextBlock Grid.Row="22" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerVerticalRetraceStart, StringFormat=' {0:X2}'}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                                <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">CurrentMode</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeHeight, StringFormat='Height: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeWidth, StringFormat='Width: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeStride, StringFormat='Stride: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeBytePanning, StringFormat='BytePanning: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeFontHeight, StringFormat='FontHeight: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeBitsPerPixel, StringFormat='BitsPerPixel: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeHorizontalPanning, StringFormat='HorizontalPanning: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeIsPlanar, StringFormat='IsPlanar: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeLineCompare, StringFormat='LineCompare: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeMouseWidth, StringFormat='MouseWidth: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeOriginalHeight, StringFormat='OriginalHeight: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModePixelHeight, StringFormat='PixelHeight: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeStartOffset, StringFormat='StartOffset: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeActiveDisplayPage, StringFormat='ActiveDisplayPage: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeStartVerticalBlanking, StringFormat='StartVerticalBlanking: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.CurrentModeVideoModeType, StringFormat='VideoModeType: {0:X2}'}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">CurrentModeHeight:</TextBlock>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.CurrentModeHeight, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">CurrentModeWidth:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.CurrentModeWidth, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">CurrentModeStride:</TextBlock>
+                                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.CurrentModeStride, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">CurrentModeBytePanning:</TextBlock>
+                                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.CurrentModeBytePanning, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">CurrentModeFontHeight:</TextBlock>
+                                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.CurrentModeFontHeight, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="5" Grid.Column="0">CurrentModeBitsPerPixel:</TextBlock>
+                                                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VideoCard.CurrentModeBitsPerPixel, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="6" Grid.Column="0">CurrentModeHorizontalPanning:</TextBlock>
+                                                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding VideoCard.CurrentModeHorizontalPanning, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="7" Grid.Column="0">CurrentModeIsPlanar:</TextBlock>
+                                                                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding VideoCard.CurrentModeIsPlanar, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="8" Grid.Column="0">CurrentModeLineCompare:</TextBlock>
+                                                                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding VideoCard.CurrentModeLineCompare, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="9" Grid.Column="0">CurrentModeMouseWidth:</TextBlock>
+                                                                <TextBlock Grid.Row="9" Grid.Column="1" Text="{Binding VideoCard.CurrentModeMouseWidth, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="10" Grid.Column="0">CurrentModeOriginalHeight:</TextBlock>
+                                                                <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding VideoCard.CurrentModeOriginalHeight, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="11" Grid.Column="0">CurrentModePixelHeight:</TextBlock>
+                                                                <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding VideoCard.CurrentModePixelHeight, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="12" Grid.Column="0">CurrentModeStartOffset:</TextBlock>
+                                                                <TextBlock Grid.Row="12" Grid.Column="1" Text="{Binding VideoCard.CurrentModeStartOffset, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="13" Grid.Column="0">CurrentModeActiveDisplayPage:</TextBlock>
+                                                                <TextBlock Grid.Row="13" Grid.Column="1" Text="{Binding VideoCard.CurrentModeActiveDisplayPage, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="14" Grid.Column="0">CurrentModeStartVerticalBlanking:</TextBlock>
+                                                                <TextBlock Grid.Row="14" Grid.Column="1" Text="{Binding VideoCard.CurrentModeStartVerticalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="15" Grid.Column="0">CurrentModeVideoModeType:</TextBlock>
+                                                                <TextBlock Grid.Row="15" Grid.Column="1" Text="{Binding VideoCard.CurrentModeVideoModeType, StringFormat=' {0:X2}'}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                                <Grid  Grid.Row="2" Grid.Column="0" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">TextConsole</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding VideoCard.TextConsoleHeight, StringFormat='Height: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.TextConsoleWidth, StringFormat='Width: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.TextConsoleAnsiEnabled, StringFormat='AnsiEnabled: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.TextConsoleBackgroundColor, StringFormat='BackgroundColor: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.TextConsoleCursorPosition, StringFormat='CursorPosition: {0}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.TextConsoleForegroundColor, StringFormat='ForegroundColor: {0:X2}'}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">TextConsoleHeight:</TextBlock>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.TextConsoleHeight, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">TextConsoleWidth:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.TextConsoleWidth, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">TextConsoleAnsiEnabled:</TextBlock>
+                                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.TextConsoleAnsiEnabled, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">TextConsoleBackgroundColor:</TextBlock>
+                                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.TextConsoleBackgroundColor, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">TextConsoleCursorPosition:</TextBlock>
+                                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.TextConsoleCursorPosition, StringFormat=' {0}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="5" Grid.Column="0">TextConsoleForegroundColor:</TextBlock>
+                                                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VideoCard.TextConsoleForegroundColor, StringFormat=' {0:X2}'}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                                <Grid  Grid.Row="2" Grid.Column="1" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">Misc</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding VideoCard.DefaultPaletteLoading, StringFormat='DefaultPaletteLoading: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding VideoCard.TotalVramBytes, StringFormat='TotalVramBytes: {0:X2}'}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left">DefaultPaletteLoading:</TextBlock>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.DefaultPaletteLoading, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Left">TotalVramBytes:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.TotalVramBytes, StringFormat=' {0:X2}'}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                                <Grid RowDefinitions="Auto,*" Margin="5">
+                                                <Grid  Grid.Row="2" Grid.Column="2" RowDefinitions="Auto,*" Margin="5">
                                                         <Label HorizontalAlignment="Center" FontWeight="Bold">VideoBiosInt10Handler</Label>
-                                                        <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                                                <TextBlock Text="{Binding Machine.VideoBiosInt10HandlerIndex, StringFormat='Int10HandlerIndex: {0:X2}'}"></TextBlock>
-                                                                <TextBlock Text="{Binding Machine.VideoBiosInt10HandlerInterruptHandlerSegment, StringFormat='InterruptHandlerSegment: {0:X2}', Converter={StaticResource InvalidNumberToQuestionMarkConverter}}"></TextBlock>
-                                                        </WrapPanel>
+                                                        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto">
+                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">VideoBiosInt10HandlerIndex:</TextBlock>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Machine.VideoBiosInt10HandlerIndex, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">VideoBiosInt10HandlerInterruptHandlerSegment:</TextBlock>
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Machine.VideoBiosInt10HandlerInterruptHandlerSegment, StringFormat=' {0:X2}', Converter={StaticResource InvalidNumberToQuestionMarkConverter}}"></TextBlock>
+                                                        </Grid>
                                                 </Grid>
-                                        </WrapPanel>
+                                        </Grid>
                                 </TabItem>
                         </TabControl>
                 </Grid>
