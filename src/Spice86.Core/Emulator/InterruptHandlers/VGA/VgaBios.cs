@@ -398,7 +398,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         CharacterPlusAttribute characterPlusAttribute = new((char)_state.AL, _state.BL, false);
         CursorPosition cursorPosition = GetCursorPosition(_bios.CurrentVideoPage);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 0E {MethodName} - '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
+            _logger.Debug("{ClassName} INT 10 0E {MethodName} - {Character} Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(WriteTextInTeletypeMode), characterPlusAttribute.Character, characterPlusAttribute.Attribute, cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
         }
         cursorPosition = WriteTeletype(cursorPosition, characterPlusAttribute);

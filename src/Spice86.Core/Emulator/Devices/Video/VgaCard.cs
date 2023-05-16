@@ -6,35 +6,16 @@ using Spice86.Shared.Interfaces;
 public class VgaCard : IVideoCard {
     private readonly IGui? _gui;
     private readonly IVgaRenderer _renderer;
-    private readonly Bios _bios;
-    private int _currentModeId = 0;
 
-    public static readonly Dictionary<byte, (int width, int height)> Resolutions = new() {
-        [0x00] = (360, 400),
-        [0x01] = (360, 400),
-        [0x02] = (720, 400),
-        [0x03] = (720, 400),
-        [0x04] = (320, 200),
-        [0x05] = (320, 200),
-        [0x06] = (640, 200),
-        [0x07] = (720, 400),
-        [0x0D] = (320, 200),
-        [0x0E] = (640, 200),
-        [0x0F] = (640, 350),
-        [0x10] = (640, 350),
-        [0x11] = (640, 480),
-        [0x12] = (640, 480),
-        [0x13] = (320, 200),
-        [0x6A] = (800, 600)
-    };
 
     private int _width;
     private int _height;
+    private Resolution _currentResolution;
 
-    public VgaCard(IGui? gui, IVgaRenderer renderer, Bios bios) {
+    public VgaCard(IGui? gui, IVgaRenderer renderer) {
         _gui = gui;
         _renderer = renderer;
-        _bios = bios;
+        _currentResolution = renderer.CalculateResolution();
     }
 
     public void TickRetrace() {
@@ -43,18 +24,10 @@ public class VgaCard : IVideoCard {
 
     public void UpdateScreen() {
         Resolution resolution = _renderer.CalculateResolution();
-        
-        byte biosVideoMode = _bios.VideoMode;
-        if (biosVideoMode != _currentModeId) {
-            (int width, int height) = Resolutions[biosVideoMode];
-            if (width != _width || height != _height) {
-                _gui?.SetResolution(width, height);
-                _width = width;
-                _height = height;
-            }
-            _currentModeId = biosVideoMode;
+        if (resolution != _currentResolution) {
+            _gui?.SetResolution(resolution.Width, resolution.Height);
+            _currentResolution = resolution;
         }
-
         _gui?.UpdateScreen();
     }
 

@@ -172,13 +172,18 @@ public class Renderer : IVgaRenderer {
                         frameBuffer[destinationAddress++] = GetDacPaletteColor(d1);
                         frameBuffer[destinationAddress++] = GetDacPaletteColor(d2);
                         frameBuffer[destinationAddress++] = GetDacPaletteColor(d3);
-                    } else {
+                    } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
                         // Loop through those bytes and create an index from the 4 planes for each bit.
                         // outputting 8 pixels.
                         for (int i = 7; i >= 0; i--) {
                             int index = (d3 >> i & 1) << 3 | (d2 >> i & 1) << 2 | (d1 >> i & 1) << 1 | d0 >> i & 1;
                             frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
                         }
+                    } else {
+                        // Text mode
+                        byte character = _memory.Planes[physicalAddress, 0];
+                        byte attribute = _memory.Planes[physicalAddress, 1];
+                        
                     }
                     memoryAddress += (characterCounter & characterClockMask) == 0 ? 1 : 0;
                 }
@@ -215,11 +220,15 @@ public class Renderer : IVgaRenderer {
     }
 
     public Resolution CalculateResolution() {
-        var resolution = new Resolution {
-            Width = (_state.CrtControllerRegisters.HorizontalDisplayEnd + 1) * _state.SequencerRegisters.ClockingModeRegister.DotsPerClock,
-            Height = 1 + _state.CrtControllerRegisters.VerticalDisplayEndValue / (_state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight + 1)
+        int width = (_state.CrtControllerRegisters.HorizontalDisplayEnd + 1) * _state.SequencerRegisters.ClockingModeRegister.DotsPerClock;
+        if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
+            width /= 2;
+        }
+        int height = 1 + _state.CrtControllerRegisters.VerticalDisplayEndValue / (_state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight + 1);
+        return new Resolution {
+            Width = width,
+            Height = height
         };
-        return resolution;
     }
 
     private uint GetDacPaletteColor(int index) {

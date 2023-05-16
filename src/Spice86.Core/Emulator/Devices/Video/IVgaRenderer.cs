@@ -5,8 +5,3 @@ public interface IVgaRenderer {
     void Render(Span<uint> buffer);
     Resolution CalculateResolution();
 }
-
-public struct Resolution {
-    public int Width;
-    public int Height;
-}

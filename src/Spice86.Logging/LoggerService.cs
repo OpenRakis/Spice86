@@ -20,7 +20,7 @@ public class LoggerService : ILoggerService {
         _loggerConfiguration
             .MinimumLevel.ControlledBy(LogLevelSwitch);
     }
-    public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
+    public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Information);
     public bool AreLogsSilenced { get; set; }
 
     public ILoggerPropertyBag LoggerPropertyBag { get; }
