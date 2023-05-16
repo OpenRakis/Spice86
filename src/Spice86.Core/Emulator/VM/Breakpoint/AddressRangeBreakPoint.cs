@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
-using JetBrains.Annotations;
-
 /// <summary>
 /// Represents a breakpoint that triggers when the CPU's execution address is within a specified address range.
 /// </summary>
@@ -24,7 +22,7 @@ public class AddressRangeBreakPoint : BreakPoint {
     /// <param name="endAddress">The end address of the range.</param>
     /// <param name="onReached">The action to execute when the breakpoint is reached.</param>
     /// <param name="isRemovedOnTrigger">A value indicating whether the breakpoint should be removed after it's triggered.</param>
-    public AddressRangeBreakPoint(BreakPointType breakPointType, long startAddress, long endAddress, [NotNull][ItemNotNull] Action<BreakPoint> onReached, bool isRemovedOnTrigger) : base(breakPointType, onReached, isRemovedOnTrigger) {
+    public AddressRangeBreakPoint(BreakPointType breakPointType, long startAddress, long endAddress, Action<BreakPoint> onReached, bool isRemovedOnTrigger) : base(breakPointType, onReached, isRemovedOnTrigger) {
         StartAddress = startAddress;
         EndAddress = endAddress;
     }

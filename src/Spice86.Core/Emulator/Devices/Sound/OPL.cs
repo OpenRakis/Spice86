@@ -91,9 +91,9 @@ public class OPLTimer {
             // How far into the next cycle
             double deltaTime = time - _trigger;
             // Sync start to last cycle
-            double counter_mod = Math.IEEERemainder(deltaTime, _counterInterval);
+            double counterMod = Math.IEEERemainder(deltaTime, _counterInterval);
 
-            _start = time - counter_mod;
+            _start = time - counterMod;
             _trigger = _start + _counterInterval;
             // Only set the overflow flag when not masked
             if (!_masked)

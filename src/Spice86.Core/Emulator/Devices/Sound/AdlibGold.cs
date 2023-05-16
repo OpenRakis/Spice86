@@ -3,8 +3,6 @@ using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Dunet;
-
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.CLI;
@@ -25,11 +23,11 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
     private readonly StereoProcessor _stereoProcessor;
     private readonly SurroundProcessor _surroundProcessor;
     private readonly AudioPlayer? _audioPlayer;
-    private readonly ushort _sampleRate = 0;
+    private readonly ushort _sampleRate;
 
-    private bool _endThread = false;
+    private bool _endThread;
 
-    private bool _initialized = false;
+    private bool _initialized;
 
     private readonly bool _paused = false;
 
@@ -91,13 +89,13 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         const int length = 2;
         Span<float> buffer = stackalloc float[length];
         while (!_endThread) {
-            // if (_fifo.TryDequeue(out AudioFrame frame)) {
-            //     buffer[0] = frame.Left;
-            //     buffer[1] = frame.Right;
-            //     _audioPlayer?.WriteData(buffer);
-            // } else {
+            //if (_fifo.TryDequeue(out AudioFrame frame)) {
+            //    buffer[0] = frame.Left;
+            //    buffer[1] = frame.Right;
+            //    _audioPlayer?.WriteData(buffer);
+            //} else {
                 Thread.Sleep(1);
-            // }
+            //}
         }
     }
 
@@ -357,7 +355,7 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         }
     }
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Explicit)]
     private struct SurroundControlReg {
         [FieldOffset(0)]
         public byte data;
