@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -647,7 +647,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         operation.Y = area.Height * characterHeight;
         operation.Height = destination.Y * characterHeight;
         operation.Lines = operation.Y + lines * characterHeight;
-        operation.Action = Action.MemMove;
+        operation.MemoryAction = MemoryAction.MemMove;
         HandleGraphicsOperation(operation);
     }
 
@@ -779,7 +779,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         operation.Y = startPosition.Y * characterHeight;
         operation.Height = area.Height * characterHeight;
         operation.Pixels[0] = ca.Attribute;
-        operation.Action = Action.MemSet;
+        operation.MemoryAction = MemoryAction.MemSet;
         HandleGraphicsOperation(operation);
     }
 
@@ -807,18 +807,18 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     private void HandleCgaGraphicsOperation(GraphicsOperation operation) {
         int bitsPerPixel = operation.VgaMode.BitsPerPixel;
         ushort offset = (ushort)(operation.Y / 2 * operation.LineLength + operation.X / 8 * bitsPerPixel);
-        switch (operation.Action) {
+        switch (operation.MemoryAction) {
             default:
-            case Action.ReadByte:
+            case MemoryAction.ReadByte:
                 ReadByteOperationCga(operation, offset, bitsPerPixel);
                 break;
-            case Action.WriteByte:
+            case MemoryAction.WriteByte:
                 WriteByteOperationCga(operation, offset, bitsPerPixel);
                 break;
-            case Action.MemSet:
+            case MemoryAction.MemSet:
                 MemSetOperationCga(operation, offset, bitsPerPixel);
                 break;
-            case Action.MemMove:
+            case MemoryAction.MemMove:
                 MemMoveOperationCga(operation, offset, bitsPerPixel);
                 break;
         }
@@ -884,18 +884,18 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     private void HandlePlanarGraphicsOperation(GraphicsOperation operation) {
         ushort offset = (ushort)(operation.Y * operation.LineLength + operation.X / 8);
         int plane;
-        switch (operation.Action) {
+        switch (operation.MemoryAction) {
             default:
-            case Action.ReadByte:
+            case MemoryAction.ReadByte:
                 ReadByteOperationPlanar(operation, offset);
                 break;
-            case Action.WriteByte:
+            case MemoryAction.WriteByte:
                 WriteByteOperationPlanar(operation, offset);
                 break;
-            case Action.MemSet:
+            case MemoryAction.MemSet:
                 MemSetOperationPlanar(operation, offset);
                 break;
-            case Action.MemMove:
+            case MemoryAction.MemMove:
                 MemMoveOperationPlanar(operation, offset);
                 break;
         }
@@ -1004,7 +1004,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         for (int i = 0; i < characterHeight; i++, operation.Y++) {
             byte fontLine = _memory.UInt8[font.Segment, (ushort)(font.Offset + i)];
             if (useXor) {
-                operation.Action = Action.ReadByte;
+                operation.MemoryAction = MemoryAction.ReadByte;
                 HandleGraphicsOperation(operation);
                 for (int j = 0; j < 8; j++) {
                     operation.Pixels[j] ^= (byte)((fontLine & 0x80 >> j) != 0 ? foregroundAttribute : 0x00);
@@ -1014,7 +1014,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
                     operation.Pixels[j] = (byte)((fontLine & 0x80 >> j) != 0 ? foregroundAttribute : 0x00);
                 }
             }
-            operation.Action = Action.WriteByte;
+            operation.MemoryAction = MemoryAction.WriteByte;
             HandleGraphicsOperation(operation);
         }
     }
@@ -1029,7 +1029,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
             Height = 0,
             X = 0,
             Y = 0,
-            Action = Action.ReadByte
+            MemoryAction = MemoryAction.ReadByte
         };
     }
 
@@ -1081,7 +1081,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
         // Read cell from screen
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
-        operation.Action = Action.ReadByte;
+        operation.MemoryAction = MemoryAction.ReadByte;
         operation.X = (ushort)(cursorPosition.X * 8);
         operation.Y = (ushort)(cursorPosition.Y * characterHeight);
 
@@ -1231,7 +1231,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
         operation.X = ALIGN_DOWN(x, 8);
         operation.Y = y;
-        operation.Action = Action.ReadByte;
+        operation.MemoryAction = MemoryAction.ReadByte;
         HandleGraphicsOperation(operation);
 
         return operation.Pixels[x & 0x07];
@@ -1248,7 +1248,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
         operation.X = ALIGN_DOWN(x, 8);
         operation.Y = y;
-        operation.Action = Action.ReadByte;
+        operation.MemoryAction = MemoryAction.ReadByte;
         HandleGraphicsOperation(operation);
 
         bool useXor = (color & 0x80) != 0 && vgaMode.BitsPerPixel < 8;
@@ -1257,7 +1257,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         } else {
             operation.Pixels[x & 0x07] = color;
         }
-        operation.Action = Action.WriteByte;
+        operation.MemoryAction = MemoryAction.WriteByte;
         HandleGraphicsOperation(operation);
     }
 
@@ -1369,18 +1369,18 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
     private void HandlePackedGraphicsOperation(GraphicsOperation operation) {
         ushort destination = (ushort)(operation.Y * operation.LineLength + operation.X);
-        switch (operation.Action) {
+        switch (operation.MemoryAction) {
             default:
-            case Action.ReadByte:
+            case MemoryAction.ReadByte:
                 operation.Pixels = _memory.GetData(MemoryUtils.ToPhysicalAddress(GraphicsSegment, destination), 8);
                 break;
-            case Action.WriteByte:
+            case MemoryAction.WriteByte:
                 _memory.LoadData(MemoryUtils.ToPhysicalAddress(GraphicsSegment, destination), operation.Pixels, 8);
                 break;
-            case Action.MemSet:
+            case MemoryAction.MemSet:
                 MemSetStride(GraphicsSegment, destination, operation.Pixels[0], operation.Width, operation.LineLength, operation.Height);
                 break;
-            case Action.MemMove:
+            case MemoryAction.MemMove:
                 ushort source = (ushort)(operation.Lines * operation.LineLength + operation.X);
                 MemMoveStride(GraphicsSegment, destination, source, operation.Width, operation.LineLength, operation.Height);
                 break;
@@ -1439,7 +1439,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     // }
 }
 
-public record struct GraphicsOperation(VgaMode VgaMode, int LineLength, int DisplayStart, Action Action, int X, int Y, byte[] Pixels, int Width, int Height, int Lines);
+public record struct GraphicsOperation(VgaMode VgaMode, int LineLength, int DisplayStart, MemoryAction MemoryAction, int X, int Y, byte[] Pixels, int Width, int Height, int Lines);
 
 public record struct CharacterPlusAttribute(char Character, byte Attribute, bool UseAttribute);
 
@@ -1449,7 +1449,7 @@ public record struct Area(int Width, int Height);
 
 public record struct VideoMode(VgaMode VgaMode, byte PixelMask, byte[] Palette, byte[] SequencerRegisterValues, byte MiscellaneousRegisterValue, byte[] CrtControllerRegisterValues, byte[] AttributeControllerRegisterValues, byte[] GraphicsControllerRegisterValues);
 
-public enum Action {
+public enum MemoryAction {
     ReadByte,
     WriteByte,
     MemSet,

@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 
 public class VgaRom : IMemoryDevice {
     private const int BaseAddress = Segment << 4;

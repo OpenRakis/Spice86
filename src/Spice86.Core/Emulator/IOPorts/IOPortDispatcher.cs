@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.IOPorts;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 

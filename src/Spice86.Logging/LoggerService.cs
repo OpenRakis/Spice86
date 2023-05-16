@@ -38,19 +38,6 @@ public class LoggerService : ILoggerService {
             .MinimumLevel.ControlledBy(LogLevelSwitch);
     }
     
-    /// <summary>
-    /// Creates the ILogger at the last possible time, since it can be created only once.
-    /// </summary>
-    /// <returns>The ILogger instance.</returns>
-    private ILogger GetLogger() {
-        _logger ??= _loggerConfiguration.CreateLogger();
-        return AddProperties(_logger);
-    }
-    
-    private ILogger AddProperties(ILogger logger) {
-        return logger.ForContext("IP", $"{LoggerPropertyBag.CsIp}");
-    }
-    
     /// <inheritdoc/>
     public LoggerConfiguration CreateLoggerConfiguration() {
         return new LoggerConfiguration()
@@ -65,14 +52,6 @@ public class LoggerService : ILoggerService {
         var logger = new LoggerService(LoggerPropertyBag) {LogLevelSwitch = new LoggingLevelSwitch(minimumLevel)};
         logger._loggerConfiguration.MinimumLevel.ControlledBy(new LoggingLevelSwitch(minimumLevel));
         return logger;
-    }
-
-    public void Write(LogEvent logEvent) {
-        GetLogger().Write(logEvent);
-    }
-
-    public bool IsEnabled(LogEventLevel level) {
-        return !AreLogsSilenced && level >= LogLevelSwitch.MinimumLevel;
     }
 
     /// <summary>
