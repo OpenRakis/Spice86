@@ -12,8 +12,8 @@ public class Configuration {
     [Option(nameof(A20Gate), Default = false, Required = false, HelpText = "Whether the 20th address line is silenced. Used for legacy 8086 programs.")]
     public bool A20Gate { get; init; }
     
-    [Option('s', nameof(SynthMode), Default = null, Required = false, HelpText = "FM Synth mode. Defaults to the Sound Blaster 16's OPL chip emulation. Use 'g' for Adlib Gold mode.")]
-    public string? SynthMode { get; init; }
+    [Option(nameof(AdlibGold), Default = null, Required = false, HelpText = "Enables the Adlib Gold's OPL chip instead of the Sound Blaster 16's OPL chip emulation.")]
+    public bool AdlibGold { get; init; }
 
     /// <summary> Path to C drive, default is exe parent. </summary>
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]

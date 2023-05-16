@@ -42,7 +42,7 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         _playbackThread = new Thread(RnderWaveFormOnPlaybackThread);
     }
 
-    private bool _disposed = false;
+    private bool _disposed;
 
 
      public void Dispose() {

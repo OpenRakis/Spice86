@@ -282,7 +282,7 @@ public class Machine : IDisposable {
         AdlibGold = new AdlibGold(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, 48000);
         OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        if (machineCreationOptions.Configuration.SynthMode == "g") {
+        if (machineCreationOptions.Configuration.AdlibGold) {
             Register(AdlibGold);
         } else {
             Register(OPL3FM);
