@@ -12,20 +12,29 @@ public class Joystick : DefaultIOPortHandler {
 
     private byte _joystickPositionAndStatusValue = 0xFF;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Joystick"/>
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public Joystick(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
     }
 
+    /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(JoystickPositionAndStatus, this);
     }
 
+    /// <inheritdoc />
     public override byte ReadByte(int port) {
         return port switch {
             JoystickPositionAndStatus => _joystickPositionAndStatusValue,
             _ => base.ReadByte(port),
         };
     }
-    
+
+    /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         switch (port) {
             case JoystickPositionAndStatus:

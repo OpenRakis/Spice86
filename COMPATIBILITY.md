@@ -1,9 +1,8 @@
 A lot of programs are not running.
 
 This is mainly because:
- - The only currently supported display mode is VGA mode 13h
-    - Text mode is not supported (for option input at the beginning of the game for example).
-    - CGA / EGA games are not supported
+ - Some VGA features are not implemented.
+ - Quite a lot of DOS kernel interrupts are not implemented.
  - TSR / sub programs / Extended memory is not implemented
 
 Here is a list of old games I tested with what worked and what didn't:
@@ -27,7 +26,7 @@ Here is a list of old games I tested with what worked and what didn't:
 | Hero Quest |  :sunglasses: Fully playable | | 2022/09/02 |
 | KGB | :sunglasses: Fully playable | | 2021/09/26 |
 | Oliver & Compagnie | :see_no_evil: Crashes | Int 10.11 operation "GET INT 1F pointer" not implemented. | 2021/09/26 |
-| Prince of persia | :slightly_smiling_face: Playable | Intro screen is black but if you press space you will go ingame. | 2021/09/26 |
+| Prince of persia | :sunglasses: Fully playable | No music is played...? | 2021/09/26 |
 | Plan 9 From Outer Space| :confused: Not playable | Black screen. | 2021/09/26 |
 | Quest for glory 3 | :see_no_evil: Crashes | Int 2F not implemented (Himem XMS Driver) | 2021/09/26 |
 | SimCity | :see_no_evil: Crashes | Int 10.11 operation "ROM 8x8 double dot pointer" not implemented. | 2021/09/26 |

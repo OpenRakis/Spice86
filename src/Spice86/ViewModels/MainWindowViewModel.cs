@@ -43,6 +43,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private DebugWindow? _debugWindow;
     private PaletteWindow? _paletteWindow;
     private PerformanceWindow? _performanceWindow;
+    private string _lastExecutableDirectory = string.Empty;
 
     private bool _closeAppOnEmulatorExit;
 
@@ -68,7 +69,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
 
     [ObservableProperty]
+    private string _statusMessage = "Emulator: not started.";
+
+    [ObservableProperty]
     private bool _isPaused;
+
+    [ObservableProperty]
+    private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -121,8 +128,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             Title = "Dump emulator state to directory...",
             Directory = _configuration.RecordedDataDirectory
         };
-        if (Directory.Exists(_configuration.RecordedDataDirectory)) {
-            ofd.Directory = _configuration.RecordedDataDirectory;
+        if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
+            ofd.Directory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
         }
         string? dir = _configuration.RecordedDataDirectory;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
@@ -192,12 +199,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    public async Task StartExecutable() {
+    public async Task StartExecutable(string? filePath) {
         _closeAppOnEmulatorExit = false;
-        await StartNewExecutable();
+        await StartNewExecutable(filePath);
     }
 
-    private async Task StartNewExecutable() {
+    private async Task StartNewExecutable(string? filePath = null) {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             OpenFileDialog ofd = new() {
                 Title = "Start Executable...",
@@ -213,19 +220,29 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                     }
                 }
             };
-            string[]? files = await ofd.ShowAsync(desktop.MainWindow);
-            if (files?.Any() == true) {
-                RestartEmulatorWithNewProgram(files[0]);
+            ofd.Directory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            if (Directory.Exists(_lastExecutableDirectory)) {
+                ofd.Directory = _lastExecutableDirectory;
+            }
+
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
+                string[]? files = await ofd.ShowAsync(desktop.MainWindow);
+                if (files?.Any() == true) {
+                    filePath = files[0];
+                    await RestartEmulatorWithNewProgram(filePath);
+                }
+            } else {
+                await RestartEmulatorWithNewProgram(filePath);
             }
         }
     }
 
-    private void RestartEmulatorWithNewProgram(string filePath) {
+    private async Task RestartEmulatorWithNewProgram(string filePath) {
         _configuration.Exe = filePath;
         _configuration.ExeArgs = "";
         _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
         Play();
-        Dispatcher.UIThread.Post(() => DisposeEmulator(), DispatcherPriority.MaxValue);
+        await Dispatcher.UIThread.InvokeAsync(() => DisposeEmulator(), DispatcherPriority.MaxValue);
         SetMainTitle();
         _okayToContinueEvent = new(true);
         _programExecutor?.Machine.ExitEmulationLoop();
@@ -307,23 +324,31 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public int MouseY { get; set; }
 
-    public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary {
-        get =>
-            VideoBuffers
-                .ToDictionary(static x =>
-                        x.Address,
-                    x => x);
-        set => throw new NotImplementedException();
-    }
+    public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary =>
+        VideoBuffers
+            .ToDictionary(static x =>
+                    x.Address,
+                x => x);
 
     public int Width { get; private set; }
 
     public bool IsLeftButtonClicked { get; private set; }
 
     public bool IsRightButtonClicked { get; private set; }
+    
     public void OnMainWindowOpened(object? sender, EventArgs e) {
         if(RunEmulator()) {
             _closeAppOnEmulatorExit = true;
+        }
+    }
+
+    private void AddOrReplaceMostRecentlyUsed(string filePath) {
+        if (MostRecentlyUsed.Any(x => x.FullName == filePath)) {
+            return;
+        }
+        MostRecentlyUsed.Insert(0,new FileInfo(filePath));
+        if (MostRecentlyUsed.Count > 3) {
+            MostRecentlyUsed.RemoveAt(3);
         }
     }
 
@@ -332,7 +357,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             string.IsNullOrWhiteSpace(_configuration.CDrive)) {
             return false;
         }
-
+        AddOrReplaceMostRecentlyUsed(_configuration.Exe);
+        _lastExecutableDirectory = _configuration.CDrive;
         RunMachine();
         return true;
     }
@@ -429,7 +455,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private async Task ShowEmulationErrorMessage(Exception e) {
         IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
-            .GetMessageBoxStandardWindow("An unhandled exception occured", e.GetBaseException().Message);
+            .GetMessageBoxStandardWindow("An unhandled exception occured", 
+                $"""
+                Method name: {e.GetBaseException().TargetSite?.Name},
+                Exception message: {e.GetBaseException().Message},
+                Stack trace (first line): {e.GetBaseException().StackTrace?.Split(Environment.NewLine).FirstOrDefault()}
+                """);
         if (!_disposed && !_isMainWindowClosing && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             await errorMessage.ShowDialog(desktop.MainWindow);
         }
@@ -473,18 +504,21 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private void MachineThread() {
         try {
-            if(!_disposed) {
+            if (!_disposed) {
                 _okayToContinueEvent.Set();
             }
+
             _programExecutor = new ProgramExecutor(_loggerService, this, _configuration);
             TimeMultiplier = _configuration.TimeMultiplier;
             _videoCard = _programExecutor.Machine.VgaCard;
             Dispatcher.UIThread.Post(() => IsMachineRunning = true);
+            Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
             Dispatcher.UIThread.Post(() => ShowVideo = true);
             _programExecutor.Run();
-            Dispatcher.UIThread.Post(() => IsMachineRunning = false);
-            if(_closeAppOnEmulatorExit && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
-                   {MainWindow: MainWindow mainWindow}) {
+            if (_closeAppOnEmulatorExit &&
+                Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime {
+                    MainWindow: MainWindow mainWindow
+                }) {
                 Dispatcher.UIThread.Post(() => mainWindow.Close());
             }
         } catch (Exception e) {
@@ -492,9 +526,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred during execution");
             }
+
             EmulatorErrorOccured += OnEmulatorErrorOccured;
             EmulatorErrorOccured?.Invoke(e);
             EmulatorErrorOccured -= OnEmulatorErrorOccured;
+        } finally {
+            Dispatcher.UIThread.Post(() => IsMachineRunning = false);
+            Dispatcher.UIThread.Post(() => StatusMessage = "Emulator: stopped.");
         }
     }
 

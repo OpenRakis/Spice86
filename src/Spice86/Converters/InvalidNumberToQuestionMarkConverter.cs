@@ -5,7 +5,11 @@ using Avalonia.Data.Converters;
 using System;
 using System.Globalization;
 
+/// <summary>
+/// Converts invalid number values (null, -1, negative float or double, etc.) to question marks ("?").
+/// </summary>
 internal class InvalidNumberToQuestionMarkConverter : IValueConverter {
+    /// <inheritdoc/>
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
         switch (value)
         {
@@ -24,6 +28,7 @@ internal class InvalidNumberToQuestionMarkConverter : IValueConverter {
         }
     }
 
+    /// <inheritdoc/>
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
         if (value is string str && str == "?") {
             return -1;

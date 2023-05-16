@@ -8,6 +8,10 @@ using Spice86.Shared.Utils;
 public sealed class Bios {
     private readonly Memory _memory;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
     public Bios(Memory memory) {
         _memory = memory;
         // VideoMode = 0x03;

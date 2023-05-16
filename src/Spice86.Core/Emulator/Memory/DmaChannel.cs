@@ -68,6 +68,9 @@ public sealed class DmaChannel {
     /// </summary>
     public ushort Count { get; internal set; }
 
+    /// <summary>
+    /// Gets or sets the number of remaining bytes to transfer.
+    /// </summary>
     public int TransferBytesRemaining {
         get => _bytesRemaining;
         internal set => _bytesRemaining = value;

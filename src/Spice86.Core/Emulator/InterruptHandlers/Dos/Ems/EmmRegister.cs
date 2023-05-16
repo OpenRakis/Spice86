@@ -18,21 +18,30 @@ public class EmmRegister : IMemoryDevice {
     /// </summary>
     public uint Offset { get; init; }
     
+    /// <summary>
+    /// Constructs a new instance.
+    /// </summary>
+    /// <param name="logicalPage">The logical page that will be mapped.</param>
+    /// <param name="offset">The start address of the register, in main memory.</param>
     public EmmRegister(EmmPage logicalPage, uint offset) {
         PhysicalPage = logicalPage;
         Offset = offset;
     }
 
+    /// <inheritdoc />
     public uint Size => ExpandedMemoryManager.EmmPageSize;
-    
+
+    /// <inheritdoc />
     public byte Read(uint address) {
         return PhysicalPage.PageMemory.Read(address - Offset);
     }
 
+    /// <inheritdoc />
     public void Write(uint address, byte value) {
         PhysicalPage.PageMemory.Write(address - Offset, value);
     }
 
+    /// <inheritdoc />
     public Span<byte> GetSpan(int address, int length) {
         return PhysicalPage.PageMemory.GetSpan((int)(address - Offset), length);
     }

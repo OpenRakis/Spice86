@@ -1,12 +1,14 @@
-using Spice86.Shared.Interfaces;
-
 namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Interfaces;
 
+/// <summary>
+/// Emulates and manages the two PICs of the IBM PC.
+/// </summary>
 public class DualPic : DefaultIOPortHandler {
     private const int MasterCommand = 0x20;
 
@@ -27,12 +29,21 @@ public class DualPic : DefaultIOPortHandler {
     private readonly Pic _pic1;
     private readonly Pic _pic2;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DualPic"/> class.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public DualPic(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _pic1 = new Pic(machine, loggerService, true);
         _pic2 = new Pic(machine, loggerService, false);
         Initialize();
     }
-
+    
+    /// <summary>
+    /// Initializes the PICs with default initialization commands.
+    /// </summary>
     public void Initialize() {
         // Send default initialization commands to the pics
         // ICW1
@@ -49,6 +60,12 @@ public class DualPic : DefaultIOPortHandler {
         _pic2.ProcessDataWrite(DefaultIcw4);
     }
 
+    /// <summary>
+    /// Masks all interrupts globally by setting the interrupt mask bit in the processor's status register. <br/>
+    /// This prevents any interrupts from being serviced while the processor is executing critical sections of code
+    /// that must not be interrupted.
+    /// or events.
+    /// </summary>
     public void MaskAllInterrupts() {
         _pic1.ProcessDataWrite(0xFF);
         _pic2.ProcessDataWrite(0xFF);
@@ -68,11 +85,23 @@ public class DualPic : DefaultIOPortHandler {
             throw new UnhandledOperationException(_machine, $"IRQ {irq} not supported at the moment");
         }
     }
-
+    
+    /// <summary>
+    /// Determines whether this instance has a pending interrupt request.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> if this instance has a pending interrupt request; otherwise, <c>false</c>.
+    /// </returns>
     public bool HasPendingRequest() {
         return _pic1.HasPendingRequest() || _pic2.HasPendingRequest();
     }
 
+    /// <summary>
+    /// Computes the interrupt vector number from the first PIC that has a pending request,
+    /// or from the second PIC if the first PIC has no pending requests.
+    /// If neither PIC has a pending request, returns null.
+    /// </summary>
+    /// <returns>The interrupt vector number, or null if no pending request.</returns>
     public byte? ComputeVectorNumber() {
         if (_pic1.HasPendingRequest()) {
             return _pic1.ComputeVectorNumber();
@@ -84,11 +113,16 @@ public class DualPic : DefaultIOPortHandler {
 
         return null;
     }
-
-    public void AcknwowledgeInterrupt() {
+    
+    /// <summary>
+    /// Acknowledges the interrupt request from the first PIC. <br/>
+    /// This signals that the PIC has processed the interrupt request and is ready to receive new requests.
+    /// </summary>
+    public void AcknowledgeInterrupt() {
         _pic1.AcknwowledgeInterrupt();
     }
 
+    /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(MasterCommand, this);
         ioPortDispatcher.AddIOPortHandler(MasterData, this);
@@ -96,6 +130,7 @@ public class DualPic : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(SlaveData, this);
     }
 
+    /// <inheritdoc />
     public override byte ReadByte(int port) {
         return port switch {
             MasterCommand => _pic1.CommandRead(),
@@ -106,6 +141,7 @@ public class DualPic : DefaultIOPortHandler {
         };
     }
 
+    /// <inheritdoc />
     public override ushort ReadWord(int port) {
         if (port == MasterCommand) {
             return (ushort)(ReadByte(MasterCommand) | ReadByte(SlaveCommand) << 8);
@@ -118,6 +154,7 @@ public class DualPic : DefaultIOPortHandler {
         return base.ReadWord(port);
     }
 
+    /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         switch (port) {
             case MasterCommand:
@@ -138,6 +175,7 @@ public class DualPic : DefaultIOPortHandler {
         }
     }
 
+    /// <inheritdoc />
     public override void WriteWord(int port, ushort value) {
         if (port == MasterCommand) {
             WriteByte(MasterCommand, (byte)value);

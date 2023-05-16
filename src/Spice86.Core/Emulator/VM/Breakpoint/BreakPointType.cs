@@ -1,5 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
+/// <summary>
+/// Types of breakpoints available
+/// </summary>
 public enum BreakPointType {
     /// <summary>
     /// CPU breakpoint triggered when address of instruction to be executed matches the address

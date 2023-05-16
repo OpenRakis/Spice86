@@ -1,25 +1,21 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
-
+﻿
 namespace Spice86.Core.Emulator.OperatingSystem;
 
-using Serilog;
-
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.OperatingSystem.Devices;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Utils;
-
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
+
+/// <summary>
+/// The class that implements DOS file operations, such as finding files, allocating file handles, and updating the Dos Transfer Area.
+/// </summary>
 public class DosFileManager {
     private const int MaxOpenFiles = 20;
     private static readonly Dictionary<byte, string> _fileOpenMode = new();
@@ -50,12 +46,24 @@ public class DosFileManager {
         _fileOpenMode.Add(0x02, "rw");
     }
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="dos">The DOS kernel</param>
     public DosFileManager(Memory memory, ILoggerService loggerService, Dos dos) {
         _loggerService = loggerService;
         _memory = memory;
         _dos = dos;
     }
 
+    /// <summary>
+    /// Closes a file handle.
+    /// </summary>
+    /// <param name="fileHandle">The file handle to an open file.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <exception cref="UnrecoverableException">If the host OS refuses to close the file.</exception>
     public DosFileOperationResult CloseFile(ushort fileHandle) {
         OpenFile? file = GetOpenFile(fileHandle);
         if (file == null) {
@@ -80,6 +88,13 @@ public class DosFileManager {
         return DosFileOperationResult.NoValue();
     }
 
+    /// <summary>
+    /// Creates a file and returns the handle to the file.
+    /// </summary>
+    /// <param name="fileName">The target file name.</param>
+    /// <param name="fileAttribute">The file system attributes to set on the new file.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
         string? hostFileName = ToHostCaseSensitiveFileName(fileName, true);
         if (hostFileName == null) {
@@ -104,6 +119,11 @@ public class DosFileManager {
         return OpenFileInternal(fileName, hostFileName, "rw");
     }
 
+    /// <summary>
+    /// Gets another file handle for the same file
+    /// </summary>
+    /// <param name="fileHandle">The handle to a file.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult DuplicateFileHandle(ushort fileHandle) {
         OpenFile? file = GetOpenFile(fileHandle);
         if (file == null) {
@@ -121,9 +141,10 @@ public class DosFileManager {
     }
 
     /// <summary>
+    /// Returns the first matching file according to the <paramref name="fileSpec"/>
     /// </summary>
     /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match. Case is insensitive</param>
-    /// <returns></returns>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = ToHostFileName(fileSpec);
         _currentMatchingFileSearchFolder = hostSearchSpec[..(hostSearchSpec.LastIndexOf('/') + 1)];
@@ -150,6 +171,10 @@ public class DosFileManager {
         return DosFileOperationResult.Error(ErrorCode.PathNotFound);
     }
 
+    /// <summary>
+    /// Returns the first matching file according to the file spec.
+    /// </summary>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindNextMatchingFile() {
         if (_matchingFilesIterator == null) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
@@ -165,7 +190,7 @@ public class DosFileManager {
         bool matching = _matchingFilesIterator.MoveNext();
         if (matching) {
             try {
-                UpdateDTAFromFile(_matchingFilesIterator.Current);
+                UpdateDosTransferAreaFromFile(_matchingFilesIterator.Current);
             } catch (IOException e) {
                 e.Demystify();
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
@@ -178,10 +203,27 @@ public class DosFileManager {
         return DosFileOperationResult.NoValue();
     }
 
+    /// <summary>
+    /// The offset part of the segmented address to the DTA.
+    /// </summary>
     public ushort DiskTransferAreaAddressOffset => _diskTransferAreaAddressOffset;
 
+    /// <summary>
+    /// The segment part of the segmented address to the DTA.
+    /// </summary>
     public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
 
+    /// <summary>
+    /// Seeks to specified location in file.
+    /// </summary>
+    /// <param name="originOfMove">Can be one of those values: <br/>
+    /// 00 = beginning of file plus offset  (SEEK_SET) <br/>
+    /// 01 = current location plus offset	(SEEK_CUR) <br/>
+    /// 02 = end of file plus offset  (SEEK_END)
+    /// </param>
+    /// <param name="fileHandle">The handle to the file.</param>
+    /// <param name="offset">Number of bytes to move.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult MoveFilePointerUsingHandle(byte originOfMove, ushort fileHandle, uint offset) {
         OpenFile? file = GetOpenFile(fileHandle);
         if (file == null) {
@@ -204,6 +246,12 @@ public class DosFileManager {
         }
     }
 
+    /// <summary>
+    /// Opens a file (in read+write access mode) and returns the file handle.
+    /// </summary>
+    /// <param name="fileName">The name of the file to open.</param>
+    /// <param name="rwAccessMode">The read+write access mode</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult OpenFile(string fileName, byte rwAccessMode) {
         string openMode = _fileOpenMode[rwAccessMode];
 
@@ -227,6 +275,13 @@ public class DosFileManager {
         return OpenFileInternal(fileName, hostFileName, openMode);
     }
 
+    /// <summary>
+    /// Returns a handle to a DOS <see cref="CharacterDevice"/>
+    /// </summary>
+    /// <param name="device">The character device</param>
+    /// <param name="openMode">Open in Read, Write, or Read+Write mode.</param>
+    /// <param name="name">The name of the device, such as "STDIN" for the standard input.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult OpenDevice(CharacterDevice device, string openMode, string name) {
         return OpenDeviceInternal(device, openMode, name);
     }
@@ -238,8 +293,8 @@ public class DosFileManager {
         }
 
         Stream stream;
-        if (device == _dos.CurrentConsoleDevice) {
-             stream = openMode == "r" ? Console.OpenStandardInput() : Console.OpenStandardOutput();
+        if (device == _dos.CurrentConsoleDevice) { 
+            stream = openMode == "r" ? Console.OpenStandardInput() : Console.OpenStandardOutput();
         } else {
             stream = new DeviceStream(device.Name, openMode, _loggerService);
         }
@@ -250,6 +305,14 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(dosIndex);
     }
 
+    /// <summary>
+    /// Read a file using a handle
+    /// </summary>
+    /// <param name="fileHandle">The handle to the file.</param>
+    /// <param name="readLength">The amount of data to read, in bytes.</param>
+    /// <param name="targetAddress">The start address of the receiving buffer.</param>
+    /// <returns></returns>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult ReadFile(ushort fileHandle, ushort readLength, uint targetAddress) {
         OpenFile? file = GetOpenFile(fileHandle);
         if (file == null) {
@@ -282,25 +345,47 @@ public class DosFileManager {
         return DosFileOperationResult.Value16((ushort)actualReadLength);
     }
 
+    /// <summary>
+    /// Sets the current directory for the <see cref="DosFileManager"/>
+    /// </summary>
+    /// <param name="currentDir">The new current directory path</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult SetCurrentDir(string currentDir) {
         _currentDir = ToHostCaseSensitiveFileName(currentDir, false);
         return DosFileOperationResult.NoValue();
     }
 
+    /// <summary>
+    /// Initializes disk parameters
+    /// </summary>
+    /// <param name="currentDir">The current directory for the <see cref="DosFileManager"/>.</param>
+    /// <param name="driveMap">The mapping between emulated drive roots and host directory paths.</param>
     public void SetDiskParameters(string currentDir, Dictionary<char, string> driveMap) {
         _currentDir = currentDir;
         _driveMap = driveMap;
     }
 
+    /// <summary>
+    /// Sets the segmented address to the DTA.
+    /// </summary>
+    /// <param name="diskTransferAreaAddressSegment">The segment part of the segmented address to the DTA.</param>
+    /// <param name="diskTransferAreaAddressOffset">The offset part of the segmented address to the DTA.</param>
     public void SetDiskTransferAreaAddress(ushort diskTransferAreaAddressSegment, ushort diskTransferAreaAddressOffset) {
         _diskTransferAreaAddressSegment = diskTransferAreaAddressSegment;
         _diskTransferAreaAddressOffset = diskTransferAreaAddressOffset;
     }
 
+    /// <summary>
+    /// Writes data to a file using a file handle.
+    /// </summary>
+    /// <param name="fileHandle">The file handle to use.</param>
+    /// <param name="writeLength">The length of the data to write.</param>
+    /// <param name="bufferAddress">The address of the buffer containing the data to write.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> object representing the result of the operation.</returns>
     public DosFileOperationResult WriteFileUsingHandle(ushort fileHandle, ushort writeLength, uint bufferAddress) {
         if (!IsValidFileHandle(fileHandle)) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing.", fileHandle);
+                _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing", fileHandle);
             }
 
             // Fake that we wrote, this could be used to write to stdout / stderr ...
@@ -352,8 +437,7 @@ public class DosFileManager {
 
     private int CountHandles(OpenFile openFileToCount) {
         int count = 0;
-        for (int i = 0; i < _openFiles.Length; i++) {
-            OpenFile? openFile = _openFiles[i];
+        foreach (var openFile in _openFiles) {
             if (openFile == openFileToCount) {
                 count++;
             }
@@ -384,8 +468,8 @@ public class DosFileManager {
     /// <summary>
     /// Converts a dos filespec to a regex pattern
     /// </summary>
-    /// <param name="fileSpec"></param>
-    /// <returns></returns>
+    /// <param name="fileSpec">The DOS filespec</param>
+    /// <returns>The regex pattern</returns>
     private Regex FileSpecToRegex(string fileSpec) {
         string regex = fileSpec.ToLowerInvariant();
         regex = regex.Replace(".", "[.]");
@@ -434,7 +518,7 @@ public class DosFileManager {
         }
         string realFileName = "";
         string[] array = Directory.GetFiles(directoryCaseSensitive);
-        foreach (var file in array) {
+        foreach (string file in array) {
             string fileToUpper = file.ToUpperInvariant();
             string searchedFile = caseInsensitivePath.ToUpperInvariant();
             if (fileToUpper == searchedFile) {
@@ -608,14 +692,14 @@ public class DosFileManager {
 
     /// <summary>
     /// Converts dosFileName to a host file name.<br/>
-    /// For this, need to:
+    /// For this, this needs to:
     /// <ul>
     /// <li>Prefix either the current folder or the drive folder.</li>
     /// <li>Replace backslashes with slashes</li>
     /// <li>Find case sensitive matches for every path item (since DOS is case insensitive but some OS are not)</li>
     /// </ul>
     /// </summary>
-    /// <param name="dosFileName"></param>
+    /// <param name="dosFileName">The file name to convert.</param>
     /// <param name="forCreation">if true will try to find case sensitive match for only the parent of the file</param>
     /// <returns>the file name in the host file system, or null if nothing was found.</returns>
     public string? ToHostCaseSensitiveFileName(string dosFileName, bool forCreation) {
@@ -636,8 +720,8 @@ public class DosFileManager {
     /// a Drive in the filename or not.<br/>
     /// Does not convert to case sensitive filename.
     /// </summary>
-    /// <param name="dosFileName"></param>
-    /// <returns></returns>
+    /// <param name="dosFileName">The file name to convert.</param>
+    /// <returns>The converted file name.</returns>
     private string ToHostFileName(string dosFileName) {
         string fileName = ConvertUtils.ToSlashPath(dosFileName);
         if (fileName.Length >= 2 && fileName[1] == ':') {
@@ -649,7 +733,7 @@ public class DosFileManager {
         return ConvertUtils.ToSlashPath(fileName);
     }
 
-    private void UpdateDTAFromFile(string matchingFile) {
+    private void UpdateDosTransferAreaFromFile(string matchingFile) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("Found matching file {MatchingFile}", matchingFile);
         }

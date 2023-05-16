@@ -52,7 +52,7 @@
 			          PlotMargins="50 0 0 0"
 			          PlotAreaBorderColor="#999999">
 						<oxy:AreaSeries 
-							DataFieldX="Time"
+							DataFieldX="Number"
 							DataFieldY="Value"
 							Items="{Binding CpuHistoryDataPoints}"
 							Color="#fd6d00" />

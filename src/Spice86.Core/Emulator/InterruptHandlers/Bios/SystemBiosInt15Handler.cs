@@ -18,8 +18,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
         _dispatchTable.Add(0x88, new Callback(0x88, GetExtendedMemorySize));
     }
 
+    /// <inheritdoc />
     public override byte Index => 0x15;
 
+    /// <inheritdoc />
     public override void Run() {
         byte operation = _state.AH;
         Run(operation);

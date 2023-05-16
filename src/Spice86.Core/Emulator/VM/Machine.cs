@@ -1,5 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using System.Diagnostics;
+using System.Text;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
@@ -24,16 +27,8 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-
-using Action = System.Action;
-using SegmentedAddress = Spice86.Shared.SegmentedAddress;
 
 /// <summary>
 /// Emulates an IBM PC
@@ -48,61 +43,159 @@ public class Machine : IDisposable {
 
     private bool _disposed;
 
+    /// <summary>
+    /// Whether we record execution data or not, for reverse engineering purposes.
+    /// </summary>
     public bool RecordData { get; set; }
     
+    /// <summary>
+    /// Memory mapped BIOS values.
+    /// </summary>
     public Bios Bios { get; set; }
 
+    /// <summary>
+    /// INT11H handler.
+    /// </summary>
     public BiosEquipmentDeterminationInt11Handler BiosEquipmentDeterminationInt11Handler { get; }
 
+    /// <summary>
+    /// INT9H handler.
+    /// </summary>
     public BiosKeyboardInt9Handler BiosKeyboardInt9Handler { get; }
 
+    /// <summary>
+    /// Handles all the callbacks, most notably interrupts.
+    /// </summary>
     public CallbackHandler CallbackHandler { get; }
 
+    /// <summary>
+    /// The emulated CPU.
+    /// </summary>
     public Cpu Cpu { get; }
 
+    /// <summary>
+    /// DOS Services.
+    /// </summary>
     public Dos Dos { get; }
 
+    /// <summary>
+    /// The Gravis Ultrasound sound card.
+    /// </summary>
     public GravisUltraSound GravisUltraSound { get; }
 
+    /// <summary>
+    /// The GUI. Can be null in headless mode.
+    /// </summary>
     public IGui? Gui { get; }
 
+    /// <summary>
+    /// Gives the port read or write to the registered handler.
+    /// </summary>
     public IOPortDispatcher IoPortDispatcher { get; }
 
+    /// <summary>
+    /// A gameport joystick
+    /// </summary>
     public Joystick Joystick { get; }
 
+    /// <summary>
+    /// An IBM PC Keyboard
+    /// </summary>
     public Keyboard Keyboard { get; }
 
+    /// <summary>
+    /// INT16H handler.
+    /// </summary>
     public KeyboardInt16Handler KeyboardInt16Handler { get; }
 
+    /// <summary>
+    /// Contains all the breakpoints
+    /// </summary>
     public MachineBreakpoints MachineBreakpoints { get; }
 
+    /// <summary>
+    /// The memory bus.
+    /// </summary>
     public Memory Memory { get; }
 
+    /// <summary>
+    /// The General MIDI (MPU-401) or MT-32 device.
+    /// </summary>
     public Midi Midi { get; }
 
+    /// <summary>
+    /// INT33H handler.
+    /// </summary>
     public MouseInt33Handler MouseInt33Handler { get; }
 
+    /// <summary>
+    /// PC Speaker device.
+    /// </summary>
     public PcSpeaker PcSpeaker { get; }
 
+    /// <summary>
+    /// The dual programmable interrupt controllers.
+    /// </summary>
     public DualPic DualPic { get; }
 
+    /// <summary>
+    /// The Sound Blaster card.
+    /// </summary>
     public SoundBlaster SoundBlaster { get; }
 
+    /// <summary>
+    /// INT15H handler.
+    /// </summary>
     public SystemBiosInt15Handler SystemBiosInt15Handler { get; }
 
+    /// <summary>
+    /// INT1A handler.
+    /// </summary>
     public SystemClockInt1AHandler SystemClockInt1AHandler { get; }
 
+    /// <summary>
+    /// The Programmable Interrupt Timer
+    /// </summary>
     public Timer Timer { get; }
 
+    /// <summary>
+    /// INT8H handler.
+    /// </summary>
     public TimerInt8Handler TimerInt8Handler { get; }
 
+    /// <summary>
+    /// The VGA Card.
+    /// </summary>
+    public IVideoCard VgaCard { get; }
+    
+    /// <summary>
+    /// The Vga Registers
+    /// </summary>
     public VideoState VgaRegisters { get; set; }
+    
+    /// <summary>
+    /// The VGA port handler
+    /// </summary>
     public IIOPortHandler VgaIoPortHandler { get; }
+    
+    /// <summary>
+    /// The Video BIOS interrupt handler.
+    /// </summary>
     public VgaBios VideoBiosInt10Handler { get; }
+    
+    /// <summary>
+    /// The Video Rom
+    /// </summary>
     public VgaRom VgaRom { get; }
 
+    /// <summary>
+    /// The EMS device driver.
+    /// </summary>
     public ExpandedMemoryManager? Ems { get; set; }
 
+    /// <summary>
+    /// The DMA controller.
+    /// </summary>
     public DmaController DmaController { get; }
 
     /// <summary>
@@ -110,14 +203,37 @@ public class Machine : IDisposable {
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
 
+    /// <summary>
+    /// The OPL3 FM Synth chip.
+    /// </summary>
     public OPL3FM OPL3FM { get; }
 
+    /// <summary>
+    /// The code invoked when emulation pauses.
+    /// </summary>
     public event Action? Paused;
 
+    /// <summary>
+    /// The code invoked when emulation resumes.
+    /// </summary>
     public event Action? Resumed;
 
+    /// <summary>
+    /// The emulator configuration.
+    /// </summary>
     public Configuration Configuration { get; }
     
+    /// <summary>
+    /// Initializes a new instance
+    /// </summary>
+    /// <param name="programExecutor">The DOS program to be executed</param>
+    /// <param name="gui">The GUI. Can be null in headless mode.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="counterConfigurator">Timer emulation configuration.</param>
+    /// <param name="executionFlowRecorder">Records execution data</param>
+    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="recordData">Whether we record execution data or not.</param>
+    /// <exception cref="InvalidOperationException"></exception>
     public Machine(ProgramExecutor programExecutor, IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
         Configuration = configuration;
@@ -167,7 +283,7 @@ public class Machine : IDisposable {
         Register(OPL3FM);
         SoundBlaster = new SoundBlaster(this, configuration, loggerService);
         Register(SoundBlaster);
-        SoundBlaster.AddEnvironnmentVariable();
+        SoundBlaster.AddEnvironmentVariable();
         GravisUltraSound = new GravisUltraSound(this, configuration, loggerService);
         Register(GravisUltraSound);
         Midi = new Midi(this, configuration, loggerService);
@@ -219,12 +335,19 @@ public class Machine : IDisposable {
         }
     }
 
-    public IVideoCard VgaCard { get; set; }
-
     public void Register(ICallback callback) {
+    /// <summary>
+    /// Registers a callback, such as an interrupt handler.
+    /// </summary>
+    /// <param name="callback">The callback implementation.</param>
         CallbackHandler.AddCallback(callback);
     }
 
+    /// <summary>
+    /// Registers a I/O port handler, such as a sound card.
+    /// </summary>
+    /// <param name="ioPortHandler">The I/O port handler.</param>
+    /// <exception cref="ArgumentException"></exception>
     public void Register(IIOPortHandler ioPortHandler) {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
 
@@ -257,6 +380,10 @@ public class Machine : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Returns a string that dumps the call stack.
+    /// </summary>
+    /// <returns>A string laying out the call stack.</returns>
     public string DumpCallStack() {
         FunctionHandler inUse = Cpu.FunctionHandlerInUse;
         StringBuilder sb = new();
@@ -268,18 +395,34 @@ public class Machine : IDisposable {
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Installs all the callback in the dispatch table in emulated memory.
+    /// </summary>
     public void InstallAllCallbacksInInterruptTable() {
         CallbackHandler.InstallAllCallbacksInInterruptTable();
     }
 
+    /// <summary>
+    /// Peeks at the return address.
+    /// </summary>
+    /// <returns>The return address string.</returns>
     public string PeekReturn() {
         return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
     }
 
+    /// <summary>
+    /// Peeks at the return address.
+    /// </summary>
+    /// <param name="returnCallType">The expected call type.</param>
+    /// <returns>The return address string.</returns>
     public string PeekReturn(CallType returnCallType) {
         return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
     }
 
+    /// <summary>
+    /// Implements the emulation loop.
+    /// </summary>
+    /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>
     public void Run() {
         State state = Cpu.State;
         FunctionHandler functionHandler = Cpu.FunctionHandler;
@@ -313,10 +456,16 @@ public class Machine : IDisposable {
         functionHandler.Ret(CallType.MACHINE);
     }
 
+    /// <summary>
+    /// Whether the emulation is paused.
+    /// </summary>
     public bool IsPaused { get; private set; }
 
-    private bool _exitEmulationLoop = false;
+    private bool _exitEmulationLoop;
 
+    /// <summary>
+    /// Forces the emulation loop to exit.
+    /// </summary>
     public void ExitEmulationLoop() => _exitEmulationLoop = true;
 
     private void RunLoop() {
@@ -331,6 +480,9 @@ public class Machine : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Performs DMA transfers when invoked.
+    /// </summary>
     public void PerformDmaTransfers() {
         if (!_disposed && !_exitDmaLoop) {
             _dmaResetEvent.Set();
@@ -362,6 +514,10 @@ public class Machine : IDisposable {
         return "null";
     }
 
+    /// <summary>
+    /// Releases all resources.
+    /// </summary>
+    /// <param name="disposing">If we must release resources.</param>
     protected virtual void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
@@ -381,6 +537,7 @@ public class Machine : IDisposable {
         }
     }
 
+    /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);

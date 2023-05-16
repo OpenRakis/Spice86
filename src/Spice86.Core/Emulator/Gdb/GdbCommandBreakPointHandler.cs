@@ -1,29 +1,40 @@
-﻿using Serilog;
-using Serilog.Events;
-
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
-using Spice86.Shared.Interfaces;
+﻿namespace Spice86.Core.Emulator.Gdb;
 
 using System.Diagnostics;
 
-namespace Spice86.Core.Emulator.Gdb;
-
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using Serilog.Events;
+
+/// <summary>
+/// Handles GDB commands related to breakpoints and stepping through instructions.
+/// </summary>
 public class GdbCommandBreakpointHandler {
     private readonly ILoggerService _loggerService;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
     private volatile bool _resumeEmulatorOnCommandEnd;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GdbCommandBreakpointHandler"/> class.
+    /// </summary>
+    /// <param name="gdbIo">The GDB I/O handler.</param>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public GdbCommandBreakpointHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService) {
         _loggerService = loggerService;
         _gdbIo = gdbIo;
         _machine = machine;
     }
 
+    /// <summary>
+    /// Adds a breakpoint to the machine.
+    /// </summary>
+    /// <param name="commandContent">The breakpoint command string.</param>
+    /// <returns>A response string to send back to GDB.</returns>
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
@@ -33,6 +44,10 @@ public class GdbCommandBreakpointHandler {
         return _gdbIo.GenerateResponse("OK");
     }
 
+    /// <summary>
+    /// Sends a response to GDB and requests that the emulator be resumed after the breakpoint is hit.
+    /// </summary>
+    /// <returns>A response string to send back to GDB.</returns>
     public string ContinueCommand() {
         _resumeEmulatorOnCommandEnd = true;
         _machine.MachineBreakpoints.PauseHandler.RequestResume();
@@ -40,9 +55,16 @@ public class GdbCommandBreakpointHandler {
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return _gdbIo.GenerateResponse("OK");
     }
-
+    
+    /// <summary>
+    /// Gets or sets a value indicating whether the emulator should be resumed when GDB command has ended.
+    /// </summary>
     public bool ResumeEmulatorOnCommandEnd { get => _resumeEmulatorOnCommandEnd; set => _resumeEmulatorOnCommandEnd = value; }
 
+    /// <summary>
+    /// Handles a breakpoint being hit.
+    /// </summary>
+    /// <param name="breakPoint">The <see cref="BreakPoint"/> object representing the breakpoint that was hit.</param>
     public void OnBreakPointReached(BreakPoint breakPoint) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint reached!\n@{@BreakPoint}", breakPoint);
@@ -64,7 +86,12 @@ public class GdbCommandBreakpointHandler {
             }
         }
     }
-
+    
+    /// <summary>
+    /// Parses a breakpoint command string and returns a <see cref="BreakPoint"/> object.
+    /// </summary>
+    /// <param name="command">The breakpoint command string to parse.</param>
+    /// <returns>A <see cref="BreakPoint"/> object if parsing succeeds, otherwise null.</returns>
     public BreakPoint? ParseBreakPoint(string command) {
         try {
             string[] commandSplit = command.Split(",");
@@ -95,6 +122,11 @@ public class GdbCommandBreakpointHandler {
         }
     }
 
+    /// <summary>
+    /// Removes a breakpoint
+    /// </summary>
+    /// <param name="commandContent">The breakpoint command string.</param>
+    /// <returns></returns>
     public string RemoveBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         if (breakPoint == null) {
@@ -107,6 +139,10 @@ public class GdbCommandBreakpointHandler {
         return _gdbIo.GenerateResponse("OK");
     }
 
+    /// <summary>
+    /// Executes a single CPU instruction
+    /// </summary>
+    /// <returns><c>null</c></returns>
     public string? Step() {
         _resumeEmulatorOnCommandEnd = true;
 

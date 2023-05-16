@@ -14,20 +14,30 @@ public class TimerInt8Handler : InterruptHandler {
     private readonly DualPic _dualPic;
     private readonly Timer _timer;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public TimerInt8Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _timer = machine.Timer;
         _memory = machine.Memory;
         _dualPic = machine.DualPic;
     }
 
+    /// <inheritdoc />
     public override byte Index => 0x8;
 
+    /// <inheritdoc />
     public override void Run() {
         long numberOfTicks = _timer.NumberOfTicks;
         TickCounterValue = (uint)numberOfTicks;
-        _dualPic.AcknwowledgeInterrupt();
+        _dualPic.AcknowledgeInterrupt();
     }
 
+    /// <summary>
+    /// Gets or set the value of the real time clock, in ticks.
+    /// </summary>
     public uint TickCounterValue {
         get => _machine.Bios.RealTimeClock; 
         set => _machine.Bios.RealTimeClock = value;

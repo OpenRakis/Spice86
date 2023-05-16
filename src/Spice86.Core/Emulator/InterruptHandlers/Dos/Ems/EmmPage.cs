@@ -6,6 +6,10 @@ using Spice86.Core.Emulator.Memory;
 /// A representation of a logical EMM page.
 /// </summary>
 public class EmmPage {
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="size">The size of the emm page, in bytes.</param>
     public EmmPage(uint size) {
         PageMemory = new Ram(size);
     }

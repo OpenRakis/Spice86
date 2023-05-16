@@ -1,14 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Sound.PCSpeaker;
 
 using Spice86.Core.Backend.Audio;
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Sound;
 
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Emulates a PC speaker.
@@ -30,7 +26,7 @@ public sealed class InternalSpeaker : IDisposable {
     private readonly CancellationTokenSource _cancelGenerateWaveform = new();
     private int _currentPeriod;
 
-    private bool _disposed = false;
+    private bool _disposed;
 
     private Configuration Configuration { get; init; }
     /// <summary>
@@ -46,11 +42,18 @@ public sealed class InternalSpeaker : IDisposable {
     /// Gets the current frequency in Hz.
     /// </summary>
     private double Frequency => FrequencyFactor / _frequencyRegister;
+    
     /// <summary>
     /// Gets the current period in samples.
     /// </summary>
     private int PeriodInSamples => (int)(_outputSampleRate / Frequency);
 
+    /// <summary>
+    /// Reads a byte from the control register.
+    /// </summary>
+    /// <param name="port">The port number to read from</param>
+    /// <returns>The value from the control register</returns>
+    /// <exception cref="NotSupportedException">If the port number is not equal to 0x61</exception>
     public byte ReadByte(int port) {
         if (port == 0x61) {
             return (byte)_controlRegister;
@@ -58,6 +61,13 @@ public sealed class InternalSpeaker : IDisposable {
 
         throw new NotSupportedException();
     }
+    
+    /// <summary>
+    /// Writes a byte either to the control register or the frequency register
+    /// </summary>
+    /// <param name="port">The port number to write to.</param>
+    /// <param name="value">The value being written.</param>
+    /// <exception cref="NotSupportedException">If the port number is not recognized.</exception>
     public void WriteByte(int port, byte value) {
         if (port == 0x61) {
             SpeakerControl oldValue = _controlRegister;
@@ -72,6 +82,7 @@ public sealed class InternalSpeaker : IDisposable {
         }
     }
 
+    /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
@@ -161,8 +172,8 @@ public sealed class InternalSpeaker : IDisposable {
         }
         FillWithSilence(player);
 
-        byte[]? buffer = new byte[4096];
-        byte[]? writeBuffer = buffer;
+        byte[] buffer = new byte[4096];
+        byte[] writeBuffer = buffer;
         bool expandToStereo = false;
         if (player.Format.Channels == 2) {
             writeBuffer = new byte[buffer.Length * 2];
@@ -189,7 +200,7 @@ public sealed class InternalSpeaker : IDisposable {
                 GenerateSilence(buffer);
                 idleCount = 0;
             } else {
-                float[]? floatArray = new float[buffer.Length];
+                float[] floatArray = new float[buffer.Length];
 
                 for (int i = 0; i < buffer.Length; i++) {
                     floatArray[i] = buffer[i];
@@ -208,7 +219,7 @@ public sealed class InternalSpeaker : IDisposable {
     }
 
     private static void FillWithSilence(AudioPlayer player) {
-        float[]? buffer = new float[4096];
+        float[] buffer = new float[4096];
         Span<float> span = buffer.AsSpan();
 
         while (player.WriteData(span) > 0) {

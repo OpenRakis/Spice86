@@ -26,6 +26,6 @@ internal partial class PaletteWindow : Window {
             Owner = desktop.MainWindow;
         }
 
-        this.DataContext = paletteViewModel;
+        DataContext = paletteViewModel;
     }
 }
