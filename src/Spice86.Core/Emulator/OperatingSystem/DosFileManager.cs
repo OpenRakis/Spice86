@@ -615,8 +615,7 @@ public class DosFileManager {
 
         string fileToProcess = ConvertUtils.ToSlashPath(caseInsensitivePath);
         string? parentDir = Path.GetDirectoryName(fileToProcess);
-        string? fileNameOnFileSystem = GetActualCaseForFileName(caseInsensitivePath);
-        if (File.Exists(fileNameOnFileSystem) || Directory.Exists(fileNameOnFileSystem) ||
+        if (File.Exists(fileToProcess) || Directory.Exists(fileToProcess) ||
             (string.IsNullOrWhiteSpace(parentDir) == false && Directory.Exists(parentDir) && Directory.GetDirectories(parentDir).Length == 0)) {
             // file exists or root reached, no need to go further. Path found.
             return caseInsensitivePath;
@@ -630,7 +629,7 @@ public class DosFileManager {
 
         // Now that parent is for sure on the disk, let's find the current file
         try {
-            fileNameOnFileSystem = GetActualCaseForFileName(caseInsensitivePath);
+            string? fileNameOnFileSystem = GetActualCaseForFileName(caseInsensitivePath);
             if (string.IsNullOrWhiteSpace(fileNameOnFileSystem) == false) {
                 return fileNameOnFileSystem;
             }
