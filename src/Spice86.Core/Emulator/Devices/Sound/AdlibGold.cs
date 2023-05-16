@@ -16,6 +16,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Adlib Gold implementation, translated from DOSBox Staging code
@@ -125,19 +126,22 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         }
     }
 
-    [Union]
-    private partial record StereoProcessorSwitchFunctions {
+    [StructLayout(LayoutKind.Explicit)]
+    private struct StereoProcessorSwitchFunctions {
         public StereoProcessorSwitchFunctions(byte value) {
-            Data = value;
-            SourceSelector = value;
-            StereoMode = value;
+            data = value;
+            sourceSelector = value;
+            stereoMode = value;
         }
 
         public StereoProcessorSwitchFunctions() { }
 
-        public byte Data { get; set; }
-        public byte SourceSelector { get; set; }
-        public byte StereoMode { get; set; }
+        [FieldOffset(0)]
+        public byte data;
+        [FieldOffset(0)]
+        public byte sourceSelector;
+        [FieldOffset(0)]
+        public byte stereoMode;
     }
 
     private enum StereoProcessorStereoMode {
@@ -195,10 +199,10 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
             ControlWrite(StereoProcessorControlReg.Bass, ShelfFilter0DbValue);
             ControlWrite(StereoProcessorControlReg.Treble, ShelfFilter0DbValue);
             StereoProcessorSwitchFunctions sf = new() {
-                SourceSelector = (byte)StereoProcessorSourceSelector.Stereo1,
-                StereoMode = (byte)StereoProcessorStereoMode.LinearStereo
+                sourceSelector = (byte)StereoProcessorSourceSelector.Stereo1,
+                stereoMode = (byte)StereoProcessorStereoMode.LinearStereo
             };
-            ControlWrite(StereoProcessorControlReg.SwitchFunctions, sf.Data);
+            ControlWrite(StereoProcessorControlReg.SwitchFunctions, sf.data);
         }
 
         public void ControlWrite(
@@ -275,8 +279,8 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
 
                 case StereoProcessorControlReg.SwitchFunctions: {
                         var sf = new StereoProcessorSwitchFunctions(data);
-                        _sourceSelector = (StereoProcessorSourceSelector)sf.SourceSelector;
-                        _stereoMode = (StereoProcessorStereoMode)sf.StereoMode;
+                        _sourceSelector = (StereoProcessorSourceSelector)sf.sourceSelector;
+                        _stereoMode = (StereoProcessorStereoMode)sf.stereoMode;
                         _loggerService.Debug("ADLIBGOLD: Stereo: Source selector set to {SourceSelector}, stereo mode set to {StereoMode}",
                             (int)(_sourceSelector),
                             (int)(_stereoMode));
@@ -353,12 +357,16 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         }
     }
 
-    [Union]
-    private partial record SurroundControlReg {
-        public byte Data { get; set; }
-        public byte Din { get; set; }
-        public byte Sci { get; set; }
-        public byte A0 { get; set; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SurroundControlReg {
+        [FieldOffset(0)]
+        public byte data;
+        [FieldOffset(0)]
+        public byte din;
+        [FieldOffset(0)]
+        public byte sci;
+        [FieldOffset(0)]
+        public byte a0;
     }
 
     /// <summary>
@@ -395,14 +403,14 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
 
         public void ControlWrite(byte val) {
             SurroundControlReg reg = new() {
-                Data = val,
-                A0 = val,
-                Din = val,
-                Sci = val
+                data = val,
+                a0 = val,
+                din = val,
+                sci = val
             };
 
             // Change register data at the falling edge of 'a0' word clock
-            if (_ctrlState.A0 == 1 && reg.A0 == 0) {
+            if (_ctrlState.A0 == 1 && reg.a0 == 0) {
                 //		_logger.Debug("ADLIBGOLD: Surround: Write
                 // control register %d, data: %d",
                 // control_state.addr, control_state.data);
@@ -412,20 +420,20 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
                 // Data is sent in serially through 'din' in MSB->LSB order,
                 // synchronised by the 'sci' bit clock. Data should be read on
                 // the rising edge of 'sci'.
-                if (_ctrlState.Sci == 0 && reg.Sci == 1) {
+                if (_ctrlState.Sci == 0 && reg.sci == 1) {
                     // The 'a0' word clock determines the type of the data.
-                    if (reg.A0 == 1) {
+                    if (reg.a0 == 1) {
                         // Data cycle
-                        _ctrlState.Data = (byte)((_ctrlState.Data << 1) | reg.Din);
+                        _ctrlState.Data = (byte)((_ctrlState.Data << 1) | reg.din);
                     } else {
                         // Address cycle
-                        _ctrlState.Addr = (byte)((_ctrlState.Addr << 1) | reg.Din);
+                        _ctrlState.Addr = (byte)((_ctrlState.Addr << 1) | reg.din);
                     }
                 }
             }
 
-            _ctrlState.Sci = reg.Sci;
-            _ctrlState.A0 = reg.A0;
+            _ctrlState.Sci = reg.sci;
+            _ctrlState.A0 = reg.a0;
         }
     }
 }

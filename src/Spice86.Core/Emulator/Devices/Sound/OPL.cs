@@ -1,9 +1,9 @@
-using Dunet;
+namespace Spice86.Core.Emulator.Devices.Sound;
+
+using System.Runtime.InteropServices;
 
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 using Spice86.Core.Emulator.VM;
-
-namespace Spice86.Core.Emulator.Devices.Sound;
 
 public enum Mode {
     Opl2, DualOpl2, Opl3, Opl3Gold
@@ -207,10 +207,16 @@ public class OPL {
     private const int _defaultVolume = 0xff;
 
 
-    [Union]
-    private partial record Reg {
-        public byte Normal { get; set; }
-        public byte[] Dual { get; set; } = new byte[2];
+    [StructLayout(LayoutKind.Explicit)]
+    private struct Reg {
+        [FieldOffset(0)]
+        public byte normal; 
+        [FieldOffset(0)]
+        public byte[] dual;
+
+        public Reg() {
+            dual = new byte[2];
+        }
     }
 
     private Reg _reg = new();
