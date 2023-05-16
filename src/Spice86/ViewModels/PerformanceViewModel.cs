@@ -102,7 +102,7 @@ public partial class PerformanceViewModel : ObservableObject {
 
         CpuHistoryDataPoints.Add(new Measurement()
         {
-            Time = CpuHistoryDataPoints.Count + 1,
+            Number = CpuHistoryDataPoints.Count + 1,
             Value = InstructionsPerSecond
         });
 

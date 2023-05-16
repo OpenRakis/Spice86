@@ -28,7 +28,18 @@ public sealed class LatchedUInt16 {
     /// </summary>
     public event EventHandler? ValueChanged;
 
-    public static implicit operator ushort(LatchedUInt16 value) => value == null ? (ushort)0 : value._value;
+    /// <summary>
+    /// Implicitly converts a LatchedUInt16 to ushort by returning the underlying value if not null, otherwise returns 0.
+    /// </summary>
+    /// <param name="value">The LatchedUInt16 object to convert.</param>
+    /// <returns>The underlying ushort value of the LatchedUInt16 object, or 0 if the object is null.</returns>
+    public static implicit operator ushort(LatchedUInt16 value) => value._value;
+    
+    /// <summary>
+    /// Implicitly converts a ushort to a LatchedUInt16 object by wrapping it in a new LatchedUInt16 instance.
+    /// </summary>
+    /// <param name="value">The ushort value to convert to a LatchedUInt16 object.</param>
+    /// <returns>A new LatchedUInt16 object wrapping the specified ushort value.</returns>
     public static implicit operator LatchedUInt16(ushort value) => new(value);
 
     /// <summary>

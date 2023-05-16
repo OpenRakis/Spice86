@@ -69,6 +69,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public override ushort? InterruptHandlerSegment => 0xF100;
 
+    /// <inheritdoc />
     public override byte Index => 0x67;
 
     private readonly ILogger _loggerService;
@@ -93,6 +94,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public IDictionary<int, EmmHandle> EmmHandles { get; } = new Dictionary<int, EmmHandle>();
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService;
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
@@ -128,11 +134,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _dispatchTable.Add(0x53, new Callback(0x53, GetSetHandleName));
         _dispatchTable.Add(0x59, new Callback(0x59, GetExpandedMemoryHardwareInformation));
     }
-    
+
+    /// <inheritdoc />
     public override void Run() {
         byte operation = _state.AH;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose))
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, _state.AL);
+        }
+
         if (!_dispatchTable.ContainsKey(operation)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("EMS function not provided: {@Function}", operation);
@@ -183,6 +192,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Gets the number of pages available.
+    /// </summary>
+    /// <returns>The number of pages available.</returns>
     public ushort GetFreePageCount() {
         return (ushort) Math.Max(0, EmmMemory.TotalPages - EmmHandles.SelectMany(static x => x.Value.LogicalPages).Count());
     }

@@ -11,6 +11,11 @@ namespace Spice86.Core.Emulator.CPU.Exceptions;
 /// is segment related. Otherwise, 0. 
 /// </summary>
 public class CpuGeneralProtectionFaultException : CpuException {
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="message">The message describing the error.</param>
+    /// <param name="errorCode">Some exceptions may have an error code pushed on the stack.</param>
     public CpuGeneralProtectionFaultException(string message, ushort errorCode = 0)
         : base(message, 0x0D, CpuExceptionType.Fault, "#GP", errorCode) {
     }

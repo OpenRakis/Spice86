@@ -1,8 +1,10 @@
 ﻿namespace Spice86.Core;
 
-using System;
 using System.Collections.Generic;
 
+/// <summary>
+/// A set of extension methods for <see cref="IDictionary{TKey,TValue}"/>
+/// </summary>
 internal static class DictionaryExtensions {
     /// <summary>
     /// Like "GetValueOrDefault" but adds the value to the dict if not found.<br/>

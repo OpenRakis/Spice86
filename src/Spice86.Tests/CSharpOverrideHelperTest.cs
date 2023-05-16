@@ -14,6 +14,7 @@ using Xunit;
 using Moq;
 
 using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 
 public class CSharpOverrideHelperTest {
     private readonly Mock<ILoggerService> _loggerServiceMock = new();

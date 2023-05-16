@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -16,9 +15,16 @@ public class GravisUltraSound : DefaultIOPortHandler {
     private const int RegisterControls = 0x24F;
     private const int TimerControlRegister = 0x248;
 
+    /// <summary>
+    /// Initializes a new instance of the Gravis Ultrasound sound card.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="loggerService">The logger service impelementation.</param>
     public GravisUltraSound(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
     }
 
+    /// <inhheritdoc/>
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(MixControlRegister, this);
         ioPortDispatcher.AddIOPortHandler(ReadDataOrTriggerStatus, this);

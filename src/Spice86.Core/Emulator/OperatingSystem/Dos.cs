@@ -14,22 +14,64 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Represents the DOS kernel.
+/// </summary>
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;
     private readonly Machine _machine;
     private readonly ILoggerService _logger;
+    
+    /// <summary>
+    /// Gets the INT 20h DOS services.
+    /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
+
+    /// <summary>
+    /// Gets the INT 21h DOS services.
+    /// </summary>
     public DosInt21Handler DosInt21Handler { get; }
+
+    /// <summary>
+    /// Gets the INT 2Fh DOS services.
+    /// </summary>
     public DosInt2fHandler DosInt2FHandler { get; }
 
+    /// <summary>
+    /// Gets the list of virtual devices.
+    /// </summary>
     public readonly List<IVirtualDevice> Devices = new();
+
+    /// <summary>
+    /// Gets or sets the current clock device.
+    /// </summary>
     public CharacterDevice CurrentClockDevice { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the current console device.
+    /// </summary>
     public CharacterDevice CurrentConsoleDevice { get; set; } = null!;
+
+    /// <summary>
+    /// Gets the DOS memory manager.
+    /// </summary>
     public DosMemoryManager MemoryManager { get; }
+
+    /// <summary>
+    /// Gets the DOS file manager.
+    /// </summary>
     public DosFileManager FileManager { get; }
-    
+
+    /// <summary>
+    /// Gets the global DOS memory structures.
+    /// </summary>
     public DosTables DosTables { get; } = new();
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="logger">The logger service implementation.</param>
     public Dos(Machine machine, ILoggerService logger) {
         _machine = machine;
         _logger = logger;
@@ -40,7 +82,7 @@ public class Dos {
         DosInt2FHandler = new DosInt2fHandler(_machine, _logger);
     }
 
-    public void Initialize() {
+    internal void Initialize() {
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("Initializing DOS");
         }

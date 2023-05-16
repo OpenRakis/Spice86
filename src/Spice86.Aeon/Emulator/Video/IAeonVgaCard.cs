@@ -1,5 +1,10 @@
 namespace Spice86.Aeon.Emulator.Video;
 
+using Spice86.Aeon.Emulator.Video.Modes;
+
+/// <summary>
+/// The VGA card interface, lifted from the Aeon DOS emulator.
+/// </summary>
 public interface IAeonVgaCard {
     /// <summary>
     /// Gets the VGA DAC.

@@ -6,7 +6,7 @@ using System.Threading;
 /// <summary>
 /// Stores bytes of data in a circular buffer.
 /// </summary>
-internal sealed class CircularBuffer {
+public sealed class CircularBuffer {
     private readonly byte[] _data;
     private readonly int _sizeMask;
     private volatile int _readPosition;

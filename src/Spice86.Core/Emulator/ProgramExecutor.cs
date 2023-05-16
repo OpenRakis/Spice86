@@ -1,33 +1,24 @@
-﻿using Spice86.Logging;
-
-namespace Spice86.Core.Emulator;
+﻿namespace Spice86.Core.Emulator;
 
 using Function.Dump;
-
-using Serilog;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.LoadableFile;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.LoadableFile.Dos.Com;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Shared.Interfaces;
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Security.Cryptography;
 using System.Diagnostics;
 
 using Spice86.Core.CLI;
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -41,15 +32,27 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly GdbServer? _gdbServer;
     private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="ProgramExecutor"/>
+    /// </summary>
+    /// <param name="loggerService">The logging service to use. Provided via DI.</param>
+    /// <param name="gui">The GUI to use for user actions. Can be null for headless mode or unit tests.</param>
+    /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     public ProgramExecutor(ILoggerService loggerService, IGui? gui, Configuration configuration) {
         _loggerService = loggerService;
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _configuration = configuration;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer();
     }
 
+    /// <summary>
+    /// The emulator machine.
+    /// </summary>
     public Machine Machine { get; private set; }
 
+    /// <summary>
+    /// Begins the emulation process.
+    /// </summary>
     public void Run() {
         _gdbServer?.StartServerAndWait();
         Machine.Run();
@@ -60,6 +63,7 @@ public sealed class ProgramExecutor : IDisposable {
         }
     }
 
+    /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
@@ -84,17 +88,12 @@ public sealed class ProgramExecutor : IDisposable {
             return;
         }
 
-        try {
-            byte[] actualHash = SHA256.HashData(file);
+        byte[] actualHash = SHA256.HashData(file);
 
-            if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
-                string error =
-                    $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
-                throw new UnrecoverableException(error);
-            }
-        } catch (UnauthorizedAccessException e) {
-            e.Demystify();
-            throw new UnrecoverableException("Executable file hash calculation failed", e);
+        if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
+            string error =
+                $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
+            throw new UnrecoverableException(error);
         }
     }
 

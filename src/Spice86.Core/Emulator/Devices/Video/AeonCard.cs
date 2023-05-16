@@ -17,6 +17,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -434,7 +435,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
                 break;
 
             default:
-                _loggerService.Error("Video command {0:X2}, BL={1:X2}h not implemented.", Functions.EGA, _state.BL);
+                _loggerService.Error("Video command {0:X2}, BL={1:X2}h not implemented", Functions.EGA, _state.BL);
                 break;
         }
     }
@@ -544,7 +545,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Reads DAC color registers to emulated RAM.
+    /// Reads DAC color registers to emulated RAM.
     /// </summary>
     private void ReadDacRegisters() {
         ushort segment = _state.ES;
@@ -564,7 +565,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Sets DAC color registers to values in emulated RAM.
+    /// Sets DAC color registers to values in emulated RAM.
     /// </summary>
     private void SetDacRegisters() {
         ushort segment = _state.ES;
@@ -582,7 +583,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Sets all of the EGA color palette registers to values in emulated RAM.
+    /// Sets all of the EGA color palette registers to values in emulated RAM.
     /// </summary>
     private void SetAllEgaPaletteRegisters() {
         ushort segment = _state.ES;
@@ -593,7 +594,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Gets a specific EGA color palette register.
+    /// Gets a specific EGA color palette register.
     /// </summary>
     /// <param name="index">Index of color to set.</param>
     /// <param name="color">New value of the color.</param>
@@ -613,7 +614,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
 
     public void WriteTextInTeletypeMode() {
         byte chr = _state.AL;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Write Text in Teletype Mode ascii code {@AsciiCode}, chr {@Character}", ConvertUtils.ToHex(chr), ConvertUtils.ToChar(chr));
         }
         Console.Out.Write(ConvertUtils.ToChar(chr));
@@ -740,8 +741,9 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     private void InternalDispose() {
         if (!_disposed) {
             unsafe {
-                if (VideoRam != IntPtr.Zero)
+                if (VideoRam != IntPtr.Zero) {
                     NativeMemory.Free(VideoRam.ToPointer());
+                }
             }
 
             _disposed = true;
@@ -749,7 +751,7 @@ public class AeonCard : DefaultIOPortHandler, IVideoCard, IAeonVgaCard, IDisposa
     }
 
     /// <summary>
-    ///   Initializes a new display mode.
+    /// Initializes a new display mode.
     /// </summary>
     /// <param name="mode">New display mode.</param>
     public void SetDisplayMode(VideoMode mode) {

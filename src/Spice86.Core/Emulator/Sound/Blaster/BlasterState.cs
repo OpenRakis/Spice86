@@ -3,7 +3,7 @@
 /// <summary>
 /// Specifies the current state of the DSP command processor.
 /// </summary>
-internal enum BlasterState {
+public enum BlasterState {
     /// <summary>
     /// The DSP is ready to receive a command.
     /// </summary>

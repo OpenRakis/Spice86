@@ -1,26 +1,22 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
-
-using Serilog.Events;
-
 using Spice86.Shared.Utils;
-
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
@@ -33,6 +29,14 @@ public class GdbCustomCommandsHandler {
     private readonly Machine _machine;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="gdbIo">The GDB I/O handler.</param>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
+    /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
     public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
@@ -42,7 +46,13 @@ public class GdbCustomCommandsHandler {
         _recordedDataWriter = new RecorderDataWriter(recordedDataDirectory, machine, _loggerService);
     }
 
-    public virtual string HandleCustomCommands(string command) {
+    
+    /// <summary>
+    /// Handles a custom command passed from GDB.
+    /// </summary>
+    /// <param name="command">The command string passed from GDB.</param>
+    /// <returns>A response string to be sent back to GDB.</returns>
+    public string HandleCustomCommands(string command) {
         string[] commandSplit = command.Split(",");
         if (commandSplit.Length != 2) {
             return _gdbIo.GenerateResponse("");
@@ -83,7 +93,7 @@ public class GdbCustomCommandsHandler {
             long cyclesBreak = currentCycles + cyclesToWait;
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
             _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
             }
 
@@ -102,7 +112,7 @@ public class GdbCustomCommandsHandler {
             uint ip = ConvertUtils.ParseHex32(args[2]);
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
             _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added for cs:ip!\n@{@BreakPoint}", breakPoint);
             }
 
@@ -116,7 +126,7 @@ public class GdbCustomCommandsHandler {
     private string BreakStop() {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
         _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint added for end of execution!@\n{@BreakPoint}", breakPoint);
         }
 
@@ -133,7 +143,7 @@ public class GdbCustomCommandsHandler {
             fileNameConsumer.Invoke(fileName);
         } catch (IOException e) {
             e.Demystify();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "{ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
             }
 

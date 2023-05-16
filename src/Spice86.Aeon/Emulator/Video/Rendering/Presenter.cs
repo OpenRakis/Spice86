@@ -1,125 +1,123 @@
-namespace Spice86.Aeon.Emulator.Video.Rendering
+namespace Spice86.Aeon.Emulator.Video.Rendering;
+
+using Spice86.Aeon.Emulator.Video.Modes;
+
+/// <summary>
+/// Renders emulated video RAM data to a bitmap.
+/// </summary>
+public abstract class Presenter : IDisposable
 {
+    private Scaler? scaler;
+    private MemoryBitmap? internalBuffer;
+    private readonly object syncLock = new();
+    private bool disposed;
+
     /// <summary>
-    /// Renders emulated video RAM data to a bitmap.
+    /// Initializes a new instance of the <see cref="Presenter"/> class.
     /// </summary>
-    public abstract class Presenter : IDisposable
+    /// <param name="videoMode"><see cref="Modes.VideoMode"/> instance describing the video mode.</param>
+    protected Presenter(VideoMode videoMode)
     {
-        private Scaler? scaler;
-        private MemoryBitmap? internalBuffer;
-        private readonly object syncLock = new();
-        private bool disposed;
+        VideoMode = videoMode;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Presenter"/> class.
-        /// </summary>
-        /// <param name="videoMode"><see cref="Video.VideoMode"/> instance describing the video mode.</param>
-        protected Presenter(VideoMode videoMode)
+    /// <summary>
+    /// Gets or sets the scaler used on the output.
+    /// </summary>
+    public ScalingAlgorithm Scaler
+    {
+        get
         {
-            VideoMode = videoMode;
-        }
-
-        /// <summary>
-        /// Gets or sets the scaler used on the output.
-        /// </summary>
-        public ScalingAlgorithm Scaler
-        {
-            get
+            return scaler switch
             {
-                return scaler switch
-                {
-                    Scale2x => ScalingAlgorithm.Scale2x,
-                    Scale3x => ScalingAlgorithm.Scale3x,
-                    _ => ScalingAlgorithm.None
-                };
+                Scale2x => ScalingAlgorithm.Scale2x,
+                Scale3x => ScalingAlgorithm.Scale3x,
+                _ => ScalingAlgorithm.None
+            };
+        }
+        set
+        {
+            if (Scaler == value) {
+                return;
             }
-            set
+
+            if (value != ScalingAlgorithm.None && internalBuffer == null)
             {
-                if (Scaler == value)
-                    return;
-
-                if (value != ScalingAlgorithm.None && internalBuffer == null)
-                {
-                    internalBuffer = new MemoryBitmap(VideoMode.PixelWidth, VideoMode.PixelHeight);
-                }
-                else
-                {
-                    internalBuffer?.Dispose();
-                    internalBuffer = null;
-                }
-
-                scaler = value switch
-                {
-                    ScalingAlgorithm.Scale2x => new Scale2x(VideoMode.PixelWidth, VideoMode.PixelHeight),
-                    ScalingAlgorithm.Scale3x => new Scale3x(VideoMode.PixelWidth, VideoMode.PixelHeight),
-                    _ => null
-                };
+                internalBuffer = new MemoryBitmap(VideoMode.PixelWidth, VideoMode.PixelHeight);
             }
-        }
-        /// <summary>
-        /// Gets the required pixel width of the render target.
-        /// </summary>
-        public int TargetWidth => scaler?.TargetWidth ?? VideoMode.PixelWidth;
-        /// <summary>
-        /// Gets the required pixel height of the render target.
-        /// </summary>
-        public int TargetHeight {
-            get => scaler?.TargetHeight ?? VideoMode.PixelHeight;
-        }
-
-        /// <summary>
-        /// Gets the width ratio of the output if a scaler is being used; otherwise 1.
-        /// </summary>
-        public int WidthRatio => scaler?.WidthRatio ?? 1;
-        /// <summary>
-        /// Gets the height ratio of the output if a scaler is being used; otherwise 1.
-        /// </summary>
-        public int HeightRatio => scaler?.HeightRatio ?? 1;
-
-        public TimeSpan RenderTime { get; private set; }
-        public TimeSpan ScalerTime { get; private set; }
-
-        /// <summary>
-        /// Gets information about the video mode.
-        /// </summary>
-        protected VideoMode VideoMode { get; }
-
-        /// <summary>
-        /// Updates the bitmap to match the current state of the video RAM.
-        /// </summary>
-        public void Update(nint destination)
-        {
-            lock (syncLock)
+            else
             {
-                if (scaler == null)
-                {
-                    DrawFrame(destination);
-                }
-                else
-                {
-                    DrawFrame(internalBuffer!.PixelBuffer);
-                    scaler.Apply(internalBuffer.PixelBuffer, destination);
-                }
+                internalBuffer?.Dispose();
+                internalBuffer = null;
+            }
+
+            scaler = value switch
+            {
+                ScalingAlgorithm.Scale2x => new Scale2x(VideoMode.PixelWidth, VideoMode.PixelHeight),
+                ScalingAlgorithm.Scale3x => new Scale3x(VideoMode.PixelWidth, VideoMode.PixelHeight),
+                _ => null
+            };
+        }
+    }
+    /// <summary>
+    /// Gets the required pixel width of the render target.
+    /// </summary>
+    public int TargetWidth => scaler?.TargetWidth ?? VideoMode.PixelWidth;
+    /// <summary>
+    /// Gets the required pixel height of the render target.
+    /// </summary>
+    public int TargetHeight {
+        get => scaler?.TargetHeight ?? VideoMode.PixelHeight;
+    }
+
+    /// <summary>
+    /// Gets the width ratio of the output if a scaler is being used; otherwise 1.
+    /// </summary>
+    public int WidthRatio => scaler?.WidthRatio ?? 1;
+    /// <summary>
+    /// Gets the height ratio of the output if a scaler is being used; otherwise 1.
+    /// </summary>
+    public int HeightRatio => scaler?.HeightRatio ?? 1;
+
+    /// <summary>
+    /// Gets information about the video mode.
+    /// </summary>
+    protected VideoMode VideoMode { get; }
+
+    /// <summary>
+    /// Updates the bitmap to match the current state of the video RAM.
+    /// </summary>
+    public void Update(nint destination)
+    {
+        lock (syncLock)
+        {
+            if (scaler == null)
+            {
+                DrawFrame(destination);
+            }
+            else
+            {
+                DrawFrame(internalBuffer!.PixelBuffer);
+                scaler.Apply(internalBuffer.PixelBuffer, destination);
             }
         }
+    }
 
-        public virtual MemoryBitmap? Dump() => null;
+    /// <summary>
+    /// Updates the bitmap to match the current state of the video RAM.
+    /// </summary>
+    protected abstract void DrawFrame(IntPtr destination);
 
-        /// <summary>
-        /// Updates the bitmap to match the current state of the video RAM.
-        /// </summary>
-        protected abstract void DrawFrame(IntPtr destination);
-
-        public void Dispose()
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        lock (syncLock)
         {
-            lock (syncLock)
+            if (!disposed)
             {
-                if (!disposed)
-                {
-                    internalBuffer?.Dispose();
-                    disposed = true;
-                    GC.SuppressFinalize(this);
-                }
+                internalBuffer?.Dispose();
+                disposed = true;
+                GC.SuppressFinalize(this);
             }
         }
     }

@@ -71,13 +71,15 @@ public sealed class PortAudioEngine : IAudioEngine {
         }
     }
 
+    /// <summary>
+    /// Releases the native library (PortAudio)
+    /// </summary>
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 
-    /// <inheritdoc />
     private void Dispose(bool disposing) {
         if(!_disposed) {
             if(disposing) {

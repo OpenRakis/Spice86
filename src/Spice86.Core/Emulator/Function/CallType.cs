@@ -1,5 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 
+using Spice86.Core.Emulator.CPU;
+
+/// <summary>
+/// All the call conventions supported by the <see cref="Cpu"/>
+/// </summary>
 public enum CallType {
     /// <summary> For this call, only IP is on the stack </summary>
     NEAR,

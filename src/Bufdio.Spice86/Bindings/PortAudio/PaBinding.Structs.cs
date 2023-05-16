@@ -1,9 +1,9 @@
 ﻿namespace Bufdio.Spice86.Bindings.PortAudio;
+
 using System;
 using System.Runtime.InteropServices;
 
-internal static partial class PaBinding
-{
+internal static partial class PaBinding {
     [StructLayout(LayoutKind.Sequential)]
     public struct PaStreamParameters
     {
@@ -15,8 +15,7 @@ internal static partial class PaBinding
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public readonly struct PaDeviceInfo
-    {
+    public readonly struct PaDeviceInfo {
         public readonly int structVersion;
 
         [MarshalAs(UnmanagedType.LPStr)]

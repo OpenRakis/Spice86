@@ -5,21 +5,30 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
+/// <summary>
+/// BIOS interrupt 10h handler
+/// </summary>
 public class VideoBiosInt10Handler : InterruptHandler {
     private readonly IVgaInterrupts _vgaCard;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="vgaCard">The VGA implementation.</param>
     public VideoBiosInt10Handler(Machine machine, ILoggerService loggerService, IVgaInterrupts vgaCard) : base(machine, loggerService) {
         _vgaCard = vgaCard;
         FillDispatchTable();
     }
 
     /// <summary>
-    ///   The interrupt vector this class handles.
+    /// The interrupt vector this class handles.
     /// </summary>
     public override byte Index => 0x10;
 
     /// <summary>
-    ///   Runs the specified video BIOS function.
+    /// Runs the specified video BIOS function.
     /// </summary>
     public override void Run() {
         byte operation = _state.AH;
@@ -48,8 +57,14 @@ public class VideoBiosInt10Handler : InterruptHandler {
         _dispatchTable.Add(0x1B, new Callback(0x1B, GetFunctionalityInfo));
     }
 
+    /// <summary>
+    /// Change current video mode to any VGA mode.
+    /// </summary>
     public void SetVideoMode() => _vgaCard.SetVideoMode();
 
+    /// <summary>
+    /// Set text-mode cursor shape
+    /// </summary>
     public void SetCursorType() => _vgaCard.SetCursorType();
 
     public void SetCursorPosition() => _vgaCard.SetCursorPosition();

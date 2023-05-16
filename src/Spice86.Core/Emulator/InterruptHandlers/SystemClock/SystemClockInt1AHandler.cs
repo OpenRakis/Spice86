@@ -1,17 +1,14 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
-
+﻿
 namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
-
-using Serilog;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Implementation of int1A.
+/// Implementation of INT1A.
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
     private readonly ILoggerService _loggerService;
@@ -29,6 +26,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         _dispatchTable.Add(0x85, new Callback(0x85, TandySoundSystemUnhandled));
     }
 
+    /// <inheritdoc />
     public override byte Index => 0x1A;
 
     public void GetSystemClockCounter() {
@@ -43,6 +41,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         _state.DX = (ushort)value;
     }
 
+    /// <inheritdoc />
     public override void Run() {
         byte operation = _state.AH;
         Run(operation);

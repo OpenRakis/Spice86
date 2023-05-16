@@ -1,17 +1,16 @@
-namespace Spice86.Aeon.Emulator.Video
+namespace Spice86.Aeon.Emulator.Video.Modes; 
+
+/// <summary>
+/// Specifies whether a video mode is text-only or graphical.
+/// </summary>
+public enum VideoModeType
 {
     /// <summary>
-    /// Specifies whether a video mode is text-only or graphical.
+    /// The video mode is text-only.
     /// </summary>
-    public enum VideoModeType
-    {
-        /// <summary>
-        /// The video mode is text-only.
-        /// </summary>
-        Text,
-        /// <summary>
-        /// The video mode is graphical.
-        /// </summary>
-        Graphics
-    }
+    Text,
+    /// <summary>
+    /// The video mode is graphical.
+    /// </summary>
+    Graphics
 }

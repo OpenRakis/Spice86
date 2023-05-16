@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// Base class for ADPCM decoders.
 /// </summary>
-internal abstract class ADPCMDecoder {
+public abstract class ADPCMDecoder {
     /// <summary>
     /// The current step value.
     /// </summary>

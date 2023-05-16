@@ -1,45 +1,41 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
-using System;
-using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Emulates a YMF262 OPL3 device.
 /// </summary>
-public sealed class FmSynthesizer
-{
-    private const double tremoloDepth0 = -1;
-    private const double tremoloDepth1 = -4.8;
-    private readonly double tremoloIncrement0;
-    private readonly double tremoloIncrement1;
-    private readonly int tremoloTableLength;
+public sealed class FmSynthesizer {
+    private const double TremoloDepth0 = -1;
+    private const double TremoloDepth1 = -4.8;
+    private readonly double _tremoloIncrement0;
+    private readonly double _tremoloIncrement1;
+    private readonly int _tremoloTableLength;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FmSynthesizer"/> class.
     /// </summary>
     /// <param name="sampleRate">Sample rate in Hz of the generated waveform data.</param>
-    public FmSynthesizer(int sampleRate = 44100)
-    {
+    public FmSynthesizer(int sampleRate = 44100) {
         if (sampleRate < 1000) {
             throw new ArgumentOutOfRangeException(nameof(sampleRate));
         }
 
         SampleRate = sampleRate;
 
-        tremoloTableLength = (int)(sampleRate / TremoloFrequency);
-        tremoloIncrement0 = CalculateIncrement(tremoloDepth0, 0, 1 / (2 * TremoloFrequency));
-        tremoloIncrement1 = CalculateIncrement(tremoloDepth1, 0, 1 / (2 * TremoloFrequency));
+        _tremoloTableLength = (int)(sampleRate / TremoloFrequency);
+        _tremoloIncrement0 = CalculateIncrement(TremoloDepth0, 0, 1 / (2 * TremoloFrequency));
+        _tremoloIncrement1 = CalculateIncrement(TremoloDepth1, 0, 1 / (2 * TremoloFrequency));
 
         InitializeOperators();
-        InitializeChannels2op();
-        InitializeChannels4op();
+        InitializeChannels2Op();
+        InitializeChannels4Op();
         InitializeChannels();
-        highHatOperator = new Operators.HighHat(this);
-        tomTomOperator = new Operators.Operator(0x12, this);
-        topCymbalOperator = new Operators.TopCymbal(this);
-        bassDrumChannel = new Channels.BassDrum(this);
-        snareDrumOperator = new Operators.SnareDrum(this);
-        highHatSnareDrumChannel = new Channels.RhythmChannel(7, highHatOperator, snareDrumOperator, this);
-        tomTomTopCymbalChannel = new Channels.RhythmChannel(8, tomTomOperator, topCymbalOperator, this);
+        HighHatOperator = new Operators.HighHat(this);
+        TomTomOperator = new Operators.Operator(0x12, this);
+        TopCymbalOperator = new Operators.TopCymbal(this);
+        _bassDrumChannel = new Channels.BassDrum(this);
+        SnareDrumOperator = new Operators.SnareDrum(this);
+        _highHatSnareDrumChannel = new Channels.RhythmChannel(7, HighHatOperator, SnareDrumOperator, this);
+        _tomTomTopCymbalChannel = new Channels.RhythmChannel(8, TomTomOperator, TopCymbalOperator, this);
     }
 
     /// <summary>
@@ -51,8 +47,7 @@ public sealed class FmSynthesizer
     /// Fills <paramref name="buffer"/> with 16-bit mono samples.
     /// </summary>
     /// <param name="buffer">Buffer to fill with 16-bit waveform data.</param>
-    public void GetData(Span<short> buffer)
-    {
+    public void GetData(Span<short> buffer) {
         for (int i = 0; i < buffer.Length; i++) {
             buffer[i] = (short)(GetNextSample() * 32767);
         }
@@ -61,8 +56,7 @@ public sealed class FmSynthesizer
     /// Fills <paramref name="buffer"/> with 32-bit mono samples.
     /// </summary>
     /// <param name="buffer">Buffer to fill with 32-bit waveform data.</param>
-    public void GetData(Span<float> buffer)
-    {
+    public void GetData(Span<float> buffer) {
         for (int i = 0; i < buffer.Length; i++) {
             buffer[i] = (float)GetNextSample();
         }
@@ -74,8 +68,7 @@ public sealed class FmSynthesizer
     /// <param name="array">Register array (may be 0 or 1).</param>
     /// <param name="address">Register address in the range 0-0x200.</param>
     /// <param name="value">Register value.</param>
-    public void SetRegisterValue(int array, int address, int value)
-    {
+    public void SetRegisterValue(int array, int address, int value) {
         // The OPL3 has two registers arrays, each with adresses ranging
         // from 0x00 to 0xF5.
         // This emulator uses one array, with the two original register arrays
@@ -86,7 +79,7 @@ public sealed class FmSynthesizer
             return;
         }
 
-        registers[registerAddress] = value;
+        Registers[registerAddress] = value;
         switch (address & 0xE0)
         {
             // The first 3 bits masking gives the type of the register by using its base address:
@@ -131,19 +124,19 @@ public sealed class FmSynthesizer
                 {
                     // If the address is in the second register array, adds 9 to the channel number.
                     // The channel number is given by the last four bits, like in A0,...,A8.
-                    channels[array, address & 0x0F].Update_2_KON1_BLOCK3_FNUMH2();
+                    _channels[array, address & 0x0F].Update_2_KON1_BLOCK3_FNUMH2();
                     break;
                 }
                 // 0xA0...0xA8 keeps fnum(l) for each channel.
                 if ((address & 0xF0) == 0xA0 && address <= 0xA8) {
-                    channels[array, address & 0x0F].Update_FNUML8();
+                    _channels[array, address & 0x0F].Update_FNUML8();
                 }
 
                 break;
             // 0xC0...0xC8 keeps cha,chb,chc,chd,fb,cnt for each channel:
             case 0xC0:
                 if (address <= 0xC8) {
-                    channels[array, address & 0x0F].Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
+                    _channels[array, address & 0x0F].Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
                 }
 
                 break;
@@ -151,31 +144,28 @@ public sealed class FmSynthesizer
             // Registers for each of the 36 Operators:
             default:
                 int operatorOffset = address & 0x1F;
-                if (operators[array, operatorOffset] == null) {
-                    break;
-                }
 
                 switch (address & 0xE0)
                 {
                     // 0x20...0x35 keeps am,vib,egt,ksr,mult for each operator:                
                     case 0x20:
-                        operators[array, operatorOffset].Update_AM1_VIB1_EGT1_KSR1_MULT4();
+                        _operators[array, operatorOffset].Update_AM1_VIB1_EGT1_KSR1_MULT4();
                         break;
                     // 0x40...0x55 keeps ksl,tl for each operator: 
                     case 0x40:
-                        operators[array, operatorOffset].Update_KSL2_TL6();
+                        _operators[array, operatorOffset].Update_KSL2_TL6();
                         break;
                     // 0x60...0x75 keeps ar,dr for each operator: 
                     case 0x60:
-                        operators[array, operatorOffset].Update_AR4_DR4();
+                        _operators[array, operatorOffset].Update_AR4_DR4();
                         break;
                     // 0x80...0x95 keeps sl,rr for each operator:
                     case 0x80:
-                        operators[array, operatorOffset].Update_SL4_RR4();
+                        _operators[array, operatorOffset].Update_SL4_RR4();
                         break;
                     // 0xE0...0xF5 keeps ws for each operator:
                     case 0xE0:
-                        operators[array, operatorOffset].Update_5_WS3();
+                        _operators[array, operatorOffset].Update_5_WS3();
                         break;
                 }
                 break;
@@ -184,8 +174,7 @@ public sealed class FmSynthesizer
 
     internal double CalculateIncrement(double begin, double end, double period) => (end - begin) / SampleRate * (1 / period);
 
-    private double GetNextSample()
-    {
+    private double GetNextSample() {
         Span<double> channelOutput = stackalloc double[4];
 
         Span<double> outputBuffer = stackalloc double[4] { 0, 0, 0, 0 };
@@ -196,7 +185,7 @@ public sealed class FmSynthesizer
             for (int channelNumber = 0; channelNumber < 9; channelNumber++)
             {
                 // Reads output from each OPL3 channel, and accumulates it in the output buffer:
-                channels[array, channelNumber].GetChannelOutput(channelOutput);
+                _channels[array, channelNumber].GetChannelOutput(channelOutput);
                 for (int i = 0; i < channelOutput.Length; i++) {
                     outputBuffer[i] += channelOutput[i];
                 }
@@ -216,180 +205,161 @@ public sealed class FmSynthesizer
 
         // Advances the OPL3-wide vibrato index, which is used by 
         // PhaseGenerator.getPhase() in each Operator.
-        vibratoIndex++;
-        if (vibratoIndex >= VibratoGenerator.Length) {
-            vibratoIndex = 0;
+        VibratoIndex++;
+        if (VibratoIndex >= VibratoGenerator.Length) {
+            VibratoIndex = 0;
         }
         // Advances the OPL3-wide tremolo index, which is used by 
         // EnvelopeGenerator.getEnvelope() in each Operator.
-        tremoloIndex++;
-        if (tremoloIndex >= tremoloTableLength) {
-            tremoloIndex = 0;
+        TremoloIndex++;
+        if (TremoloIndex >= _tremoloTableLength) {
+            TremoloIndex = 0;
         }
 
         return (float)(output[0] + output[1] + output[2] + output[3]);
     }
 
-    internal double GetTremoloValue(int dam, int i)
-    {
-        if (i < tremoloTableLength / 2)
-        {
-            if (dam == 0) {
-                return tremoloDepth0 + (tremoloIncrement0 * i);
+    internal double GetTremoloValue(int damValue, int i) {
+        if (i < _tremoloTableLength / 2) {
+            if (damValue == 0) {
+                return TremoloDepth0 + (_tremoloIncrement0 * i);
             } else {
-                return tremoloDepth1 + (tremoloIncrement1 * i);
+                return TremoloDepth1 + (_tremoloIncrement1 * i);
             }
         }
-        else
-        {
-            if (dam == 0) {
-                return -tremoloIncrement0 * i;
+        else {
+            if (damValue == 0) {
+                return -_tremoloIncrement0 * i;
             } else {
-                return -tremoloIncrement1 * i;
+                return -_tremoloIncrement1 * i;
             }
         }
     }
-    private void InitializeOperators()
-    {
+    
+    private void InitializeOperators() {
         // The YMF262 has 36 operators:
-        for (int array = 0; array < 2; array++)
-        {
-            for (int group = 0; group <= 0x10; group += 8)
-            {
-                for (int offset = 0; offset < 6; offset++)
-                {
+        for (int array = 0; array < 2; array++) {
+            for (int group = 0; group <= 0x10; group += 8) {
+                for (int offset = 0; offset < 6; offset++) {
                     int baseAddress = (array << 8) | (group + offset);
-                    operators[array, group + offset] = new Operators.Operator(baseAddress, this);
+                    _operators[array, group + offset] = new Operators.Operator(baseAddress, this);
                 }
             }
         }
 
         // Save operators when they are in non-rhythm mode:
         // Channel 7:
-        highHatOperatorInNonRhythmMode = operators[0, 0x11];
-        snareDrumOperatorInNonRhythmMode = operators[0, 0x14];
+        _highHatOperatorInNonRhythmMode = _operators[0, 0x11];
+        _snareDrumOperatorInNonRhythmMode = _operators[0, 0x14];
         // Channel 8:
-        tomTomOperatorInNonRhythmMode = operators[0, 0x12];
-        topCymbalOperatorInNonRhythmMode = operators[0, 0x15];
+        _tomTomOperatorInNonRhythmMode = _operators[0, 0x12];
+        _topCymbalOperatorInNonRhythmMode = _operators[0, 0x15];
     }
-    private void InitializeChannels2op()
-    {
+    
+    private void InitializeChannels2Op() {
         // The YMF262 has 18 2-op channels.
         // Each 2-op channel can be at a serial or parallel operator configuration:
-        for (int array = 0; array < 2; array++)
-        {
-            for (int channelNumber = 0; channelNumber < 3; channelNumber++)
-            {
+        for (int array = 0; array < 2; array++) {
+            for (int channelNumber = 0; channelNumber < 3; channelNumber++) {
                 int baseAddress = (array << 8) | channelNumber;
                 // Channels 1, 2, 3 -> Operator offsets 0x0,0x3; 0x1,0x4; 0x2,0x5
-                channels2op[array, channelNumber] = new Channels.Channel2(baseAddress, operators[array, channelNumber], operators[array, channelNumber + 0x3], this);
+                Channels2Op[array, channelNumber] = new Channels.Channel2(baseAddress, _operators[array, channelNumber], _operators[array, channelNumber + 0x3], this);
                 // Channels 4, 5, 6 -> Operator offsets 0x8,0xB; 0x9,0xC; 0xA,0xD
-                channels2op[array, channelNumber + 3] = new Channels.Channel2(baseAddress + 3, operators[array, channelNumber + 0x8], operators[array, channelNumber + 0xB], this);
+                Channels2Op[array, channelNumber + 3] = new Channels.Channel2(baseAddress + 3, _operators[array, channelNumber + 0x8], _operators[array, channelNumber + 0xB], this);
                 // Channels 7, 8, 9 -> Operators 0x10,0x13; 0x11,0x14; 0x12,0x15
-                channels2op[array, channelNumber + 6] = new Channels.Channel2(baseAddress + 6, operators[array, channelNumber + 0x10], operators[array, channelNumber + 0x13], this);
+                Channels2Op[array, channelNumber + 6] = new Channels.Channel2(baseAddress + 6, _operators[array, channelNumber + 0x10], _operators[array, channelNumber + 0x13], this);
             }
         }
     }
-    private void InitializeChannels4op()
-    {
+    private void InitializeChannels4Op() {
         // The YMF262 has 3 4-op channels in each array:
-        for (int array = 0; array < 2; array++)
-        {
-            for (int channelNumber = 0; channelNumber < 3; channelNumber++)
-            {
+        for (int array = 0; array < 2; array++) {
+            for (int channelNumber = 0; channelNumber < 3; channelNumber++) {
                 int baseAddress = (array << 8) | channelNumber;
                 // Channels 1, 2, 3 -> Operators 0x0,0x3,0x8,0xB; 0x1,0x4,0x9,0xC; 0x2,0x5,0xA,0xD;
-                channels4op[array, channelNumber] = new Channels.Channel4(baseAddress, operators[array, channelNumber], operators[array, channelNumber + 0x3], operators[array, channelNumber + 0x8], operators[array, channelNumber + 0xB], this);
+                _channels4Op[array, channelNumber] = new Channels.Channel4(baseAddress, _operators[array, channelNumber], _operators[array, channelNumber + 0x3], _operators[array, channelNumber + 0x8], _operators[array, channelNumber + 0xB], this);
             }
         }
     }
-    private void InitializeChannels()
-    {
+    
+    private void InitializeChannels() {
         // Channel is an abstract class that can be a 2-op, 4-op, rhythm or disabled channel, 
         // depending on the OPL3 configuration at the time.
         // channels[] inits as a 2-op serial channel array:
-        for (int array = 0; array < 2; array++)
-        {
+        for (int array = 0; array < 2; array++) {
             for (int i = 0; i < 9; i++) {
-                channels[array, i] = channels2op[array, i];
+                _channels[array, i] = Channels2Op[array, i];
             }
         }
     }
-    private void Update_1_NTS1_6()
-    {
-        int _1_nts1_6 = registers[_1_NTS1_6_Offset];
+    
+    private void Update_1_NTS1_6() {
+        int _1_nts1_6 = Registers[_1_NTS1_6_Offset];
         // Note Selection. This register is used in Channel.updateOperators() implementations,
         // to calculate the channel´s Key Scale Number.
         // The value of the actual envelope rate follows the value of
         // OPL3.nts,Operator.keyScaleNumber and Operator.ksr
-        nts = (_1_nts1_6 & 0x40) >> 6;
+        Nts = (_1_nts1_6 & 0x40) >> 6;
     }
-    private void Update_DAM1_DVB1_RYT1_BD1_SD1_TOM1_TC1_HH1()
-    {
-        int dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 = registers[DAM1_DVB1_RYT1_BD1_SD1_TOM1_TC1_HH1_Offset];
+    
+    private void Update_DAM1_DVB1_RYT1_BD1_SD1_TOM1_TC1_HH1() {
+        int dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 = Registers[Dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1Offset];
         // Depth of amplitude. This register is used in EnvelopeGenerator.getEnvelope();
-        dam = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x80) >> 7;
+        Dam = (dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 & 0x80) >> 7;
 
         // Depth of vibrato. This register is used in PhaseGenerator.getPhase();
-        dvb = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x40) >> 6;
+        Dvb = (dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 & 0x40) >> 6;
 
-        int new_ryt = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x20) >> 5;
-        if (new_ryt != ryt)
-        {
-            ryt = new_ryt;
+        int newRyt = (dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 & 0x20) >> 5;
+        if (newRyt != Ryt) {
+            Ryt = newRyt;
             SetRhythmMode();
         }
 
-        int new_bd = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x10) >> 4;
-        if (new_bd != bd)
-        {
-            bd = new_bd;
-            if (bd == 1)
-            {
-                bassDrumChannel.op1.KeyOn();
-                bassDrumChannel.op2.KeyOn();
+        int newBd = (dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 & 0x10) >> 4;
+        if (newBd != Bd) {
+            Bd = newBd;
+            if (Bd == 1) {
+                _bassDrumChannel.Op1.KeyOn();
+                _bassDrumChannel.Op2.KeyOn();
             }
         }
 
-        int new_sd = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x08) >> 3;
-        if (new_sd != sd)
-        {
-            sd = new_sd;
-            if (sd == 1) {
-                snareDrumOperator.KeyOn();
+        int newSd = (dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 & 0x08) >> 3;
+        if (newSd != Sd) {
+            Sd = newSd;
+            if (Sd == 1) {
+                SnareDrumOperator.KeyOn();
             }
         }
 
-        int new_tom = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x04) >> 2;
-        if (new_tom != tom)
-        {
-            tom = new_tom;
-            if (tom == 1) {
-                tomTomOperator.KeyOn();
+        int newTom = (dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 & 0x04) >> 2;
+        if (newTom != Tom) {
+            Tom = newTom;
+            if (Tom == 1) {
+                TomTomOperator.KeyOn();
             }
         }
 
-        int new_tc = (dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x02) >> 1;
-        if (new_tc != tc)
-        {
-            tc = new_tc;
-            if (tc == 1) {
-                topCymbalOperator.KeyOn();
+        int newTc = (dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 & 0x02) >> 1;
+        if (newTc != Tc) {
+            Tc = newTc;
+            if (Tc == 1) {
+                TopCymbalOperator.KeyOn();
             }
         }
 
-        int new_hh = dam1_dvb1_ryt1_bd1_sd1_tom1_tc1_hh1 & 0x01;
-        if (new_hh != hh)
-        {
-            hh = new_hh;
-            if (hh == 1) {
-                highHatOperator.KeyOn();
+        int newHh = dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 & 0x01;
+        if (newHh != Hh) {
+            Hh = newHh;
+            if (Hh == 1) {
+                HighHatOperator.KeyOn();
             }
         }
     }
-    private void Update_7_NEW1()
-    {
-        int _7_new1 = registers[_7_NEW1_Offset];
+    
+    private void Update_7_NEW1() {
+        int _7_new1 = Registers[_7_NEW1_Offset];
         // OPL2/OPL3 mode selection. This register is used in 
         // OPL3.read(), OPL3.write() and Operator.getOperatorOutput();
         IsOpl3Mode = (_7_new1 & 0x01);
@@ -397,120 +367,112 @@ public sealed class FmSynthesizer
             SetEnabledChannels();
         }
 
-        Set4opConnections();
+        Set4OpConnections();
     }
-    private void SetEnabledChannels()
-    {
-        for (int array = 0; array < 2; array++)
-        {
-            for (int i = 0; i < 9; i++)
-            {
-                int baseAddress = channels[array, i].channelBaseAddress;
-                registers[baseAddress + Channels.Channel.CHD1_CHC1_CHB1_CHA1_FB3_CNT1_Offset] |= 0xF0;
-                channels[array, i].Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
+    
+    private void SetEnabledChannels() {
+        for (int array = 0; array < 2; array++) {
+            for (int i = 0; i < 9; i++) {
+                int baseAddress = _channels[array, i].ChannelBaseAddress;
+                Registers[baseAddress + Channels.Channel.Chd1Chc1Chb1Cha1Fb3Cnt1Offset] |= 0xF0;
+                _channels[array, i].Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
             }
         }
     }
-    private void Update_2_CONNECTIONSEL6()
-    {
+    
+    private void Update_2_CONNECTIONSEL6() {
         // This method is called only if IsOpl3Mode is set.
-        int _2_connectionsel6 = registers[_2_CONNECTIONSEL6_Offset];
+        int _2_connectionsel6 = Registers[_2_CONNECTIONSEL6_Offset];
         // 2-op/4-op channel selection. This register is used here to configure the OPL3.channels[] array.
-        connectionsel = (_2_connectionsel6 & 0x3F);
-        Set4opConnections();
+        Connectionsel = (_2_connectionsel6 & 0x3F);
+        Set4OpConnections();
     }
-    private void Set4opConnections()
-    {
+    
+    private void Set4OpConnections() {
         var disabledChannel = new Channels.NullChannel(this);
 
         // bits 0, 1, 2 sets respectively 2-op channels (1,4), (2,5), (3,6) to 4-op operation.
         // bits 3, 4, 5 sets respectively 2-op channels (10,13), (11,14), (12,15) to 4-op operation.
-        for (int array = 0; array < 2; array++)
-        {
-            for (int i = 0; i < 3; i++)
-            {
-                if (IsOpl3Mode == 1)
-                {
+        for (int array = 0; array < 2; array++) {
+            for (int i = 0; i < 3; i++) {
+                if (IsOpl3Mode == 1) {
                     int shift = (array * 3) + i;
-                    int connectionBit = (connectionsel >> shift) & 0x01;
-                    if (connectionBit == 1)
-                    {
-                        channels[array, i] = channels4op[array, i];
-                        channels[array, i + 3] = disabledChannel;
-                        channels[array, i].UpdateChannel();
+                    int connectionBit = (Connectionsel >> shift) & 0x01;
+                    if (connectionBit == 1) {
+                        _channels[array, i] = _channels4Op[array, i];
+                        _channels[array, i + 3] = disabledChannel;
+                        _channels[array, i].UpdateChannel();
                         continue;
                     }
                 }
-                channels[array, i] = channels2op[array, i];
-                channels[array, i + 3] = channels2op[array, i + 3];
-                channels[array, i].UpdateChannel();
-                channels[array, i + 3].UpdateChannel();
+                _channels[array, i] = Channels2Op[array, i];
+                _channels[array, i + 3] = Channels2Op[array, i + 3];
+                _channels[array, i].UpdateChannel();
+                _channels[array, i + 3].UpdateChannel();
             }
         }
     }
-    private void SetRhythmMode()
-    {
-        if (ryt == 1)
-        {
-            channels[0, 6] = bassDrumChannel;
-            channels[0, 7] = highHatSnareDrumChannel;
-            channels[0, 8] = tomTomTopCymbalChannel;
-            operators[0, 0x11] = highHatOperator;
-            operators[0, 0x14] = snareDrumOperator;
-            operators[0, 0x12] = tomTomOperator;
-            operators[0, 0x15] = topCymbalOperator;
+    
+    private void SetRhythmMode() {
+        if (Ryt == 1) {
+            _channels[0, 6] = _bassDrumChannel;
+            _channels[0, 7] = _highHatSnareDrumChannel;
+            _channels[0, 8] = _tomTomTopCymbalChannel;
+            _operators[0, 0x11] = HighHatOperator;
+            _operators[0, 0x14] = SnareDrumOperator;
+            _operators[0, 0x12] = TomTomOperator;
+            _operators[0, 0x15] = TopCymbalOperator;
         }
-        else
-        {
+        else {
             for (int i = 6; i <= 8; i++) {
-                channels[0, i] = channels2op[0, i];
+                _channels[0, i] = Channels2Op[0, i];
             }
-            if(highHatOperatorInNonRhythmMode is not null) {
-                operators[0, 0x11] = highHatOperatorInNonRhythmMode;
+            if(_highHatOperatorInNonRhythmMode is not null) {
+                _operators[0, 0x11] = _highHatOperatorInNonRhythmMode;
             }
-            if(snareDrumOperatorInNonRhythmMode is not null) {
-                operators[0, 0x14] = snareDrumOperatorInNonRhythmMode;
+            if(_snareDrumOperatorInNonRhythmMode is not null) {
+                _operators[0, 0x14] = _snareDrumOperatorInNonRhythmMode;
             }
-            if(tomTomOperatorInNonRhythmMode is not null) {
-                operators[0, 0x12] = tomTomOperatorInNonRhythmMode;
+            if(_tomTomOperatorInNonRhythmMode is not null) {
+                _operators[0, 0x12] = _tomTomOperatorInNonRhythmMode;
             }
-            if(topCymbalOperatorInNonRhythmMode is not null) {
-                operators[0, 0x15] = topCymbalOperatorInNonRhythmMode;
+            if(_topCymbalOperatorInNonRhythmMode is not null) {
+                _operators[0, 0x15] = _topCymbalOperatorInNonRhythmMode;
             }
         }
         for (int i = 6; i <= 8; i++) {
-            channels[0, i].UpdateChannel();
+            _channels[0, i].UpdateChannel();
         }
     }
 
-    internal readonly int[] registers = new int[0x200];
-    internal readonly Operators.HighHat highHatOperator;
-    internal readonly Operators.SnareDrum snareDrumOperator;
-    internal readonly Operators.Operator tomTomOperator;
-    internal readonly Operators.TopCymbal topCymbalOperator;
-    internal int nts, dam, dvb, ryt, bd, sd, tom, tc, hh, IsOpl3Mode, connectionsel;
-    internal int vibratoIndex, tremoloIndex;
+    internal readonly int[] Registers = new int[0x200];
+    internal readonly Operators.HighHat HighHatOperator;
+    internal readonly Operators.SnareDrum SnareDrumOperator;
+    internal readonly Operators.Operator TomTomOperator;
+    internal readonly Operators.TopCymbal TopCymbalOperator;
+    internal int Nts, Dam, Dvb, Ryt, Bd, Sd, Tom, Tc, Hh, IsOpl3Mode, Connectionsel;
+    internal int VibratoIndex, TremoloIndex;
 
     private const double TremoloFrequency = 3.7;
     private const int _1_NTS1_6_Offset = 0x08;
-    private const int DAM1_DVB1_RYT1_BD1_SD1_TOM1_TC1_HH1_Offset = 0xBD;
+    private const int Dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1Offset = 0xBD;
     private const int _7_NEW1_Offset = 0x105;
     private const int _2_CONNECTIONSEL6_Offset = 0x104;
 
     // The YMF262 has 36 operators.
-    private readonly Operators.Operator[,] operators = new Operators.Operator[2, 0x20];
+    private readonly Operators.Operator[,] _operators = new Operators.Operator[2, 0x20];
     // The YMF262 has 3 4-op channels in each array.
-    private readonly Channels.Channel4[,] channels4op = new Channels.Channel4[2, 3];
-    private readonly Channels.Channel[,] channels = new Channels.Channel[2, 9];
-    private readonly Channels.BassDrum bassDrumChannel;
-    private readonly Channels.RhythmChannel highHatSnareDrumChannel;
-    private readonly Channels.RhythmChannel tomTomTopCymbalChannel;
-    private Operators.Operator? highHatOperatorInNonRhythmMode;
-    private Operators.Operator? snareDrumOperatorInNonRhythmMode;
-    private Operators.Operator? tomTomOperatorInNonRhythmMode;
-    private Operators.Operator? topCymbalOperatorInNonRhythmMode;
+    private readonly Channels.Channel4[,] _channels4Op = new Channels.Channel4[2, 3];
+    private readonly Channels.Channel[,] _channels = new Channels.Channel[2, 9];
+    private readonly Channels.BassDrum _bassDrumChannel;
+    private readonly Channels.RhythmChannel _highHatSnareDrumChannel;
+    private readonly Channels.RhythmChannel _tomTomTopCymbalChannel;
+    private Operators.Operator? _highHatOperatorInNonRhythmMode;
+    private Operators.Operator? _snareDrumOperatorInNonRhythmMode;
+    private Operators.Operator? _tomTomOperatorInNonRhythmMode;
+    private Operators.Operator? _topCymbalOperatorInNonRhythmMode;
 
     // The YMF262 has 18 2-op channels.
     // Each 2-op channel can be at a serial or parallel operator configuration.
-    private static readonly Channels.Channel2[,] channels2op = new Channels.Channel2[2, 9];
+    private static readonly Channels.Channel2[,] Channels2Op = new Channels.Channel2[2, 9];
 }

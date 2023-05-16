@@ -86,7 +86,14 @@ public class Memory {
     public uint GetUint32(uint address) {
         return (uint)(Read(address) | Read(address + 1) << 8 | Read(address + 2) << 16 | Read(address + 3) << 24);
     }
-
+    
+    /// <summary>
+    /// Returns a <see cref="Span{T}"/> that represents the specified range of memory.
+    /// </summary>
+    /// <param name="address">The starting address of the memory range.</param>
+    /// <param name="length">The length of the memory range.</param>
+    /// <returns>A <see cref="Span{T}"/> instance that represents the specified range of memory.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no memory device supports the specified memory range.</exception>
     public Span<byte> GetSpan(int address, int length) {
         foreach (DeviceRegistration device in _devices) {
             if (address >= device.StartAddress && address + length <= device.EndAddress) {
@@ -96,6 +103,13 @@ public class Memory {
         }
         throw new InvalidOperationException($"No Memory Device supports a span from {address} to {address + length}");
     }
+    
+    /// <summary>
+    /// Returns an array of bytes read from RAM.
+    /// </summary>
+    /// <param name="address">The start address.</param>
+    /// <param name="length">The length of the array.</param>
+    /// <returns>The array of bytes, read from RAM.</returns>
     public byte[] GetData(uint address, uint length) {
         byte[] data = new byte[length];
         for (uint i = 0; i < length; i++) {

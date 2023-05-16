@@ -4,6 +4,9 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using System.Diagnostics;
 
+/// <summary>
+/// Represents a GDB server that allows for remote debugging of a Machine instance.
+/// </summary>
 public sealed class GdbServer : IDisposable {
     private readonly ILoggerService _loggerService;
     private EventWaitHandle? _waitFirstConnectionHandle;
@@ -14,18 +17,29 @@ public sealed class GdbServer : IDisposable {
     private Thread? _gdbServerThread;
     private GdbIo? _gdbIo;
 
+    /// <summary>
+    /// Creates a new instance of the GdbServer class with the specified parameters.
+    /// </summary>
+    /// <param name="machine">The Machine instance to be debugged remotely.</param>
+    /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
+    /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
     public GdbServer(Machine machine, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
         _machine = machine;
         _configuration = configuration;
     }
 
+    /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Releases the unmanaged resources used by the GdbServer instance and optionally releases the managed resources.
+    /// </summary>
+    /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
@@ -42,8 +56,16 @@ public sealed class GdbServer : IDisposable {
         }
     }
 
+    
+    /// <summary>
+    /// Gets the GdbCommandHandler instance associated with the current GdbServer instance.
+    /// </summary>
     public GdbCommandHandler? GdbCommandHandler { get; private set; }
 
+    /// <summary>
+    /// Accepts a single connection to the GDB server and creates a new GdbCommandHandler instance to handle the connection.
+    /// </summary>
+    /// <param name="gdbIo">The GdbIo instance used to communicate with the GDB client.</param>
     private void AcceptOneConnection(GdbIo gdbIo) {
         gdbIo.WaitForConnection();
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo,
@@ -62,6 +84,10 @@ public sealed class GdbServer : IDisposable {
         _loggerService.Verbose("Client disconnected");
     }
 
+    
+    /// <summary>
+    /// Runs the GDB server and handles incoming connections.
+    /// </summary>
     private void RunServer() {
         if (_configuration.GdbPort is null) {
             return;
@@ -99,12 +125,18 @@ public sealed class GdbServer : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Starts the GDB server thread and waits for the initial connection to be made.
+    /// </summary>
     public void StartServerAndWait() {
         if (_configuration.GdbPort is not null) {
             StartServerThread();
         }
     }
 
+    /// <summary>
+    /// Starts the GDB server thread and waits for the initial connection to be made.
+    /// </summary>
     private void StartServerThread() {
         _waitFirstConnectionHandle = new AutoResetEvent(false);
         _gdbServerThread = new(RunServer) {
@@ -118,6 +150,9 @@ public sealed class GdbServer : IDisposable {
         _waitFirstConnectionHandle = null;
     }
 
+    /// <summary>
+    /// Sets the auto-reset event for the initial connection.
+    /// </summary>
     private void OnConnect() {
         _waitFirstConnectionHandle?.Set();
     }

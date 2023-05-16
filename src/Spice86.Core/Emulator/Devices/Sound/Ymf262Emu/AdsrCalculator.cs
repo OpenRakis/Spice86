@@ -1,18 +1,16 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
-using System;
-using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Generates an ADSR envelope for waveform data.
 /// </summary>
 internal sealed class AdsrCalculator
 {
-    private double xAttackIncrement, xMinimumInAttack;
-    private double dBdecayIncrement;
-    private double dBreleaseIncrement;
-    private double attenuation, totalLevel, sustainLevel;
-    private double x, envelope;
-    private readonly FmSynthesizer opl;
+    private double _xAttackIncrement, _xMinimumInAttack;
+    private double _dBdecayIncrement;
+    private double _dBreleaseIncrement;
+    private double _attenuation, _totalLevel, _sustainLevel;
+    private double _x, _envelope;
+    private readonly FmSynthesizer _opl;
 
     /// <summary>
     /// Initializes a new instance of the AdsrCalculator class.
@@ -20,15 +18,16 @@ internal sealed class AdsrCalculator
     /// <param name="opl">FmSynthesizer instance which owns the AdsrCalculator.</param>
     public AdsrCalculator(FmSynthesizer opl)
     {
-        x = DecibelsToX(-96);
-        envelope = -96;
-        this.opl = opl;
+        _x = DecibelsToX(-96);
+        _envelope = -96;
+        _opl = opl;
     }
 
     /// <summary>
     /// Gets or sets the current ADSR state.
     /// </summary>
     public AdsrState State { get; set; }
+    
     /// <summary>
     /// Gets or sets the current sustain level.
     /// </summary>
@@ -36,53 +35,55 @@ internal sealed class AdsrCalculator
     {
         get
         {
-            if (sustainLevel == -93) {
+            if (_sustainLevel == -93) {
                 return 0x0F;
             } else {
-                return (int)sustainLevel / -3;
+                return (int)_sustainLevel / -3;
             }
         }
         set
         {
             if (value == 0x0F) {
-                sustainLevel = -93;
+                _sustainLevel = -93;
             } else {
-                sustainLevel = -3 * value;
+                _sustainLevel = -3 * value;
             }
         }
     }
+    
     /// <summary>
     /// Gets or sets the total output level.
     /// </summary>
     public int TotalLevel
     {
-        get => (int)(totalLevel / -0.75);
-        set => totalLevel = value * -0.75;
+        get => (int)(_totalLevel / -0.75);
+        set => _totalLevel = value * -0.75;
     }
 
     public void SetAtennuation(int frequencyNumber, int block, int ksl)
     {
-        int hi4bits = (frequencyNumber >> 6) & 0x0F;
-        int index = (hi4bits * 8) + block;
+        int hi4Bits = (frequencyNumber >> 6) & 0x0F;
+        int index = (hi4Bits * 8) + block;
         switch (ksl)
         {
             case 0:
-                attenuation = 0;
+                _attenuation = 0;
                 break;
             case 1:
                 // ~3 dB/Octave
-                attenuation = ksl3dBtable[index];
+                _attenuation = Ksl3dBtable[index];
                 break;
             case 2:
                 // ~1.5 dB/Octave
-                attenuation = ksl3dBtable[index] / 2;
+                _attenuation = Ksl3dBtable[index] / 2;
                 break;
             case 3:
                 // ~6 dB/Octave
-                attenuation = ksl3dBtable[index] * 2;
+                _attenuation = Ksl3dBtable[index] * 2;
                 break;
         }
     }
+    
     public void SetActualAttackRate(int attackRate, int ksr, int keyScaleNumber)
     {
         // According to the YMF278B manual's OPL3 section, the attack curve is exponential,
@@ -95,11 +96,11 @@ internal sealed class AdsrCalculator
         int actualAttackRate = CalculateActualRate(attackRate, ksr, keyScaleNumber);
         ReadOnlySpan<double> attackTimeValues = GetAttackTimeValues(actualAttackRate);
 
-        int period0to100inSamples = (int)(attackTimeValues[0] * opl.SampleRate);
-        int period10to90inSamples = (int)(attackTimeValues[1] * opl.SampleRate);
+        int period0To100InSamples = (int)(attackTimeValues[0] * _opl.SampleRate);
+        int period10To90InSamples = (int)(attackTimeValues[1] * _opl.SampleRate);
 
         // The x increment is dictated by the period between 10% and 90%:
-        xAttackIncrement = opl.CalculateIncrement(PercentageToX_10, PercentageToX_90, attackTimeValues[1]);
+        _xAttackIncrement = _opl.CalculateIncrement(PercentageToX10, PercentageToX90, attackTimeValues[1]);
         // Discover how many samples are still from the top.
         // It cannot reach 0 dB, since x is a logarithmic parameter and would be
         // negative infinity. So we will use -0.1875 dB as the resolution
@@ -108,38 +109,40 @@ internal sealed class AdsrCalculator
         // percentageToX(0.9) + samplesToTheTop*xAttackIncrement = dBToX(-0.1875); ->
         // samplesToTheTop = (dBtoX(-0.1875) - percentageToX(0.9)) / xAttackIncrement); ->
         // period10to100InSamples = period10to90InSamples + samplesToTheTop; ->
-        int period10to100inSamples = (int)(period10to90inSamples + ((DecibelsToX_n0_1875 - PercentageToX_90) / xAttackIncrement));
+        int period10To100InSamples = (int)(period10To90InSamples + ((DecibelsToXN01875 - PercentageToX90) / _xAttackIncrement));
         // Discover the minimum x that, through the attackIncrement value, keeps 
         // the 10%-90% period, and reaches 0 dB at the total period:
-        xMinimumInAttack = PercentageToX_10 - ((period0to100inSamples - period10to100inSamples) * xAttackIncrement);
+        _xMinimumInAttack = PercentageToX10 - ((period0To100InSamples - period10To100InSamples) * _xAttackIncrement);
     }
 
-    private static readonly double DecibelsToX_n0_1875 = DecibelsToX(-0.1875);
-    private static readonly double PercentageToX_10 = PercentageToX(0.1);
-    private static readonly double PercentageToX_90 = PercentageToX(0.9);
+    private static readonly double DecibelsToXN01875 = DecibelsToX(-0.1875);
+    private static readonly double PercentageToX10 = PercentageToX(0.1);
+    private static readonly double PercentageToX90 = PercentageToX(0.9);
 
     public void SetActualDecayRate(int decayRate, int ksr, int keyScaleNumber)
     {
         int actualDecayRate = CalculateActualRate(decayRate, ksr, keyScaleNumber);
-        double period10to90inSeconds = decayAndReleaseTimeValuesTable[actualDecayRate];
+        double period10To90InSeconds = DecayAndReleaseTimeValuesTable[actualDecayRate];
         // Differently from the attack curve, the decay/release curve is linear.        
         // The dB increment is dictated by the period between 10% and 90%:
-        dBdecayIncrement = opl.CalculateIncrement(PercentageToDB(0.1), PercentageToDB(0.9), period10to90inSeconds);
+        _dBdecayIncrement = _opl.CalculateIncrement(PercentageToDb(0.1), PercentageToDb(0.9), period10To90InSeconds);
     }
+    
     public void SetActualReleaseRate(int releaseRate, int ksr, int keyScaleNumber)
     {
         int actualReleaseRate = CalculateActualRate(releaseRate, ksr, keyScaleNumber);
-        double period10to90inSeconds = decayAndReleaseTimeValuesTable[actualReleaseRate];
-        dBreleaseIncrement = opl.CalculateIncrement(PercentageToDB(0.1), PercentageToDB(0.9), period10to90inSeconds);
+        double period10To90InSeconds = DecayAndReleaseTimeValuesTable[actualReleaseRate];
+        _dBreleaseIncrement = _opl.CalculateIncrement(PercentageToDb(0.1), PercentageToDb(0.9), period10To90InSeconds);
     }
+    
     public double GetEnvelope(int egt, int am)
     {
         // The datasheets attenuation values
         // must be halved to match the real OPL3 output.
-        double envelopeSustainLevel = sustainLevel / 2;
-        double envelopeTremolo = opl.GetTremoloValue(opl.dam, opl.tremoloIndex) / 2;
-        double envelopeAttenuation = attenuation / 2;
-        double envelopeTotalLevel = totalLevel / 2;
+        double envelopeSustainLevel = _sustainLevel / 2;
+        double envelopeTremolo = _opl.GetTremoloValue(_opl.Dam, _opl.TremoloIndex) / 2;
+        double envelopeAttenuation = _attenuation / 2;
+        double envelopeTotalLevel = _totalLevel / 2;
 
         const double envelopeMinimum = -96;
         const double envelopeResolution = 0.1875;
@@ -153,11 +156,11 @@ internal sealed class AdsrCalculator
             case AdsrState.Attack:
                 // Since the attack is exponential, it will never reach 0 dB, so
                 // we´ll work with the next to maximum in the envelope resolution.
-                if (envelope < -envelopeResolution && xAttackIncrement != -double.PositiveInfinity)
+                if (_envelope < -envelopeResolution && _xAttackIncrement != -double.PositiveInfinity)
                 {
                     // The attack is exponential.
-                    envelope = -Math.Pow(2, x);
-                    x += xAttackIncrement;
+                    _envelope = -Math.Pow(2, _x);
+                    _x += _xAttackIncrement;
                     break;
                 }
                 else
@@ -165,16 +168,16 @@ internal sealed class AdsrCalculator
                     // It is needed here to explicitly set envelope = 0, since
                     // only the attack can have a period of
                     // 0 seconds and produce a infinity envelope increment.
-                    envelope = 0;
+                    _envelope = 0;
                     State = AdsrState.Decay;
                 }
                 goto case AdsrState.Decay;
 
             case AdsrState.Decay:
                 // The decay and release are linear.                
-                if (envelope > envelopeSustainLevel)
+                if (_envelope > envelopeSustainLevel)
                 {
-                    envelope -= dBdecayIncrement;
+                    _envelope -= _dBdecayIncrement;
                     break;
                 }
                 else
@@ -195,8 +198,8 @@ internal sealed class AdsrCalculator
                 }
                 else
                 {
-                    if (envelope > envelopeMinimum) {
-                        envelope -= dBreleaseIncrement;
+                    if (_envelope > envelopeMinimum) {
+                        _envelope -= _dBreleaseIncrement;
                     } else {
                         State = AdsrState.Off;
                     }
@@ -206,8 +209,8 @@ internal sealed class AdsrCalculator
                 // If we have Key OFF, only here we are in the Release stage.
                 // Now, we can turn EGT back and forth and it will have no effect,i.e.,
                 // it will release inexorably to the Off stage.
-                if (envelope > envelopeMinimum) {
-                    envelope -= dBreleaseIncrement;
+                if (_envelope > envelopeMinimum) {
+                    _envelope -= _dBreleaseIncrement;
                 } else {
                     State = AdsrState.Off;
                 }
@@ -216,7 +219,7 @@ internal sealed class AdsrCalculator
         }
 
         // Ongoing original envelope
-        outputEnvelope = envelope;
+        outputEnvelope = _envelope;
 
         //Tremolo
         if (am == 1) {
@@ -232,12 +235,14 @@ internal sealed class AdsrCalculator
         // The envelope has a resolution of 0.1875 dB:
         return ((int)(outputEnvelope / envelopeResolution)) * envelopeResolution;
     }
+    
     public void KeyOn()
     {
-        double xCurrent = Intrinsics.Log2(-envelope);
-        x = Math.Min(xCurrent, xMinimumInAttack);
+        double xCurrent = Intrinsics.Log2(-_envelope);
+        _x = Math.Min(xCurrent, _xMinimumInAttack);
         State = AdsrState.Attack;
     }
+    
     public void KeyOff()
     {
         if (State != AdsrState.Off) {
@@ -262,17 +267,17 @@ internal sealed class AdsrCalculator
     }
 
     private static double DecibelsToX(double dB) => Intrinsics.Log2(-dB);
-    private static double PercentageToDB(double percentage) => Math.Log10(percentage) * 10.0;
-    private static double PercentageToX(double percentage) => DecibelsToX(PercentageToDB(percentage));
+    private static double PercentageToDb(double percentage) => Math.Log10(percentage) * 10.0;
+    private static double PercentageToX(double percentage) => DecibelsToX(PercentageToDb(percentage));
 
     #region Lookup Tables
 
-    private static ReadOnlySpan<double> GetAttackTimeValues(int i) => new(attackTimeValuesTable, i * 2, 2);
+    private static ReadOnlySpan<double> GetAttackTimeValues(int i) => new(AttackTimeValuesTable, i * 2, 2);
 
     // These attack periods in miliseconds were taken from the YMF278B manual. 
     // The attack actual rates range from 0 to 63, with different data for 
     // 0%-100% and for 10%-90%: 
-    private static readonly double[] attackTimeValuesTable =
+    private static readonly double[] AttackTimeValuesTable =
     {
         double.PositiveInfinity, double.PositiveInfinity,
         double.PositiveInfinity, double.PositiveInfinity,
@@ -346,7 +351,7 @@ internal sealed class AdsrCalculator
     // These decay and release periods in miliseconds were taken from the YMF278B manual. 
     // The rate index range from 0 to 63, with different data for 
     // 0%-100% and for 10%-90%: 
-    private static readonly double[] decayAndReleaseTimeValuesTable =
+    private static readonly double[] DecayAndReleaseTimeValuesTable =
     {
         double.PositiveInfinity,
         double.PositiveInfinity,
@@ -417,7 +422,7 @@ internal sealed class AdsrCalculator
         0.00051
     };
 
-    private static readonly double[] ksl3dBtable =
+    private static readonly double[] Ksl3dBtable =
     {
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0 , 0 , 0, -3, -6, -9,

@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// 3-bit ADPCM decoder.
 /// </summary>
-internal sealed class ADPCM3 : ADPCM2 {
+public sealed class ADPCM3 : ADPCM2 {
     /// <summary>
     /// The limit value.
     /// </summary>

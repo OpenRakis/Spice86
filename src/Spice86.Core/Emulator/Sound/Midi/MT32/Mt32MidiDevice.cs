@@ -1,16 +1,29 @@
-﻿using Spice86.Logging;
+﻿namespace Spice86.Core.Emulator.Sound.Midi.MT32;
+
 using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.Sound.Midi.MT32;
-
 using Spice86.Core.Emulator.Sound.Midi;
 
-using System;
-
+/// <summary>
+/// A MIDI device implementation for playing MIDI files on an MT-32 sound module.
+/// </summary>
 internal sealed class Mt32MidiDevice : MidiDevice {
+    /// <summary>
+    /// The MT-32 player instance associated with this device.
+    /// </summary>
     private readonly Mt32Player _player;
+    
+    /// <summary>
+    /// Indicates whether this object has been disposed.
+    /// </summary>
     private bool _disposed;
 
+    /// <summary>
+    /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
+    /// </summary>
+    /// <param name="romsPath">The path to the MT-32 ROM files.</param>
+    /// <param name="configuration">The configuration settings for the device.</param>
+    /// <param name="loggerService">The logger service to use for logging messages.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
     public Mt32MidiDevice(string romsPath, Configuration configuration, ILoggerService loggerService) {
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
@@ -22,17 +35,23 @@ internal sealed class Mt32MidiDevice : MidiDevice {
             configuration);
     }
 
+    /// <inheritdoc/>
     public override void Pause() {
         _player.Pause();
     }
 
+    /// <inheritdoc/>
     public override void Resume() {
         _player.Resume();
     }
-
+    
+    /// <inheritdoc/>
     protected override void PlayShortMessage(uint message) => _player.PlayShortMessage(message);
+    
+    /// <inheritdoc/>
     protected override void PlaySysex(ReadOnlySpan<byte> data) => _player.PlaySysex(data);
 
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {

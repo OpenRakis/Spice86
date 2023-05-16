@@ -5,17 +5,30 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Implements DOS memory operations, such as allocating and releasing MCBs
+/// </summary>
 public class DosMemoryManager {
     private readonly ILoggerService _loggerService;
     private readonly Memory _memory;
     private ushort _pspSegment;
     private DosMemoryControlBlock? _start;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public DosMemoryManager(Memory memory, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
     }
 
+    /// <summary>
+    /// Allocates a memory block of the specified size. Returns null if no memory block could be found to fit the requested size.
+    /// </summary>
+    /// <param name="requestedSize">The requested size of the memory block.</param>
+    /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or null if no memory block could be found.</returns>
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSize) {
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
 
@@ -29,7 +42,7 @@ public class DosMemoryManager {
         if (blockOptional is null) {
             // Nothing found
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Could not find any MCB to fit {RequestedSize}.", requestedSize);
+                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSize);
             }
             return null;
         }
@@ -38,7 +51,7 @@ public class DosMemoryManager {
         if (!SplitBlock(block, requestedSize)) {
             // An issue occurred while splitting the block
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Could not spit block {Block}.", block);
+                _loggerService.Error("Could not spit block {Block}", block);
             }
             return null;
         }
@@ -47,6 +60,10 @@ public class DosMemoryManager {
         return block;
     }
 
+    /// <summary>
+    /// Finds the largest free <see cref="DosMemoryControlBlock"/>.
+    /// </summary>
+    /// <returns>The largest free <see cref="DosMemoryControlBlock"/></returns>
     public DosMemoryControlBlock FindLargestFree() {
         DosMemoryControlBlock? current = _start;
         DosMemoryControlBlock? largest = null;
@@ -63,6 +80,11 @@ public class DosMemoryManager {
         }
     }
 
+    /// <summary>
+    /// Releases an MCB.
+    /// </summary>
+    /// <param name="blockSegment">The segment number of the MCB.</param>
+    /// <returns>Whether the operation was successful.</returns>
     public bool FreeMemoryBlock(ushort blockSegment) {
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
         if (!CheckValidOrLogError(block)) {
@@ -73,9 +95,12 @@ public class DosMemoryManager {
         return JoinBlocks(block, true);
     }
 
+    /// <summary>
+    /// Gets the segment number of the Process Segment Prefix (PSP)
+    /// </summary>
     public ushort PspSegment => _pspSegment;
 
-    public void Init(ushort pspSegment, ushort lastFreeSegment) {
+    internal void Init(ushort pspSegment, ushort lastFreeSegment) {
         ushort startSegment = (ushort)(pspSegment - 1);
         _pspSegment = pspSegment;
         ushort size = (ushort)(lastFreeSegment - startSegment);
@@ -87,6 +112,12 @@ public class DosMemoryManager {
         _start.SetLast();
     }
 
+    /// <summary>
+    /// Extends or reduces a MCB.
+    /// </summary>
+    /// <param name="blockSegment">The segment number of the MCB.</param>
+    /// <param name="requestedSize">The new size for the MCB, in bytes.</param>
+    /// <returns>Whether the operation was successful.</returns>
     public bool ModifyBlock(ushort blockSegment, ushort requestedSize) {
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
         if (!CheckValidOrLogError(block)) {
@@ -96,14 +127,14 @@ public class DosMemoryManager {
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false)) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Could not join MCB {Block}.", block);
+                _loggerService.Error("Could not join MCB {Block}", block);
             }
             return false;
         }
 
         if (block.Size < requestedSize - 1) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}.", block, requestedSize);
+                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}", block, requestedSize);
             }
             return false;
         }
@@ -119,7 +150,7 @@ public class DosMemoryManager {
     private bool CheckValidOrLogError(DosMemoryControlBlock? block) {
         if (block is null || !block.IsValid) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} is invalid.", block);
+                _loggerService.Error("MCB {Block} is invalid", block);
             }
             return false;
         }
@@ -164,7 +195,7 @@ public class DosMemoryManager {
 
             if (!CheckValidOrLogError(next)) {
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _loggerService.Error("MCB {NextBlock} is not valid.", next);
+                    _loggerService.Error("MCB {NextBlock} is not valid", next);
                 }
                 return false;
             }
@@ -203,7 +234,7 @@ public class DosMemoryManager {
         int nextBlockSize = blockSize - size - 1;
         if (nextBlockSize < 0) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Cannot split block {Block} with size {Size} because it is too small.", block, size);
+                _loggerService.Error("Cannot split block {Block} with size {Size} because it is too small", block, size);
             }
             return false;
         }

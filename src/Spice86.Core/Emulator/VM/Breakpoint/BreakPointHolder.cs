@@ -2,17 +2,25 @@
 
 using Spice86.Core;
 
-using System.Collections.Generic;
-
+/// <summary>
+/// Holds breakpoints and triggers them when certain conditions are met.
+/// </summary>
 public class BreakPointHolder {
     private readonly Dictionary<long, List<BreakPoint>> _addressBreakPoints = new();
 
     private readonly List<BreakPoint> _unconditionalBreakPoints = new();
     private readonly List<BreakPoint> _rangeBreakPoints = new();
 
-
+    /// <summary>
+    /// Gets a value indicating whether this BreakPointHolder is empty.
+    /// </summary>
     public bool IsEmpty => _addressBreakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
 
+    /// <summary>
+    /// Toggles the specified breakpoint on or off.
+    /// </summary>
+    /// <param name="breakPoint">The breakpoint to toggle.</param>
+    /// <param name="on">True to enable the breakpoint; false to disable it.</param>
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
         if (breakPoint is UnconditionalBreakPoint) {
             ToggleUnconditionalBreakPoint(breakPoint, on);
@@ -23,6 +31,12 @@ public class BreakPointHolder {
         }
     }
 
+    
+    /// <summary>
+    /// Triggers all breakpoints that match the specified address range.
+    /// </summary>
+    /// <param name="startAddress">The start address of the range.</param>
+    /// <param name="endAddress">The end address of the range.</param>
     public void TriggerBreakPointsWithAddressRange(long startAddress, long endAddress) {
         if (_addressBreakPoints.Count > 0) {
             foreach (List<BreakPoint> breakPointList in _addressBreakPoints.Values) {
@@ -37,7 +51,11 @@ public class BreakPointHolder {
             TriggerBreakPointsWithAddressRangeFromList(_rangeBreakPoints, startAddress, endAddress);
         }
     }
-
+    
+    /// <summary>
+    /// Triggers all breakpoints that match the specified address.
+    /// </summary>
+    /// <param name="address">The address to match.</param>
     public void TriggerMatchingBreakPoints(long address) {
         if (_addressBreakPoints.Count > 0) {
             if (_addressBreakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {

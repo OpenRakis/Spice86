@@ -7,6 +7,10 @@ using System;
 /// </summary>
 public abstract partial class AudioPlayer : IDisposable {
     private readonly InternalBufferWriter _writer;
+    
+    /// <summary>
+    /// Whether the native resources were disposed.
+    /// </summary>
     protected bool _disposed;
 
     /// <summary>
@@ -42,13 +46,24 @@ public abstract partial class AudioPlayer : IDisposable {
     /// <returns>Number of samples actually written to the buffer.</returns>
     public int WriteData(Span<short> data) => _writer.WriteData(data);
 
+    /// <inheritdoc />
     public void Dispose() {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    /// </summary>
+    /// <param name="disposing">Whether we are disposing of resources.</param>
     protected virtual void Dispose(bool disposing) {
         _disposed = true;
     }
+    
+    /// <summary>
+    /// Writes the audio data to the rendering backend
+    /// </summary>
+    /// <param name="data">The data to write</param>
+    /// <returns>The length of data written. Might not be equal to the input data length.</returns>
     protected abstract int WriteDataInternal(Span<byte> data);
 }
