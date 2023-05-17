@@ -8,6 +8,9 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
+/// <summary>
+/// I/O port handler for the VGA card.
+/// </summary>
 public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly AttributeControllerRegisters _attributeRegisters;
     private readonly CrtControllerRegisters _crtRegisters;
@@ -18,6 +21,13 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly SequencerRegisters _sequencerRegisters;
     private bool _attributeDataMode;
 
+    /// <summary>
+    /// Create a new VGA I/O port handler.
+    /// </summary>
+    /// <param name="machine"></param>
+    /// <param name="loggerService"></param>
+    /// <param name="configuration"></param>
+    /// <param name="videoState"></param>
     public VgaIoPortHandler(Machine machine, ILoggerService loggerService, Configuration configuration, IVideoState videoState) :
         base(machine, configuration, loggerService) {
         _logger = loggerService.WithLogLevel(LogEventLevel.Information);
@@ -62,12 +72,14 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
             Ports.SequencerData
         };
 
+    /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         foreach (int port in HandledPorts) {
             ioPortDispatcher.AddIOPortHandler(port, this);
         }
     }
 
+    /// <inheritdoc />
     public override byte ReadByte(int port) {
         byte value;
         switch (port) {
@@ -170,6 +182,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         return value;
     }
 
+    /// <inheritdoc />
     public override ushort ReadWord(int port) {
         byte value = ReadByte(port);
 
@@ -180,6 +193,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         return value;
     }
 
+    /// <inheritdoc />
     public override uint ReadDWord(int port) {
         byte value = ReadByte(port);
 
@@ -190,6 +204,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         return value;
     }
 
+    /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         switch (port) {
             case Ports.DacAddressReadIndex:

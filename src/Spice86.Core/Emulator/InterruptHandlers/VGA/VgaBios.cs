@@ -4,15 +4,30 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// A VGA BIOS implementation.
+/// </summary>
 public class VgaBios : InterruptHandler, IVgaInterrupts {
+    /// <summary>
+    /// The segment of the graphics memory.
+    /// </summary>
     public const ushort GraphicsSegment = 0xA000;
+    /// <summary>
+    /// The segment of the text memory.
+    /// </summary>
     public const ushort ColorTextSegment = 0xB800;
+    /// <summary>
+    /// The segment of the monochrome text memory.
+    /// </summary>
     public const ushort MonochromeTextSegment = 0xB000;
 
     private readonly Bios _bios;
@@ -21,6 +36,11 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     private VgaMode _currentVgaMode;
     private readonly VgaFunctions _vgaFunctions;
 
+    /// <summary>
+    /// VGA BIOS constructor.
+    /// </summary>
+    /// <param name="machine">The machine hosting the bios.</param>
+    /// <param name="loggerService">A logger</param>
     public VgaBios(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _bios = _machine.Bios;
         _vgaRom = machine.VgaRom;
@@ -62,6 +82,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     /// </summary>
     public override byte Index => 0x10;
 
+    /// <inheritdoc />
     public void WriteString() {
         CursorPosition cursorPosition = new(_state.DL, _state.DH, _state.BH);
         ushort count = _state.CX;
@@ -88,10 +109,12 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public VideoFunctionalityInfo GetFunctionalityInfo() {
         throw new NotImplementedException();
     }
 
+    /// <inheritdoc />
     public void GetSetDisplayCombinationCode() {
         switch (_state.AL) {
             case 0x00: {
@@ -119,6 +142,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void VideoSubsystemConfiguration() {
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
@@ -252,6 +276,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void LoadFontInfo() {
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("{ClassName} INT 10 11 {MethodName} - Sub function 0x{SubFunction:X2}",
@@ -313,6 +338,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void SetPaletteRegisters() {
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 10 {MethodName} - Sub function 0x{SubFunction:X2}",
@@ -384,6 +410,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void GetVideoState() {
         _state.BH = _bios.CurrentVideoPage;
         _state.AL = (byte)(_bios.VideoMode | _bios.VideoCtl & 0x80);
@@ -394,6 +421,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void WriteTextInTeletypeMode() {
         CharacterPlusAttribute characterPlusAttribute = new((char)_state.AL, _state.BL, false);
         CursorPosition cursorPosition = GetCursorPosition(_bios.CurrentVideoPage);
@@ -405,6 +433,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         SetCursorPosition(cursorPosition);
     }
 
+    /// <inheritdoc />
     public void SetColorPaletteOrBackGroundColor() {
         switch (_state.BH) {
             case 0x00:
@@ -426,6 +455,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void WriteCharacterAtCursor() {
         CharacterPlusAttribute characterPlusAttribute = new((char)_state.AL, _state.BL, false);
         CursorPosition cursorPosition = GetCursorPosition(_state.BH);
@@ -439,6 +469,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void WriteCharacterAndAttributeAtCursor() {
         CharacterPlusAttribute characterPlusAttribute = new((char)_state.AL, _state.BL, true);
         CursorPosition cursorPosition = GetCursorPosition(_state.BH);
@@ -452,6 +483,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void ReadCharacterAndAttributeAtCursor() {
         CursorPosition cursorPosition = GetCursorPosition(_state.BH);
         CharacterPlusAttribute characterPlusAttribute = ReadChar(cursorPosition);
@@ -463,6 +495,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void ScrollPageDown() {
         VerifyScroll(-1, _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -471,6 +504,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void ScrollPageUp() {
         VerifyScroll(1, _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -479,6 +513,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void SelectActiveDisplayPage() {
         SetActivePage(_state.AL);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -487,6 +522,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void GetCursorPosition() {
         _state.CX = _bios.CursorType;
         CursorPosition cursorPosition = GetCursorPosition(_state.BH);
@@ -498,6 +534,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void SetCursorPosition() {
         CursorPosition cursorPosition = new(_state.DL, _state.DH, _state.BH);
         SetCursorPosition(cursorPosition);
@@ -507,6 +544,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void SetCursorType() {
         SetCursorShape(_state.CX);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -515,6 +553,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void ReadDot() {
         _state.AL = vgafb_read_pixel(_state.CX, _state.DX);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -523,6 +562,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void WriteDot() {
         vgafb_write_pixel(_state.AL, _state.CX, _state.DX);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -531,6 +571,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         }
     }
 
+    /// <inheritdoc />
     public void SetVideoMode() {
         int modeId = _state.AL & 0x7F;
         ModeFlags flags = ModeFlags.Legacy | (ModeFlags)_bios.ModesetCtl & (ModeFlags.NoPalette | ModeFlags.GraySum);
@@ -693,17 +734,17 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void LoadRom8X16Font2(byte fontBlock) {
-        _vgaFunctions.LoadFont(VgaRom.VgaFont16, 0x100, 0, fontBlock, 16);
+        _vgaFunctions.LoadFont(Fonts.VgaFont16, 0x100, 0, fontBlock, 16);
         SetScanLines(16);
     }
 
     private void LoadRom8X8DoubleDotFont2(byte fontBlock) {
-        _vgaFunctions.LoadFont(VgaRom.VgaFont8, 0x100, 0, fontBlock, 8);
+        _vgaFunctions.LoadFont(Fonts.VgaFont8, 0x100, 0, fontBlock, 8);
         SetScanLines(8);
     }
 
     private void LoadRomMonochromeFont2(byte fontBlock) {
-        _vgaFunctions.LoadFont(VgaRom.VgaFont14, 0x100, 0, fontBlock, 14);
+        _vgaFunctions.LoadFont(Fonts.VgaFont14, 0x100, 0, fontBlock, 14);
         SetScanLines(14);
     }
 
@@ -729,7 +770,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void LoadRom8X16Font(byte fontBlock) {
-        _vgaFunctions.LoadFont(VgaRom.VgaFont16, 0x100, 0, fontBlock, 16);
+        _vgaFunctions.LoadFont(Fonts.VgaFont16, 0x100, 0, fontBlock, 16);
     }
 
     private void SetBlockSpecifier(byte fontBlock) {
@@ -737,11 +778,11 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void LoadRom8X8DoubleDotFont(byte fontBlock) {
-        _vgaFunctions.LoadFont(VgaRom.VgaFont8, 0x100, 0, fontBlock, 8);
+        _vgaFunctions.LoadFont(Fonts.VgaFont8, 0x100, 0, fontBlock, 8);
     }
 
     private void LoadRomMonochromeFont(byte fontBlock) {
-        _vgaFunctions.LoadFont(VgaRom.VgaFont14, 0x100, 0, fontBlock, 14);
+        _vgaFunctions.LoadFont(Fonts.VgaFont14, 0x100, 0, fontBlock, 14);
     }
 
     private void LoadUserFont(ushort segment, ushort offset, ushort length, ushort start, byte fontBlock, byte height) {
@@ -794,11 +835,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
             case MemoryModel.Packed:
                 HandlePackedGraphicsOperation(operation);
                 break;
-            case MemoryModel.Direct:
             case MemoryModel.Text:
-            case MemoryModel.Hercules:
-            case MemoryModel.NonChain4X256:
-            case MemoryModel.Yuv:
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation), $"Unsupported memory model {operation.VgaMode.MemoryModel}");
         }
@@ -883,7 +920,6 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
     private void HandlePlanarGraphicsOperation(GraphicsOperation operation) {
         ushort offset = (ushort)(operation.Y * operation.LineLength + operation.X / 8);
-        int plane;
         switch (operation.MemoryAction) {
             default:
             case MemoryAction.ReadByte:
@@ -1261,6 +1297,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         HandleGraphicsOperation(operation);
     }
 
+    /// <inheritdoc />
     public void ReadLightPenPosition() {
         _state.AX = _state.BX = _state.CX = _state.DX = 0;
     }
@@ -1437,57 +1474,4 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     //     _memory.UInt32[MemoryMap.StaticFunctionalityTableSegment, 0] = 0x000FFFFF; // supports all video modes
     //     _memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
     // }
-}
-
-public record struct GraphicsOperation(VgaMode VgaMode, int LineLength, int DisplayStart, MemoryAction MemoryAction, int X, int Y, byte[] Pixels, int Width, int Height, int Lines);
-
-public record struct CharacterPlusAttribute(char Character, byte Attribute, bool UseAttribute);
-
-public record struct CursorPosition(int X, int Y, int Page);
-
-public record struct Area(int Width, int Height);
-
-public record struct VideoMode(VgaMode VgaMode, byte PixelMask, byte[] Palette, byte[] SequencerRegisterValues, byte MiscellaneousRegisterValue, byte[] CrtControllerRegisterValues, byte[] AttributeControllerRegisterValues, byte[] GraphicsControllerRegisterValues);
-
-public enum MemoryAction {
-    ReadByte,
-    WriteByte,
-    MemSet,
-    MemMove
-}
-
-[Flags]
-public enum ModeFlags {
-    // Mode flags
-    Legacy = 0x0001,
-    GraySum = 0x0002,
-    NoPalette = 0x0008,
-    NoClearMem = 0x8000,
-}
-
-public enum MemoryModel {
-    Text,
-    Cga,
-    Hercules,
-    Planar,
-    Packed,
-    NonChain4X256,
-    Direct,
-    Yuv
-}
-
-internal enum VgaPort {
-    AttributeAddress = 0x3C0,
-    AttributeData = 0x3C1,
-    MiscOutputWrite = 0x3C2,
-    SequencerAddress = 0x3C4,
-    DacPelMask = 0x3C6,
-    DacAddressReadIndex = 0x3C7,
-    DacAddressWriteIndex = 0x3C8,
-    DacData = 0x3C9,
-    MiscOutputRead = 0x3CC,
-    GraphicsControllerAddress = 0x3CE,
-    CrtControllerAddress = 0x3B4,
-    CrtControllerAddressAlt = 0x3D4,
-    InputStatus1ReadAlt = 0x3DA,
 }

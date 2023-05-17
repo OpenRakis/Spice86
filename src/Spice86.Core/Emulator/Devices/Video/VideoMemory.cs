@@ -11,6 +11,11 @@ public class VideoMemory : IVideoMemory {
     private readonly byte[] _latches;
     private readonly IVideoState _state;
 
+    /// <summary>
+    ///     Create a new instance of the video memory.
+    /// </summary>
+    /// <param name="baseAddress"></param>
+    /// <param name="state"></param>
     public VideoMemory(uint baseAddress, IVideoState state) {
         _baseAddress = baseAddress;
         _state = state;
@@ -19,8 +24,10 @@ public class VideoMemory : IVideoMemory {
         Size = 0x20000;
     }
 
+    /// <inheritdoc />
     public uint Size { get; }
 
+    /// <inheritdoc />
     public byte Read(uint address) {
         (byte plane, uint offset) = DecodeReadAddress(address);
         _latches[0] = Planes[offset, 0];
@@ -67,6 +74,7 @@ public class VideoMemory : IVideoMemory {
         return result;
     }
 
+    /// <inheritdoc />
     public void Write(uint address, byte value) {
         (byte planes, uint offset) = DecodeWriteAddress(address);
         bool[] writePlane = planes.ToBits();
@@ -90,6 +98,14 @@ public class VideoMemory : IVideoMemory {
                 throw new InvalidOperationException($"Unknown writeMode {_state.GraphicsControllerRegisters.GraphicsModeRegister.WriteMode}");
         }
     }
+
+    /// <inheritdoc />
+    public Span<byte> GetSpan(int address, int length) {
+        throw new NotSupportedException();
+    }
+
+    /// <inheritdoc />
+    public byte[,] Planes { get; }
 
     private void HandleWriteMode3(byte value, Register8 planeEnable, bool[] writePlane, Register8 setReset, uint offset) {
         value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
@@ -181,10 +197,6 @@ public class VideoMemory : IVideoMemory {
         return tempValue;
     }
 
-    public Span<byte> GetSpan(int address, int length) {
-        throw new NotSupportedException();
-    }
-
     private (byte plane, uint offset) DecodeReadAddress(uint address) {
         byte plane;
         uint offset = address - _baseAddress;
@@ -215,8 +227,6 @@ public class VideoMemory : IVideoMemory {
         }
         return (plane, offset);
     }
-
-    public byte[,] Planes { get; }
 
     private (byte planes, uint offset) DecodeWriteAddress(uint address) {
         byte planes;

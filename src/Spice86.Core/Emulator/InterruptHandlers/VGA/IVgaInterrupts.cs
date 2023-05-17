@@ -99,7 +99,19 @@ public interface IVgaInterrupts
     /// Sets the cursor type.
     /// </summary>
     void SetCursorType();
+    
+    /// <summary>
+    /// Writes a single pixel.
+    /// </summary>
     void WriteDot();
+    
+    /// <summary>
+    /// Reads a single pixel.
+    /// </summary>
     void ReadDot();
+    
+    /// <summary>
+    /// Reads the light pen position.
+    /// </summary>
     void ReadLightPenPosition();
 }

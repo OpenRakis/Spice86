@@ -31,8 +31,6 @@ public class Timer : DefaultIOPortHandler {
 
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
-    // retrace is in a separate counter because it needs to be controlled by the time multiplier unlike screen refresh
-    private readonly Counter _vgaRetraceCounter;
 
     public Timer(Machine machine, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration, loggerService) {
         _dualPic = dualPic;
@@ -46,9 +44,6 @@ public class Timer : DefaultIOPortHandler {
         // screen refresh is 60hz regardless of the configuration
         _vgaScreenRefreshCounter = new Counter(machine, _loggerService, 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
-        // retrace 60 times per seconds
-        _vgaRetraceCounter = new Counter(machine, _loggerService, 5, counterConfigurator.InstanciateCounterActivator(_cpu.State));
-        _vgaRetraceCounter.SetValue((int)(Counter.HardwareFrequency / 60));
     }
 
     public void SetTimeMultiplier(double multiplier) {
@@ -58,7 +53,6 @@ public class Timer : DefaultIOPortHandler {
         foreach (Counter counter in _counters) {
             counter.Activator.Multiplier = multiplier;
         }
-        _vgaRetraceCounter.Activator.Multiplier = multiplier;
     }
 
     public Counter GetCounter(int counterIndex) {
@@ -119,9 +113,6 @@ public class Timer : DefaultIOPortHandler {
             _dualPic.ProcessInterruptRequest(0);
         }
 
-        if (_vgaRetraceCounter.ProcessActivation(cycles)) {
-            _vgaCard?.TickRetrace();
-        }
         if (_vgaScreenRefreshCounter.ProcessActivation(cycles)) {
             _vgaCard?.UpdateScreen();
         }

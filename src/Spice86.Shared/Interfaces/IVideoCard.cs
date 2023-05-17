@@ -5,11 +5,6 @@ namespace Spice86.Shared.Interfaces;
 /// </summary>
 public interface IVideoCard {
     /// <summary>
-    /// Method to be called during the vertical retrace period of the display.
-    /// </summary>
-    void TickRetrace();
-
-    /// <summary>
     /// Method to update the screen with the contents of the video memory.
     /// </summary>
     void UpdateScreen();

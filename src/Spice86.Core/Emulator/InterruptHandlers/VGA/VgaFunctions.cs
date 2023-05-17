@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -400,7 +403,7 @@ internal class VgaFunctions {
 
         // Write the fonts in memory
         if (vgaMode.MemoryModel == MemoryModel.Text) {
-            LoadFont(VgaRom.VgaFont16, 0x100, 0, 0, 16);
+            LoadFont(Fonts.VgaFont16, 0x100, 0, 0, 16);
         }
     }
 
@@ -412,12 +415,8 @@ internal class VgaFunctions {
             case MemoryModel.Cga:
                 MemSet16(vgaMode.StartSegment, 0, 0x0000, 32 * 1024);
                 break;
-            case MemoryModel.Hercules:
             case MemoryModel.Planar:
             case MemoryModel.Packed:
-            case MemoryModel.NonChain4X256:
-            case MemoryModel.Direct:
-            case MemoryModel.Yuv:
             default:
                 MemSet16(vgaMode.StartSegment, 0, 0x0000, 64 * 1024);
                 break;

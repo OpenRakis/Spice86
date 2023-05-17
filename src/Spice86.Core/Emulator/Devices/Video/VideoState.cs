@@ -1,9 +1,12 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.Devices.Video.Registers;
-using Spice86.Core.Emulator.InterruptHandlers.VGA;
 
+/// <inheritdoc />
 public class VideoState : IVideoState {
+    /// <summary>
+    /// Creates a new instance of the <see cref="VideoState"/> class.
+    /// </summary>
     public VideoState() {
         DacRegisters = new DacRegisters();
         GeneralRegisters = new GeneralRegisters();
@@ -13,14 +16,21 @@ public class VideoState : IVideoState {
         AttributeControllerRegisters = new AttributeControllerRegisters();
     }
 
-    // Registers
+    /// <inheritdoc />
     public DacRegisters DacRegisters { get; }
-    public GeneralRegisters GeneralRegisters { get; }
-    public SequencerRegisters SequencerRegisters { get; }
-    public CrtControllerRegisters CrtControllerRegisters { get; }
-    public GraphicsControllerRegisters GraphicsControllerRegisters { get; }
-    public AttributeControllerRegisters AttributeControllerRegisters { get; }
 
-    // Other state
-    public VgaMode CurrentMode { get; } = default;
+    /// <inheritdoc />
+    public GeneralRegisters GeneralRegisters { get; }
+
+    /// <inheritdoc />
+    public SequencerRegisters SequencerRegisters { get; }
+
+    /// <inheritdoc />
+    public CrtControllerRegisters CrtControllerRegisters { get; }
+
+    /// <inheritdoc />
+    public GraphicsControllerRegisters GraphicsControllerRegisters { get; }
+
+    /// <inheritdoc />
+    public AttributeControllerRegisters AttributeControllerRegisters { get; }
 }

@@ -9,6 +9,9 @@ public static class BitManipulationExtensions {
         value = (byte)(value << 8 - amount | value >> amount);
     }
 
+    /// <summary>
+    /// Split a byte into an array of eight booleans.
+    /// </summary>
     public static bool[] ToBits(this byte value) {
         bool[] b = new bool[8];
         for (int i = 0; i < 8; i++) {

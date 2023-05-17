@@ -184,7 +184,7 @@ public class Machine : IDisposable {
     public VgaBios VideoBiosInt10Handler { get; }
     
     /// <summary>
-    /// The Video Rom
+    /// The Video Rom containing fonts and other data.
     /// </summary>
     public VgaRom VgaRom { get; }
 
