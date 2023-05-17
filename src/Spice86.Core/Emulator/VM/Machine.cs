@@ -283,13 +283,13 @@ public class Machine : IDisposable {
         OPL3FM = new Opl3Fm(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         if (machineCreationOptions.Configuration.AdlibGold) {
-            Register(AdlibGold);
+            //Register(Opl);
         } else {
             Register(OPL3FM);
         }
         Register(SoundBlaster);
         SoundBlaster.AddEnvironmentVariable();
-        GravisUltraSound = new GravisUltraSound(this, configuration, loggerService);
+        GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(GravisUltraSound);
         MidiDevice = new Midi(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(MidiDevice);

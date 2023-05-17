@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 
 using Spice86.Shared.Interfaces;
@@ -13,40 +12,20 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Adlib Gold implementation, translated from DOSBox Staging code
 /// </summary>
-public sealed class AdlibGold : DefaultIOPortHandler  {
+public sealed class AdlibGold  {
     private readonly StereoProcessor _stereoProcessor;
     private readonly SurroundProcessor _surroundProcessor;
     private readonly ushort _sampleRate;
 
-    public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
+    public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) {
         _sampleRate = sampleRate;
         _stereoProcessor = new(_sampleRate, loggerService);
         _surroundProcessor = new(_sampleRate);
     }
 
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(OplConsts.FmMusicStatusPortNumber2, this);
-        ioPortDispatcher.AddIOPortHandler(OplConsts.FmMusicDataPortNumber2, this);
-        ioPortDispatcher.AddIOPortHandler(0x332, this);
-        ioPortDispatcher.AddIOPortHandler(0x333, this);
-        ioPortDispatcher.AddIOPortHandler(0x38A, this);
-    }
-
     public void StereoControlWrite(byte reg, byte data) => _stereoProcessor.ControlWrite((StereoProcessorControlReg)reg, data);
 
     public void SurroundControlWrite(byte data) => _surroundProcessor.ControlWrite(data);
-
-    public override byte ReadByte(int port) {
-        return base.ReadByte(port);
-    }
-
-    public override void WriteByte(int port, byte value) {
-        base.WriteByte(port, value);
-    }
-
-    public override void WriteWord(int port, ushort value) {
-        base.WriteWord(port, value);
-    }
 
     private void Process(short[] input, uint framesRemaining, ref AudioFrame output) {
         for (var index = 0; framesRemaining-- > 0; index++) {
