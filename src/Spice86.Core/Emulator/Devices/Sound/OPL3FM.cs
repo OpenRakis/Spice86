@@ -12,18 +12,18 @@ using System;
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.
 /// </summary>
-public class OPL3FM : DefaultIOPortHandler, IDisposable {
+public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
-    protected readonly AudioPlayer? _audioPlayer;
-    protected readonly FmSynthesizer? _synth;
+    protected readonly AudioPlayer? AudioPlayer;
+    protected readonly FmSynthesizer? Synth;
     private int _currentAddress;
-    protected volatile bool _endThread;
-    protected readonly Thread _playbackThread;
-    protected bool _initialized;
+    protected volatile bool EndThread;
+    protected readonly Thread PlaybackThread;
+    protected bool Initialized;
     private bool _paused;
-    protected byte _statusByte;
+    protected byte StatusByte;
     private byte _timer1Data;
     private byte _timer2Data;
     private byte _timerControlByte;
@@ -38,18 +38,18 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public OPL3FM(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
-        _audioPlayer = Audio.CreatePlayer(48000, 2048);
-        if (_audioPlayer is not null) {
-            _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);
+    public Opl3Fm(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+        AudioPlayer = Audio.CreatePlayer(48000, 2048);
+        if (AudioPlayer is not null) {
+            Synth = new FmSynthesizer(AudioPlayer.Format.SampleRate);
         }
-        _playbackThread = new Thread(RnderWaveFormOnPlaybackThread);
+        PlaybackThread = new Thread(RnderWaveFormOnPlaybackThread);
     }
 
     /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicStatusPortNumber2, this);
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicDataPortNumber2, this);
+        ioPortDispatcher.AddIOPortHandler(OplConsts.FmMusicStatusPortNumber2, this);
+        ioPortDispatcher.AddIOPortHandler(OplConsts.FmMusicDataPortNumber2, this);
     }
 
     /// <inheritdoc />
@@ -62,12 +62,12 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     private void Dispose(bool disposing) {
         if(!_disposed) {
             if(disposing) {
-                _endThread = true;
-                if (_playbackThread.IsAlive) {
-                    _playbackThread.Join();
+                EndThread = true;
+                if (PlaybackThread.IsAlive) {
+                    PlaybackThread.Join();
                 }
-                _audioPlayer?.Dispose();
-                _initialized = false;
+                AudioPlayer?.Dispose();
+                Initialized = false;
             }
             _disposed = true;
         }
@@ -75,26 +75,26 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc />
     public override byte ReadByte(int port) {
-        if ((_timerControlByte & 0x01) != 0x00 && (_statusByte & Timer1Mask) == 0) {
+        if ((_timerControlByte & 0x01) != 0x00 && (StatusByte & Timer1Mask) == 0) {
             _timer1Data++;
             if (_timer1Data == 0) {
-                _statusByte |= Timer1Mask;
+                StatusByte |= Timer1Mask;
             }
         }
 
-        if ((_timerControlByte & 0x02) != 0x00 && (_statusByte & Timer2Mask) == 0) {
+        if ((_timerControlByte & 0x02) != 0x00 && (StatusByte & Timer2Mask) == 0) {
             _timer2Data++;
             if (_timer2Data == 0) {
-                _statusByte |= Timer2Mask;
+                StatusByte |= Timer2Mask;
             }
         }
 
-        return _statusByte;
+        return StatusByte;
     }
 
     /// <inheritdoc />
     public override ushort ReadWord(int port) {
-        return _statusByte;
+        return StatusByte;
     }
 
     /// <inheritdoc />
@@ -109,10 +109,10 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
             } else if (_currentAddress == 0x04) {
                 _timerControlByte = value;
                 if ((value & 0x80) == 0x80) {
-                    _statusByte = 0;
+                    StatusByte = 0;
                 }
             } else {
-                _synth?.SetRegisterValue(0, _currentAddress, value);
+                Synth?.SetRegisterValue(0, _currentAddress, value);
             }
         }
     }
@@ -129,43 +129,43 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// Generates and plays back output waveform data.
     /// </summary>
     protected virtual void RnderWaveFormOnPlaybackThread() {
-        if (_audioPlayer is null) {
+        if (AudioPlayer is null) {
             return;
         }
         int length = 1024;
         Span<float> buffer = stackalloc float[length];
-        bool expandToStereo = _audioPlayer.Format.Channels == 2;
+        bool expandToStereo = AudioPlayer.Format.Channels == 2;
         if (expandToStereo) {
             length *= 2;
         }
         Span<float> playBuffer = stackalloc float[length];
         FillBuffer(buffer, playBuffer, expandToStereo);
-        while (!_endThread) {
-            Audio.WriteFullBuffer(_audioPlayer, playBuffer);
+        while (!EndThread) {
+            Audio.WriteFullBuffer(AudioPlayer, playBuffer);
             FillBuffer(buffer, playBuffer, expandToStereo);
         }
     }
 
     private void FillBuffer(Span<float> buffer, Span<float> playBuffer, bool expandToStereo) {
-        _synth?.GetData(buffer);
+        Synth?.GetData(buffer);
         if (expandToStereo) {
             ChannelAdapter.MonoToStereo(buffer, playBuffer);
         }
     }
 
     public void StartPlayback(string threadName) {
-        if (!_initialized) {
+        if (!Initialized) {
             StartPlaybackThread(threadName);
         }
     }
 
     protected void StartPlaybackThread(string threadName = "") {
-        if(!_endThread) {
+        if(!EndThread) {
             if(!string.IsNullOrWhiteSpace(threadName)) {
-                _playbackThread.Name = threadName;
+                PlaybackThread.Name = threadName;
             }
-            _playbackThread.Start();
-            _initialized = true;
+            PlaybackThread.Start();
+            Initialized = true;
         }
     }
 }

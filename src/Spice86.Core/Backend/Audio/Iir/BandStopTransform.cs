@@ -54,13 +54,16 @@ public class BandStopTransform {
         _wc = _wc2 + ww;
 
         // this is crap
-        if (_wc2 < 1e-8)
+        if (_wc2 < 1e-8) {
             _wc2 = 1e-8;
-        if (_wc > Math.PI - 1e-8)
+        }
+
+        if (_wc > Math.PI - 1e-8) {
             _wc = Math.PI - 1e-8;
+        }
 
         _a = Math.Cos((_wc + _wc2) * .5) /
-                Math.Cos((_wc - _wc2) * .5);
+             Math.Cos((_wc - _wc2) * .5);
         _b = Math.Tan((_wc - _wc2) * .5);
         _a2 = _a * _a;
         _b2 = _b * _b;
@@ -82,17 +85,19 @@ public class BandStopTransform {
             digital.Add(poles, zeros);
         }
 
-        if (fc < 0.25)
+        if (fc < 0.25) {
             digital.SetNormal(Math.PI, analog.NormalGain);
-        else
+        } else {
             digital.SetNormal(0, analog.NormalGain);
+        }
     }
 
     private ComplexPair Transform(Complex c) {
-        if (c == Complex.Infinity)
+        if (c == Complex.Infinity) {
             c = new Complex(-1, 0);
-        else
+        } else {
             c = new Complex(1, 0).Add(c).Divide(new Complex(1, 0).Subtract(c)); // bilinear
+        }
 
         var u = new Complex(0, 0);
         u = MathSupplement.AddMul(u, 4 * (_b2 + _a2 - 1), c);

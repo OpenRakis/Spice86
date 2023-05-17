@@ -48,8 +48,9 @@ public class Butterworth : Cascade {
                 AddPoleZeroConjugatePairs(c, Complex.Infinity);
             }
 
-            if ((_nPoles & 1) == 1)
+            if ((_nPoles & 1) == 1) {
                 Add(new Complex(-1, 0), Complex.Infinity);
+            }
         }
     }
 

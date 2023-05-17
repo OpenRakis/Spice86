@@ -52,10 +52,13 @@ public class BandPassTransform {
         _wc = _wc2 + ww;
 
         // what is this crap?
-        if (_wc2 < 1e-8)
+        if (_wc2 < 1e-8) {
             _wc2 = 1e-8;
-        if (_wc > Math.PI - 1e-8)
+        }
+
+        if (_wc > Math.PI - 1e-8) {
             _wc = Math.PI - 1e-8;
+        }
 
         _a = Math.Cos((_wc + _wc2) * 0.5) / Math.Cos((_wc - _wc2) * 0.5);
         _b = 1 / Math.Tan((_wc - _wc2) * 0.5);

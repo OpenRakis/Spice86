@@ -12,14 +12,14 @@ public enum Mode {
 public struct Control {
     public Control() { }
     public byte Index { get; set; }
-    public byte LVol { get; set; } = OPL.DefaultVolume;
+    public byte LVol { get; set; } = Opl.DefaultVolumeValue;
     public byte RVol { get; set; }
 
     public bool IsActive { get; set; }
     public bool UseMixer { get; set; }
 }
 
-public class OPLTimer {
+public class OplTimer {
     /// <summary>
     /// Rounded down start time
     /// </summary>
@@ -45,7 +45,7 @@ public class OPLTimer {
     private bool _enabled = false;
     private bool _overflow = false;
     private bool _masked = false;
-    public OPLTimer(short micros) {
+    public OplTimer(short micros) {
         _clockInterval = micros * 0.001;
         SetCounter(0);
     }
@@ -96,8 +96,9 @@ public class OPLTimer {
             _start = time - counterMod;
             _trigger = _start + _counterInterval;
             // Only set the overflow flag when not masked
-            if (!_masked)
+            if (!_masked) {
                 _overflow = true;
+            }
         }
         return _overflow;
     }
@@ -114,8 +115,8 @@ public class Chip {
     /// <summary>
     /// Last selected register
     /// </summary>
-    public OPLTimer Timer0 { get; private set; }
-    public OPLTimer Timer1 { get; private set; }
+    public OplTimer Timer0 { get; private set; }
+    public OplTimer Timer1 { get; private set; }
 
     /// <summary>
     /// Check for it being a write to the timer
@@ -139,13 +140,15 @@ public class Chip {
                     Timer1.Reset();
                 } else {
                     double time = TimeSpan.FromTicks(_machine.Timer.NumberOfTicks).TotalMilliseconds;
-                    if ((val & 0x1) > 0)
+                    if ((val & 0x1) > 0) {
                         Timer0.Start(time);
-                    else
+                    } else {
                         Timer0.Stop();
-                    if ((val & 0x2) > 0)
+                    }
+
+                    if ((val & 0x2) > 0) {
                         Timer1.Start(time);
-                    else {
+                    } else {
                         Timer1.Stop();
                     }
                     Timer0.SetMask((val & 0x40) > 0);
@@ -176,8 +179,8 @@ public class Chip {
     }
 }
 
-public class OPL {
-    public const byte DefaultVolume = 0xff;
+public class Opl {
+    public const byte DefaultVolumeValue = 0xff;
 
     public MixerChannel Channel { get; private set; } = new();
 
@@ -204,7 +207,7 @@ public class OPL {
 
     // Last selected address in the chip for the different modes
 
-    private const int _defaultVolume = 0xff;
+    private const int DefaultVolume = 0xff;
 
 
     [StructLayout(LayoutKind.Explicit)]
@@ -223,7 +226,7 @@ public class OPL {
 
     private Control _ctrl = new();
 
-    public OPL(AdlibGold adlibGold, OplMode mode) {
+    public Opl(AdlibGold adlibGold, OplMode mode) {
         _adlibGold = adlibGold;
     }
 
@@ -258,9 +261,8 @@ public class OPL {
                 if (_ctrl.UseMixer) {
                     // Dune CD version uses 32 volume steps in an apparent
                     // mistake, should be 128
-                    //Channel.SetAppVolume(
-                    //        (_ctrl.LVol & 0x1f) / 31.0f,
-                    //        (_ctrl.RVol & 0x1f) / 31.0f);
+                    _ctrl.LVol &= (byte) (0x1f / 31.0f);
+                    _ctrl.RVol &= (byte) (0x1f / 31.0f);
                 }
                 break;
 

@@ -24,72 +24,72 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// The port number for checking if data is available to be read from the DSP.
     /// </summary>
-    public const int DSP_DATA_AVAILABLE_PORT_NUMBER = 0x22E;
+    public const int DspDataAvailablePortNumber = 0x22E;
 
     /// <summary>
     /// The port number for reading data from the DSP.
     /// </summary>
-    public const int DSP_READ_PORT_NUMBER = 0x22A;
+    public const int DspReadPortNumber = 0x22A;
 
     /// <summary>
     /// The port number for resetting the DSP.
     /// </summary>
-    public const int DSP_RESET_PORT_NUMBER = 0x226;
+    public const int DspResetPortNumber = 0x226;
 
     /// <summary>
     /// The port number for checking the status of the DSP write buffer.
     /// </summary>
-    public const int DSP_WRITE_BUFFER_STATUS_PORT_NUMBER = 0x22C;
+    public const int DspWriteBufferStatusPortNumber = 0x22C;
 
     /// <summary>
     /// The port number for sending FM music data to the left FM music channel.
     /// </summary>
-    public const int FM_MUSIC_DATA_PORT_NUMBER = 0x229;
+    public const int FmMusicDataPortNumber = 0x229;
 
     /// <summary>
     /// The port number for sending FM music data to the right FM music channel.
     /// </summary>
-    public const int FM_MUSIC_DATA_PORT_NUMBER_2 = 0x389;
+    public const int FmMusicDataPortNumber2 = 0x389;
 
     /// <summary>
     /// The port number for checking the status of the left FM music channel.
     /// </summary>
-    public const int FM_MUSIC_STATUS_PORT_NUMBER = 0x228;
+    public const int FmMusicStatusPortNumber = 0x228;
 
     /// <summary>
     /// The port number for checking the status of the right FM music channel.
     /// </summary>
-    public const int FM_MUSIC_STATUS_PORT_NUMBER_2 = 0x388;
+    public const int FmMusicStatusPortNumber2 = 0x388;
 
     /// <summary>
     /// The port number for sending data to the left speaker.
     /// </summary>
-    public const int LEFT_SPEAKER_DATA_PORT_NUMBER = 0x221;
+    public const int LeftSpeakerDataPortNumber = 0x221;
 
     /// <summary>
     /// The port number for checking the status of the left speaker.
     /// </summary>
-    public const int LEFT_SPEAKER_STATUS_PORT_NUMBER = 0x220;
+    public const int LeftSpeakerStatusPortNumber = 0x220;
 
     /// <summary>
     /// The port number for sending data to the mixer.
     /// </summary>
-    public const int MIXER_DATA_PORT_NUMBER = 0x225;
+    public const int MixerDataPortNumber = 0x225;
 
     /// <summary>
     /// The port number for accessing the mixer registers.
     /// </summary>
-    public const int MIXER_REGISTER_PORT_NUMBER = 0x224;
+    public const int MixerRegisterPortNumber = 0x224;
 
     /// <summary>
     /// The port number for sending data to the right speaker.
     /// </summary>
-    public const int RIGHT_SPEAKER_DATA_PORT_NUMBER = 0x223;
+    public const int RightSpeakerDataPortNumber = 0x223;
 
     /// <summary>
     /// The port number for checking the status of the right speaker.
     /// </summary>
-    public const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222;
+    public const int RightSpeakerStatusPortNumber = 0x222;
 
     private bool _disposed;
 
@@ -142,11 +142,11 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     public SoundBlaster(Machine machine, Configuration configuration, ILoggerService loggerService, byte irq = 7, int dma8 = 1, int dma16 = 5) : base(machine, configuration, loggerService) {
         _machine.Paused += MachinePaused;
         _machine.Resumed += MachineResumed;
-        IRQ = irq;
-        DMA = dma8;
+        Irq = irq;
+        Dma = dma8;
         _dma16 = dma16;
         _mixer = new Mixer(this);
-        _dmaChannel = machine.DmaController.Channels[DMA];
+        _dmaChannel = machine.DmaController.Channels[Dma];
         _dsp = new Dsp(machine, dma8, dma16);
         _dsp.AutoInitBufferComplete += (_, _) => RaiseInterrupt();
         _playbackThread = new Thread(AudioPlayback) {
@@ -244,29 +244,29 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         return (ushort)value;
     }
 
-    int IDmaDevice8.Channel => DMA;
+    int IDmaDevice8.Channel => Dma;
 
     int IDmaDevice16.Channel => _dma16;
 
     /// <summary>
     /// Gets the DMA channel assigned to the device.
     /// </summary>
-    public int DMA { get; }
+    public int Dma { get; }
 
     /// <summary>
     /// The list of input ports.
     /// </summary>
-    public IEnumerable<int> InputPorts => new int[] { DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData };
+    public IEnumerable<int> InputPorts => new[] { DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData };
 
     /// <summary>
     /// Gets the hardware IRQ assigned to the device.
     /// </summary>
-    public byte IRQ { get; }
+    public byte Irq { get; }
 
     /// <summary>
     /// The list of output ports.
     /// </summary>
-    public IEnumerable<int> OutputPorts => new int[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress };
+    public IEnumerable<int> OutputPorts => new[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress };
 
     /// <inheritdoc />
     public void Dispose() {
@@ -289,19 +289,19 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
     /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_BUFFER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_DATA_AVAILABLE_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_READ_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DspResetPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(DspWriteBufferStatusPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(MixerRegisterPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(MixerDataPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(DspDataAvailablePortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(DspReadPortNumber, this);
 
-        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(LeftSpeakerStatusPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(LeftSpeakerDataPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(RightSpeakerStatusPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(RightSpeakerDataPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(FmMusicStatusPortNumber, this);
+        ioPortDispatcher.AddIOPortHandler(FmMusicDataPortNumber, this);
         // Those are managed by OPL3FM class.
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER_2, this);
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER_2, this);
@@ -319,7 +319,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
 
     internal void AddEnvironmentVariable() {
-        _machine.EnvironmentVariables["BLASTER"] = $"A220 I{IRQ} D{DMA} T4";
+        _machine.EnvironmentVariables["BLASTER"] = $"A220 I{Irq} D{Dma} T4";
     }
 
     private void AudioPlayback() {
@@ -529,7 +529,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// </summary>
     private void RaiseInterrupt() {
         _mixer.InterruptStatusRegister = InterruptStatus.Dma8;
-        _machine.DualPic.ProcessInterruptRequest(IRQ);
+        _machine.DualPic.ProcessInterruptRequest(Irq);
         //System.Diagnostics.Debug.WriteLine("Sound Blaster IRQ");
     }
 

@@ -39,7 +39,9 @@
 using System.Collections.ObjectModel;
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-public static class OPL3Nuked {
+using Spice86.Shared.Emulator.Errors;
+
+public static class Opl3Nuked {
     public const int OplWriteBufSize = 1024;
     public const int OplWriteBufDelay = 2;
 
@@ -149,7 +151,7 @@ public static class OPL3Nuked {
     /// freq mult table multiplied by 2
     /// 1/2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15
     /// </summary>
-    private static readonly ReadOnlyCollection<int> Mt = Array.AsReadOnly(new int[] {
+    private static readonly ReadOnlyCollection<int> Mt = Array.AsReadOnly(new[] {
         1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30
     });
 
@@ -167,7 +169,7 @@ public static class OPL3Nuked {
     /// <summary>
     /// envelope generator constants
     /// </summary>
-    private static readonly ReadOnlyCollection<byte[]> EgIncStep = Array.AsReadOnly(new byte[][] {
+    private static readonly ReadOnlyCollection<byte[]> EgIncStep = Array.AsReadOnly(new[] {
         new byte[]{ 0, 0, 0, 0 },
         new byte[]{ 1, 0, 0, 0 },
         new byte[]{ 1, 0, 1, 0 },
@@ -197,14 +199,14 @@ public static class OPL3Nuked {
     /*
     * Envelope generator
     */
-    private static short OPL3EnvelopeCalcExp(int level) {
+    private static short Opl3EnvelopeCalcExp(int level) {
         if (level > 0x1fff) {
             level = 0x1fff;
         }
-        return (short)((ExpRom[(int)(level & 0xff)] << 1) >> (level >> 8));
+        return (short)((ExpRom[level & 0xff] << 1) >> (level >> 8));
     }
 
-    private static short OPL3EnvelopeCalcSin0(ushort phase, ushort envelope) {
+    private static short Opl3EnvelopeCalcSin0(ushort phase, ushort envelope) {
         ushort neg = 0;
         phase &= 0x3ff;
         if ((phase & 0x200) >= 1) {
@@ -216,10 +218,10 @@ public static class OPL3Nuked {
         } else {
             output = LogSinRom[phase & 0xff];
         }
-        return (short)(OPL3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
+        return (short)(Opl3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
     }
 
-    private static short OPL3EnvelopeCalcSin1(ushort phase, ushort envelope) {
+    private static short Opl3EnvelopeCalcSin1(ushort phase, ushort envelope) {
         phase &= 0x3f;
         ushort output;
         if ((phase & 0x200) >= 1) {
@@ -229,10 +231,10 @@ public static class OPL3Nuked {
         } else {
             output = LogSinRom[phase & 0xff];
         }
-        return OPL3EnvelopeCalcExp(output + (envelope << 3));
+        return Opl3EnvelopeCalcExp(output + (envelope << 3));
     }
 
-    private static short OPL3EnvelopeCalcSin2(ushort phase, ushort envelope) {
+    private static short Opl3EnvelopeCalcSin2(ushort phase, ushort envelope) {
         phase &= 0x3ff;
         ushort output;
         if ((phase & 0x100) >= 1) {
@@ -240,10 +242,10 @@ public static class OPL3Nuked {
         } else {
             output = LogSinRom[phase & 0xff];
         }
-        return OPL3EnvelopeCalcExp(output + (envelope << 3));
+        return Opl3EnvelopeCalcExp(output + (envelope << 3));
     }
 
-    private static short OPL3EnvelopeCalcSin3(ushort phase, ushort envelope) {
+    private static short Opl3EnvelopeCalcSin3(ushort phase, ushort envelope) {
         phase &= 0x3ff;
         ushort output;
         if ((phase & 0x100) >= 1) {
@@ -251,10 +253,10 @@ public static class OPL3Nuked {
         } else {
             output = LogSinRom[phase & 0xff];
         }
-        return OPL3EnvelopeCalcExp(output + (envelope << 3));
+        return Opl3EnvelopeCalcExp(output + (envelope << 3));
     }
 
-    private static short OPL3EnvelopeCalcSin4(ushort phase, ushort envelope) {
+    private static short Opl3EnvelopeCalcSin4(ushort phase, ushort envelope) {
         ushort neg = 0;
         phase &= 0x3ff;
         if ((phase & 0x300) == 0x100) {
@@ -268,10 +270,10 @@ public static class OPL3Nuked {
         } else {
             output = LogSinRom[(phase << 1) & 0xff];
         }
-        return (short)(OPL3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
+        return (short)(Opl3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
     }
 
-    private static short OPL3EnvelopeCalcSin5(ushort phase, ushort envelope) {
+    private static short Opl3EnvelopeCalcSin5(ushort phase, ushort envelope) {
         phase &= 0x3ff;
         ushort output;
         if ((phase & 0x200) >= 1) {
@@ -281,19 +283,19 @@ public static class OPL3Nuked {
         } else {
             output = LogSinRom[(phase << 1) & 0xff];
         }
-        return OPL3EnvelopeCalcExp(output + (envelope << 3));
+        return Opl3EnvelopeCalcExp(output + (envelope << 3));
     }
 
-    private static short OPL3EnvelopeCalcSin6(ushort phase, ushort envelope) {
+    private static short Opl3EnvelopeCalcSin6(ushort phase, ushort envelope) {
         ushort neg = 0;
         phase &= 0x3ff;
         if ((phase & 0x200) >= 1) {
             neg = 0xffff;
         }
-        return (short)(OPL3EnvelopeCalcExp(envelope << 3) ^ neg);
+        return (short)(Opl3EnvelopeCalcExp(envelope << 3) ^ neg);
     }
 
-    private static short OPL3EnvelopeCalcSin7(ushort phase, ushort envelope) {
+    private static short Opl3EnvelopeCalcSin7(ushort phase, ushort envelope) {
         ushort neg = 0;
         phase &= 0x3ff;
         if ((phase & 0x200) >= 1) {
@@ -301,18 +303,18 @@ public static class OPL3Nuked {
             phase = (ushort)((phase & 0x1ff) ^ 0x1ff);
         }
         ushort output = (ushort)(phase << 3);
-        return (short)(OPL3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
+        return (short)(Opl3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
     }
 
     private static readonly ReadOnlyCollection<Func<ushort, ushort, short>> EnvelopeSin = Array.AsReadOnly(new Func<ushort, ushort, short>[]{
-        new ((x, y) => OPL3EnvelopeCalcSin0(x, y)),
-        new ((x, y) => OPL3EnvelopeCalcSin1(x, y)),
-        new ((x, y) => OPL3EnvelopeCalcSin2(x, y)),
-        new ((x, y) => OPL3EnvelopeCalcSin3(x, y)),
-        new ((x, y) => OPL3EnvelopeCalcSin4(x, y)),
-        new ((x, y) => OPL3EnvelopeCalcSin5(x, y)),
-        new ((x, y) => OPL3EnvelopeCalcSin6(x, y)),
-        new ((x, y) => OPL3EnvelopeCalcSin7(x, y)),
+        (x, y) => Opl3EnvelopeCalcSin0(x, y),
+        (x, y) => Opl3EnvelopeCalcSin1(x, y),
+        (x, y) => Opl3EnvelopeCalcSin2(x, y),
+        (x, y) => Opl3EnvelopeCalcSin3(x, y),
+        (x, y) => Opl3EnvelopeCalcSin4(x, y),
+        (x, y) => Opl3EnvelopeCalcSin5(x, y),
+        (x, y) => Opl3EnvelopeCalcSin6(x, y),
+        (x, y) => Opl3EnvelopeCalcSin7(x, y),
     });
 
     private enum EnvelopeGenNum {
@@ -322,7 +324,7 @@ public static class OPL3Nuked {
         Release,
     }
 
-    private static void OPL3EnvelopeUpdateKSL(ref Opl3Slot slot) {
+    private static void Opl3EnvelopeUpdateKsl(ref Opl3Slot slot) {
         short ksl = (short)((KslRom[slot.Channel.FNum >> 6] << 2)
             - ((0x08 - slot.Channel.Block) << 5));
         if (ksl < 0) {
@@ -331,7 +333,7 @@ public static class OPL3Nuked {
         slot.EgKsl = (byte)ksl;
     }
 
-    private static void OPL3EnvelopeCalc(ref Opl3Slot slot) {
+    private static void Opl3EnvelopeCalc(ref Opl3Slot slot) {
         byte nonzero;
         byte rate;
         byte rateHi;
@@ -389,8 +391,6 @@ public static class OPL3Nuked {
                             break;
                         case 14:
                             shift = (byte)(rateLo & 0x01);
-                            break;
-                        default:
                             break;
                     }
                 }
@@ -454,7 +454,7 @@ public static class OPL3Nuked {
         slot.Key |= type;
     }
 
-    private static void OPL3EnvelopeKeyOff(ref Opl3Slot slot, byte type) {
+    private static void Opl3EnvelopeKeyOff(ref Opl3Slot slot, byte type) {
         slot.Key &= (byte)~type;
     }
 
@@ -462,7 +462,7 @@ public static class OPL3Nuked {
         Phase Generator
     */
 
-    private static void OPL3PhaseGenerate(ref Opl3Slot slot) {
+    private static void Opl3PhaseGenerate(ref Opl3Slot slot) {
         Opl3Chip chip;
         ushort fNum;
         uint basefreq;
@@ -532,8 +532,6 @@ public static class OPL3Nuked {
                 case 17: /* tc */
                     slot.PgPhaseOut = (ushort)((rmXor << 9) | 0x80);
                     break;
-                default:
-                    break;
             }
         }
         nBit = (byte)(((noise >> 14) ^ noise) & 0x01);
@@ -544,7 +542,7 @@ public static class OPL3Nuked {
         Slot
     */
 
-    private static void OPL3SlotWrite20(ref Opl3Slot slot, byte data) {
+    private static void Opl3SlotWrite20(ref Opl3Slot slot, byte data) {
         if (((data >> 7) & 0x01) > 0) {
             slot.Trem = slot.Chip.Tremolo;
         } else {
@@ -556,13 +554,13 @@ public static class OPL3Nuked {
         slot.RegMult = (byte)(data & 0x0f);
     }
 
-    private static void OPL3SlotWrite40(ref Opl3Slot slot, byte data) {
+    private static void Opl3SlotWrite40(ref Opl3Slot slot, byte data) {
         slot.RegKsl = (byte)((data >> 6) & 0x03);
         slot.RegTl = (byte)(data & 0x3f);
-        OPL3EnvelopeUpdateKSL(ref slot);
+        Opl3EnvelopeUpdateKsl(ref slot);
     }
 
-    private static void OPL3SlotWrite60(ref Opl3Slot slot, byte data) {
+    private static void Opl3SlotWrite60(ref Opl3Slot slot, byte data) {
         slot.RegSl = (byte)((data >> 4) & 0x0f);
         if (slot.RegSl == 0x0f) {
             slot.RegSl = 0x1f;
@@ -570,7 +568,7 @@ public static class OPL3Nuked {
         slot.RegRr = (byte)(data & 0x0f);
     }
 
-    private static void OPL3SlotWrite80(ref Opl3Slot slot, byte data) {
+    private static void Opl3SlotWrite80(ref Opl3Slot slot, byte data) {
         slot.RegSl = (byte)((data >> 4) & 0x0f);
         if (slot.RegSl == 0x0f) {
             slot.RegSl = 0x1f;
@@ -578,18 +576,18 @@ public static class OPL3Nuked {
         slot.RegRr = (byte)(data & 0x0f);
     }
 
-    private static void OPL3SlotWriteE0(ref Opl3Slot slot, byte data) {
+    private static void Opl3SlotWriteE0(ref Opl3Slot slot, byte data) {
         slot.RegWf = (byte)(data & 0x07);
         if (slot.Chip.NewM == 0x00) {
             slot.RegWf &= 0x03;
         }
     }
 
-    private static void OPL3SlotGenerate(ref Opl3Slot slot) {
+    private static void Opl3SlotGenerate(ref Opl3Slot slot) {
         slot.Out = EnvelopeSin[slot.RegWf]((ushort)(slot.PgPhaseOut + slot.Mod), slot.EgOut);
     }
 
-    private static void OPL3SlotCalcFB(ref Opl3Slot slot) {
+    private static void Opl3SlotCalcFb(ref Opl3Slot slot) {
         if (slot.Channel.Fb != 0x00) {
             slot.FbMod = (short)((slot.PrOut + slot.Out) >> (0x09 - slot.Channel.Fb));
         } else {
@@ -602,7 +600,7 @@ public static class OPL3Nuked {
         Channel
     */
 
-    private static void OPL3ChannelSetupAlg(Opl3Channel channel) {
+    private static void Opl3ChannelSetupAlg(Opl3Channel channel) {
         ArgumentNullException.ThrowIfNull(channel);
         channel.Pair ??= new();
         ArgumentNullException.ThrowIfNull(channel.Pair);
@@ -696,7 +694,7 @@ public static class OPL3Nuked {
         }
     }
 
-    private static void OPL3ChannelUpdateRhytm(ref Opl3Chip chip, byte data) {
+    private static void Opl3ChannelUpdateRhytm(ref Opl3Chip chip, byte data) {
         Opl3Channel channel6;
         Opl3Channel channel7;
         Opl3Channel channel8;
@@ -722,70 +720,70 @@ public static class OPL3Nuked {
             for (chNum = 6; chNum < 9; chNum++) {
                 chip.Channel[chNum].ChType = (byte)ChType.ChDrum;
             }
-            OPL3ChannelSetupAlg(channel6);
-            OPL3ChannelSetupAlg(channel7);
-            OPL3ChannelSetupAlg(channel8);
+            Opl3ChannelSetupAlg(channel6);
+            Opl3ChannelSetupAlg(channel7);
+            Opl3ChannelSetupAlg(channel8);
             /* hh */
             if ((chip.Rhy & 0x01) > 0) {
                 OPL3EnvelopeKeyOn(ref channel7.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
             } else {
-                OPL3EnvelopeKeyOff(ref channel7.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
+                Opl3EnvelopeKeyOff(ref channel7.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
             }
             /* tc */
             if ((chip.Rhy & 0x02) > 0) {
                 OPL3EnvelopeKeyOn(ref channel8.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
             } else {
-                OPL3EnvelopeKeyOff(ref channel8.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
+                Opl3EnvelopeKeyOff(ref channel8.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
             }
             /* tom */
             if ((chip.Rhy & 0x04) > 0) {
                 OPL3EnvelopeKeyOn(ref channel8.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
             } else {
-                OPL3EnvelopeKeyOff(ref channel8.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
+                Opl3EnvelopeKeyOff(ref channel8.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
             }
             /* sd */
             if ((chip.Rhy & 0x08) > 0) {
                 OPL3EnvelopeKeyOn(ref channel7.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
             } else {
-                OPL3EnvelopeKeyOff(ref channel7.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
+                Opl3EnvelopeKeyOff(ref channel7.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
             }
             /* bd */
             if ((chip.Rhy & 0x10) > 0) {
                 OPL3EnvelopeKeyOn(ref channel6.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
                 OPL3EnvelopeKeyOn(ref channel6.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
             } else {
-                OPL3EnvelopeKeyOff(ref channel6.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
-                OPL3EnvelopeKeyOff(ref channel6.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
+                Opl3EnvelopeKeyOff(ref channel6.Slots[0], (byte)EnvelopeKeyType.EgkDrum);
+                Opl3EnvelopeKeyOff(ref channel6.Slots[1], (byte)EnvelopeKeyType.EgkDrum);
             }
         } else {
             for (chNum = 6; chNum < 9; chNum++) {
                 chip.Channel[chNum].ChType = (byte)ChType.Ch2Op;
-                OPL3ChannelSetupAlg(chip.Channel[chNum]);
-                OPL3EnvelopeKeyOff(ref chip.Channel[chNum].Slots[0], (byte)EnvelopeKeyType.EgkDrum);
-                OPL3EnvelopeKeyOff(ref chip.Channel[chNum].Slots[1], (byte)EnvelopeKeyType.EgkDrum);
+                Opl3ChannelSetupAlg(chip.Channel[chNum]);
+                Opl3EnvelopeKeyOff(ref chip.Channel[chNum].Slots[0], (byte)EnvelopeKeyType.EgkDrum);
+                Opl3EnvelopeKeyOff(ref chip.Channel[chNum].Slots[1], (byte)EnvelopeKeyType.EgkDrum);
             }
         }
     }
 
-    private static void OPL3ChannelWriteA0(Opl3Channel channel, byte data) {
+    private static void Opl3ChannelWriteA0(Opl3Channel channel, byte data) {
         if (channel.Chip.NewM > 0 && channel.ChType == (byte)ChType.Ch4Op2) {
             return;
         }
         channel.FNum = (ushort)((channel.FNum & 0x300) | data);
         channel.Ksv = (byte)((channel.Block << 1)
                     | ((channel.FNum >> (0x09 - channel.Chip.Nts)) & 0x01));
-        OPL3EnvelopeUpdateKSL(ref channel.Slots[0]);
-        OPL3EnvelopeUpdateKSL(ref channel.Slots[1]);
+        Opl3EnvelopeUpdateKsl(ref channel.Slots[0]);
+        Opl3EnvelopeUpdateKsl(ref channel.Slots[1]);
         if (channel.Pair is not null &&
             channel.Chip.NewM > 0 && channel.ChType == (byte)ChType.Ch4Op) {
             channel.Pair.FNum = channel.FNum;
             channel.Pair.Ksv = channel.Ksv;
-            OPL3EnvelopeUpdateKSL(ref channel.Pair.Slots[0]);
-            OPL3EnvelopeUpdateKSL(ref channel.Pair.Slots[1]);
+            Opl3EnvelopeUpdateKsl(ref channel.Pair.Slots[0]);
+            Opl3EnvelopeUpdateKsl(ref channel.Pair.Slots[1]);
         }
     }
 
-    private static void OPL3ChannelWriteB0(Opl3Channel channel, byte data) {
+    private static void Opl3ChannelWriteB0(Opl3Channel channel, byte data) {
         if (channel.Chip.NewM > 0 && channel.ChType == (byte)ChType.Ch4Op2) {
             return;
         }
@@ -793,19 +791,19 @@ public static class OPL3Nuked {
         channel.Block = (byte)((data >> 2) & 0x07);
         channel.Ksv = (byte)((channel.Block << 1)
                     | ((channel.FNum >> (0x09 - channel.Chip.Nts)) & 0x01));
-        OPL3EnvelopeUpdateKSL(ref channel.Slots[0]);
-        OPL3EnvelopeUpdateKSL(ref channel.Slots[1]);
+        Opl3EnvelopeUpdateKsl(ref channel.Slots[0]);
+        Opl3EnvelopeUpdateKsl(ref channel.Slots[1]);
         if (channel.Pair is not null &&
             channel.Chip.NewM > 0 && channel.ChType == (byte)ChType.Ch4Op) {
             channel.Pair.FNum = channel.FNum;
             channel.Pair.Block = channel.Block;
             channel.Pair.Ksv = channel.Ksv;
-            OPL3EnvelopeUpdateKSL(ref channel.Pair.Slots[0]);
-            OPL3EnvelopeUpdateKSL(ref channel.Pair.Slots[1]);
+            Opl3EnvelopeUpdateKsl(ref channel.Pair.Slots[0]);
+            Opl3EnvelopeUpdateKsl(ref channel.Pair.Slots[1]);
         }
     }
 
-    private static void OPL3ChannelWriteC0(Opl3Channel channel, byte data) {
+    private static void Opl3ChannelWriteC0(Opl3Channel channel, byte data) {
         channel.Fb = (byte)((data & 0x0e) >> 1);
         channel.Con = (byte)(data & 0x01);
         channel.Alg = channel.Con;
@@ -813,16 +811,16 @@ public static class OPL3Nuked {
             if (channel.ChType == (byte)ChType.Ch4Op) {
                 channel.Pair.Alg = (byte)(0x04 | (channel.Con << 1) | (channel.Pair.Con));
                 channel.Alg = 0x08;
-                OPL3ChannelSetupAlg(channel.Pair);
+                Opl3ChannelSetupAlg(channel.Pair);
             } else if (channel.ChType == (byte)ChType.Ch4Op2) {
                 channel.Alg = (byte)(0x04 | (channel.Pair.Con << 1) | (channel.Con));
                 channel.Pair.Alg = 0x08;
-                OPL3ChannelSetupAlg(channel);
+                Opl3ChannelSetupAlg(channel);
             } else {
-                OPL3ChannelSetupAlg(channel);
+                Opl3ChannelSetupAlg(channel);
             }
         } else {
-            OPL3ChannelSetupAlg(channel);
+            Opl3ChannelSetupAlg(channel);
         }
         if (channel.Chip.NewM > 0) {
             channel.Cha = (ushort)(((data >> 4) & 0x01) > 0 ? ~0 : 0);
@@ -867,24 +865,24 @@ public static class OPL3Nuked {
         }
     }
 
-    private static void OPL3ChannelKeyOff(Opl3Channel channel) {
+    private static void Opl3ChannelKeyOff(Opl3Channel channel) {
         if (channel.Chip.NewM > 0 && channel.Pair is not null) {
             if (channel.ChType == (byte)ChType.Ch4Op) {
-                OPL3EnvelopeKeyOff(ref channel.Slots[0], (byte)EnvelopeKeyType.EgkNorm);
-                OPL3EnvelopeKeyOff(ref channel.Slots[1], (byte)EnvelopeKeyType.EgkNorm);
-                OPL3EnvelopeKeyOff(ref channel.Pair.Slots[0], (byte)EnvelopeKeyType.EgkNorm);
-                OPL3EnvelopeKeyOff(ref channel.Pair.Slots[1], (byte)EnvelopeKeyType.EgkNorm);
+                Opl3EnvelopeKeyOff(ref channel.Slots[0], (byte)EnvelopeKeyType.EgkNorm);
+                Opl3EnvelopeKeyOff(ref channel.Slots[1], (byte)EnvelopeKeyType.EgkNorm);
+                Opl3EnvelopeKeyOff(ref channel.Pair.Slots[0], (byte)EnvelopeKeyType.EgkNorm);
+                Opl3EnvelopeKeyOff(ref channel.Pair.Slots[1], (byte)EnvelopeKeyType.EgkNorm);
             } else if (channel.ChType is ((byte)ChType.Ch2Op) or ((byte)ChType.ChDrum)) {
-                OPL3EnvelopeKeyOff(ref channel.Slots[0], (byte)EnvelopeKeyType.EgkNorm);
-                OPL3EnvelopeKeyOff(ref channel.Slots[1], (byte)EnvelopeKeyType.EgkNorm);
+                Opl3EnvelopeKeyOff(ref channel.Slots[0], (byte)EnvelopeKeyType.EgkNorm);
+                Opl3EnvelopeKeyOff(ref channel.Slots[1], (byte)EnvelopeKeyType.EgkNorm);
             }
         } else {
-            OPL3EnvelopeKeyOff(ref channel.Slots[0], (byte)EnvelopeKeyType.EgkNorm);
-            OPL3EnvelopeKeyOff(ref channel.Slots[1], (byte)EnvelopeKeyType.EgkNorm);
+            Opl3EnvelopeKeyOff(ref channel.Slots[0], (byte)EnvelopeKeyType.EgkNorm);
+            Opl3EnvelopeKeyOff(ref channel.Slots[1], (byte)EnvelopeKeyType.EgkNorm);
         }
     }
 
-    private static void OPL3ChannelSet4Op(ref Opl3Chip chip, byte data) {
+    private static void Opl3ChannelSet4Op(ref Opl3Chip chip, byte data) {
         byte bit;
         byte chnum;
         for (bit = 0; bit < 6; bit++) {
@@ -902,7 +900,7 @@ public static class OPL3Nuked {
         }
     }
 
-    private static short OPL3ClipSample(int sample) {
+    private static short Opl3ClipSample(int sample) {
         if (sample > 32767) {
             sample = 32767;
         } else if (sample < -32768) {
@@ -911,14 +909,14 @@ public static class OPL3Nuked {
         return (short)sample;
     }
 
-    private static void OPL3ProcessSlot(ref Opl3Slot slot) {
-        OPL3SlotCalcFB(ref slot);
-        OPL3EnvelopeCalc(ref slot);
-        OPL3PhaseGenerate(ref slot);
-        OPL3SlotGenerate(ref slot);
+    private static void Opl3ProcessSlot(ref Opl3Slot slot) {
+        Opl3SlotCalcFb(ref slot);
+        Opl3EnvelopeCalc(ref slot);
+        Opl3PhaseGenerate(ref slot);
+        Opl3SlotGenerate(ref slot);
     }
 
-    public static void OPL3Generate(ref Opl3Chip chip, short[] buf) {
+    public static void Opl3Generate(ref Opl3Chip chip, short[] buf) {
         Opl3Channel channel;
         Opl3WriteBuf writebuf;
         short[] output;
@@ -927,7 +925,7 @@ public static class OPL3Nuked {
         short accm;
         byte shift = 0;
 
-        buf[1] = OPL3ClipSample(chip.MixBuff[1]);
+        buf[1] = Opl3ClipSample(chip.MixBuff[1]);
 
 #if OPL_QUIRK_CHANNELSAMPLEDELAY
         for (ii = 0; ii < 15; ii++)
@@ -935,7 +933,7 @@ public static class OPL3Nuked {
         for (ii = 0; ii < 36; ii++)
 #endif
         {
-            OPL3ProcessSlot(ref chip.Slot[ii]);
+            Opl3ProcessSlot(ref chip.Slot[ii]);
         }
 
         mix = 0;
@@ -954,16 +952,16 @@ public static class OPL3Nuked {
 #if OPL_QUIRK_CHANNELSAMPLEDELAY
         for (ii = 15; ii < 18; ii++)
         {
-            OPL3ProcessSlot(ref chip.Slot[ii]);
+            Opl3ProcessSlot(ref chip.Slot[ii]);
         }
 #endif
 
-        buf[0] = OPL3ClipSample(chip.MixBuff[0]);
+        buf[0] = Opl3ClipSample(chip.MixBuff[0]);
 
 #if OPL_QUIRK_CHANNELSAMPLEDELAY
         for (ii = 18; ii < 33; ii++)
         {
-            OPL3ProcessSlot(ref chip.Slot[ii]);
+            Opl3ProcessSlot(ref chip.Slot[ii]);
         }
 #endif
 
@@ -983,7 +981,7 @@ public static class OPL3Nuked {
 #if OPL_QUIRK_CHANNELSAMPLEDELAY
     for (ii = 33; ii < 36; ii++)
     {
-        OPL3ProcessSlot(ref chip.Slot[ii]);
+        Opl3ProcessSlot(ref chip.Slot[ii]);
     }
 #endif
 
@@ -1031,17 +1029,17 @@ public static class OPL3Nuked {
                 break;
             }
             writebuf.Reg &= 0x1ff;
-            OPL3WriteReg(ref chip, writebuf.Reg, writebuf.Data);
+            Opl3WriteReg(ref chip, writebuf.Reg, writebuf.Data);
             chip.WriteBufCur = (chip.WriteBufCur + 1) % OplWriteBufSize;
         }
         chip.WritebufSampleCnt++;
     }
 
-    public static void OPL3GenerateResampled(ref Opl3Chip chip, short[] buf, uint bufOffset) {
+    public static void Opl3GenerateResampled(ref Opl3Chip chip, short[] buf, uint bufOffset) {
         while (chip.SampleCnt >= chip.RateRatio) {
             chip.OldSamples[0] = chip.Samples[0];
             chip.OldSamples[1] = chip.Samples[1];
-            OPL3Generate(ref chip, chip.Samples);
+            Opl3Generate(ref chip, chip.Samples);
             chip.SampleCnt -= chip.RateRatio;
         }
         buf[bufOffset + 0] = (short)((chip.OldSamples[0] * (chip.RateRatio - chip.SampleCnt)
@@ -1051,7 +1049,7 @@ public static class OPL3Nuked {
         chip.SampleCnt += 1 << RsmFrac;
     }
 
-    public static void OPL3Reset(ref Opl3Chip chip, uint samplerate) {
+    public static void Opl3Reset(ref Opl3Chip chip, uint samplerate) {
         Opl3Slot slot;
         Opl3Channel channel;
         byte slotNum;
@@ -1075,13 +1073,9 @@ public static class OPL3Nuked {
          * the code. Therefore, we programmatically determine the total number of
          * channels available and double check it against this magic literal.
          */
-        // sizeof: not translated into C#...
-        // #if DEBUG
-        //         const int channels = (int)(chip.Channel.Length / chip.Channel[0].);
-        // #endif
-        //         if(channels != 18) {
-        //             throw new InvalidOperationException($"{nameof(channels)} must equal 18");
-        //         }
+         if(chip.Channel.Length != 18) {
+             throw new UnrecoverableException($"{nameof(chip.Channel)} must equal 18");
+         }
 
         for (channelNum = 0; channelNum < 18; channelNum++) {
             channel = chip.Channel[channelNum];
@@ -1114,7 +1108,7 @@ public static class OPL3Nuked {
             channel.rightpan = 0x10000;
 #endif
             channel.ChNum = channelNum;
-            OPL3ChannelSetupAlg(channel);
+            Opl3ChannelSetupAlg(channel);
         }
         chip.Noise = 1;
         chip.RateRatio = (int)((samplerate << RsmFrac) / 49716);
@@ -1134,7 +1128,7 @@ public static class OPL3Nuked {
 #endif
     }
 
-    public static void OPL3WriteReg(ref Opl3Chip chip, ushort reg, byte v) {
+    public static void Opl3WriteReg(ref Opl3Chip chip, ushort reg, byte v) {
         byte high = (byte)((reg >> 8) & 0x01);
         byte regm = (byte)(reg & 0xff);
         switch (regm & 0xf0) {
@@ -1142,7 +1136,7 @@ public static class OPL3Nuked {
                 if (high > 0) {
                     switch (regm & 0x0f) {
                         case 0x04:
-                            OPL3ChannelSet4Op(ref chip, v);
+                            Opl3ChannelSet4Op(ref chip, v);
                             break;
                         case 0x05:
                             chip.NewM = (byte)(v & 0x01);
@@ -1162,55 +1156,55 @@ public static class OPL3Nuked {
             case 0x20:
             case 0x30:
                 if (AdSlot[regm & 0x1f] >= 0) {
-                    OPL3SlotWrite20(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
+                    Opl3SlotWrite20(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
                 }
                 break;
             case 0x40:
             case 0x50:
                 if (AdSlot[regm & 0x1f] >= 0) {
-                    OPL3SlotWrite40(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
+                    Opl3SlotWrite40(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
                 }
                 break;
             case 0x60:
             case 0x70:
                 if (AdSlot[regm & 0x1f] >= 0) {
-                    OPL3SlotWrite60(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
+                    Opl3SlotWrite60(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
                 }
                 break;
             case 0x80:
             case 0x90:
                 if (AdSlot[regm & 0x1f] >= 0) {
-                    OPL3SlotWrite80(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
+                    Opl3SlotWrite80(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
                 }
                 break;
             case 0xe0:
             case 0xf0:
                 if (AdSlot[regm & 0x1f] >= 0) {
-                    OPL3SlotWriteE0(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
+                    Opl3SlotWriteE0(ref chip.Slot[18 * high + AdSlot[regm & 0x1f]], v);
                 }
                 break;
             case 0xa0:
                 if ((regm & 0x0f) < 9) {
-                    OPL3ChannelWriteA0(chip.Channel[9 * high + (regm & 0x0f)], v);
+                    Opl3ChannelWriteA0(chip.Channel[9 * high + (regm & 0x0f)], v);
                 }
                 break;
             case 0xb0:
                 if (regm == 0xbd && high <= 0) {
                     chip.TremoloShift = (byte)((((v >> 7) ^ 1) << 1) + 2);
                     chip.VibShift = (byte)(((v >> 6) & 0x01) ^ 1);
-                    OPL3ChannelUpdateRhytm(ref chip, v);
+                    Opl3ChannelUpdateRhytm(ref chip, v);
                 } else if ((regm & 0x0f) < 9) {
-                    OPL3ChannelWriteB0(chip.Channel[9 * high + (regm & 0x0f)], v);
+                    Opl3ChannelWriteB0(chip.Channel[9 * high + (regm & 0x0f)], v);
                     if ((v & 0x20) > 0) {
                         OPL3ChannelKeyOn(chip.Channel[9 * high + (regm & 0x0f)]);
                     } else {
-                        OPL3ChannelKeyOff(chip.Channel[9 * high + (regm & 0x0f)]);
+                        Opl3ChannelKeyOff(chip.Channel[9 * high + (regm & 0x0f)]);
                     }
                 }
                 break;
             case 0xc0:
                 if ((regm & 0x0f) < 9) {
-                    OPL3ChannelWriteC0(chip.Channel[9 * high + (regm & 0x0f)], v);
+                    Opl3ChannelWriteC0(chip.Channel[9 * high + (regm & 0x0f)], v);
                 }
                 break;
 #if OPL_ENABLE_STEREOEXT
@@ -1224,14 +1218,14 @@ public static class OPL3Nuked {
         }
     }
 
-    public static void OPL3WriteRegBuffered(ref Opl3Chip chip, ushort reg, byte v) {
+    public static void Opl3WriteRegBuffered(ref Opl3Chip chip, ushort reg, byte v) {
         ulong time1, time2;
         Opl3WriteBuf writebuf;
         uint writeBufLast = chip.WriteBufLast;
         writebuf = chip.WriteBuf[writeBufLast];
 
         if ((writebuf.Reg & 0x200) > 0) {
-            OPL3WriteReg(ref chip, (ushort)(writebuf.Reg & 0x1ff), writebuf.Data);
+            Opl3WriteReg(ref chip, (ushort)(writebuf.Reg & 0x1ff), writebuf.Data);
 
             chip.WriteBufCur = (writeBufLast + 1) % OplWriteBufSize;
             chip.WritebufSampleCnt = writebuf.Time;
@@ -1239,8 +1233,8 @@ public static class OPL3Nuked {
 
         writebuf.Reg = (ushort)(reg | 0x200);
         writebuf.Data = v;
-        time1 = (ulong)(chip.WriteBufLastTime + OplWriteBufDelay);
-        time2 = (ulong)chip.WritebufSampleCnt;
+        time1 = chip.WriteBufLastTime + OplWriteBufDelay;
+        time2 = chip.WritebufSampleCnt;
 
         if (time1 < time2) {
             time1 = time2;
@@ -1251,11 +1245,11 @@ public static class OPL3Nuked {
         chip.WriteBufLast = (writeBufLast + 1) % OplWriteBufSize;
     }
 
-    public static void OPL3GenerateStream(ref Opl3Chip chip, short[] sndptr, uint numsamples) {
+    public static void Opl3GenerateStream(ref Opl3Chip chip, short[] sndptr, uint numsamples) {
         uint i;
         uint sndOffset = 0;
         for (i = 0; i < numsamples; i++) {
-            OPL3GenerateResampled(ref chip, sndptr, sndOffset);
+            Opl3GenerateResampled(ref chip, sndptr, sndOffset);
             sndOffset += 2;
         }
     }
@@ -1310,7 +1304,7 @@ public struct Opl3Chip {
 
     public ulong WriteBufLastTime { get; set; }
 
-    public Opl3WriteBuf[] WriteBuf { get; set; } = new Opl3WriteBuf[OPL3Nuked.OplWriteBufSize];
+    public Opl3WriteBuf[] WriteBuf { get; set; } = new Opl3WriteBuf[Opl3Nuked.OplWriteBufSize];
 }
 
 public struct Opl3Slot {

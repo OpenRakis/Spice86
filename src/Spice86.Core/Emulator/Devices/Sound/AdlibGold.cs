@@ -1,74 +1,32 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
+﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-namespace Spice86.Core.Emulator.Devices.Sound;
+using System.Runtime.InteropServices;
 
-using Spice86.Core.Backend.Audio;
 using Spice86.Core.Backend.Audio.Iir;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.VM;
 
 using Spice86.Shared.Interfaces;
 
-using System;
-using System.Runtime.InteropServices;
-
 /// <summary>
 /// Adlib Gold implementation, translated from DOSBox Staging code
 /// </summary>
-public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
+public sealed class AdlibGold : DefaultIOPortHandler  {
     private readonly StereoProcessor _stereoProcessor;
     private readonly SurroundProcessor _surroundProcessor;
-    private readonly AudioPlayer? _audioPlayer;
     private readonly ushort _sampleRate;
-
-    private bool _endThread;
-
-    private bool _initialized;
-
-    private readonly bool _paused = false;
-
-    private readonly Thread _playbackThread;
 
     public AdlibGold(Machine machine, Configuration configuration, ILoggerService loggerService, ushort sampleRate) : base(machine, configuration, loggerService) {
         _sampleRate = sampleRate;
         _stereoProcessor = new(_sampleRate, loggerService);
         _surroundProcessor = new(_sampleRate);
-        _audioPlayer = Audio.CreatePlayer(48000, 2048);
-        _playbackThread = new Thread(RnderWaveFormOnPlaybackThread);
-    }
-
-    private bool _disposed;
-
-
-     public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    private void Dispose(bool disposing) {
-        if(!_disposed) {
-            if(disposing) {
-                if (!_paused) {
-                    _endThread = true;
-                    if (_playbackThread.IsAlive) {
-                        _playbackThread.Join();
-                    }
-                }
-                _audioPlayer?.Dispose();
-                _initialized = false;
-            }
-            _disposed = true;
-        }
     }
 
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicStatusPortNumber2, this);
-        ioPortDispatcher.AddIOPortHandler(OPLConsts.FmMusicDataPortNumber2, this);
+        ioPortDispatcher.AddIOPortHandler(OplConsts.FmMusicStatusPortNumber2, this);
+        ioPortDispatcher.AddIOPortHandler(OplConsts.FmMusicDataPortNumber2, this);
         ioPortDispatcher.AddIOPortHandler(0x332, this);
         ioPortDispatcher.AddIOPortHandler(0x333, this);
         ioPortDispatcher.AddIOPortHandler(0x38A, this);
@@ -80,23 +38,6 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
 
     public override byte ReadByte(int port) {
         return base.ReadByte(port);
-    }
-
-    private void RnderWaveFormOnPlaybackThread() {
-        if (_audioPlayer is null) {
-            return;
-        }
-        const int length = 2;
-        Span<float> buffer = stackalloc float[length];
-        while (!_endThread) {
-            //if (_fifo.TryDequeue(out AudioFrame frame)) {
-            //    buffer[0] = frame.Left;
-            //    buffer[1] = frame.Right;
-            //    _audioPlayer?.WriteData(buffer);
-            //} else {
-                Thread.Sleep(1);
-            //}
-        }
     }
 
     public override void WriteByte(int port, byte value) {
@@ -112,7 +53,7 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
             AudioFrame frame = new(input[0], input[1]);
             AudioFrame wet = _surroundProcessor.Process(ref frame);
 
-            // Additionnal wet signal level boost to make the emulated
+            // Additional wet signal level boost to make the emulated
             // sound more closely resemble real hardware recordings.
             const float wetBoost = 1.8f;
             frame.Left = wet.Left * wetBoost;
@@ -185,9 +126,9 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
                 throw new IndexOutOfRangeException(nameof(_sampleRate));
             }
 
-            const double AllPassFrequency = 400.0;
-            const double QFactor = 1.7;
-            _allPass.Setup(_sampleRate, AllPassFrequency, QFactor);
+            const double allPassFrequency = 400.0;
+            const double qFactor = 1.7;
+            _allPass.Setup(_sampleRate, allPassFrequency, qFactor);
             Reset();
         }
 
@@ -207,29 +148,29 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
             StereoProcessorControlReg reg,
             byte data) {
             float CalcVolumeGain(int value) {
-                const float MinGainDb = -128.0f;
-                const float MaxGainDb = 6.0f;
-                const float StepDb = 2.0f;
+                const float minGainDb = -128.0f;
+                const float maxGainDb = 6.0f;
+                const float stepDb = 2.0f;
 
-                float val = (float)(value - Volume0DbValue);
-                float gainDb = Math.Clamp(val * StepDb, MinGainDb, MaxGainDb);
+                float val = value - Volume0DbValue;
+                float gainDb = Math.Clamp(val * stepDb, minGainDb, maxGainDb);
                 return MathUtils.DecibelToGain(gainDb);
             }
 
             float CalcFilterGainDb(int value) {
-                const double MainGainDb = -12.0;
-                const double MaxGainDb = 15.0;
-                const double StepDb = 3.0;
+                const double mainGainDb = -12.0;
+                const double maxGainDb = 15.0;
+                const double stepDb = 3.0;
 
                 int val = value - ShelfFilter0DbValue;
-                return (float)Math.Clamp(val * StepDb, MainGainDb, MaxGainDb);
+                return (float)Math.Clamp(val * stepDb, mainGainDb, maxGainDb);
             }
 
-            const int VolumeControlWidth = 6;
-            const int volumeControlMask = (1 << VolumeControlWidth) - 1;
+            const int volumeControlWidth = 6;
+            const int volumeControlMask = (1 << volumeControlWidth) - 1;
 
-            const int filter_control_width = 4;
-            const int filterControlMask = (1 << filter_control_width) - 1;
+            const int filterControlWidth = 4;
+            const int filterControlMask = (1 << filterControlWidth) - 1;
 
             switch (reg) {
                 case StereoProcessorControlReg.VolumeLeft: {
@@ -296,10 +237,10 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         }
 
         public void SetLowShelfGain(double gainDb) {
-            const double cutoff_freq = 400.0;
+            const double cutoffFreq = 400.0;
             const double slope = 0.5;
             foreach (LowShelf f in _lowShelf) {
-                f.Setup(_sampleRate, cutoff_freq, gainDb, slope);
+                f.Setup(_sampleRate, cutoffFreq, gainDb, slope);
             }
         }
 
@@ -313,45 +254,45 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
         }
 
         public AudioFrame ProcessShelvingFilters(AudioFrame frame) {
-            AudioFrame out_frame = new();
+            AudioFrame outFrame = new();
 
             for (int i = 0; i < 2; ++i) {
-                out_frame[i] = (float)_lowShelf[i].Filter(frame[i]);
-                out_frame[i] = (float)_highShelf[i].Filter(out_frame[i]);
+                outFrame[i] = (float)_lowShelf[i].Filter(frame[i]);
+                outFrame[i] = (float)_highShelf[i].Filter(outFrame[i]);
             }
-            return out_frame;
+            return outFrame;
         }
 
         public AudioFrame ProcessStereoProcessing(AudioFrame frame) {
-            AudioFrame out_frame = new();
+            AudioFrame outFrame = new();
 
             switch (_stereoMode) {
                 case StereoProcessorStereoMode.ForcedMono: {
                         float m = frame.Left + frame.Right;
-                        out_frame.Left = m;
-                        out_frame.Right = m;
+                        outFrame.Left = m;
+                        outFrame.Right = m;
                     }
                     break;
 
                 case StereoProcessorStereoMode.PseudoStereo:
-                    out_frame.Left = (float)_allPass.Filter(frame.Left);
-                    out_frame.Right = frame.Right;
+                    outFrame.Left = (float)_allPass.Filter(frame.Left);
+                    outFrame.Right = frame.Right;
                     break;
 
                 case StereoProcessorStereoMode.SpatialStereo: {
-                        const float crosstalk_percentage = 52.0f;
-                        const float k = crosstalk_percentage / 100.0f;
+                        const float crosstalkPercentage = 52.0f;
+                        const float k = crosstalkPercentage / 100.0f;
                         float l = frame.Left;
                         float r = frame.Right;
-                        out_frame.Left = l + (l - r) * k;
-                        out_frame.Right = r + (r - l) * k;
+                        outFrame.Left = l + (l - r) * k;
+                        outFrame.Right = r + (r - l) * k;
                     }
                     break;
 
                 case StereoProcessorStereoMode.LinearStereo:
-                default: out_frame = frame; break;
+                default: outFrame = frame; break;
             }
-            return out_frame;
+            return outFrame;
         }
     }
 
@@ -387,15 +328,15 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
                 throw new ArgumentOutOfRangeException(nameof(sampleRate));
             }
 
-            YM7128B.ChipIdealSetup(ref _chip, sampleRate);
-            YM7128B.ChipIdealReset(ref _chip);
-            YM7128B.ChipIdealStart(ref _chip);
+            Ym7128B.ChipIdealSetup(ref _chip, sampleRate);
+            Ym7128B.ChipIdealReset(ref _chip);
+            Ym7128B.ChipIdealStart(ref _chip);
         }
 
         public AudioFrame Process(ref AudioFrame frame) {
             ChipIdealProcessData data = new();
             data.Inputs[0] = frame.Left + frame.Right;
-            YM7128B.ChipIdealProcess(ref _chip, ref data);
+            Ym7128B.ChipIdealProcess(ref _chip, ref data);
             return new(data.Outputs[0], data.Outputs[1]);
         }
 
@@ -413,7 +354,7 @@ public sealed class AdlibGold : DefaultIOPortHandler, IDisposable  {
                 // control register %d, data: %d",
                 // control_state.addr, control_state.data);
 
-                YM7128B.ChipIdealWrite(ref _chip, _ctrlState.Addr, _ctrlState.Data);
+                Ym7128B.ChipIdealWrite(ref _chip, _ctrlState.Addr, _ctrlState.Data);
             } else {
                 // Data is sent in serially through 'din' in MSB->LSB order,
                 // synchronised by the 'sci' bit clock. Data should be read on

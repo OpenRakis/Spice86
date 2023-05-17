@@ -44,10 +44,11 @@ public static class MathSupplement {
     }
 
     public static Complex AdjustImage(Complex c) {
-        if (Math.Abs(c.Imaginary) < 1e-30)
+        if (Math.Abs(c.Imaginary) < 1e-30) {
             return new Complex(c.Real, 0);
-        else
+        } else {
             return c;
+        }
     }
 
     public static Complex AddMul(Complex c, double v, Complex c1) {

@@ -29,8 +29,9 @@ public class LowPassTransform {
     private readonly double _f;
 
     private Complex Transform(Complex c) {
-        if (Complex.IsInfinity(c))
+        if (Complex.IsInfinity(c)) {
             return new Complex(-1, 0);
+        }
 
         // frequency transform
         c = Complex.Multiply(c, _f);

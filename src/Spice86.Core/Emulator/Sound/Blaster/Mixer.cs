@@ -50,7 +50,7 @@ public sealed class Mixer {
     /// </summary>
     /// <returns>The byte value for the IRQ mixer register.</returns>
     private byte GetIRQByte() {
-        return _blaster.IRQ switch {
+        return _blaster.Irq switch {
             2 => 1 << 0,
             5 => 1 << 1,
             7 => 1 << 2,
@@ -63,5 +63,5 @@ public sealed class Mixer {
     /// Returns the byte value for the DMA mixer register based on the current DMA value of the SoundBlaster instance.
     /// </summary>
     /// <returns>The byte value for the DMA mixer register.</returns>
-    private byte GetDMAByte() => (byte)(1 << _blaster.DMA);
+    private byte GetDMAByte() => (byte)(1 << _blaster.Dma);
 }

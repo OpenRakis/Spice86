@@ -211,7 +211,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
-    public OPL3FM OPL3FM { get; }
+    public Opl3Fm OPL3FM { get; }
 
     public AdlibGold? AdlibGold { get; }
 
@@ -280,7 +280,7 @@ public class Machine : IDisposable {
         PcSpeaker = new PcSpeaker(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
         Register(PcSpeaker);
         AdlibGold = new AdlibGold(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, 48000);
-        OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        OPL3FM = new Opl3Fm(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         if (machineCreationOptions.Configuration.AdlibGold) {
             Register(AdlibGold);
