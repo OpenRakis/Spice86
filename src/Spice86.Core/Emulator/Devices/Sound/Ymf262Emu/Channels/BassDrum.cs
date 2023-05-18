@@ -10,7 +10,9 @@ internal sealed class BassDrum : Channel2 {
     public override void GetChannelOutput(Span<double> output) {
         // Bass Drum ignores first operator, when it is in series.
         if (Cnt == 1) {
-            Op1.Ar = 0;
+            if (Op1 != null) {
+                Op1.Ar = 0;
+            }
         }
 
         base.GetChannelOutput(output);

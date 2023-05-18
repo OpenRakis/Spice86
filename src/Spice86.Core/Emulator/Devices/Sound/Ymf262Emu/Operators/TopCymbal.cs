@@ -29,8 +29,10 @@ internal class TopCymbal : Operator {
     /// </summary>
     /// <param name="modulator">Modulation factor to apply to the output.</param>
     /// <returns>Current output value of the operator.</returns>
-    public override double GetOperatorOutput(double modulator)
-    {
+    public override double GetOperatorOutput(double modulator) {
+        if (Opl.HighHatOperator == null) {
+            return 0d;
+        }
         double highHatOperatorPhase = Opl.HighHatOperator.Phase * PhaseMultiplierTable[Opl.HighHatOperator.Mult];
         // The Top Cymbal operator uses his own phase together with the High Hat phase.
         return GetOperatorOutput(modulator, highHatOperatorPhase);

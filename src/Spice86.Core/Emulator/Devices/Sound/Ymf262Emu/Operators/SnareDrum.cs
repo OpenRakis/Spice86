@@ -31,7 +31,10 @@ internal sealed class SnareDrum : Operator {
         // If it is in OPL2 mode, use first four waveforms only:
         int waveIndex = Ws & ((Opl.IsOpl3Mode << 2) + 3);
 
-        Phase = Opl.HighHatOperator.Phase * 2;
+        if (Opl.HighHatOperator != null) {
+            Phase = Opl.HighHatOperator.Phase * 2;
+        }
+
         double operatorOutput = GetOutput(modulator, Phase, waveIndex);
         double noise = _random.NextDouble() * Envelope;
 
