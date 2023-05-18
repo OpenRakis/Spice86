@@ -76,7 +76,13 @@ public class DosMemoryManager {
                 return largest;
             }
 
-            current = current?.Next();
+            if (current == null) {
+                continue;
+            }
+
+            if(!current.TryGetNext(out current)) {
+                return current;
+            }
         }
     }
 
@@ -172,7 +178,7 @@ public class DosMemoryManager {
             if (current?.IsLast == true) {
                 return candidates;
             }
-            current = current?.Next();
+            current?.TryGetNext(out current);
         }
     }
 
@@ -187,7 +193,7 @@ public class DosMemoryManager {
         }
 
         while (block?.IsNonLast == true) {
-            DosMemoryControlBlock next = block.Next();
+            block.TryGetNext(out DosMemoryControlBlock next);
             if (!next.IsFree) {
                 // end of the free blocks reached
                 break;
@@ -240,7 +246,7 @@ public class DosMemoryManager {
         }
 
         block.Size = size;
-        DosMemoryControlBlock next = block.Next();
+        block.TryGetNext(out DosMemoryControlBlock next);
 
         // if it was last propagate it
         next.TypeField = block.TypeField;

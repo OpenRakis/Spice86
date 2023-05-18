@@ -79,11 +79,18 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     public bool IsValid => IsLast || IsNonLast;
 
     /// <summary>
-    /// Returns the next MCB in the MCB chain.
+    /// Returns the next MCB in the next MCB in chain, along with a boolean status.
     /// </summary>
-    /// <returns></returns>
-    public DosMemoryControlBlock Next() {
-        return new DosMemoryControlBlock(Memory, BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(Size + 1), 0));
+    /// <param name="next">The output variable containing the next MCB, or this MCB.</param>
+    /// <returns><c>true</c> if the next MCB is found, <c>false</c> if not.</returns>
+    public bool TryGetNext(out DosMemoryControlBlock next) {
+        uint physicalAddress = BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(Size + 1), 0);
+        if (physicalAddress >= Memory.MemoryBusSize) {
+            next = this;
+            return false;
+        }
+        next = new DosMemoryControlBlock(Memory, physicalAddress);
+        return true;
     }
 
     /// <summary>
