@@ -108,9 +108,6 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
         TypeField = McbNonLastEntry;
     }
 
-    /// <summary>
-    /// Gets a value indicating whether the MCB is valid.
-    /// </summary>
     /// <inheritdoc />
     public override string ToString() {
         return new StringBuilder(System.Text.Json.JsonSerializer.Serialize(this)).Append("typeField: ").Append(TypeField).Append("pspSegment: ").Append(PspSegment).Append("size: ").Append(Size).Append("fileName: ").Append(FileName).ToString();
