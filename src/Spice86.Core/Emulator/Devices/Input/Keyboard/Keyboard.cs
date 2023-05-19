@@ -9,8 +9,12 @@ using Spice86.Shared.Interfaces;
 /// Basic implementation of a keyboard
 /// </summary>
 public class Keyboard : DefaultIOPortHandler {
-    private const int KeyboardIoPort = 0x60;
     private readonly IGui? _gui;
+
+    /// <summary>
+    /// The current keyboard command, such as 'Perform self-test' (0xAA)
+    /// </summary>
+    public KeyboardCommand Command { get; private set; } = KeyboardCommand.None;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Keyboard"/> class.
@@ -46,13 +50,43 @@ public class Keyboard : DefaultIOPortHandler {
     public override byte ReadByte(int port) {
         byte? scancode = LastKeyboardInput.ScanCode;
         if (scancode == null) {
-            return 0;
+            scancode = 0;
         }
-        return scancode.Value;
+        
+        return port switch {
+            KeyboardPorts.AccessInputOrOutput => scancode.Value,
+            // keyboard not locked, self-test completed.
+            KeyboardPorts.StatusRegister => 0x14,
+            _ => base.ReadByte(port)
+        };
+        
+    }
+
+    /// <inheritdoc />
+    public override void WriteByte(int port, byte value) {
+        switch (port) {
+            // the byte is interpreted as a data byte
+            case KeyboardPorts.AccessInputOrOutput:
+                if (Command == KeyboardCommand.SetOutputPort) {
+                    _machine.Memory.IsA20GateEnabled = (value & 2) > 0;
+                    Command = KeyboardCommand.None;
+                }
+                break;
+            case KeyboardPorts.CommandPort:
+                Command = value switch {
+                    KeyboardValues.SetKeyboardCommand => KeyboardCommand.SetCommand,
+                    _ => Command
+                };
+                break;
+            default:
+                base.WriteByte(port, value);
+                break;
+        }
     }
 
     /// <inheritdoc/>
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(KeyboardIoPort, this);
+        ioPortDispatcher.AddIOPortHandler(KeyboardPorts.AccessInputOrOutput, this);
+        ioPortDispatcher.AddIOPortHandler(KeyboardPorts.StatusRegister, this);
     }
 }

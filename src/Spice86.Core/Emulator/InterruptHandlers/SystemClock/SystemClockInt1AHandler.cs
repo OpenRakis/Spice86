@@ -1,5 +1,4 @@
-﻿
-namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;

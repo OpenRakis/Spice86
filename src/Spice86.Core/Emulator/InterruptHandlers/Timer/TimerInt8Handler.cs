@@ -1,9 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Timer;
-using Spice86.Core.Emulator.Devices.ExternalInput;
 
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 

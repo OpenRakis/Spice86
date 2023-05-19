@@ -61,6 +61,7 @@ public class Memory {
     /// <param name="address">The address to write to</param>
     /// <param name="value">The value to write</param>
     public void SetUint32(uint address, uint value) {
+        address &= A20GateAddressMask;
         Write(address, (byte)value);
         Write(address + 1, (byte)(value >> 8));
         Write(address + 2, (byte)(value >> 16));
@@ -73,6 +74,7 @@ public class Memory {
     /// <param name="address">The address to write to</param>
     /// <param name="value">The value to write</param>
     public void SetUint16(uint address, ushort value) {
+        address &= A20GateAddressMask;
         Write(address, (byte)value);
         Write(address + 1, (byte)(value >> 8));
     }
@@ -83,6 +85,7 @@ public class Memory {
     /// <param name="address">The address to write to</param>
     /// <param name="value">The value to write</param>
     public void SetUint8(uint address, byte value) {
+        address &= A20GateAddressMask;
         Write(address, value);
     }
 
@@ -92,6 +95,7 @@ public class Memory {
     /// <param name="address">The address to read from</param>
     /// <returns>The value at that address</returns>
     public uint GetUint32(uint address) {
+        address &= A20GateAddressMask;
         return (uint)(Read(address) | Read(address + 1) << 8 | Read(address + 2) << 16 | Read(address + 3) << 24);
     }
     
@@ -103,6 +107,7 @@ public class Memory {
     /// <returns>A <see cref="Span{T}"/> instance that represents the specified range of memory.</returns>
     /// <exception cref="InvalidOperationException">Thrown when no memory device supports the specified memory range.</exception>
     public Span<byte> GetSpan(int address, int length) {
+        address = (int) (address & A20GateAddressMask);
         foreach (DeviceRegistration device in _devices) {
             if (address >= device.StartAddress && address + length <= device.EndAddress) {
                 MonitorRangeReadAccess((uint)address, (uint)(address + length));
@@ -119,6 +124,7 @@ public class Memory {
     /// <param name="length">The length of the array.</param>
     /// <returns>The array of bytes, read from RAM.</returns>
     public byte[] GetData(uint address, uint length) {
+        address &= A20GateAddressMask;
         byte[] data = new byte[length];
         for (uint i = 0; i < length; i++) {
             data[i] = Read(address + i);
@@ -132,6 +138,7 @@ public class Memory {
     /// <param name="address">The address to read from</param>
     /// <returns>The value at that address</returns>
     public ushort GetUint16(uint address) {
+        address &= A20GateAddressMask;
         return (ushort)(Read(address) | Read(address + 1) << 8);
     }
 
@@ -141,6 +148,7 @@ public class Memory {
     /// <param name="address">The address to read from</param>
     /// <returns>The value at that address</returns>
     public byte GetUint8(uint address) {
+        address &= A20GateAddressMask;
         return Read(address);
     }
 
@@ -150,6 +158,7 @@ public class Memory {
     /// <param name="address">The memory address to start writing</param>
     /// <param name="data">The array of bytes to write</param>
     public void LoadData(uint address, byte[] data) {
+        address &= A20GateAddressMask;
         LoadData(address, data, data.Length);
     }
 
@@ -160,6 +169,7 @@ public class Memory {
     /// <param name="data">The array of bytes to write</param>
     /// <param name="length">How many bytes to read from the byte array</param>
     public void LoadData(uint address, byte[] data, int length) {
+        address &= A20GateAddressMask;
         for (int i = 0; i < length; i++) {
             Write((uint)(address + i), data[i]);
         }
@@ -283,6 +293,24 @@ public class Memory {
     }
 
     /// <summary>
+    /// The value for the <see cref="A20AddressMask"/> when <see cref="IsA20GateEnabled"/> is <c>true</c>
+    /// </summary>
+    public const uint A20GateAddressMask = 0x000FFFFFu;
+
+    /// <summary>
+    /// The address mask used over memory accesses.
+    /// </summary>
+    public uint A20AddressMask { get; private set; } = A20GateAddressMask;
+
+    /// <summary>
+    /// Gets and sets whether we use the <see cref="A20AddressMask"/>
+    /// </summary>
+    public bool IsA20GateEnabled {
+        get => this.A20AddressMask == uint.MaxValue;
+        set => this.A20AddressMask = value ? uint.MaxValue : 0x000FFFFFu;
+    }
+
+    /// <summary>
     ///     Allow a class to register for a certain memory range.
     /// </summary>
     /// <param name="baseAddress">The start of the frame</param>
@@ -341,11 +369,13 @@ public class Memory {
     }
 
     private void Write(uint address, byte value) {
+        address &= A20GateAddressMask;
         MonitorWriteAccess(address, value);
         _memoryDevices[address].Write(address, value);
     }
 
     private byte Read(uint address) {
+        address &= A20GateAddressMask;
         MonitorReadAccess(address);
         return _memoryDevices[address].Read(address);
     }

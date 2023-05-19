@@ -1,8 +1,4 @@
-﻿using Spice86.Logging;
-
-namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-
-using Serilog;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers;
