@@ -12,6 +12,27 @@ public class MainMemoryTest {
     private readonly Memory _memory = new(new Ram(64 * 1024));
 
     [Fact]
+    public void EnabledA20Gate_Should_ThrowExceptionAbove1MB() {
+        // Arrange
+        _memory.IsA20GateEnabled = true;
+
+        // Act & Assert
+        Assert.Throws<IndexOutOfRangeException>(() =>_memory.UInt8[0xF800, 0x8000]);
+    }
+    
+    [Fact]
+    public void DisabledA20Gate_Should_RolloverAddress() {
+        // Arrange
+        _memory.IsA20GateEnabled = false;
+
+        // Act
+        _memory.UInt8[0xF800, 0x8000] = 1;
+
+        // Assert
+        Assert.Equal(1, _memory.UInt8[0x00000000]);
+    }
+
+    [Fact]
     public void TestGetUint8() {
         // Arrange
         _memory.UInt8[0x1234] = 0x12;
