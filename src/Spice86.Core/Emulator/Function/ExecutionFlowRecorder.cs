@@ -143,7 +143,10 @@ public class ExecutionFlowRecorder {
     }
 
     /// <summary>
-    /// 
+    /// Creates a memory write breakpoint on the given executable address.
+    /// When triggered will fill <see cref="ExecutableAddressWrittenBy"/> appropriately:
+    ///  - key of the map is the address being modified
+    ///  - value is a dictionary of instruction addresses that modified it, with for each instruction a list of the before and after values.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="cs">The value of the CS register, for the segment.</param>

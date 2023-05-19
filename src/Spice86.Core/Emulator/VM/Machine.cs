@@ -218,7 +218,6 @@ public class Machine : IDisposable {
     /// <param name="executionFlowRecorder">Records execution data</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="recordData">Whether we record execution data or not.</param>
-    /// <exception cref="InvalidOperationException"></exception>
     public Machine(ProgramExecutor programExecutor, IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
         Configuration = configuration;
