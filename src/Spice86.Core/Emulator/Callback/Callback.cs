@@ -2,7 +2,9 @@
 
 using System;
 
-/// <inheritdoc/>
+/// <summary>
+/// Represents a callback. Used by interrupt handlers.
+/// </summary>
 public class Callback : ICallback {
     private readonly Action _runnable;
 
