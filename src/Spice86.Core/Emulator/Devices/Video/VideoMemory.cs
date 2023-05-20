@@ -3,23 +3,22 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 
+using System.Diagnostics;
+
 /// <summary>
 ///     A wrapper class for the video card that implements the IMemoryDevice interface.
 /// </summary>
 public class VideoMemory : IVideoMemory {
-    private readonly uint _baseAddress;
     private readonly byte[] _latches;
     private readonly IVideoState _state;
 
     /// <summary>
     ///     Create a new instance of the video memory.
     /// </summary>
-    /// <param name="baseAddress"></param>
     /// <param name="state"></param>
-    public VideoMemory(uint baseAddress, IVideoState state) {
-        _baseAddress = baseAddress;
+    public VideoMemory(IVideoState state) {
         _state = state;
-        Planes = new byte[0x10000, 4];
+        Planes = new byte[4, 0x10000];
         _latches = new byte[4];
         Size = 0x20000;
     }
@@ -30,10 +29,10 @@ public class VideoMemory : IVideoMemory {
     /// <inheritdoc />
     public byte Read(uint address) {
         (byte plane, uint offset) = DecodeReadAddress(address);
-        _latches[0] = Planes[offset, 0];
-        _latches[1] = Planes[offset, 1];
-        _latches[2] = Planes[offset, 2];
-        _latches[3] = Planes[offset, 3];
+        _latches[0] = Planes[0, offset];
+        _latches[1] = Planes[1, offset];
+        _latches[2] = Planes[2, offset];
+        _latches[3] = Planes[3, offset];
         byte result = 0;
         switch (_state.GraphicsControllerRegisters.GraphicsModeRegister.ReadMode) {
             case ReadMode.ReadMode0:
@@ -121,7 +120,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= bitMask;
             tempValue |= (byte)(_latches[plane] & ~bitMask);
             // write the data
-            Planes[offset, plane] = tempValue;
+            Planes[plane, offset] = tempValue;
         }
     }
 
@@ -139,7 +138,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= _state.GraphicsControllerRegisters.BitMask;
             tempValue |= (byte)(_latches[plane] & ~_state.GraphicsControllerRegisters.BitMask);
             // write the data
-            Planes[offset, plane] = tempValue;
+            Planes[plane, offset] = tempValue;
         }
     }
 
@@ -147,12 +146,13 @@ public class VideoMemory : IVideoMemory {
         // Foreach plane
         for (int plane = 0; plane < 4; plane++) {
             if (planeEnable[plane] && writePlane[plane]) {
-                Planes[offset, plane] = _latches[plane];
+                Planes[plane, offset] = _latches[plane];
             }
         }
     }
 
     private void HandleWriteMode0(byte value, Register8 planeEnable, IReadOnlyList<bool> writePlane, Register8 setResetEnable, Register8 setReset, uint offset) {
+        Debug.Assert(offset < 0x10000);
         if (_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount != 0) {
             value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
         }
@@ -173,7 +173,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= _state.GraphicsControllerRegisters.BitMask;
             tempValue |= (byte)(_latches[plane] & ~_state.GraphicsControllerRegisters.BitMask);
             // write the data
-            Planes[offset, plane] = tempValue;
+            Planes[plane, offset] = tempValue;
         }
     }
 
@@ -199,7 +199,7 @@ public class VideoMemory : IVideoMemory {
 
     private (byte plane, uint offset) DecodeReadAddress(uint address) {
         byte plane;
-        uint offset = address - _baseAddress;
+        uint offset = address - _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.BaseAddress;
         // read chain 4 memory
         if (_state.SequencerRegisters.MemoryModeRegister.Chain4Mode) {
             plane = (byte)(offset & 3);
@@ -207,19 +207,17 @@ public class VideoMemory : IVideoMemory {
         }
         // read odd/even memory
         else if (_state.SequencerRegisters.MemoryModeRegister.OddEvenMode) {
-            if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.ChainOddMapsToEven) {
-                offset &= 0xFFFE; // Make address even
-                if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.MemoryMap == 0) {
-                    if (_state.SequencerRegisters.MemoryModeRegister.ExtendedMemory) {
-                        offset |= offset >> 16 & 1; //Bit 16 becomes bit 0
-                    } else {
-                        offset |= offset >> 14 & 1; //Bit 14 becomes bit 0
-                    }
-                } else if (_state.GeneralRegisters.MiscellaneousOutput.OddPageSelect) {
-                    offset |= 1; // Make address odd
-                }
-            }
             plane = (byte)(offset & 1);
+            if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.ChainOddMapsToEven) {
+                int highOrderBitShift = _state.SequencerRegisters.MemoryModeRegister.ExtendedMemory ? 16 : 14;
+                uint mask = (1u << highOrderBitShift) - 2u;
+                uint highOrderBit = offset >> highOrderBitShift & 1u;
+                offset &= mask + highOrderBit;
+            } else if (_state.GeneralRegisters.MiscellaneousOutput.EvenPageSelect) {
+                offset &= 0xFFFE;
+            } else {
+                offset |= 1;
+            }
         }
         // read planar memory
         else {
@@ -230,7 +228,7 @@ public class VideoMemory : IVideoMemory {
 
     private (byte planes, uint offset) DecodeWriteAddress(uint address) {
         byte planes;
-        uint offset = address - _baseAddress;
+        uint offset = address - _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.BaseAddress;
         // chain 4 memory
         if (_state.SequencerRegisters.MemoryModeRegister.Chain4Mode) {
             // write to which plane?
@@ -239,20 +237,18 @@ public class VideoMemory : IVideoMemory {
         }
         // odd/even memory
         else if (_state.SequencerRegisters.MemoryModeRegister.OddEvenMode) {
-            if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.ChainOddMapsToEven) {
-                offset &= 0xFFFE; // Make address even
-                if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.MemoryMap == 0) {
-                    if (_state.SequencerRegisters.MemoryModeRegister.ExtendedMemory) {
-                        offset |= offset >> 16 & 1; //Bit 16 becomes bit 0
-                    } else {
-                        offset |= offset >> 14 & 1; //Bit 14 becomes bit 0
-                    }
-                } else if (_state.GeneralRegisters.MiscellaneousOutput.OddPageSelect) {
-                    offset |= 1; // Make address odd
-                }
-            }
             // Select odd or even planes
             planes = (byte)((offset & 1) == 0 ? 0b0101 : 0b1010);
+            if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.ChainOddMapsToEven) {
+                int highOrderBitShift = _state.SequencerRegisters.MemoryModeRegister.ExtendedMemory ? 16 : 14;
+                uint mask = (1u << highOrderBitShift) - 2u;
+                uint highOrderBit = offset >> highOrderBitShift & 1u;
+                offset &= mask + highOrderBit;
+            } else if (_state.GeneralRegisters.MiscellaneousOutput.EvenPageSelect) {
+                offset &= 0xFFFE;
+            } else {
+                offset |= 1;
+            }
         }
         // planar memory
         else {

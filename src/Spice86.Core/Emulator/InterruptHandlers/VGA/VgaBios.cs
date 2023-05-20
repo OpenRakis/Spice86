@@ -1273,7 +1273,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         return operation.Pixels[x & 0x07];
     }
 
-    private ushort ALIGN_DOWN(ushort value, int alignment) {
+    private static ushort ALIGN_DOWN(ushort value, int alignment) {
         int mask = alignment - 1;
         return (ushort)(value & ~mask);
     }

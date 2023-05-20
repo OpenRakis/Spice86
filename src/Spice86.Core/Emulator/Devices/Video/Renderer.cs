@@ -70,7 +70,7 @@ public class Renderer : IVgaRenderer {
             : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
                 ? 1
                 : 0;
-        int bytesAtAtime;
+        int characterHeight = _state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight + 1;
 
         bool horizontalBlanking = false;
         bool verticalBlanking = false;
@@ -81,25 +81,21 @@ public class Renderer : IVgaRenderer {
 
         bool chain4 = _state.SequencerRegisters.MemoryModeRegister.Chain4Mode;
 
-        byte[,] palette = _state.DacRegisters.Palette;
-
         MemoryWidth memoryWidthMode;
         if (_state.CrtControllerRegisters.UnderlineRowScanlineRegister.DoubleWordMode) {
             memoryWidthMode = MemoryWidth.DoubleWord;
-            bytesAtAtime = 4;
         } else if (_state.CrtControllerRegisters.CrtModeControlRegister.ByteWordMode == ByteWordMode.Byte) {
             memoryWidthMode = MemoryWidth.Byte;
-            bytesAtAtime = 1;
         } else if (_state.CrtControllerRegisters.CrtModeControlRegister.AddressWrap) {
             memoryWidthMode = MemoryWidth.Word15;
-            bytesAtAtime = 2;
         } else {
             memoryWidthMode = MemoryWidth.Word13;
-            bytesAtAtime = 2;
         }
-        int scanLinesPerRowMask = _state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight;
 
         int offsetShift = 1; //_state.CrtControllerRegisters.CrtModeControlRegister.ByteWordMode == ByteWordMode.Word ? 0 : 1;
+
+        int dotsPerClock = _state.SequencerRegisters.ClockingModeRegister.DotsPerClock;
+        int rowWidth = horizontalDisplayEnd * dotsPerClock;
 
         const bool debug = false;
 
@@ -155,10 +151,10 @@ public class Renderer : IVgaRenderer {
                     }
 
                     // Read 4 bytes from the 4 planes.
-                    byte d0 = _memory.Planes[physicalAddress, 0];
-                    byte d1 = _memory.Planes[physicalAddress, 1];
-                    byte d2 = _memory.Planes[physicalAddress, 2];
-                    byte d3 = _memory.Planes[physicalAddress, 3];
+                    byte d0 = _memory.Planes[0, physicalAddress];
+                    byte d1 = _memory.Planes[1, physicalAddress];
+                    byte d2 = _memory.Planes[2, physicalAddress];
+                    byte d3 = _memory.Planes[3, physicalAddress];
 
                     if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
                         if (debug) {
@@ -181,9 +177,24 @@ public class Renderer : IVgaRenderer {
                         }
                     } else {
                         // Text mode
-                        byte character = _memory.Planes[physicalAddress, 0];
-                        byte attribute = _memory.Planes[physicalAddress, 1];
-                        
+                        byte character = _memory.Planes[0, physicalAddress];
+                        byte attribute = _memory.Planes[1, physicalAddress];
+                        int fontAddress = 2 * character * characterHeight;
+                        int xPosition = characterCounter * dotsPerClock;
+                        var backGroundColor = GetDacPaletteColor(attribute >> 4 & 0b1111);
+                        var foreGroundColor = GetDacPaletteColor(attribute & 0b1111);
+                        for (int y = 0; y < characterHeight; y++) {
+                            int yPosition = (int)((rowCounter + y) * rowWidth);
+                            byte fontByte = _memory.Planes[2, fontAddress + y];
+                            for (int x = 0; x < dotsPerClock; x++) {
+                                uint pixel = (fontByte & 1 << 8 - x) != 0 ? foreGroundColor : backGroundColor;
+                                destinationAddress = yPosition + xPosition + x;
+                                if (destinationAddress > frameBuffer.Length && Debugger.IsAttached) {
+                                    Debugger.Break();
+                                }
+                                frameBuffer[destinationAddress] = pixel;
+                            }
+                        }
                     }
                     memoryAddress += (characterCounter & characterClockMask) == 0 ? 1 : 0;
                 }
@@ -224,7 +235,10 @@ public class Renderer : IVgaRenderer {
         if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
             width /= 2;
         }
-        int height = 1 + _state.CrtControllerRegisters.VerticalDisplayEndValue / (_state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight + 1);
+        int height = _state.CrtControllerRegisters.VerticalDisplayEndValue + 1;
+        if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
+            height /= (_state.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight + 1);
+        }
         return new Resolution {
             Width = width,
             Height = height
@@ -236,6 +250,9 @@ public class Renderer : IVgaRenderer {
             case true:
                 return _state.DacRegisters.ArgbPalette[index];
             default: {
+                if (index >= _state.AttributeControllerRegisters.InternalPalette.Length) {
+                    var a = 0;
+                }
                 int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index];
                 int bits0To3 = fromPaletteRam6Bits & 0b00001111;
                 int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select

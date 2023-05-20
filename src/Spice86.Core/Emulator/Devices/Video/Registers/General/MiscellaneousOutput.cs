@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.General;
 
+/// <summary>
+///    Emulates the Miscellaneous Output register.
+/// </summary>
 public class MiscellaneousOutput : Register8 {
     /// <summary>
     ///     The I/O Address Select field (bit 0) selects the CRT controller addresses. When set to 0, this bit sets the
@@ -23,7 +26,7 @@ public class MiscellaneousOutput : Register8 {
 
     /// <summary>
     ///     The Clock Select field (bits 3, 2) selects the clock source according to the following figure. The external
-    ///     /// clock is driven through the auxiliary video extension. The input clock should be kept between 14.3 MHz and
+    ///     clock is driven through the auxiliary video extension. The input clock should be kept between 14.3 MHz and
     ///     28.4 MHz.
     /// </summary>
     public ClockSelect ClockSelect {
@@ -33,18 +36,17 @@ public class MiscellaneousOutput : Register8 {
 
     /// <summary>
     ///     This bit affects the meaning of the LSB of display memory address when in Even/Odd modes (SR4[2] = 1). If this bit
-    ///     is programmed to ‘0’,
-    ///     only odd memory locations are selected. If this bit is programmed to ‘1’, only even memory locations are selected.
+    ///     is programmed to ‘0’, only odd memory locations are selected. If this bit is programmed to ‘1’, only even memory
+    ///     locations are selected.
     /// </summary>
-    public bool OddPageSelect {
+    public bool EvenPageSelect {
         get => GetBit(5);
         set => SetBit(5, value);
     }
 
     /// <summary>
     ///     When set to 0, the Horizontal Sync Polarity field (bit 6) selects a positive ‘horizontal retrace’ signal. Bits 7
-    ///     and
-    ///     6 select the vertical size
+    ///     and 6 select the vertical size
     /// </summary>
     public Polarity HorizontalSyncPolarity {
         get => GetBit(6) ? Polarity.Negative : Polarity.Positive;
@@ -60,6 +62,9 @@ public class MiscellaneousOutput : Register8 {
         set => SetBit(7, value == Polarity.Negative);
     }
 
+    /// <summary>
+    /// Vertical size in scanLines based on the HorizontalSyncPolarity and VerticalSyncPolarity
+    /// </summary>
     public int VerticalSize => HorizontalSyncPolarity switch {
         Polarity.Negative when VerticalSyncPolarity == Polarity.Positive => 400,
         Polarity.Positive when VerticalSyncPolarity == Polarity.Negative => 350,

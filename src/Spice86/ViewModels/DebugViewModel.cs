@@ -53,7 +53,7 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.GeneralHorizontalSyncPolarity = videoState.GeneralRegisters.MiscellaneousOutput.HorizontalSyncPolarity;
         VideoCard.GeneralVerticalSyncPolarity = videoState.GeneralRegisters.MiscellaneousOutput.VerticalSyncPolarity;
         VideoCard.GeneralIoAddressSelect = videoState.GeneralRegisters.MiscellaneousOutput.IoAddressSelect;
-        VideoCard.GeneralOddPageSelect = videoState.GeneralRegisters.MiscellaneousOutput.OddPageSelect;
+        VideoCard.GeneralOddPageSelect = videoState.GeneralRegisters.MiscellaneousOutput.EvenPageSelect;
         VideoCard.GeneralInputStatusRegister0 = videoState.GeneralRegisters.InputStatusRegister0.Value;
         VideoCard.GeneralCrtInterrupt = videoState.GeneralRegisters.InputStatusRegister0.CrtInterrupt;
         VideoCard.GeneralSwitchSense = videoState.GeneralRegisters.InputStatusRegister0.SwitchSense;

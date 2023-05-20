@@ -266,7 +266,7 @@ public class Machine : IDisposable {
         Register(VgaIoPortHandler);
 
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
-        IVideoMemory vgaMemory = new VideoMemory(videoBaseAddress, VgaRegisters);
+        IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         IVgaRenderer vgaRenderer = new Renderer(VgaRegisters, vgaMemory, loggerService);
         VgaCard = new VgaCard(gui, vgaRenderer);
