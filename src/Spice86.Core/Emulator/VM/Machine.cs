@@ -233,7 +233,6 @@ public class Machine : IDisposable {
     /// <param name="executionFlowRecorder">Records execution data</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="recordData">Whether we record execution data or not.</param>
-    /// <exception cref="InvalidOperationException"></exception>
     public Machine(ProgramExecutor programExecutor, IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         _programExecutor = programExecutor;
         Configuration = configuration;
@@ -426,34 +425,40 @@ public class Machine : IDisposable {
     public void Run() {
         State state = Cpu.State;
         FunctionHandler functionHandler = Cpu.FunctionHandler;
-        try {
-            if (!_dmaThreadStarted) {
-                _dmaThread.Start();
-                _dmaThreadStarted = true;
+        if (!_dmaThreadStarted) {
+            _dmaThread.Start();
+            _dmaThreadStarted = true;
+        }
+        if (Debugger.IsAttached) {
+            try {
+                StartRunLoop(functionHandler, state);
+            } catch (HaltRequestedException) {
+                // Actually a signal generated code requested Exit
+                Dispose(disposing: true);
             }
-            // Entry could be overridden and could throw exceptions
-            functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
-            RunLoop();
-        } catch (InvalidVMOperationException e) {
-            e.Demystify();
-            if (Debugger.IsAttached) {
-                Debugger.Break();
+        } else {
+            try {
+                StartRunLoop(functionHandler, state);
+            } catch (InvalidVMOperationException e) {
+                e.Demystify();
+                throw;
+            } catch (HaltRequestedException) {
+                // Actually a signal generated code requested Exit
+                Dispose(disposing: true);
+            } catch (Exception e) {
+                e.Demystify();
+                throw new InvalidVMOperationException(this, e);
             }
-
-            throw;
-        } catch (HaltRequestedException) {
-            // Actually a signal generated code requested Exit
-            Dispose(disposing: true);
-        } catch (Exception e) {
-            if (Debugger.IsAttached) {
-                Debugger.Break();
-            }
-
-            e.Demystify();
-            throw new InvalidVMOperationException(this, e);
         }
         MachineBreakpoints.OnMachineStop();
         functionHandler.Ret(CallType.MACHINE);
+    }
+
+    private void StartRunLoop(FunctionHandler functionHandler, State state)
+    {
+        // Entry could be overridden and could throw exceptions
+        functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
+        RunLoop();
     }
 
     /// <summary>

@@ -13,6 +13,11 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class ExecutionFlowRecorder {
     /// <summary>
+    /// A set of pre-allocated breakpoints from physical address 0x0 to <see cref="Memory.Memory.MemoryBusSize"/>
+    /// </summary>
+    private Dictionary<uint, AddressBreakPoint> _addressBreakPoints = new();
+
+    /// <summary>
     /// Gets or sets whether we register calls, jumps, returns, and unaligned returns.
     /// </summary>
     public bool RecordData { set; get; }
@@ -72,6 +77,24 @@ public class ExecutionFlowRecorder {
         UnalignedRetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         ExecutedInstructions = new HashSet<SegmentedAddress>();
         ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>>();
+    }
+
+    /// <summary>
+    /// Avoids allocation and deallocation of closures before the emulation starts.
+    /// Speeds up the emulator quite a bit.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    internal void PreAllocatePossibleExecutionFlowBreakPoints(Machine machine) {
+        //Avoid re-entry.
+        if (_addressBreakPoints.Count != 0) {
+            return;
+        }
+        // This is fast *because* the memory bus size is around 1 MB.
+        // Beyond that, this code would have to be deleted,
+        // as the allocation would take way too much time.
+        for (uint i = 0; i < Memory.Memory.MemoryBusSize; i++) {
+            _addressBreakPoints.Add(i, GenerateBreakPoint(machine, i));
+        }
     }
 
     /// <summary>
@@ -143,7 +166,10 @@ public class ExecutionFlowRecorder {
     }
 
     /// <summary>
-    /// 
+    /// Creates a memory write breakpoint on the given executable address.
+    /// When triggered will fill <see cref="ExecutableAddressWrittenBy"/> appropriately:
+    ///  - key of the map is the address being modified
+    ///  - value is a dictionary of instruction addresses that modified it, with for each instruction a list of the before and after values.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="cs">The value of the CS register, for the segment.</param>
@@ -169,6 +195,15 @@ public class ExecutionFlowRecorder {
             return;
         }
 
+        AddressBreakPoint? breakPoint;
+        if (!_addressBreakPoints.TryGetValue(physicalAddress, out breakPoint)) {
+            breakPoint = GenerateBreakPoint(machine, physicalAddress);
+        }
+        
+        machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+    }
+
+    private AddressBreakPoint GenerateBreakPoint(Machine machine, uint physicalAddress) {
         AddressBreakPoint breakPoint = new(BreakPointType.WRITE, physicalAddress, _ => {
             if (!IsRegisterExecutableCodeModificationEnabled) {
                 return;
@@ -182,7 +217,7 @@ public class ExecutionFlowRecorder {
                     new SegmentedAddress(state.CS, state.IP), physicalAddress, oldValue, newValue);
             }
         }, false);
-        machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        return breakPoint;
     }
 
     private void RegisterExecutableByteModification(SegmentedAddress instructionAddress, uint modifiedAddress, byte oldValue, byte newValue) {

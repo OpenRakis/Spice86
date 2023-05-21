@@ -21,6 +21,10 @@ internal sealed class HighHat : TopCymbal {
     /// <param name="modulator">Modulation factor to apply to the output.</param>
     /// <returns>Current output value of the operator.</returns>
     public override double GetOperatorOutput(double modulator) {
+        if (Opl.TopCymbalOperator == null) {
+            return 0d;
+        }
+
         double topCymbalOperatorPhase = Opl.TopCymbalOperator.Phase * PhaseMultiplierTable[Opl.TopCymbalOperator.Mult];
         double operatorOutput = GetOperatorOutput(modulator, topCymbalOperatorPhase);
         if (operatorOutput == 0) {

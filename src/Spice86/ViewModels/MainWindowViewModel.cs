@@ -504,35 +504,44 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private void MachineThread() {
         try {
-            if (!_disposed) {
-                _okayToContinueEvent.Set();
+            if (Debugger.IsAttached) {
+                StartProgramExecutor();
+            } else {
+                try {
+                    StartProgramExecutor();
+                } catch (Exception e) {
+                    e.Demystify();
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error(e, "An error occurred during execution");
+                    }
+                    EmulatorErrorOccured += OnEmulatorErrorOccured;
+                    EmulatorErrorOccured?.Invoke(e);
+                    EmulatorErrorOccured -= OnEmulatorErrorOccured;
+                }
             }
-
-            _programExecutor = new ProgramExecutor(_loggerService, this, _configuration);
-            TimeMultiplier = _configuration.TimeMultiplier;
-            _videoCard = _programExecutor.Machine.VgaCard;
-            Dispatcher.UIThread.Post(() => IsMachineRunning = true);
-            Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
-            Dispatcher.UIThread.Post(() => ShowVideo = true);
-            _programExecutor.Run();
-            if (_closeAppOnEmulatorExit &&
-                Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime {
-                    MainWindow: MainWindow mainWindow
-                }) {
-                Dispatcher.UIThread.Post(() => mainWindow.Close());
-            }
-        } catch (Exception e) {
-            e.Demystify();
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(e, "An error occurred during execution");
-            }
-
-            EmulatorErrorOccured += OnEmulatorErrorOccured;
-            EmulatorErrorOccured?.Invoke(e);
-            EmulatorErrorOccured -= OnEmulatorErrorOccured;
-        } finally {
+        }  finally {
             Dispatcher.UIThread.Post(() => IsMachineRunning = false);
             Dispatcher.UIThread.Post(() => StatusMessage = "Emulator: stopped.");
+        }
+    }
+
+    private void StartProgramExecutor() {
+        if (!_disposed) {
+            _okayToContinueEvent.Set();
+        }
+
+        _programExecutor = new ProgramExecutor(_loggerService, this, _configuration);
+        TimeMultiplier = _configuration.TimeMultiplier;
+        _videoCard = _programExecutor.Machine.VgaCard;
+        Dispatcher.UIThread.Post(() => IsMachineRunning = true);
+        Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
+        Dispatcher.UIThread.Post(() => ShowVideo = true);
+        _programExecutor.Run();
+        if (_closeAppOnEmulatorExit &&
+            Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime {
+                MainWindow: MainWindow mainWindow
+            }) {
+            Dispatcher.UIThread.Post(() => mainWindow.Close());
         }
     }
 

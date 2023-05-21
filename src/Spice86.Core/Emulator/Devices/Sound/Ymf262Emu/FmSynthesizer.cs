@@ -1,5 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
+
 /// <summary>
 /// Emulates a YMF262 OPL3 device.
 /// </summary>
@@ -9,6 +12,37 @@ public sealed class FmSynthesizer {
     private readonly double _tremoloIncrement0;
     private readonly double _tremoloIncrement1;
     private readonly int _tremoloTableLength;
+    
+    internal readonly int[] Registers = new int[0x200];
+    internal readonly HighHat? HighHatOperator;
+    internal readonly SnareDrum? SnareDrumOperator;
+    internal readonly Operator? TomTomOperator;
+    internal readonly TopCymbal? TopCymbalOperator;
+    internal int Nts, Dam, Dvb, Ryt, Bd, Sd, Tom, Tc, Hh, IsOpl3Mode, Connectionsel;
+    internal int VibratoIndex, TremoloIndex;
+
+    private const double TremoloFrequency = 3.7;
+    private const int _1_NTS1_6_Offset = 0x08;
+    private const int Dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1Offset = 0xBD;
+    private const int _7_NEW1_Offset = 0x105;
+    private const int _2_CONNECTIONSEL6_Offset = 0x104;
+
+    // The YMF262 has 36 operators.
+    private readonly Operator?[,] _operators = new Operator[2, 0x20];
+    // The YMF262 has 3 4-op channels in each array.
+    private readonly Channel4[,] _channels4Op = new Channel4[2, 3];
+    private readonly Channel[,] _channels = new Channel[2, 9];
+    private readonly BassDrum _bassDrumChannel;
+    private readonly RhythmChannel _highHatSnareDrumChannel;
+    private readonly RhythmChannel _tomTomTopCymbalChannel;
+    private Operator? _highHatOperatorInNonRhythmMode;
+    private Operator? _snareDrumOperatorInNonRhythmMode;
+    private Operator? _tomTomOperatorInNonRhythmMode;
+    private Operator? _topCymbalOperatorInNonRhythmMode;
+
+    // The YMF262 has 18 2-op channels.
+    // Each 2-op channel can be at a serial or parallel operator configuration.
+    private static readonly Channel2[,] Channels2Op = new Channel2[2, 9];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FmSynthesizer"/> class.
@@ -29,13 +63,13 @@ public sealed class FmSynthesizer {
         InitializeChannels2Op();
         InitializeChannels4Op();
         InitializeChannels();
-        HighHatOperator = new Operators.HighHat(this);
-        TomTomOperator = new Operators.Operator(0x12, this);
-        TopCymbalOperator = new Operators.TopCymbal(this);
-        _bassDrumChannel = new Channels.BassDrum(this);
-        SnareDrumOperator = new Operators.SnareDrum(this);
-        _highHatSnareDrumChannel = new Channels.RhythmChannel(7, HighHatOperator, SnareDrumOperator, this);
-        _tomTomTopCymbalChannel = new Channels.RhythmChannel(8, TomTomOperator, TopCymbalOperator, this);
+        HighHatOperator = new HighHat(this);
+        TomTomOperator = new Operator(0x12, this);
+        TopCymbalOperator = new TopCymbal(this);
+        _bassDrumChannel = new BassDrum(this);
+        SnareDrumOperator = new SnareDrum(this);
+        _highHatSnareDrumChannel = new RhythmChannel(7, HighHatOperator, SnareDrumOperator, this);
+        _tomTomTopCymbalChannel = new RhythmChannel(8, TomTomOperator, TopCymbalOperator, this);
     }
 
     /// <summary>
@@ -80,8 +114,7 @@ public sealed class FmSynthesizer {
         }
 
         Registers[registerAddress] = value;
-        switch (address & 0xE0)
-        {
+        switch (address & 0xE0) {
             // The first 3 bits masking gives the type of the register by using its base address:
             // 0x00, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xE0 
             // When it is needed, we further separate the register type inside each base address,
@@ -94,24 +127,21 @@ public sealed class FmSynthesizer {
             // Numbers without accompanying names are unused bits.
             case 0x00:
                 // Unique registers for the entire OPL3:                
-                if (array == 1)
-                {
+                if (array == 1) {
                     if (address == 0x04) {
                         Update_2_CONNECTIONSEL6();
                     } else if (address == 0x05) {
                         Update_7_NEW1();
                     }
                 }
-                else if (address == 0x08)
-                {
+                else if (address == 0x08) {
                     Update_1_NTS1_6();
                 }
                 break;
 
             case 0xA0:
                 // 0xBD is a control register for the entire OPL3:
-                if (address == 0xBD)
-                {
+                if (address == 0xBD) {
                     if (array == 0) {
                         Update_DAM1_DVB1_RYT1_BD1_SD1_TOM1_TC1_HH1();
                     }
@@ -120,8 +150,7 @@ public sealed class FmSynthesizer {
                 }
                 // Registers for each channel are in A0-A8, B0-B8, C0-C8, in both register arrays.
                 // 0xB0...0xB8 keeps kon,block,fnum(h) for each channel.
-                if ((address & 0xF0) == 0xB0 && address <= 0xB8)
-                {
+                if ((address & 0xF0) == 0xB0 && address <= 0xB8) {
                     // If the address is in the second register array, adds 9 to the channel number.
                     // The channel number is given by the last four bits, like in A0,...,A8.
                     _channels[array, address & 0x0F].Update_2_KON1_BLOCK3_FNUMH2();
@@ -145,27 +174,26 @@ public sealed class FmSynthesizer {
             default:
                 int operatorOffset = address & 0x1F;
 
-                switch (address & 0xE0)
-                {
+                switch (address & 0xE0) {
                     // 0x20...0x35 keeps am,vib,egt,ksr,mult for each operator:                
                     case 0x20:
-                        _operators[array, operatorOffset].Update_AM1_VIB1_EGT1_KSR1_MULT4();
+                        _operators[array, operatorOffset]?.Update_AM1_VIB1_EGT1_KSR1_MULT4();
                         break;
                     // 0x40...0x55 keeps ksl,tl for each operator: 
                     case 0x40:
-                        _operators[array, operatorOffset].Update_KSL2_TL6();
+                        _operators[array, operatorOffset]?.Update_KSL2_TL6();
                         break;
                     // 0x60...0x75 keeps ar,dr for each operator: 
                     case 0x60:
-                        _operators[array, operatorOffset].Update_AR4_DR4();
+                        _operators[array, operatorOffset]?.Update_AR4_DR4();
                         break;
                     // 0x80...0x95 keeps sl,rr for each operator:
                     case 0x80:
-                        _operators[array, operatorOffset].Update_SL4_RR4();
+                        _operators[array, operatorOffset]?.Update_SL4_RR4();
                         break;
                     // 0xE0...0xF5 keeps ws for each operator:
                     case 0xE0:
-                        _operators[array, operatorOffset].Update_5_WS3();
+                        _operators[array, operatorOffset]?.Update_5_WS3();
                         break;
                 }
                 break;
@@ -180,10 +208,8 @@ public sealed class FmSynthesizer {
         Span<double> outputBuffer = stackalloc double[4] { 0, 0, 0, 0 };
 
         // If IsOpl3Mode = 0, use OPL2 mode with 9 channels. If IsOpl3Mode = 1, use OPL3 18 channels;
-        for (int array = 0; array < (IsOpl3Mode + 1); array++)
-        {
-            for (int channelNumber = 0; channelNumber < 9; channelNumber++)
-            {
+        for (int array = 0; array < (IsOpl3Mode + 1); array++) {
+            for (int channelNumber = 0; channelNumber < 9; channelNumber++) {
                 // Reads output from each OPL3 channel, and accumulates it in the output buffer:
                 _channels[array, channelNumber].GetChannelOutput(channelOutput);
                 for (int i = 0; i < channelOutput.Length; i++) {
@@ -242,7 +268,7 @@ public sealed class FmSynthesizer {
             for (int group = 0; group <= 0x10; group += 8) {
                 for (int offset = 0; offset < 6; offset++) {
                     int baseAddress = (array << 8) | (group + offset);
-                    _operators[array, group + offset] = new Operators.Operator(baseAddress, this);
+                    _operators[array, group + offset] = new Operator(baseAddress, this);
                 }
             }
         }
@@ -263,11 +289,11 @@ public sealed class FmSynthesizer {
             for (int channelNumber = 0; channelNumber < 3; channelNumber++) {
                 int baseAddress = (array << 8) | channelNumber;
                 // Channels 1, 2, 3 -> Operator offsets 0x0,0x3; 0x1,0x4; 0x2,0x5
-                Channels2Op[array, channelNumber] = new Channels.Channel2(baseAddress, _operators[array, channelNumber], _operators[array, channelNumber + 0x3], this);
+                Channels2Op[array, channelNumber] = new Channel2(baseAddress, _operators[array, channelNumber], _operators[array, channelNumber + 0x3], this);
                 // Channels 4, 5, 6 -> Operator offsets 0x8,0xB; 0x9,0xC; 0xA,0xD
-                Channels2Op[array, channelNumber + 3] = new Channels.Channel2(baseAddress + 3, _operators[array, channelNumber + 0x8], _operators[array, channelNumber + 0xB], this);
+                Channels2Op[array, channelNumber + 3] = new Channel2(baseAddress + 3, _operators[array, channelNumber + 0x8], _operators[array, channelNumber + 0xB], this);
                 // Channels 7, 8, 9 -> Operators 0x10,0x13; 0x11,0x14; 0x12,0x15
-                Channels2Op[array, channelNumber + 6] = new Channels.Channel2(baseAddress + 6, _operators[array, channelNumber + 0x10], _operators[array, channelNumber + 0x13], this);
+                Channels2Op[array, channelNumber + 6] = new Channel2(baseAddress + 6, _operators[array, channelNumber + 0x10], _operators[array, channelNumber + 0x13], this);
             }
         }
     }
@@ -277,7 +303,7 @@ public sealed class FmSynthesizer {
             for (int channelNumber = 0; channelNumber < 3; channelNumber++) {
                 int baseAddress = (array << 8) | channelNumber;
                 // Channels 1, 2, 3 -> Operators 0x0,0x3,0x8,0xB; 0x1,0x4,0x9,0xC; 0x2,0x5,0xA,0xD;
-                _channels4Op[array, channelNumber] = new Channels.Channel4(baseAddress, _operators[array, channelNumber], _operators[array, channelNumber + 0x3], _operators[array, channelNumber + 0x8], _operators[array, channelNumber + 0xB], this);
+                _channels4Op[array, channelNumber] = new Channel4(baseAddress, _operators[array, channelNumber], _operators[array, channelNumber + 0x3], _operators[array, channelNumber + 0x8], _operators[array, channelNumber + 0xB], this);
             }
         }
     }
@@ -320,8 +346,8 @@ public sealed class FmSynthesizer {
         if (newBd != Bd) {
             Bd = newBd;
             if (Bd == 1) {
-                _bassDrumChannel.Op1.KeyOn();
-                _bassDrumChannel.Op2.KeyOn();
+                _bassDrumChannel.Op1?.KeyOn();
+                _bassDrumChannel.Op2?.KeyOn();
             }
         }
 
@@ -329,7 +355,7 @@ public sealed class FmSynthesizer {
         if (newSd != Sd) {
             Sd = newSd;
             if (Sd == 1) {
-                SnareDrumOperator.KeyOn();
+                SnareDrumOperator?.KeyOn();
             }
         }
 
@@ -337,7 +363,7 @@ public sealed class FmSynthesizer {
         if (newTom != Tom) {
             Tom = newTom;
             if (Tom == 1) {
-                TomTomOperator.KeyOn();
+                TomTomOperator?.KeyOn();
             }
         }
 
@@ -345,7 +371,7 @@ public sealed class FmSynthesizer {
         if (newTc != Tc) {
             Tc = newTc;
             if (Tc == 1) {
-                TopCymbalOperator.KeyOn();
+                TopCymbalOperator?.KeyOn();
             }
         }
 
@@ -353,7 +379,7 @@ public sealed class FmSynthesizer {
         if (newHh != Hh) {
             Hh = newHh;
             if (Hh == 1) {
-                HighHatOperator.KeyOn();
+                HighHatOperator?.KeyOn();
             }
         }
     }
@@ -374,7 +400,7 @@ public sealed class FmSynthesizer {
         for (int array = 0; array < 2; array++) {
             for (int i = 0; i < 9; i++) {
                 int baseAddress = _channels[array, i].ChannelBaseAddress;
-                Registers[baseAddress + Channels.Channel.Chd1Chc1Chb1Cha1Fb3Cnt1Offset] |= 0xF0;
+                Registers[baseAddress + Channel.Chd1Chc1Chb1Cha1Fb3Cnt1Offset] |= 0xF0;
                 _channels[array, i].Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1();
             }
         }
@@ -389,7 +415,7 @@ public sealed class FmSynthesizer {
     }
     
     private void Set4OpConnections() {
-        var disabledChannel = new Channels.NullChannel(this);
+        var disabledChannel = new NullChannel(this);
 
         // bits 0, 1, 2 sets respectively 2-op channels (1,4), (2,5), (3,6) to 4-op operation.
         // bits 3, 4, 5 sets respectively 2-op channels (10,13), (11,14), (12,15) to 4-op operation.
@@ -444,35 +470,4 @@ public sealed class FmSynthesizer {
             _channels[0, i].UpdateChannel();
         }
     }
-
-    internal readonly int[] Registers = new int[0x200];
-    internal readonly Operators.HighHat HighHatOperator;
-    internal readonly Operators.SnareDrum SnareDrumOperator;
-    internal readonly Operators.Operator TomTomOperator;
-    internal readonly Operators.TopCymbal TopCymbalOperator;
-    internal int Nts, Dam, Dvb, Ryt, Bd, Sd, Tom, Tc, Hh, IsOpl3Mode, Connectionsel;
-    internal int VibratoIndex, TremoloIndex;
-
-    private const double TremoloFrequency = 3.7;
-    private const int _1_NTS1_6_Offset = 0x08;
-    private const int Dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1Offset = 0xBD;
-    private const int _7_NEW1_Offset = 0x105;
-    private const int _2_CONNECTIONSEL6_Offset = 0x104;
-
-    // The YMF262 has 36 operators.
-    private readonly Operators.Operator[,] _operators = new Operators.Operator[2, 0x20];
-    // The YMF262 has 3 4-op channels in each array.
-    private readonly Channels.Channel4[,] _channels4Op = new Channels.Channel4[2, 3];
-    private readonly Channels.Channel[,] _channels = new Channels.Channel[2, 9];
-    private readonly Channels.BassDrum _bassDrumChannel;
-    private readonly Channels.RhythmChannel _highHatSnareDrumChannel;
-    private readonly Channels.RhythmChannel _tomTomTopCymbalChannel;
-    private Operators.Operator? _highHatOperatorInNonRhythmMode;
-    private Operators.Operator? _snareDrumOperatorInNonRhythmMode;
-    private Operators.Operator? _tomTomOperatorInNonRhythmMode;
-    private Operators.Operator? _topCymbalOperatorInNonRhythmMode;
-
-    // The YMF262 has 18 2-op channels.
-    // Each 2-op channel can be at a serial or parallel operator configuration.
-    private static readonly Channels.Channel2[,] Channels2Op = new Channels.Channel2[2, 9];
 }

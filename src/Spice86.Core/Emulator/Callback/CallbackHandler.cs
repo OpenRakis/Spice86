@@ -9,7 +9,9 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-/// <inheritdoc/>
+/// <summary>
+/// The class that handles emulation of memory based callbacks.
+/// </summary>
 public class CallbackHandler : IndexBasedDispatcher {
     private const ushort CallbackSize = 4;
 
@@ -32,7 +34,12 @@ public class CallbackHandler : IndexBasedDispatcher {
 
     private readonly Memory _memory;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="interruptHandlerSegment">Segment where to install the callback code in memory.</param>
     public CallbackHandler(Machine machine, ILoggerService loggerService, ushort interruptHandlerSegment) : base(machine, loggerService) {
         _machine = machine;
         _memory = machine.Memory;
