@@ -112,10 +112,10 @@ public class Dos {
     }
 
     private void AddDefaultDevices() {
-        AddDevice(new CharacterDevice(DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON"));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX"));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN"));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK"));
+        AddDevice(new ConsoleDevice(DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _machine, _logger));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _logger));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _logger));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _logger));
         AddDevice(new BlockDevice(DeviceAttributes.FatDevice, 1));
     }
 

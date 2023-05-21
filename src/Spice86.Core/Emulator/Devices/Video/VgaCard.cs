@@ -8,31 +8,41 @@ using Spice86.Shared.Interfaces;
 public class VgaCard : IVideoCard {
     private readonly IGui? _gui;
     private readonly IVgaRenderer _renderer;
-    private Resolution _currentResolution;
+    private int _renderWidth;
+    private int _renderHeight;
+    private int _requiredBufferSize;
+    private readonly ILoggerService _logger;
 
     /// <summary>
     ///    Create a new VGA card.
     /// </summary>
-    /// <param name="gui"></param>
-    /// <param name="renderer"></param>
-    public VgaCard(IGui? gui, IVgaRenderer renderer) {
+    public VgaCard(IGui? gui, IVgaRenderer renderer, ILoggerService loggerService) {
         _gui = gui;
+        _logger = loggerService;
         _renderer = renderer;
-        _currentResolution = renderer.CalculateResolution();
+        _renderWidth = renderer.Width;
+        _renderHeight = renderer.Height;
+        _requiredBufferSize = _renderWidth * _renderHeight;
     }
 
     /// <inheritdoc />
     public void UpdateScreen() {
-        Resolution resolution = _renderer.CalculateResolution();
-        if (resolution != _currentResolution) {
-            _gui?.SetResolution(resolution.Width, resolution.Height);
-            _currentResolution = resolution;
+        if (_renderer.Width != _renderWidth || _renderer.Height != _renderHeight) {
+            _gui?.SetResolution(_renderer.Width, _renderer.Height);
+            _renderWidth = _renderer.Width;
+            _renderHeight = _renderer.Height;
+            _requiredBufferSize = _renderWidth * _renderHeight;
         }
         _gui?.UpdateScreen();
     }
 
     /// <inheritdoc />
     public void Render(Span<uint> buffer) {
+        if (buffer.Length < _requiredBufferSize && _logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            _logger.Warning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
+                buffer.Length, _requiredBufferSize, _renderWidth, _renderHeight);
+            return;
+        }
         _renderer.Render(buffer);
     }
 }

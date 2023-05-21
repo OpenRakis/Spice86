@@ -292,13 +292,7 @@ public class DosFileManager {
             return NoFreeHandleError();
         }
 
-        Stream stream;
-        if (device == _dos.CurrentConsoleDevice) { 
-            stream = openMode == "r" ? Console.OpenStandardInput() : Console.OpenStandardOutput();
-        } else {
-            stream = new DeviceStream(device.Name, openMode, _loggerService);
-        }
-
+        Stream stream = device.OpenStream(openMode);
         ushort dosIndex = (ushort)freeIndex.Value;
         SetOpenFile(dosIndex, new OpenFile(name ?? device.Name, dosIndex, stream));
         

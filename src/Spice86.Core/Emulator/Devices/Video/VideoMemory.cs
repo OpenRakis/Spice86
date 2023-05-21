@@ -18,7 +18,7 @@ public class VideoMemory : IVideoMemory {
     /// <param name="state"></param>
     public VideoMemory(IVideoState state) {
         _state = state;
-        Planes = new byte[4, 0x10000];
+        Planes = new byte[4, 0x20000];
         _latches = new byte[4];
         Size = 0x20000;
     }

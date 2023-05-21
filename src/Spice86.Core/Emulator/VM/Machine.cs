@@ -181,7 +181,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The Video BIOS interrupt handler.
     /// </summary>
-    public VgaBios VideoBiosInt10Handler { get; }
+    public IVgaInterrupts VideoBiosInt10Handler { get; }
     
     /// <summary>
     /// The Video Rom containing fonts and other data.
@@ -269,7 +269,7 @@ public class Machine : IDisposable {
         IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         IVgaRenderer vgaRenderer = new Renderer(VgaRegisters, vgaMemory, loggerService);
-        VgaCard = new VgaCard(gui, vgaRenderer);
+        VgaCard = new VgaCard(gui, vgaRenderer, loggerService);
         
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
@@ -335,11 +335,11 @@ public class Machine : IDisposable {
         }
     }
 
-    public void Register(ICallback callback) {
     /// <summary>
     /// Registers a callback, such as an interrupt handler.
     /// </summary>
     /// <param name="callback">The callback implementation.</param>
+    public void Register(ICallback callback) {
         CallbackHandler.AddCallback(callback);
     }
 

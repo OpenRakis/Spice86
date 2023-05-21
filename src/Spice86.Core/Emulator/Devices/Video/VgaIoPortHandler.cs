@@ -243,7 +243,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 break;
 
             case Ports.GraphicsControllerData:
-                if (_graphicsRegisters.AddressRegister is GraphicsControllerRegister.ReadMapSelect or GraphicsControllerRegister.BitMask or GraphicsControllerRegister.GraphicsMode) {
+                if (_graphicsRegisters.AddressRegister is GraphicsControllerRegister.ReadMapSelect or GraphicsControllerRegister.BitMask or GraphicsControllerRegister.GraphicsMode or GraphicsControllerRegister.EnableSetReset or GraphicsControllerRegister.SetReset) {
                     if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                         _logger.Verbose("[{Port:X4}] Write to Graphics register {Register}: {Value:X2} {Explained}", port, _graphicsRegisters.AddressRegister, value, _graphicsRegisters.AddressRegister.Explain(value));
                     }

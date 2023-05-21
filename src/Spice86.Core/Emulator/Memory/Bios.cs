@@ -14,13 +14,6 @@ public sealed class Bios {
     /// <param name="memory">The memory bus.</param>
     public Bios(Memory memory) {
         _memory = memory;
-        // VideoMode = 0x03;
-        // ScreenRows = 24;
-        // ScreenColumns = 80;
-        // CurrentVideoPage = 0;
-        // CharacterPointHeight = 16;
-        // CrtControllerBaseAddress = 0x03D4;
-        // DisplayCombinationCode = 0x08; // VGA with color monitor
     }
     
     /// <summary>

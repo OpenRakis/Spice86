@@ -59,7 +59,7 @@ public static class RegisterExtensions {
             default:
                 throw new ArgumentOutOfRangeException(nameof(controllerRegister), controllerRegister, null);
         }
-        return "not yet implemented";
+        return "(explanation not yet implemented)";
     }
 
     public static string Explain(this SequencerRegister register, byte value) {
@@ -81,7 +81,7 @@ public static class RegisterExtensions {
             default:
                 throw new ArgumentOutOfRangeException(nameof(register), register, null);
         }
-        return "not yet implemented";
+        return "(explanation not yet implemented)";
     }
 
     public static string Explain(this CrtControllerRegister register, byte value) {
@@ -159,7 +159,7 @@ public static class RegisterExtensions {
             default:
                 throw new ArgumentOutOfRangeException(nameof(register), register, null);
         }
-        return "not yet implemented";
+        return "(explanation not yet implemented)";
     }
 }
 

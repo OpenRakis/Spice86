@@ -403,7 +403,17 @@ internal class VgaFunctions {
 
         // Write the fonts in memory
         if (vgaMode.MemoryModel == MemoryModel.Text) {
-            LoadFont(Fonts.VgaFont16, 0x100, 0, 0, 16);
+            switch (vgaMode.CharacterHeight) {
+                case 14:
+                    LoadFont(Fonts.VgaFont14, 0x100, 0, 0, 14);
+                    break;
+                case 16:
+                    LoadFont(Fonts.VgaFont16, 0x100, 0, 0, 16);
+                    break;
+                default:
+                    LoadFont(Fonts.VgaFont8, 0x100, 0, 0, 8);
+                    break;
+            }
         }
     }
 

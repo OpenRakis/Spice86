@@ -101,7 +101,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _loggerService = loggerService;
-        var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier);
+        var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier, loggerService);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
         FillDispatchTable();
 
