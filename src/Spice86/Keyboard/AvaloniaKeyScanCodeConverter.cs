@@ -177,10 +177,11 @@ public class AvaloniaKeyScanCodeConverter {
         if (keyPressedScanCode > 0x7F) {
             keyPressedScanCode = (byte?) (keyPressedScanCode - 0x80);
         }
-        if (keyPressedScanCode is null || !_scanCodeToAscii.ContainsKey((byte)keyPressedScanCode)) {
-            return null;
+        if (keyPressedScanCode is not null && _scanCodeToAscii.TryGetValue((byte)keyPressedScanCode, out byte value)) {
+            return value;
         }
-        return _scanCodeToAscii[(byte)keyPressedScanCode];
+
+        return null;
     }
 
     /// <summary>
@@ -189,10 +190,10 @@ public class AvaloniaKeyScanCodeConverter {
     /// <param name="key">The key for which to retrieve the scancode.</param>
     /// <returns>The scancode of the pressed key, or null if the key is not present in the dictionary.</returns>
     public byte? GetKeyPressedScancode(Key key) {
-        if (!_keyPressedScanCode.ContainsKey(key)) {
-            return null;
+        if (_keyPressedScanCode.TryGetValue(key, out byte value)) {
+            return value;
         }
-        return _keyPressedScanCode[key];
+        return null;
     }
 
     /// <summary>
