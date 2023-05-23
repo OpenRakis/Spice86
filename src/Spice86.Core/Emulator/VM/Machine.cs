@@ -213,7 +213,10 @@ public class Machine : IDisposable {
     /// </summary>
     public Opl3Fm OPL3FM { get; }
 
-    public AdlibGold? AdlibGold { get; }
+    /// <summary>
+    /// The Adlib Gold sound card.
+    /// </summary>
+    public AdlibGold AdlibGold { get; }
 
     /// <summary>
     /// The code invoked when emulation pauses.
@@ -547,7 +550,6 @@ public class Machine : IDisposable {
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
-                AdlibGold?.Dispose();
                 MachineBreakpoints.Dispose();
             }
             _disposed = true;
