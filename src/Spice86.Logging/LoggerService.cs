@@ -47,7 +47,7 @@ public class LoggerService : ILoggerService {
     }
     
     private ILogger AddProperties(ILogger logger) {
-        return logger.ForContext("IP", $"{LoggerPropertyBag.CsIp}");
+        return logger.ForContext("IP", LoggerPropertyBag.CsIp, destructureObjects: false);
     }
     
     /// <inheritdoc/>
