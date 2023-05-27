@@ -10,7 +10,8 @@
         Icon="/Icon/Spice86.ico"
         CanResize="True"
         WindowStartupLocation="CenterOwner"
-        MinWidth="768" MinHeight="1024" Width="1024" Height="768">
+        SizeToContent="Width"
+        MinWidth="1024" MinHeight="900" Width="1024" Height="900">
         <Design.DataContext>
                 <vm:DebugViewModel />
         </Design.DataContext>
@@ -25,185 +26,185 @@
                                 <TabItem Header="Video Card">
                                         <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,Auto,Auto">
                                                 <Grid Grid.Row="0" Grid.Column="0" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">Dac</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">Dac</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">DacReadIndex:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">DacReadIndex:</Label>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.DacReadIndex, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">DacWriteIndex:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">DacWriteIndex:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.DacWriteIndex, StringFormat=' {0:X2}'}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
                                                 <Grid Grid.Row="0" Grid.Column="1" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">Graphics</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">Graphics</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">GraphicsBitMask:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">GraphicsBitMask:</Label>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.GraphicsBitMask, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">GraphicsColorCompare:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">GraphicsColorCompare:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.GraphicsColorCompare, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">GraphicsGraphicsMode:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">GraphicsGraphicsMode:</Label>
                                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.GraphicsGraphicsMode, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">GraphicsMiscellaneousGraphics:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="3" Grid.Column="0">GraphicsMiscellaneousGraphics:</Label>
                                                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.GraphicsMiscellaneousGraphics, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">GraphicsSetResetExpanded:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="4" Grid.Column="0">GraphicsSetResetExpanded:</Label>
                                                                 <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.GraphicsSetResetExpanded, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="5" Grid.Column="0">GraphicsColorDontCareExpanded:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="5" Grid.Column="0">GraphicsColorDontCareExpanded:</Label>
                                                                 <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VideoCard.GraphicsColorDontCareExpanded, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="6" Grid.Column="0">GraphicsEnableSetResetExpanded:</TextBlock>
-                                                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding VideoCard.GraphicsEnableSetResetExpanded, StringFormat=': {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="7" Grid.Column="0">GraphicsReadMapSelect:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="6" Grid.Column="0">GraphicsEnableSetResetExpanded:</Label>
+                                                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding VideoCard.GraphicsEnableSetResetExpanded, StringFormat=' {0:X2}'}"></TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="7" Grid.Column="0">GraphicsReadMapSelect:</Label>
                                                                 <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding VideoCard.GraphicsReadMapSelect, StringFormat=' {0:X2}'}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
                                                 <Grid Grid.Row="0" Grid.Column="2" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">Sequencer</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">Sequencer</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">SequencerReset:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">SequencerReset:</Label>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.SequencerReset, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">SequencerClockingMode:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">SequencerClockingMode:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.SequencerClockingMode, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">SequencerMapMaskExpanded:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">SequencerMapMaskExpanded:</Label>
                                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.SequencerMapMaskExpanded, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">SequencerCharacterMapSelect:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="3" Grid.Column="0">SequencerCharacterMapSelect:</Label>
                                                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.SequencerCharacterMapSelect, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">SequencerSequencerMemoryMode:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="4" Grid.Column="0">SequencerSequencerMemoryMode:</Label>
                                                                 <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.SequencerSequencerMemoryMode, StringFormat=' {0:X2}'}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
                                                 <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">AttributeController</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">AttributeController</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">AttributeControllerColorSelect:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">AttributeControllerColorSelect:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerColorSelect, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">AttributeControllerOverscanColor:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">AttributeControllerOverscanColor:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerOverscanColor, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">AttributeControllerAttributeModeControl:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">AttributeControllerAttributeModeControl:</Label>
                                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerAttributeModeControl, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">AttributeControllerColorPlaneEnable:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="3" Grid.Column="0">AttributeControllerColorPlaneEnable:</Label>
                                                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerColorPlaneEnable, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">AttributeControllerHorizontalPixelPanning:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="4" Grid.Column="0">AttributeControllerHorizontalPixelPanning:</Label>
                                                                 <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.AttributeControllerHorizontalPixelPanning, StringFormat=' {0:X2}'}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
                                                 <Grid  Grid.Row="1" Grid.Column="1" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">CRT Controller</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">CrtControllerOffset:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">CrtControllerOffset:</Label>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.CrtControllerOffset, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">CrtControllerOverflow:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">CrtControllerOverflow:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.CrtControllerOverflow, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">CrtControllerCursorEnd:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">CrtControllerCursorEnd:</Label>
                                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.CrtControllerCursorEnd, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">CrtControllerCursorLocation:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="3" Grid.Column="0">CrtControllerCursorLocation:</Label>
                                                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.CrtControllerCursorLocation, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">CrtControllerCursorStart:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="4" Grid.Column="0">CrtControllerCursorStart:</Label>
                                                                 <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.CrtControllerCursorStart, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="5" Grid.Column="0">CrtControllerHorizontalTotal:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="5" Grid.Column="0">CrtControllerHorizontalTotal:</Label>
                                                                 <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VideoCard.CrtControllerHorizontalTotal, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="6" Grid.Column="0">CrtControllerLineCompare:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="6" Grid.Column="0">CrtControllerLineCompare:</Label>
                                                                 <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding VideoCard.CrtControllerLineCompare, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="7" Grid.Column="0">CrtControllerStartAddress:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="7" Grid.Column="0">CrtControllerStartAddress:</Label>
                                                                 <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding VideoCard.CrtControllerStartAddress, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="8" Grid.Column="0">CrtControllerUnderlineLocation:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="8" Grid.Column="0">CrtControllerUnderlineLocation:</Label>
                                                                 <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding VideoCard.CrtControllerUnderlineLocation, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="9" Grid.Column="0">CrtControllerVerticalTotal:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="9" Grid.Column="0">CrtControllerVerticalTotal:</Label>
                                                                 <TextBlock Grid.Row="9" Grid.Column="1" Text="{Binding VideoCard.CrtControllerVerticalTotal, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="10" Grid.Column="0">CrtControllerCrtModeControl:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="10" Grid.Column="0">CrtControllerCrtModeControl:</Label>
                                                                 <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding VideoCard.CrtControllerCrtModeControl, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="11" Grid.Column="0">CrtControllerEndHorizontalBlanking:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="11" Grid.Column="0">CrtControllerEndHorizontalBlanking:</Label>
                                                                 <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding VideoCard.CrtControllerEndHorizontalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="12" Grid.Column="0">CrtControllerEndHorizontalDisplay:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="12" Grid.Column="0">CrtControllerEndHorizontalDisplay:</Label>
                                                                 <TextBlock Grid.Row="12" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerEndHorizontalDisplay, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="13" Grid.Column="0">CrtControllerEndHorizontalRetrace:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="13" Grid.Column="0">CrtControllerEndHorizontalRetrace:</Label>
                                                                 <TextBlock Grid.Row="13" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerEndHorizontalRetrace, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="14" Grid.Column="0">CrtControllerEndVerticalBlanking:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="14" Grid.Column="0">CrtControllerEndVerticalBlanking:</Label>
                                                                 <TextBlock Grid.Row="14" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerEndVerticalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="15" Grid.Column="0">CrtControllerMaximumScanLine:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="15" Grid.Column="0">CrtControllerMaximumScanLine:</Label>
                                                                 <TextBlock Grid.Row="15" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerMaximumScanLine, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="16" Grid.Column="0">CrtControllerPresetRowScan:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="16" Grid.Column="0">CrtControllerPresetRowScan:</Label>
                                                                 <TextBlock Grid.Row="16" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerPresetRowScan, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="17" Grid.Column="0">CrtControllerStartHorizontalBlanking:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="17" Grid.Column="0">CrtControllerStartHorizontalBlanking:</Label>
                                                                 <TextBlock Grid.Row="17" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerStartHorizontalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="18" Grid.Column="0">CrtControllerStartHorizontalRetrace:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="18" Grid.Column="0">CrtControllerStartHorizontalRetrace:</Label>
                                                                 <TextBlock Grid.Row="18" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerStartHorizontalRetrace, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="19" Grid.Column="0">CrtControllerStartVerticalBlanking:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="19" Grid.Column="0">CrtControllerStartVerticalBlanking:</Label>
                                                                 <TextBlock Grid.Row="19" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerStartVerticalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="20" Grid.Column="0">CrtControllerVerticalDisplayEnd:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="20" Grid.Column="0">CrtControllerVerticalDisplayEnd:</Label>
                                                                 <TextBlock Grid.Row="20" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerVerticalDisplayEnd, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="21" Grid.Column="0">CrtControllerVerticalRetraceEnd:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="21" Grid.Column="0">CrtControllerVerticalRetraceEnd:</Label>
                                                                 <TextBlock Grid.Row="21" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerVerticalRetraceEnd, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="22" Grid.Column="0">CrtControllerVerticalRetraceStart:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="22" Grid.Column="0">CrtControllerVerticalRetraceStart:</Label>
                                                                 <TextBlock Grid.Row="22" Grid.Column="1"  Text="{Binding VideoCard.CrtControllerVerticalRetraceStart, StringFormat=' {0:X2}'}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
                                                 <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">CurrentMode</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">CurrentMode</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">CurrentModeHeight:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">CurrentModeHeight:</Label>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.CurrentModeHeight, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">CurrentModeWidth:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">CurrentModeWidth:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.CurrentModeWidth, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">CurrentModeStride:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">CurrentModeStride:</Label>
                                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.CurrentModeStride, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">CurrentModeBytePanning:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="3" Grid.Column="0">CurrentModeBytePanning:</Label>
                                                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.CurrentModeBytePanning, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">CurrentModeFontHeight:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="4" Grid.Column="0">CurrentModeFontHeight:</Label>
                                                                 <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.CurrentModeFontHeight, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="5" Grid.Column="0">CurrentModeBitsPerPixel:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="5" Grid.Column="0">CurrentModeBitsPerPixel:</Label>
                                                                 <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VideoCard.CurrentModeBitsPerPixel, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="6" Grid.Column="0">CurrentModeHorizontalPanning:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="6" Grid.Column="0">CurrentModeHorizontalPanning:</Label>
                                                                 <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding VideoCard.CurrentModeHorizontalPanning, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="7" Grid.Column="0">CurrentModeIsPlanar:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="7" Grid.Column="0">CurrentModeIsPlanar:</Label>
                                                                 <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding VideoCard.CurrentModeIsPlanar, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="8" Grid.Column="0">CurrentModeLineCompare:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="8" Grid.Column="0">CurrentModeLineCompare:</Label>
                                                                 <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding VideoCard.CurrentModeLineCompare, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="9" Grid.Column="0">CurrentModeMouseWidth:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="9" Grid.Column="0">CurrentModeMouseWidth:</Label>
                                                                 <TextBlock Grid.Row="9" Grid.Column="1" Text="{Binding VideoCard.CurrentModeMouseWidth, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="10" Grid.Column="0">CurrentModeOriginalHeight:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="10" Grid.Column="0">CurrentModeOriginalHeight:</Label>
                                                                 <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding VideoCard.CurrentModeOriginalHeight, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="11" Grid.Column="0">CurrentModePixelHeight:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="11" Grid.Column="0">CurrentModePixelHeight:</Label>
                                                                 <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding VideoCard.CurrentModePixelHeight, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="12" Grid.Column="0">CurrentModeStartOffset:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="12" Grid.Column="0">CurrentModeStartOffset:</Label>
                                                                 <TextBlock Grid.Row="12" Grid.Column="1" Text="{Binding VideoCard.CurrentModeStartOffset, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="13" Grid.Column="0">CurrentModeActiveDisplayPage:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="13" Grid.Column="0">CurrentModeActiveDisplayPage:</Label>
                                                                 <TextBlock Grid.Row="13" Grid.Column="1" Text="{Binding VideoCard.CurrentModeActiveDisplayPage, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="14" Grid.Column="0">CurrentModeStartVerticalBlanking:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="14" Grid.Column="0">CurrentModeStartVerticalBlanking:</Label>
                                                                 <TextBlock Grid.Row="14" Grid.Column="1" Text="{Binding VideoCard.CurrentModeStartVerticalBlanking, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="15" Grid.Column="0">CurrentModeVideoModeType:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="15" Grid.Column="0">CurrentModeVideoModeType:</Label>
                                                                 <TextBlock Grid.Row="15" Grid.Column="1" Text="{Binding VideoCard.CurrentModeVideoModeType, StringFormat=' {0:X2}'}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
                                                 <Grid  Grid.Row="2" Grid.Column="0" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">TextConsole</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">TextConsole</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">TextConsoleHeight:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">TextConsoleHeight:</Label>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.TextConsoleHeight, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">TextConsoleWidth:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">TextConsoleWidth:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.TextConsoleWidth, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="2" Grid.Column="0">TextConsoleAnsiEnabled:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">TextConsoleAnsiEnabled:</Label>
                                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VideoCard.TextConsoleAnsiEnabled, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="3" Grid.Column="0">TextConsoleBackgroundColor:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="3" Grid.Column="0">TextConsoleBackgroundColor:</Label>
                                                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VideoCard.TextConsoleBackgroundColor, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="4" Grid.Column="0">TextConsoleCursorPosition:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="4" Grid.Column="0">TextConsoleCursorPosition:</Label>
                                                                 <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding VideoCard.TextConsoleCursorPosition, StringFormat=' {0}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="5" Grid.Column="0">TextConsoleForegroundColor:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="5" Grid.Column="0">TextConsoleForegroundColor:</Label>
                                                                 <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VideoCard.TextConsoleForegroundColor, StringFormat=' {0:X2}'}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
                                                 <Grid  Grid.Row="2" Grid.Column="1" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">Misc</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">Misc</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left">DefaultPaletteLoading:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left">DefaultPaletteLoading:</Label>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VideoCard.DefaultPaletteLoading, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Left">TotalVramBytes:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Left">TotalVramBytes:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VideoCard.TotalVramBytes, StringFormat=' {0:X2}'}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
                                                 <Grid  Grid.Row="2" Grid.Column="2" RowDefinitions="Auto,*" Margin="5">
-                                                        <Label HorizontalAlignment="Center" FontWeight="Bold">VideoBiosInt10Handler</Label>
+                                                        <Label FontWeight="Bold" HorizontalAlignment="Center">VideoBiosInt10Handler</Label>
                                                         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto">
-                                                                <TextBlock Foreground="DimGray" Grid.Row="0" Grid.Column="0">VideoBiosInt10HandlerIndex:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">VideoBiosInt10HandlerIndex:</Label>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Machine.VideoBiosInt10HandlerIndex, StringFormat=' {0:X2}'}"></TextBlock>
-                                                                <TextBlock Foreground="DimGray" Grid.Row="1" Grid.Column="0">VideoBiosInt10HandlerInterruptHandlerSegment:</TextBlock>
+                                                                <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">VideoBiosInt10HandlerInterruptHandlerSegment:</Label>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Machine.VideoBiosInt10HandlerInterruptHandlerSegment, StringFormat=' {0:X2}', Converter={StaticResource InvalidNumberToQuestionMarkConverter}}"></TextBlock>
                                                         </Grid>
                                                 </Grid>
