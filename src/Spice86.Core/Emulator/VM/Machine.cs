@@ -494,7 +494,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// Releases all resources.
     /// </summary>
-    /// <param name="disposing">If we must release resources.</param>
+    /// <param name="disposing">If we must also release native resources.</param>
     protected virtual void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
