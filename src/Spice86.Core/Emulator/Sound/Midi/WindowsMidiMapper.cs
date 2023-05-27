@@ -1,9 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi;
 
-using Spice86.Core.Emulator.Sound;
-
 using System;
 using System.Runtime.Versioning;
+
+using Bufdio.Spice86.WinMM;
 
 /// <summary>
 /// Provides access to the Windows MIDI mapper.

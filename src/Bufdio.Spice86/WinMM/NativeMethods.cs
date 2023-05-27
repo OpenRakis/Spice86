@@ -1,14 +1,15 @@
-﻿namespace Spice86.Core.Emulator.Sound;
+﻿namespace Bufdio.Spice86.WinMM;
 
 using System;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
 /// <summary>
-/// The NativeMethods class provides access to the winmm.dll library, which provides multimedia services for Windows. It contains several methods for MIDI output management, including opening and closing MIDI output devices, sending short MIDI messages, and resetting a MIDI output device.
+/// This <see cref="NativeMethods"/> class provides access to the winmm.dll library, which provides multimedia services for Windows.<br/>
+/// It contains several methods for MIDI output management, including opening and closing MIDI output devices, sending short MIDI messages, and resetting a MIDI output device.
 /// </summary>
 [SupportedOSPlatform("windows")]
-internal static class NativeMethods {
+public static class NativeMethods {
     /// <summary>
     /// Opens a MIDI output device for playback.
     /// </summary>
