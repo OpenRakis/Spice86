@@ -65,11 +65,23 @@
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
 		<PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
+		<PackageReference Include="MeltySynth" Version="2.4.1" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Spice86.Aeon\Spice86.Aeon.csproj" />
 		<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="Resources\2MGM.license">
+			<Link>2MGM.license</Link>
+		  	<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Resources\2MGM.sf2">
+			<Link>2MGM.sf2</Link>
+		  	<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 </Project>

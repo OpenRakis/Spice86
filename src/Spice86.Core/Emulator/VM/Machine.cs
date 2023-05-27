@@ -121,7 +121,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The General MIDI (MPU-401) or MT-32 device.
     /// </summary>
-    public Midi Midi { get; }
+    public Midi MidiDevice { get; }
 
     /// <summary>
     /// INT33H handler.
@@ -261,8 +261,8 @@ public class Machine : IDisposable {
         SoundBlaster.AddEnvironmentVariable();
         GravisUltraSound = new GravisUltraSound(this, configuration, loggerService);
         Register(GravisUltraSound);
-        Midi = new Midi(this, configuration, loggerService);
-        Register(Midi);
+        MidiDevice = new Midi(this, configuration, loggerService);
+        Register(MidiDevice);
 
         // Services
         CallbackHandler = new CallbackHandler(this, loggerService, MemoryMap.InterruptHandlersSegment);
@@ -494,7 +494,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// Releases all resources.
     /// </summary>
-    /// <param name="disposing">If we must also release native resources.</param>
+    /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
@@ -504,7 +504,7 @@ public class Machine : IDisposable {
                     _dmaThread.Join();
                 }
                 _dmaResetEvent.Dispose();
-                Midi.Dispose();
+                MidiDevice.Dispose();
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();

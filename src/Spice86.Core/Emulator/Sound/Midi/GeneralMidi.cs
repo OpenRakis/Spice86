@@ -134,8 +134,8 @@ public sealed class GeneralMidi : IDisposable {
                 if (_midiMapper is null) {
                     if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
                         _midiMapper = new Mt32MidiDevice(Mt32RomsPath, Configuration, _loggerService);
-                    } else if (OperatingSystem.IsWindows()) {
-                        _midiMapper = new WindowsMidiMapper();
+                    } else {
+                        _midiMapper = new GeneralMidiDevice();
                     }
                 }
 
@@ -165,20 +165,6 @@ public sealed class GeneralMidi : IDisposable {
     /// <param name="port">The port to write to.</param>
     /// <param name="value">The value being written.</param>
     public void WriteWord(int port, ushort value) => WriteByte(port, (byte)value);
-
-    /// <summary>
-    /// Invoked when emulation pauses
-    /// </summary>
-    public void Pause() {
-        _midiMapper?.Pause();
-    }
-    
-    /// <summary>
-    /// Invoked when emulation resumes
-    /// </summary>
-    public void Resume() {
-        _midiMapper?.Resume();
-    }
 
     /// <inheritdoc />
     public void Dispose() {

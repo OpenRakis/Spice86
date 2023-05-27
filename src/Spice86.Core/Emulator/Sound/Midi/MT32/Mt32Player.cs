@@ -92,16 +92,6 @@ internal sealed class Mt32Player : IDisposable {
         }
     }
 
-    public void Pause() {
-        //... Do not pause ...
-        //audioPlayer?.StopPlayback();
-    }
-
-    public void Resume() {
-        // ... and restart, this produces an InvalidOperationException
-        //audioPlayer?.BeginPlayback(this.FillBuffer);
-    }
-
     /// <inheritdoc/>
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
