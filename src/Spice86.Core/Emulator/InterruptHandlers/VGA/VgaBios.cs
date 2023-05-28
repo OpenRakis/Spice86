@@ -54,8 +54,6 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
         InitializeBiosArea();
         _vgaFunctions = new VgaFunctions(machine.Memory, machine.IoPortDispatcher);
-        _state.AL = 0x03;
-        SetVideoMode();
     }
 
     /// <summary>
