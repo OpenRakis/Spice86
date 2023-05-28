@@ -438,6 +438,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private IEnumerable<IVideoBufferViewModel> SortedBuffers() {
+        if (_disposed || _isSettingResolution) {
+            return Array.Empty<IVideoBufferViewModel>();
+        }
         return VideoBuffers.OrderBy(static x => x.Address).Select(static x => x);
     }
 

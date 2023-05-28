@@ -148,7 +148,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
             Audio.WriteFullBuffer(_audioPlayer, playBuffer);
             FillBuffer(buffer, playBuffer, expandToStereo);
         }
-}
+    }
 
     private void FillBuffer(Span<float> buffer, Span<float> playBuffer, bool expandToStereo) {
         _synth?.GetData(buffer);
