@@ -310,7 +310,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         TimeMultiplier = _configuration.TimeMultiplier;
     }
     public void UpdateScreen() {
-        if (_disposed || _isSettingResolution) {
+        if (_disposed || _isSettingResolution || _isMainWindowClosing) {
             return;
         }
         foreach (IVideoBufferViewModel videoBuffer in SortedBuffers()) {
@@ -438,7 +438,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private IEnumerable<IVideoBufferViewModel> SortedBuffers() {
-        if (_disposed || _isSettingResolution) {
+        if (_disposed || _isSettingResolution || _isMainWindowClosing) {
             return Array.Empty<IVideoBufferViewModel>();
         }
         return VideoBuffers.OrderBy(static x => x.Address).Select(static x => x);
