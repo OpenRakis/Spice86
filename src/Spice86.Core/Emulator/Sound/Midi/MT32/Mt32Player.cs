@@ -130,9 +130,9 @@ internal sealed class Mt32Player : IDisposable {
             using ZipArchive zip = new ZipArchive(File.OpenRead(path), ZipArchiveMode.Read);
             bool foundRom = false;
             for (int i = 0; i < zip.Entries.Count; i++) {
-                ZipArchiveEntry? entry = zip.Entries[i];
+                ZipArchiveEntry entry = zip.Entries[i];
                 if (entry.FullName.EndsWith(".ROM", StringComparison.OrdinalIgnoreCase)) {
-                    using Stream? stream = entry.Open();
+                    using Stream stream = entry.Open();
                     _context.AddRom(stream);
                     foundRom = true;
                 }
