@@ -46,16 +46,24 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         if (_audioPlayer is null) {
             return;
         }
-        Span<float> data = stackalloc float[128];
+        // General MIDI needs a large buffer to store preset PCM data of musical instruments.
+        // Too small and it's garbled.
+        // Too large and we can't render in time, therefore there is only silence.
+        Span<float> data = stackalloc float[16384];
         Synthesizer synthesizer = new(new SoundFont(SoundFont), _audioPlayer.Format.SampleRate);
         while (!_endThread) {
             if(!_endThread) {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
-            ExtractAndProcessMidiMessage(_message, synthesizer);
-            synthesizer.RenderInterleaved(data);
+            FillBuffer(synthesizer, data);
             Audio.WriteFullBuffer(_audioPlayer, data);
+            data.Clear();
         }
+    }
+
+    private void FillBuffer(Synthesizer synthesizer, Span<float> data) {
+        ExtractAndProcessMidiMessage(_message, synthesizer);
+        synthesizer.RenderInterleaved(data);
     }
 
     protected override void PlayShortMessage(uint message) {
