@@ -76,12 +76,12 @@
 
 	<ItemGroup>
 		<None Update="Resources\2MGM.license">
-			<Link>2MGM.license</Link>
-		  	<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		  <Link>2MGM.license</Link>
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="Resources\2MGM.sf2">
-			<Link>2MGM.sf2</Link>
-		  	<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		  <Link>2MGM.sf2</Link>
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 </Project>
