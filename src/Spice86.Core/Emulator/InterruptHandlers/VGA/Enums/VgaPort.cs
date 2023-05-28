@@ -13,5 +13,5 @@ internal enum VgaPort {
     GraphicsControllerAddress = 0x3CE,
     CrtControllerAddress = 0x3B4,
     CrtControllerAddressAlt = 0x3D4,
-    InputStatus1ReadAlt = 0x3DA,
+    InputStatus1ReadAlt = 0x3DA
 }

@@ -1,20 +1,22 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Serilog.Events;
+
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Thin interface between renderer and gui.
+///     Thin interface between renderer and gui.
 /// </summary>
 public class VgaCard : IVideoCard {
     private readonly IGui? _gui;
-    private readonly IVgaRenderer _renderer;
-    private int _renderWidth;
-    private int _renderHeight;
-    private int _requiredBufferSize;
     private readonly ILoggerService _logger;
+    private readonly IVgaRenderer _renderer;
+    private int _renderHeight;
+    private int _renderWidth;
+    private int _requiredBufferSize;
 
     /// <summary>
-    ///    Create a new VGA card.
+    ///     Create a new VGA card.
     /// </summary>
     public VgaCard(IGui? gui, IVgaRenderer renderer, ILoggerService loggerService) {
         _gui = gui;
@@ -38,7 +40,7 @@ public class VgaCard : IVideoCard {
 
     /// <inheritdoc />
     public void Render(Span<uint> buffer) {
-        if (buffer.Length < _requiredBufferSize && _logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (buffer.Length < _requiredBufferSize && _logger.IsEnabled(LogEventLevel.Warning)) {
             _logger.Warning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
                 buffer.Length, _requiredBufferSize, _renderWidth, _renderHeight);
             return;

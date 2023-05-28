@@ -12,7 +12,7 @@ public class Memory {
     private readonly IMemoryDevice _ram;
     private readonly BreakPointHolder _readBreakPoints = new();
     private readonly BreakPointHolder _writeBreakPoints = new();
-    private List<IMemoryDevice> _memoryDevices;
+    private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
 
     /// <summary>
@@ -21,7 +21,7 @@ public class Memory {
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
     public Memory(IMemoryDevice baseMemory) {
         uint memorySize = baseMemory.Size;
-        _memoryDevices = new((int)memorySize);
+        _memoryDevices = new IMemoryDevice[memorySize];
         _ram = new Ram(memorySize);
         RegisterMapping(0, memorySize, _ram);
         UInt8 = new UInt8Indexer(this);
@@ -39,9 +39,9 @@ public class Memory {
     /// </summary>
     public byte[] Ram {
         get {
-            byte[] copy = new byte[_memoryDevices.Count];
+            byte[] copy = new byte[_memoryDevices.Length];
             for (uint address = 0; address < copy.Length; address++) {
-                copy[address] = _memoryDevices[(int)address].Read(address);
+                copy[address] = _memoryDevices[address].Read(address);
             }
             return copy;
         }
@@ -110,18 +110,10 @@ public class Memory {
     /// <param name="address">The start address.</param>
     /// <param name="length">The length of the array.</param>
     /// <returns>The array of bytes, read from RAM.</returns>
-    public byte[] GetData(uint address, int length) {
+    public byte[] GetData(uint address, uint length) {
         byte[] data = new byte[length];
         for (uint i = 0; i < length; i++) {
             data[i] = Read(address + i);
-        }
-        return data;
-    }
-    
-    public ushort[] GetDataW(uint address, int length) {
-        ushort[] data = new ushort[length];
-        for (uint i = 0; i < length; i++) {
-            data[i] = GetUint16(address + i);
         }
         return data;
     }
@@ -218,18 +210,18 @@ public class Memory {
     /// <returns>The address of the first occurence of the specified sequence of bytes, or null if not found.</returns>
     public uint? SearchValue(uint address, int len, IList<byte> value) {
         int end = (int)(address + len);
-        if (end >= _memoryDevices.Count) {
-            end = _memoryDevices.Count;
+        if (end >= _memoryDevices.Length) {
+            end = _memoryDevices.Length;
         }
 
         for (long i = address; i < end; i++) {
             long endValue = value.Count;
-            if (endValue + i >= _memoryDevices.Count) {
-                endValue = _memoryDevices.Count - i;
+            if (endValue + i >= _memoryDevices.Length) {
+                endValue = _memoryDevices.Length - i;
             }
 
             int j = 0;
-            while (j < endValue && _memoryDevices[(int)(i + j)].Read((uint)(i + j)) == value[j]) {
+            while (j < endValue && _memoryDevices[i + j].Read((uint)(i + j)) == value[j]) {
                 j++;
             }
 
@@ -279,7 +271,7 @@ public class Memory {
     /// <summary>
     ///     The number of bytes in the memory map.
     /// </summary>
-    public int Size => _memoryDevices.Count;
+    public int Size => _memoryDevices.Length;
 
     /// <summary>
     ///     Allows indexed byte access to the memory map.
@@ -310,33 +302,13 @@ public class Memory {
     /// <param name="memoryDevice">The memory device to use</param>
     public void RegisterMapping(uint baseAddress, uint size, IMemoryDevice memoryDevice) {
         uint endAddress = baseAddress + size;
-        if (endAddress >= _memoryDevices.Count) {
-            long length = endAddress - _memoryDevices.Count;
-            IMemoryDevice[] collection = new IMemoryDevice[length];
-            for (int i = 0; i < collection.Length; i++) {
-                collection[i] = memoryDevice;
-            }
-
-            _memoryDevices.AddRange(collection);
+        if (endAddress >= _memoryDevices.Length) {
+            Array.Resize(ref _memoryDevices, (int)endAddress);
         }
-        else {
-            for (uint i = baseAddress; i < endAddress; i++) {
-                _memoryDevices[(int)i] = memoryDevice;
-            }
+        for (uint i = baseAddress; i < endAddress; i++) {
+            _memoryDevices[i] = memoryDevice;
         }
         _devices.Add(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
-    }
-    
-    /// <summary>
-    /// Allow a class to unregister for a certain memory range.
-    /// </summary>
-    /// <param name="baseAddress">The start of the frame</param>
-    /// <param name="size">The size of the window</param>
-    /// <param name="memoryDevice">The memory device to use</param>
-    public void UnregisterMapping(uint baseAddress, uint size, IMemoryDevice memoryDevice) {
-        _memoryDevices.RemoveRange((int) baseAddress, (int) size);
-        uint endAddress = baseAddress + size;
-        _devices.Remove(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
     }
 
     /// <summary>
@@ -392,12 +364,12 @@ public class Memory {
 
     private void Write(uint address, byte value) {
         MonitorWriteAccess(address, value);
-        _memoryDevices[(int)address].Write(address, value);
+        _memoryDevices[address].Write(address, value);
     }
 
     private byte Read(uint address) {
         MonitorReadAccess(address);
-        return _memoryDevices[(int)address].Read(address);
+        return _memoryDevices[address].Read(address);
     }
 
     private void MonitorReadAccess(uint address) {

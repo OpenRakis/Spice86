@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;

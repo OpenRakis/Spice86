@@ -1,11 +1,11 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 
 /// <summary>
-/// Represents the 3*6-bit VGA palettes.
+///     Represents the 3*6-bit VGA palettes.
 /// </summary>
 public struct Palettes {
     /// <summary>
-    /// The default monochrome palette.
+    ///     The default monochrome palette.
     /// </summary>
     public static readonly byte[] Monochrome = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -27,7 +27,7 @@ public struct Palettes {
     };
 
     /// <summary>
-    /// The default CGA palette.
+    ///     The default CGA palette.
     /// </summary>
     public static readonly byte[] Cga = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x2a, 0x00, 0x00, 0x2a, 0x2a,
@@ -49,7 +49,7 @@ public struct Palettes {
     };
 
     /// <summary>
-    /// The default EGA palette.
+    ///     The default EGA palette.
     /// </summary>
     public static readonly byte[] Ega = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x2a, 0x00, 0x00, 0x2a, 0x2a,
@@ -71,7 +71,7 @@ public struct Palettes {
     };
 
     /// <summary>
-    /// The default 256 color palette.
+    ///     The default 256 color palette.
     /// </summary>
     public static readonly byte[] Vga = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x2a, 0x00, 0x00, 0x2a, 0x2a,

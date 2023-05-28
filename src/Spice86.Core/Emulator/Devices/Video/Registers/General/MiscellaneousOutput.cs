@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.General;
 
 /// <summary>
-///    Emulates the Miscellaneous Output register.
+///     Emulates the Miscellaneous Output register.
 /// </summary>
 public class MiscellaneousOutput : Register8 {
     /// <summary>
@@ -63,7 +63,7 @@ public class MiscellaneousOutput : Register8 {
     }
 
     /// <summary>
-    /// Vertical size in scanLines based on the HorizontalSyncPolarity and VerticalSyncPolarity
+    ///     Vertical size in scanLines based on the HorizontalSyncPolarity and VerticalSyncPolarity
     /// </summary>
     public int VerticalSize => HorizontalSyncPolarity switch {
         Polarity.Negative when VerticalSyncPolarity == Polarity.Positive => 400,

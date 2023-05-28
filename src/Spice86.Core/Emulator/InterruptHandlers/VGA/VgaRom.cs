@@ -1,20 +1,21 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 
 public class VgaRom : IMemoryDevice {
     private const int BaseAddress = Segment << 4;
-    private readonly byte[] _storage;
 
     /// <summary>
-    /// The segment of the video BIOS.
+    ///     The segment of the video BIOS.
     /// </summary>
     public const int Segment = 0xC000;
 
+    private readonly byte[] _storage;
+
     /// <summary>
-    /// Creates a new instance of the <see cref="VgaRom"/> class.
+    ///     Creates a new instance of the <see cref="VgaRom" /> class.
     /// </summary>
     public VgaRom() {
         // Create some storage.
@@ -38,19 +39,22 @@ public class VgaRom : IMemoryDevice {
     }
 
     /// <summary>
-    /// Gets the address of the 8x8 VGA font.
+    ///     Gets the address of the 8x8 VGA font.
     /// </summary>
     public SegmentedAddress VgaFont8Address { get; }
+
     /// <summary>
-    /// Gets the address of the 2nd half of the 8x8 VGA font.
+    ///     Gets the address of the 2nd half of the 8x8 VGA font.
     /// </summary>
     public SegmentedAddress VgaFont8Address2 { get; }
+
     /// <summary>
-    /// Gets the address of the 8x14 VGA font.
+    ///     Gets the address of the 8x14 VGA font.
     /// </summary>
     public SegmentedAddress VgaFont14Address { get; }
+
     /// <summary>
-    /// Gets the address of the 8x16 VGA font.
+    ///     Gets the address of the 8x16 VGA font.
     /// </summary>
     public SegmentedAddress VgaFont16Address { get; }
 

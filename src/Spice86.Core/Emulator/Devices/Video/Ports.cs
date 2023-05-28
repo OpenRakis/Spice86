@@ -26,8 +26,8 @@ public static class Ports {
     public const int CrtControllerDataAltMirror2 = 0x03D3;
     public const int CrtControllerAddressAlt = 0x03D4;
     public const int CrtControllerDataAlt = 0x03D5;
-    public const int CgaModeControl = 0x03D8; 
-    public const int CgaColorSelect = 0x03D9; 
+    public const int CgaModeControl = 0x03D8;
+    public const int CgaColorSelect = 0x03D9;
     public const int InputStatus1ReadAlt = 0x03DA;
     public const int FeatureControlWriteAlt = 0x03DA;
 }

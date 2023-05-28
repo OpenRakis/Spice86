@@ -49,6 +49,6 @@ public class Register8 {
     }
 
     public override string ToString() {
-        return Convert.ToString(Value, 2).PadLeft(8, '0'); 
+        return Convert.ToString(Value, 2).PadLeft(8, '0');
     }
 }

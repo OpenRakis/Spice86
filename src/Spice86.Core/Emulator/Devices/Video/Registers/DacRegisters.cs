@@ -66,7 +66,6 @@ public class DacRegisters {
         }
         set {
             try {
-
                 Palette[_internalIndex, _tripletCounter++] = (byte)(value & 0x3F);
                 if (_tripletCounter == 3) {
                     _indexRegister++;
@@ -80,7 +79,7 @@ public class DacRegisters {
             }
         }
     }
-    
+
     public byte DataPeek => Palette[_internalIndex, _tripletCounter];
 
     /// <summary>

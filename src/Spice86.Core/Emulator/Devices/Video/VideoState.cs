@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Devices.Video.Registers;
 /// <inheritdoc />
 public class VideoState : IVideoState {
     /// <summary>
-    /// Creates a new instance of the <see cref="VideoState"/> class.
+    ///     Creates a new instance of the <see cref="VideoState" /> class.
     /// </summary>
     public VideoState() {
         DacRegisters = new DacRegisters();

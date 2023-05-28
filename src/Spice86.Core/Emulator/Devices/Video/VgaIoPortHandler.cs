@@ -9,7 +9,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// I/O port handler for the VGA card.
+///     I/O port handler for the VGA card.
 /// </summary>
 public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly AttributeControllerRegisters _attributeRegisters;
@@ -22,7 +22,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     private bool _attributeDataMode;
 
     /// <summary>
-    /// Create a new VGA I/O port handler.
+    ///     Create a new VGA I/O port handler.
     /// </summary>
     /// <param name="machine"></param>
     /// <param name="loggerService"></param>
@@ -71,7 +71,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
             Ports.SequencerAddress,
             Ports.SequencerData,
             Ports.CgaModeControl,
-            Ports.CgaColorSelect,
+            Ports.CgaColorSelect
         };
 
     /// <inheritdoc />

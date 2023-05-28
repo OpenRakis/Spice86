@@ -5,26 +5,21 @@ using Serilog.Events;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
-using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
 /// <inheritdoc />
 public class Renderer : IVgaRenderer {
+    private static bool _rendering;
     private readonly IVideoMemory _memory;
     private readonly IVideoState _state;
 
-    private static bool _rendering;
-    private readonly ILoggerService _logger;
-    private int _bufferSize;
-
     /// <summary>
-    ///   Create a new VGA renderer.
+    ///     Create a new VGA renderer.
     /// </summary>
-    public Renderer(IVideoState state, IVideoMemory memory, ILoggerService loggerService) {
+    public Renderer(IVideoState state, IVideoMemory memory) {
         _state = state;
         _memory = memory;
-        _logger = loggerService.WithLogLevel(LogEventLevel.Verbose);
     }
 
     /// <inheritdoc />
@@ -40,14 +35,14 @@ public class Renderer : IVgaRenderer {
     public int Height => (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
 
     /// <inheritdoc />
-    public int BufferSize => _bufferSize;
+    public int BufferSize { get; private set; }
 
     /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
         if (_rendering) {
             return;
         }
-        _bufferSize = frameBuffer.Length;
+        BufferSize = frameBuffer.Length;
         if (Width * Height > frameBuffer.Length) {
             // Resolution change hasn't caught up yet. Skip a frame.
             return;
@@ -172,7 +167,6 @@ public class Renderer : IVgaRenderer {
                         //     }
                         // }
 
-                        
                         // Read 4 bytes from the 4 planes.
                         byte plane0 = (byte)(planesEnabled[0] ? _memory.Planes[0, physicalAddress] : 0);
                         byte plane1 = (byte)(planesEnabled[1] ? _memory.Planes[1, physicalAddress] : 0);
@@ -200,11 +194,11 @@ public class Renderer : IVgaRenderer {
                             } else {
                                 // Cga mode has a different shift register mode, where the bits are interleaved.
                                 for (int bitNr = 6; bitNr >= 0; bitNr -= 2) {
-                                    int index = (plane2 >> bitNr & 3) << 2 | (plane0 >> bitNr & 3);
+                                    int index = (plane2 >> bitNr & 3) << 2 | plane0 >> bitNr & 3;
                                     frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
                                 }
                                 for (int bitNr = 6; bitNr >= 0; bitNr -= 2) {
-                                    int index = (plane3 >> bitNr & 3) << 2 | (plane1 >> bitNr & 3);
+                                    int index = (plane3 >> bitNr & 3) << 2 | plane1 >> bitNr & 3;
                                     frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
                                 }
                             }

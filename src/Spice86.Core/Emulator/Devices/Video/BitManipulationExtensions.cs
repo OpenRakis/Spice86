@@ -10,7 +10,7 @@ public static class BitManipulationExtensions {
     }
 
     /// <summary>
-    /// Split a byte into an array of eight booleans.
+    ///     Split a byte into an array of eight booleans.
     /// </summary>
     public static bool[] ToBits(this byte value) {
         bool[] b = new bool[8];

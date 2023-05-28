@@ -248,7 +248,7 @@ internal class VgaFunctions {
     }
 
     public void WriteToDac(ushort segment, ushort offset, byte startIndex, ushort count) {
-        byte[] rgb = _memory.GetData(MemoryUtils.ToPhysicalAddress(segment, offset), 3 * count);
+        byte[] rgb = _memory.GetData(MemoryUtils.ToPhysicalAddress(segment, offset), (uint)(3 * count));
         WriteToDac(rgb, startIndex, count);
     }
 
@@ -447,6 +447,6 @@ internal class VgaFunctions {
     }
 
     private void WriteMaskedToMiscellaneousRegister(byte offBits, byte onBits) {
-        WriteToMiscellaneousOutput((byte)((ReadMiscellaneousOutput() & ~offBits) | onBits));
+        WriteToMiscellaneousOutput((byte)(ReadMiscellaneousOutput() & ~offBits | onBits));
     }
 }

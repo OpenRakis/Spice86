@@ -2,10 +2,7 @@ namespace Spice86.Tests.Video;
 
 using FluentAssertions;
 
-using Spice86.Aeon.Emulator.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
-
-using System.Drawing;
 
 using Xunit;
 
@@ -14,13 +11,13 @@ public class DacTest {
     public void TestReadingDacReturns6BitData() {
         // Arrange
         var dac = new DacRegisters();
-        
+
         // Act
         for (byte i = 0; i < byte.MaxValue; i++) {
             dac.DataRegister = i;
         }
         dac.IndexRegisterReadMode = 0;
-        
+
         // Assert
         for (byte i = 0; i < byte.MaxValue; i++) {
             byte expected = (byte)(i & 0b00111111);
@@ -33,12 +30,12 @@ public class DacTest {
     public void WhiteStaysWhite() {
         // Arrange
         var dac = new DacRegisters();
-        
+
         // Act
         dac.DataRegister = 0b111111;
         dac.DataRegister = 0b111111;
         dac.DataRegister = 0b111111;
-        
+
         // Assert
         dac.ArgbPalette[0].Should().Be(0xFFFFFFFF);
     }

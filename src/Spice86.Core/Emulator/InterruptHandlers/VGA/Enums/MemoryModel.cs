@@ -1,23 +1,26 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 
 /// <summary>
-/// Represents the memory model.
+///     Represents the memory model.
 /// </summary>
 public enum MemoryModel {
     /// <summary>
-    /// Text memory layout.
+    ///     Text memory layout.
     /// </summary>
     Text,
+
     /// <summary>
-    /// CGA memory layout.
+    ///     CGA memory layout.
     /// </summary>
     Cga,
+
     /// <summary>
-    /// Planar memory layout.
+    ///     Planar memory layout.
     /// </summary>
     Planar,
+
     /// <summary>
-    /// Packed memory layout.
+    ///     Packed memory layout.
     /// </summary>
-    Packed,
+    Packed
 }

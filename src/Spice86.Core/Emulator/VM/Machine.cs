@@ -177,6 +177,11 @@ public class Machine : IDisposable {
     /// The VGA port handler
     /// </summary>
     public IIOPortHandler VgaIoPortHandler { get; }
+
+    /// <summary>
+    /// The class that handles converting video memory to a bitmap 
+    /// </summary>
+    public readonly IVgaRenderer VgaRenderer;
     
     /// <summary>
     /// The Video BIOS interrupt handler.
@@ -267,7 +272,7 @@ public class Machine : IDisposable {
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
-        VgaRenderer = new Renderer(VgaRegisters, vgaMemory, loggerService);
+        VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
         
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
@@ -467,7 +472,6 @@ public class Machine : IDisposable {
     public bool IsPaused { get; private set; }
 
     private bool _exitEmulationLoop;
-    public readonly IVgaRenderer VgaRenderer;
 
     /// <summary>
     /// Forces the emulation loop to exit.
