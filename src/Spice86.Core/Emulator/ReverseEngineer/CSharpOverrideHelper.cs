@@ -561,13 +561,13 @@ public class CSharpOverrideHelper {
     /// <param name="segment">The segment of the instruction to override.</param>
     /// <param name="offset">The offset of the instruction to override.</param>
     /// <param name="renamedOverride">An action that provides the new implementation to use for the instruction.</param>
-    public void OverrideInstruction(ushort segment, ushort offset, Action renamedOverride) {
+    public void OverrideInstruction(ushort segment, ushort offset, Func<Action> renamedOverride) {
         AddressBreakPoint breakPoint = new(
             BreakPointType.EXECUTION,
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
-            _ => renamedOverride.Invoke()
+            _ => renamedOverride.Invoke().Invoke()
             , false);
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
