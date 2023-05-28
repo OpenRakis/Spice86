@@ -164,6 +164,8 @@ Sometimes it's useful to see what kind of images programs are generating in memo
 (gdb) monitor vbuffer refresh
 ```
 
+For a pleasing and productive experience with GDB, the [seerGDB](https://github.com/epasveer/seer) client is higly recommended.
+
 ## Reverse engineering process
 Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).
 
