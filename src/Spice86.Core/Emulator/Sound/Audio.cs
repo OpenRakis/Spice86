@@ -24,7 +24,7 @@ internal static class Audio {
     /// <param name="player">The <see cref="AudioPlayer"/> to write the data to.</param>
     /// <param name="buffer">The buffer of audio data to write.</param>
     /// <remarks>
-    /// The buffer must contain data in the range [-1.0, 1.0]. The method will block until the entire buffer has been written to the <paramref name="player"/>.
+    /// The method will block until the entire buffer has been written to the <paramref name="player"/>.
     /// </remarks>
     public static void WriteFullBuffer(AudioPlayer player, Span<float> buffer) {
         Span<float> writeBuffer = buffer;
