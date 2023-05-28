@@ -32,7 +32,7 @@ public class ClockingModeRegister : Register8 {
     ///     affected because they are derived from the dot clock. The dot clock divided by 2 is used for 320 and 360
     ///     horizontal PEL modes.
     /// </summary>
-    public bool DotClock {
+    public bool HalfDotClock {
         get => GetBit(3);
         set => SetBit(3, value);
     }

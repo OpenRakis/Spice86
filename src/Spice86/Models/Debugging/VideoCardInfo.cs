@@ -381,4 +381,15 @@ public partial class VideoCardInfo : ObservableObject {
 
     [ObservableProperty]
     private int _crtControllerVerticalTotal;
+    
+    [ObservableProperty]
+    private int _rendererWidth;
+    
+    [ObservableProperty]
+    private int _rendererHeight;
+        
+    [ObservableProperty]
+    private int _rendererBufferSize;
+    
+    
 }

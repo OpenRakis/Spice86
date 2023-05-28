@@ -45,6 +45,10 @@ public partial class DebugViewModel : ObservableObject {
         if (videoState is null) {
             return;
         }
+        IVgaRenderer? renderer = _emulatorMachine?.VgaRenderer;
+        if (renderer is null) {
+            return;
+        }
         
         VideoCard.GeneralMiscellaneousOutputRegister = videoState.GeneralRegisters.MiscellaneousOutput.Value;
         VideoCard.GeneralClockSelect = videoState.GeneralRegisters.MiscellaneousOutput.ClockSelect;
@@ -83,13 +87,13 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.CrtControllerAddressWrap = videoState.CrtControllerRegisters.CrtModeControlRegister.AddressWrap;
         VideoCard.CrtControllerBytePanning = videoState.CrtControllerRegisters.PresetRowScanRegister.BytePanning;
         VideoCard.CrtControllerByteWordMode = videoState.CrtControllerRegisters.CrtModeControlRegister.ByteWordMode;
-        VideoCard.CrtControllerCharacterCellHeightRegister = videoState.CrtControllerRegisters.CharacterCellHeightRegister.Value;
-        VideoCard.CrtControllerCharacterCellHeight = videoState.CrtControllerRegisters.CharacterCellHeightRegister.CharacterCellHeight;
+        VideoCard.CrtControllerCharacterCellHeightRegister = videoState.CrtControllerRegisters.MaximumScanlineRegister.Value;
+        VideoCard.CrtControllerCharacterCellHeight = videoState.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline;
         VideoCard.CrtControllerCompatibilityModeSupport = videoState.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport;
         VideoCard.CrtControllerCompatibleRead = videoState.CrtControllerRegisters.HorizontalBlankingEndRegister.CompatibleRead;
         VideoCard.CrtControllerCountByFour = videoState.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour;
         VideoCard.CrtControllerCountByTwo = videoState.CrtControllerRegisters.CrtModeControlRegister.CountByTwo;
-        VideoCard.CrtControllerCrtcScanDouble = videoState.CrtControllerRegisters.CharacterCellHeightRegister.CrtcScanDouble;
+        VideoCard.CrtControllerCrtcScanDouble = videoState.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble;
         VideoCard.CrtControllerCrtModeControl = videoState.CrtControllerRegisters.CrtModeControlRegister.Value;
         VideoCard.CrtControllerCursorEnd = videoState.CrtControllerRegisters.TextCursorEndRegister.Value;
         VideoCard.CrtControllerCursorLocationHigh = videoState.CrtControllerRegisters.TextCursorLocationHigh;
@@ -165,7 +169,7 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.SequencerClockingModeRegister = videoState.SequencerRegisters.ClockingModeRegister.Value;
         VideoCard.SequencerDotsPerClock = videoState.SequencerRegisters.ClockingModeRegister.DotsPerClock;
         VideoCard.SequencerShiftLoad = videoState.SequencerRegisters.ClockingModeRegister.ShiftLoad;
-        VideoCard.SequencerDotClock = videoState.SequencerRegisters.ClockingModeRegister.DotClock;
+        VideoCard.SequencerDotClock = videoState.SequencerRegisters.ClockingModeRegister.HalfDotClock;
         VideoCard.SequencerShift4 = videoState.SequencerRegisters.ClockingModeRegister.Shift4;
         VideoCard.SequencerScreenOff = videoState.SequencerRegisters.ClockingModeRegister.ScreenOff;
         VideoCard.SequencerPlaneMask = videoState.SequencerRegisters.PlaneMaskRegister.Value;
@@ -176,6 +180,10 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.SequencerExtendedMemory = videoState.SequencerRegisters.MemoryModeRegister.ExtendedMemory;
         VideoCard.SequencerOddEvenMode = videoState.SequencerRegisters.MemoryModeRegister.OddEvenMode;
         VideoCard.SequencerChain4Mode = videoState.SequencerRegisters.MemoryModeRegister.Chain4Mode;
+
+        VideoCard.RendererWidth = renderer.Width;
+        VideoCard.RendererHeight = renderer.Height;
+        VideoCard.RendererBufferSize = renderer.BufferSize;
 
         LastUpdate = DateTime.Now;
     }

@@ -19,4 +19,9 @@ public interface IVgaRenderer {
     /// Calculate the current height required to render.
     /// </summary>
     int Height { get; }
+
+    /// <summary>
+    /// Gets the size of the buffer that was presented to the renderer.
+    /// </summary>
+    int BufferSize { get; }
 }

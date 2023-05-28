@@ -267,8 +267,8 @@ public class Machine : IDisposable {
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
-        IVgaRenderer vgaRenderer = new Renderer(VgaRegisters, vgaMemory, loggerService);
-        VgaCard = new VgaCard(gui, vgaRenderer, loggerService);
+        VgaRenderer = new Renderer(VgaRegisters, vgaMemory, loggerService);
+        VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
         
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
@@ -467,6 +467,7 @@ public class Machine : IDisposable {
     public bool IsPaused { get; private set; }
 
     private bool _exitEmulationLoop;
+    public readonly IVgaRenderer VgaRenderer;
 
     /// <summary>
     /// Forces the emulation loop to exit.

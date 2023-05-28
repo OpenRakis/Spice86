@@ -54,6 +54,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
 
         InitializeBiosArea();
         _vgaFunctions = new VgaFunctions(machine.Memory, machine.IoPortDispatcher);
+        _state.AL = 0x03;
+        SetVideoMode();
     }
 
     /// <summary>
@@ -924,12 +926,15 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
             }
             _memory.UInt8[ColorTextSegment, offset] = uint8;
         } else {
-            ushort uint16 = 0;
+            ushort pixels = 0;
             for (int pixel = 0; pixel < 8; pixel++) {
-                uint16 |= (byte)((operation.Pixels[pixel] & 3) << (7 - pixel) * 2);
+                pixels |= (ushort)((operation.Pixels[pixel] & 3) << (7 - pixel) * 2);
             }
-            uint16 = (ushort)(uint16 << 8 | uint16 >> 8);
-            _memory.UInt16[ColorTextSegment, offset] = uint16;
+            pixels = (ushort)(pixels << 8 | pixels >> 8);
+            // if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            //     _logger.Verbose("Writing {Value:X2} to offset {Offset:X4}", pixels, offset);
+            // }
+            _memory.UInt16[ColorTextSegment, offset] = pixels;
         }
     }
 
@@ -992,8 +997,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void WriteByteOperationPlanar(GraphicsOperation operation, ushort offset) {
-        int plane;
-        for (plane = 0; plane < 4; plane++) {
+        for (int plane = 0; plane < 4; plane++) {
             _vgaFunctions.planar4_plane(plane);
             byte data = 0;
             for (int pixel = 0; pixel < 8; pixel++) {
@@ -1004,9 +1008,8 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     }
 
     private void ReadByteOperationPlanar(GraphicsOperation operation, ushort offset) {
-        int plane;
         operation.Pixels = new byte[8];
-        for (plane = 0; plane < 4; plane++) {
+        for (int plane = 0; plane < 4; plane++) {
             _vgaFunctions.planar4_plane(plane);
             byte data = _memory.UInt8[GraphicsSegment, offset];
             int pixel;

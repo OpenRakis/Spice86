@@ -15,8 +15,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spice86.Tests", "Spice86.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bufdio.Spice86", "Bufdio.Spice86\Bufdio.Spice86.csproj", "{7D5BE77E-870A-411B-8B05-E52AC9D784B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spice86.Aeon", "Spice86.Aeon\Spice86.Aeon.csproj", "{F2182734-FD0A-486C-B46C-F7350EE6725C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,9 +45,6 @@ Global
 		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D5BE77E-870A-411B-8B05-E52AC9D784B4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F2182734-FD0A-486C-B46C-F7350EE6725C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F2182734-FD0A-486C-B46C-F7350EE6725C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F2182734-FD0A-486C-B46C-F7350EE6725C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

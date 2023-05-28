@@ -24,7 +24,7 @@ public class CharacterCellHeightRegister : Register8 {
     ///     This field specifies the vertical size of the character cell in terms of scan lines. The value programmed into
     ///     this field is the actual size minus 1.
     /// </summary>
-    public byte CharacterCellHeight {
+    public byte MaximumScanline {
         get => GetBits(4, 0);
         set => SetBits(4, 0, value);
     }

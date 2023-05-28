@@ -84,7 +84,7 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets or sets the Maximum Scan Line register.
     /// </summary>
-    public CharacterCellHeightRegister CharacterCellHeightRegister { get; set; } = new();
+    public CharacterCellHeightRegister MaximumScanlineRegister { get; set; } = new();
 
     /// <summary>
     ///     Gets or sets the Cursor Start register.
@@ -197,7 +197,7 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets the full 10-bit value of the Vertical Blanking Start register.
     /// </summary>
-    public int VerticalBlankingStartValue => VerticalBlankingStart | OverflowRegister.VerticalBlankingStart8 | CharacterCellHeightRegister.VerticalBlankStart9;
+    public int VerticalBlankingStartValue => VerticalBlankingStart | OverflowRegister.VerticalBlankingStart8 | MaximumScanlineRegister.VerticalBlankStart9;
 
     /// <summary>
     ///     Gets or sets the End Vertical Blanking register.
@@ -217,7 +217,7 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets the full 10-bit value of the Line Compare register.
     /// </summary>
-    public int LineCompareValue => LineCompare | OverflowRegister.LineCompare8 | CharacterCellHeightRegister.LineCompare9;
+    public int LineCompareValue => LineCompare | OverflowRegister.LineCompare8 | MaximumScanlineRegister.LineCompare9;
 
     /// <summary>
     ///     Returns the current value of a CRT controller register.
@@ -235,7 +235,7 @@ public sealed class CrtControllerRegisters {
             CrtControllerRegister.VerticalTotal => VerticalTotal,
             CrtControllerRegister.Overflow => OverflowRegister.Value,
             CrtControllerRegister.PresetRowScan => PresetRowScanRegister.Value,
-            CrtControllerRegister.CharacterCellHeight => CharacterCellHeightRegister.Value,
+            CrtControllerRegister.CharacterCellHeight => MaximumScanlineRegister.Value,
             CrtControllerRegister.CursorStart => TextCursorStartRegister.Value,
             CrtControllerRegister.CursorEnd => TextCursorEndRegister.Value,
             CrtControllerRegister.StartAddressHigh => ScreenStartAddressHigh,
@@ -299,7 +299,7 @@ public sealed class CrtControllerRegisters {
                 break;
 
             case CrtControllerRegister.CharacterCellHeight:
-                CharacterCellHeightRegister.Value = value;
+                MaximumScanlineRegister.Value = value;
                 break;
 
             case CrtControllerRegister.CursorStart:

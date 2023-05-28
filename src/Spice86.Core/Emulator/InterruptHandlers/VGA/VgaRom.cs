@@ -64,7 +64,7 @@ public class VgaRom : IMemoryDevice {
 
     /// <inheritdoc />
     public void Write(uint address, byte value) {
-        throw new NotSupportedException("Video BIOS ROM is read-only.");
+        throw new NotSupportedException($"Video BIOS ROM is read-only. Writing {value:X2} to {address:X6} is not supported.");
     }
 
     /// <inheritdoc />

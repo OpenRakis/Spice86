@@ -313,7 +313,7 @@ public class Cpu {
                 _instructions32.Movsx();
                 break;
             default:
-                HandleInvalidOpcode(subcode);
+                HandleInvalidOpcode((ushort)(subcode | 0x0F00));
                 break;
         }
     }

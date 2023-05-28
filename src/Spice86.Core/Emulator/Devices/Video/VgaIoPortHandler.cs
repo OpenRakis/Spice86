@@ -69,7 +69,9 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
             Ports.MiscOutputRead,
             Ports.MiscOutputWrite,
             Ports.SequencerAddress,
-            Ports.SequencerData
+            Ports.SequencerData,
+            Ports.CgaModeControl,
+            Ports.CgaColorSelect,
         };
 
     /// <inheritdoc />
@@ -173,6 +175,18 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Read MiscOutput: {Value:X2} {@Explained}", port, value, value);
                 }
+                break;
+            case Ports.CgaModeControl:
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Read CgaModeControl: Not Implemented", port);
+                }
+                value = 0;
+                break;
+            case Ports.CgaColorSelect:
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Read CgaColorSelect: Not Implemented", port);
+                }
+                value = 0;
                 break;
             default:
                 value = base.ReadByte(port);
@@ -312,6 +326,16 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 _generalRegisters.MiscellaneousOutput.Value = value;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("[{Port:X4}] Write to MiscOutputWrite: {Value:X2} {@Explained}", port, value, _generalRegisters.MiscellaneousOutput);
+                }
+                break;
+            case Ports.CgaModeControl:
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Write to CgaModeControl: Not Implemented", port);
+                }
+                break;
+            case Ports.CgaColorSelect:
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("[{Port:X4}] Write to CgaColorSelect: Not Implemented", port);
                 }
                 break;
             default:

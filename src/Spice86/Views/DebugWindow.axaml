@@ -135,13 +135,13 @@
                                            Text="{Binding VideoCard.GraphicsWriteMode, StringFormat='WriteMode: {0}'}">
                                 </TextBlock>
                                 <TextBlock TextAlignment="Right"
-                                           Text="{Binding VideoCard.GraphicsOddEven, StringFormat='OddEven: {0:X2}'}">
+                                           Text="{Binding VideoCard.GraphicsOddEven, StringFormat='OddEven: {0}'}">
                                 </TextBlock>
                                 <TextBlock TextAlignment="Right"
-                                           Text="{Binding VideoCard.GraphicsShiftRegisterMode, StringFormat='ShiftRegisterMode: {0:X2}'}">
+                                           Text="{Binding VideoCard.GraphicsShiftRegisterMode, StringFormat='ShiftRegisterMode: {0}'}">
                                 </TextBlock>
                                 <TextBlock TextAlignment="Right"
-                                           Text="{Binding VideoCard.GraphicsIn256ColorMode, StringFormat='In256ColorMode: {0:X2}'}">
+                                           Text="{Binding VideoCard.GraphicsIn256ColorMode, StringFormat='In256ColorMode: {0}'}">
                                 </TextBlock>
                                 <TextBlock TextAlignment="Right"
                                            Text="{Binding VideoCard.GraphicsGraphicsMode, StringFormat='GraphicsMode: {0}'}">
@@ -442,6 +442,20 @@
 
                             </WrapPanel>
                             <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
+                        </Grid>
+                        <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Label HorizontalAlignment="Center" FontWeight="Bold">Renderer</Label>
+                            <WrapPanel Grid.Row="1" Orientation="Vertical">
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.RendererWidth, StringFormat='Width: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.RendererHeight, StringFormat='Height: {0}'}">
+                                </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.RendererBufferSize, StringFormat='BufferSize: {0}'}">
+                                </TextBlock>
+                            </WrapPanel>
                         </Grid>
                     </WrapPanel>
                 </TabItem>
