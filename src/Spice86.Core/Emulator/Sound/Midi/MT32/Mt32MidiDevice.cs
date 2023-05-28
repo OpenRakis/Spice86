@@ -34,16 +34,6 @@ internal sealed class Mt32MidiDevice : MidiDevice {
             loggerService,
             configuration);
     }
-
-    /// <inheritdoc/>
-    public override void Pause() {
-        _player.Pause();
-    }
-
-    /// <inheritdoc/>
-    public override void Resume() {
-        _player.Resume();
-    }
     
     /// <inheritdoc/>
     protected override void PlayShortMessage(uint message) => _player.PlayShortMessage(message);

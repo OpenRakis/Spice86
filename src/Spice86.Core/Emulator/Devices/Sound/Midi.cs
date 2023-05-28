@@ -9,8 +9,15 @@ using Spice86.Shared.Interfaces;
 /// MPU401 MIDI interface implementation.
 /// </summary>
 public sealed class Midi : DefaultIOPortHandler, IDisposable {
-    private const int Command = 0x331;
-    private const int Data = 0x330;
+    /// <summary>
+    /// The port number used for MIDI commands.
+    /// </summary>
+    public const int Command = 0x331;
+    
+    /// <summary>
+    /// The port number used for MIDI data.
+    /// </summary>
+    public const int Data = 0x330;
 
     private readonly GeneralMidi _generalMidi;
     private bool _disposed;
@@ -23,18 +30,8 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <param name="loggerService">The logger service implementation.</param>
     public Midi(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _generalMidi = new GeneralMidi(configuration, loggerService);
-        _machine.Paused += Machine_Paused;
-        _machine.Resumed += Machine_Resumed;
     }
-
-    private void Machine_Resumed() {
-        _generalMidi.Resume();
-    }
-
-    private void Machine_Paused() {
-        _generalMidi.Pause();
-    }
-
+    
     /// <inheritdoc />
     public override byte ReadByte(int port) {
         return _generalMidi.ReadByte(port);

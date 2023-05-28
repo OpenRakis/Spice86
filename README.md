@@ -164,6 +164,8 @@ Sometimes it's useful to see what kind of images programs are generating in memo
 (gdb) monitor vbuffer refresh
 ```
 
+For a pleasing and productive experience with GDB, the [seerGDB](https://github.com/epasveer/seer) client is highly recommended.
+
 ## Reverse engineering process
 Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).
 
@@ -314,8 +316,8 @@ Without it, there will be no sound.
 - PC Speaker is implemented.
 - Adlib/SoundBlaster MIDI OPL is supported.
 - SoundBlaster PCM is supported.
-- MT-32 is supported, but not on macOS, as a static build of MUNT is missing in the MT-32 wrapper for that platform. (PRs welcome !)
-- General MIDI is supported, but only on Windows (PRs welcome !).
+- MT-32 is supported. However, not on macOS, as a static build of MUNT is missing for that platform. (PRs welcome !)
+- General MIDI is supported.
 
 Compatibility list available [here](COMPATIBILITY.md).
 

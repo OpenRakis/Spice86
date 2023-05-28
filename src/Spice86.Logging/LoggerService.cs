@@ -38,6 +38,19 @@ public class LoggerService : ILoggerService {
             .MinimumLevel.ControlledBy(LogLevelSwitch);
     }
     
+    /// <summary>
+    /// Creates the ILogger at the last possible time, since it can be created only once.
+    /// </summary>
+    /// <returns>The ILogger instance.</returns>
+    private ILogger GetLogger() {
+        _logger ??= _loggerConfiguration.CreateLogger();
+        return AddProperties(_logger);
+    }
+    
+    private ILogger AddProperties(ILogger logger) {
+        return logger.ForContext("IP", LoggerPropertyBag.CsIp, destructureObjects: false);
+    }
+    
     /// <inheritdoc/>
     public LoggerConfiguration CreateLoggerConfiguration() {
         return new LoggerConfiguration()
@@ -54,69 +67,85 @@ public class LoggerService : ILoggerService {
         return logger;
     }
 
-    /// <summary>
-    ///     Creates the ILogger at the last possible time, since it can be created only once.
-    /// </summary>
-    /// <returns>The ILogger instance.</returns>
-    private ILogger GetLogger() {
-        _logger ??= _loggerConfiguration.CreateLogger();
-        return AddProperties(_logger);
-    }
-
-    private ILogger AddProperties(ILogger logger) {
-        return logger.ForContext("IP", $"{LoggerPropertyBag.CsIp}");
-    }
-
-
 #pragma warning disable Serilog004
     
     /// <inheritdoc/>
     public void Information(string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Information(messageTemplate, properties);
     }
 
     /// <inheritdoc/>
     public void Warning(string message) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Warning(message);
     }
     
     /// <inheritdoc/>
     public void Warning(Exception? e, string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Warning(e, messageTemplate, properties);
     }
     
     /// <inheritdoc/>
     public void Error(Exception? e, string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Error(e, messageTemplate, properties);
     }
     
     /// <inheritdoc/>
     public void Fatal(Exception? e, string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Fatal(e, messageTemplate, properties);
     }
     
     /// <inheritdoc/>
     public void Warning(string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Warning(messageTemplate, properties);
     }
     
     /// <inheritdoc/>
     public void Error(string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Error(messageTemplate, properties);
     }
     
     /// <inheritdoc/>
     public void Fatal(string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Fatal(messageTemplate, properties);
     }
     
     /// <inheritdoc/>
     public void Debug(string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Debug(messageTemplate, properties);
     }
     
     /// <inheritdoc/>
     public void Verbose(string messageTemplate, params object?[]? properties) {
+        if (AreLogsSilenced) {
+            return;
+        }
         GetLogger().Verbose(messageTemplate, properties);
     }
 #pragma warning restore Serilog004

@@ -21,8 +21,7 @@ public static class ConvertUtils {
     /// <returns>The hexadecimal representation of the byte array.</returns>
     public static string ByteArrayToHexString(byte[] value) {
         StringBuilder stringBuilder = new(value.Length * 2);
-        for (int i = 0; i < value.Length; i++) {
-            byte b = value[i];
+        foreach (byte b in value) {
             stringBuilder.AppendFormat("{0:X2}", b);
         }
 
@@ -38,7 +37,6 @@ public static class ConvertUtils {
     public static uint BytesToInt32(byte[] data, int start) {
         return Uint32((data[start] << 24 & 0xFF000000) | ((uint)data[start + 1] << 16 & 0x00FF0000) | ((uint)data[start + 2] << 8 & 0x0000FF00) | ((uint)data[start + 3] & 0x000000FF));
     }
-
     
     /// <summary>
     /// Converts a hexadecimal string to a byte array.
@@ -271,7 +269,6 @@ public static class ConvertUtils {
     /// <param name="segment">The segment value.</param>
     /// <param name="offset">The offset value.</param>
     /// <returns>A string representing the segmented address in the format "segment:offset".</returns>
-
     public static string ToSegmentedAddressRepresentation(ushort segment, ushort offset) {
         return $"{ToHex16(segment)}:{ToHex16(offset)}";
     }

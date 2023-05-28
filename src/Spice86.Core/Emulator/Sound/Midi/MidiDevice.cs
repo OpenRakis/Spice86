@@ -53,16 +53,6 @@ internal abstract class MidiDevice : IDisposable {
         }
     }
     
-    /// <summary>
-    /// Invoked when the emulation is paused.
-    /// </summary>
-    public abstract void Pause();
-    
-    /// <summary>
-    /// Invoked when the emulation resumes.
-    /// </summary>
-    public abstract void Resume();
-    
     /// <inheritdoc/>
     public void Dispose() {
         Dispose(true);
