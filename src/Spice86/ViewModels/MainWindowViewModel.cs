@@ -184,7 +184,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(videoCard, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
         Dispatcher.UIThread.Post(
             () => {
-                if(!VideoBuffers.Any(x => x.Address == videoBuffer.Address)) {
+                if(VideoBuffers.All(x => x.Address != videoBuffer.Address)) {
                     VideoBuffers.Add(videoBuffer);
                 }
             }
@@ -393,6 +393,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             Width = width;
             Height = height;
             AddBuffer(_videoCard, address, 1, width, height, true);
+            _isSettingResolution = false;
+        }, DispatcherPriority.MaxValue);
+    }
+    
+    public void SetResolution(int width, int height) {
+        Dispatcher.UIThread.Post(() => {
+            _isSettingResolution = true;
+            DisposeBuffers();
+            VideoBuffers = new();
+            Width = width;
+            Height = height;
+            AddBuffer(_videoCard, 0xA0000, 1, width, height, true);
             _isSettingResolution = false;
         }, DispatcherPriority.MaxValue);
     }

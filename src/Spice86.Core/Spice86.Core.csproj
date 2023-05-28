@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
@@ -68,7 +68,6 @@
 		<PackageReference Include="MeltySynth" Version="2.4.1" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\Spice86.Aeon\Spice86.Aeon.csproj" />
 		<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
