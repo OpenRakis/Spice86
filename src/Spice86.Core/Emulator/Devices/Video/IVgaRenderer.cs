@@ -20,6 +20,11 @@ public interface IVgaRenderer {
     int BufferSize { get; }
 
     /// <summary>
+    /// Gets the time it took to render the last frame.
+    /// </summary>
+    TimeSpan LastFrameRenderTime { get; }
+
+    /// <summary>
     ///     Render the current video memory to a buffer.
     /// </summary>
     /// <param name="buffer"></param>

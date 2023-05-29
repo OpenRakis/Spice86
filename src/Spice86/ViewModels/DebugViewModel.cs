@@ -184,6 +184,7 @@ public partial class DebugViewModel : ObservableObject {
         VideoCard.RendererWidth = renderer.Width;
         VideoCard.RendererHeight = renderer.Height;
         VideoCard.RendererBufferSize = renderer.BufferSize;
+        VideoCard.LastFrameRenderTime = renderer.LastFrameRenderTime;
 
         LastUpdate = DateTime.Now;
     }
