@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 /// <inheritdoc />
 public class Renderer : IVgaRenderer {
-    private static bool _rendering;
+    private static readonly object RenderLock = new();
     private readonly IVideoMemory _memory;
     private readonly IVideoState _state;
 
@@ -40,134 +40,137 @@ public class Renderer : IVgaRenderer {
 
     /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
-        if (_rendering) {
+        if (!Monitor.TryEnter(RenderLock)) {
+            // We're already rendering. Get out of here.
             return;
         }
-        BufferSize = frameBuffer.Length;
-        if (Width * Height > BufferSize) {
-            // Resolution change hasn't caught up yet. Skip a frame.
-            return;
-        }
-        _rendering = true;
+        try {
+            BufferSize = frameBuffer.Length;
+            if (Width * Height > BufferSize) {
+                // Resolution change hasn't caught up yet. Skip a frame.
+                return;
+            }
 
-        // Some timing helpers.
-        long horizontalTickTarget = Stopwatch.Frequency / 31469L; // Number of ticks per horizontal line.
-        var waitSpinner = new SpinWait();
-        var stopwatch = Stopwatch.StartNew();
+            // Some timing helpers.
+            long horizontalTickTarget = Stopwatch.Frequency / 31469L; // Number of ticks per horizontal line.
+            var waitSpinner = new SpinWait();
+            var stopwatch = Stopwatch.StartNew();
 
-        // I _think_ changes to these are ignored during the frame, so we latch them here.
-        int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
-        int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
-        int skew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew; // Skew controls the delay of enabling the display at the start of the line.
-        int characterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
-            ? 3
-            : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
-                ? 1
-                : 0;
-        int rowMemoryAddressCounter = _state.CrtControllerRegisters.ScreenStartAddress + _state.CrtControllerRegisters.PresetRowScanRegister.BytePanning;
+            // I _think_ changes to these are ignored during the frame, so we latch them here.
+            int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
+            int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
+            int skew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew; // Skew controls the delay of enabling the display at the start of the line.
+            int characterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
+                ? 3
+                : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
+                    ? 1
+                    : 0;
+            int rowMemoryAddressCounter = _state.CrtControllerRegisters.ScreenStartAddress + _state.CrtControllerRegisters.PresetRowScanRegister.BytePanning;
 
-        // Memory reading parameters.
-        MemoryWidth memoryWidthMode = DetermineMemoryWidthMode();
-        bool scanLineBit0ForAddressBit13 = !_state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport;
-        bool scanLineBit0ForAddressBit14 = !_state.CrtControllerRegisters.CrtModeControlRegister.SelectRowScanCounter;
+            // Memory reading parameters.
+            MemoryWidth memoryWidthMode = DetermineMemoryWidthMode();
+            bool scanLineBit0ForAddressBit13 = !_state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport;
+            bool scanLineBit0ForAddressBit14 = !_state.CrtControllerRegisters.CrtModeControlRegister.SelectRowScanCounter;
 
-        _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = false;
-        _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
-        int destinationAddress = 0;
-        bool verticalBlanking = false;
+            _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = false;
+            _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
+            int destinationAddress = 0;
+            bool verticalBlanking = false;
 
-        /////////////////////////
-        // Start Vertical loop //
-        /////////////////////////
-        int lineCounter = _state.CrtControllerRegisters.PresetRowScanRegister.PresetRowScan;
-        while (lineCounter < totalHeight) {
-            // These registers can change mid-frame, so we need to check them every scanline.
-            // I _think_ changes to these are ignored during a scanline, so we latch them here. 
-            int horizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1 + skew;
-            int totalWidth = _state.CrtControllerRegisters.HorizontalTotal + 3;
-            bool[] planesEnabled = _state.AttributeControllerRegisters.ColorPlaneEnableRegister.PlanesEnabled;
-            byte maximumScanline = _state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline;
-            int drawLinesPerScanLine = _state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1;
+            /////////////////////////
+            // Start Vertical loop //
+            /////////////////////////
+            int lineCounter = _state.CrtControllerRegisters.PresetRowScanRegister.PresetRowScan;
+            while (lineCounter < totalHeight) {
+                // These registers can change mid-frame, so we need to check them every scanline.
+                // I _think_ changes to these are ignored during a scanline, so we latch them here. 
+                int horizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1 + skew;
+                int totalWidth = _state.CrtControllerRegisters.HorizontalTotal + 3;
+                bool[] planesEnabled = _state.AttributeControllerRegisters.ColorPlaneEnableRegister.PlanesEnabled;
+                byte maximumScanline = _state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline;
+                int drawLinesPerScanLine = _state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1;
 
-            // For every row we can have multiple lines. In text-modes this is used for character height, and in graphics
-            // modes this is used for double-scanning.
-            for (int scanline = 0; scanline <= maximumScanline; scanline++) {
-                // We latch the destination address here, so that the double-scan lines are drawn on top of each other.
-                int destinationAddressLatch = destinationAddress;
-                for (int doubleScan = 0; doubleScan < drawLinesPerScanLine; doubleScan++) {
-                    int memoryAddressCounter = rowMemoryAddressCounter;
-                    destinationAddress = destinationAddressLatch;
+                // For every row we can have multiple lines. In text-modes this is used for character height, and in graphics
+                // modes this is used for double-scanning.
+                for (int scanline = 0; scanline <= maximumScanline; scanline++) {
+                    // We latch the destination address here, so that the double-scan lines are drawn on top of each other.
+                    int destinationAddressLatch = destinationAddress;
+                    for (int doubleScan = 0; doubleScan < drawLinesPerScanLine; doubleScan++) {
+                        int memoryAddressCounter = rowMemoryAddressCounter;
+                        destinationAddress = destinationAddressLatch;
 
-                    long ticksAtStartOfRow = stopwatch.ElapsedTicks;
-                    bool horizontalBlanking = true;
+                        long ticksAtStartOfRow = stopwatch.ElapsedTicks;
+                        bool horizontalBlanking = true;
 
-                    ///////////////////////////
-                    // Start Horizontal loop //
-                    ///////////////////////////
-                    // We loop through the entire horizontal line, even if we're in blanking. This allows programs
-                    // to detect the brief disabling and enabling of the display during horizontal blanking.
-                    for (int characterCounter = 0; characterCounter < totalWidth; characterCounter++) {
-                        // Skew controls the delay of enabling the display at the start of the line.
-                        if (characterCounter == skew) {
-                            horizontalBlanking = false;
+                        ///////////////////////////
+                        // Start Horizontal loop //
+                        ///////////////////////////
+                        // We loop through the entire horizontal line, even if we're in blanking. This allows programs
+                        // to detect the brief disabling and enabling of the display during horizontal blanking.
+                        for (int characterCounter = 0; characterCounter < totalWidth; characterCounter++) {
+                            // Skew controls the delay of enabling the display at the start of the line.
+                            if (characterCounter == skew) {
+                                horizontalBlanking = false;
+                            }
+                            // For simplicity we ignore horizontal blanking registers and use the display end register.
+                            if (characterCounter == horizontalDisplayEnd) {
+                                horizontalBlanking = true;
+                            }
+                            if (horizontalBlanking || verticalBlanking) {
+                                _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
+                                // No need to read memory or render pixels.
+                                continue;
+                            }
+
+                            // No blanking, so we're rendering pixels.
+                            _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = false;
+
+                            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryWidthMode, memoryAddressCounter, scanLineBit0ForAddressBit13, scanline, scanLineBit0ForAddressBit14, planesEnabled);
+
+                            // Convert the 4 bytes into 8 pixels.
+                            if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
+                                Draw256ColorMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
+                            } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
+                                DrawGraphicsMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
+                            } else {
+                                DrawTextMode(frameBuffer, ref destinationAddress, plane0, plane1, scanline);
+                            }
+                            // This increases the memory address counter after each character, taking count-by-two and count-by-four into account.
+                            memoryAddressCounter += (characterCounter & characterClockMask) == 0 ? 1 : 0;
+                        } // End of horizontal loop
+
+                        // When the LineCompare register value is reached, the video memory address is reset to 0. This allows a split-screen effect.
+                        if (lineCounter == _state.CrtControllerRegisters.LineCompareValue) {
+                            rowMemoryAddressCounter = 0;
                         }
-                        // For simplicity we ignore horizontal blanking registers and use the display end register.
-                        if (characterCounter == horizontalDisplayEnd) {
-                            horizontalBlanking = true;
+                        // To maximize the time spent in vertical retrace, we start it at the end of display.
+                        if (lineCounter == verticalDisplayEnd) {
+                            _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = true;
+                            verticalBlanking = true;
                         }
-                        if (horizontalBlanking || verticalBlanking) {
-                            _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
-                            // No need to read memory or render pixels.
+
+                        // We wait at the end of each line to create the correct horizontal timing of 31.46875 kHz
+                        // This allows programs running in the CPU thread to detect the horizontal retrace.
+                        while (stopwatch.ElapsedTicks - ticksAtStartOfRow < horizontalTickTarget) {
+                            waitSpinner.SpinOnce(-1);
+                        }
+                        // If the VerticalTiming is halved, we only increase the line counter every other scanline.
+                        if (_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved && (scanline & 1) != 1) {
                             continue;
                         }
+                        lineCounter++;
+                    } // End of doubleScan
+                } // end of scanline loop
 
-                        // No blanking, so we're rendering pixels.
-                        _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = false;
+                // Rather than simply continuing increasing memory addresses, an offset is added at the end of each line.
+                // This allows creating a "virtual screen" that is larger than the displayed area.
+                rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
+            } // End of vertical loop
 
-                        (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryWidthMode, memoryAddressCounter, scanLineBit0ForAddressBit13, scanline, scanLineBit0ForAddressBit14, planesEnabled);
-
-                        // Convert the 4 bytes into 8 pixels.
-                        if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
-                            Draw256ColorMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
-                        } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
-                            DrawGraphicsMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
-                        } else {
-                            DrawTextMode(frameBuffer, ref destinationAddress, plane0, plane1, scanline);
-                        }
-                        // This increases the memory address counter after each character, taking count-by-two and count-by-four into account.
-                        memoryAddressCounter += (characterCounter & characterClockMask) == 0 ? 1 : 0;
-                    } // End of horizontal loop
-
-                    // When the LineCompare register value is reached, the video memory address is reset to 0. This allows a split-screen effect.
-                    if (lineCounter == _state.CrtControllerRegisters.LineCompareValue) {
-                        rowMemoryAddressCounter = 0;
-                    }
-                    // To maximize the time spent in vertical retrace, we start it at the end of display.
-                    if (lineCounter == verticalDisplayEnd) {
-                        _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = true;
-                        verticalBlanking = true;
-                    }
-
-                    // We wait at the end of each line to create the correct horizontal timing of 31.46875 kHz
-                    // This allows programs running in the CPU thread to detect the horizontal retrace.
-                    while (stopwatch.ElapsedTicks - ticksAtStartOfRow < horizontalTickTarget) {
-                        waitSpinner.SpinOnce(-1);
-                    }
-                    // If the VerticalTiming is halved, we only increase the line counter every other scanline.
-                    if (_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved && (scanline & 1) != 1) {
-                        continue;
-                    }
-                    lineCounter++;
-                } // End of doubleScan
-            } // end of scanline loop
-
-            // Rather than simply continuing increasing memory addresses, an offset is added at the end of each line.
-            // This allows creating a "virtual screen" that is larger than the displayed area.
-            rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
-        } // End of vertical loop
-
-        LastFrameRenderTime = stopwatch.Elapsed;
-        _rendering = false;
+            LastFrameRenderTime = stopwatch.Elapsed;
+        } finally {
+            Monitor.Exit(RenderLock);
+        }
     }
 
     private MemoryWidth DetermineMemoryWidthMode() {

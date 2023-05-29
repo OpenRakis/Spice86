@@ -1332,11 +1332,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
         ushort height = vgaMode.Height;
         MemoryModel memoryModel = vgaMode.MemoryModel;
         ushort characterHeight = vgaMode.CharacterHeight;
-        if (modeId < 0x100) {
-            _bios.VideoMode = (byte)modeId;
-        } else {
-            _bios.VideoMode = 0xff;
-        }
+        _bios.VideoMode = modeId < 0x100 ? (byte)modeId : (byte)0xff;
 
         _currentVgaMode = vgaMode;
 
