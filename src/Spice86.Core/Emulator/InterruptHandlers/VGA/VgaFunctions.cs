@@ -344,54 +344,11 @@ internal class VgaFunctions {
 
         // if palette loading (bit 3 of modeset ctl = 0)
         if (!flags.HasFlag(ModeFlags.NoPalette)) {
-            // Set the PEL mask
-            WriteToPixelMask(videoMode.PixelMask);
-
-            // From which palette
-            byte[] palette = videoMode.Palette;
-            int paletteEntryCount = videoMode.Palette.Length / 3;
-
-            // Always 256*3 values
-            WriteToDac(palette, 0, paletteEntryCount);
-            int remainingEntryCount = 256 - paletteEntryCount;
-            byte[] empty = new byte[remainingEntryCount * 3];
-            WriteToDac(empty, (byte)paletteEntryCount, remainingEntryCount);
-
-            if (flags.HasFlag(ModeFlags.GraySum)) {
-                PerformGrayScaleSumming(0x00, 0x100);
-            }
+            LoadPalette(videoMode, flags);
         }
 
-        // Set Attribute Ctl
-        for (byte i = 0; i < videoMode.AttributeControllerRegisterValues.Length; i++) {
-            WriteToAttributeController(i, videoMode.AttributeControllerRegisterValues[i]);
-        }
-
-        // Set Sequencer Ctl
-        for (byte i = 0; i < videoMode.SequencerRegisterValues.Length; i++) {
-            WriteToSequencer(i, videoMode.SequencerRegisterValues[i]);
-        }
-
-        // Set Grafx Ctl
-        for (byte i = 0; i < videoMode.GraphicsControllerRegisterValues.Length; i++) {
-            WriteToGraphicsController(i, videoMode.GraphicsControllerRegisterValues[i]);
-        }
-
-        // Set CRTC address VGA or MDA
-        byte miscellaneousRegisterValue = videoMode.MiscellaneousRegisterValue;
-        VgaPort crtControllerPort = (miscellaneousRegisterValue & 1) == 0
-            ? VgaPort.CrtControllerAddress
-            : VgaPort.CrtControllerAddressAlt;
-
-        // Disable CRTC write protection
-        WriteToCrtController(crtControllerPort, 0x11, 0x00);
-        // Set CRTC regs
-        for (byte i = 0; i <= 0x18; i++) {
-            WriteToCrtController(crtControllerPort, i, videoMode.CrtControllerRegisterValues[i]);
-        }
-
-        // Set the misc register
-        WriteToMiscellaneousOutput(miscellaneousRegisterValue);
+        // Fill the registers with the values belonging to this mode.
+        FillRegisters(videoMode);
 
         // Enable video
         SetAttributeControllerIndex(0x20);
@@ -403,23 +360,90 @@ internal class VgaFunctions {
 
         // Write the fonts in memory
         if (vgaMode.MemoryModel == MemoryModel.Text) {
-            switch (vgaMode.CharacterHeight) {
-                case 14:
-                    LoadFont(Fonts.VgaFont14, 0x100, 0, 0, 14);
-                    break;
-                case 16:
-                    LoadFont(Fonts.VgaFont16, 0x100, 0, 0, 16);
-                    break;
-                default:
-                    LoadFont(Fonts.VgaFont8, 0x100, 0, 0, 8);
-                    break;
-            }
+            WriteFonts(vgaMode);
+        }
+    }
+
+    private void WriteFonts(VgaMode vgaMode) {
+        switch (vgaMode.CharacterHeight) {
+            case 14:
+                LoadFont(Fonts.VgaFont14, 0x100, 0, 0, 14);
+                break;
+            case 16:
+                LoadFont(Fonts.VgaFont16, 0x100, 0, 0, 16);
+                break;
+            default:
+                LoadFont(Fonts.VgaFont8, 0x100, 0, 0, 8);
+                break;
+        }
+    }
+
+    private void FillRegisters(VideoMode videoMode) {
+        SetAttributeControllerRegisters(videoMode.AttributeControllerRegisterValues);
+        SetSequencerRegisters(videoMode.SequencerRegisterValues);
+        SetGraphicsControllerRegisters(videoMode.GraphicsControllerRegisterValues);
+
+        // Set CRTC address VGA or MDA
+        byte miscellaneousRegisterValue = videoMode.MiscellaneousRegisterValue;
+        VgaPort crtControllerPort = (miscellaneousRegisterValue & 1) == 0
+            ? VgaPort.CrtControllerAddress
+            : VgaPort.CrtControllerAddressAlt;
+
+        // Disable CRTC write protection
+        WriteToCrtController(crtControllerPort, 0x11, 0x00);
+        SetCrtControllerRegisters(crtControllerPort, videoMode.CrtControllerRegisterValues);
+
+        // Set the misc register
+        WriteToMiscellaneousOutput(miscellaneousRegisterValue);
+    }
+
+    private void SetCrtControllerRegisters(VgaPort crtControllerPort, IReadOnlyList<byte> videoModeCrtControllerRegisterValues) {
+        for (byte i = 0; i <= 0x18; i++) {
+            WriteToCrtController(crtControllerPort, i, videoModeCrtControllerRegisterValues[i]);
+        }
+    }
+
+    private void SetGraphicsControllerRegisters(IReadOnlyList<byte> videoModeGraphicsControllerRegisterValues) {
+        for (byte i = 0; i < videoModeGraphicsControllerRegisterValues.Count; i++) {
+            WriteToGraphicsController(i, videoModeGraphicsControllerRegisterValues[i]);
+        }
+    }
+
+    private void SetSequencerRegisters(IReadOnlyList<byte> videoModeSequencerRegisterValues) {
+        for (byte i = 0; i < videoModeSequencerRegisterValues.Count; i++) {
+            WriteToSequencer(i, videoModeSequencerRegisterValues[i]);
+        }
+    }
+
+    private void SetAttributeControllerRegisters(IReadOnlyList<byte> videoModeAttributeControllerRegisterValues) {
+        for (byte i = 0; i < videoModeAttributeControllerRegisterValues.Count; i++) {
+            WriteToAttributeController(i, videoModeAttributeControllerRegisterValues[i]);
+        }
+    }
+
+    private void LoadPalette(VideoMode videoMode, ModeFlags flags) {
+        // Set the PEL mask
+        WriteToPixelMask(videoMode.PixelMask);
+
+        // From which palette
+        byte[] palette = videoMode.Palette;
+        int paletteEntryCount = videoMode.Palette.Length / 3;
+
+        // Always 256*3 values
+        WriteToDac(palette, 0, paletteEntryCount);
+        int remainingEntryCount = 256 - paletteEntryCount;
+        byte[] empty = new byte[remainingEntryCount * 3];
+        WriteToDac(empty, (byte)paletteEntryCount, remainingEntryCount);
+
+        if (flags.HasFlag(ModeFlags.GraySum)) {
+            PerformGrayScaleSumming(0x00, 0x100);
         }
     }
 
     private void ClearScreen(VgaMode vgaMode) {
         switch (vgaMode.MemoryModel) {
             case MemoryModel.Text:
+                // Write white (0x07) spaces (0x20) to memory. 
                 MemSet16(vgaMode.StartSegment, 0, 0x0720, 32 * 1024);
                 break;
             case MemoryModel.Cga:
