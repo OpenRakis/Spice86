@@ -48,7 +48,7 @@ public class VgaBios : InterruptHandler, IVgaInterrupts {
     public VgaBios(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         _bios = _machine.Bios;
         _vgaRom = machine.VgaRom;
-        _logger = loggerService.WithLogLevel(LogEventLevel.Verbose);
+        _logger = loggerService;
         _logger.Debug("Initializing VGA BIOS");
         FillDispatchTable();
 

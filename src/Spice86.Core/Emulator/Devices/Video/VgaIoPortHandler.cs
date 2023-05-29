@@ -30,7 +30,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <param name="videoState"></param>
     public VgaIoPortHandler(Machine machine, ILoggerService loggerService, Configuration configuration, IVideoState videoState) :
         base(machine, configuration, loggerService) {
-        _logger = loggerService.WithLogLevel(LogEventLevel.Information);
+        _logger = loggerService;
 
         // Initialize registers.
         _attributeRegisters = videoState.AttributeControllerRegisters;
