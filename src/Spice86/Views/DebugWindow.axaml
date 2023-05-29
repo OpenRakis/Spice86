@@ -455,6 +455,9 @@
                                 <TextBlock TextAlignment="Right"
                                            Text="{Binding VideoCard.RendererBufferSize, StringFormat='BufferSize: {0}'}">
                                 </TextBlock>
+                                <TextBlock TextAlignment="Right"
+                                           Text="{Binding VideoCard.LastFrameRenderTime, StringFormat='FrameRenderTime: {0}'}">
+                                </TextBlock>
                             </WrapPanel>
                         </Grid>
                     </WrapPanel>
