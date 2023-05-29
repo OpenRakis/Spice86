@@ -10,6 +10,9 @@ public sealed class CrtControllerRegisters {
     private int _screenStartAddress;
     private int _textCursorLocation;
 
+    /// <summary>
+    ///     Specifies which CRT controller register is currently selected.
+    /// </summary>
     public CrtControllerRegister AddressRegister { get; set; }
 
     /// <summary>
