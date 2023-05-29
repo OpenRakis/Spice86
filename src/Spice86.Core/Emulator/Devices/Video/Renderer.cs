@@ -217,8 +217,6 @@ public class Renderer : IVgaRenderer {
         // Plane 0 contains the character codes.
         int fontAddress = 32 * plane0; // No idea why this seems to work for all character heights. It shouldn't.
         // The byte in plane 1 contains the foreground and background colors.
-        // TODO: When _state.AttributeControllerRegisters.AttributeControllerModeRegister.BlinkingEnabled is set,
-        // bit 7 of the byte in plane 1 is used to control blinking.
         uint backGroundColor = GetDacPaletteColor(plane1 >> 4 & 0b1111);
         int index;
         if (_state.SequencerRegisters.MemoryModeRegister.ExtendedMemory) {
@@ -234,6 +232,13 @@ public class Renderer : IVgaRenderer {
             index = plane1 & 0xF;
         }
         uint foreGroundColor = GetDacPaletteColor(index);
+        if (_state.AttributeControllerRegisters.AttributeControllerModeRegister.BlinkingEnabled
+            && (plane1 & 0x80) != 0
+            && DateTime.UtcNow.Millisecond % 1000 < 500) {
+            // Blinking is enabled and the blink bit is set and the current time is in the first half of the second.
+            // Swap the foreground and background colors.
+            (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
+        }
         // The 8 pixels to render this line come from the font which is stored in plane 2.
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
         for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
