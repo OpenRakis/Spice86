@@ -6,6 +6,12 @@ using Spice86.Core.Emulator.Function;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public class Configuration {
+    /// <summary>
+    /// Gets or sets whether the A20 gate is silenced. If <c>true</c> memory addresses will rollover above 1 MB.
+    /// </summary>
+    [Option(nameof(A20Gate), Default = false, Required = false, HelpText = "Whether the 20th address line is silenced. Used for legacy 8086 programs.")]
+    public bool A20Gate { get; init; }
+    
     /// <summary> Path to C drive, default is exe parent. </summary>
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]
     public string? CDrive { get; set; }

@@ -68,7 +68,7 @@ public class Keyboard : DefaultIOPortHandler {
             // the byte is interpreted as a data byte
             case KeyboardPorts.IOPort:
                 if (Command == KeyboardCommand.SetOutputPort) {
-                    _machine.Memory.IsA20GateEnabled = (value & 2) > 0;
+                    _machine.Memory.A20Gate.IsA20GateEnabled = (value & 2) > 0;
                     Command = KeyboardCommand.None;
                 }
                 break;
