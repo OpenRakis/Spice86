@@ -110,7 +110,7 @@ public class Memory {
     /// <returns>A <see cref="Span{T}"/> instance that represents the specified range of memory.</returns>
     /// <exception cref="InvalidOperationException">Thrown when no memory device supports the specified memory range.</exception>
     public Span<byte> GetSpan(int address, int length) {
-        address = A20Gate.TransformAddress(address);
+        A20Gate.TransformAddress(ref address);
         foreach (DeviceRegistration device in _devices) {
             if (address >= device.StartAddress && address + length <= device.EndAddress) {
                 MonitorRangeReadAccess((uint)address, (uint)(address + length));
@@ -349,13 +349,13 @@ public class Memory {
     }
 
     private void Write(uint address, byte value) {
-        address = A20Gate.TransformAddress(address);
+        A20Gate.TransformAddress(ref address);
         MonitorWriteAccess(address, value);
         _memoryDevices[address].Write(address, value);
     }
 
     private byte Read(uint address) {
-        address = A20Gate.TransformAddress(address);
+        A20Gate.TransformAddress(ref address);
         MonitorReadAccess(address);
         return _memoryDevices[address].Read(address);
     }
