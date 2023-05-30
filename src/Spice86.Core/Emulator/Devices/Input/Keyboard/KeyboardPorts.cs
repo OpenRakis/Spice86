@@ -8,7 +8,7 @@ public static class KeyboardPorts {
     /// <summary>
     /// Port used by the CPU to read the input buffer, or write to the output buffer, of the keyboard controller.
     /// </summary>
-    public const byte IOPort = 0x60;
+    public const byte Data = 0x60;
 
     /// <summary>
     /// Port that can be used by the CPU to read the status register of the keyboard controller.

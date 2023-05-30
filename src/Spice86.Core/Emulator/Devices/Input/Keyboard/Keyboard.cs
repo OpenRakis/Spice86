@@ -54,7 +54,7 @@ public class Keyboard : DefaultIOPortHandler {
         }
         
         return port switch {
-            KeyboardPorts.IOPort => scancode.Value,
+            KeyboardPorts.Data => scancode.Value,
             // keyboard not locked, self-test completed.
             KeyboardPorts.StatusRegister => 0x14,
             _ => base.ReadByte(port)
@@ -66,7 +66,7 @@ public class Keyboard : DefaultIOPortHandler {
     public override void WriteByte(int port, byte value) {
         switch (port) {
             // the byte is interpreted as a data byte
-            case KeyboardPorts.IOPort:
+            case KeyboardPorts.Data:
                 if (Command == KeyboardCommand.SetOutputPort) {
                     _machine.Memory.A20Gate.IsA20GateEnabled = (value & 2) > 0;
                     Command = KeyboardCommand.None;
@@ -86,7 +86,7 @@ public class Keyboard : DefaultIOPortHandler {
 
     /// <inheritdoc/>
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(KeyboardPorts.IOPort, this);
+        ioPortDispatcher.AddIOPortHandler(KeyboardPorts.Data, this);
         ioPortDispatcher.AddIOPortHandler(KeyboardPorts.StatusRegister, this);
     }
 }
