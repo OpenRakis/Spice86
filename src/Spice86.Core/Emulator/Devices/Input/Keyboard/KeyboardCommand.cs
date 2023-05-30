@@ -11,12 +11,12 @@ public enum KeyboardCommand : byte {
     None = 0x0,
     
     /// <summary>
-    /// Set keyboard controller command
+    /// Read from input port
     /// </summary>
-    SetCommand = 0x4,
+    ReadInputPort = 0xD0,
     
     /// <summary>
     /// Write to the output port
     /// </summary>
-    SetOutputPort = 0x03
+    SetOutputPort = 0xD1,
 }

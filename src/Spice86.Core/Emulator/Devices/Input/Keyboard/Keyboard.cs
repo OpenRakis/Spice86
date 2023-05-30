@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
@@ -15,6 +16,16 @@ public class Keyboard : DefaultIOPortHandler {
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
     /// </summary>
     public KeyboardCommand Command { get; private set; } = KeyboardCommand.None;
+    
+    /// <summary>
+    /// Part of the value sent when tne CPU reads the status register.
+    /// </summary>
+    public const byte SystemTestStatusMask = 1<<2;
+    
+    /// <summary>
+    /// Part of the value sent when tne CPU reads the status register.
+    /// </summary>
+    public const byte KeyboardEnableStatusMask = 1<<4;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Keyboard"/> class.
@@ -54,9 +65,9 @@ public class Keyboard : DefaultIOPortHandler {
         }
         
         return port switch {
-            KeyboardPorts.Data => scancode.Value,
+            KeyboardPorts.Data => Command == KeyboardCommand.ReadInputPort ? scancode.Value : base.ReadByte(port),
             // keyboard not locked, self-test completed.
-            KeyboardPorts.StatusRegister => 0x14,
+            KeyboardPorts.StatusRegister => SystemTestStatusMask | KeyboardEnableStatusMask,
             _ => base.ReadByte(port)
         };
         
@@ -65,18 +76,18 @@ public class Keyboard : DefaultIOPortHandler {
     /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         switch (port) {
-            // the byte is interpreted as a data byte
             case KeyboardPorts.Data:
                 if (Command == KeyboardCommand.SetOutputPort) {
                     _machine.Memory.A20Gate.IsA20GateEnabled = (value & 2) > 0;
                     Command = KeyboardCommand.None;
                 }
                 break;
-            case KeyboardPorts.CommandPort:
-                Command = value switch {
-                    KeyboardValues.SetKeyboardCommand => KeyboardCommand.SetCommand,
-                    _ => Command
-                };
+            case KeyboardPorts.Command:
+                if (Enum.IsDefined(typeof(KeyboardCommand), value)) {
+                    Command = (KeyboardCommand)value;
+                } else {
+                    throw new UnrecoverableException("Keyboard command not recognized or not implemented.");
+                }
                 break;
             default:
                 base.WriteByte(port, value);

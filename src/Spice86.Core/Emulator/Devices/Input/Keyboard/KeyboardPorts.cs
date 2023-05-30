@@ -18,5 +18,5 @@ public static class KeyboardPorts {
     /// <summary>
     /// If the CPU writes to port 0x64, the byte is interpreted as a command byte. 
     /// </summary>
-    public const byte CommandPort = 0x64;
+    public const byte Command = 0x64;
 }
