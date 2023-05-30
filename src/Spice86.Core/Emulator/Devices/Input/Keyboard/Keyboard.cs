@@ -65,10 +65,10 @@ public class Keyboard : DefaultIOPortHandler {
         }
         
         return port switch {
-            KeyboardPorts.Data => Command == KeyboardCommand.ReadInputPort ? scancode.Value : base.ReadByte(port),
+            KeyboardPorts.Data => scancode.Value,
             // keyboard not locked, self-test completed.
             KeyboardPorts.StatusRegister => SystemTestStatusMask | KeyboardEnableStatusMask,
-            _ => base.ReadByte(port)
+            _ => 0
         };
         
     }
