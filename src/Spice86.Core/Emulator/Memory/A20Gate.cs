@@ -21,7 +21,8 @@ public class A20Gate {
     /// </summary>
     /// <param name="address">The memory address that is to be accessed.</param>
     /// <returns>The transformed address if the 20th address line is silenced. The same address if it isn't.</returns>
-    public void TransformAddress(ref int address) => address = (int)((address & A20AddressMask) % Memory.EndOfHighMemoryArea);
+    [Pure]
+    public int TransformAddress(int address) => (int) ((address & A20AddressMask) % Memory.EndOfHighMemoryArea);
 
     /// <summary>
     /// Calculates the new memory address with the 20th address line silenced. <br/>
@@ -29,7 +30,8 @@ public class A20Gate {
     /// </summary>
     /// <param name="address">The memory address that is to be accessed.</param>
     /// <returns>The transformed address if the 20th address line is silenced. The same address if it isn't.</returns>
-    public void TransformAddress(ref uint address) => address = (address & A20AddressMask) % Memory.EndOfHighMemoryArea;
+    [Pure]
+    public uint TransformAddress(uint address) => (address & A20AddressMask) % Memory.EndOfHighMemoryArea;
 
     /// <summary>
     /// The value for the <see cref="A20AddressMask"/> when <see cref="IsA20GateEnabled"/> is <c>false</c>
