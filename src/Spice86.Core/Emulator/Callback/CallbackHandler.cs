@@ -113,7 +113,7 @@ public class CallbackHandler : IndexBasedDispatcher {
     /// <param name="vectorNumber">The interrupt vector number to install.</param>
     /// <param name="segment">The segment address of the callback function.</param>
     /// <param name="offset">The offset address of the callback function.</param>
-    /// <returns>The size of the callback function in bytes.</returns>
+    /// <returns>The size of the callback function.</returns>
     private ushort InstallInterruptWithCallback(byte vectorNumber, ushort segment, ushort offset) {
         InstallVectorInTable(vectorNumber, segment, offset);
         return WriteInterruptCallback(vectorNumber, segment, offset);
@@ -137,7 +137,7 @@ public class CallbackHandler : IndexBasedDispatcher {
     /// <param name="vectorNumber">The interrupt vector number to write the callback for.</param>
     /// <param name="segment">The segment address of the callback function.</param>
     /// <param name="offset">The offset address of the callback function.</param>
-    /// <returns>The size of the callback function in bytes.</returns>
+    /// <returns>The size of the callback function.</returns>
     private ushort WriteInterruptCallback(byte vectorNumber, ushort segment, ushort offset) {
         _callbackAddresses.Add(vectorNumber, new SegmentedAddress(segment, offset));
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
