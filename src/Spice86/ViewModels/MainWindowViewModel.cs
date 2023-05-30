@@ -359,6 +359,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
         AddOrReplaceMostRecentlyUsed(_configuration.Exe);
         _lastExecutableDirectory = _configuration.CDrive;
+        StatusMessage = "Emulator starting...";
         RunMachine();
         return true;
     }
