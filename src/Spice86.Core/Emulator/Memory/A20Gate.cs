@@ -22,7 +22,7 @@ public class A20Gate {
     /// <param name="address">The memory address that is to be accessed.</param>
     /// <returns>The transformed address if the 20th address line is silenced. The same address if it isn't.</returns>
     [Pure]
-    public int TransformAddress(int address) => (int) ((address & A20AddressMask) % Memory.EndOfHighMemoryArea);
+    public int TransformAddress(int address) => (int) ((address & AddressMask) % Memory.EndOfHighMemoryArea);
 
     /// <summary>
     /// Calculates the new memory address with the 20th address line silenced. <br/>
@@ -31,28 +31,29 @@ public class A20Gate {
     /// <param name="address">The memory address that is to be accessed.</param>
     /// <returns>The transformed address if the 20th address line is silenced. The same address if it isn't.</returns>
     [Pure]
-    public uint TransformAddress(uint address) => (address & A20AddressMask) % Memory.EndOfHighMemoryArea;
+    public uint TransformAddress(uint address) => (address & AddressMask) % Memory.EndOfHighMemoryArea;
 
     /// <summary>
-    /// The value for the <see cref="A20AddressMask"/> when <see cref="IsEnabled"/> is <c>false</c>
+    /// The value for the <see cref="AddressMask"/> when <see cref="IsEnabled"/> is <c>false</c>
     /// </summary>
-    public const uint A20DisabledAddressMask = 0x000FFFFFu;
+    public const uint DisabledAddressMask = 0x000FFFFFu;
 
     /// <summary>
-    /// The value for the <see cref="A20AddressMask"/> when <see cref="IsEnabled"/> is <c>true</c>
+    /// The value for the <see cref="AddressMask"/> when <see cref="IsEnabled"/> is <c>true</c>
     /// </summary>
-    public const uint A20EnabledAddressMask = uint.MaxValue;
+    public const uint EnabledAddressMask = uint.MaxValue;
 
     /// <summary>
     /// The address mask used over memory accesses.
     /// </summary>
-    public uint A20AddressMask { get; private set; } = A20DisabledAddressMask;
+    public uint AddressMask { get; private set; } = DisabledAddressMask;
+    
     /// <summary>
     /// Gets and sets whether the 20th address line is enabled.
     /// When <c>false</c>, the address 'rollover' beyond the first megabyte of main memory is active.
     /// </summary>
     public bool IsEnabled {
-        get => A20AddressMask == A20EnabledAddressMask;
-        set => A20AddressMask = value ? A20EnabledAddressMask : A20DisabledAddressMask;
+        get => AddressMask == EnabledAddressMask;
+        set => AddressMask = value ? EnabledAddressMask : DisabledAddressMask;
     }
 }
