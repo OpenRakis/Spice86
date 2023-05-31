@@ -78,7 +78,7 @@ public class Keyboard : DefaultIOPortHandler {
         switch (port) {
             case KeyboardPorts.Data:
                 if (Command == KeyboardCommand.SetOutputPort) {
-                    _machine.Memory.A20Gate.IsA20GateEnabled = (value & 2) > 0;
+                    _machine.Memory.A20Gate.IsEnabled = (value & 2) > 0;
                     Command = KeyboardCommand.None;
                 }
                 break;

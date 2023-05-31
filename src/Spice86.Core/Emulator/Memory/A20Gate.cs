@@ -12,7 +12,7 @@ public class A20Gate {
     /// </summary>
     /// <param name="enabled">Whether the 20th address line is enabled on emulator startup.</param>
     public A20Gate(bool enabled) {
-        IsA20GateEnabled = enabled;
+        IsEnabled = enabled;
     }
     
     /// <summary>
@@ -34,12 +34,12 @@ public class A20Gate {
     public uint TransformAddress(uint address) => (address & A20AddressMask) % Memory.EndOfHighMemoryArea;
 
     /// <summary>
-    /// The value for the <see cref="A20AddressMask"/> when <see cref="IsA20GateEnabled"/> is <c>false</c>
+    /// The value for the <see cref="A20AddressMask"/> when <see cref="IsEnabled"/> is <c>false</c>
     /// </summary>
     public const uint A20DisabledAddressMask = 0x000FFFFFu;
 
     /// <summary>
-    /// The value for the <see cref="A20AddressMask"/> when <see cref="IsA20GateEnabled"/> is <c>true</c>
+    /// The value for the <see cref="A20AddressMask"/> when <see cref="IsEnabled"/> is <c>true</c>
     /// </summary>
     public const uint A20EnabledAddressMask = uint.MaxValue;
 
@@ -47,12 +47,11 @@ public class A20Gate {
     /// The address mask used over memory accesses.
     /// </summary>
     public uint A20AddressMask { get; private set; } = A20DisabledAddressMask;
-
     /// <summary>
-    /// Gets and sets whether we use the <see cref="A20AddressMask"/> value of 0 or not. <br/>
+    /// Gets and sets whether the 20th address line is enabled.
     /// When <c>false</c>, the address 'rollover' beyond the first megabyte of main memory is active.
     /// </summary>
-    public bool IsA20GateEnabled {
+    public bool IsEnabled {
         get => A20AddressMask == A20EnabledAddressMask;
         set => A20AddressMask = value ? A20EnabledAddressMask : A20DisabledAddressMask;
     }

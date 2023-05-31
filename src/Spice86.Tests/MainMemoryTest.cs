@@ -15,7 +15,7 @@ public class MainMemoryTest {
     [Fact]
     public void EnabledA20Gate_Should_ThrowExceptionAbove1MB() {
         // Arrange
-        _memory.A20Gate.IsA20GateEnabled = true;
+        _memory.A20Gate.IsEnabled = true;
 
         // Act & Assert
         Assert.Throws<IndexOutOfRangeException>(() =>_memory.UInt8[0xF800, 0x8000]);
@@ -24,7 +24,7 @@ public class MainMemoryTest {
     [Fact]
     public void DisabledA20Gate_Should_RolloverAddress() {
         // Arrange
-        _memory.A20Gate.IsA20GateEnabled = false;
+        _memory.A20Gate.IsEnabled = false;
 
         // Act
         _memory.UInt8[0xF800, 0x8000] = 1;
