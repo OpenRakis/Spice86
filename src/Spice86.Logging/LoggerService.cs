@@ -156,6 +156,7 @@ public class LoggerService : ILoggerService {
 
     /// <inheritdoc/>
     public bool IsEnabled(LogEventLevel level) {
-        return GetLogger().IsEnabled(level);
+        _logger ??= _loggerConfiguration.CreateLogger();
+        return _logger.IsEnabled(level);
     }
 }
