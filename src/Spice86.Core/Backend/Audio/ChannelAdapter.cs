@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// Adapts channels of input audio data
 /// </summary>
-public static class ChannelAdapter {
+internal static class ChannelAdapter {
     /// <summary>
     /// Transforms mono audio data to stereo audio data.
     /// </summary>

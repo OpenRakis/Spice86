@@ -2,7 +2,7 @@
 /// <summary>
 /// Used to specify the number of bits per sample in a sound buffer.
 /// </summary>
-public enum SampleFormat {
+internal enum SampleFormat {
     /// <summary>
     /// There are eight bits per sample.
     /// </summary>

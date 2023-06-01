@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 /// <summary>
 /// Converts between various sample formats.
 /// </summary>
-public static class SampleConverter {
+internal static class SampleConverter {
     /// <summary>
     /// Converts 16-bit PCM samples to 32-bit IEEE float samples.
     /// </summary>

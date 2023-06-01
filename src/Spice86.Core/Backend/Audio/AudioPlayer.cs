@@ -1,11 +1,13 @@
-﻿namespace Spice86.Core.Backend.Audio;
+namespace Spice86.Core.Backend.Audio;
 
 using System;
+using System.Runtime.CompilerServices;
 
 /// <summary>
-/// Implements a background audio playback stream.
+/// The base class for the <see cref="PortAudio.PortAudioPlayer" />
 /// </summary>
-public abstract partial class AudioPlayer : IDisposable {
+internal abstract class AudioPlayer : IDisposable
+{
     private readonly InternalBufferWriter _writer;
     
     /// <summary>
@@ -66,4 +68,32 @@ public abstract partial class AudioPlayer : IDisposable {
     /// <param name="data">The data to write</param>
     /// <returns>The length of data written. Might not be equal to the input data length.</returns>
     protected abstract int WriteDataInternal(Span<byte> data);
+
+    private sealed class InternalBufferWriter<TOutput> : InternalBufferWriter
+        where TOutput : unmanaged {
+        private readonly AudioPlayer _player;
+        private TOutput[]? _conversionBuffer;
+
+        public InternalBufferWriter(AudioPlayer player) => _player = player;
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public override int WriteData<TInput>(Span<TInput> data) {
+            // if formats are the same no sample conversion is needed
+            if (typeof(TInput) == typeof(TOutput)) {
+                return _player.WriteDataInternal(data.AsBytes()) / Unsafe.SizeOf<TOutput>();
+            }
+
+            int minBufferSize = data.Length;
+            if (_conversionBuffer == null || _conversionBuffer.Length < minBufferSize) {
+                Array.Resize(ref _conversionBuffer, minBufferSize);
+            }
+
+            SampleConverter.InternalConvert<TInput, TOutput>(data, _conversionBuffer);
+            return _player.WriteDataInternal(_conversionBuffer.AsSpan(0, data.Length).AsBytes()) / Unsafe.SizeOf<TOutput>();
+        }
+    }
+
+    private abstract class InternalBufferWriter {
+        public abstract int WriteData<TInput>(Span<TInput> data) where TInput : unmanaged;
+    }
 }
