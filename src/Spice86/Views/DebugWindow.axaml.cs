@@ -11,9 +11,6 @@ using Spice86.ViewModels;
 public partial class DebugWindow : Window {
     public DebugWindow() {
         InitializeComponent();
-#if DEBUG
-        this.AttachDevTools();
-#endif
         if (!Design.IsDesignMode &&
             Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             Owner = desktop.MainWindow;
@@ -22,18 +19,11 @@ public partial class DebugWindow : Window {
     
     public DebugWindow(Machine machine) {
         InitializeComponent();
-#if DEBUG
-        this.AttachDevTools();
-#endif
         if (!Design.IsDesignMode &&
             Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             Owner = desktop.MainWindow;
         }
 
         DataContext = new DebugViewModel(machine);
-    }
-    
-    private void InitializeComponent() {
-        AvaloniaXamlLoader.Load(this);
     }
 }

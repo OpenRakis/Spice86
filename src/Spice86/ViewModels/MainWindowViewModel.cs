@@ -14,6 +14,7 @@ using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -94,7 +95,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public MainWindowViewModel(ILoggerService loggerService) {
         _loggerService = loggerService;
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is not null) {
             desktop.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
         }
     }
@@ -136,25 +137,27 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         if (_programExecutor is null) {
             return;
         }
-        OpenFolderDialog ofd = new OpenFolderDialog() {
-            Title = "Dump emulator state to directory...",
-            Directory = Configuration.RecordedDataDirectory
-        };
-        if (!Directory.Exists(Configuration.RecordedDataDirectory)) {
-            ofd.Directory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-        }
-        string? dir = Configuration.RecordedDataDirectory;
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            dir = await ofd.ShowAsync(desktop.MainWindow);
-        }
-        if (string.IsNullOrWhiteSpace(dir)
-        && !string.IsNullOrWhiteSpace(Configuration.RecordedDataDirectory)) {
-            dir = Configuration.RecordedDataDirectory;
-        }
-        if (!string.IsNullOrWhiteSpace(dir)) {
-            new RecorderDataWriter(dir, _programExecutor.Machine,
-                _loggerService)
+
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            && desktop.MainWindow is not null &&
+            desktop.MainWindow.StorageProvider.CanSave &&
+            desktop.MainWindow.StorageProvider.CanPickFolder) {
+            IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
+            FolderPickerOpenOptions options = new() {
+                Title = "Dump emulator state to directory...",
+                AllowMultiple = false,
+                SuggestedStartLocation = await storageProvider.TryGetFolderFromPathAsync(Configuration.RecordedDataDirectory)
+            };
+            if (!Directory.Exists(Configuration.RecordedDataDirectory)) {
+                options.SuggestedStartLocation = await storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+            }
+
+            Uri? dir = (await storageProvider.OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
+            if (!string.IsNullOrWhiteSpace(dir?.AbsolutePath)) {
+                new RecorderDataWriter(dir.AbsolutePath, _programExecutor.Machine,
+                        _loggerService)
                     .DumpAll();
+            }
         }
     }
 
@@ -205,31 +208,36 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private async Task StartNewExecutable(string? filePath = null) {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            OpenFileDialog ofd = new() {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow is not null &&
+            desktop.MainWindow.StorageProvider.CanOpen) {
+            IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
+            FilePickerOpenOptions options = new() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
-                Filters = new(){
-                    new FileDialogFilter() {
-                        Extensions = {"exe", "com", "EXE", "COM" },
-                        Name = "DOS Executables"
+                FileTypeFilter = new[] {
+                    new FilePickerFileType("DOS Executables") {
+                        Patterns = new[] {"*.com", "*.exe", "*.EXE", "*.COM"}
                     },
-                    new FileDialogFilter() {
-                        Extensions = { "*" },
-                        Name = "All Files"
+                    new FilePickerFileType("All files") {
+                        Patterns = new[] {"*"}
                     }
                 }
             };
-            ofd.Directory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            IStorageFolder? folder = await storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+            options.SuggestedStartLocation = folder;
             if (Directory.Exists(_lastExecutableDirectory)) {
-                ofd.Directory = _lastExecutableDirectory;
+                options.SuggestedStartLocation = await storageProvider.TryGetFolderFromPathAsync(_lastExecutableDirectory);
             }
 
-            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
-                string[]? files = await ofd.ShowAsync(desktop.MainWindow);
-                if (files?.Any() == true) {
-                    filePath = files[0];
-                    await RestartEmulatorWithNewProgram(filePath);
+            IReadOnlyList<IStorageFile> files = await storageProvider.OpenFilePickerAsync(options);
+
+            if (string.IsNullOrWhiteSpace(filePath)) {
+                if (!File.Exists(filePath) && desktop.MainWindow is not null) {
+                    if (files.Any()) {
+                        filePath = files[0].Path.AbsolutePath;
+                        await RestartEmulatorWithNewProgram(filePath);
+                    }
                 }
             } else {
                 await RestartEmulatorWithNewProgram(filePath);
@@ -247,8 +255,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         SetMainTitle();
         _okayToContinueEvent = new(true);
         _programExecutor?.Machine.ExitEmulationLoop();
-        while (_emulatorThread?.IsAlive == true)
-        {
+        while (_emulatorThread?.IsAlive == true) {
             Dispatcher.UIThread.RunJobs();
         }
 

@@ -10,9 +10,6 @@ internal partial class MainWindow : Window {
     public MainWindow() {
         InitializeComponent();
         Closing += MainWindow_Closing;
-#if DEBUG
-        this.AttachDevTools();
-#endif
     }
 
     private Image? _videoBufferImage;
@@ -27,7 +24,7 @@ internal partial class MainWindow : Window {
     private void FocusOnVideoBuffer() {
         if (_videoBufferImage is not null) {
             _videoBufferImage.IsEnabled = false;
-            FocusManager.Instance?.Focus(_videoBufferImage);
+            _videoBufferImage.Focus();
             _videoBufferImage.IsEnabled = true;
         }
     }
@@ -44,9 +41,5 @@ internal partial class MainWindow : Window {
 
     private void MainWindow_Closing(object? sender, CancelEventArgs e) {
         AppClosing?.Invoke(sender, e);
-    }
-
-    private void InitializeComponent() {
-        AvaloniaXamlLoader.Load(this);
     }
 }

@@ -17,8 +17,7 @@ internal static class Startup {
     /// </summary>
     /// <param name="commandLineArgs">The command line arguments.</param>
     /// <returns>A <see cref="ServiceProvider"/> instance that can be used to retrieve registered services.</returns>
-    public static ServiceProvider StartupInjectedServices(string[] commandLineArgs)
-    {
+    public static ServiceProvider StartupInjectedServices(string[] commandLineArgs) {
         ServiceCollection services = new ServiceCollection();
         services.AddLogging();
         ServiceProvider serviceProvider = services.BuildServiceProvider();

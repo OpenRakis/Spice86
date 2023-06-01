@@ -4,9 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Spice86">
     <Application.Styles>
-        <FluentTheme Mode="Light" />
-        <FluentTheme Mode="Dark" />
-        <!-- Add the line below to get OxyPlot UI theme applied. -->
-        <StyleInclude Source="resm:OxyPlot.Avalonia.Themes.Default.xaml?assembly=OxyPlot.Avalonia"/>
+        <FluentTheme />
     </Application.Styles>
 </Application>

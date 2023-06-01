@@ -30,7 +30,7 @@ internal partial class App : Application {
     /// Called when the framework initialization is completed.
     /// </summary>
     public override void OnFrameworkInitializationCompleted() {
-        if (!IsInDarkMode()) {
+        if (!IsInDarkMode() && Styles.Count > 1) {
             Styles.RemoveAt(1);
         }
 
@@ -38,7 +38,7 @@ internal partial class App : Application {
             throw new PlatformNotSupportedException("Spice86 needs the desktop Linux/Mac/Windows platform in order to run.");
         }
 
-        ServiceProvider serviceProvider = Startup.StartupInjectedServices(desktop.Args);
+        ServiceProvider serviceProvider = Startup.StartupInjectedServices(desktop.Args ?? Array.Empty<string>());
 
         ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>();
         if (loggerService is null) {
@@ -48,8 +48,8 @@ internal partial class App : Application {
         desktop.MainWindow = new MainWindow();
         MainWindowViewModel mainViewModel = new(loggerService);
         desktop.MainWindow.DataContext = mainViewModel;
-        mainViewModel.SetConfiguration(desktop.Args);
-        desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();
+        mainViewModel.SetConfiguration(desktop.Args ?? Array.Empty<string>());
+        desktop.MainWindow.Closed += (_, _) => mainViewModel.Dispose();
         desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
         base.OnFrameworkInitializationCompleted();
     }

@@ -17,7 +17,7 @@
 		</LayoutTransformControl.RenderTransform>
 		<Viewbox>
 			<Image x:Name="Image"
-				RenderOptions.BitmapInterpolationMode="Default"
+				RenderOptions.BitmapInterpolationMode="None"
 				Cursor="{Binding Cursor}"
 				Source="{Binding Bitmap}" />
 		</Viewbox>

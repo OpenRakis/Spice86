@@ -6,6 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -66,14 +67,18 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
 
     [RelayCommand]
     public async Task SaveBitmap() {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            SaveFileDialog picker = new SaveFileDialog {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow is not null &&
+            desktop.MainWindow.StorageProvider.CanSave &&
+            desktop.MainWindow.StorageProvider.CanPickFolder) {
+            IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
+            FilePickerSaveOptions options = new() {
+                Title = "Save bitmap image...",
                 DefaultExtension = "bmp",
-                InitialFileName = "screenshot.bmp",
-                Title = "Save Bitmap"
+                SuggestedStartLocation = await storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
             };
-            string? file = await picker.ShowAsync(desktop.MainWindow);
-            if (string.IsNullOrWhiteSpace(file) == false) {
+            string? file = (await storageProvider.SaveFilePickerAsync(options))?.TryGetLocalPath();
+            if (!string.IsNullOrWhiteSpace(file)) {
                 Bitmap?.Save(file);
             }
         }
