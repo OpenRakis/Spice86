@@ -16,7 +16,7 @@ using Spice86.Shared.Utils;
 /// <summary>
 ///     A VGA BIOS implementation.
 /// </summary>
-public class VgaBios : InterruptHandler, IVgaInterrupts {
+public class VgaBios : InterruptHandler, IVideoBios {
     /// <summary>
     ///     The segment of the graphics memory.
     /// </summary>

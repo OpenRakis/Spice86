@@ -186,7 +186,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The Video BIOS interrupt handler.
     /// </summary>
-    public IVgaInterrupts VideoBiosInt10Handler { get; }
+    public IVideoBios VideoBios { get; }
     
     /// <summary>
     /// The Video Rom containing fonts and other data.
@@ -299,8 +299,8 @@ public class Machine : IDisposable {
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VideoBiosInt10Handler = new VgaBios(this, loggerService);
-        Register(VideoBiosInt10Handler);
+        VideoBios = new VgaBios(this, loggerService);
+        Register(VideoBios);
         
         TimerInt8Handler = new TimerInt8Handler(this, loggerService);
         Register(TimerInt8Handler);

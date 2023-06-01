@@ -58,7 +58,7 @@ public class ScreenStream : Stream {
         byte originalAl = _machine.Cpu.State.AL;
         foreach (byte character in bytesToWrite) {
             _machine.Cpu.State.AL = character;
-            _machine.VideoBiosInt10Handler.WriteTextInTeletypeMode();
+            _machine.VideoBios.WriteTextInTeletypeMode();
         }
         _machine.Cpu.State.AL = originalAl;
     }
