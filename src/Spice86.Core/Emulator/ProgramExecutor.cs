@@ -133,6 +133,10 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         if (_configuration.InitializeDOS is true) {
+            // Initialize VGA text mode.
+            Machine.Cpu.State.AL = 0x03;
+            Machine.VideoBios.SetVideoMode();
+            // Set up disk/filesystem.
             InitializeDOS(_configuration);
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
