@@ -32,12 +32,11 @@ Emulate the hardware of the IBM PC (and compatible clones), allowing it to run g
 
 Additionally, it should enable the reverse engineer to understand and replace the game's logic, piece by piece.
 
-For example, those APIs should be available to *CSharpOverrideHelper* in order to access all of the emulator and override behavior.
+For example, new emulator APIs should be public in order to give access to all of the emulator when overriding assembly code with C# code.
 
 ### What this project should not do
 
-* Emulate protected mode. Protected mode is out of scope of this project.
-* Emulate anything that is not related to real mode.
+* Try to emulate protected mode and protected mode games. Protected mode is out of scope of this project.
 
 ## Technical Information
 
@@ -78,7 +77,7 @@ The standard issue template is used.
 
 ### Contributing Code
 
-Pull Requests are welcome.
+Pull Requests are welcome. See the [PR template](https://github.com/OpenRakis/Spice86/blob/master/.github/pull_request_template.md) for more details.
 
 #### General Points
 

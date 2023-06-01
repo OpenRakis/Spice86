@@ -1,8 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi;
 
+using Bufdio.Spice86.WinMM;
+
 using MeltySynth;
 
 using Spice86.Core.Backend.Audio;
+
+using OperatingSystem = System.OperatingSystem;
 
 /// <summary>
 /// Represents an external General MIDI device. <br/>
@@ -27,13 +31,20 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     /// The soundfont file name we use for all General MIDI preset sounds.
     /// </summary>
     private const string SoundFont = "2MGM.sf2";
+    
+    private IntPtr _midiOutHandle;
 
     public GeneralMidiDevice() {
         _audioPlayer = Audio.CreatePlayer(48000, 2048);
         _playbackThread = new Thread(RenderThreadMethod) {
             Name = "GeneralMIDIAudio"
         };
+        if (OperatingSystem.IsWindows()) {
+            NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
+        }
     }
+    
+    ~GeneralMidiDevice() => Dispose(false);
     
     private void StartThreadIfNeeded() {
         if(!_disposed && !_endThread && !_threadStarted) {
@@ -67,9 +78,13 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     }
 
     protected override void PlayShortMessage(uint message) {
-        StartThreadIfNeeded();
-        _message = message;
-        WakeUpRenderThread();
+        if (OperatingSystem.IsWindows()) {
+            NativeMethods.midiOutShortMsg(_midiOutHandle, message);
+        } else {
+            StartThreadIfNeeded();
+            _message = message;
+            WakeUpRenderThread();
+        }
     }
     
     private void WakeUpRenderThread() {
@@ -114,6 +129,10 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if(disposing) {
+                if (_midiOutHandle != IntPtr.Zero & OperatingSystem.IsWindows()) {
+                    NativeMethods.midiOutClose(_midiOutHandle);
+                    _midiOutHandle = IntPtr.Zero;
+                }
                 _endThread = true;
                 _fillBufferEvent.Set();
                 if(_playbackThread?.IsAlive == true) {

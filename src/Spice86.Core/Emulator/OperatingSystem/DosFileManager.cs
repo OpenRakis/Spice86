@@ -303,7 +303,7 @@ public class DosFileManager {
     /// Read a file using a handle
     /// </summary>
     /// <param name="fileHandle">The handle to the file.</param>
-    /// <param name="readLength">The amount of data to read, in bytes.</param>
+    /// <param name="readLength">The amount of data to read.</param>
     /// <param name="targetAddress">The start address of the receiving buffer.</param>
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
