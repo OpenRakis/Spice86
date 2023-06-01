@@ -25,7 +25,7 @@ using System.Numerics;
 /**
  * PoleZeroPair with gain factor
  */
-internal class BiquadPoleState : PoleZeroPair {
+internal abstract class BiquadPoleState : PoleZeroPair {
     public BiquadPoleState(Complex p, Complex z) : base(p, z) {
     }
 
