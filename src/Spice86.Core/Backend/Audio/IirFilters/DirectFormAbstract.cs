@@ -26,10 +26,6 @@ namespace Spice86.Core.Backend.Audio.IirFilters;
  * Direct form I or II is derived from it
  */
 internal abstract class DirectFormAbstract {
-    protected DirectFormAbstract() {
-        Reset();
-    }
-
     public abstract void Reset();
 
     public abstract double Process1(double x, Biquad s);

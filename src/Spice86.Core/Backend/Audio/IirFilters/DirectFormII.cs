@@ -32,24 +32,19 @@ internal class DirectFormIi : DirectFormAbstract {
         Reset();
     }
 
-    public override void Reset() {
+    public sealed override void Reset() {
         _v1 = 0;
         _v2 = 0;
     }
 
-    public override double Process1(double x,
-                    Biquad s) {
-        if (s != null) {
-            double w = x - s.A1 * _v1 - s.A2 * _v2;
-            double res = s.B0 * w + s.B1 * _v1 + s.B2 * _v2;
+    public override double Process1(double x, Biquad s) {
+        double w = x - s.A1 * _v1 - s.A2 * _v2;
+        double res = s.B0 * w + s.B1 * _v1 + s.B2 * _v2;
 
-            _v2 = _v1;
-            _v1 = w;
+        _v2 = _v1;
+        _v1 = w;
 
-            return res;
-        } else {
-            return x;
-        }
+        return res;
     }
 
     double _v1; // v[-1]

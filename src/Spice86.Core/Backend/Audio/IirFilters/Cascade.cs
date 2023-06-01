@@ -64,9 +64,7 @@ internal class Cascade {
     public double Filter(double x) {
         double res = x;
         for (int i = 0; i < _numBiquads; i++) {
-            if (_states[i] != null) {
-                res = _states[i].Process1(res, _biquads[i]);
-            }
+            res = _states[i].Process1(res, _biquads[i]);
         }
         return res;
     }
@@ -104,14 +102,13 @@ internal class Cascade {
     private void CreateStates(int filterTypes) {
         switch (filterTypes) {
             case DirectFormAbstract.DirectFormI:
-                _states = new DirectFormI[_numBiquads];
+                _states = new DirectFormAbstract[_numBiquads];
                 for (int i = 0; i < _numBiquads; i++) {
                     _states[i] = new DirectFormI();
                 }
                 break;
-            case DirectFormAbstract.DirectFormIi:
             default:
-                _states = new DirectFormIi[_numBiquads];
+                _states = new DirectFormAbstract[_numBiquads];
                 for (int i = 0; i < _numBiquads; i++) {
                     _states[i] = new DirectFormIi();
                 }

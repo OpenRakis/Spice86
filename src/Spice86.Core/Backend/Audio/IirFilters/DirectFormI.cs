@@ -31,7 +31,7 @@ internal class DirectFormI : DirectFormAbstract {
         Reset();
     }
 
-    public override void Reset() {
+    public sealed override void Reset() {
         _x1 = 0;
         _x2 = 0;
         _y1 = 0;

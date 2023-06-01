@@ -36,7 +36,7 @@ internal class HighPassTransform {
             throw new ArithmeticException("Cutoff frequency cannot be negative.");
         }
 
-        if (!(fc < 0.5)) {
+        if (fc > 0.5) {
             throw new ArithmeticException("Cutoff frequency must be less than the Nyquist frequency.");
         }
 

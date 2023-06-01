@@ -5,7 +5,7 @@ using System.Numerics;
 internal static class ComplexUtils {
     public static Complex PolarToComplex(double r, double theta) {
         if (r < 0.0) {
-            throw new ArgumentException(r.ToString(), nameof(r));
+            throw new ArgumentException($"r", nameof(r));
         } else {
             return new Complex(r * Math.Cos(theta), r * Math.Sin(theta));
         }
