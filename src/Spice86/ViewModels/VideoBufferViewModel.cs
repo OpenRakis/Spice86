@@ -25,8 +25,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
 
     private bool _exitDrawThread;
 
-    private readonly ManualResetEvent _manualResetEvent = new(false);
-
     /// <summary>
     /// For AvaloniaUI Designer
     /// </summary>
@@ -53,9 +51,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private void DrawThreadMethod() {
         while (!_exitDrawThread) {
             _drawAction?.Invoke();
-            if (!_exitDrawThread) {
-                _manualResetEvent.WaitOne();
-            }
         }
     }
 
@@ -173,10 +168,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
                 LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
             }
         };
-        if (!_exitDrawThread) {
-            _manualResetEvent.Set();
-            _manualResetEvent.Reset();
-        }
     }
 
     [ObservableProperty]
@@ -188,11 +179,9 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         if (!_disposedValue) {
             if (disposing) {
                 _exitDrawThread = true;
-                _manualResetEvent.Set();
                 if (_drawThread?.IsAlive == true) {
                     _drawThread.Join();
                 }
-                _manualResetEvent.Dispose();
                 Dispatcher.UIThread.Post(() => {
                     Bitmap?.Dispose();
                     Bitmap = null;
