@@ -51,7 +51,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// Memory mapped BIOS values.
     /// </summary>
-    public Bios Bios { get; set; }
+    public BiosDataArea BiosDataArea { get; set; }
 
     /// <summary>
     /// INT11H handler.
@@ -186,7 +186,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The Video BIOS interrupt handler.
     /// </summary>
-    public IVideoBios VideoBios { get; }
+    public IVideoInt10Handler VideoInt10Handler { get; }
     
     /// <summary>
     /// The Video Rom containing fonts and other data.
@@ -246,7 +246,7 @@ public class Machine : IDisposable {
 
         IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
         Memory = new Memory(ram, configuration);
-        Bios = new Bios(Memory);
+        BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
         // Breakpoints
@@ -299,8 +299,9 @@ public class Machine : IDisposable {
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VideoBios = new VgaBios(this, loggerService);
-        Register(VideoBios);
+        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
+        VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, loggerService);
+        Register(VideoInt10Handler);
         
         TimerInt8Handler = new TimerInt8Handler(this, loggerService);
         Register(TimerInt8Handler);
@@ -338,6 +339,8 @@ public class Machine : IDisposable {
             Register(Ems);
         }
     }
+
+    public IVgaFunctionality VgaFunctions { get; set; }
 
     /// <summary>
     /// Registers a callback, such as an interrupt handler.

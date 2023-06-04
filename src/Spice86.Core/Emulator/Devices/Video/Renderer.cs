@@ -285,14 +285,18 @@ public class Renderer : IVgaRenderer {
     private void Draw256ColorMode(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // 256-color mode is simply using the video memory bytes directly.
         // Output 8 pixels by drawing each of the 4 pixels twice.
-        frameBuffer[destinationAddress++] = GetDacPaletteColor(plane0);
-        frameBuffer[destinationAddress++] = GetDacPaletteColor(plane0);
-        frameBuffer[destinationAddress++] = GetDacPaletteColor(plane1);
-        frameBuffer[destinationAddress++] = GetDacPaletteColor(plane1);
-        frameBuffer[destinationAddress++] = GetDacPaletteColor(plane2);
-        frameBuffer[destinationAddress++] = GetDacPaletteColor(plane2);
-        frameBuffer[destinationAddress++] = GetDacPaletteColor(plane3);
-        frameBuffer[destinationAddress++] = GetDacPaletteColor(plane3);
+        uint pixel12Color = GetDacPaletteColor(plane0);
+        uint pixel34Color = GetDacPaletteColor(plane1);
+        uint pixel56Color = GetDacPaletteColor(plane2);
+        uint pixel78Color = GetDacPaletteColor(plane3);
+        frameBuffer[destinationAddress++] = pixel12Color;
+        frameBuffer[destinationAddress++] = pixel12Color;
+        frameBuffer[destinationAddress++] = pixel34Color;
+        frameBuffer[destinationAddress++] = pixel34Color;
+        frameBuffer[destinationAddress++] = pixel56Color;
+        frameBuffer[destinationAddress++] = pixel56Color;
+        frameBuffer[destinationAddress++] = pixel78Color;
+        frameBuffer[destinationAddress++] = pixel78Color;
     }
 
     private uint GetDacPaletteColor(int index) {
