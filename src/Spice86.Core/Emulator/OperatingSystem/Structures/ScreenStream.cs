@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.VM;
 
 using System.Linq;
@@ -57,8 +58,7 @@ public class ScreenStream : Stream {
         byte[] bytesToWrite = buffer.Skip(offset).Take(count).ToArray();
         byte originalAl = _machine.Cpu.State.AL;
         foreach (byte character in bytesToWrite) {
-            _machine.Cpu.State.AL = character;
-            _machine.VideoBios.WriteTextInTeletypeMode();
+            _machine.VgaFunctions.WriteTextInTeletypeMode(new CharacterPlusAttribute((char)character, 0x07, false));
         }
         _machine.Cpu.State.AL = originalAl;
     }

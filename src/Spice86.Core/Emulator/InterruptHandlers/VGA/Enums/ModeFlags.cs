@@ -4,7 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 ///     Vga Mode setup flags.
 /// </summary>
 [Flags]
-internal enum ModeFlags {
+public enum ModeFlags {
     /// <summary>
     ///     Unknown.
     /// </summary>

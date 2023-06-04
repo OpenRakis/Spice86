@@ -3,14 +3,14 @@
 /// <summary>
 /// Provides access to emulated memory mapped BIOS values.
 /// </summary>
-public sealed class Bios {
+public sealed class BiosDataArea {
     private readonly Memory _memory;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    public Bios(Memory memory) {
+    public BiosDataArea(Memory memory) {
         _memory = memory;
     }
     

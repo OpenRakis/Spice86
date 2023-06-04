@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.Devices.Video;
 /// <summary>
 ///     Represents the VGA interrupt interface for managing video functionality.
 /// </summary>
-public interface IVideoBios : ICallback {
+public interface IVideoInt10Handler : ICallback {
     /// <summary>
     ///     Writes a string to the video buffer.
     /// </summary>

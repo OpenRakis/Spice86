@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 
-internal enum VgaPort {
+public enum VgaPort {
     AttributeAddress = 0x3C0,
     AttributeData = 0x3C1,
     MiscOutputWrite = 0x3C2,
