@@ -25,10 +25,10 @@ public class DosMemoryManager {
     }
 
     /// <summary>
-    /// Allocates a memory block of the specified size. Returns null if no memory block could be found to fit the requested size.
+    /// Allocates a memory block of the specified size. Returns <c>null</c> if no memory block could be found to fit the requested size.
     /// </summary>
     /// <param name="requestedSize">The requested size of the memory block.</param>
-    /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or null if no memory block could be found.</returns>
+    /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or <c>null</c> if no memory block could be found.</returns>
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSize) {
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
 
@@ -76,7 +76,17 @@ public class DosMemoryManager {
                 return largest;
             }
 
-            current = current?.Next();
+            if (current == null) {
+                continue;
+            }
+
+            DosMemoryControlBlock? next = current.Next();
+
+            if(next is null) {
+                return current;
+            }
+
+            current = next;
         }
     }
 
@@ -172,7 +182,12 @@ public class DosMemoryManager {
             if (current?.IsLast == true) {
                 return candidates;
             }
-            current = current?.Next();
+
+            DosMemoryControlBlock? next = current?.Next();
+
+            if (next is not null) {
+                current = next;
+            }
         }
     }
 
@@ -187,8 +202,8 @@ public class DosMemoryManager {
         }
 
         while (block?.IsNonLast == true) {
-            DosMemoryControlBlock next = block.Next();
-            if (!next.IsFree) {
+            DosMemoryControlBlock? next = block.Next();
+            if (next is null || !next.IsFree) {
                 // end of the free blocks reached
                 break;
             }
@@ -240,7 +255,11 @@ public class DosMemoryManager {
         }
 
         block.Size = size;
-        DosMemoryControlBlock next = block.Next();
+        DosMemoryControlBlock? next = block.Next();
+
+        if (next is null) {
+            return false;
+        }
 
         // if it was last propagate it
         next.TypeField = block.TypeField;
