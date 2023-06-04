@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 /// <summary>
 /// The base class for the <see cref="PortAudio.PortAudioPlayer" />
 /// </summary>
-internal abstract class AudioPlayer : IDisposable
+public abstract class AudioPlayer : IDisposable
 {
     private readonly InternalBufferWriter _writer;
     
