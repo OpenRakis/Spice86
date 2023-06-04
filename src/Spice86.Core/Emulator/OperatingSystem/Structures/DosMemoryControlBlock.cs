@@ -84,7 +84,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     /// <returns>The next MCB if found, <c>null</c> otherwise.</returns>
     public DosMemoryControlBlock? Next() {
         uint baseAddress = BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(Size + 1), 0);
-        if (baseAddress >= Memory.MemoryBusSize) {
+        if (baseAddress >= Memory.EndOfHighMemoryArea) {
             return null;
         }
         DosMemoryControlBlock next = new(Memory, baseAddress);

@@ -13,7 +13,7 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class ExecutionFlowRecorder {
     /// <summary>
-    /// A set of pre-allocated breakpoints from physical address 0x0 to <see cref="Memory.Memory.MemoryBusSize"/>
+    /// A set of pre-allocated breakpoints from physical address 0x0 to <see cref="Memory.Memory.EndOfHighMemoryArea"/>
     /// </summary>
     private Dictionary<uint, AddressBreakPoint> _addressBreakPoints = new();
 
@@ -92,7 +92,7 @@ public class ExecutionFlowRecorder {
         // This is fast *because* the memory bus size is around 1 MB.
         // Beyond that, this code would have to be deleted,
         // as the allocation would take way too much time.
-        for (uint i = 0; i < Memory.Memory.MemoryBusSize; i++) {
+        for (uint i = 0; i < Memory.Memory.EndOfHighMemoryArea; i++) {
             _addressBreakPoints.Add(i, GenerateBreakPoint(machine, i));
         }
     }
