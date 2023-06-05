@@ -53,12 +53,9 @@ public class DosInt21Handler : InterruptHandler {
     }
     
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x01, new Callback(0x01, KeyboardInputWithEcho));
         _dispatchTable.Add(0x02, new Callback(0x02, DisplayOutput));
         _dispatchTable.Add(0x06, new Callback(0x06, () => DirectConsoleIo(true)));
-        _dispatchTable.Add(0x08, new Callback(0x08, ConsoleInputWithoutEcho));
         _dispatchTable.Add(0x09, new Callback(0x09, PrintString));
-        _dispatchTable.Add(0x0B, new Callback(0x0B, CheckStdInStatus));
         _dispatchTable.Add(0x0C, new Callback(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction));
         _dispatchTable.Add(0x0D, new Callback(0x0D, DiskReset));
         _dispatchTable.Add(0x0E, new Callback(0x0E, SelectDefaultDrive));
@@ -93,40 +90,6 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x4F, new Callback(0x4F, () => FindNextMatchingFile(true)));
         _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
-    }
-
-    private void CheckStdInStatus() {
-        _state.AL = _machine.Dos.FileManager.ReadByteFromFileHandle(0);
-    }
-
-    private void ConsoleInputWithoutEcho() {
-        // if (_loggerService.IsEnabled(LogEventLevel.Information))
-        _loggerService.Fatal("INT 21: ConsoleInputWithoutEcho Waiting for key...");
-        ushort? key;
-        do {
-            key = _machine.KeyboardInt16Handler.GetNextKeyCode();
-            _machine.Timer.Tick();
-            _machine.BiosKeyboardInt9Handler.Run();
-        } while (key == null);
-        
-        // if (_loggerService.IsEnabled(LogEventLevel.Debug))
-        _loggerService.Fatal("INT 21: ConsoleInputWithoutEcho Key pressed: {Key}", (char)key);
-    }
-
-    private void KeyboardInputWithEcho() {
-        // if (_loggerService.IsEnabled(LogEventLevel.Information))
-            _loggerService.Fatal("INT 21: KeyboardInputWithEcho Waiting for key...");
-        ushort? key;
-        do {
-            _machine.BiosKeyboardInt9Handler.Run();
-            key = _machine.KeyboardInt16Handler.GetNextKeyCode();
-            _machine.Timer.Tick();
-        } while (key == null);
-_machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.Init();        
-        // if (_loggerService.IsEnabled(LogEventLevel.Debug))
-            _loggerService.Fatal("INT 21: KeyboardInputWithEcho Key pressed: {Key}", (char)key);
-        
-        _machine.Dos.FileManager.WriteByteToFileHandle(1, (byte)key);
     }
 
     public void GetAllocationInfoForDefaultDrive() {
@@ -360,9 +323,8 @@ _machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.Init();
 
     public void GetInterruptVector() {
         byte vectorNumber = _state.AL;
-        int tableOffset = 4 * vectorNumber;
-        ushort segment = _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)(tableOffset + 2)];
-        ushort offset = _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)tableOffset];
+        ushort segment = _memory.GetUint16((uint)((4 * vectorNumber) + 2));
+        ushort offset = _memory.GetUint16((uint)(4 * vectorNumber));
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("GET INTERRUPT VECTOR INT {VectorInt}, got {SegmentedAddress}", ConvertUtils.ToHex8(vectorNumber),
                 ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
@@ -453,22 +415,7 @@ _machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.Init();
         ushort offset = _state.DX;
         string str = GetDosString(_memory, segment, offset, '$');
 
-        // Store registers
-        ushort[] savedRegisters = {_state.ES, _state.BP, _state.AX, _state.BX, _state.CX, _state.DX};
-        
-        // Set up values for bios call
-        _state.BL = 0x0F; // white on black
-        _state.ES = segment;
-        _state.BP = offset;
-        _state.CX = (ushort)str.Length;
-        _state.AL = 0x00; // no attribute, no cursor movement
-        _state.BH = _machine.Bios.CurrentVideoPage;
-        _state.DX = _machine.Bios.GetCursorPosition(_state.BH);
-        _state.AH = 0x13; // Write string
-        _machine.CallbackHandler.Run(0x10);
-        
-        // Restore registers
-        (_state.ES, _state.BP, _state.AX, _state.BX, _state.CX, _state.DX) = (savedRegisters[0], savedRegisters[1], savedRegisters[2], savedRegisters[3], savedRegisters[4], savedRegisters[5]);
+        _machine.VgaFunctions.WriteString(str);
         
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PRINT STRING: {String}", str);
@@ -531,9 +478,8 @@ _machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.Init();
     }
 
     public void SetInterruptVector(byte vectorNumber, ushort segment, ushort offset) {
-        ushort tableOffset = (ushort)(4 * vectorNumber);
-        _memory.UInt16[MemoryMap.InterruptVectorSegment, tableOffset] = offset;
-        _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)(tableOffset + 2)] = segment;
+        _memory.SetUint16((ushort)((4 * vectorNumber) + 2), segment);
+        _memory.SetUint16((ushort)(4 * vectorNumber), offset);
     }
 
     public void WriteFileUsingHandle(bool calledFromVm) {

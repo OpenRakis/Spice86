@@ -1,7 +1,5 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers;
 
-using Spice86.Aeon.Emulator.Video;
-
 using System.Diagnostics;
 
 public class DacRegisters {

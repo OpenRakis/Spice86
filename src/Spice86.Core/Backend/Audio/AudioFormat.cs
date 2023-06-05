@@ -3,7 +3,7 @@
 /// <summary>
 /// Specifies an audio playback format.
 /// </summary>
-public sealed record AudioFormat(int SampleRate, int Channels, SampleFormat SampleFormat) {
+internal sealed record AudioFormat(int SampleRate, int Channels, SampleFormat SampleFormat) {
     /// <summary>
     /// Gets the number of bytes per sample of the format.
     /// </summary>

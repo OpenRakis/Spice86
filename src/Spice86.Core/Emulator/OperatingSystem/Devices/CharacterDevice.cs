@@ -8,6 +8,9 @@ using Spice86.Shared.Interfaces;
 /// Character devices are things like the console, the printer, the clock, etc.
 /// </summary>
 public class CharacterDevice : VirtualDeviceBase {
+    /// <summary>
+    /// The logging service.
+    /// </summary>
     protected readonly ILoggerService Logger;
 
     /// <summary>
@@ -20,7 +23,7 @@ public class CharacterDevice : VirtualDeviceBase {
     /// </summary>
     /// <param name="attributes">The device attributes.</param>
     /// <param name="name">The name of the device.</param>
-    /// <param name="loggerService"></param>
+    /// <param name="loggerService">The logging service.</param>
     /// <param name="strategy">Optional entrypoint for the strategy routine.</param>
     /// <param name="interrupt">Optional entrypoint for the interrupt routine.</param>
     public CharacterDevice(DeviceAttributes attributes, string name, ILoggerService loggerService, ushort strategy = 0, ushort interrupt = 0)

@@ -51,7 +51,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// Memory mapped BIOS values.
     /// </summary>
-    public Bios Bios { get; set; }
+    public BiosDataArea BiosDataArea { get; set; }
 
     /// <summary>
     /// INT11H handler.
@@ -186,7 +186,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The Video BIOS interrupt handler.
     /// </summary>
-    public IVgaInterrupts VideoBiosInt10Handler { get; }
+    public IVideoInt10Handler VideoInt10Handler { get; }
     
     /// <summary>
     /// The Video Rom containing fonts and other data.
@@ -246,7 +246,7 @@ public class Machine : IDisposable {
 
         IMemoryDevice ram = new Ram(Memory.MemoryBusSize);
         Memory = new Memory(ram);
-        Bios = new Bios(Memory);
+        BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
         // Breakpoints
@@ -299,8 +299,9 @@ public class Machine : IDisposable {
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VideoBiosInt10Handler = new VgaBios(this, loggerService);
-        Register(VideoBiosInt10Handler);
+        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
+        VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, loggerService);
+        Register(VideoInt10Handler);
         
         TimerInt8Handler = new TimerInt8Handler(this, loggerService);
         Register(TimerInt8Handler);
@@ -339,6 +340,8 @@ public class Machine : IDisposable {
         }
     }
 
+    public IVgaFunctionality VgaFunctions { get; set; }
+
     /// <summary>
     /// Registers a callback, such as an interrupt handler.
     /// </summary>
@@ -372,7 +375,8 @@ public class Machine : IDisposable {
     /// </summary>
     private void DmaLoop() {
         while (Cpu.IsRunning && !_exitDmaLoop && !_exitEmulationLoop && !_disposed) {
-            foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
+            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+                DmaChannel dmaChannel = _dmaDeviceChannels[i];
                 if (Gui?.IsPaused == true || IsPaused) {
                     Gui?.WaitForContinue();
                 }

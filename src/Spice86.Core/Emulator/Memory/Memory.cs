@@ -194,10 +194,22 @@ public class Memory {
     /// </summary>
     /// <param name="address">The memory address to start writing to</param>
     /// <param name="value">The byte value to write</param>
-    /// <param name="length">How many times to write the value</param>
-    public void Memset(uint address, byte value, uint length) {
-        for (int i = 0; i < length; i++) {
+    /// <param name="amount">How many times to write the value</param>
+    public void Memset(uint address, byte value, uint amount) {
+        for (int i = 0; i < amount; i++) {
             Write((uint)(address + i), value);
+        }
+    }
+    
+    /// <summary>
+    ///     Fill a range of memory with a value.
+    /// </summary>
+    /// <param name="address">The memory address to start writing to</param>
+    /// <param name="value">The ushort value to write</param>
+    /// <param name="amount">How many times to write the value</param>
+    public void Memset(uint address, ushort value, uint amount) {
+        for (int i = 0; i < amount; i += 2) {
+            SetUint16((uint)(address + i), value);
         }
     }
 
