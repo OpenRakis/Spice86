@@ -18,12 +18,12 @@ public class Keyboard : DefaultIOPortHandler {
     public KeyboardCommand Command { get; private set; } = KeyboardCommand.None;
     
     /// <summary>
-    /// Part of the value sent when tne CPU reads the status register.
+    /// Part of the value sent when the CPU reads the status register.
     /// </summary>
     public const byte SystemTestStatusMask = 1<<2;
     
     /// <summary>
-    /// Part of the value sent when tne CPU reads the status register.
+    /// Part of the value sent when the CPU reads the status register.
     /// </summary>
     public const byte KeyboardEnableStatusMask = 1<<4;
 
@@ -77,10 +77,13 @@ public class Keyboard : DefaultIOPortHandler {
     public override void WriteByte(int port, byte value) {
         switch (port) {
             case KeyboardPorts.Data:
-                if (Command == KeyboardCommand.SetOutputPort) {
-                    _machine.Memory.A20Gate.IsEnabled = (value & 2) > 0;
-                    Command = KeyboardCommand.None;
-                }
+                _machine.Memory.A20Gate.IsEnabled = Command switch {
+                    KeyboardCommand.SetOutputPort => (value & 2) > 0,
+                    KeyboardCommand.EnableA20Gate => false,
+                    KeyboardCommand.DisableA20Gate => true,
+                    _ => _machine.Memory.A20Gate.IsEnabled
+                };
+                Command = KeyboardCommand.None;
                 break;
             case KeyboardPorts.Command:
                 if (Enum.IsDefined(typeof(KeyboardCommand), value)) {
