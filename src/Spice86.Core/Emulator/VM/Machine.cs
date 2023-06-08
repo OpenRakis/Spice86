@@ -244,8 +244,8 @@ public class Machine : IDisposable {
         Gui = gui;
         RecordData = recordData;
 
-        IMemoryDevice ram = new Ram(Memory.MemoryBusSize);
-        Memory = new Memory(ram);
+        IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
+        Memory = new Memory(ram, configuration);
         BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 

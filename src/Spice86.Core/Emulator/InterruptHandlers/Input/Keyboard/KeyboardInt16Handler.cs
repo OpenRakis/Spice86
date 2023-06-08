@@ -1,20 +1,15 @@
-﻿using Spice86.Logging;
-using Spice86.Shared.Interfaces;
-
+﻿
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-
-using Serilog;
 
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 public class KeyboardInt16Handler : InterruptHandler {
-    private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
     public KeyboardInt16Handler(Machine machine, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(machine, loggerService) {
-        _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _dispatchTable.Add(0x00, new Callback(0x00, () => GetKeystroke()));
         _dispatchTable.Add(0x01, new Callback(0x01, () => GetKeystrokeStatus(true)));

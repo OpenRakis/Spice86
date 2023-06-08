@@ -22,8 +22,6 @@ using System.Text;
 /// Reimplementation of INT21
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
-    private readonly ILoggerService _loggerService;
-
     private readonly Encoding _cp850CharSet;
 
     private readonly DosMemoryManager _dosMemoryManager;
@@ -43,7 +41,6 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dos">The DOS kernel.</param>
     public DosInt21Handler(Machine machine, ILoggerService loggerService, Dos dos) : base(machine, loggerService) {
-        _loggerService = loggerService;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dosMemoryManager = dos.MemoryManager;

@@ -8,15 +8,12 @@ using Spice86.Shared.Interfaces;
 /// Reimplementation of int20
 /// </summary>
 public class DosInt20Handler : InterruptHandler {
-    private readonly ILoggerService _loggerService;
-
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt20Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _loggerService = loggerService;
     }
 
     /// <inheritdoc />
