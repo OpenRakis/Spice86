@@ -15,9 +15,15 @@ public abstract class IndexBasedDispatcher {
     /// </summary>
     protected Dictionary<int, ICallback> _dispatchTable = new();
 
-    private readonly ILoggerService _loggerService;
+    /// <summary>
+    /// The logger service implementation.
+    /// </summary>
+    protected readonly ILoggerService _loggerService;
 
-    private readonly Machine _machine;
+    /// <summary>
+    /// The emulator machine.
+    /// </summary>
+    protected readonly Machine _machine;
 
     /// <summary>
     /// Initializes a new instance of an <see cref="IndexBasedDispatcher"/>

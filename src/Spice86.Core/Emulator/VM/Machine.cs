@@ -225,7 +225,7 @@ public class Machine : IDisposable {
         RecordData = recordData;
 
         IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
-        Memory = new Memory(ram);
+        Memory = new Memory(ram, configuration);
         Bios = new Bios(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 

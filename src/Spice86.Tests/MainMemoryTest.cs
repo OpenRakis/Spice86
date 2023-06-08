@@ -2,6 +2,7 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Memory;
 
 using System;
@@ -9,7 +10,28 @@ using System;
 using Xunit;
 
 public class MainMemoryTest {
-    private readonly Memory _memory = new(new Ram(64 * 1024));
+    private readonly Memory _memory = new(new Ram(64 * 1024), new Configuration());
+
+    [Fact]
+    public void EnabledA20Gate_Should_ThrowExceptionAbove1MB() {
+        // Arrange
+        _memory.A20Gate.IsEnabled = true;
+
+        // Act & Assert
+        Assert.Throws<IndexOutOfRangeException>(() =>_memory.UInt8[0xF800, 0x8000]);
+    }
+    
+    [Fact]
+    public void DisabledA20Gate_Should_RolloverAddress() {
+        // Arrange
+        _memory.A20Gate.IsEnabled = false;
+
+        // Act
+        _memory.UInt8[0xF800, 0x8000] = 1;
+
+        // Assert
+        Assert.Equal(1, _memory.UInt8[0x00000000]);
+    }
 
     [Fact]
     public void TestGetUint8() {

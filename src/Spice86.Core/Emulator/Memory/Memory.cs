@@ -1,12 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
+using System.Text;
+
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
 
-using System.Text;
-
 /// <summary>
-///     Represents the memory bus of the IBM PC.
+/// Represents the memory bus of the IBM PC.
 /// </summary>
 public class Memory {
     private readonly IMemoryDevice _ram;
@@ -16,10 +16,16 @@ public class Memory {
     private readonly List<DeviceRegistration> _devices = new();
 
     /// <summary>
+    /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
+    /// </summary>
+    public A20Gate A20Gate { get; }
+
+    /// <summary>
     /// Instantiate a new memory bus.
     /// </summary>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
-    public Memory(IMemoryDevice baseMemory) {
+    /// <param name="configuration">The emulator configuration</param>
+    public Memory(IMemoryDevice baseMemory, Configuration configuration) {
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
         _ram = new Ram(memorySize);
@@ -27,6 +33,7 @@ public class Memory {
         UInt8 = new UInt8Indexer(this);
         UInt16 = new UInt16Indexer(this);
         UInt32 = new UInt32Indexer(this);
+        A20Gate = new(configuration.A20Gate);
     }
 
     /// <summary>
@@ -103,6 +110,7 @@ public class Memory {
     /// <returns>A <see cref="Span{T}"/> instance that represents the specified range of memory.</returns>
     /// <exception cref="InvalidOperationException">Thrown when no memory device supports the specified memory range.</exception>
     public Span<byte> GetSpan(int address, int length) {
+        address = A20Gate.TransformAddress(address);
         foreach (DeviceRegistration device in _devices) {
             if (address >= device.StartAddress && address + length <= device.EndAddress) {
                 MonitorRangeReadAccess((uint)address, (uint)(address + length));
@@ -341,11 +349,13 @@ public class Memory {
     }
 
     private void Write(uint address, byte value) {
+        address = A20Gate.TransformAddress(address);
         MonitorWriteAccess(address, value);
         _memoryDevices[address].Write(address, value);
     }
 
     private byte Read(uint address) {
+        address = A20Gate.TransformAddress(address);
         MonitorReadAccess(address);
         return _memoryDevices[address].Read(address);
     }
