@@ -10,11 +10,9 @@ using Spice86.Shared.Interfaces;
 /// Implementation of INT1A.
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
-    private readonly ILoggerService _loggerService;
     private readonly TimerInt8Handler _timerHandler;
 
     public SystemClockInt1AHandler(Machine machine, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(machine, loggerService) {
-        _loggerService = loggerService;
         _timerHandler = timerHandler;
         _dispatchTable.Add(0x00, new Callback(0x00, SetSystemClockCounter));
         _dispatchTable.Add(0x01, new Callback(0x01, GetSystemClockCounter));

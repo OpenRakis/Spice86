@@ -9,12 +9,9 @@ using Spice86.Shared.Interfaces;
 /// Crude implementation of Int9
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
-    private readonly ILoggerService _loggerService;
-
     private readonly Keyboard _keyboard;
 
     public BiosKeyboardInt9Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _loggerService = loggerService;
         _keyboard = machine.Keyboard;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
         BiosKeyboardBuffer.Init();

@@ -11,7 +11,6 @@ using Spice86.Shared.Interfaces;
 /// Re-implements int33.<br/>
 /// </summary>
 public class MouseInt33Handler : InterruptHandler {
-    private readonly ILoggerService _loggerService;
     private const ushort MOUSE_RANGE_X = 639;
     private const ushort MOUSE_RANGE_Y = 199;
     private readonly IGui? _gui;
@@ -24,7 +23,6 @@ public class MouseInt33Handler : InterruptHandler {
     private ushort _userCallbackSegment;
 
     public MouseInt33Handler(Machine machine, ILoggerService loggerService, IGui? gui) : base(machine, loggerService) {
-        _loggerService = loggerService;
         _gui = gui;
         _dispatchTable.Add(0x00, new Callback(0x00, MouseInstalledFlag));
         _dispatchTable.Add(0x01, new Callback(0x01, ShowMouseCursor));

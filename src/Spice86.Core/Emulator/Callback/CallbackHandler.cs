@@ -30,8 +30,6 @@ public class CallbackHandler : IndexBasedDispatcher {
     /// </summary>
     private ushort _offset = 0;
 
-    private readonly Machine _machine;
-
     private readonly Memory _memory;
 
     /// <summary>
@@ -41,7 +39,6 @@ public class CallbackHandler : IndexBasedDispatcher {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="interruptHandlerSegment">Segment where to install the callback code in memory.</param>
     public CallbackHandler(Machine machine, ILoggerService loggerService, ushort interruptHandlerSegment) : base(machine, loggerService) {
-        _machine = machine;
         _memory = machine.Memory;
         _callbackHandlerSegment = interruptHandlerSegment;
     }
