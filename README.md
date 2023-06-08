@@ -288,6 +288,7 @@ CPU:
 
 Memory:
 - Segmented addressing is implemented.
+- The A20 Gate is supported.
 - Helpers are available in order to convert a segmented address into a physical address, and vice-versa.
 - EMS (Expanded Memory) 3.2 is partially implemented.
 - XMS (Extended Memory) is not implemeented.
