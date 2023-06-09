@@ -49,6 +49,8 @@ If there are already data there the emulator will load them first and complete t
 ## More command line options
 
 ```
+  --Ems                              (Default: false) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
+  --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
   -c, --CDrive                       Path to C drive, default is exe parent
   -r, --RecordedDataDirectory        Directory to dump data to when not specified otherwise. Working directory if blank
