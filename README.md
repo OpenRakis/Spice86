@@ -49,6 +49,8 @@ If there are already data there the emulator will load them first and complete t
 ## More command line options
 
 ```
+  --Ems                              (Default: false) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
+  --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
   -c, --CDrive                       Path to C drive, default is exe parent
   -r, --RecordedDataDirectory        Directory to dump data to when not specified otherwise. Working directory if blank
@@ -288,9 +290,10 @@ CPU:
 
 Memory:
 - Segmented addressing is implemented.
+- The A20 Gate is supported.
 - Helpers are available in order to convert a segmented address into a physical address, and vice-versa.
 - EMS (Expanded Memory) 3.2 is partially implemented.
-- XMS (Extended Memory) is not implemeented.
+- XMS (Extended Memory) is not implemented.
 - X86 Paging (virtual memory) is not implemented.
 
 Graphics:
