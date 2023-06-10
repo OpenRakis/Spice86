@@ -408,7 +408,12 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void PrintString() {
-        string str = GetDosString(_memory, _state.DS, _state.DX, '$');
+        ushort segment = _state.DS;
+        ushort offset = _state.DX;
+        string str = GetDosString(_memory, segment, offset, '$');
+
+        _machine.VgaFunctions.WriteString(str);
+        
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PRINT STRING: {String}", str);
         }

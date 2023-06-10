@@ -51,7 +51,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// Memory mapped BIOS values.
     /// </summary>
-    public Bios Bios { get; set; }
+    public BiosDataArea BiosDataArea { get; set; }
 
     /// <summary>
     /// INT11H handler.
@@ -169,9 +169,29 @@ public class Machine : IDisposable {
     public IVideoCard VgaCard { get; }
     
     /// <summary>
+    /// The Vga Registers
+    /// </summary>
+    public VideoState VgaRegisters { get; set; }
+    
+    /// <summary>
+    /// The VGA port handler
+    /// </summary>
+    public IIOPortHandler VgaIoPortHandler { get; }
+
+    /// <summary>
+    /// The class that handles converting video memory to a bitmap 
+    /// </summary>
+    public readonly IVgaRenderer VgaRenderer;
+    
+    /// <summary>
     /// The Video BIOS interrupt handler.
     /// </summary>
-    public VideoBiosInt10Handler VideoBiosInt10Handler { get; }
+    public IVideoInt10Handler VideoInt10Handler { get; }
+    
+    /// <summary>
+    /// The Video Rom containing fonts and other data.
+    /// </summary>
+    public VgaRom VgaRom { get; }
 
     /// <summary>
     /// The EMS device driver.
@@ -226,7 +246,7 @@ public class Machine : IDisposable {
 
         IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
         Memory = new Memory(ram, configuration);
-        Bios = new Bios(Memory);
+        BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
 
         // Breakpoints
@@ -244,8 +264,17 @@ public class Machine : IDisposable {
 
         DualPic = new DualPic(this, configuration, loggerService);
         Register(DualPic);
-        VgaCard = new AeonCard(this, loggerService, gui, configuration);
-        Register(VgaCard as IIOPortHandler ?? throw new InvalidOperationException());
+
+        VgaRegisters = new VideoState();
+        VgaIoPortHandler = new VgaIoPortHandler(this, loggerService, configuration, VgaRegisters);
+        Register(VgaIoPortHandler);
+
+        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
+        IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
+        Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
+        VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
+        VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
+        
         Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
         Register(Timer);
         Keyboard = new Keyboard(this, loggerService, gui, configuration);
@@ -267,12 +296,18 @@ public class Machine : IDisposable {
         // Services
         CallbackHandler = new CallbackHandler(this, loggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
+        
+        VgaRom = new VgaRom();
+        Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
+        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
+        VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, loggerService);
+        Register(VideoInt10Handler);
+        
         TimerInt8Handler = new TimerInt8Handler(this, loggerService);
         Register(TimerInt8Handler);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, loggerService);
         Register(BiosKeyboardInt9Handler);
-        VideoBiosInt10Handler = new VideoBiosInt10Handler(this, loggerService, (IVgaInterrupts)VgaCard);
-        Register(VideoBiosInt10Handler);
+        
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, loggerService);
         Register(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, loggerService);
@@ -304,6 +339,8 @@ public class Machine : IDisposable {
             Register(Ems);
         }
     }
+
+    public IVgaFunctionality VgaFunctions { get; set; }
 
     /// <summary>
     /// Registers a callback, such as an interrupt handler.

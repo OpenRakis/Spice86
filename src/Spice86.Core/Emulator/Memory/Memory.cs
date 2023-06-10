@@ -172,6 +172,26 @@ public class Memory {
             Write((uint)(address + i), data[i]);
         }
     }
+    /// <summary>
+    ///     Load data from a words array into memory.
+    /// </summary>
+    /// <param name="address">The memory address to start writing</param>
+    /// <param name="data">The array of words to write</param>
+    public void LoadData(uint address, ushort[] data) {
+        LoadData(address, data, data.Length);
+    }
+
+    /// <summary>
+    ///     Load data from a word array into memory.
+    /// </summary>
+    /// <param name="address">The memory address to start writing</param>
+    /// <param name="data">The array of words to write</param>
+    /// <param name="length">How many words to read from the byte array</param>
+    public void LoadData(uint address, ushort[] data, int length) {
+        for (int i = 0; i < length; i++) {
+            SetUint16((uint)(address + i), data[i]);
+        }
+    }
 
     /// <summary>
     ///     Copy bytes from one memory address to another.
@@ -190,10 +210,22 @@ public class Memory {
     /// </summary>
     /// <param name="address">The memory address to start writing to</param>
     /// <param name="value">The byte value to write</param>
-    /// <param name="length">How many times to write the value</param>
-    public void Memset(uint address, byte value, uint length) {
-        for (int i = 0; i < length; i++) {
+    /// <param name="amount">How many times to write the value</param>
+    public void Memset(uint address, byte value, uint amount) {
+        for (int i = 0; i < amount; i++) {
             Write((uint)(address + i), value);
+        }
+    }
+    
+    /// <summary>
+    ///     Fill a range of memory with a value.
+    /// </summary>
+    /// <param name="address">The memory address to start writing to</param>
+    /// <param name="value">The ushort value to write</param>
+    /// <param name="amount">How many times to write the value</param>
+    public void Memset(uint address, ushort value, uint amount) {
+        for (int i = 0; i < amount; i += 2) {
+            SetUint16((uint)(address + i), value);
         }
     }
 
@@ -346,6 +378,16 @@ public class Memory {
         }
 
         SetUint8((uint)(address + i), 0);
+    }
+    
+        
+    public string GetString(uint address, int length) {
+        StringBuilder res = new();
+        for (int i = 0; i < length; i++) {
+            char character = (char)Read((uint)(address + i));
+            res.Append(character);
+        }
+        return res.ToString();
     }
 
     private void Write(uint address, byte value) {

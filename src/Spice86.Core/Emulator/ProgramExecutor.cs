@@ -17,6 +17,7 @@ using System.Security.Cryptography;
 using System.Diagnostics;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -133,6 +134,9 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         if (_configuration.InitializeDOS is true) {
+            // Initialize VGA text mode.
+            Machine.VgaFunctions.VgaSetMode(0x03, ModeFlags.Legacy);
+            // Set up disk/filesystem.
             InitializeDOS(_configuration);
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed

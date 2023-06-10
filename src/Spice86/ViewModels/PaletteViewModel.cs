@@ -43,12 +43,12 @@ public partial class PaletteViewModel : ObservableObject {
     /// <param name="sender">Source of the event.</param>
     /// <param name="e">Unused EventArgs instance.</param>
     private void UpdateColors(object? sender, EventArgs e) {
-        AeonCard? videoCard = _machine?.VgaCard as AeonCard;
-        if (videoCard is null) {
+        IVideoState? videoState = _machine?.VgaRegisters;
+        if (videoState is null) {
             return;
         }
 
-        ReadOnlySpan<uint> palette = videoCard.CurrentMode.Palette;
+        ArgbPalette palette = videoState.DacRegisters.ArgbPalette;
         for(int i = 0; i < Palette.Count; i++) {
             Rectangle rectangle = Palette[i];
             uint source = palette[i];
