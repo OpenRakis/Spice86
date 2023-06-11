@@ -12,13 +12,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Views;
-using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
-using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IVideoBufferViewModel" />
 public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel {
@@ -162,7 +158,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
                 _frameRenderTimeWatch.Restart();
                 using ILockedFramebuffer pixels = Bitmap.Lock();
                 var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                // _videoCard?.Render(Address, Width, Height, pixels.Address);
                 _videoCard?.Render(buffer);
 
                 Dispatcher.UIThread.Post(() => {
