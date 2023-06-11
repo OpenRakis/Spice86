@@ -24,16 +24,12 @@ public interface IVideoBufferViewModel : IDisposable {
     /// </summary>
     /// <value></value>
     int Width { get; }
+    
     /// <summary>
     /// The height of the videobuffer, in pixels.
     /// </summary>
     /// <value></value>
     int Height { get; }
-    /// <summary>
-    /// The start address in memory of the videobuffer.
-    /// </summary>
-    /// <value></value>
-    uint Address { get; }
 
     /// <summary>
     /// The number of frames rendered since its creation

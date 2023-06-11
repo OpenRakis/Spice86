@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
-using Spice86.Core;
-
 /// <summary>
 /// Holds breakpoints and triggers them when certain conditions are met.
 /// </summary>
@@ -22,12 +20,16 @@ public class BreakPointHolder {
     /// <param name="breakPoint">The breakpoint to toggle.</param>
     /// <param name="on">True to enable the breakpoint; false to disable it.</param>
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
-        if (breakPoint is UnconditionalBreakPoint) {
-            ToggleUnconditionalBreakPoint(breakPoint, on);
-        } else if (breakPoint is AddressBreakPoint addressBreakPoint) {
-            ToggleAddressBreakPoint(addressBreakPoint, on);
-        } else if (breakPoint is AddressRangeBreakPoint addressRangeBreakPoint) {
-            ToggleRangeBreakPoint(addressRangeBreakPoint, on);
+        switch (breakPoint) {
+            case UnconditionalBreakPoint:
+                ToggleUnconditionalBreakPoint(breakPoint, on);
+                break;
+            case AddressBreakPoint addressBreakPoint:
+                ToggleAddressBreakPoint(addressBreakPoint, on);
+                break;
+            case AddressRangeBreakPoint addressRangeBreakPoint:
+                ToggleRangeBreakPoint(addressRangeBreakPoint, on);
+                break;
         }
     }
 
@@ -101,8 +103,11 @@ public class BreakPointHolder {
     private void ToggleAddressBreakPoint(AddressBreakPoint breakPoint, bool on) {
         long address = breakPoint.Address;
         if (on) {
-            List<BreakPoint> breakPointList = _addressBreakPoints.ComputeIfAbsent(address, new());
-            breakPointList.Add(breakPoint);
+            if (!_addressBreakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
+                _addressBreakPoints.Add(address, new List<BreakPoint>() { breakPoint });
+            } else {
+                breakPointList.Add(breakPoint);
+            }
         } else {
             if (_addressBreakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
                 breakPointList.Remove(breakPoint);

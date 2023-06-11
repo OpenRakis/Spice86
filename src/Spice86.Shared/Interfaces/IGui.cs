@@ -10,6 +10,11 @@ using Spice86.Shared.Emulator.Keyboard;
 /// </summary>
 public interface IGui {
     /// <summary>
+    /// Represents the video source displayed by the GUI.
+    /// </summary>
+    IVideoBufferViewModel VideoBuffer { get; }
+    
+    /// <summary>
     /// Shows the UI mouse cursor
     /// </summary>
     void ShowMouseCursor();
@@ -62,29 +67,6 @@ public interface IGui {
     void WaitForContinue();
 
     /// <summary>
-    /// Removes a videobuffer from the GUI.
-    /// </summary>
-    /// <param name="address">The start address in memory of the video buffer.</param>
-    /// <exception cref="InvalidOperationException">No buffer entry has that address.</exception>
-    void RemoveBuffer(uint address);
-
-    /// <summary>
-    /// Adds a videobuffer to the GUI.
-    /// </summary>
-    /// <param name="videoCard">The video card implementation to use</param>
-    /// <param name="address">The start address in memory of the videobuffer.</param>
-    /// <param name="scale">The amount by which to scale up the videobuffer on screen.</param>
-    /// <param name="bufferWidth">The width, in pixels.</param>
-    /// <param name="bufferHeight">The height, in pixels.</param>
-    /// <param name="isPrimaryDisplay">Indicates if this is the videoBuffer that will receive input (mouse, keyboard, gamepad) events. False by default.</param>
-    void AddBuffer(IVideoCard videoCard, uint address, double scale, int bufferWidth, int bufferHeight, bool isPrimaryDisplay = false);
-
-    /// <summary>
-    /// All the video buffers displayed in the UI, copied over to an <see cref="IDictionary{TKey,TValue}"/>
-    /// </summary>
-    IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary { get; }
-
-    /// <summary>
     /// X coordinates of the mouse cursor, in pixels.
     /// </summary>
     int MouseX { get; set; }
@@ -93,14 +75,6 @@ public interface IGui {
     /// Y coordinates of the mouse cursor, in pixels.
     /// </summary>
     int MouseY { get; set; }
-
-    /// <summary>
-    /// On video mode change: Set Resolution of the video source for the GUI to display
-    /// </summary>
-    /// <param name="videoWidth">The width in pixels</param>
-    /// <param name="videoHeight">The height in pixels</param>
-    /// <param name="offset">The start address in memory of the data to display on screen. Usually 0xA000</param>
-    void SetResolution(int videoWidth, int videoHeight, uint offset);
 
     /// <summary>
     /// Indicates whether the LMB is down.
@@ -113,12 +87,12 @@ public interface IGui {
     bool IsRightButtonClicked { get; }
 
     /// <summary>
-    /// Width of the primary video buffer from the emulator's point of view, in pixels.
+    /// Width of the video display from the emulator's point of view, in pixels.
     /// </summary>
     int Width { get; }
 
     /// <summary>
-    /// Height of the primary video buffer from the emulator's point of view, in pixels.
+    /// Height of the video display from the emulator's point of view, in pixels.
     /// </summary>
     int Height { get; }
 

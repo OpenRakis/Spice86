@@ -58,7 +58,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private ProgramExecutor? _programExecutor;
 
     [ObservableProperty]
-    private AvaloniaList<IVideoBufferViewModel> _videoBuffers = new();
+    private IVideoBufferViewModel? _videoBuffer;
     
     private ManualResetEvent _okayToContinueEvent = new(true);
 
@@ -96,17 +96,19 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     
     public void HideMouseCursor() {
         Dispatcher.UIThread.Post(() => {
-                foreach (IVideoBufferViewModel x in VideoBuffers) {
-                    x.ShowCursor = false;
-                }            
+            if (VideoBuffer is null) {
+                return;
+            }
+            VideoBuffer.ShowCursor = false;
         });
     }
 
     public void ShowMouseCursor() {
         Dispatcher.UIThread.Post(() => {
-            foreach (IVideoBufferViewModel x in VideoBuffers) {
-                x.ShowCursor = true;
-            }            
+            if (VideoBuffer is null) {
+                return;
+            }
+            VideoBuffer.ShowCursor = true;
         });
     }
 
@@ -178,18 +180,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [ObservableProperty]
     private string? _mainTitle;
-
-    public void AddBuffer(IVideoCard videoCard, uint address, double scale, int bufferWidth, int bufferHeight,
-        bool isPrimaryDisplay = false) {
-        IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(videoCard, scale, bufferWidth, bufferHeight, address, VideoBuffers.Count, isPrimaryDisplay);
-        Dispatcher.UIThread.Post(
-            () => {
-                if(VideoBuffers.All(x => x.Address != videoBuffer.Address)) {
-                    VideoBuffers.Add(videoBuffer);
-                }
-            }
-        );
-    }
 
     [RelayCommand]
     public async Task DebugExecutable() {
@@ -309,13 +299,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     public void ResetTimeMultiplier() {
         TimeMultiplier = _configuration.TimeMultiplier;
     }
+    
     public void UpdateScreen() {
         if (_disposed || _isSettingResolution || _isMainWindowClosing) {
             return;
         }
-        foreach (IVideoBufferViewModel videoBuffer in SortedBuffers()) {
-            videoBuffer.Draw();
-        }
+        VideoBuffer?.Draw();
     }
 
     public int Height { get; private set; }
@@ -323,13 +312,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     public int MouseX { get; set; }
 
     public int MouseY { get; set; }
-
-    public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary =>
-        VideoBuffers
-            .ToDictionary(static x =>
-                    x.Address,
-                x => x);
-
     public int Width { get; private set; }
 
     public bool IsLeftButtonClicked { get; private set; }
@@ -378,43 +360,25 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         MouseX = (int)@event.GetPosition(image).X;
         MouseY = (int)@event.GetPosition(image).Y;
     }
-
-    public void RemoveBuffer(uint address) {
-        IVideoBufferViewModel videoBuffer = VideoBuffers.First(x => x.Address == address);
-        videoBuffer.Dispose();
-        VideoBuffers.Remove(videoBuffer);
-    }
-
-    public void SetResolution(int width, int height, uint address) {
-        Dispatcher.UIThread.Post(() => {
-            _isSettingResolution = true;
-            DisposeBuffers();
-            VideoBuffers = new();
-            Width = width;
-            Height = height;
-            AddBuffer(_videoCard, address, 1, width, height, true);
-            _isSettingResolution = false;
-        }, DispatcherPriority.MaxValue);
-    }
     
     public void SetResolution(int width, int height) {
         Dispatcher.UIThread.Post(() => {
             _isSettingResolution = true;
-            DisposeBuffers();
-            VideoBuffers = new();
+            DisposeVideoBuffer();
             Width = width;
             Height = height;
-            AddBuffer(_videoCard, 0xA0000, 1, width, height, true);
+            IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(_videoCard, scale:1, width, height);
+            Dispatcher.UIThread.Post(() => {
+                    VideoBuffer?.Dispose();
+                    VideoBuffer = videoBuffer;
+                }
+            );
             _isSettingResolution = false;
         }, DispatcherPriority.MaxValue);
     }
 
-    private void DisposeBuffers() {
-        for (int i = 0; i < VideoBuffers.Count; i++) {
-            IVideoBufferViewModel buffer = VideoBuffers[i];
-            buffer.Dispose();
-        }
-        VideoBuffers.Clear();
+    private void DisposeVideoBuffer() {
+        VideoBuffer?.Dispose();
     }
 
     public void Dispose() {
@@ -442,19 +406,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private void DisposeEmulator() {
-        DisposeBuffers();
+        DisposeVideoBuffer();
         _programExecutor?.Dispose();
     }
 
     private static Configuration GenerateConfiguration(string[] args) {
         return CommandLineParser.ParseCommandLine(args);
-    }
-
-    private IEnumerable<IVideoBufferViewModel> SortedBuffers() {
-        if (_disposed || _isSettingResolution || _isMainWindowClosing) {
-            return Array.Empty<IVideoBufferViewModel>();
-        }
-        return VideoBuffers.OrderBy(static x => x.Address).Select(static x => x);
     }
 
     private async Task ShowEmulationErrorMessage(Exception e) {
