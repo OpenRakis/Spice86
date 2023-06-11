@@ -31,6 +31,7 @@ public class DosInt2fHandler : InterruptHandler {
         _dispatchTable.Add(0x15, new Callback(0x15, SendDeviceDriverRequest));
         _dispatchTable.Add(0x43, new Callback(0x43, () => ClearCFAndCX(true)));
         _dispatchTable.Add(0x46, new Callback(0x46, () => ClearCFAndCX(true)));
+        _dispatchTable.Add(0xFB, new Callback(0xFB, () => ClearCFAndCX(true)));
     }
 
     /// <summary>

@@ -138,6 +138,16 @@ public class Machine : IDisposable {
     /// The Sound Blaster card.
     /// </summary>
     public SoundBlaster SoundBlaster { get; }
+    
+    /// <summary>
+    /// The BIOS services related to storage media (Floppy disk, ...)
+    /// </summary>
+    public BiosDiskInt13Handler BiosDiskInt13Handler { get; }
+    
+    /// <summary>
+    /// The BIOS services related to conventional memory.
+    /// </summary>
+    public BiosMemoryInt12Handler BiosMemoryInt12Handler { get; }
 
     /// <summary>
     /// INT15H handler.
@@ -148,6 +158,7 @@ public class Machine : IDisposable {
     /// INT1A handler.
     /// </summary>
     public SystemClockInt1AHandler SystemClockInt1AHandler { get; }
+
 
     /// <summary>
     /// The Programmable Interrupt Timer
@@ -278,11 +289,15 @@ public class Machine : IDisposable {
         RegisterCallbackHandler(TimerInt8Handler);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(BiosKeyboardInt9Handler);
-        
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(SystemBiosInt15Handler);
+        BiosDiskInt13Handler = new(this, machineCreationOptions.LoggerService);
+        RegisterCallbackHandler(BiosDiskInt13Handler);
+        BiosMemoryInt12Handler = new(this, machineCreationOptions.LoggerService);
+        RegisterCallbackHandler(BiosMemoryInt12Handler);
+        
         KeyboardInt16Handler = new KeyboardInt16Handler(
             this,
             machineCreationOptions.LoggerService,

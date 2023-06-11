@@ -49,10 +49,24 @@ public class DosInt21Handler : InterruptHandler {
         FillDispatchTable();
     }
     
+    /// <inheritdoc/>
+    public override void Run() {
+        byte operation = _state.AH;
+        Run(operation);
+    }
+    
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x02, new Callback(0x02, DisplayOutput));
+        _dispatchTable.Add(0x00, new Callback(0x00, TerminateProgram));
+        _dispatchTable.Add(0x01, new Callback(0x01, CharacterInputWithEcho));
+        _dispatchTable.Add(0x02, new Callback(0x02, CharacterOutput));
+        _dispatchTable.Add(0x03, new Callback(0x03, AuxiliaryInput));
+        _dispatchTable.Add(0x04, new Callback(0x04, AuxiliaryOutput));
         _dispatchTable.Add(0x06, new Callback(0x06, () => DirectConsoleIo(true)));
-        _dispatchTable.Add(0x09, new Callback(0x09, PrintString));
+        _dispatchTable.Add(0x07, new Callback(0x07, UnfilteredCharacterWithoutEcho));
+        _dispatchTable.Add(0x08, new Callback(0x08, CharacterInputWithoutEcho));
+        _dispatchTable.Add(0x09, new Callback(0x09, WriteStringToStandardOutput));
+        _dispatchTable.Add(0x10, new Callback(0x10, CloseFileUsingFcb));
+        _dispatchTable.Add(0x0A, new Callback(0x0A, BufferedInput));
         _dispatchTable.Add(0x0C, new Callback(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction));
         _dispatchTable.Add(0x0D, new Callback(0x0D, DiskReset));
         _dispatchTable.Add(0x0E, new Callback(0x0E, SelectDefaultDrive));
@@ -89,6 +103,54 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
     }
 
+    public void TerminateProgram() {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Program requested exit via INT2F AH=0x00 (Terminate Program). Terminating now");
+        }
+        _cpu.IsRunning = false;
+    }
+
+    public void BufferedInput() {
+        
+    }
+
+    /// <summary>
+    /// Waits for a character from standard input, echoes it to standard output, and returns the character in the AL register. <br/>
+    /// Echoes on standard output.
+    /// </summary>
+    public void CharacterInputWithEcho() {
+        // Standard input is not implemented, we return no character ready.
+        _state.AL = 0;
+    }
+    
+    /// <summary>
+    /// Waits for a character from standard input, echoes it to standard output, and returns the character in the AL register.
+    /// </summary>
+    public void CharacterInputWithoutEcho() {
+        // Standard input is not implemented, we return no character ready.
+        _state.AL = 0;
+    }
+
+    /// <summary>
+    /// Waits for a character from the standard auxiliary device and returns the character int he AL register.
+    /// </summary>
+    public void AuxiliaryInput() {
+        // NOP
+        _state.AL = 0;
+    }
+    
+    /// <summary>
+    /// Sends a character in _state.DL to the first AUX device.
+    /// </summary>
+    public void AuxiliaryOutput() {
+        // NOP
+    }
+
+    public void UnfilteredCharacterWithoutEcho() {
+        // Standard input is not implemented, we return no character ready.
+        _state.AL = 0;
+    }
+
     public void GetAllocationInfoForDefaultDrive() {
         // Bytes per sector
         _state.CX = 0x200;
@@ -123,7 +185,9 @@ public class DosInt21Handler : InterruptHandler {
     
     public void AllocateMemoryBlock(bool calledFromVm) {
         ushort requestedSize = _state.BX;
-        _loggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSize);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSize);
+        }
         SetCarryFlag(false, calledFromVm);
         DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSize);
         if (res == null) {
@@ -177,8 +241,8 @@ public class DosInt21Handler : InterruptHandler {
         byte character = _state.DL;
         if (character == 0xFF) {
             _loggerService.Debug("DIRECT CONSOLE IO, INPUT REQUESTED");
-            // Read from STDIN, not implemented, return no character ready
-            ushort? scancode = _machine.KeyboardInt16Handler.GetNextKeyCode();
+            // Read from STDIN not implemented, read from keyboard like DOS 1.0 does.
+            ushort? scancode = _machine.Keyboard.LastKeyboardInput.ScanCode;
             if (scancode == null) {
                 SetZeroFlag(true, calledFromVm);
                 _state.AL = 0;
@@ -201,7 +265,10 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
-    public void DisplayOutput() {
+    /// <summary>
+    /// Sends a character to standard output.
+    /// </summary>
+    public void CharacterOutput() {
         byte characterByte = _state.DL;
         string character = ConvertSingleDosChar(characterByte);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -419,7 +486,7 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
-    public void PrintString() {
+    public void WriteStringToStandardOutput() {
         ushort segment = _state.DS;
         ushort offset = _state.DX;
         string str = GetDosString(_memory, segment, offset, '$');
@@ -429,6 +496,10 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PRINT STRING: {String}", str);
         }
+    }
+
+    public void CloseFileUsingFcb() {
+        _state.AX = 0;
     }
 
     public void QuitWithExitCode() {
@@ -449,11 +520,6 @@ public class DosInt21Handler : InterruptHandler {
         uint targetMemory = MemoryUtils.ToPhysicalAddress(_state.DS, _state.DX);
         DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFile(fileHandle, readLength, targetMemory);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
-    }
-
-    public override void Run() {
-        byte operation = _state.AH;
-        Run(operation);
     }
 
     public void SelectDefaultDrive() {

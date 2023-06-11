@@ -38,6 +38,17 @@ public class Dos {
     /// Gets the INT 2Fh DOS services.
     /// </summary>
     public DosInt2fHandler DosInt2FHandler { get; }
+    
+    /// <summary>
+    /// Gets the INT 25H DOS services.
+    /// </summary>
+    public DosInt25Handler DosInt25Handler { get;  }
+    
+    /// <summary>
+    /// Gets the INT 26H DOS services.
+    /// </summary>
+    public DosInt26Handler DosInt26Handler { get;  }
+
 
     /// <summary>
     /// Gets the list of virtual devices.
@@ -92,6 +103,8 @@ public class Dos {
         DosInt20Handler = new DosInt20Handler(_machine, _loggerService);
         DosInt21Handler = new DosInt21Handler(_machine, _loggerService, this);
         DosInt2FHandler = new DosInt2fHandler(_machine, _loggerService);
+        DosInt25Handler = new DosInt25Handler(_machine, _loggerService);
+        DosInt26Handler = new DosInt26Handler(_machine, _loggerService);
     }
 
     internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, Configuration configuration) {

@@ -18,6 +18,11 @@ public static class MemoryMap {
     /// Segment containing the BIOS data area.
     /// </summary>
     public const ushort BiosDataSegment = 0x0040;
+
+    /// <summary>
+    /// Segment containing the BIOS memory size word.
+    /// </summary>
+    public const ushort BiosMemorySizeSegment = 0x0041;
     
     /// <summary>
     /// The length of the boot sector code.
