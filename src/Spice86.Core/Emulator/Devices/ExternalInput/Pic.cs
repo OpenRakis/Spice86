@@ -173,10 +173,16 @@ public class Pic {
     }
 
     private byte EnabledInterruptRequests => (byte)(_interruptRequestRegister & ~_interruptMaskRegister);
+    
+    private bool OnComputeVectorNumberFoundAnIrq(int irq) {
+        int irqMask = GenerateIrqMask(irq);
+        bool irqInService = (_inServiceRegister & irqMask) != 0;
+        bool irqRequestExists = (EnabledInterruptRequests & irqMask) != 0;
+        return !(_specialMask && irqInService) && !_interruptOngoing && irqRequestExists;
+    }
 
     internal byte? ComputeVectorNumber() {
-        byte enabledInterruptRequests = EnabledInterruptRequests;
-        if (enabledInterruptRequests == 0) {
+        if (EnabledInterruptRequests == 0) {
             // No requests
             _interruptOngoing = false;
             return null;
@@ -187,13 +193,8 @@ public class Pic {
             return null;
         }
 
-        // search for higher priority Requests 
-        byte? irq = FindIrq((int)maxIrqToSearch, (irq) => {
-            int irqMask = GenerateIrqMask(irq);
-            bool irqInService = (_inServiceRegister & irqMask) != 0;
-            bool irqRequestExists = (enabledInterruptRequests & irqMask) != 0;
-            return !(_specialMask && irqInService) && !_interruptOngoing && irqRequestExists;
-        });
+        // search for higher priority Requests
+        byte? irq = FindIrq((int)maxIrqToSearch, FindIrqMode.ComputeVectorNumber);
         if (irq == null) {
             return null;
         }
@@ -215,11 +216,18 @@ public class Pic {
 
     private byte HighestPriorityIrq => (byte)((_lowestPriorityIrq + 1) % 8);
 
-    private byte? FindIrq(int stopAt, Func<int, bool> irqFoundCondition) {
+    private enum FindIrqMode {
+        ComputeVectorNumber,
+        HighestIrqInService
+    }
+    
+    
+    private byte? FindIrq(int stopAt, FindIrqMode mode) {
         // Browse the irq space from the highest priority to the lowest.
         byte irq = HighestPriorityIrq;
         do {
-            if (irqFoundCondition.Invoke(irq)) {
+            if ((mode == FindIrqMode.ComputeVectorNumber && OnComputeVectorNumberFoundAnIrq(irq)) ||
+                mode == FindIrqMode.HighestIrqInService && OnFindHighestIrqInServiceFoundIrq(irq)) {
                 return irq;
             }
 
@@ -229,10 +237,12 @@ public class Pic {
         return null;
     }
 
+    private bool OnFindHighestIrqInServiceFoundIrq(int irq) {
+        return (_inServiceRegister & GenerateIrqMask(irq)) != 0;
+    }
+
     private byte? FindHighestIrqInService() {
-        return FindIrq(HighestPriorityIrq, (irq) => {
-            return (_inServiceRegister & GenerateIrqMask(irq)) != 0;
-        });
+        return FindIrq(HighestPriorityIrq, FindIrqMode.HighestIrqInService);
     }
 
     private void ClearHighestInServiceIrq() {
