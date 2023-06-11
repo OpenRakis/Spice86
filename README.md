@@ -148,6 +148,7 @@ Break at the end of the emulated program:
 ```
 
 #Refreshing screen or buffers while debugging
+```
 (gdb) monitor vbuffer refresh
 ```
 
