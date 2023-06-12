@@ -103,26 +103,34 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
     }
 
+    /// <summary>
+    /// Flushes all buffers to disk, terminates the current process, and releases the memory used by the process.
+    /// <remarks>
+    /// Currently, this only terminates the emulation process by setting <see cref="CPU.Cpu.IsRunning"/> to <c>false</c>
+    /// </remarks>
+    /// </summary>
     public void TerminateProgram() {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Program requested exit via INT2F AH=0x00 (Terminate Program). Terminating now");
         }
         _cpu.IsRunning = false;
     }
-
-    public void BufferedInput() {
-        
-    }
-
+    
     /// <summary>
     /// Waits for a character from standard input, echoes it to standard output, and returns the character in the AL register. <br/>
-    /// Echoes on standard output.
     /// </summary>
     public void CharacterInputWithEcho() {
         // Standard input is not implemented, we return no character ready.
         _state.AL = 0;
     }
-    
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public void BufferedInput() {
+        
+    }
+
     /// <summary>
     /// Waits for a character from standard input, echoes it to standard output, and returns the character in the AL register.
     /// </summary>
