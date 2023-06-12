@@ -38,5 +38,9 @@ public class BiosDiskInt13Handler : InterruptHandler {
     /// </summary>
     public void ResetDiskSystem() {
         _state.AL = 0;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("{ClassName} INT {Int:X2} 00 {MethodName}: Not implemented, returning 0",
+            nameof(BiosDiskInt13Handler), Index, nameof(ResetDiskSystem));
+        }
     }
 }
