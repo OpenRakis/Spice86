@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -40,5 +42,9 @@ public class BiosMemoryInt12Handler : InterruptHandler {
     /// </summary>
     public void GetBiosMemorySize() {
         _state.AX = _memory.GetUint16(MemoryUtils.ToPhysicalAddress(MemoryMap.BiosMemorySizeSegment, 0));
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("{ClassName} INT {Int:X2} 20 {MethodName}: {MemorySize} KB",
+                nameof(BiosMemoryInt12Handler), Index, nameof(GetBiosMemorySize), _state.AX);
+        }
     }
 }
