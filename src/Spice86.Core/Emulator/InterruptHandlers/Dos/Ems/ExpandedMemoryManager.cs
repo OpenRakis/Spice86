@@ -72,8 +72,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <inheritdoc />
     public override byte Index => 0x67;
 
-    private readonly ILogger _loggerService;
-
     /// <summary>
     /// Because the 8086, 8088, and 80286 (in real mode) microprocessors can
     /// physically address only 1M byte of memory, they access expanded memory
@@ -100,7 +98,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _loggerService = loggerService;
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier, loggerService);
         machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
         FillDispatchTable();
