@@ -17,7 +17,7 @@ public partial class PerformanceViewModel : ObservableObject {
     private readonly MainWindowViewModel? _mainViewModel;
     private readonly Machine? _machine;
 
-    private Dictionary<uint, long> _framesRendered = new();
+    private List<long> _framesRendered = new();
 
     private DateTimeOffset _lastUpdateTime;
 
@@ -68,20 +68,17 @@ public partial class PerformanceViewModel : ObservableObject {
                 }
                 AverageInstructionsPerSecond = ApproxRollingAverage(AverageInstructionsPerSecond, InstructionsPerSecond,
                     _instructionsPerSecondSampleNumber++);
-                if(_mainViewModel?.VideoBuffers.Count > 0) {
-                    FramesPerSecond = _mainViewModel.VideoBuffers
-                        .Select(x => x.FramesRendered - _framesRendered
-                            .GetValueOrDefault(x.Address))
-                                .Average(x => x);
-                    VideoBuffersLastFrameRenderTime = _mainViewModel.VideoBuffers.Average(x => x.LastFrameRenderTimeMs);
+                if(_mainViewModel?.VideoBuffer is not null) {
+                    FramesPerSecond = _mainViewModel.VideoBuffer.FramesRendered;
+                    VideoBuffersLastFrameRenderTime = _mainViewModel.VideoBuffer.LastFrameRenderTimeMs;
                 }
             }
             _lastUpdateTime = DateTimeOffset.Now;
         }
         InstructionsExecuted = _machine.Cpu.State.Cycles;
         UpdateCpuHistory(_lastUpdateTime);
-        if(_mainViewModel is not null) {
-            _framesRendered = new(_mainViewModel.VideoBuffers.Select(x => new KeyValuePair<uint, long>(x.Address, x.FramesRendered)));
+        if(_mainViewModel?.VideoBuffer is not null) {
+            _framesRendered = new() { _mainViewModel.VideoBuffer.FramesRendered };
         }
     }
 

@@ -33,7 +33,7 @@ internal partial class VideoBufferView : UserControl {
         }
 
         _image = this.FindControl<Image>(nameof(Image));
-        if (vm.IsPrimaryDisplay && _image is not null && desktop.MainWindow is MainWindow mainWindow && desktop.MainWindow.DataContext is MainWindowViewModel mainVm) {
+        if (_image is not null && desktop.MainWindow is MainWindow mainWindow && desktop.MainWindow.DataContext is MainWindowViewModel mainVm) {
             mainWindow.SetPrimaryDisplayControl(_image);
             _image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, _image);
             _image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, _image);

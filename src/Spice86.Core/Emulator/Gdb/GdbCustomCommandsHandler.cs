@@ -359,30 +359,6 @@ Supported custom commands:
             if ("refresh".Equals(action)) {
                 gui?.UpdateScreen();
                 return _gdbIo.GenerateResponse("");
-            } else if ("list".Equals(action)) {
-                StringBuilder listBuilder = new StringBuilder();
-                gui?.VideoBuffersToDictionary.ToDictionary(x => x.ToString()).Select(x => $"{x.Value}\n").ToList()
-                    .ForEach(x => listBuilder.AppendLine(x));
-                string list = listBuilder.ToString();
-                return _gdbIo.GenerateMessageToDisplayResponse(list);
-            }
-
-            uint address = ExtractAddress(args, action);
-            if ("remove".Equals(action)) {
-                gui?.RemoveBuffer(address);
-                return _gdbIo.GenerateMessageToDisplayResponse($"Removed buffer at address {address}");
-            }
-
-            int[] resolution = ExtractResolution(args, action);
-            double scale = ExtractScale(args);
-            if ("add".Equals(action)) {
-                if (gui?.VideoBuffersToDictionary.TryGetValue(address, out IVideoBufferViewModel? existing) == true) {
-                    return _gdbIo.GenerateMessageToDisplayResponse($"Buffer already exists: {existing}");
-                }
-
-                // Todo: Fix this?
-                // gui?.AddBuffer(_machine.VgaIoPortHandler, address, scale, resolution[0], resolution[1]);
-                return _gdbIo.GenerateMessageToDisplayResponse($"Added buffer to view address {address}");
             } else {
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand action {action}");
             }

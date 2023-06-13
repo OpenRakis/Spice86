@@ -147,22 +147,8 @@ Break at the end of the emulated program:
 (gdb) monitor breakStop
 ```
 
-#### Displaying additional buffers
-Sometimes it's useful to see what kind of images programs are generating in memory before display.
-```
-# Displays the content of memory at address 0x123AB as a buffer of resolution 320x200
-(gdb) monitor vbuffer add 0x123AB 320x200
-
-# Displays the content of memory at address 0x123AB as a buffer of resolution 16x16, scaling it 10 times so that it's not tiny
-(gdb) monitor vbuffer add 0x123AB 16x16 10
-
-# Remove the buffer display
-(gdb) monitor vbuffer remove 0x123AB
-
-# List information about currently displayed buffers
-(gdb) monitor vbuffer list
-
 #Refreshing screen or buffers while debugging
+```
 (gdb) monitor vbuffer refresh
 ```
 
@@ -297,8 +283,7 @@ Memory:
 - X86 Paging (virtual memory) is not implemented.
 
 Graphics:
-- Text modes, VGA, EGA, and CGA are entirely or partially implemented.
-- Some text modes are not implemented.
+- Text modes, VGA, EGA, and CGA are implemented.
 
 DOS:
 - Part of int 21 is implemented. Identifies itself as dos 5.0 for now.

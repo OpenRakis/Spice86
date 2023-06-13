@@ -12,16 +12,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Views;
-using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
-using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IVideoBufferViewModel" />
-public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel, IComparable<VideoBufferViewModel> {
+public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel {
     private bool _disposedValue;
 
     private Thread? _drawThread;
@@ -39,19 +35,14 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         }
         Width = 320;
         Height = 200;
-        Address = 1;
-        _index = 1;
         Scale = 1;
         _frameRenderTimeWatch = new Stopwatch();
     }
 
-    public VideoBufferViewModel(IVideoCard videoCard, double scale, int width, int height, uint address, int index, bool isPrimaryDisplay) {
+    public VideoBufferViewModel(IVideoCard videoCard, double scale, int width, int height) {
         _videoCard = videoCard;
-        _isPrimaryDisplay = isPrimaryDisplay;
         Width = width;
         Height = height;
-        Address = address;
-        _index = index;
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
         _frameRenderTimeWatch = new Stopwatch();
@@ -91,8 +82,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
     }
-
-    public uint Address { get; private set; }
 
     /// <summary>
     /// TODO : Get current DPI from Avalonia or Skia.
@@ -137,27 +126,12 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private int _height = 200;
 
     [ObservableProperty]
-    private bool _isPrimaryDisplay;
-
-    [ObservableProperty]
     private int _width = 320;
 
     [ObservableProperty]
     private long _framesRendered;
 
     private bool _appClosing;
-
-    private readonly int _index;
-
-    public int CompareTo(VideoBufferViewModel? other) {
-        if (_index < other?._index) {
-            return -1;
-        }
-        if (_index == other?._index) {
-            return 0;
-        }
-        return 1;
-    }
 
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -184,7 +158,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
                 _frameRenderTimeWatch.Restart();
                 using ILockedFramebuffer pixels = Bitmap.Lock();
                 var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                // _videoCard?.Render(Address, Width, Height, pixels.Address);
                 _videoCard?.Render(buffer);
 
                 Dispatcher.UIThread.Post(() => {
@@ -205,14 +178,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private long _lastFrameRenderTimeMs;
 
     private readonly IVideoCard? _videoCard;
-
-    public override bool Equals(object? obj) {
-        return this == obj || ((obj is VideoBufferViewModel other) && _index == other._index);
-    }
-
-    public override int GetHashCode() {
-        return _index;
-    }
 
     private void Dispose(bool disposing) {
         if (!_disposedValue) {
