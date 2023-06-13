@@ -1,23 +1,13 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
-using Serilog.Events;
-
-using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System.Text;
-
-using Spice86.Shared.Utils;
 
 /// <summary>
 /// Represents the state of the CPU
 /// </summary>
 public class State {
-    private ILoggerService _logger;
-
-    public State(ILoggerService logger) {
-        _logger = logger;
-    }
-
     // Accumulator
     public byte AH { get => Registers.GetRegister8H(Registers.AxIndex); set => Registers.SetRegister8H(Registers.AxIndex, value); }
     public byte AL { get => Registers.GetRegister8L(Registers.AxIndex); set => Registers.SetRegister8L(Registers.AxIndex, value); }
