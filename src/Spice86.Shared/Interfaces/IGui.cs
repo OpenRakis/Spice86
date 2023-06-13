@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Shared.Interfaces;
 
 using Spice86.Shared.Emulator.Keyboard;
+using Spice86.Shared.Emulator.Mouse;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -87,12 +88,12 @@ public interface IGui {
     /// <summary>
     /// X coordinates of the mouse cursor, in pixels.
     /// </summary>
-    int MouseX { get; set; }
+    double MouseX { get; set; }
 
     /// <summary>
     /// Y coordinates of the mouse cursor, in pixels.
     /// </summary>
-    int MouseY { get; set; }
+    double MouseY { get; set; }
 
     /// <summary>
     /// On video mode change: Set Resolution of the video source for the GUI to display
@@ -133,4 +134,8 @@ public interface IGui {
     /// <param name="videoWidth">The width in pixels</param>
     /// <param name="videoHeight">The height in pixels</param>
     void SetResolution(int videoWidth, int videoHeight);
+
+    event EventHandler<MouseMoveEventArgs>? MouseMoved;
+    event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
+    event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 }

@@ -73,7 +73,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <returns>The value read from the port.</returns>
     public virtual byte ReadByte(int port) {
         LogUnhandledPortRead(port);
-        return OnUnandledIn(port);
+        return OnUnhandledIn(port);
     }
 
     /// <summary>
@@ -165,7 +165,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// </summary>
     /// <param name="port">The port number.</param>
     /// <returns>A default value.</returns>
-    protected virtual byte OnUnandledIn(int port) {
+    protected virtual byte OnUnhandledIn(int port) {
         LogUnhandledPortRead(port);
         OnUnhandledPort(port);
         return byte.MaxValue;

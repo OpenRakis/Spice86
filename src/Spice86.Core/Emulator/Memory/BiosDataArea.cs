@@ -15,6 +15,14 @@ public sealed class BiosDataArea {
     }
     
     /// <summary>
+    /// Gets or sets the Extended BIOS Data Area segment.
+    /// </summary>
+    public ushort ExtendedBiosDataAreaSegment {
+        get => _memory.UInt16[MemoryMap.BiosDataSegment, 0x000E];
+        set => _memory.UInt16[MemoryMap.BiosDataSegment, 0x000E] = value;
+    }
+    
+    /// <summary>
     /// Gets or sets the flags that indicate which hardware is installed.
     /// </summary>
     public ushort EquipmentListFlags {

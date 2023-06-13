@@ -8,17 +8,22 @@ public static class MemoryMap {
     /// Segment that contains a list of addresses of interrupt handlers.
     /// </summary>
     public const int InterruptVectorSegment = 0x0000;
-    
+
     /// <summary>
-    /// Segment of the VGA static functionality table.
+    /// The length of the interrupt vector table.
     /// </summary>
-    public const ushort StaticFunctionalityTableSegment = 0x0100;
-    
+    public const int InterruptVectorLength = 1024;
+
     /// <summary>
     /// Segment containing the BIOS data area.
     /// </summary>
     public const ushort BiosDataSegment = 0x0040;
-    
+
+    /// <summary>
+    /// The start segment of the free memory area.
+    /// </summary>
+    public const int FreeMemoryStartSegment = 0x50;
+
     /// <summary>
     /// The length of the boot sector code.
     /// </summary>
@@ -30,44 +35,24 @@ public static class MemoryMap {
     public const int BootSectorCodeSegment = 0x07C0;
 
     /// <summary>
-    /// The length of the color text video memory.
+    /// Segment of the graphic video memory.
     /// </summary>
-    public const int ColorTextVideoMemoryLength = 32767;
-
-    /// <summary>
-    /// Segment of the color text video memory.
-    /// </summary>
-    public const int ColorTextVideoMemorySegment = 0xB800;
-
-    /// <summary>
-    /// The start segment of the free memory area.
-    /// </summary>
-    public const int FreeMemoryStartSegment = 0x50;
-
-    /// <summary>
-    /// The length of the graphic video memory.
-    /// </summary>
-    public const int GraphicVideoMemorylength = 65535;
-
+    public const int ExtendedBiosDaraAreaSegment = 0x9FC0;
+    
     /// <summary>
     /// Segment of the graphic video memory.
     /// </summary>
     public const int GraphicVideoMemorySegment = 0xA000;
 
     /// <summary>
-    /// The length of the interrupt vector table.
-    /// </summary>
-    public const int InterruptVectorLength = 1024;
-
-    /// <summary>
-    /// The length of the monochrome text video memory.
-    /// </summary>
-    public const int MonochromeTextVideoMemoryLength = 32767;
-
-    /// <summary>
     /// Segment of the monochrome text video memory.
     /// </summary>
     public const int MonochromeTextVideoMemorySegment = 0xB000;
+
+    /// <summary>
+    /// Segment of the color text video memory.
+    /// </summary>
+    public const int ColorTextVideoMemorySegment = 0xB800;
 
     /// <summary>
     /// Segment where VGA BIOS is stored.

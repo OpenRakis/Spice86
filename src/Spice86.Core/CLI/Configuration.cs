@@ -124,4 +124,10 @@ public class Configuration {
     /// </summary>
     [Option(nameof(Ems), Default = false, Required = false, HelpText = "Enable EMS")]
     public bool Ems { get; init; }
+    
+    /// <summary>
+    /// Specify the type of mouse to use.
+    /// </summary>
+    [Option(nameof(Mouse), Default = MouseType.PS2, Required = false, HelpText = "Specify the type of mouse to use. Valid values are None, PS2 (default), and PS2Wheel")]
+    public MouseType Mouse { get; init; }
 }

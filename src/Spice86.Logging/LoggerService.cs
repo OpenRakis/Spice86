@@ -16,9 +16,13 @@ public class LoggerService : ILoggerService {
     
     /// <inheritdoc/>
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
-    
+
     /// <inheritdoc/>
-    public bool AreLogsSilenced { get; set; }
+    public bool AreLogsSilenced {
+        get => true;
+        set {
+        }
+    }
 
     private ILogger? _logger;
 

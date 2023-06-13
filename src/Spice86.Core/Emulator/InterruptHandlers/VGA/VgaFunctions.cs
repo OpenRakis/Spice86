@@ -97,7 +97,7 @@ internal class VgaFunctions {
         ushort blockAddress = (ushort)(((destinationFlags & 0x03) << 14) + ((destinationFlags & 0x04) << 11));
         ushort destination = (ushort)(blockAddress + start * 32);
         for (ushort i = 0; i < count; i++) {
-            uint address = MemoryUtils.ToPhysicalAddress(VgaBios.GraphicsSegment, (ushort)(destination + i * 32));
+            uint address = MemoryUtils.ToPhysicalAddress(VgaConstants.GraphicsSegment, (ushort)(destination + i * 32));
             var value = new Span<byte>(fontBytes, i * fontSize, fontSize);
             _memory.LoadData(address, value.ToArray(), fontSize);
         }

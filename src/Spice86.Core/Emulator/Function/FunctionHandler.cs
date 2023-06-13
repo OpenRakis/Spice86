@@ -71,8 +71,8 @@ public class FunctionHandler {
 
             FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, recordReturn);
             _callerStack.Push(currentFunctionCall);
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Calling {CurrentFunction} from {Caller}", currentFunction, caller);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Calling {CurrentFunction} from {Caller}", currentFunction, caller);
             }
 
             currentFunction.Enter(caller);
@@ -191,8 +191,8 @@ public class FunctionHandler {
         }
         FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
         bool returnAddressAlignedWithCallStack = AddReturn(returnCallType, currentFunctionCall, currentFunctionInformation);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Returning from {CurrentFunctionInformation} to {CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Returning from {CurrentFunctionInformation} to {CurrentFunctionCall}", currentFunctionInformation, GetFunctionInformation(CurrentFunctionCall));
         }
 
         if (!returnAddressAlignedWithCallStack) {

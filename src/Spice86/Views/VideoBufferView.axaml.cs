@@ -26,7 +26,7 @@ internal partial class VideoBufferView : UserControl {
     private Image? _image;
     private bool _appClosing;
 
-    private void VideoBufferView_DataContextChanged(object? sender, EventArgs e) {
+    private void VideoBufferView_DataContextChanged(object? sender, EventArgs @event) {
         if (DataContext is not VideoBufferViewModel vm ||
             Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
             return;
@@ -35,12 +35,9 @@ internal partial class VideoBufferView : UserControl {
         _image = this.FindControl<Image>(nameof(Image));
         if (vm.IsPrimaryDisplay && _image is not null && desktop.MainWindow is MainWindow mainWindow && desktop.MainWindow.DataContext is MainWindowViewModel mainVm) {
             mainWindow.SetPrimaryDisplayControl(_image);
-            _image.PointerMoved -= (s, e) => mainVm.OnMouseMoved(e, _image);
-            _image.PointerPressed -= (s, e) => mainVm.OnMouseClick(e, true);
-            _image.PointerReleased -= (s, e) => mainVm.OnMouseClick(e, false);
             _image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, _image);
-            _image.PointerPressed += (s, e) => mainVm.OnMouseClick(e, true);
-            _image.PointerReleased += (s, e) => mainVm.OnMouseClick(e, false);
+            _image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, _image);
+            _image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, _image);
         }
         vm.SetUIUpdateMethod(InvalidateImage);
     }

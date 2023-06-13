@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
@@ -59,7 +61,8 @@ public class Pic {
     /// <param name="irq">The IRQ Number, which will be internally translated to a vector number</param>
     /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
     public void InterruptRequest(byte irq) {
-        SetInterruptRequestRegister(irq);
+        if ((_inServiceRegister & GenerateIrqMask(irq)) == 0)
+            SetInterruptRequestRegister(irq);
     }
 
     /// <summary>

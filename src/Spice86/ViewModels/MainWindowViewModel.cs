@@ -22,15 +22,18 @@ using CommunityToolkit.Mvvm.Input;
 using MessageBox.Avalonia.BaseWindows.Base;
 using MessageBox.Avalonia.Enums;
 
+using Spice86.Converters;
 using Spice86.Keyboard;
 using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Shared.Emulator.Keyboard;
+using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
+using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
@@ -68,6 +71,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
             _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
 
+
+
     [ObservableProperty]
     private string _statusMessage = "Emulator: not started.";
 
@@ -79,7 +84,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
-
+    public event EventHandler<MouseMoveEventArgs>? MouseMoved;
+    public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
+    public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+    
     private bool _isMainWindowClosing;
 
     public MainWindowViewModel(ILoggerService loggerService) {
@@ -320,9 +328,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public int Height { get; private set; }
 
-    public int MouseX { get; set; }
+    public double MouseX { get; set; }
 
-    public int MouseY { get; set; }
+    public double MouseY { get; set; }
 
     public IDictionary<uint, IVideoBufferViewModel> VideoBuffersToDictionary =>
         VideoBuffers
@@ -364,19 +372,22 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         return true;
     }
 
-    public void OnMouseClick(PointerEventArgs @event, bool click) {
-        if (@event.Pointer.IsPrimary) {
-            IsLeftButtonClicked = click;
-        }
+    public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
+        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
+        MouseButton spice86MouseButton = mouseButton.ToSpice86MouseButton();
+        MouseButtonDown?.Invoke(this, new MouseButtonEventArgs(spice86MouseButton, true));
+    }
 
-        if (!@event.Pointer.IsPrimary) {
-            IsRightButtonClicked = click;
-        }
+    public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
+        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
+        MouseButton spice86MouseButton = mouseButton.ToSpice86MouseButton();
+        MouseButtonUp?.Invoke(this, new MouseButtonEventArgs(spice86MouseButton, false));
     }
 
     public void OnMouseMoved(PointerEventArgs @event, Image image) {
-        MouseX = (int)@event.GetPosition(image).X;
-        MouseY = (int)@event.GetPosition(image).Y;
+        MouseX = @event.GetPosition(image).X / image.Source.Size.Width;
+        MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
+        MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
     }
 
     public void RemoveBuffer(uint address) {
@@ -384,7 +395,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         videoBuffer.Dispose();
         VideoBuffers.Remove(videoBuffer);
     }
-
+ 
     public void SetResolution(int width, int height, uint address) {
         Dispatcher.UIThread.Post(() => {
             _isSettingResolution = true;
@@ -396,7 +407,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _isSettingResolution = false;
         }, DispatcherPriority.MaxValue);
     }
-    
+
     public void SetResolution(int width, int height) {
         Dispatcher.UIThread.Post(() => {
             _isSettingResolution = true;
@@ -494,7 +505,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     // We use async void, but thankfully this doesn't generate an exception.
+
     // So this is OK...
+
     private async void OnEmulatorErrorOccured(Exception e) {
         await Dispatcher.UIThread.InvokeAsync(async () => await ShowEmulationErrorMessage(e));
     }

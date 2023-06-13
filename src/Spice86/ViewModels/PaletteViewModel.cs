@@ -8,10 +8,8 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Spice86.Aeon.Emulator.Video;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Video;
 
 public partial class PaletteViewModel : ObservableObject {

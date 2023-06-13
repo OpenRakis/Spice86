@@ -65,7 +65,7 @@ public class Cpu {
         _loggerService = loggerService;
         _machine = machine;
         _memory = machine.Memory;
-        State = new State();
+        State = new State(_loggerService);
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);
         ExecutionFlowRecorder = executionFlowRecorder;
@@ -139,6 +139,8 @@ public class Cpu {
     public State State { get; }
 
     public void InterruptRet() {
+        var fromCs = State.CS;
+        var fromIP = State.IP;
         FunctionHandlerInUse.Ret(CallType.INTERRUPT);
         _internalIp = Stack.Pop16();
         State.CS = Stack.Pop16();
@@ -146,6 +148,7 @@ public class Cpu {
         FunctionHandlerInUse = FunctionHandler;
         // Set it here for overriden code calling this
         State.IP = _internalIp;
+        _loggerService.Debug("IRET called from {FromCS:X4}:{FromIP:X4}, returning to {ToCS:X4}:{ToIP:X4}", fromCs, fromIP, State.CS, State.IP);
     }
 
     public void NearRet(int numberOfBytesToPop) {
@@ -1167,7 +1170,7 @@ public class Cpu {
         FarCall(State.CS, _internalIp, targetCS, targetIP);
     }
 
-    private void FarCall(ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
+    internal void FarCall(ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
         Stack.Push16(returnCS);
         Stack.Push16(returnIP);
         HandleCall(CallType.FAR, returnCS, returnIP, targetCS, targetIP);
@@ -1213,6 +1216,7 @@ public class Cpu {
     }
 
     private void Interrupt(byte? vectorNumber, bool external) {
+        _loggerService.Debug("Interrupt {Vector:X2}, external: {External}", vectorNumber, external);
         if (vectorNumber == null) {
             return;
         }

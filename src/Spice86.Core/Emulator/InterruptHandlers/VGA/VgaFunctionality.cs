@@ -748,7 +748,7 @@ public class VgaFunctionality : IVgaFunctionality {
 
         byte foregroundAttribute = 0x00;
         const byte backgroundAttribute = 0x00;
-        byte[] lines = new byte[characterHeight];
+        byte[] lines = new byte[characterHeight]; 
 
         for (byte i = 0; i < characterHeight; i++, operation.Y++) {
             byte line = 0;
