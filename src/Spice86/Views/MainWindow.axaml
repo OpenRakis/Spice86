@@ -5,7 +5,6 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
-		xmlns:i="clr-namespace:Avalonia;assembly=Avalonia.Interactivity"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Icon/Spice86.ico"
@@ -34,9 +33,9 @@
 					<MenuItem Header="{Binding MostRecentlyUsed[2].Name}" CommandParameter="{Binding MostRecentlyUsed[2].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=3}" />
 				</MenuItem>
 				<MenuItem Header="Debug">
-					<MenuItem Header="Debug Window" Command="{Binding ShowDebugWindowCommand}" />
-					<MenuItem Header="Color Palette" Command="{Binding ShowColorPaletteCommand}" />
-					<MenuItem Header="Performance" Command="{Binding ShowPerformanceCommand}" />
+					<MenuItem Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowDebugWindowCommand}" />
+					<MenuItem Header="Color Palette" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowColorPaletteCommand}" />
+					<MenuItem Header="Performance" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowPerformanceCommand}" />
 					<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
 						<MenuItem Header="Silent" Command="{Binding SetLogLevel}" CommandParameter="Silent"></MenuItem>
 						<MenuItem Header="Verbose" Command="{Binding SetLogLevel}" CommandParameter="Verbose"></MenuItem>
@@ -46,10 +45,10 @@
 						<MenuItem Header="Error" Command="{Binding SetLogLevel}" CommandParameter="Error"></MenuItem>
 						<MenuItem Header="Fatal" Command="{Binding SetLogLevel}" CommandParameter="Fatal"></MenuItem>
 					</MenuItem>
-					<MenuItem Header="Dump emulator state to directory..." Command="{Binding DumpEmulatorStateToFileCommand}" />
+					<MenuItem Header="Dump emulator state to directory..." IsEnabled="{Binding IsMachineRunning}" Command="{Binding DumpEmulatorStateToFileCommand}" />
 				</MenuItem>
-				<MenuItem Header="Video" DataContext="{Binding VideoBuffer}">
-					<MenuItem>
+				<MenuItem Header="Video" IsEnabled="{Binding IsMachineRunning}">
+					<MenuItem DataContext="{Binding VideoBuffer}">
 						<MenuItem.Header>
 							<Grid ColumnDefinitions="Auto,Auto">
 								<Label Grid.Column="0" Content="Scale" HorizontalContentAlignment="Center" />
@@ -57,12 +56,12 @@
 							</Grid>
 						</MenuItem.Header>
 					</MenuItem>
-					<MenuItem>
+					<MenuItem DataContext="{Binding VideoBuffer}">
 						<MenuItem.Header>
 							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 						</MenuItem.Header>
 					</MenuItem>
-					<MenuItem Command="{Binding SaveBitmapCommand}">
+					<MenuItem DataContext="{Binding VideoBuffer}" Command="{Binding SaveBitmapCommand}">
 						<MenuItem.Header>
 							<Label Content="Save Bitmap" />
 						</MenuItem.Header>

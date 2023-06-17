@@ -504,8 +504,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _okayToContinueEvent.Set();
         }
 
-        _programExecutor = new ProgramExecutor(_loggerService, this, _configuration);
-        TimeMultiplier = _configuration.TimeMultiplier;
+        _programExecutor = new ProgramExecutor(_loggerService, this, Configuration);
+        TimeMultiplier = Configuration.TimeMultiplier;
         _videoCard = _programExecutor.Machine.VgaCard;
         Dispatcher.UIThread.Post(() => IsMachineRunning = true);
         Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
