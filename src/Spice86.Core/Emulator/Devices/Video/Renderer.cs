@@ -246,7 +246,13 @@ public class Renderer : IVgaRenderer {
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
         for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
             uint pixel = (fontByte & 0x80 >> x) != 0 ? foreGroundColor : backGroundColor;
-            frameBuffer[destinationAddress++] = pixel;
+            TryWriteElementAt(frameBuffer, destinationAddress++, pixel);
+        }
+    }
+
+    private static void TryWriteElementAt(Span<uint> span, int index, uint value) {
+        if (index < span.Length) {
+            span[index] = value;
         }
     }
 
@@ -264,12 +270,12 @@ public class Renderer : IVgaRenderer {
         // First 4 pixels are created from planes 0 and 2.
         for (int bitNr = 6; bitNr >= 0; bitNr -= 2) {
             int index = (plane2 >> bitNr & 3) << 2 | plane0 >> bitNr & 3;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            TryWriteElementAt(frameBuffer, destinationAddress++, GetDacPaletteColor(index));
         }
         // Then 4 pixels are created from planes 1 and 3.
         for (int bitNr = 6; bitNr >= 0; bitNr -= 2) {
             int index = (plane3 >> bitNr & 3) << 2 | plane1 >> bitNr & 3;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            TryWriteElementAt(frameBuffer, destinationAddress++, GetDacPaletteColor(index));
         }
     }
 
@@ -278,7 +284,7 @@ public class Renderer : IVgaRenderer {
         // outputting 8 pixels.
         for (int bitNr = 7; bitNr >= 0; bitNr--) {
             int index = (plane3 >> bitNr & 1) << 3 | (plane2 >> bitNr & 1) << 2 | (plane1 >> bitNr & 1) << 1 | plane0 >> bitNr & 1;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            TryWriteElementAt(frameBuffer, destinationAddress++, GetDacPaletteColor(index));
         }
     }
 
@@ -289,14 +295,21 @@ public class Renderer : IVgaRenderer {
         uint pixel34Color = GetDacPaletteColor(plane1);
         uint pixel56Color = GetDacPaletteColor(plane2);
         uint pixel78Color = GetDacPaletteColor(plane3);
-        frameBuffer[destinationAddress++] = pixel12Color;
-        frameBuffer[destinationAddress++] = pixel12Color;
-        frameBuffer[destinationAddress++] = pixel34Color;
-        frameBuffer[destinationAddress++] = pixel34Color;
-        frameBuffer[destinationAddress++] = pixel56Color;
-        frameBuffer[destinationAddress++] = pixel56Color;
-        frameBuffer[destinationAddress++] = pixel78Color;
-        frameBuffer[destinationAddress++] = pixel78Color;
+        TryWriteElementAt(frameBuffer, destinationAddress++, pixel12Color);
+        TryWriteElementAt(frameBuffer, destinationAddress++, pixel12Color);
+        TryWriteElementAt(frameBuffer, destinationAddress++, pixel34Color);
+        TryWriteElementAt(frameBuffer, destinationAddress++, pixel34Color);
+        TryWriteElementAt(frameBuffer, destinationAddress++, pixel56Color);
+        TryWriteElementAt(frameBuffer, destinationAddress++, pixel56Color);
+        TryWriteElementAt(frameBuffer, destinationAddress++, pixel78Color);
+        TryWriteElementAt(frameBuffer, destinationAddress++, pixel78Color);
+    }
+    
+    private static int? GetElementAtOrNull(IList<byte> collection, int index) {
+        if (index < collection.Count) {
+            return collection[index];
+        }
+        return null;
     }
 
     private uint GetDacPaletteColor(int index) {
@@ -304,15 +317,20 @@ public class Renderer : IVgaRenderer {
             case true:
                 return _state.DacRegisters.ArgbPalette[index];
             default: {
-                int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index];
-                int bits0To3 = fromPaletteRam6Bits & 0b00001111;
-                int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
-                    ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
-                    : fromPaletteRam6Bits & 0b00110000;
-                int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
-                int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
-                int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
-                return _state.DacRegisters.ArgbPalette[paletteIndex];
+                int? fromPaletteRam6BitsOrNull = GetElementAtOrNull(_state.AttributeControllerRegisters.InternalPalette, index);
+                if (fromPaletteRam6BitsOrNull is not null) {
+                    int fromPaletteRam6Bits = fromPaletteRam6BitsOrNull.Value;
+                    int bits0To3 = fromPaletteRam6Bits & 0b00001111;
+                    int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
+                        ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
+                        : fromPaletteRam6Bits & 0b00110000;
+                    int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
+                    int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
+                    int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
+                    return _state.DacRegisters.ArgbPalette[paletteIndex];
+                }
+                // black
+                return 0;
             }
         }
     }
