@@ -86,8 +86,8 @@
 			<TextBlock Text="{Binding StatusMessage}" />
 			<TextBlock Margin="5,0,0,0" Text="|" />
 			<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
-			<TextBlock Margin="5,0,0,0" Text="|" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}}" />
-			<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}}" />
+			<TextBlock Margin="5,0,0,0" Text="|" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
+			<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 		</WrapPanel>
 	</Grid>
 </Window>
