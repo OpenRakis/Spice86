@@ -230,112 +230,106 @@ public class Machine : IDisposable {
     
     /// <summary>
     /// Initializes a new instance
+    /// <param name="machineCreationOptions">Describes how the machine will run, and what it will run.</param>
     /// </summary>
-    /// <param name="programExecutor">The DOS program to be executed</param>
-    /// <param name="gui">The GUI. Can be null in headless mode.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="counterConfigurator">Timer emulation configuration.</param>
-    /// <param name="executionFlowRecorder">Records execution data</param>
-    /// <param name="configuration">The emulator configuration.</param>
-    /// <param name="recordData">Whether we record execution data or not.</param>
-    public Machine(ProgramExecutor programExecutor, IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
-        _programExecutor = programExecutor;
-        Configuration = configuration;
-        Gui = gui;
-        RecordData = recordData;
+    public Machine(MachineCreationOptions machineCreationOptions) {
+        _programExecutor = machineCreationOptions.ProgramExecutor;
+        Configuration = machineCreationOptions.Configuration;
+        Gui = machineCreationOptions.Gui;
+        RecordData = machineCreationOptions.RecordData;
 
         IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
-        Memory = new Memory(ram, configuration);
+        Memory = new Memory(ram, machineCreationOptions.Configuration);
         BiosDataArea = new BiosDataArea(Memory);
-        Cpu = new Cpu(this, loggerService, executionFlowRecorder, recordData);
+        Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 
         // Breakpoints
-        MachineBreakpoints = new MachineBreakpoints(this, loggerService);
+        MachineBreakpoints = new MachineBreakpoints(this, machineCreationOptions.LoggerService);
 
         // IO devices
         IoPortDispatcher = new IOPortDispatcher(
             this,
-            loggerService,
-            configuration);
+            machineCreationOptions.LoggerService,
+            machineCreationOptions.Configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
 
-        DmaController = new DmaController(this, configuration, loggerService);
+        DmaController = new DmaController(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(DmaController);
 
-        DualPic = new DualPic(this, configuration, loggerService);
+        DualPic = new DualPic(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(DualPic);
 
         VgaRegisters = new VideoState();
-        VgaIoPortHandler = new VgaIoPortHandler(this, loggerService, configuration, VgaRegisters);
+        VgaIoPortHandler = new VgaIoPortHandler(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration, VgaRegisters);
         Register(VgaIoPortHandler);
 
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
-        VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
+        VgaCard = new VgaCard(machineCreationOptions.Gui, VgaRenderer, machineCreationOptions.LoggerService);
         
-        Timer = new Timer(this, loggerService, DualPic, VgaCard, counterConfigurator, configuration);
+        Timer = new Timer(this, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
         Register(Timer);
-        Keyboard = new Keyboard(this, loggerService, gui, configuration);
+        Keyboard = new Keyboard(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui, machineCreationOptions.Configuration);
         Register(Keyboard);
-        Joystick = new Joystick(this, configuration, loggerService);
+        Joystick = new Joystick(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(Joystick);
-        PcSpeaker = new PcSpeaker(this, loggerService, configuration);
+        PcSpeaker = new PcSpeaker(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
         Register(PcSpeaker);
-        OPL3FM = new OPL3FM(this, configuration, loggerService);
+        OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, configuration, loggerService);
+        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(SoundBlaster);
         SoundBlaster.AddEnvironmentVariable();
-        GravisUltraSound = new GravisUltraSound(this, configuration, loggerService);
+        GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(GravisUltraSound);
-        MidiDevice = new Midi(this, configuration, loggerService);
+        MidiDevice = new Midi(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(MidiDevice);
 
         // Services
-        CallbackHandler = new CallbackHandler(this, loggerService, MemoryMap.InterruptHandlersSegment);
+        CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
-        VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, loggerService);
+        VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
         Register(VideoInt10Handler);
         
-        TimerInt8Handler = new TimerInt8Handler(this, loggerService);
+        TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
         Register(TimerInt8Handler);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, loggerService);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, machineCreationOptions.LoggerService);
         Register(BiosKeyboardInt9Handler);
         
-        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, loggerService);
+        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
         Register(BiosEquipmentDeterminationInt11Handler);
-        SystemBiosInt15Handler = new SystemBiosInt15Handler(this, loggerService);
+        SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
         Register(SystemBiosInt15Handler);
         KeyboardInt16Handler = new KeyboardInt16Handler(
             this,
-            loggerService,
+            machineCreationOptions.LoggerService,
             BiosKeyboardInt9Handler.BiosKeyboardBuffer);
         Register(KeyboardInt16Handler);
         SystemClockInt1AHandler = new SystemClockInt1AHandler(
             this,
-            loggerService,
+            machineCreationOptions.LoggerService,
             TimerInt8Handler);
         Register(SystemClockInt1AHandler);
 
         // Initialize DOS.
-        Dos = new Dos(this, loggerService);
+        Dos = new Dos(this, machineCreationOptions.LoggerService);
         Dos.Initialize();
         
-        MouseInt33Handler = new MouseInt33Handler(this, loggerService, gui);
+        MouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui);
         Register(MouseInt33Handler);
         
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
         
-        if(configuration.Ems) {
-            Ems = new(this, loggerService);
+        if(machineCreationOptions.Configuration.Ems) {
+            Ems = new(this, machineCreationOptions.LoggerService);
             Register(Ems);
         }
     }
