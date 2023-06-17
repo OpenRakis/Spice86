@@ -25,7 +25,7 @@ public class Configuration {
     public string? ExeArgs { get; set; }
 
     /// <summary> Hexadecimal string representing the expected checksum of the emulated program. </summary>
-    [Option('x', nameof(ExpectedChecksum), Default = null, Required = false, HelpText = "Hexadecimal string representing the expected checksum of the emulated program")]
+    [Option('x', nameof(ExpectedChecksum), Default = null, Required = false, HelpText = "Hexadecimal string representing the expected SHA256 checksum of the emulated program")]
     public string? ExpectedChecksum { get; init; }
 
     /// <summary> The value of the expected checksum. </summary>

@@ -56,7 +56,7 @@ If there are already data there the emulator will load them first and complete t
   -r, --RecordedDataDirectory        Directory to dump data to when not specified otherwise. Working directory if blank
   -e, --Exe                          Required. Path to executable
   -a, --ExeArgs                      List of parameters to give to the emulated program
-  -x, --ExpectedChecksum             Hexadecimal string representing the expected checksum of the emulated program
+  -x, --ExpectedChecksum             Hexadecimal string representing the expected SHA256 checksum of the emulated program
   -f, --FailOnUnhandledPort          (Default: false) If true, will fail when encountering an unhandled IO port. Useful to check for unimplemented hardware. false by default.
   -g, --GdbPort                      gdb port, if empty gdb server will not be created. If not empty, application will pause until gdb connects
   -o, --OverrideSupplierClassName    Name of a class that will generate the initial function information. See documentation for more information.
