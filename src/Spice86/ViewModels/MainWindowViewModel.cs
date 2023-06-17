@@ -72,6 +72,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private string _statusMessage = "Emulator: not started.";
 
     [ObservableProperty]
+    private string _asmOverrideStatus = "ASM Overrides: not used.";
+
+    [ObservableProperty]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -231,6 +234,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         _configuration.Exe = filePath;
         _configuration.ExeArgs = "";
         _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
+        _configuration.UseCodeOverride = false;
         Play();
         await Dispatcher.UIThread.InvokeAsync(() => DisposeEmulator(), DispatcherPriority.MaxValue);
         SetMainTitle();
@@ -342,6 +346,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         AddOrReplaceMostRecentlyUsed(_configuration.Exe);
         _lastExecutableDirectory = _configuration.CDrive;
         StatusMessage = "Emulator starting...";
+        if (_configuration is {UseCodeOverrideOption: true, OverrideSupplier: not null}) {
+            AsmOverrideStatus = $"ASM code overrides: disabled";
+        } else {
+            AsmOverrideStatus = $"ASM code overrides: enabled";
+        }
         RunMachine();
         return true;
     }
@@ -483,6 +492,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }  finally {
             Dispatcher.UIThread.Post(() => IsMachineRunning = false);
             Dispatcher.UIThread.Post(() => StatusMessage = "Emulator: stopped.");
+            Dispatcher.UIThread.Post(() => AsmOverrideStatus = "");
         }
     }
 

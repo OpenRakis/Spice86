@@ -81,10 +81,10 @@
 		<Viewbox Grid.Row="1">
 			<local:VideoBufferView DataContext="{Binding VideoBuffer}" />
 		</Viewbox>
-		<Grid Grid.Row="2">
-			<WrapPanel Orientation="Horizontal">
-				<TextBlock Text="{Binding StatusMessage}" />
-			</WrapPanel>
-		</Grid>
+		<WrapPanel Grid.Row="2" Orientation="Horizontal">
+			<TextBlock Text="{Binding StatusMessage}" />
+			<TextBlock Margin="5,0,0,0" Text="|" />
+			<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
+		</WrapPanel>
 	</Grid>
 </Window>
