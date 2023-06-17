@@ -5,6 +5,7 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
+		xmlns:i="clr-namespace:Avalonia;assembly=Avalonia.Interactivity"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Icon/Spice86.ico"
@@ -85,6 +86,8 @@
 			<TextBlock Text="{Binding StatusMessage}" />
 			<TextBlock Margin="5,0,0,0" Text="|" />
 			<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
+			<TextBlock Margin="5,0,0,0" Text="|" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}}" />
+			<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}}" />
 		</WrapPanel>
 	</Grid>
 </Window>

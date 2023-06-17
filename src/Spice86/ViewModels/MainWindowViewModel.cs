@@ -36,6 +36,7 @@ using Key = Spice86.Shared.Emulator.Keyboard.Key;
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
+    [ObservableProperty]
     private Configuration _configuration = new();
     private bool _disposed;
     private Thread? _emulatorThread;
