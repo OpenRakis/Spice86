@@ -49,12 +49,6 @@ public class DosInt21Handler : InterruptHandler {
         FillDispatchTable();
     }
     
-    /// <inheritdoc/>
-    public override void Run() {
-        byte operation = _state.AH;
-        Run(operation);
-    }
-    
     private void FillDispatchTable() {
         _dispatchTable.Add(0x00, new Callback(0x00, TerminateProgram));
         _dispatchTable.Add(0x01, new Callback(0x01, CharacterInputWithEcho));
@@ -79,6 +73,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x2F, new Callback(0x2F, GetDiskTransferAddress));
         _dispatchTable.Add(0x30, new Callback(0x30, GetDosVersion));
         _dispatchTable.Add(0x33, new Callback(0x33, GetSetControlBreak));
+        _dispatchTable.Add(0x34, new Callback(0x34, GetInDosFlag));
         _dispatchTable.Add(0x35, new Callback(0x35, GetInterruptVector));
         _dispatchTable.Add(0x36, new Callback(0x36, GetFreeDiskSpace));
         _dispatchTable.Add(0x38, new Callback(0x38, () => SetCountryCode(true)));
@@ -101,6 +96,31 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x4F, new Callback(0x4F, () => FindNextMatchingFile(true)));
         _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
+    }
+    
+    
+    /// <inheritdoc />
+    public override void Run() {
+        byte operation = _state.AH;
+        if (_machine.Dos.DosSwappableArea.InDos > 0) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Cannot call DOS kernel while a critical DOS call is in progress !");
+            }
+            return;
+        }
+        //In FreeDOS, INT25H and INT26H also increments...
+        _machine.Dos.DosSwappableArea.InDos++;
+        Run(operation);
+        // ... and decrements the InDos byte counter.
+        _machine.Dos.DosSwappableArea.InDos--;
+    }
+
+    /// <summary>
+    /// Returns the address of the InDos byte counter.
+    /// </summary>
+    public void GetInDosFlag() {
+        _state.ES = DosSwappableArea.StartSegment;
+        _state.DS = DosSwappableArea.InDosOffset;
     }
 
     /// <summary>

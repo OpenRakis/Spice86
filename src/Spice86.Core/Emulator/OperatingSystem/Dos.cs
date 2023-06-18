@@ -25,6 +25,10 @@ public class Dos {
     private readonly ILoggerService _loggerService;
     
     /// <summary>
+    /// Gets the DOS Swappable Data Area.
+    /// </summary>
+    public DosSwappableArea DosSwappableArea { get; }
+    /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
@@ -98,6 +102,7 @@ public class Dos {
     public Dos(Machine machine, ILoggerService loggerService) {
         _machine = machine;
         _loggerService = loggerService;
+        DosSwappableArea = new(machine.Memory, MemoryUtils.ToPhysicalAddress(DosSwappableArea.StartSegment, 0));
         FileManager = new DosFileManager(_machine.Memory, _loggerService, this);
         MemoryManager = new DosMemoryManager(_machine.Memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_machine, _loggerService);
