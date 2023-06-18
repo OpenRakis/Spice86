@@ -98,5 +98,10 @@ public enum ErrorCode : byte
     /// <summary>
     /// There are no more files in the directory to read.
     /// </summary>
-    NoMoreFiles
+    NoMoreFiles,
+    
+    /// <summary>
+    /// No more files match the criteria
+    /// </summary>
+    NoMoreMatchingFiles
 }
