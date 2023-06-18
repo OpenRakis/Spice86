@@ -168,6 +168,8 @@ public class Renderer : IVgaRenderer {
             } // End of vertical loop
 
             LastFrameRenderTime = stopwatch.Elapsed;
+        } catch (IndexOutOfRangeException) {
+            // Resolution changed during rendering, discard the rest of this frame.
         } finally {
             Monitor.Exit(RenderLock);
         }
@@ -304,7 +306,7 @@ public class Renderer : IVgaRenderer {
             case true:
                 return _state.DacRegisters.ArgbPalette[index];
             default: {
-                int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index];
+                int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index & 0x0F];
                 int bits0To3 = fromPaletteRam6Bits & 0b00001111;
                 int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
                     ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
