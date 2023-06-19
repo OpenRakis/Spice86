@@ -41,6 +41,9 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="calledFromVm">Whether it was called by the emulator or not</param>
     public void ClearCFAndCX(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("Undocumented and unimplemented INT2F interrupt called, only returned success");
+        }
         _state.CX = 0;
     }
 
