@@ -17,8 +17,7 @@ using System.IO;
 using System.Reflection;
 
 /// <summary>
-/// Parses the command line options to create a Configuration.<br/>
-/// Displays help when configuration could not be parsed.
+/// Parses the command line options to create a <see cref="Configuration"/>.
 /// </summary>
 public static class CommandLineParser {
     /// <summary>
