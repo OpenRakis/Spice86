@@ -237,6 +237,9 @@ public class DosFileManager {
         try {
             uint newOffset = Seek(randomAccessFile, originOfMove, offset);
             return DosFileOperationResult.Value32(newOffset);
+        } catch(NotSupportedException e) {
+            e.Demystify();
+            throw new UnrecoverableException("Fatal exception while seeking file", e);
         } catch (IOException e) {
             e.Demystify();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
@@ -321,9 +324,9 @@ public class DosFileManager {
         int actualReadLength;
         try {
             actualReadLength = file.RandomAccessFile.Read(buffer, 0, readLength);
-        } catch (IOException e) {
+        } catch (Exception e) when (e is IOException or NotSupportedException) {
             e.Demystify();
-            throw new UnrecoverableException("IOException while reading file", e);
+            throw new UnrecoverableException("Fatal exception while reading file", e);
         }
 
         if (actualReadLength == -1) {
@@ -405,7 +408,7 @@ public class DosFileManager {
 
     private int CountHandles(OpenFile openFileToCount) {
         int count = 0;
-        foreach (var openFile in _openFiles) {
+        foreach (OpenFile? openFile in _openFiles) {
             if (openFile == openFileToCount) {
                 count++;
             }
