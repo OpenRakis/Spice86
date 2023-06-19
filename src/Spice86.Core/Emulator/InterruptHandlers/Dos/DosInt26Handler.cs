@@ -20,7 +20,15 @@ public class DosInt26Handler : InterruptHandler {
     /// <inheritdoc />
     public override void Run() {
         byte operation = _state.AH;
+        if (_machine.Dos.DosSwappableArea.InDos > 0) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Cannot call DOS kernel while a critical DOS call is in progress !");
+            }
+            return;
+        }
+        _machine.Dos.DosSwappableArea.InDos++;
         Run(operation);
+        _machine.Dos.DosSwappableArea.InDos--;
     }
 
     private void FillDispatchTable() {

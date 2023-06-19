@@ -108,10 +108,8 @@ public class DosInt21Handler : InterruptHandler {
             }
             return;
         }
-        //In FreeDOS, INT25H and INT26H also increments...
         _machine.Dos.DosSwappableArea.InDos++;
         Run(operation);
-        // ... and decrements the InDos byte counter.
         _machine.Dos.DosSwappableArea.InDos--;
     }
 
