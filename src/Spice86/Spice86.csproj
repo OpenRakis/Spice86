@@ -50,7 +50,6 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 		<PackageReference Include="Avalonia" Version="0.10.21" />
 		<PackageReference Include="Avalonia.Desktop" Version="0.10.21" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->

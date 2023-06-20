@@ -1,6 +1,9 @@
 ﻿namespace Spice86; 
 
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+
 using OxyPlot.Avalonia;
 using Microsoft.Extensions.DependencyInjection;
 using Spice86.Core.CLI;
@@ -40,13 +43,28 @@ public class Program {
 
         if (!configuration.HeadlessMode) {
             OxyPlotModule.EnsureLoaded();
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
+            AppBuilder appBuilder = BuildAvaloniaApp();
+            ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, args);
+            App app = (App)appBuilder.Instance;
+            app.SetupMainWindow(serviceProvider);
+            desktop.Start(args);
         }
         else {
             ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
             ProgramExecutor programExecutor = new(loggerService, null, configuration);
             programExecutor.Run();
         }
+    }
+    
+    private static ClassicDesktopStyleApplicationLifetime SetuptWithClassicDesktopLifetime<T>(
+        T builder, string[] args)
+        where T : AppBuilderBase<T>, new() {
+        var lifetime = new ClassicDesktopStyleApplicationLifetime {
+            Args = args,
+            ShutdownMode = ShutdownMode.OnMainWindowClose
+        };
+        builder.SetupWithLifetime(lifetime);
+        return lifetime;
     }
 
     /// <summary>
