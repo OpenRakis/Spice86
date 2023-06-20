@@ -39,6 +39,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
+    [ObservableProperty]
     private Configuration _configuration = new();
     private bool _disposed;
     private Thread? _emulatorThread;
@@ -75,6 +76,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [ObservableProperty]
     private string _statusMessage = "Emulator: not started.";
+
+    [ObservableProperty]
+    private string _asmOverrideStatus = "ASM Overrides: not used.";
 
     [ObservableProperty]
     private bool _isPaused;
@@ -136,18 +140,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }
         OpenFolderDialog ofd = new OpenFolderDialog() {
             Title = "Dump emulator state to directory...",
-            Directory = _configuration.RecordedDataDirectory
+            Directory = Configuration.RecordedDataDirectory
         };
-        if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
+        if (!Directory.Exists(Configuration.RecordedDataDirectory)) {
             ofd.Directory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
         }
-        string? dir = _configuration.RecordedDataDirectory;
+        string? dir = Configuration.RecordedDataDirectory;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             dir = await ofd.ShowAsync(desktop.MainWindow);
         }
         if (string.IsNullOrWhiteSpace(dir)
-        && !string.IsNullOrWhiteSpace(_configuration.RecordedDataDirectory)) {
-            dir = _configuration.RecordedDataDirectory;
+        && !string.IsNullOrWhiteSpace(Configuration.RecordedDataDirectory)) {
+            dir = Configuration.RecordedDataDirectory;
         }
         if (!string.IsNullOrWhiteSpace(dir)) {
             new RecorderDataWriter(dir, _programExecutor.Machine,
@@ -177,13 +181,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     public void SetConfiguration(string[] args) {
-        _configuration = GenerateConfiguration(args);
-        SetLogLevel(_configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
+        Configuration = GenerateConfiguration(args);
+        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
         SetMainTitle();
     }
 
     private void SetMainTitle() {
-        MainTitle = $"{nameof(Spice86)} {_configuration.Exe}";
+        MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
     }
 
     [ObservableProperty]
@@ -236,9 +240,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private async Task RestartEmulatorWithNewProgram(string filePath) {
-        _configuration.Exe = filePath;
-        _configuration.ExeArgs = "";
-        _configuration.CDrive = Path.GetDirectoryName(_configuration.Exe);
+        Configuration.Exe = filePath;
+        Configuration.ExeArgs = "";
+        Configuration.CDrive = Path.GetDirectoryName(Configuration.Exe);
+        Configuration.UseCodeOverride = false;
         Play();
         await Dispatcher.UIThread.InvokeAsync(() => DisposeEmulator(), DispatcherPriority.MaxValue);
         SetMainTitle();
@@ -305,7 +310,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     [RelayCommand]
     public void ResetTimeMultiplier() {
-        TimeMultiplier = _configuration.TimeMultiplier;
+        TimeMultiplier = Configuration.TimeMultiplier;
     }
     
     public void UpdateScreen() {
@@ -343,13 +348,20 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     private bool RunEmulator() {
-        if (string.IsNullOrWhiteSpace(_configuration.Exe) ||
-            string.IsNullOrWhiteSpace(_configuration.CDrive)) {
+        if (string.IsNullOrWhiteSpace(Configuration.Exe) ||
+            string.IsNullOrWhiteSpace(Configuration.CDrive)) {
             return false;
         }
-        AddOrReplaceMostRecentlyUsed(_configuration.Exe);
-        _lastExecutableDirectory = _configuration.CDrive;
+        AddOrReplaceMostRecentlyUsed(Configuration.Exe);
+        _lastExecutableDirectory = Configuration.CDrive;
         StatusMessage = "Emulator starting...";
+        if (Configuration is {UseCodeOverrideOption: true, OverrideSupplier: not null}) {
+            AsmOverrideStatus = $"ASM code overrides: enabled.";
+        } else if(Configuration is {UseCodeOverride: false, OverrideSupplier: not null}) {
+            AsmOverrideStatus = $"ASM code overrides: only functions names will be referenced.";
+        } else {
+            AsmOverrideStatus = $"ASM code overrides: none.";
+        }
         RunMachine();
         return true;
     }
@@ -496,6 +508,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         }  finally {
             Dispatcher.UIThread.Post(() => IsMachineRunning = false);
             Dispatcher.UIThread.Post(() => StatusMessage = "Emulator: stopped.");
+            Dispatcher.UIThread.Post(() => AsmOverrideStatus = "");
         }
     }
 
@@ -504,8 +517,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _okayToContinueEvent.Set();
         }
 
-        _programExecutor = new ProgramExecutor(_loggerService, this, _configuration);
-        TimeMultiplier = _configuration.TimeMultiplier;
+        _programExecutor = new ProgramExecutor(_loggerService, this, Configuration);
+        TimeMultiplier = Configuration.TimeMultiplier;
         _videoCard = _programExecutor.Machine.VgaCard;
         Dispatcher.UIThread.Post(() => IsMachineRunning = true);
         Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");

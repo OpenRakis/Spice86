@@ -187,7 +187,8 @@ public class Pic : IHardwareInterruptController {
         return !(_specialMask && irqInService) && irqRequestExists;
     }
 
-    internal byte? ComputeVectorNumber() {
+    /// <inheritdoc />
+    public byte? ComputeVectorNumber() {
         if (EnabledInterruptRequests == 0) {
             // No requests
             return null;

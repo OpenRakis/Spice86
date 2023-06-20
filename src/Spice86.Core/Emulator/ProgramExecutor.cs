@@ -122,8 +122,7 @@ public sealed class ProgramExecutor : IDisposable {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
-        Machine = new Machine(this, gui, _loggerService, counterConfigurator, executionFlowRecorder,
-            _configuration, RecordData);
+        Machine = new Machine(new MachineCreationOptions(this, gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, RecordData));
         InitializeCpu();
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {

@@ -316,8 +316,20 @@ public class DosInt21Handler : InterruptHandler {
         _state.DX = 0x3FFF;
     }
 
+    /// <inheritdoc/>
     public override byte Index => 0x21;
 
+    /// <summary>
+    /// Function 35H returns the address stored in the interrupt vector table for the handler associated with the specified interrupt. <br/>
+    /// To call:
+    /// <ul>
+    ///   <li>AH = 35H</li>
+    ///   <li>AL = interrupt number</li>
+    /// </ul>
+    /// <returns>ES:BX = segment:offset of handler for interrupt specified in AL</returns>
+    /// <remarks>Interrupt vectors should always be read with function 35H and set with function 25H (SetInterruptVector). <br/>
+    /// Programs should never attempt to read or change interrupt vectors directly in memory.</remarks>
+    /// </summary>
     public void GetInterruptVector() {
         byte vectorNumber = _state.AL;
         ushort segment = _memory.GetUint16((uint)((4 * vectorNumber) + 2));
