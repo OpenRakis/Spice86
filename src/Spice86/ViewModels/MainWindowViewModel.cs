@@ -91,14 +91,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IMainWindowV
     
     private bool _isMainWindowClosing;
 
-    private ICommandLineParser _commandLineParser;
-
-    public MainWindowViewModel(ICommandLineParser commandLineParser, ILoggerService loggerService) {
-        _commandLineParser = commandLineParser;
+    public MainWindowViewModel(Configuration configuration, ILoggerService loggerService) {
+        Configuration = configuration;
         _loggerService = loggerService;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             desktop.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
         }
+        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
+        SetMainTitle();
     }
 
     public void PauseEmulationOnStart() {
@@ -179,13 +179,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IMainWindowV
         _okayToContinueEvent.Set();
         IsPaused = false;
     }
-
-    public void SetConfiguration(string[] args) {
-        Configuration = GenerateConfiguration(args);
-        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
-        SetMainTitle();
-    }
-
+    
     private void SetMainTitle() {
         MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
     }
@@ -432,10 +426,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IMainWindowV
     private void DisposeEmulator() {
         DisposeVideoBuffer();
         _programExecutor?.Dispose();
-    }
-
-    private Configuration GenerateConfiguration(string[] args) {
-        return _commandLineParser.ParseCommandLine(args);
     }
 
     private async Task ShowEmulationErrorMessage(Exception e) {

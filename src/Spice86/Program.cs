@@ -46,11 +46,12 @@ public class Program {
         IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
         ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
         Configuration configuration = commandLineParser.ParseCommandLine(args);
-        SetLoggingLevel(configuration, serviceProvider.GetRequiredService<ILoggerService>());
+        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+        SetLoggingLevel(configuration, loggerService);
         if (!configuration.HeadlessMode) {
-            StartMainWindow(args, serviceProvider);
+            StartMainWindow(args, configuration, loggerService);
         } else {
-            StartConsole(serviceProvider, configuration);
+            StartConsole(configuration, loggerService);
         }
     }
 
@@ -66,18 +67,17 @@ public class Program {
         }
     }
 
-    private static void StartConsole(IServiceProvider serviceProvider, Configuration configuration) {
-        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+    private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
         ProgramExecutor programExecutor = new(loggerService, null, configuration);
         programExecutor.Run();
     }
 
-    private static void StartMainWindow(string[] args, IServiceProvider serviceProvider) {
+    private static void StartMainWindow(string[] args, Configuration configuration, ILoggerService loggerService) {
         OxyPlotModule.EnsureLoaded();
         AppBuilder appBuilder = BuildAvaloniaApp();
         ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, args);
         App app = (App) appBuilder.Instance;
-        app.SetupMainWindow(serviceProvider);
+        app.SetupMainWindow(configuration, loggerService);
         desktop.Start(args);
     }
 

@@ -22,18 +22,14 @@ internal partial class App : Application {
         AvaloniaXamlLoader.Load(this);
     }
 
-    public void SetupMainWindow(IServiceProvider serviceProvider) {
+    public void SetupMainWindow(Configuration configuration, ILoggerService loggerService) {
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
             throw new PlatformNotSupportedException("Spice86 needs the desktop Linux/Mac/Windows platform in order to run.");
         }
 
-        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-        ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
-
         desktop.MainWindow = new MainWindow();
-        MainWindowViewModel mainViewModel = new(commandLineParser, loggerService);
+        MainWindowViewModel mainViewModel = new(configuration, loggerService);
         desktop.MainWindow.DataContext = mainViewModel;
-        mainViewModel.SetConfiguration(desktop.Args);
         desktop.MainWindow.Closed += (_, _) => mainViewModel.Dispose();
         desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
     }
