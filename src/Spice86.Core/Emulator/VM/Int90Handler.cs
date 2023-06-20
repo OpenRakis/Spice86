@@ -14,7 +14,6 @@ public class Int90Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        _loggerService.Warning("Restoring state");
         _savedRegisters.Restore(_state);
         _savedRegisters.Release();
     }

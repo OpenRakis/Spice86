@@ -237,7 +237,7 @@ public class Machine : IDisposable, IMachine {
         IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         BiosDataArea = new BiosDataArea(Memory);
-        if (configuration.Mouse is MouseType.PS2 or MouseType.PS2Wheel) {
+        if (machineCreationOptions.Configuration.Mouse is MouseType.PS2 or MouseType.PS2Wheel) {
             ExtendedBiosDataArea = new ExtendedBiosDataArea(Memory);
             BiosDataArea.ExtendedBiosDataAreaSegment = MemoryMap.ExtendedBiosDaraAreaSegment;
         }

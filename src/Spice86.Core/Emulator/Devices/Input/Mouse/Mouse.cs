@@ -36,9 +36,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     public double DeltaY { get; private set; }
-
     public double DeltaX { get; private set; }
-
     public MouseEventMask LastTrigger { get; private set; }
     public ushort SampleRate { get; set; } = 100;
     public MouseType MouseType { get; }
@@ -48,8 +46,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public bool IsRightButtonDown { get; private set; }
     public bool IsMiddleButtonDown { get; private set; }
     public ushort DoubleSpeedThreshold { get; set; }
-    public ushort HorizontalMickeysPerPixel { get; set; }
-    public ushort VerticalMickeysPerPixel { get; set; }
+    public ushort HorizontalMickeysPerPixel { get; set; } = 8;
+    public ushort VerticalMickeysPerPixel { get; set; } = 16;
 
     private void Initialize() {
         if (_gui is not null && MouseType != MouseType.None) {
@@ -131,7 +129,6 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
 
         LastTrigger = trigger;
         _machine.DualPic.ProcessInterruptRequest(12);
-        // Updated?.Invoke(this, new MouseUpdatedEventArgs(trigger, deltaX, deltaY));
     }
 }
 

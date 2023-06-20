@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
 using Spice86.Core.Emulator.CPU;
 
-public struct MouseDriverSavedRegisters {
+public class MouseDriverSavedRegisters {
     private ushort _ax;
     private ushort _bx;
     private ushort _cx;

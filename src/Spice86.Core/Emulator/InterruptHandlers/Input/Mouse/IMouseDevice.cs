@@ -22,4 +22,6 @@ public interface IMouseDevice : IIOPortHandler {
     ushort VerticalMickeysPerPixel { get; set; }
     MouseEventMask LastTrigger { get; }
     ushort SampleRate { get; set; }
+    double DeltaY { get; }
+    double DeltaX { get; }
 }

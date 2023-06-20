@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
+using CommunityToolkit.HighPerformance.Helpers;
+
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Callback;
@@ -15,7 +17,7 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
     private const ushort MouseMinXAbsolute = 0;
     private const ushort MouseMinYAbsolute = 0;
     private readonly IGui? _gui;
-    private new readonly ILoggerService _loggerService;
+    private readonly ILoggerService _logger;
     private readonly IMouseDevice _mouse;
 
     private ushort _mouseCurrentMaxX;
@@ -28,7 +30,7 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
     private MouseDriverSavedRegisters _savedState;
 
     public MouseInt33Handler(Machine machine, ILoggerService loggerService, IMouseDevice mouse, IGui? gui, MouseDriverSavedRegisters savedState) : base(machine, loggerService) {
-        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
+        _logger = loggerService.WithLogLevel(LogEventLevel.Verbose);
         _mouse = mouse;
         _gui = gui;
         _savedState = savedState;
@@ -56,8 +58,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
     }
 
     public void MouseInstalledFlag() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 00 {MethodName}: driver installed, 3 buttons",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 00 {MethodName}: driver installed, 3 buttons",
                 nameof(MouseInt33Handler), Index, nameof(MouseInstalledFlag));
         }
         _state.AX = 0xFFFF;
@@ -67,16 +69,16 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
     }
 
     public void ShowMouseCursor() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 01 {MethodName}: {Gui}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 01 {MethodName}: {Gui}",
                 nameof(MouseInt33Handler), Index, nameof(ShowMouseCursor), _gui is null ? "no gui present" : "telling gui to show cursor");
         }
         _gui?.ShowMouseCursor();
     }
 
     public void HideMouseCursor() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 02 {MethodName}: {Gui}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 02 {MethodName}: {Gui}",
                 nameof(MouseInt33Handler), Index, nameof(HideMouseCursor), _gui is null ? "no gui present" : "telling gui to hide cursor");
         }
         _gui?.HideMouseCursor();
@@ -84,23 +86,20 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
 
     public void Update() {
         if (_savedState.Locked) {
-            _loggerService.Debug("Mousehandler is locked, returning");
+            _logger.Debug("Mousehandler is locked, returning");
             return;
         }
-        _savedState.Lock();
-        double deltaXPixels = _mouse.MouseXRelative * ScreenWidth;
-        double deltaYPixels = _mouse.MouseYRelative * ScreenHeight;
-        ushort deltaXMickeys = (ushort)(_mouse.HorizontalMickeysPerPixel * deltaXPixels);
-        ushort deltaYMickeys = (ushort)(_mouse.VerticalMickeysPerPixel * deltaYPixels);
+
         if (_userCallbackSegment != 0 && _userCallbackOffset != 0 && (_userCallbackMask & 1) != 0) {
-            CallUserSubRoutine(_mouse.LastTrigger, deltaXMickeys, deltaYMickeys);
+            _savedState.Lock();
+            CallUserSubRoutine(_mouse.LastTrigger);
         }
     }
 
     public void GetMousePositionAndStatus() {
         MouseStatus status = GetCurrentMouseStatus();
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 03 {MethodName}: {MouseStatus}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 03 {MethodName}: {MouseStatus}",
                 nameof(MouseInt33Handler), Index, nameof(GetMousePositionAndStatus), status);
         }
         _state.CX = status.X;
@@ -133,8 +132,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
         ushort x = _state.CX;
         ushort y = _state.DX;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 04 {MethodName}: x = {MouseX}, y = {MouseY}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 04 {MethodName}: x = {MouseX}, y = {MouseY}",
                 nameof(MouseInt33Handler), Index, nameof(SetMouseCursorPosition), x, y);
         }
 
@@ -145,8 +144,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
     public void SetMouseHorizontalMinMaxPosition() {
         _mouseCurrentMinX = _state.CX;
         _mouseCurrentMaxX = _state.DX;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 07 {MethodName}: min = {Min}, max = {Max}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 07 {MethodName}: min = {Min}, max = {Max}",
                 nameof(MouseInt33Handler), Index, nameof(SetMouseHorizontalMinMaxPosition), _mouseCurrentMinX, _mouseCurrentMaxX);
         }
     }
@@ -154,8 +153,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
     public void SetMouseVerticalMinMaxPosition() {
         _mouseCurrentMinY = _state.CX;
         _mouseCurrentMaxY = _state.DX;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 08 {MethodName}: min Y = {MinY}, max Y = {MaxY}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 08 {MethodName}: min Y = {MinY}, max Y = {MaxY}",
                 nameof(MouseInt33Handler), Index, nameof(SetMouseVerticalMinMaxPosition), _mouseCurrentMinY, _mouseCurrentMaxY);
         }
     }
@@ -164,8 +163,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
         _userCallbackMask = _state.CX;
         _userCallbackSegment = _state.ES;
         _userCallbackOffset = _state.DX;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 0C {MethodName}: mask = {Mask:X2}, segment = {Segment:X4}, offset = {Offset:X4}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 0C {MethodName}: mask = {Mask:X2}, segment = {Segment:X4}, offset = {Offset:X4}",
                 nameof(MouseInt33Handler), Index, nameof(SetMouseUserDefinedSubroutine), _userCallbackMask, _userCallbackSegment, _userCallbackOffset);
         }
     }
@@ -173,18 +172,18 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
     public void SetMouseMickeyPixelRatio() {
         ushort horizontal = _state.CX;
         ushort vertical = _state.DX;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 0F {MethodName}: horizontal = {XRatio} mickeys per 8 pixels, vertical = {YRatio} mickeys per 8 pixels",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 0F {MethodName}: horizontal = {XRatio} mickeys per 8 pixels, vertical = {YRatio} mickeys per 8 pixels",
                 nameof(MouseInt33Handler), Index, nameof(SetMouseMickeyPixelRatio), horizontal, vertical);
         }
-        _mouse.HorizontalMickeysPerPixel = (ushort)(horizontal >> 3);
-        _mouse.VerticalMickeysPerPixel = (ushort)(vertical >> 3);
+        _mouse.HorizontalMickeysPerPixel = (ushort)(horizontal << 3);
+        _mouse.VerticalMickeysPerPixel = (ushort)(vertical << 3);
     }
 
     public void SetMouseDoubleSpeedThreshold() {
         ushort threshold = _state.DX;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 13 {MethodName}: doubleSpeedThreshold = {Threshold} mickeys per second",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 13 {MethodName}: doubleSpeedThreshold = {Threshold} mickeys per second",
                 nameof(MouseInt33Handler), Index, nameof(SetMouseDoubleSpeedThreshold), threshold);
         }
         _mouse.DoubleSpeedThreshold = threshold;
@@ -194,8 +193,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
         ushort horizontal = _state.BX;
         ushort vertical = _state.CX;
         ushort threshold = _state.DX;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 1A {MethodName}: horizontal = {XRatio} mickeys per pixel, vertical = {YRatio} mickeys per pixel, doubleSpeedThreshold = {Threshold} mickeys per second",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 1A {MethodName}: horizontal = {XRatio} mickeys per pixel, vertical = {YRatio} mickeys per pixel, doubleSpeedThreshold = {Threshold} mickeys per second",
                 nameof(MouseInt33Handler), Index, nameof(SetMouseSensitivity), horizontal, vertical, threshold);
         }
         _mouse.HorizontalMickeysPerPixel = horizontal;
@@ -207,8 +206,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
         ushort newUserCallbackMask = _state.CX;
         ushort newUserCallbackSegment = _state.ES;
         ushort newUserCallbackOffset = _state.DX;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 14 {MethodName}: old: mask = {Mask:X2}, segment = {Segment:X4}, offset = {Offset:X4}, new: mask = {NewMask:X2}, segment = {NewSegment:X4}, offset = {NewOffset:X4}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 14 {MethodName}: old: mask = {Mask:X2}, segment = {Segment:X4}, offset = {Offset:X4}, new: mask = {NewMask:X2}, segment = {NewSegment:X4}, offset = {NewOffset:X4}",
                 nameof(MouseInt33Handler), Index, nameof(SwapMouseUserDefinedSubroutine), _userCallbackMask, _userCallbackSegment, _userCallbackOffset, newUserCallbackMask, newUserCallbackSegment, newUserCallbackOffset);
         }
         _state.CX = _userCallbackMask;
@@ -223,8 +222,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
     ///     Interrupt rate is set by the host OS. NOP.
     /// </summary>
     public void SetInterruptRate() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 1C {MethodName}: called with rate {Rate} ",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 1C {MethodName}: called with rate {Rate} ",
                 nameof(MouseInt33Handler), Index, nameof(SetInterruptRate), _state.BX);
         }
         if (_mouse.MouseType == MouseType.InPort) {
@@ -246,8 +245,8 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
             };
             _state.CL = 0; /* (0=PS/2, 2=IRQ2, 3=IRQ3,...,7=IRQ7,...,0Fh=IRQ15) */
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} INT {Int:X2} 24 {MethodName}: reporting version {Major}.{Minor}, mouse type {MouseType} and irq {IRQ}",
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 24 {MethodName}: reporting version {Major}.{Minor}, mouse type {MouseType} and irq {IRQ}",
                 nameof(MouseInt33Handler), Index, nameof(GetSoftwareVersionAndMouseType), _state.BH, _state.BL, _mouse.MouseType, _state.CL);
         }
     }
@@ -269,20 +268,23 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
         _dispatchTable.Add(0x24, new Callback(0x24, GetSoftwareVersionAndMouseType));
     }
 
-    public void CallUserSubRoutine(MouseEventMask trigger, ushort deltaXMickeys, ushort deltaYMickeys) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{ClassName} {MethodName}: trigger: {Trigger:X2}, delta x: {DeltaX} mickeys, delta y: {DeltaY} mickeys",
+    public void CallUserSubRoutine(MouseEventMask trigger) {
+        double deltaXPixels = _mouse.DeltaX * ScreenWidth;
+        double deltaYPixels = _mouse.DeltaY * ScreenHeight;
+        ushort deltaXMickeys = (ushort)(_mouse.HorizontalMickeysPerPixel * deltaXPixels);
+        ushort deltaYMickeys = (ushort)(_mouse.VerticalMickeysPerPixel * deltaYPixels);
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} {MethodName}: trigger: {Trigger:X2}, delta x: {DeltaX} mickeys, delta y: {DeltaY} mickeys",
                 nameof(MouseInt33Handler), nameof(CallUserSubRoutine), (byte)trigger, deltaXMickeys, deltaYMickeys);
         }
         // Save registers
-        _loggerService.Debug("Saving state");
         _savedState.Save(_state);
         // Set mouse info
         MouseStatus status = GetCurrentMouseStatus();
         _state.AX = (ushort)trigger;
         _state.BX = status.ButtonFlags;
-        _state.CX = status.X;
-        _state.DX = status.Y;
+        _state.CX = (ushort)(status.X << 2);
+        _state.DX = (ushort)(status.Y << 2);
         _state.SI = deltaXMickeys;
         _state.DI = deltaYMickeys;
         
