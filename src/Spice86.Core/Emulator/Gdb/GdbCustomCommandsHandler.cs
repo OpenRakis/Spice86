@@ -292,7 +292,7 @@ Supported custom commands:
     private string Vbuffer(string[] args) {
         try {
             string action = ExtractAction(args);
-            IGui? gui = _machine.Gui;
+            IMainWindowViewModel? gui = _machine.Gui;
 
             // Actions for 1 parameter
             if ("refresh".Equals(action)) {

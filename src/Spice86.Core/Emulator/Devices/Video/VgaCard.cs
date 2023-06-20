@@ -8,7 +8,7 @@ using Spice86.Shared.Interfaces;
 ///     Thin interface between renderer and gui.
 /// </summary>
 public class VgaCard : IVideoCard {
-    private readonly IGui? _gui;
+    private readonly IMainWindowViewModel? _gui;
     private readonly ILoggerService _logger;
     private readonly IVgaRenderer _renderer;
     private int _renderHeight;
@@ -18,7 +18,7 @@ public class VgaCard : IVideoCard {
     /// <summary>
     ///     Create a new VGA card.
     /// </summary>
-    public VgaCard(IGui? gui, IVgaRenderer renderer, ILoggerService loggerService) {
+    public VgaCard(IMainWindowViewModel? gui, IVgaRenderer renderer, ILoggerService loggerService) {
         _gui = gui;
         _logger = loggerService;
         _renderer = renderer;

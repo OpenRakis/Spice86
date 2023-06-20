@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private const int IrqNumber = 12;
-    private readonly IGui? _gui;
+    private readonly IMainWindowViewModel? _gui;
     private readonly ILoggerService _logger;
     private long _lastUpdateTimestamp;
     private bool _previousIsLeftButtonDown;
@@ -31,7 +31,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">to get the mouse type from</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Mouse(Machine machine, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    public Mouse(Machine machine, IMainWindowViewModel? gui, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _gui = gui;
         MouseType = configuration.Mouse;
         _logger = loggerService;

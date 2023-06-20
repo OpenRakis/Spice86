@@ -15,6 +15,6 @@ using Spice86.Shared.Interfaces;
 /// <param name="Configuration">The emulator configuration.</param>
 /// <param name="RecordData">Whether we record execution data or not.</param>
 public record MachineCreationOptions(
-    ProgramExecutor ProgramExecutor, IGui? Gui, ILoggerService LoggerService,
+    ProgramExecutor ProgramExecutor, IMainWindowViewModel? Gui, ILoggerService LoggerService,
     CounterConfigurator CounterConfigurator, ExecutionFlowRecorder ExecutionFlowRecorder,
     Configuration Configuration, bool RecordData);

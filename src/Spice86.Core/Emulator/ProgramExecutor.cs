@@ -39,7 +39,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
     /// <param name="gui">The GUI to use for user actions. Can be null for headless mode or unit tests.</param>
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
-    public ProgramExecutor(ILoggerService loggerService, IGui? gui, Configuration configuration) {
+    public ProgramExecutor(ILoggerService loggerService, IMainWindowViewModel? gui, Configuration configuration) {
         _loggerService = loggerService;
         _configuration = configuration;
         Machine = CreateMachine(gui);
@@ -128,7 +128,7 @@ public sealed class ProgramExecutor : IDisposable {
         return new BiosLoader(Machine, _loggerService);
     }
 
-    private Machine CreateMachine(IGui? gui) {
+    private Machine CreateMachine(IMainWindowViewModel? gui) {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);

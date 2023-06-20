@@ -35,8 +35,8 @@ using Spice86.Shared.Interfaces;
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 
-/// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
+/// <inheritdoc cref="IMainWindowViewModel" />
+public sealed partial class MainWindowViewModel : ObservableObject, IMainWindowViewModel, IDisposable {
     private readonly ILoggerService _loggerService;
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
     [ObservableProperty]

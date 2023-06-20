@@ -87,7 +87,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The GUI. Can be null in headless mode.
     /// </summary>
-    public IGui? Gui { get; }
+    public IMainWindowViewModel? Gui { get; }
 
     /// <summary>
     /// Gives the port read or write to the registered handler.

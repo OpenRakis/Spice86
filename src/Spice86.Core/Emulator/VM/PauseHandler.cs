@@ -12,14 +12,14 @@ using Spice86.Shared.Interfaces;
 public sealed class PauseHandler : IDisposable {
     private readonly ILoggerService _loggerService;
 
-    private readonly IGui? _gui;
+    private readonly IMainWindowViewModel? _gui;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PauseHandler"/> class with the specified logger service and GUI.
     /// </summary>
     /// <param name="loggerService">The logger service to use for logging.</param>
     /// <param name="gui">The GUI to use for handling pausing.</param>
-    public PauseHandler(ILoggerService loggerService, IGui? gui) {
+    public PauseHandler(ILoggerService loggerService, IMainWindowViewModel? gui) {
         _loggerService = loggerService;
         _gui = gui;
     }

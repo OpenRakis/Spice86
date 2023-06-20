@@ -10,7 +10,7 @@ using Spice86.Shared.Interfaces;
 /// Basic implementation of a keyboard
 /// </summary>
 public class Keyboard : DefaultIOPortHandler {
-    private readonly IGui? _gui;
+    private readonly IMainWindowViewModel? _gui;
 
     /// <summary>
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
@@ -34,7 +34,7 @@ public class Keyboard : DefaultIOPortHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public Keyboard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) : base(machine, configuration, loggerService) {
+    public Keyboard(Machine machine, ILoggerService loggerService, IMainWindowViewModel? gui, Configuration configuration) : base(machine, configuration, loggerService) {
         _gui = gui;
         if (_gui is not null) {
             _gui.KeyUp += OnKeyUp;
