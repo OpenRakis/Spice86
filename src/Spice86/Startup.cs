@@ -11,16 +11,21 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Provides a method to initialize services and set the logging level based on command line arguments.
 /// </summary>
-public static class Startup {
+public class Startup {
+    private IServiceCollection _serviceCollection;
+
+    public Startup(IServiceCollection serviceCollection) {
+        _serviceCollection = serviceCollection;
+    }
+
     /// <summary>
-    /// Initializes the service collection and sets the logging level.
+    /// Adds application-wide services to the services collection, sets the initial logging level, and returns the fully initialized <see cref="IServiceProvider"/>.
     /// </summary>
     /// <param name="commandLineArgs">The command line arguments.</param>
-    /// <returns>A <see cref="ServiceProvider"/> instance that can be used to retrieve registered services.</returns>
-    public static IServiceProvider StartupInjectedServices(string[] commandLineArgs) {
-        ServiceCollection services = new();
-        services.TryAddCmdLineParserAndLogging();
-        ServiceProvider serviceProvider = services.BuildServiceProvider();
+    /// <returns>A <see cref="IServiceProvider"/> instance that can be used to retrieve registered services.</returns>
+    public IServiceProvider BuildServiceContainer(string[] commandLineArgs) {
+        _serviceCollection.TryAddCmdLineParserAndLogging();
+        IServiceProvider serviceProvider = _serviceCollection.BuildServiceProvider();
         SetLoggingLevel(serviceProvider.GetRequiredService<ICommandLineParser>(), serviceProvider.GetRequiredService<ILoggerService>(), commandLineArgs);
         return serviceProvider;
     }

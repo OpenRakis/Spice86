@@ -39,7 +39,8 @@ internal partial class App : Application {
             throw new PlatformNotSupportedException("Spice86 needs the desktop Linux/Mac/Windows platform in order to run.");
         }
 
-        IServiceProvider serviceProvider = Startup.StartupInjectedServices(desktop.Args);
+        IServiceCollection serviceCollection = new ServiceCollection();
+        IServiceProvider serviceProvider = new Startup(serviceCollection).BuildServiceContainer(desktop.Args);
         ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
         ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
 
@@ -47,7 +48,7 @@ internal partial class App : Application {
         MainWindowViewModel mainViewModel = new(commandLineParser, loggerService);
         desktop.MainWindow.DataContext = mainViewModel;
         mainViewModel.SetConfiguration(desktop.Args);
-        desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();
+        desktop.MainWindow.Closed += (_, _) => mainViewModel.Dispose();
         desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
         base.OnFrameworkInitializationCompleted();
     }
@@ -60,11 +61,8 @@ internal partial class App : Application {
     private static bool GetIsWindowsInDarkMode() {
         RegistryKey? key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath);
         object? registryValueObject = key?.GetValue(RegistryValueName);
-        if (registryValueObject == null) {
-            return false;
-        }
 
-        int registryValue = (int)registryValueObject;
+        int? registryValue = (int?) registryValueObject;
         return registryValue <= 0;
     }
 

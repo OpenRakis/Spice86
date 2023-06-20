@@ -33,7 +33,8 @@ public class Program {
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
     public static void Main(string[] args) {
-        IServiceProvider serviceProvider = Startup.StartupInjectedServices(args);
+        IServiceCollection serviceCollection = new ServiceCollection();
+        IServiceProvider serviceProvider = new Startup(serviceCollection).BuildServiceContainer(args);
         ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
         Configuration configuration = commandLineParser.ParseCommandLine(args);
 
