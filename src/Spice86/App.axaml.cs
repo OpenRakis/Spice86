@@ -39,7 +39,7 @@ internal partial class App : Application {
             throw new PlatformNotSupportedException("Spice86 needs the desktop Linux/Mac/Windows platform in order to run.");
         }
 
-        ServiceProvider serviceProvider = Startup.StartupInjectedServices(desktop.Args);
+        IServiceProvider serviceProvider = Startup.StartupInjectedServices(desktop.Args);
         ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
         ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
 

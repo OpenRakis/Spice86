@@ -33,10 +33,8 @@ public class Program {
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
     public static void Main(string[] args) {
-        ServiceProvider serviceProvider = Startup.StartupInjectedServices(args);
-
+        IServiceProvider serviceProvider = Startup.StartupInjectedServices(args);
         ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
-        
         Configuration configuration = commandLineParser.ParseCommandLine(args);
 
         if (!configuration.HeadlessMode) {
@@ -45,7 +43,7 @@ public class Program {
         }
         else {
             ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-            ProgramExecutor programExecutor = new ProgramExecutor(loggerService, null, configuration);
+            ProgramExecutor programExecutor = new(loggerService, null, configuration);
             programExecutor.Run();
         }
     }

@@ -10,10 +10,9 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Provides extension methods to register the logging services in the DI container.
 /// </summary>
-public static class LoggerServiceInjectionExtensions {
-    
+public static class ServiceInjectionExtensions {
     /// <summary>
-    /// Adds the logging services to the DI container.
+    /// Adds the command line parser service and the logging service to the DI container.
     /// </summary>
     /// <param name="services">The service collection to add the services to.</param>
     /// <returns>The modified service collection.</returns>
