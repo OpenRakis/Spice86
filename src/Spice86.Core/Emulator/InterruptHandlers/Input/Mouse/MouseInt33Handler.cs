@@ -84,7 +84,7 @@ public class MouseInt33Handler : InterruptHandler, IMouseInt33Handler {
 
     public void Update() {
         if (_savedState.Locked) {
-            _loggerService.Debug("Moushandler is locked, returning");
+            _loggerService.Debug("Mousehandler is locked, returning");
             return;
         }
         _savedState.Lock();

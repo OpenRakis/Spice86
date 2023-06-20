@@ -14,5 +14,6 @@ public class BiosMouseInt74Handler : InterruptHandler {
     public override byte Index => 0x74;
     public override void Run() {
         _machine.MouseDriver.Update();
+        _machine.DualPic.AcknowledgeInterrupt(12);
     }
 }

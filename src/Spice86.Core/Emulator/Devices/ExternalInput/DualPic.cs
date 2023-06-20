@@ -18,9 +18,9 @@ public class DualPic : DefaultIOPortHandler {
 
     private const int SlaveData = 0xA1;
 
-    private const byte DefaultIcw1 = 0x11;
-    // Auto EOI
-    private const byte DefaultIcw4 = 0b10;
+    private const byte DefaultIcw1 = 0b10001;
+    
+    private const byte DefaultIcw4 = 0b0001;
 
     private const byte BaseInterruptVectorMaster = 0x08;
 
@@ -36,8 +36,8 @@ public class DualPic : DefaultIOPortHandler {
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DualPic(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
-        _pic1 = new Pic(machine, loggerService, true);
-        _pic2 = new Pic(machine, loggerService, false);
+        _pic1 = new Pic(loggerService);
+        _pic2 = new Pic(loggerService);
         Initialize();
     }
     
@@ -53,8 +53,8 @@ public class DualPic : DefaultIOPortHandler {
         _pic1.ProcessDataWrite(BaseInterruptVectorMaster);
         _pic2.ProcessDataWrite(BaseInterruptVectorSlave);
         // ICW3
-        _pic1.ProcessDataWrite(0);
-        _pic2.ProcessDataWrite(0);
+        _pic1.ProcessDataWrite(0b00000100); // slave at irq 2
+        _pic2.ProcessDataWrite(0); // slave id 0
         // ICW4
         _pic1.ProcessDataWrite(DefaultIcw4);
         _pic2.ProcessDataWrite(DefaultIcw4);
@@ -77,6 +77,8 @@ public class DualPic : DefaultIOPortHandler {
     /// <param name="irq">The IRQ Number, which will be internally translated to a vector number</param>
     /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
     public void ProcessInterruptRequest(byte irq) {
+        if (irq != 0)
+            _loggerService.Warning("Received IRQ {Irq}", irq);
         if (irq < 8) {
             _pic1.InterruptRequest(irq);
         } else if (irq < 15) {
@@ -118,8 +120,15 @@ public class DualPic : DefaultIOPortHandler {
     /// Acknowledges the interrupt request from the first PIC. <br/>
     /// This signals that the PIC has processed the interrupt request and is ready to receive new requests.
     /// </summary>
-    public void AcknowledgeInterrupt() {
-        _pic1.AcknwowledgeInterrupt();
+    public void AcknowledgeInterrupt(byte irq) {
+        if (irq < 8) {
+            _pic1.AcknowledgeInterrupt();
+        } else if (irq < 15) {
+            _pic2.AcknowledgeInterrupt();
+            _pic1.AcknowledgeInterrupt();
+        } else {
+            throw new UnhandledOperationException(_machine, $"IRQ {irq} not supported at the moment");
+        }
     }
 
     /// <inheritdoc />

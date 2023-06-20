@@ -130,7 +130,6 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
         _previousIsMiddleButtonDown = IsMiddleButtonDown;
 
         LastTrigger = trigger;
-        _logger.Verbose("Triggering irq 12 from UI thread");
         _machine.DualPic.ProcessInterruptRequest(12);
         // Updated?.Invoke(this, new MouseUpdatedEventArgs(trigger, deltaX, deltaY));
     }

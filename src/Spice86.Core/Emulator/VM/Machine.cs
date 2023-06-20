@@ -34,7 +34,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Emulates an IBM PC
 /// </summary>
-public class Machine : IDisposable {
+public class Machine : IDisposable, IMachine {
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly Thread _dmaThread;
