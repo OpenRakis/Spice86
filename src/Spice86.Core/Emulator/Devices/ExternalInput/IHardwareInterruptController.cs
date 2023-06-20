@@ -2,6 +2,9 @@ namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Spice86.Shared.Emulator.Errors;
 
+/// <summary>
+/// Controller to route external irq to cpu interrupt vectors. 
+/// </summary>
 public interface IHardwareInterruptController {
     /// <summary>
     /// Services an IRQ request
@@ -44,4 +47,10 @@ public interface IHardwareInterruptController {
     /// </summary>
     /// <returns>The byte read from the command register.</returns>
     byte DataRead();
+
+    /// <summary>
+    /// Take the next pending interrupt request into service.
+    /// </summary>
+    /// <returns>The interrupt vector number to trigger</returns>
+    byte? ComputeVectorNumber();
 }

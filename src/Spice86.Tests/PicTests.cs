@@ -12,7 +12,7 @@ using Spice86.Shared.Interfaces;
 using Xunit;
 
 public class PicTests {
-    private readonly Pic _pic;
+    private readonly IHardwareInterruptController _pic;
 
     public PicTests() {
         var loggerMock = new Mock<ILoggerService>();

@@ -26,8 +26,8 @@ public class DualPic : DefaultIOPortHandler {
 
     private const byte BaseInterruptVectorSlave = 0x70;
 
-    private readonly Pic _pic1;
-    private readonly Pic _pic2;
+    private readonly IHardwareInterruptController _pic1;
+    private readonly IHardwareInterruptController _pic2;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DualPic"/> class.
