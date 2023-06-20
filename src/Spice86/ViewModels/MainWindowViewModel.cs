@@ -92,7 +92,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     
     private bool _isMainWindowClosing;
 
-    public MainWindowViewModel(ILoggerService loggerService) {
+    private ICommandLineParser _commandLineParser;
+
+    public MainWindowViewModel(ICommandLineParser commandLineParser, ILoggerService loggerService) {
+        _commandLineParser = commandLineParser;
         _loggerService = loggerService;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             desktop.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
@@ -432,8 +435,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         _programExecutor?.Dispose();
     }
 
-    private static Configuration GenerateConfiguration(string[] args) {
-        return CommandLineParser.ParseCommandLine(args);
+    private Configuration GenerateConfiguration(string[] args) {
+        return _commandLineParser.ParseCommandLine(args);
     }
 
     private async Task ShowEmulationErrorMessage(Exception e) {

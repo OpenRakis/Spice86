@@ -1,10 +1,11 @@
+namespace Spice86.DependencyInjection;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
+using Spice86.Core.CLI;
 using Spice86.Logging;
 using Spice86.Shared.Interfaces;
-
-namespace Spice86.DependencyInjection; 
 
 /// <summary>
 /// Provides extension methods to register the logging services in the DI container.
@@ -16,8 +17,9 @@ public static class LoggerServiceInjectionExtensions {
     /// </summary>
     /// <param name="services">The service collection to add the services to.</param>
     /// <returns>The modified service collection.</returns>
-    public static IServiceCollection AddLogging(this IServiceCollection services) {
+    public static IServiceCollection TryAddCmdLineParserAndLogging(this IServiceCollection services) {
         services.TryAddSingleton<ILoggerPropertyBag, LoggerPropertyBag>();
+        services.TryAddSingleton<ICommandLineParser, CommandLineParser>();
         services.TryAddSingleton<ILoggerService, LoggerService>();
         return services;
     }

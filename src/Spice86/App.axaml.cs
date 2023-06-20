@@ -8,6 +8,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
+using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 using Spice86.Views;
@@ -39,14 +40,11 @@ internal partial class App : Application {
         }
 
         ServiceProvider serviceProvider = Startup.StartupInjectedServices(desktop.Args);
-
-        ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>();
-        if (loggerService is null) {
-            throw new InvalidOperationException("Could not get logging service from DI !");
-        }
+        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+        ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
 
         desktop.MainWindow = new MainWindow();
-        MainWindowViewModel mainViewModel = new(loggerService);
+        MainWindowViewModel mainViewModel = new(commandLineParser, loggerService);
         desktop.MainWindow.DataContext = mainViewModel;
         mainViewModel.SetConfiguration(desktop.Args);
         desktop.MainWindow.Closed += (s, e) => mainViewModel.Dispose();

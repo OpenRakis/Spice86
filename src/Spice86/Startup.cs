@@ -7,10 +7,13 @@ using Serilog.Events;
 using Spice86.Core.CLI;
 using Spice86.DependencyInjection;
 using Spice86.Shared.Interfaces;
+
 /// <summary>
 /// Provides a method to initialize services and set the logging level based on command line arguments.
 /// </summary>
 internal static class Startup {
+    
+    
     
     /// <summary>
     /// Initializes the service collection and sets the logging level.
@@ -19,8 +22,8 @@ internal static class Startup {
     /// <returns>A <see cref="ServiceProvider"/> instance that can be used to retrieve registered services.</returns>
     public static ServiceProvider StartupInjectedServices(string[] commandLineArgs)
     {
-        ServiceCollection services = new ServiceCollection();
-        services.AddLogging();
+        ServiceCollection services = new();
+        services.TryAddCmdLineParserAndLogging();
         ServiceProvider serviceProvider = services.BuildServiceProvider();
         SetLoggingLevel(serviceProvider, commandLineArgs);
         return serviceProvider;
@@ -31,12 +34,10 @@ internal static class Startup {
     /// </summary>
     /// <param name="serviceProvider">The <see cref="ServiceProvider"/> instance used to retrieve the <see cref="ILoggerService"/>.</param>
     /// <param name="commandLineArgs">The command line arguments.</param>
-    private static void SetLoggingLevel(ServiceProvider serviceProvider, string[] commandLineArgs) {
-        ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>();
-        if (loggerService is null) {
-            return;
-        }
-        Configuration configuration = CommandLineParser.ParseCommandLine(commandLineArgs);
+    private static void SetLoggingLevel(IServiceProvider serviceProvider, string[] commandLineArgs) {
+        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+        ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
+        Configuration configuration = commandLineParser.ParseCommandLine(commandLineArgs);
 
         if (configuration.SilencedLogs)
         {
