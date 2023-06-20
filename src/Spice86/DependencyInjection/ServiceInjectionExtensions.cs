@@ -16,10 +16,10 @@ public static class ServiceInjectionExtensions {
     /// </summary>
     /// <param name="services">The service collection to add the services to.</param>
     /// <returns>The modified service collection.</returns>
-    public static IServiceCollection TryAddCmdLineParserAndLogging(this IServiceCollection services) {
-        services.TryAddSingleton<ILoggerPropertyBag, LoggerPropertyBag>();
-        services.TryAddSingleton<ICommandLineParser, CommandLineParser>();
-        services.TryAddSingleton<ILoggerService, LoggerService>();
+    public static IServiceCollection AddCmdLineParserAndLogging(this IServiceCollection services) {
+        services.AddSingleton<ILoggerPropertyBag, LoggerPropertyBag>();
+        services.AddSingleton<ICommandLineParser, CommandLineParser>();
+        services.AddSingleton<ILoggerService, LoggerService>();
         return services;
     }
 }

@@ -24,7 +24,7 @@ public class Startup {
     /// <param name="commandLineArgs">The command line arguments.</param>
     /// <returns>A <see cref="IServiceProvider"/> instance that can be used to retrieve registered services.</returns>
     public IServiceProvider BuildServiceContainer(string[] commandLineArgs) {
-        _serviceCollection.TryAddCmdLineParserAndLogging();
+        _serviceCollection.AddCmdLineParserAndLogging();
         IServiceProvider serviceProvider = _serviceCollection.BuildServiceProvider();
         SetLoggingLevel(serviceProvider.GetRequiredService<ICommandLineParser>(), serviceProvider.GetRequiredService<ILoggerService>(), commandLineArgs);
         return serviceProvider;
