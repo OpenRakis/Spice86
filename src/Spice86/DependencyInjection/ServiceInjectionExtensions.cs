@@ -1,14 +1,13 @@
 namespace Spice86.DependencyInjection;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Spice86.Core.CLI;
 using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Provides extension methods to register the logging services in the DI container.
+/// Provides extension methods to register services in the DI container.
 /// </summary>
 public static class ServiceInjectionExtensions {
     /// <summary>

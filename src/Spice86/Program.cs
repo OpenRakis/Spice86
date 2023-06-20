@@ -6,8 +6,12 @@ using Avalonia.Controls.ApplicationLifetimes;
 
 using OxyPlot.Avalonia;
 using Microsoft.Extensions.DependencyInjection;
+
+using Serilog.Events;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
+using Spice86.DependencyInjection;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -37,25 +41,56 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         IServiceCollection serviceCollection = new ServiceCollection();
-        IServiceProvider serviceProvider = new Startup(serviceCollection).BuildServiceContainer(args);
+
+        serviceCollection.AddCmdLineParserAndLogging();
+        IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
         ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
         Configuration configuration = commandLineParser.ParseCommandLine(args);
-
+        SetLoggingLevel(configuration, serviceProvider.GetRequiredService<ILoggerService>());
         if (!configuration.HeadlessMode) {
-            OxyPlotModule.EnsureLoaded();
-            AppBuilder appBuilder = BuildAvaloniaApp();
-            ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, args);
-            App app = (App)appBuilder.Instance;
-            app.SetupMainWindow(serviceProvider);
-            desktop.Start(args);
-        }
-        else {
-            ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-            ProgramExecutor programExecutor = new(loggerService, null, configuration);
-            programExecutor.Run();
+            StartMainWindow(args, serviceProvider);
+        } else {
+            StartConsole(serviceProvider, configuration);
         }
     }
-    
+
+    private static void SetLoggingLevel(Configuration configuration, ILoggerService loggerService) {
+        if (configuration.SilencedLogs) {
+            loggerService.AreLogsSilenced = true;
+        }
+        else if (configuration.WarningLogs) {
+            loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
+        }
+        else if (configuration.VerboseLogs) {
+            loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+        }
+    }
+
+    private static void StartConsole(IServiceProvider serviceProvider, Configuration configuration) {
+        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+        ProgramExecutor programExecutor = new(loggerService, null, configuration);
+        programExecutor.Run();
+    }
+
+    private static void StartMainWindow(string[] args, IServiceProvider serviceProvider) {
+        OxyPlotModule.EnsureLoaded();
+        AppBuilder appBuilder = BuildAvaloniaApp();
+        ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, args);
+        App app = (App) appBuilder.Instance;
+        app.SetupMainWindow(serviceProvider);
+        desktop.Start(args);
+    }
+
+    /// <summary>
+    /// Configures and builds an Avalonia application instance.
+    /// </summary>
+    /// <returns>The built <see cref="AppBuilder"/> instance.</returns>
+    private static AppBuilder BuildAvaloniaApp() {
+        return AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .LogToTrace();
+    }
+
     private static ClassicDesktopStyleApplicationLifetime SetuptWithClassicDesktopLifetime<T>(
         T builder, string[] args)
         where T : AppBuilderBase<T>, new() {
@@ -65,15 +100,5 @@ public class Program {
         };
         builder.SetupWithLifetime(lifetime);
         return lifetime;
-    }
-
-    /// <summary>
-    /// Configures and builds an Avalonia application instance.
-    /// </summary>
-    /// <returns>The built <see cref="AppBuilder"/> instance.</returns>
-    public static AppBuilder BuildAvaloniaApp() {
-        return AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .LogToTrace();
     }
 }
