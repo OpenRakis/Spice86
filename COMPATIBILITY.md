@@ -1,9 +1,9 @@
 A lot of programs are not running.
 
 This is mainly because:
- - Some VGA features are not implemented.
+ - Some VGA features are not implemented (eg. smooth scrolling).
  - Quite a lot of DOS kernel interrupts are not implemented.
- - TSR / sub programs / Extended memory is not implemented
+ - TSR / sub programs / XMS is not implemented
 
 Here is a list of old games I tested with what worked and what didn't:
 
@@ -17,6 +17,8 @@ Here is a list of old games I tested with what worked and what didn't:
 | Betrayal at Krondor | :see_no_evil: Crashes | Unimplemented opcodes Leave, Movsx, Shld. FBOV OVL overlay not handled. | 2023/01/06 |
 | Cryo Dune | :sunglasses: Fully playable | | 2021/09/26 |
 | Double dragon 3 | :see_no_evil: Crashes | Int 10.3 (text mode) not implemented. | 2021/09/26 |
+| Duke Nukem | :sunglasses: Fully playable | But with no PC Speaker sound effects | 2023/06/18 |
+| Duke Nukem II | :sunglasses: Fully playable | But the INT21H service for deleting a file is unimplemented (skip the intro before it ends) | 2023/06/18 |
 | Dragon's Lair | :see_no_evil: Crashes | Terminates without displaying anything and without error. | 2021/09/26 |
 | Dragon's Lair 3 | :see_no_evil: Crashes | Int 10.3 (text mode) not implemented. | 2021/09/26 |
 | Dune 2 | :slightly_smiling_face: Playable | Mouse cursor doesn't move (callback missing) | 2023/02/10 |

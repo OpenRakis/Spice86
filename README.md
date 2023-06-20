@@ -372,7 +372,7 @@ Stunts:
 
 ### Credits
 
-Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Most notably the video card, DMA support, PC Speaker, SoundBlaster, MT-32, and General MIDI devices.
+Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Those are: The DMA Controller, the PC Speaker, the SoundBlaster, the MT-32, and General MIDI.
 
 Also, this project uses JetBrains Rider licenses, thanks to JetBrains' [Open Source Community Support](https://www.jetbrains.com/community/opensource/#support).
 

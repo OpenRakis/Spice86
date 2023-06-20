@@ -98,7 +98,7 @@ public class DosFileManager {
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
         string? hostFileName = ToHostCaseSensitiveFileName(fileName, true);
         if (hostFileName == null) {
-            return FileNotFoundErrorWithLog($"Could not find parent of {fileName} so cannot create file.");
+            return FileOperationErrorWithLog($"Could not find parent of {fileName} so cannot create file.", ErrorCode.PathNotFound);
         }
 
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -184,7 +184,7 @@ public class DosFileManager {
         }
 
         if (!_matchingFilesIterator.MoveNext()) {
-            return FileNotFoundErrorWithLog($"No more files matching {_currentMatchingFileSearchSpec} in path {_currentMatchingFileSearchFolder}");
+            return FileOperationErrorWithLog($"No more files matching {_currentMatchingFileSearchSpec} in path {_currentMatchingFileSearchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
 
         bool matching = _matchingFilesIterator.MoveNext();
@@ -440,16 +440,20 @@ public class DosFileManager {
         return count;
     }
 
-    private DosFileOperationResult FileNotFoundError(string? fileName) {
-        return FileNotFoundErrorWithLog($"File {fileName} not found!");
+    private DosFileOperationResult FileAccessDeniedError(string? filename) {
+        return FileOperationErrorWithLog($"File {filename} already in use!", ErrorCode.AccessDenied);
     }
 
-    private DosFileOperationResult FileNotFoundErrorWithLog(string message) {
+    private DosFileOperationResult FileNotFoundError(string? fileName) {
+        return FileOperationErrorWithLog($"File {fileName} not found!", ErrorCode.FileNotFound);
+    }
+
+    private DosFileOperationResult FileOperationErrorWithLog(string message, ErrorCode errorCode) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            _loggerService.Warning("{FileNotFoundErrorWithLog}: {Message}", nameof(FileNotFoundErrorWithLog), message);
+            _loggerService.Warning("{FileNotFoundErrorWithLog}: {Message}", nameof(FileOperationErrorWithLog), message);
         }
 
-        return DosFileOperationResult.Error(ErrorCode.FileNotFound);
+        return DosFileOperationResult.Error(errorCode);
     }
 
     private DosFileOperationResult FileNotOpenedError(int fileHandle) {
@@ -560,10 +564,8 @@ public class DosFileManager {
         ushort dosIndex = (ushort)freeIndex.Value;
         try {
             Stream? randomAccessFile = null;
-            switch (openMode)
-            {
-                case "r":
-                {
+            switch (openMode) {
+                case "r": {
                     string? realFileName = GetActualCaseForFileName(hostFileName);
                     if (File.Exists(hostFileName)) {
                         randomAccessFile = File.OpenRead(hostFileName);
@@ -578,8 +580,7 @@ public class DosFileManager {
                 case "w":
                     randomAccessFile = File.OpenWrite(hostFileName);
                     break;
-                case "rw":
-                {
+                case "rw": {
                     string? realFileName = GetActualCaseForFileName(hostFileName);
                     if (File.Exists(hostFileName)) {
                         randomAccessFile = File.Open(hostFileName, FileMode.Open);
@@ -592,11 +593,14 @@ public class DosFileManager {
                     break;
                 }
             }
+
             if (randomAccessFile != null) {
                 SetOpenFile(dosIndex, new OpenFile(fileName, dosIndex, randomAccessFile));
             }
         } catch (FileNotFoundException) {
             return FileNotFoundError(fileName);
+        } catch (IOException) {
+            return FileAccessDeniedError(fileName);
         }
 
         return DosFileOperationResult.Value16(dosIndex);
