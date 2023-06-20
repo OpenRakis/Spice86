@@ -11,9 +11,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Provides a method to initialize services and set the logging level based on command line arguments.
 /// </summary>
-internal static class Startup {
-    
-    
+public static class Startup {
     
     /// <summary>
     /// Initializes the service collection and sets the logging level.
