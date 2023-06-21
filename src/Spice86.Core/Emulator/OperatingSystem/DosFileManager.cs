@@ -647,7 +647,6 @@ public class DosFileManager {
     }
 
     private static ushort ToDosDate(DateTime localDate) {
-        // https://stanislavs.org/helppc/file_attributes.html
         int day = localDate.Day;
         int month = localDate.Month;
         int dosYear = localDate.Year - 1980;
@@ -655,7 +654,6 @@ public class DosFileManager {
     }
 
     private static ushort ToDosTime(DateTime localTime) {
-        // https://stanislavs.org/helppc/file_attributes.html
         int dosSeconds = localTime.Second / 2;
         int minutes = localTime.Minute;
         int hours = localTime.Hour;

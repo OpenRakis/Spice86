@@ -7,7 +7,7 @@ using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// Represents a MCB in memory. More info here: https://stanislavs.org/helppc/memory_control_block.html
+/// Represents a MCB in memory.
 /// </summary>
 public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     private const int FilenameFieldSize = 8;
