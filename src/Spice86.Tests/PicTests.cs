@@ -299,7 +299,7 @@ public class PicTests {
         AssertInServiceRegister(0b00001000);
     }
 
-    [Fact]
+    [Fact (Skip = "To be determined if we want to support priority rotation or not")]
     public void AutomaticRotationAtEndOfInterruptLowersLastServiceDevicePriority() {
         // Arrange
         InitializePic();

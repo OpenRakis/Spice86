@@ -10,7 +10,6 @@ public interface IHardwareInterruptController {
     /// Services an IRQ request
     /// </summary>
     /// <param name="irq">The IRQ Number, which will be internally translated to a vector number</param>
-    /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
     void InterruptRequest(byte irq);
 
     /// <summary>

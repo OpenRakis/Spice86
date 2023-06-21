@@ -15,7 +15,7 @@
 				ScaleY="{Binding Scale}">
 			</ScaleTransform>
 		</LayoutTransformControl.RenderTransform>
-		<Viewbox Stretch="UniformToFill">
+		<Viewbox>
 			<Image x:Name="Image"
 				RenderOptions.BitmapInterpolationMode="Default"
 				Cursor="{Binding Cursor}"

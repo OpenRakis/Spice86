@@ -59,6 +59,8 @@ public class Pic : IHardwareInterruptController {
         uint bit = 1u << irq;
         if ((_inServiceRegister & bit) == 0) {
             _interruptRequestRegister = (byte)((_interruptRequestRegister | bit) & ~_interruptMaskRegister);
+            if (irq != 0)
+                _loggerService.Verbose("Interrupt requested for irq {Irq} ", irq);
         } else {
             _loggerService.Verbose("Interrupt request {Irq} already in service", irq);
         }
