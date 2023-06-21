@@ -44,7 +44,7 @@ public class Machine : IDisposable {
     private bool _disposed;
 
     /// <summary>
-    /// Whether we record execution data or not, for reverse engineering purposes.
+    /// Gets or set if we record execution data, for reverse engineering purposes.
     /// </summary>
     public bool RecordData { get; set; }
     
