@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
-using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.VM;
+using Serilog.Events;
+
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Utils;
 using Spice86.Shared.Interfaces;
@@ -14,10 +14,8 @@ using Spice86.Shared.Interfaces;
 /// <li>https://k.lse.epita.fr/internals/8259a_controller.html</li>
 /// </ul>
 /// </summary>
-public class Pic {
+public class Pic : IHardwareInterruptController {
     private readonly ILoggerService _loggerService;
-
-    private readonly Machine _machine;
 
     private bool _initialized;
 
@@ -27,8 +25,6 @@ public class Pic {
 
     private int _currentInitializationCommand = 0;
 
-    private readonly bool _master;
-
     // 1 indicates the channel is masked (inhibited), 0 indicates the channel is enabled.
     private byte _interruptMaskRegister = 0;
     private byte _interruptRequestRegister = 0;
@@ -37,20 +33,16 @@ public class Pic {
     private byte _lowestPriorityIrq = 7;
     private bool _specialMask = false;
     private bool _polled = false;
-    private bool _interruptOngoing = false;
     private bool _autoEoi = false;
     private SelectedReadRegister _selectedReadRegister = SelectedReadRegister.InterruptRequestRegister;
+    private readonly ReaderWriterLockSlim _readerWriterLock = new();
 
     /// <summary>
     /// Initializes a new instance of the PIC.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="master">Whether this is the so called 'master' PIC or not.</param>
-    public Pic(Machine machine, ILoggerService loggerService, bool master) {
-        _loggerService = loggerService;
-        _master = master;
-        _machine = machine;
+    public Pic(ILoggerService loggerService) {
+        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
     }
 
     /// <summary>
@@ -59,13 +51,27 @@ public class Pic {
     /// <param name="irq">The IRQ Number, which will be internally translated to a vector number</param>
     /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
     public void InterruptRequest(byte irq) {
-        SetInterruptRequestRegister(irq);
+        if (!_initialized)
+            return;
+
+        _readerWriterLock.EnterWriteLock();
+
+        uint bit = 1u << irq;
+        if ((_inServiceRegister & bit) == 0) {
+            _interruptRequestRegister = (byte)((_interruptRequestRegister | bit) & ~_interruptMaskRegister);
+            if (irq != 0)
+                _loggerService.Verbose("Interrupt requested for irq {Irq} ", irq);
+        } else {
+            _loggerService.Verbose("Interrupt request {Irq} already in service", irq);
+        }
+
+        _readerWriterLock.ExitWriteLock();
     }
 
     /// <summary>
     /// Acknowledges an interrupt by clearing the highest priority interrupt in-service bit.
     /// </summary>
-    public void AcknwowledgeInterrupt() {
+    public void AcknowledgeInterrupt() {
         ClearHighestInServiceIrq();
     }
 
@@ -73,7 +79,7 @@ public class Pic {
         bool icw4Present = (value & 0b1) != 0;
         bool singleController = (value & 0b10) != 0;
         bool levelTriggered = (value & 0b1000) != 0;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose(
                 "MASTER PIC COMMAND ICW1 {Value}. {Icw4Present}, {SingleController}, {LevelTriggered}",
                 ConvertUtils.ToHex8(value), icw4Present, singleController, levelTriggered);
@@ -86,14 +92,14 @@ public class Pic {
 
     private void ProcessICW2(byte value) {
         _baseInterruptVector = (byte)(value & 0b11111000);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("MASTER PIC COMMAND ICW2 {Value}. {BaseOffsetInInterruptDescriptorTable}",
                 ConvertUtils.ToHex8(value), value);
         }
     }
 
     private void ProcessICW3(byte value) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PIC COMMAND ICW3 {Value}", ConvertUtils.ToHex8(value));
         }
 
@@ -104,7 +110,7 @@ public class Pic {
 
     private void ProcessICW4(byte value) {
         _autoEoi = (value & 0b10) != 0;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PIC COMMAND ICW4 {Value}. Auto EOI is  {AutoEoi}", ConvertUtils.ToHex8(value),
                 _autoEoi);
         }
@@ -114,7 +120,7 @@ public class Pic {
 
     private void ProcessOCW1(byte value) {
         _interruptMaskRegister = value;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PIC COMMAND OCW1 {Value}. Mask is {Mask}", ConvertUtils.ToHex8(value),
                 ConvertUtils.ToBin8(value));
         }
@@ -125,7 +131,7 @@ public class Pic {
         bool sendEndOfInterruptCommand = (value & 0b10_0000) != 0;
         bool sendSpecificCommand = (value & 0b100_0000) != 0;
         bool rotatePriorities = (value & 0b1000_0000) != 0;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose(
                 "PIC COMMAND OCW2 {Value}. {InterruptLevel}, {SendEndOfInterruptCommand}, {SendSpecificCommand}, @{RotatePriorities}",
                 ConvertUtils.ToHex8(value), interruptLevel, sendEndOfInterruptCommand, sendSpecificCommand,
@@ -173,18 +179,18 @@ public class Pic {
     }
 
     private byte EnabledInterruptRequests => (byte)(_interruptRequestRegister & ~_interruptMaskRegister);
-    
+
     private bool OnComputeVectorNumberFoundAnIrq(int irq) {
         int irqMask = GenerateIrqMask(irq);
         bool irqInService = (_inServiceRegister & irqMask) != 0;
         bool irqRequestExists = (EnabledInterruptRequests & irqMask) != 0;
-        return !(_specialMask && irqInService) && !_interruptOngoing && irqRequestExists;
+        return !(_specialMask && irqInService) && irqRequestExists;
     }
 
-    internal byte? ComputeVectorNumber() {
+    /// <inheritdoc />
+    public byte? ComputeVectorNumber() {
         if (EnabledInterruptRequests == 0) {
             // No requests
-            _interruptOngoing = false;
             return null;
         }
 
@@ -199,14 +205,9 @@ public class Pic {
             return null;
         }
 
-        // Higher priority request found, servicing it
-        if (!_autoEoi) {
-            _interruptOngoing = true;
-        }
-
         _currentIrq = (byte)irq;
-        ClearInterruptRequestRegister((byte)irq);
         SetInServiceRegister((byte)irq);
+        ClearInterruptRequestRegister((byte)irq);
         return (byte)(_baseInterruptVector + irq);
     }
 
@@ -220,8 +221,7 @@ public class Pic {
         ComputeVectorNumber,
         HighestIrqInService
     }
-    
-    
+
     private byte? FindIrq(int stopAt, FindIrqMode mode) {
         // Browse the irq space from the highest priority to the lowest.
         byte irq = HighestPriorityIrq;
@@ -264,10 +264,6 @@ public class Pic {
         _inServiceRegister = (byte)(_inServiceRegister & ~GenerateIrqMask(irq));
     }
 
-    private void SetInterruptRequestRegister(byte irq) {
-        _interruptRequestRegister = (byte)(_interruptRequestRegister | GenerateIrqMask(irq));
-    }
-
     private void ClearInterruptRequestRegister(byte irq) {
         _interruptRequestRegister = (byte)(_interruptRequestRegister & ~GenerateIrqMask(irq));
     }
@@ -276,7 +272,7 @@ public class Pic {
         int specialMask = (value & 0b1100000) >> 5;
         int poll = (value & 0b100) >> 2;
         int readOperation = value & 0b11;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose(
                 "PIC COMMAND OCW3 {Value}. {SpecialMask}, {Poll}, @{ReadOperation}",
                 ConvertUtils.ToHex8(value), specialMask, poll, readOperation);
@@ -334,8 +330,7 @@ public class Pic {
                     ProcessICW4(value);
                     break;
                 default:
-                    throw new UnhandledOperationException(_machine,
-                        $"Invalid initialization command index {_currentInitializationCommand}, should never happen");
+                    throw new InvalidOperationException($"Invalid initialization command index {_currentInitializationCommand}, should never happen");
             }
 
             _currentInitializationCommand++;
@@ -344,7 +339,6 @@ public class Pic {
         }
     }
 
-    
     private byte ReadPolledData() {
         ClearHighestInServiceIrq();
         _polled = false;
@@ -366,7 +360,7 @@ public class Pic {
 
         return _interruptRequestRegister;
     }
-    
+
     /// <summary>
     /// Reads a byte from the command register.
     /// </summary>
