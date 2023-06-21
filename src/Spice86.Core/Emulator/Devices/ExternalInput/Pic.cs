@@ -42,7 +42,7 @@ public class Pic : IHardwareInterruptController {
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
     public Pic(ILoggerService loggerService) {
-        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
+        _loggerService = loggerService;
     }
 
     /// <summary>
