@@ -76,9 +76,7 @@
 				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 			</Grid>
 		</Grid>
-		<Viewbox Grid.Row="1">
-			<local:VideoBufferView DataContext="{Binding VideoBuffer}" />
-		</Viewbox>
+		<local:VideoBufferView Grid.Row="1" DataContext="{Binding VideoBuffer}" />
 		<WrapPanel Grid.Row="2" Orientation="Horizontal">
 			<TextBlock Text="{Binding StatusMessage}" />
 			<TextBlock Margin="5,0,0,0" Text="|" />
