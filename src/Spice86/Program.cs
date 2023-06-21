@@ -43,10 +43,13 @@ public class Program {
         IServiceCollection serviceCollection = new ServiceCollection();
 
         serviceCollection.AddCmdLineParserAndLogging();
+        
         IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+        
         ICommandLineParser commandLineParser = serviceProvider.GetRequiredService<ICommandLineParser>();
         Configuration configuration = commandLineParser.ParseCommandLine(args);
         ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+        
         SetLoggingLevel(configuration, loggerService);
         if (!configuration.HeadlessMode) {
             StartMainWindow(args, configuration, loggerService);
