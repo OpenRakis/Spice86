@@ -34,7 +34,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Emulates an IBM PC
 /// </summary>
-public class Machine : IDisposable {
+public sealed class Machine : IDisposable {
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly Thread _dmaThread;
@@ -481,7 +481,7 @@ public class Machine : IDisposable {
     /// Releases all resources.
     /// </summary>
     /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
-    protected virtual void Dispose(bool disposing) {
+    private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
                 _dmaResetEvent.Set();
