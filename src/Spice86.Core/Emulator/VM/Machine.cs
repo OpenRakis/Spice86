@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
 using System.Diagnostics;
-using System.Text;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
@@ -18,7 +17,6 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -27,7 +25,6 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -193,7 +190,6 @@ public sealed class Machine : IDisposable {
     /// The DMA controller.
     /// </summary>
     public DmaController DmaController { get; }
-    
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>

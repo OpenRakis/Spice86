@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.LoadableFile.Dos;
 
-using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 /// <summary>
