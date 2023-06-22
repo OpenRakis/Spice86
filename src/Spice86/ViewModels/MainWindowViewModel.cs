@@ -379,6 +379,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     public void OnMouseMoved(PointerEventArgs @event, Image image) {
+        if (image.Source is null) {
+            return;
+        }
         MouseX = @event.GetPosition(image).X / image.Source.Size.Width;
         MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
         MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));

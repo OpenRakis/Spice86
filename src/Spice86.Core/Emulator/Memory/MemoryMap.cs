@@ -35,9 +35,9 @@ public static class MemoryMap {
     public const int BootSectorCodeSegment = 0x07C0;
 
     /// <summary>
-    /// Segment of the graphic video memory.
+    /// Segment of the Extended BIOS Data Area.
     /// </summary>
-    public const int ExtendedBiosDaraAreaSegment = 0x9FC0;
+    public const int ExtendedBiosDataAreaSegment = 0x9FC0;
     
     /// <summary>
     /// Segment of the graphic video memory.

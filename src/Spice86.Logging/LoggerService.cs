@@ -15,14 +15,10 @@ public class LoggerService : ILoggerService {
     private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
     
     /// <inheritdoc/>
-    public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
+    public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Debug);
 
     /// <inheritdoc/>
-    public bool AreLogsSilenced {
-        get => true;
-        set {
-        }
-    }
+    public bool AreLogsSilenced { get; set; }
 
     private ILogger? _logger;
 

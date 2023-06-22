@@ -12,6 +12,7 @@ using Spice86.Shared.Interfaces;
 ///     Basic implementation of a keyboard
 /// </summary>
 public class Mouse : DefaultIOPortHandler, IMouseDevice {
+    private const int IrqNumber = 12;
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
     private long _lastUpdateTimestamp;
@@ -35,18 +36,46 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
         Initialize();
     }
 
+    /// <inheritdoc />
     public double DeltaY { get; private set; }
+
+    /// <inheritdoc />
     public double DeltaX { get; private set; }
-    public MouseEventMask LastTrigger { get; private set; }
-    public ushort SampleRate { get; set; } = 100;
-    public MouseType MouseType { get; }
+
+    /// <inheritdoc />
+    public ushort ButtonCount { get; } = 3;
+
+    /// <inheritdoc />
     public double MouseXRelative { get; private set; }
+
+    /// <inheritdoc />
     public double MouseYRelative { get; private set; }
+
+    /// <inheritdoc />
+    public MouseEventMask LastTrigger { get; private set; }
+
+    /// <inheritdoc />
+    public ushort SampleRate { get; set; } = 100;
+
+    /// <inheritdoc />
+    public MouseType MouseType { get; }
+
+    /// <inheritdoc />
     public bool IsLeftButtonDown { get; private set; }
+
+    /// <inheritdoc />
     public bool IsRightButtonDown { get; private set; }
+
+    /// <inheritdoc />
     public bool IsMiddleButtonDown { get; private set; }
+
+    /// <inheritdoc />
     public ushort DoubleSpeedThreshold { get; set; }
+
+    /// <inheritdoc />
     public ushort HorizontalMickeysPerPixel { get; set; } = 8;
+
+    /// <inheritdoc />
     public ushort VerticalMickeysPerPixel { get; set; } = 16;
 
     private void Initialize() {
@@ -92,15 +121,17 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void UpdateMouse() {
-        if (!_machine.Cpu.IsRunning || _machine.IsPaused)
+        if (_machine.IsPaused) {
             return;
+        }
+
         long timestamp = DateTime.Now.Ticks;
         // Check sample rate to see if we need to send an update yet.
         long ticksDuration = timestamp - _lastUpdateTimestamp;
-        long threshold = 10 * TimeSpan.TicksPerSecond / SampleRate;
+        long threshold = TimeSpan.TicksPerSecond / SampleRate;
         if (ticksDuration < threshold) {
             return;
-        } 
+        }
         _lastUpdateTimestamp = timestamp;
 
         MouseEventMask trigger = 0;
@@ -128,17 +159,10 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
         _previousIsMiddleButtonDown = IsMiddleButtonDown;
 
         LastTrigger = trigger;
-        _machine.DualPic.ProcessInterruptRequest(12);
+        TriggerInterruptRequest();
     }
-}
 
-[Flags]
-public enum MouseEventMask {
-    Movement = 1 << 0,
-    LeftButtonDown = 1 << 1,
-    LeftButtonUp = 1 << 2,
-    RightButtonDown = 1 << 3,
-    RightButtonUp = 1 << 4,
-    MiddleButtonDown = 1 << 5,
-    MiddleButtonUp = 1 << 6
+    private void TriggerInterruptRequest() {
+        _machine.DualPic.ProcessInterruptRequest(IrqNumber);
+    }
 }

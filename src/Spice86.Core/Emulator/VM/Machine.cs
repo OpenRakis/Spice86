@@ -34,7 +34,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Emulates an IBM PC
 /// </summary>
-public class Machine : IDisposable, IMachine {
+public class Machine : IDisposable {
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly Thread _dmaThread;
@@ -239,7 +239,7 @@ public class Machine : IDisposable, IMachine {
         BiosDataArea = new BiosDataArea(Memory);
         if (machineCreationOptions.Configuration.Mouse is MouseType.PS2 or MouseType.PS2Wheel) {
             ExtendedBiosDataArea = new ExtendedBiosDataArea(Memory);
-            BiosDataArea.ExtendedBiosDataAreaSegment = MemoryMap.ExtendedBiosDaraAreaSegment;
+            BiosDataArea.ExtendedBiosDataAreaSegment = MemoryMap.ExtendedBiosDataAreaSegment;
         }
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 
@@ -323,13 +323,13 @@ public class Machine : IDisposable, IMachine {
         Dos = new Dos(this, machineCreationOptions.LoggerService);
         Dos.Initialize();
 
-        MouseDriverSavedRegisters mouseDriverSavedRegisters = new();
-        MouseDriver = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDevice, machineCreationOptions.Gui, mouseDriverSavedRegisters);
-        Register(MouseDriver);
+        MouseDriver = new MouseDriver(Cpu, machineCreationOptions.LoggerService, MouseDevice, machineCreationOptions.Gui, VgaFunctions);
+        var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
+        Register(mouseInt33Handler);
         if (ExtendedBiosDataArea != null) {
-            var mouseIrq12Handler = new BiosMouseInt74Handler(this, machineCreationOptions.LoggerService, ExtendedBiosDataArea);
+            var mouseIrq12Handler = new BiosMouseInt74Handler(this, machineCreationOptions.LoggerService);
             Register(mouseIrq12Handler);
-            var mouseCleanupHandler = new Int90Handler(this, machineCreationOptions.LoggerService, mouseDriverSavedRegisters);
+            var mouseCleanupHandler = new CustomMouseInt90Handler(this, machineCreationOptions.LoggerService, MouseDriver);
             Register(mouseCleanupHandler);
         }
 
@@ -345,10 +345,19 @@ public class Machine : IDisposable, IMachine {
 
     public ExtendedBiosDataArea? ExtendedBiosDataArea { get; set; }
 
+    /// <summary>
+    /// The mouse device hardware abstraction.
+    /// </summary>
     public IMouseDevice MouseDevice { get; set; }
 
-    public IMouseInt33Handler MouseDriver { get; set; }
+    /// <summary>
+    /// The mouse driver.
+    /// </summary>
+    public IMouseDriver MouseDriver { get; set; }
 
+    /// <summary>
+    /// The VGA functionality.
+    /// </summary>
     public IVgaFunctionality VgaFunctions { get; set; }
 
     /// <summary>

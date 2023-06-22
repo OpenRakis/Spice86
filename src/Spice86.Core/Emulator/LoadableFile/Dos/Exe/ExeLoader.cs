@@ -38,8 +38,8 @@ public class ExeLoader : DosFileLoader {
             _loggerService.Debug("Exe size: {ExeSize}", exe.Length);
         }
         ExeFile exeFile = new ExeFile(exe);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Read header: {ReadHeader}", exeFile);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
         }
 
         LoadExeFileInMemory(exeFile, _startSegment);
