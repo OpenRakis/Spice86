@@ -6,7 +6,6 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
@@ -33,11 +32,6 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public sealed class Machine : IDisposable {
     private readonly ProgramExecutor _programExecutor;
-    private readonly List<DmaChannel> _dmaDeviceChannels = new();
-    private readonly Thread _dmaThread;
-    private bool _exitDmaLoop;
-    private bool _dmaThreadStarted;
-    private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private bool _disposed;
 
@@ -187,13 +181,14 @@ public sealed class Machine : IDisposable {
     public VgaRom VgaRom { get; }
 
     /// <summary>
-    /// The DMA controller.
-    /// </summary>
-    public DmaController DmaController { get; }
-    /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
     public OPL3FM OPL3FM { get; }
+    
+    /// <summary>
+    /// The DMA loop and DMA channels
+    /// </summary>
+    public DmaSubsystem DmaSubsystem { get; }
 
     /// <summary>
     /// The emulator configuration.
@@ -225,8 +220,7 @@ public sealed class Machine : IDisposable {
             machineCreationOptions.Configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
 
-        DmaController = new DmaController(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        RegisterIoPortHandler(DmaController);
+        DmaSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, machineCreationOptions.Gui);
 
         DualPic = new DualPic(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(DualPic);
@@ -255,6 +249,7 @@ public sealed class Machine : IDisposable {
         RegisterIoPortHandler(OPL3FM);
         SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, new SoundBlasterHardwareConfig(7,1,5));
         RegisterIoPortHandler(SoundBlaster);
+        DmaSubsystem.RegisterDmaDevice(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
         MidiDevice = new Midi(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
@@ -293,7 +288,7 @@ public sealed class Machine : IDisposable {
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
         Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
-
+        
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
         var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
         RegisterCallbackHandler(mouseInt33Handler);
@@ -301,10 +296,6 @@ public sealed class Machine : IDisposable {
         RegisterCallbackHandler(mouseIrq12Handler);
         var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(mouseCleanupHandler);
-
-        _dmaThread = new Thread(DmaLoop) {
-            Name = "DMAThread"
-        };
     }
 
     /// <summary>
@@ -337,35 +328,6 @@ public sealed class Machine : IDisposable {
     /// <exception cref="ArgumentException"></exception>
     public void RegisterIoPortHandler(IIOPortHandler ioPortHandler) {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
-
-        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
-            return;
-        }
-
-        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
-            throw new ArgumentException("Invalid DMA channel on DMA device.");
-        }
-
-        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    /// <summary>
-    /// https://techgenix.com/direct-memory-access/
-    /// </summary>
-    private void DmaLoop() {
-        while (Cpu.IsRunning && !_exitDmaLoop && !_exitEmulationLoop && !_disposed) {
-            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                if (Gui?.IsPaused == true || IsPaused) {
-                    Gui?.WaitForContinue();
-                }
-                dmaChannel.Transfer(Memory);
-                if (!_exitDmaLoop) {
-                    _dmaResetEvent.WaitOne(1);
-                }
-            }
-        }
     }
 
     /// <summary>
@@ -390,10 +352,7 @@ public sealed class Machine : IDisposable {
     public void Run() {
         State state = Cpu.State;
         FunctionHandler functionHandler = Cpu.FunctionHandler;
-        if (!_dmaThreadStarted) {
-            _dmaThread.Start();
-            _dmaThreadStarted = true;
-        }
+        DmaSubsystem.Run();
         if (Debugger.IsAttached) {
             try {
                 StartRunLoop(functionHandler, state);
@@ -449,15 +408,6 @@ public sealed class Machine : IDisposable {
         }
     }
 
-    /// <summary>
-    /// Performs DMA transfers when invoked.
-    /// </summary>
-    public void PerformDmaTransfers() {
-        if (!_disposed && !_exitDmaLoop) {
-            _dmaResetEvent.Set();
-        }
-    }
-
     private void PauseIfAskedTo() {
         if(Gui?.PauseEmulatorOnStart == true) {
             Gui?.PauseEmulationOnStart();
@@ -480,12 +430,7 @@ public sealed class Machine : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _dmaResetEvent.Set();
-                _exitDmaLoop = true;
-                if (_dmaThread.IsAlive && _dmaThreadStarted) {
-                    _dmaThread.Join();
-                }
-                _dmaResetEvent.Dispose();
+                DmaSubsystem.Dispose();
                 MidiDevice.Dispose();
                 SoundBlaster.Dispose();
                 OPL3FM.Dispose();

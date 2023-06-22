@@ -136,7 +136,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
         _mixer = new Mixer(this);
-        _dmaChannel = machine.DmaController.Channels[DMA];
+        _dmaChannel = machine.DmaSubsystem.DmaController.Channels[DMA];
         _dsp = new Dsp(machine, this, DMA, _dma16);
         _playbackThread = new Thread(AudioPlayback) {
             Name = "PCMAudio",
@@ -382,37 +382,37 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             case Commands.SingleCycleDmaOutput8_Alt:
             case Commands.SingleCycleDmaOutput8Fifo_Alt:
                 _dsp.Begin(false, false, false);
-                _machine.PerformDmaTransfers();
+                _machine.DmaSubsystem.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, true);
-                _machine.PerformDmaTransfers();
+                _machine.DmaSubsystem.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, false);
-                _machine.PerformDmaTransfers();
+                _machine.DmaSubsystem.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, true);
-                _machine.PerformDmaTransfers();
+                _machine.DmaSubsystem.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, false);
-                _machine.PerformDmaTransfers();
+                _machine.DmaSubsystem.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, true);
-                _machine.PerformDmaTransfers();
+                _machine.DmaSubsystem.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, false);
-                _machine.PerformDmaTransfers();
+                _machine.DmaSubsystem.PerformDmaTransfers();
                 break;
 
             case Commands.AutoInitDmaOutput8:

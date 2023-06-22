@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Blaster;
 
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 
 using System;
@@ -24,8 +23,8 @@ public sealed class Dsp {
     /// <param name="dma8">8-bit DMA channel for the DSP device.</param>
     /// <param name="dma16">16-bit DMA channel for the DSP device.</param>
     public Dsp(Machine vm, IRequestInterrupt soundCard, int dma8, int dma16) {
-        dmaChannel8 = vm.DmaController.Channels[dma8];
-        dmaChannel16 = vm.DmaController.Channels[dma16];
+        dmaChannel8 = vm.DmaSubsystem.DmaController.Channels[dma8];
+        dmaChannel16 = vm.DmaSubsystem.DmaController.Channels[dma16];
         SampleRate = 22050;
         BlockTransferSize = 65536;
         _soundCard = soundCard;
