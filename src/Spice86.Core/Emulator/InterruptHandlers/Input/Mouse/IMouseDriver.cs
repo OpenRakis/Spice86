@@ -38,17 +38,17 @@ public interface IMouseDriver {
     ///     Set the number of mickeys per pixel of horizontal movement.
     /// </summary>
     /// <value></value>
-    ushort HorizontalMickeysPerPixel { set; }
+    ushort HorizontalMickeysPerPixel { get; set; }
 
     /// <summary>
     ///     Set the number of mickeys per pixel of vertical movement.
     /// </summary>
-    ushort VerticalMickeysPerPixel { set; }
+    ushort VerticalMickeysPerPixel { get; set; }
 
     /// <summary>
     ///     Set the threshold of movement amount to enable double speed.
     /// </summary>
-    ushort DoubleSpeedThreshold { set; }
+    ushort DoubleSpeedThreshold { get; set; }
 
     /// <summary>
     ///     Get the x, y position of the mouse as well as the button flags.
@@ -93,4 +93,15 @@ public interface IMouseDriver {
     ///     Restores the registers that were saved by the driver before calling user code.
     /// </summary>
     void RestoreRegisters();
+
+    /// <summary>
+    ///     Get the number of mickeys of horizontal movement.
+    /// </summary>
+    short GetDeltaXMickeys();
+
+    /// <summary>
+    ///     Get the number of mickeys of vertical movement.
+    /// </summary>
+    /// <returns></returns>
+    short GetDeltaYMickeys();
 }

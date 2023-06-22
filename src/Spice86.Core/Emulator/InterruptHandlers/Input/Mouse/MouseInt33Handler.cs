@@ -124,7 +124,20 @@ public class MouseInt33Handler : InterruptHandler {
         _mouseDriver.DoubleSpeedThreshold = threshold;
     }
 
-    public void SetMouseSensitivity() {
+    private void GetMouseSensitivity() {
+        ushort horizontal = _mouseDriver.HorizontalMickeysPerPixel;
+        ushort vertical = _mouseDriver.VerticalMickeysPerPixel;
+        ushort threshold = _mouseDriver.DoubleSpeedThreshold;
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 1B {MethodName}: horizontal = {XRatio} mickeys per pixel, vertical = {YRatio} mickeys per pixel, doubleSpeedThreshold = {Threshold} mickeys per second",
+                nameof(MouseInt33Handler), Index, nameof(GetMouseSensitivity), horizontal, vertical, threshold);
+        }
+        _state.BX = horizontal;
+        _state.CX = vertical;
+        _state.DX = threshold;
+    }
+
+    private void SetMouseSensitivity() {
         ushort horizontal = _state.BX;
         ushort vertical = _state.CX;
         ushort threshold = _state.DX;
@@ -191,12 +204,25 @@ public class MouseInt33Handler : InterruptHandler {
         _dispatchTable.Add(0x04, new Callback(0x04, SetMouseCursorPosition));
         _dispatchTable.Add(0x07, new Callback(0x07, SetMouseHorizontalMinMaxPosition));
         _dispatchTable.Add(0x08, new Callback(0x08, SetMouseVerticalMinMaxPosition));
+        _dispatchTable.Add(0x0B, new Callback(0x0B, GetMotionDistance));
         _dispatchTable.Add(0x0C, new Callback(0x0C, SetMouseUserDefinedSubroutine));
         _dispatchTable.Add(0x0F, new Callback(0x0F, SetMouseMickeyPixelRatio));
         _dispatchTable.Add(0x13, new Callback(0x13, SetMouseDoubleSpeedThreshold));
         _dispatchTable.Add(0x14, new Callback(0x14, SwapMouseUserDefinedSubroutine));
         _dispatchTable.Add(0x1A, new Callback(0x1A, SetMouseSensitivity));
+        _dispatchTable.Add(0x1B, new Callback(0x1B, GetMouseSensitivity));
         _dispatchTable.Add(0x1C, new Callback(0x1C, SetInterruptRate));
         _dispatchTable.Add(0x24, new Callback(0x24, GetSoftwareVersionAndMouseType));
+    }
+
+    private void GetMotionDistance() {
+        short x = _mouseDriver.GetDeltaXMickeys();
+        short y = _mouseDriver.GetDeltaYMickeys();
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} INT {Int:X2} 0B {MethodName}: x = {X} mickeys, y = {Y} mickeys",
+                nameof(MouseInt33Handler), Index, nameof(GetMotionDistance), x, y);
+        }
+        _state.CX = (ushort)x;
+        _state.DX = (ushort)y;
     }
 }

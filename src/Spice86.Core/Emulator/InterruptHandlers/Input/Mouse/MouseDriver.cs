@@ -115,16 +115,19 @@ public class MouseDriver : IMouseDriver {
 
     /// <inheritdoc />
     public ushort HorizontalMickeysPerPixel {
+        get => _mouseDevice.HorizontalMickeysPerPixel;
         set => _mouseDevice.HorizontalMickeysPerPixel = value;
     }
 
     /// <inheritdoc />
     public ushort VerticalMickeysPerPixel {
+        get => _mouseDevice.VerticalMickeysPerPixel;
         set => _mouseDevice.VerticalMickeysPerPixel = value;
     }
 
     /// <inheritdoc />
     public ushort DoubleSpeedThreshold {
+        get => _mouseDevice.DoubleSpeedThreshold;
         set => _mouseDevice.DoubleSpeedThreshold = value;
     }
 
@@ -145,6 +148,20 @@ public class MouseDriver : IMouseDriver {
         _state.AX = _savedRegisters.Ax;
     }
 
+    /// <inheritdoc />
+    public short GetDeltaXMickeys() {
+        double deltaXPixels = _mouseDevice.DeltaX * ScreenWidth;
+        double deltaXMickeys = _mouseDevice.HorizontalMickeysPerPixel * deltaXPixels;
+        return (short)deltaXMickeys;
+    }
+
+    /// <inheritdoc />
+    public short GetDeltaYMickeys() {
+        double deltaYPixels = _mouseDevice.DeltaY * ScreenHeight;
+        double deltaYMickeys = _mouseDevice.VerticalMickeysPerPixel * deltaYPixels;
+        return (short)deltaYMickeys;
+    }
+
     private void Initialize() {
         CurrentMinX = MouseMinXAbsolute;
         CurrentMinY = MouseMinYAbsolute;
@@ -160,8 +177,8 @@ public class MouseDriver : IMouseDriver {
         _state.BX = status.ButtonFlags;
         _state.CX = (ushort)(status.X << 2);
         _state.DX = (ushort)(status.Y << 2);
-        _state.SI = GetDeltaXMickeys();
-        _state.DI = GetDeltaYMickeys();
+        _state.SI = (ushort)GetDeltaXMickeys();
+        _state.DI = (ushort)GetDeltaYMickeys();
 
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("{ClassName} {MethodName}: calling {Segment:X4}:{Offset:X4} with AX={AX:X4}, BX={BX:X4}, CX={CX:X4}, DX={DX:X4}, SI={SI:X4}, DI={DI:X4}",
@@ -177,18 +194,6 @@ public class MouseDriver : IMouseDriver {
 
     private static int LinearInterpolate(double index, int min, int max) {
         return (int)(min + (max - min) * index);
-    }
-
-    private ushort GetDeltaXMickeys() {
-        double deltaXPixels = _mouseDevice.DeltaX * ScreenWidth;
-        double deltaXMickeys = _mouseDevice.HorizontalMickeysPerPixel * deltaXPixels;
-        return (ushort)deltaXMickeys;
-    }
-
-    private ushort GetDeltaYMickeys() {
-        double deltaYPixels = _mouseDevice.DeltaY * ScreenHeight;
-        double deltaYMickeys = _mouseDevice.VerticalMickeysPerPixel * deltaYPixels;
-        return (ushort)deltaYMickeys;
     }
 
     private void SaveRegisters() {
