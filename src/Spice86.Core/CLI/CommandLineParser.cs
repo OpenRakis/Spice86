@@ -16,16 +16,18 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
-/// <inheritdoc />
-public class CommandLineParser : ICommandLineParser {
+/// <summary>
+/// Parses the command line arguments into a <see cref="Configuration"/> object.
+/// </summary>
+public static class CommandLineParser {
     
     /// <summary>
-    /// Parses the command line into a <see cref="Configuration"/> object.
+    /// Parses the command line arguments into a <see cref="Configuration"/> object.
     /// </summary>
     /// <param name="args">The application command line arguments</param>
     /// <returns>A <see cref="Configuration"/> object representing the command line arguments</returns>
     /// <exception cref="UnreachableException">When the command line arguments are unrecognized.</exception>
-    public Configuration ParseCommandLine(string[] args) {
+    public static Configuration ParseCommandLine(string[] args) {
         ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(args);
         return result.MapResult(initialConfig => {
             initialConfig.Exe = ParseExePath(initialConfig.Exe);

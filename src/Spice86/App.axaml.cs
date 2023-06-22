@@ -1,7 +1,5 @@
 namespace Spice86;
 
-using Microsoft.Extensions.DependencyInjection;
-
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
