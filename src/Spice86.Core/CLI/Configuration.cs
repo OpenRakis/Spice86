@@ -122,6 +122,6 @@ public class Configuration {
     /// <summary>
     /// Determines whether EMS (Expanded Memory Specification) should be enabled or not.
     /// </summary>
-    [Option(nameof(Ems), Default = true, Required = false, HelpText = "Enable EMS")]
+    [Option(nameof(Ems), Default = false, Required = false, HelpText = "Enable EMS")]
     public bool Ems { get; init; }
 }
