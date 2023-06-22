@@ -93,7 +93,7 @@ public class Dos {
         DosInt21Handler = new DosInt21Handler(_machine, _loggerService, this);
         DosInt2FHandler = new DosInt2fHandler(_machine, _loggerService);
     }
-
+    
     internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, Configuration configuration) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
