@@ -49,7 +49,6 @@ public class Pic : IHardwareInterruptController {
     /// Services an IRQ request
     /// </summary>
     /// <param name="irq">The IRQ Number, which will be internally translated to a vector number</param>
-    /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
     public void InterruptRequest(byte irq) {
         if (!_initialized)
             return;
@@ -60,9 +59,13 @@ public class Pic : IHardwareInterruptController {
         if ((_inServiceRegister & bit) == 0) {
             _interruptRequestRegister = (byte)((_interruptRequestRegister | bit) & ~_interruptMaskRegister);
             if (irq != 0)
-                _loggerService.Verbose("Interrupt requested for irq {Irq} ", irq);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("Interrupt requested for irq {Irq} ", irq);
+                }
         } else {
-            _loggerService.Verbose("Interrupt request {Irq} already in service", irq);
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Interrupt request {Irq} already in service", irq);
+            }
         }
 
         _readerWriterLock.ExitWriteLock();

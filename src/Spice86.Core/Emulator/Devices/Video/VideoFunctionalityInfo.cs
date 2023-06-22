@@ -8,7 +8,6 @@ using System.ComponentModel.DataAnnotations;
 /// <summary>
 ///     Represents a Dynamic Functionality State Table in memory, a data structure used in IBM PC VGA emulation to keep
 ///     track of the current state of video functionality. <br />
-///     For more information, see https://stanislavs.org/helppc/int_10-1b.html.
 /// </summary>
 public class VideoFunctionalityInfo : MemoryBasedDataStructureWithBaseAddress {
     /// <summary>

@@ -1,7 +1,8 @@
-### Thanks for starting a pull request on Spice86!
+### Description of Changes
+<!-- Brief description or overview on what was changed in the PR -->
 
-#### Don't forget:
-- [ ] Identify what it adds in the title. For example: ```[Memory] XMS Manager```
-- [ ] Link to GitHub issues it solves. ```closes #1234```, if there is one.
-- [ ] Include unit tests, if possible
-- [ ] Include comments
+### Rationale behind Changes
+<!-- Why were these changes made?  What problem does it solve / area does it improve? -->
+
+### Suggested Testing Steps
+<!-- If applicable, including examples you've already tested with / recommendations for how to test further is very helpful! -->
