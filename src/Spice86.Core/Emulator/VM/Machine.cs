@@ -178,8 +178,6 @@ public sealed class Machine : IDisposable {
         
         MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MouseDevice);
-        
-        SoundSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
 
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
@@ -202,6 +200,8 @@ public sealed class Machine : IDisposable {
         RegisterCallbackHandler(mouseIrq12Handler);
         var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(mouseCleanupHandler);
+
+        SoundSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
 
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
