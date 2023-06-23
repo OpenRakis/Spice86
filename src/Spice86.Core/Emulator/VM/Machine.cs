@@ -64,12 +64,7 @@ public sealed class Machine : IDisposable {
     /// DOS Services.
     /// </summary>
     public Dos Dos { get; }
-
-    /// <summary>
-    /// The Gravis Ultrasound sound card.
-    /// </summary>
-    public GravisUltraSound GravisUltraSound { get; }
-
+    
     /// <summary>
     /// The GUI. Can be null in headless mode.
     /// </summary>
@@ -89,27 +84,12 @@ public sealed class Machine : IDisposable {
     /// The memory bus.
     /// </summary>
     public Memory Memory { get; }
-
-    /// <summary>
-    /// The General MIDI (MPU-401) or MT-32 device.
-    /// </summary>
-    public Midi MidiDevice { get; }
-
-    /// <summary>
-    /// PC Speaker device.
-    /// </summary>
-    public PcSpeaker PcSpeaker { get; }
-
+    
     /// <summary>
     /// The dual programmable interrupt controllers.
     /// </summary>
     public DualPic DualPic { get; }
 
-    /// <summary>
-    /// The Sound Blaster card.
-    /// </summary>
-    public SoundBlaster SoundBlaster { get; }
-    
     /// <summary>
     /// Contains the keyboard, mouse, and joystick.
     /// <remarks>BIOS related interrupt handlers live in this subsystem.</remarks>
@@ -167,14 +147,14 @@ public sealed class Machine : IDisposable {
     public VgaRom VgaRom { get; }
 
     /// <summary>
-    /// The OPL3 FM Synth chip.
-    /// </summary>
-    public OPL3FM OPL3FM { get; }
-    
-    /// <summary>
     /// The DMA loop and DMA channels
     /// </summary>
     public DmaSubsystem DmaSubsystem { get; }
+    
+    /// <summary>
+    /// /// Contains the PC Speaker, the external MIDI device (MT-32 or General MIDI), the FM Synth chips, and the sound cards
+    /// </summary>
+    public SoundSubsystem SoundSubsystem { get; }
 
     /// <summary>
     /// The emulator configuration.
@@ -223,19 +203,11 @@ public sealed class Machine : IDisposable {
         
         Timer = new Timer(this, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
         RegisterIoPortHandler(Timer);
+        
         MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MouseDevice);
-        PcSpeaker = new PcSpeaker(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
-        RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        RegisterIoPortHandler(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, new SoundBlasterHardwareConfig(7,1,5));
-        RegisterIoPortHandler(SoundBlaster);
-        DmaSubsystem.RegisterDmaDevice(SoundBlaster);
-        GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        RegisterIoPortHandler(MidiDevice);
+        
+        SoundSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
 
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
@@ -273,7 +245,7 @@ public sealed class Machine : IDisposable {
 
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
-        Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
+        Dos.Initialize(SoundSubsystem.SoundBlaster, machineCreationOptions.Configuration);
     }
 
     /// <summary>
@@ -409,10 +381,7 @@ public sealed class Machine : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 DmaSubsystem.Dispose();
-                MidiDevice.Dispose();
-                SoundBlaster.Dispose();
-                OPL3FM.Dispose();
-                PcSpeaker.Dispose();
+                SoundSubsystem.Dispose();
                 MachineBreakpoints.Dispose();
             }
             _disposed = true;
