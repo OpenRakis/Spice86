@@ -7,7 +7,7 @@ public interface IMouseDriver {
     /// <summary>
     ///     Get the amount of buttons the mouse reports.
     /// </summary>
-    ushort ButtonCount { get; }
+    int ButtonCount { get; }
 
     /// <summary>
     ///     Get the type of mouse.
@@ -17,38 +17,38 @@ public interface IMouseDriver {
     /// <summary>
     ///     Get or set the lower bound of the mouse horizontal position.
     /// </summary>
-    ushort CurrentMinX { get; set; }
+    int CurrentMinX { get; set; }
 
     /// <summary>
     ///     Get or set the upper bound of the mouse horizontal position.
     /// </summary>
-    ushort CurrentMaxX { get; set; }
+    int CurrentMaxX { get; set; }
 
     /// <summary>
     ///     Get or set the upper bound of the mouse vertical position.
     /// </summary>
-    ushort CurrentMaxY { get; set; }
+    int CurrentMaxY { get; set; }
 
     /// <summary>
     ///     Get or set the lower bound of the mouse vertical position.
     /// </summary>
-    ushort CurrentMinY { get; set; }
+    int CurrentMinY { get; set; }
 
     /// <summary>
     ///     Set the number of mickeys per pixel of horizontal movement.
     /// </summary>
     /// <value></value>
-    ushort HorizontalMickeysPerPixel { get; set; }
+    int HorizontalMickeysPerPixel { get; set; }
 
     /// <summary>
     ///     Set the number of mickeys per pixel of vertical movement.
     /// </summary>
-    ushort VerticalMickeysPerPixel { get; set; }
+    int VerticalMickeysPerPixel { get; set; }
 
     /// <summary>
     ///     Set the threshold of movement amount to enable double speed.
     /// </summary>
-    ushort DoubleSpeedThreshold { get; set; }
+    int DoubleSpeedThreshold { get; set; }
 
     /// <summary>
     ///     Get the x, y position of the mouse as well as the button flags.
@@ -87,7 +87,7 @@ public interface IMouseDriver {
     /// </summary>
     /// <param name="x">Horizontal position in pixels</param>
     /// <param name="y">Vertical position in pixels</param>
-    void SetCursorPosition(ushort x, ushort y);
+    void SetCursorPosition(int x, int y);
 
     /// <summary>
     ///     Restores the registers that were saved by the driver before calling user code.
@@ -104,4 +104,9 @@ public interface IMouseDriver {
     /// </summary>
     /// <returns></returns>
     short GetDeltaYMickeys();
+
+    /// <summary>
+    ///     Resets the mouse driver to default values.
+    /// </summary>
+    void Reset();
 }

@@ -30,17 +30,17 @@ public interface IMouseDevice : IIOPortHandler {
     /// <summary>
     ///     The threshold of movement amount to enable double speed.
     /// </summary>
-    ushort DoubleSpeedThreshold { get; set; }
+    int DoubleSpeedThreshold { get; set; }
 
     /// <summary>
     ///     The number of mickeys per pixel of horizontal movement.
     /// </summary>
-    ushort HorizontalMickeysPerPixel { get; set; }
+    int HorizontalMickeysPerPixel { get; set; }
 
     /// <summary>
     ///     The number of mickeys per pixel of vertical movement.
     /// </summary>
-    ushort VerticalMickeysPerPixel { get; set; }
+    int VerticalMickeysPerPixel { get; set; }
 
     /// <summary>
     ///     A bitmask of the mouse events that were triggered since the last update.
@@ -50,7 +50,7 @@ public interface IMouseDevice : IIOPortHandler {
     /// <summary>
     ///     The sample rate of the mouse.
     /// </summary>
-    ushort SampleRate { get; set; }
+    int SampleRate { get; set; }
 
     /// <summary>
     ///     The amount of movement in the Y direction since the last update.
@@ -65,15 +65,15 @@ public interface IMouseDevice : IIOPortHandler {
     /// <summary>
     ///     The number of buttons on the mouse.
     /// </summary>
-    ushort ButtonCount { get; }
+    int ButtonCount { get; }
 
     /// <summary>
     ///     Horizontal position of the mouse cursor relative to the window.
     /// </summary>
-    double MouseXRelative { get; }
+    double MouseXRelative { get; set; }
 
     /// <summary>
     ///     Vertical position of the mouse cursor relative to the window.
     /// </summary>
-    double MouseYRelative { get; }
+    double MouseYRelative { get; set; }
 }

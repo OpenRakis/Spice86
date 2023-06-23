@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Shared.Emulator.Memory;
@@ -375,4 +376,9 @@ public interface IVgaFunctionality {
     ///     Load custom font and set the amount of screen rows.
     /// </summary>
     void LoadGraphicsFont(ushort segment, ushort offset, byte height, byte rowSpecifier, byte userSpecifiedRows);
+    
+    /// <summary>
+    ///    Notifies when the video mode has changed.
+    /// </summary>
+    event EventHandler<VideoModeChangedEventArgs> VideoModeChanged;
 }

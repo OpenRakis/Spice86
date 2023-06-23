@@ -43,19 +43,19 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public double DeltaX { get; private set; }
 
     /// <inheritdoc />
-    public ushort ButtonCount { get; } = 3;
+    public int ButtonCount { get; } = 3;
 
     /// <inheritdoc />
-    public double MouseXRelative { get; private set; }
+    public double MouseXRelative { get; set; }
 
     /// <inheritdoc />
-    public double MouseYRelative { get; private set; }
+    public double MouseYRelative { get; set; }
 
     /// <inheritdoc />
     public MouseEventMask LastTrigger { get; private set; }
 
     /// <inheritdoc />
-    public ushort SampleRate { get; set; } = 100;
+    public int SampleRate { get; set; } = 100;
 
     /// <inheritdoc />
     public MouseType MouseType { get; }
@@ -70,13 +70,13 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public bool IsMiddleButtonDown { get; private set; }
 
     /// <inheritdoc />
-    public ushort DoubleSpeedThreshold { get; set; }
+    public int DoubleSpeedThreshold { get; set; }
 
     /// <inheritdoc />
-    public ushort HorizontalMickeysPerPixel { get; set; } = 8;
+    public int HorizontalMickeysPerPixel { get; set; } = 8;
 
     /// <inheritdoc />
-    public ushort VerticalMickeysPerPixel { get; set; } = 16;
+    public int VerticalMickeysPerPixel { get; set; } = 16;
 
     private void Initialize() {
         if (_gui is not null && MouseType != MouseType.None) {

@@ -4,14 +4,14 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 ///     Driver for the mouse.
 /// </summary>
 public class MouseDriver : IMouseDriver {
-    private const ushort MouseMinXAbsolute = 0;
-    private const ushort MouseMinYAbsolute = 0;
     private readonly Cpu _cpu;
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
@@ -21,6 +21,7 @@ public class MouseDriver : IMouseDriver {
     private readonly IVgaFunctionality _vgaFunctions;
     private MouseRegisters? _savedRegisters;
     private MouseUserCallback _userCallback;
+    private VgaMode _vgaMode;
 
     /// <summary>
     ///     Create a new instance of the mouse driver.
@@ -38,25 +39,22 @@ public class MouseDriver : IMouseDriver {
         _gui = gui;
         _vgaFunctions = vgaFunctions;
 
-        Initialize();
+        _vgaFunctions.VideoModeChanged += OnVideoModeChanged;
+
+        Reset();
     }
 
-    private ushort MouseMaxXAbsolute => _vgaFunctions.GetCurrentMode().Width;
-    private ushort MouseMaxYAbsolute => _vgaFunctions.GetCurrentMode().Height;
-    private ushort ScreenWidth => (ushort)(MouseMaxXAbsolute - MouseMinXAbsolute);
-    private ushort ScreenHeight => (ushort)(MouseMaxYAbsolute - MouseMinYAbsolute);
+    /// <inheritdoc />
+    public int CurrentMinX { get; set; }
 
     /// <inheritdoc />
-    public ushort CurrentMinX { get; set; }
+    public int CurrentMaxX { get; set; }
 
     /// <inheritdoc />
-    public ushort CurrentMaxX { get; set; }
+    public int CurrentMaxY { get; set; }
 
     /// <inheritdoc />
-    public ushort CurrentMaxY { get; set; }
-
-    /// <inheritdoc />
-    public ushort CurrentMinY { get; set; }
+    public int CurrentMinY { get; set; }
 
     /// <inheritdoc />
     public void Update() {
@@ -90,43 +88,43 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
-    public void SetCursorPosition(ushort x, ushort y) {
+    public void SetCursorPosition(int x, int y) {
         if (_gui != null) {
             _gui.MouseX = x;
             _gui.MouseY = y;
         }
+        _mouseDevice.MouseXRelative = (double)x / _vgaMode.Width;
+        _mouseDevice.MouseYRelative = (double)y / _vgaMode.Height;
     }
 
     /// <inheritdoc />
-    public ushort ButtonCount => _mouseDevice.ButtonCount;
+    public int ButtonCount => _mouseDevice.ButtonCount;
 
     /// <inheritdoc />
     public MouseType MouseType => _mouseDevice.MouseType;
 
     /// <inheritdoc />
     public MouseStatus GetCurrentMouseStatus() {
-        ushort xRaw = (ushort)LinearInterpolate(_mouseDevice.MouseXRelative, MouseMinXAbsolute, MouseMaxXAbsolute);
-        ushort yRaw = (ushort)LinearInterpolate(_mouseDevice.MouseYRelative, MouseMinYAbsolute, MouseMaxYAbsolute);
-        ushort x = ushort.Clamp(xRaw, CurrentMinX, CurrentMaxX);
-        ushort y = ushort.Clamp(yRaw, CurrentMinY, CurrentMaxY);
+        int x = LinearInterpolate(_mouseDevice.MouseXRelative, CurrentMinX, CurrentMaxX);
+        int y = LinearInterpolate(_mouseDevice.MouseYRelative, CurrentMinY, CurrentMaxY);
         ushort buttonFlags = (ushort)((_mouseDevice.IsLeftButtonDown ? 1 : 0) | (_mouseDevice.IsRightButtonDown ? 2 : 0) | (_mouseDevice.IsMiddleButtonDown ? 4 : 0));
         return new MouseStatus(x, y, buttonFlags);
     }
 
     /// <inheritdoc />
-    public ushort HorizontalMickeysPerPixel {
+    public int HorizontalMickeysPerPixel {
         get => _mouseDevice.HorizontalMickeysPerPixel;
         set => _mouseDevice.HorizontalMickeysPerPixel = value;
     }
 
     /// <inheritdoc />
-    public ushort VerticalMickeysPerPixel {
+    public int VerticalMickeysPerPixel {
         get => _mouseDevice.VerticalMickeysPerPixel;
         set => _mouseDevice.VerticalMickeysPerPixel = value;
     }
 
     /// <inheritdoc />
-    public ushort DoubleSpeedThreshold {
+    public int DoubleSpeedThreshold {
         get => _mouseDevice.DoubleSpeedThreshold;
         set => _mouseDevice.DoubleSpeedThreshold = value;
     }
@@ -150,23 +148,34 @@ public class MouseDriver : IMouseDriver {
 
     /// <inheritdoc />
     public short GetDeltaXMickeys() {
-        double deltaXPixels = _mouseDevice.DeltaX * ScreenWidth;
+        double deltaXPixels = _mouseDevice.DeltaX * _vgaMode.Width;
         double deltaXMickeys = _mouseDevice.HorizontalMickeysPerPixel * deltaXPixels;
         return (short)deltaXMickeys;
     }
 
     /// <inheritdoc />
     public short GetDeltaYMickeys() {
-        double deltaYPixels = _mouseDevice.DeltaY * ScreenHeight;
+        double deltaYPixels = _mouseDevice.DeltaY * _vgaMode.Height;
         double deltaYMickeys = _mouseDevice.VerticalMickeysPerPixel * deltaYPixels;
         return (short)deltaYMickeys;
     }
 
-    private void Initialize() {
-        CurrentMinX = MouseMinXAbsolute;
-        CurrentMinY = MouseMinYAbsolute;
-        CurrentMaxX = MouseMaxXAbsolute;
-        CurrentMaxY = MouseMaxYAbsolute;
+    /// <inheritdoc />
+    public void Reset() {
+        _vgaMode = _vgaFunctions.GetCurrentMode();
+        SetCursorPosition(_vgaMode.Width / 2, _vgaMode.Height / 2);
+        HideMouseCursor();
+        CurrentMinX = 0;
+        CurrentMinY = 0;
+        CurrentMaxX = _vgaMode.Width - 1;
+        CurrentMaxY = _vgaMode.Height - 1;
+        HorizontalMickeysPerPixel = 8;
+        VerticalMickeysPerPixel = 16;
+    }
+
+    private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
+        _vgaMode = e.NewMode;
+        Reset();
     }
 
     private void CallUserSubRoutine() {
@@ -174,9 +183,9 @@ public class MouseDriver : IMouseDriver {
         // Set mouse info
         MouseStatus status = GetCurrentMouseStatus();
         _state.AX = (ushort)_mouseDevice.LastTrigger;
-        _state.BX = status.ButtonFlags;
-        _state.CX = (ushort)(status.X << 2);
-        _state.DX = (ushort)(status.Y << 2);
+        _state.BX = (ushort)status.ButtonFlags;
+        _state.CX = (ushort)status.X;
+        _state.DX = (ushort)status.Y;
         _state.SI = (ushort)GetDeltaXMickeys();
         _state.DI = (ushort)GetDeltaYMickeys();
 

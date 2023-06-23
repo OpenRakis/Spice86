@@ -15,6 +15,10 @@ public class MouseInt33Handler : InterruptHandler {
     private readonly ILoggerService _logger;
     private readonly IMouseDriver _mouseDriver;
 
+    /// <summary>
+    ///     Create a new instance of the mouse interrupt handler.
+    /// </summary>
+    /// <param name="mouseDriver">The mouse driver to handle the actual functionality.</param>
     public MouseInt33Handler(Machine machine, ILoggerService loggerService, IMouseDriver mouseDriver) : base(machine, loggerService) {
         _logger = loggerService.WithLogLevel(LogEventLevel.Verbose);
         _mouseDriver = mouseDriver;
@@ -32,11 +36,12 @@ public class MouseInt33Handler : InterruptHandler {
 
     public void MouseInstalledFlag() {
         _state.AX = 0xFFFF; // installed
-        _state.BX = _mouseDriver.ButtonCount;
+        _state.BX = (ushort)_mouseDriver.ButtonCount;
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("{ClassName} INT {Int:X2} 00 {MethodName}: driver installed, {ButtonCount} buttons",
                 nameof(MouseInt33Handler), Index, nameof(MouseInstalledFlag), _state.BX);
         }
+        _mouseDriver.Reset();
     }
 
     public void ShowMouseCursor() {
@@ -61,9 +66,9 @@ public class MouseInt33Handler : InterruptHandler {
             _logger.Verbose("{ClassName} INT {Int:X2} 03 {MethodName}: {MouseStatus}",
                 nameof(MouseInt33Handler), Index, nameof(GetMousePositionAndStatus), status);
         }
-        _state.CX = status.X;
-        _state.DX = status.Y;
-        _state.BX = status.ButtonFlags;
+        _state.CX = (ushort)status.X;
+        _state.DX = (ushort)status.Y;
+        _state.BX = (ushort)status.ButtonFlags;
     }
 
     public void SetMouseCursorPosition() {
@@ -82,7 +87,6 @@ public class MouseInt33Handler : InterruptHandler {
             _logger.Verbose("{ClassName} INT {Int:X2} 07 {MethodName}: min = {Min}, max = {Max}",
                 nameof(MouseInt33Handler), Index, nameof(SetMouseHorizontalMinMaxPosition), _state.CX, _state.DX);
         }
-        _mouseDriver.CurrentMinX = _state.CX;
         _mouseDriver.CurrentMaxX = _state.DX;
     }
 
@@ -125,16 +129,16 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     private void GetMouseSensitivity() {
-        ushort horizontal = _mouseDriver.HorizontalMickeysPerPixel;
-        ushort vertical = _mouseDriver.VerticalMickeysPerPixel;
-        ushort threshold = _mouseDriver.DoubleSpeedThreshold;
+        int horizontal = _mouseDriver.HorizontalMickeysPerPixel;
+        int vertical = _mouseDriver.VerticalMickeysPerPixel;
+        int threshold = _mouseDriver.DoubleSpeedThreshold;
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("{ClassName} INT {Int:X2} 1B {MethodName}: horizontal = {XRatio} mickeys per pixel, vertical = {YRatio} mickeys per pixel, doubleSpeedThreshold = {Threshold} mickeys per second",
                 nameof(MouseInt33Handler), Index, nameof(GetMouseSensitivity), horizontal, vertical, threshold);
         }
-        _state.BX = horizontal;
-        _state.CX = vertical;
-        _state.DX = threshold;
+        _state.BX = (ushort)horizontal;
+        _state.CX = (ushort)vertical;
+        _state.DX = (ushort)threshold;
     }
 
     private void SetMouseSensitivity() {

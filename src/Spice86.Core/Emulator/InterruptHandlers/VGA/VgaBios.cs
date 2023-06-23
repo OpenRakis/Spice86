@@ -453,8 +453,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 nameof(VgaBios), nameof(SetVideoMode), modeId, flags);
         }
         _vgaFunctions.VgaSetMode(modeId, flags);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("VGA BIOS mode set complete");
+        if (_logger.IsEnabled(LogEventLevel.Information)) {
+            _logger.Information("VGA BIOS mode {Mode:X2} set complete", modeId);
         }
     }
 
