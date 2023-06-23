@@ -20,9 +20,9 @@ public sealed class DmaSubsystem : IDisposable {
     /// </summary>
     public DmaController DmaController { get; }
 
-    private IMainWindowViewModel? _gui;
+    private readonly IMainWindowViewModel? _gui;
 
-    private Machine _machine;
+    private readonly Machine _machine;
 
     /// <summary>
     /// Initializes a new instance.

@@ -15,7 +15,7 @@ using Spice86.Shared.Emulator.Video;
 
 public partial class PaletteViewModel : ObservableObject {
     private readonly Machine? _machine;
-    private DispatcherTimer _timer;
+    private readonly DispatcherTimer _timer;
 
     public PaletteViewModel() {
         if (!Design.IsDesignMode) {

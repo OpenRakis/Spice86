@@ -20,7 +20,7 @@ public partial class DebugViewModel : ObservableObject {
     [ObservableProperty]
     private DateTime? _lastUpdate = null;
 
-    private Machine? _emulatorMachine;
+    private readonly Machine? _emulatorMachine;
 
     private readonly DispatcherTimer _timer;
     

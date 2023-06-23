@@ -13,7 +13,7 @@ using Spice86.Core.Emulator;
 using Spice86.Shared.Interfaces;
 
 public class Startup {
-    private ILoggerService _loggerService;
+    private readonly ILoggerService _loggerService;
     
     
     public Startup(ILoggerService loggerService) {

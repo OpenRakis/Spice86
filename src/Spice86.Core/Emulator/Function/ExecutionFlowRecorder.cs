@@ -15,7 +15,7 @@ public class ExecutionFlowRecorder {
     /// <summary>
     /// A set of pre-allocated breakpoints from physical address 0x0 to <see cref="Memory.Memory.EndOfHighMemoryArea"/>
     /// </summary>
-    private Dictionary<uint, AddressBreakPoint> _addressBreakPoints = new();
+    private readonly Dictionary<uint, AddressBreakPoint> _addressBreakPoints = new();
 
     /// <summary>
     /// Gets or sets whether we register calls, jumps, returns, and unaligned returns.
