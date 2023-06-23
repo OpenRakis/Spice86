@@ -22,6 +22,7 @@ public class MouseDriver : IMouseDriver {
     private MouseRegisters? _savedRegisters;
     private MouseUserCallback _userCallback;
     private VgaMode _vgaMode;
+    private int _mouseCursorHidden;
 
     /// <summary>
     ///     Create a new instance of the mouse driver.
@@ -79,22 +80,32 @@ public class MouseDriver : IMouseDriver {
 
     /// <inheritdoc />
     public void ShowMouseCursor() {
-        _gui?.ShowMouseCursor();
+        if (_mouseCursorHidden != 0) {
+            _mouseCursorHidden++;
+        }
+        if (_mouseCursorHidden == 0) {
+            _gui?.ShowMouseCursor();
+        }
     }
 
     /// <inheritdoc />
     public void HideMouseCursor() {
-        _gui?.HideMouseCursor();
+        if (_mouseCursorHidden == 0) {
+            _gui?.HideMouseCursor();
+        }
+        _mouseCursorHidden--;
     }
 
     /// <inheritdoc />
     public void SetCursorPosition(int x, int y) {
+        int mouseAreaWidth = CurrentMaxX - CurrentMinX;
+        int mouseAreaHeight = CurrentMaxY - CurrentMinY;
         if (_gui != null) {
             _gui.MouseX = x;
             _gui.MouseY = y;
         }
-        _mouseDevice.MouseXRelative = (double)x / _vgaMode.Width;
-        _mouseDevice.MouseYRelative = (double)y / _vgaMode.Height;
+        _mouseDevice.MouseXRelative = (double)x / mouseAreaWidth;
+        _mouseDevice.MouseYRelative = (double)y / mouseAreaHeight;
     }
 
     /// <inheritdoc />
@@ -164,7 +175,8 @@ public class MouseDriver : IMouseDriver {
     public void Reset() {
         _vgaMode = _vgaFunctions.GetCurrentMode();
         SetCursorPosition(_vgaMode.Width / 2, _vgaMode.Height / 2);
-        HideMouseCursor();
+        _mouseCursorHidden = -1;
+        _gui?.HideMouseCursor();
         CurrentMinX = 0;
         CurrentMinY = 0;
         CurrentMaxX = _vgaMode.Width - 1;
