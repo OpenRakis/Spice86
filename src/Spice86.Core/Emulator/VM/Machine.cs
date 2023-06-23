@@ -6,9 +6,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
@@ -60,16 +58,16 @@ public sealed class Machine : IDisposable {
     /// Contains all the breakpoints
     /// </summary>
     public MachineBreakpoints MachineBreakpoints { get; }
+    
+    /// <summary>
+    /// Contains programmable chips, such as the PIC and the PIT
+    /// </summary>
+    public ProgrammableSubsystem ProgrammableSubsystem { get; } 
 
     /// <summary>
     /// The memory bus.
     /// </summary>
     public Memory Memory { get; }
-    
-    /// <summary>
-    /// The dual programmable interrupt controllers.
-    /// </summary>
-    public DualPic DualPic { get; }
 
     /// <summary>
     /// Contains the keyboard, mouse, and joystick.
@@ -81,11 +79,6 @@ public sealed class Machine : IDisposable {
     /// The basic input output system.
     /// </summary>
     public Bios Bios { get; }
-
-    /// <summary>
-    /// The Programmable Interrupt Timer
-    /// </summary>
-    public Timer Timer { get; }
 
     /// <summary>
     /// The DMA loop and DMA channels
@@ -121,7 +114,6 @@ public sealed class Machine : IDisposable {
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 
-        // Breakpoints
         MachineBreakpoints = new MachineBreakpoints(this, machineCreationOptions.LoggerService);
 
         // IO devices
@@ -133,11 +125,7 @@ public sealed class Machine : IDisposable {
 
         DmaSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, Gui);
 
-        DualPic = new DualPic(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        RegisterIoPortHandler(DualPic);
-
-        Timer = new Timer(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, DualPic, machineCreationOptions.CounterConfigurator);
-        RegisterIoPortHandler(Timer);
+        ProgrammableSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, machineCreationOptions.CounterConfigurator);
 
         MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MouseDevice);
@@ -157,7 +145,7 @@ public sealed class Machine : IDisposable {
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VideoSubsystem.VgaFunctions, machineCreationOptions.LoggerService);
         var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
         RegisterCallbackHandler(mouseInt33Handler);
-        var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, this, machineCreationOptions.LoggerService);
+        var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, ProgrammableSubsystem.DualPic, this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(mouseIrq12Handler);
         var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(mouseCleanupHandler);
@@ -268,7 +256,7 @@ public sealed class Machine : IDisposable {
                 MachineBreakpoints.CheckBreakPoint();
             }
             Cpu.ExecuteNextInstruction();
-            Timer.Tick();
+            ProgrammableSubsystem.Timer.Tick();
         }
     }
 

@@ -171,6 +171,6 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void TriggerInterruptRequest() {
-        _machine.DualPic.ProcessInterruptRequest(IrqNumber);
+        _machine.ProgrammableSubsystem.DualPic.ProcessInterruptRequest(IrqNumber);
     }
 }

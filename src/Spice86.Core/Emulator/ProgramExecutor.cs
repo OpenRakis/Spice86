@@ -154,7 +154,7 @@ public sealed class ProgramExecutor : IDisposable {
             Machine.Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         } else {
             // Bios will take care of enabling interrupts (or not)
-            Machine.DualPic.MaskAllInterrupts();
+            Machine.ProgrammableSubsystem.DualPic.MaskAllInterrupts();
         }
 
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());

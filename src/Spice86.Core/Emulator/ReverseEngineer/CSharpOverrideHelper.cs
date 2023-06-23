@@ -677,11 +677,11 @@ public class CSharpOverrideHelper {
             Exit();
         }
         State.IncCycles();
-        Machine.Timer.Tick();
+        Machine.ProgrammableSubsystem.Timer.Tick();
         if (!InterruptFlag) {
             return;
         }
-        byte? vectorNumber = Machine.DualPic.ComputeVectorNumber();
+        byte? vectorNumber = Machine.ProgrammableSubsystem.DualPic.ComputeVectorNumber();
         if (vectorNumber != null) {
             InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);
         }

@@ -1190,7 +1190,7 @@ public class Cpu {
         }
 
         // Check the PIC in case this was not directly set by rewritten code
-        ExternalInterruptVectorNumber ??= _machine.DualPic.ComputeVectorNumber();
+        ExternalInterruptVectorNumber ??= _machine.ProgrammableSubsystem.DualPic.ComputeVectorNumber();
 
         if (ExternalInterruptVectorNumber == null) {
             return;

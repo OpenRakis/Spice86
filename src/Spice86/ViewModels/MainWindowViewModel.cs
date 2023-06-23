@@ -259,7 +259,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IMainWindowV
         get => _timeMultiplier;
         set {
             SetProperty(ref _timeMultiplier, value);
-            _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
+            _programExecutor?.Machine.ProgrammableSubsystem.Timer.SetTimeMultiplier(_timeMultiplier);
         }
     }
 

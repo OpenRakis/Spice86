@@ -44,12 +44,12 @@ public class Keyboard : DefaultIOPortHandler {
 
     private void OnKeyDown(object? sender, KeyboardEventArgs e) {
         LastKeyboardInput = e;
-        _machine.DualPic.ProcessInterruptRequest(1);
+        _machine.ProgrammableSubsystem.DualPic.ProcessInterruptRequest(1);
     }
 
     private void OnKeyUp(object? sender, KeyboardEventArgs e) {
         LastKeyboardInput = e;
-        _machine.DualPic.ProcessInterruptRequest(1);
+        _machine.ProgrammableSubsystem.DualPic.ProcessInterruptRequest(1);
     }
 
     /// <summary>

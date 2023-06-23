@@ -492,7 +492,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <inheritdoc/>
     public void RaiseInterruptRequest() {
         _mixer.InterruptStatusRegister = InterruptStatus.Dma8;
-        _machine.DualPic.ProcessInterruptRequest(IRQ);
+        _machine.ProgrammableSubsystem.DualPic.ProcessInterruptRequest(IRQ);
     }
 
     /// <summary>
