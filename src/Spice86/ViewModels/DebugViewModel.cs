@@ -41,11 +41,11 @@ public partial class DebugViewModel : ObservableObject {
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        VideoState? videoState = _emulatorMachine?.VgaRegisters;
+        VideoState? videoState = _emulatorMachine?.VideoSubsystem.VgaRegisters;
         if (videoState is null) {
             return;
         }
-        IVgaRenderer? renderer = _emulatorMachine?.VgaRenderer;
+        IVgaRenderer? renderer = _emulatorMachine?.VideoSubsystem.VgaRenderer;
         if (renderer is null) {
             return;
         }

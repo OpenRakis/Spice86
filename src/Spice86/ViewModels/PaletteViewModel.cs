@@ -43,7 +43,7 @@ public partial class PaletteViewModel : ObservableObject {
     /// <param name="sender">Source of the event.</param>
     /// <param name="e">Unused EventArgs instance.</param>
     private void UpdateColors(object? sender, EventArgs e) {
-        IVideoState? videoState = _machine?.VgaRegisters;
+        IVideoState? videoState = _machine?.VideoSubsystem.VgaRegisters;
         if (videoState is null) {
             return;
         }

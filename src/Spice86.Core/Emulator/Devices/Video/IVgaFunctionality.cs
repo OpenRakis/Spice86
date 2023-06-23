@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
-/// Defines all VGA high level functions, such as writing text to the screen.
+/// The VGA services for text and graphics
 /// </summary>
 public interface IVgaFunctionality {
     /// <summary>

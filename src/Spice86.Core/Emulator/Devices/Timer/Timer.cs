@@ -27,14 +27,11 @@ public class Timer : DefaultIOPortHandler {
     private readonly Counter[] _counters = new Counter[3];
     private readonly DualPic _dualPic;
 
-    private readonly IVideoCard? _vgaCard;
-
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
 
-    public Timer(Machine machine, Configuration configuration, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator) : base(machine, configuration, loggerService) {
+    public Timer(Machine machine, Configuration configuration, ILoggerService loggerService, DualPic dualPic, CounterConfigurator counterConfigurator) : base(machine, configuration, loggerService) {
         _dualPic = dualPic;
-        _vgaCard = vgaCard;
         _cpu = machine.Cpu;
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(machine,
@@ -114,7 +111,7 @@ public class Timer : DefaultIOPortHandler {
         }
 
         if (_vgaScreenRefreshCounter.ProcessActivation(cycles)) {
-            _vgaCard?.UpdateScreen();
+            _machine.VideoSubsystem.VgaCard.UpdateScreen();
         }
     }
 

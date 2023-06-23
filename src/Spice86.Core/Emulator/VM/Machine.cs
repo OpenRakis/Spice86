@@ -9,11 +9,9 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
-using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -90,39 +88,14 @@ public sealed class Machine : IDisposable {
     public Timer Timer { get; }
 
     /// <summary>
-    /// The VGA Card.
-    /// </summary>
-    public IVideoCard VgaCard { get; }
-    
-    /// <summary>
-    /// The Vga Registers
-    /// </summary>
-    public VideoState VgaRegisters { get; set; }
-    
-    /// <summary>
-    /// The VGA port handler
-    /// </summary>
-    public IIOPortHandler VgaIoPortHandler { get; }
-
-    /// <summary>
-    /// The class that handles converting video memory to a bitmap 
-    /// </summary>
-    public readonly IVgaRenderer VgaRenderer;
-    
-    /// <summary>
-    /// The Video BIOS interrupt handler.
-    /// </summary>
-    public IVideoInt10Handler VideoInt10Handler { get; }
-    
-    /// <summary>
-    /// The Video Rom containing fonts and other data.
-    /// </summary>
-    public VgaRom VgaRom { get; }
-
-    /// <summary>
     /// The DMA loop and DMA channels
     /// </summary>
     public DmaSubsystem DmaSubsystem { get; }
+    
+    /// <summary>
+    /// Contains the VGA card, the VGA port handler, the VGA services, the VGA registers, the VGA renderer, the video interrupts, and VGA ROM.
+    /// </summary>
+    public VideoSubsystem VideoSubsystem { get; }
     
     /// <summary>
     /// Contains the PC Speaker, the external MIDI device (MT-32 or General MIDI), the FM Synth chips, and the sound cards
@@ -158,27 +131,17 @@ public sealed class Machine : IDisposable {
             machineCreationOptions.Configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
 
-        DmaSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, machineCreationOptions.Gui);
+        DmaSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, Gui);
 
         DualPic = new DualPic(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(DualPic);
 
-        VgaRegisters = new VideoState();
-        VgaIoPortHandler = new VgaIoPortHandler(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, VgaRegisters);
-        RegisterIoPortHandler(VgaIoPortHandler);
-
-        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
-        IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
-        Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
-        VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
-        VgaCard = new VgaCard(machineCreationOptions.Gui, VgaRenderer, machineCreationOptions.LoggerService);
-        
-        Timer = new Timer(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator);
+        Timer = new Timer(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, DualPic, machineCreationOptions.CounterConfigurator);
         RegisterIoPortHandler(Timer);
-        
+
         MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MouseDevice);
-
+        
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
@@ -187,21 +150,17 @@ public sealed class Machine : IDisposable {
 
         Bios = new(this, machineCreationOptions.LoggerService);
 
-        VgaRom = new VgaRom();
-        Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, Bios.BiosDataArea, VgaRom);
-        VideoInt10Handler = new VgaBios(this, VgaFunctions, Bios.BiosDataArea, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(VideoInt10Handler);
-        
-        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
+        VideoSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, Gui);
+
+        SoundSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+
+        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VideoSubsystem.VgaFunctions, machineCreationOptions.LoggerService);
         var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
         RegisterCallbackHandler(mouseInt33Handler);
         var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(mouseIrq12Handler);
         var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(mouseCleanupHandler);
-
-        SoundSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
 
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
@@ -217,12 +176,7 @@ public sealed class Machine : IDisposable {
     /// The mouse driver.
     /// </summary>
     public IMouseDriver MouseDriver { get; }
-
-    /// <summary>
-    /// Defines all VGA high level functions, such as writing text to the screen.
-    /// </summary>
-    public IVgaFunctionality VgaFunctions { get; set; }
-
+    
     /// <summary>
     /// Registers a callback, such as an interrupt handler.
     /// </summary>

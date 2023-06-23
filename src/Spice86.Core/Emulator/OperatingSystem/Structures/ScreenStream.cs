@@ -58,7 +58,7 @@ public class ScreenStream : Stream {
         byte[] bytesToWrite = buffer.Skip(offset).Take(count).ToArray();
         byte originalAl = _machine.Cpu.State.AL;
         foreach (byte character in bytesToWrite) {
-            _machine.VgaFunctions.WriteTextInTeletypeMode(new CharacterPlusAttribute((char)character, 0x07, false));
+            _machine.VideoSubsystem.VgaFunctions.WriteTextInTeletypeMode(new CharacterPlusAttribute((char)character, 0x07, false));
         }
         _machine.Cpu.State.AL = originalAl;
     }
