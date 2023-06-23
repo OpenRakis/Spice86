@@ -342,7 +342,7 @@ public sealed class Machine : IDisposable {
     private bool _exitEmulationLoop;
 
     /// <summary>
-    /// Forces the emulation loop to exit.
+    /// Forces the emulation thread to exit.
     /// </summary>
     public void ExitEmulationLoop() => _exitEmulationLoop = true;
 
