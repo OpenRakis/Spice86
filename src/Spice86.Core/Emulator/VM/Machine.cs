@@ -7,19 +7,12 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Input.Joystick;
-using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
-using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers.Bios;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
-using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
-using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -41,16 +34,6 @@ public sealed class Machine : IDisposable {
     public bool RecordData { get; set; }
     
     /// <summary>
-    /// Memory mapped BIOS values.
-    /// </summary>
-    public BiosDataArea BiosDataArea { get; set; }
-
-    /// <summary>
-    /// INT11H handler.
-    /// </summary>
-    public BiosEquipmentDeterminationInt11Handler BiosEquipmentDeterminationInt11Handler { get; }
-
-    /// <summary>
     /// Handles all the callbacks, most notably interrupts.
     /// </summary>
     public CallbackHandler CallbackHandler { get; }
@@ -61,7 +44,7 @@ public sealed class Machine : IDisposable {
     public Cpu Cpu { get; }
 
     /// <summary>
-    /// DOS Services.
+    /// The emulated DOS kernel.
     /// </summary>
     public Dos Dos { get; }
     
@@ -97,24 +80,14 @@ public sealed class Machine : IDisposable {
     public InputSubsystem InputSubsystem { get; }
 
     /// <summary>
-    /// INT15H handler.
+    /// The basic input output system.
     /// </summary>
-    public SystemBiosInt15Handler SystemBiosInt15Handler { get; }
-
-    /// <summary>
-    /// INT1A handler.
-    /// </summary>
-    public SystemClockInt1AHandler SystemClockInt1AHandler { get; }
+    public Bios Bios { get; }
 
     /// <summary>
     /// The Programmable Interrupt Timer
     /// </summary>
     public Timer Timer { get; }
-
-    /// <summary>
-    /// INT8H handler.
-    /// </summary>
-    public TimerInt8Handler TimerInt8Handler { get; }
 
     /// <summary>
     /// The VGA Card.
@@ -173,7 +146,6 @@ public sealed class Machine : IDisposable {
 
         IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
-        BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 
         // Breakpoints
@@ -213,11 +185,14 @@ public sealed class Machine : IDisposable {
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
         
-        
+        InputSubsystem = new(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+
+        Bios = new(this, machineCreationOptions.LoggerService);
+
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
-        VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
+        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, Bios.BiosDataArea, VgaRom);
+        VideoInt10Handler = new VgaBios(this, VgaFunctions, Bios.BiosDataArea, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(VideoInt10Handler);
         
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
@@ -227,21 +202,6 @@ public sealed class Machine : IDisposable {
         RegisterCallbackHandler(mouseIrq12Handler);
         var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(mouseCleanupHandler);
-        
-        InputSubsystem = new(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-
-        TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(TimerInt8Handler);
-
-        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(BiosEquipmentDeterminationInt11Handler);
-        SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(SystemBiosInt15Handler);
-        SystemClockInt1AHandler = new SystemClockInt1AHandler(
-            this,
-            machineCreationOptions.LoggerService,
-            TimerInt8Handler);
-        RegisterCallbackHandler(SystemClockInt1AHandler);
 
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
