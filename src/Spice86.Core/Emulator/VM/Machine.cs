@@ -51,11 +51,6 @@ public sealed class Machine : IDisposable {
     public BiosEquipmentDeterminationInt11Handler BiosEquipmentDeterminationInt11Handler { get; }
 
     /// <summary>
-    /// INT9H handler.
-    /// </summary>
-    public BiosKeyboardInt9Handler BiosKeyboardInt9Handler { get; }
-
-    /// <summary>
     /// Handles all the callbacks, most notably interrupts.
     /// </summary>
     public CallbackHandler CallbackHandler { get; }
@@ -86,21 +81,6 @@ public sealed class Machine : IDisposable {
     public IOPortDispatcher IoPortDispatcher { get; }
 
     /// <summary>
-    /// A gameport joystick
-    /// </summary>
-    public Joystick Joystick { get; }
-
-    /// <summary>
-    /// An IBM PC Keyboard
-    /// </summary>
-    public Keyboard Keyboard { get; }
-
-    /// <summary>
-    /// INT16H handler.
-    /// </summary>
-    public KeyboardInt16Handler KeyboardInt16Handler { get; }
-
-    /// <summary>
     /// Contains all the breakpoints
     /// </summary>
     public MachineBreakpoints MachineBreakpoints { get; }
@@ -129,6 +109,12 @@ public sealed class Machine : IDisposable {
     /// The Sound Blaster card.
     /// </summary>
     public SoundBlaster SoundBlaster { get; }
+    
+    /// <summary>
+    /// Contains the keyboard, mouse, and joystick.
+    /// <remarks>BIOS related interrupt handlers live in this subsystem.</remarks>
+    /// </summary>
+    public InputSubsystem InputSubsystem { get; }
 
     /// <summary>
     /// INT15H handler.
@@ -237,12 +223,8 @@ public sealed class Machine : IDisposable {
         
         Timer = new Timer(this, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
         RegisterIoPortHandler(Timer);
-        Keyboard = new Keyboard(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui, machineCreationOptions.Configuration);
-        RegisterIoPortHandler(Keyboard);
         MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MouseDevice);
-        Joystick = new Joystick(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-        RegisterIoPortHandler(Joystick);
         PcSpeaker = new PcSpeaker(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
         RegisterIoPortHandler(PcSpeaker);
         OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
@@ -259,26 +241,30 @@ public sealed class Machine : IDisposable {
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
         
+        
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
         VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(VideoInt10Handler);
         
+        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
+        var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
+        RegisterCallbackHandler(mouseInt33Handler);
+        var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, this, machineCreationOptions.LoggerService);
+        RegisterCallbackHandler(mouseIrq12Handler);
+        var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
+        RegisterCallbackHandler(mouseCleanupHandler);
+        
+        InputSubsystem = new(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+
         TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(TimerInt8Handler);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(BiosKeyboardInt9Handler);
-        
+
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(SystemBiosInt15Handler);
-        KeyboardInt16Handler = new KeyboardInt16Handler(
-            this,
-            machineCreationOptions.LoggerService,
-            BiosKeyboardInt9Handler.BiosKeyboardBuffer);
-        RegisterCallbackHandler(KeyboardInt16Handler);
         SystemClockInt1AHandler = new SystemClockInt1AHandler(
             this,
             machineCreationOptions.LoggerService,
@@ -288,14 +274,6 @@ public sealed class Machine : IDisposable {
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
         Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
-        
-        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
-        RegisterCallbackHandler(mouseInt33Handler);
-        var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(mouseIrq12Handler);
-        var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(mouseCleanupHandler);
     }
 
     /// <summary>

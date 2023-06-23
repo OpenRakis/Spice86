@@ -11,8 +11,8 @@ using Spice86.Shared.Interfaces;
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
 
-    public BiosKeyboardInt9Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _keyboard = machine.Keyboard;
+    public BiosKeyboardInt9Handler(Machine machine, Keyboard keyboard, ILoggerService loggerService) : base(machine, loggerService) {
+        _keyboard = keyboard;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
         BiosKeyboardBuffer.Init();
     }

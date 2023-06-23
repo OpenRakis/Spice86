@@ -178,7 +178,7 @@ public class DosInt21Handler : InterruptHandler {
         if (character == 0xFF) {
             _loggerService.Debug("DIRECT CONSOLE IO, INPUT REQUESTED");
             // Read from STDIN, not implemented, return no character ready
-            ushort? scancode = _machine.KeyboardInt16Handler.GetNextKeyCode();
+            ushort? scancode = _machine.InputSubsystem.KeyboardInt16Handler.GetNextKeyCode();
             if (scancode == null) {
                 SetZeroFlag(true, calledFromVm);
                 _state.AL = 0;
