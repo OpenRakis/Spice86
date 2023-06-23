@@ -28,7 +28,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <param name="loggerService"></param>
     /// <param name="configuration"></param>
     /// <param name="videoState"></param>
-    public VgaIoPortHandler(Machine machine, ILoggerService loggerService, Configuration configuration, IVideoState videoState) :
+    public VgaIoPortHandler(Machine machine, Configuration configuration, ILoggerService loggerService, IVideoState videoState) :
         base(machine, configuration, loggerService) {
         _logger = loggerService;
 

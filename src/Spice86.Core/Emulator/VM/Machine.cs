@@ -75,7 +75,7 @@ public sealed class Machine : IDisposable {
 
     /// <summary>
     /// Contains the keyboard, mouse, and joystick.
-    /// <remarks>BIOS related interrupt handlers live in this subsystem.</remarks>
+    /// <remarks>BIOS keyboard/mouse interrupt handlers live in this subsystem.</remarks>
     /// </summary>
     public InputSubsystem InputSubsystem { get; }
 
@@ -125,7 +125,7 @@ public sealed class Machine : IDisposable {
     public DmaSubsystem DmaSubsystem { get; }
     
     /// <summary>
-    /// /// Contains the PC Speaker, the external MIDI device (MT-32 or General MIDI), the FM Synth chips, and the sound cards
+    /// Contains the PC Speaker, the external MIDI device (MT-32 or General MIDI), the FM Synth chips, and the sound cards
     /// </summary>
     public SoundSubsystem SoundSubsystem { get; }
 
@@ -164,7 +164,7 @@ public sealed class Machine : IDisposable {
         RegisterIoPortHandler(DualPic);
 
         VgaRegisters = new VideoState();
-        VgaIoPortHandler = new VgaIoPortHandler(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration, VgaRegisters);
+        VgaIoPortHandler = new VgaIoPortHandler(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, VgaRegisters);
         RegisterIoPortHandler(VgaIoPortHandler);
 
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
@@ -173,7 +173,7 @@ public sealed class Machine : IDisposable {
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(machineCreationOptions.Gui, VgaRenderer, machineCreationOptions.LoggerService);
         
-        Timer = new Timer(this, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
+        Timer = new Timer(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator);
         RegisterIoPortHandler(Timer);
         
         MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);

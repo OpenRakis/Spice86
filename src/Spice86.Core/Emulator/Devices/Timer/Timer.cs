@@ -32,7 +32,7 @@ public class Timer : DefaultIOPortHandler {
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
 
-    public Timer(Machine machine, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration, loggerService) {
+    public Timer(Machine machine, Configuration configuration, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator) : base(machine, configuration, loggerService) {
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         _cpu = machine.Cpu;

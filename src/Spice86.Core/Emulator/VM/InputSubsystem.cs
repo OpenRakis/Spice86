@@ -8,7 +8,7 @@ using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Contains the keyboard, mouse, and joystick.
-/// <remarks>BIOS related interrupt handlers live in this subsystem.</remarks>
+/// <remarks>BIOS keyboard/mouse interrupt handlers live in this subsystem.</remarks>
 /// </summary>
 public class InputSubsystem {
     /// <summary>
