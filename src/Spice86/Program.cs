@@ -32,6 +32,7 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         using TopLevelContainer topLevelContainer = new();
-        topLevelContainer.Run(startup => startup.StartApp(args));
+        Configuration configuration = CommandLineParser.ParseCommandLine(args);
+        topLevelContainer.Run(startup => startup.StartApp(configuration));
     }
 }

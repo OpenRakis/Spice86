@@ -20,12 +20,10 @@ public class Startup {
         _loggerService = loggerService;
     }
     
-    public void StartApp(string[] args) {
-        Configuration configuration = CommandLineParser.ParseCommandLine(args);
-        
+    public void StartApp(Configuration configuration) {
         SetLoggingLevel(configuration, _loggerService);
         if (!configuration.HeadlessMode) {
-            StartMainWindow(args, configuration, _loggerService);
+            StartMainWindow(configuration, _loggerService);
         } else {
             StartConsole(configuration, _loggerService);
         }
@@ -48,13 +46,13 @@ public class Startup {
         programExecutor.Run();
     }
 
-    private static void StartMainWindow(string[] args, Configuration configuration, ILoggerService loggerService) {
+    private static void StartMainWindow(Configuration configuration, ILoggerService loggerService) {
         OxyPlotModule.EnsureLoaded();
         AppBuilder appBuilder = BuildAvaloniaApp();
-        ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, args);
+        ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, Array.Empty<string>());
         App app = (App) appBuilder.Instance;
         app.SetupMainWindow(configuration, loggerService);
-        desktop.Start(args);
+        desktop.Start(Array.Empty<string>());
     }
 
     /// <summary>
