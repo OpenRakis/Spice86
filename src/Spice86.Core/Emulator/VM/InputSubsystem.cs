@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -44,7 +43,7 @@ public class InputSubsystem {
         machine.RegisterIoPortHandler(Keyboard);
         Joystick = new(machine, configuration, loggerService);
         machine.RegisterIoPortHandler(Joystick);
-        BiosKeyboardInt9Handler = new(machine, Keyboard, loggerService);
+        BiosKeyboardInt9Handler = new(machine, machine.Memory, Keyboard, loggerService);
         machine.RegisterCallbackHandler(BiosKeyboardInt9Handler);
         KeyboardInt16Handler = new(machine, BiosKeyboardInt9Handler.BiosKeyboardBuffer, loggerService);
         machine.RegisterCallbackHandler(KeyboardInt16Handler);

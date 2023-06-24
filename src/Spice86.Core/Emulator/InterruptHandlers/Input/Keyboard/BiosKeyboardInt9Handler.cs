@@ -2,11 +2,12 @@
 
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Crude implementation of Int9
+/// Crude implementation of INT9H
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly IKeyboardDevice _keyboard;
@@ -15,11 +16,12 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory where the bios keyboard buffer is stored.</param>
     /// <param name="keyboard">The keyboard device.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public BiosKeyboardInt9Handler(Machine machine, IKeyboardDevice keyboard, ILoggerService loggerService) : base(machine, loggerService) {
+    public BiosKeyboardInt9Handler(Machine machine, IMemoryStore memory, IKeyboardDevice keyboard, ILoggerService loggerService) : base(machine, loggerService) {
         _keyboard = keyboard;
-        BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
+        BiosKeyboardBuffer = new BiosKeyboardBuffer(memory);
     }
 
     /// <summary>

@@ -3,6 +3,7 @@
 using Newtonsoft.Json;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
@@ -13,7 +14,7 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class ExecutionFlowRecorder {
     /// <summary>
-    /// A set of pre-allocated breakpoints from physical address 0x0 to <see cref="Memory.Memory.EndOfHighMemoryArea"/>
+    /// A set of pre-allocated breakpoints from physical address 0x0 to <see cref="Memory.EndOfHighMemoryArea"/>
     /// </summary>
     private readonly Dictionary<uint, AddressBreakPoint> _addressBreakPoints = new();
 
@@ -92,7 +93,7 @@ public class ExecutionFlowRecorder {
         // This is fast *because* the memory bus size is around 1 MB.
         // Beyond that, this code would have to be deleted,
         // as the allocation would take way too much time.
-        for (uint i = 0; i < Memory.Memory.EndOfHighMemoryArea; i++) {
+        for (uint i = 0; i < MemoryConsts.EndOfHighMemoryArea; i++) {
             _addressBreakPoints.Add(i, GenerateBreakPoint(machine, i));
         }
     }

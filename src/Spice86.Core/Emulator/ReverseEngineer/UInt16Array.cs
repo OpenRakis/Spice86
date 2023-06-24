@@ -11,7 +11,7 @@ public class Uint16Array : MemoryBasedArray<ushort> {
     /// <param name="memory">The memory where the array is stored.</param>
     /// <param name="baseAddress">The base address of the array.</param>
     /// <param name="length">The length of the array.</param>
-    public Uint16Array(Memory memory, uint baseAddress, int length) : base(memory, baseAddress, length) {
+    public Uint16Array(IMemoryStore memory, uint baseAddress, int length) : base(memory, baseAddress, length) {
     }
 
     /// <summary>

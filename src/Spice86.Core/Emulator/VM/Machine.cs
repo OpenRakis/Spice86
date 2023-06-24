@@ -110,7 +110,7 @@ public sealed class Machine : IDisposable {
         Gui = machineCreationOptions.Gui;
         RecordData = machineCreationOptions.RecordData;
 
-        IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
+        IMemoryDevice ram = new Ram(MemoryConsts.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 

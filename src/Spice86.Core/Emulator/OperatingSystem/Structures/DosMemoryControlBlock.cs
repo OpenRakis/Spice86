@@ -24,7 +24,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="baseAddress">the address of the structure in memory.</param>
-    public DosMemoryControlBlock(Memory memory, uint baseAddress) : base(memory, baseAddress) {
+    public DosMemoryControlBlock(IMemoryStore memory, uint baseAddress) : base(memory, baseAddress) {
     }
     /// <summary>
     /// Gets or sets the name of the file associated with the MCB.
@@ -84,7 +84,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructureWithBaseAddress {
     /// <returns>The next MCB if found, <c>null</c> otherwise.</returns>
     public DosMemoryControlBlock? Next() {
         uint baseAddress = BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(Size + 1), 0);
-        if (baseAddress >= Memory.EndOfHighMemoryArea) {
+        if (baseAddress >= MemoryConsts.EndOfHighMemoryArea) {
             return null;
         }
         DosMemoryControlBlock next = new(Memory, baseAddress);
