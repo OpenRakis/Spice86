@@ -51,7 +51,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public ushort? GetNextKeyCode() {
-        return _biosKeyboardBuffer.GetKeyCode();
+        return _biosKeyboardBuffer.GetNextKeyCode();
     }
 
     public override void Run() {

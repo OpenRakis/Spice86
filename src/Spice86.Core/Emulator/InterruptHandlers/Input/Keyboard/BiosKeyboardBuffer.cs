@@ -52,14 +52,12 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
         return GetUint16(head);
     }
 
-    public ushort? GetKeyCode() {
-        ushort head = HeadAddress;
+    public ushort? GetNextKeyCode() {
         if (IsEmpty) {
             return null;
         }
-
         HeadAddress = AdvancePointer(HeadAddress);
-        return GetUint16(head);
+        return GetUint16(HeadAddress);
     }
 
     public ushort StartAddress { get => GetUint16(Start); set => SetUint16(Start, value); }
