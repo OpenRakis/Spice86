@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Timer;
 
+using Spice86.Core.Emulator.CPU;
+
 using System.Diagnostics;
 
 using Spice86.Shared.Interfaces;
@@ -26,13 +28,15 @@ public class Timer : DefaultIOPortHandler {
 
     private readonly Counter[] _counters = new Counter[3];
     private readonly DualPic _dualPic;
+    private readonly IVideoCard _videoCard;
 
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
 
-    public Timer(Machine machine, Configuration configuration, ILoggerService loggerService, DualPic dualPic, CounterConfigurator counterConfigurator) : base(machine, configuration, loggerService) {
+    public Timer(Machine machine, Configuration configuration, ILoggerService loggerService, DualPic dualPic, CounterConfigurator counterConfigurator, Cpu cpu, IVideoCard videoCard) : base(machine, configuration, loggerService) {
+        _cpu = cpu;
         _dualPic = dualPic;
-        _cpu = machine.Cpu;
+        _videoCard = videoCard;
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(machine,
                 _loggerService,
@@ -111,7 +115,7 @@ public class Timer : DefaultIOPortHandler {
         }
 
         if (_vgaScreenRefreshCounter.ProcessActivation(cycles)) {
-            _machine.VideoSubsystem.VgaCard.UpdateScreen();
+            _videoCard.UpdateScreen();
         }
     }
 

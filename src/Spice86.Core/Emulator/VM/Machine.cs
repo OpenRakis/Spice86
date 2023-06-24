@@ -23,6 +23,11 @@ public sealed class Machine : IDisposable {
     private readonly ProgramExecutor _programExecutor;
 
     private bool _disposed;
+    
+    /// <summary>
+    /// Memory mapped BIOS values.
+    /// </summary>
+    public BiosDataArea BiosDataArea { get; set; }
 
     /// <summary>
     /// Gets or set if we record execution data, for reverse engineering purposes.
@@ -112,6 +117,7 @@ public sealed class Machine : IDisposable {
 
         IMemoryDevice ram = new Ram(MemoryConsts.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
+        BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 
         MachineBreakpoints = new MachineBreakpoints(this, machineCreationOptions.LoggerService);
@@ -125,7 +131,6 @@ public sealed class Machine : IDisposable {
 
         DmaSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, Gui);
 
-        ProgrammableSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, machineCreationOptions.CounterConfigurator);
 
         MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MouseDevice);
@@ -133,12 +138,12 @@ public sealed class Machine : IDisposable {
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
-        
-        InputSubsystem = new(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
-
-        Bios = new(this, machineCreationOptions.LoggerService);
 
         VideoSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, Gui);
+        ProgrammableSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, machineCreationOptions.CounterConfigurator, Cpu, VideoSubsystem.VgaCard);
+        Bios = new(this, machineCreationOptions.LoggerService, ProgrammableSubsystem.Timer, ProgrammableSubsystem.DualPic);
+        
+        InputSubsystem = new(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
 
         SoundSubsystem = new(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
 
@@ -164,14 +169,6 @@ public sealed class Machine : IDisposable {
     /// The mouse driver.
     /// </summary>
     public IMouseDriver MouseDriver { get; }
-    
-    /// <summary>
-    /// Registers a callback, such as an interrupt handler.
-    /// </summary>
-    /// <param name="callback">The callback implementation.</param>
-    public void RegisterCallbackHandler(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
-    }
 
     /// <summary>
     /// Registers a I/O port handler, such as a sound card.
@@ -181,14 +178,14 @@ public sealed class Machine : IDisposable {
     public void RegisterIoPortHandler(IIOPortHandler ioPortHandler) {
         ioPortHandler.InitPortHandlers(IoPortDispatcher);
     }
-
+    
     /// <summary>
-    /// Installs all the callback in the dispatch table in emulated memory.
+    /// Registers a callback, such as an interrupt handler.
     /// </summary>
-    public void InstallAllCallbacksInInterruptTable() {
-        CallbackHandler.InstallAllCallbacksInInterruptTable();
+    /// <param name="callback">The callback implementation.</param>
+    public void RegisterCallbackHandler(ICallback callback) {
+        CallbackHandler.AddCallback(callback);
     }
-
     /// <summary>
     /// Peeks at the return address.
     /// </summary>
@@ -234,6 +231,13 @@ public sealed class Machine : IDisposable {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         RunLoop();
+    }
+    
+    /// <summary>
+    /// Installs all the callback in the dispatch table in emulated memory.
+    /// </summary>
+    public void InstallAllCallbacksInInterruptTable() {
+        CallbackHandler.InstallAllCallbacksInInterruptTable();
     }
 
     /// <summary>

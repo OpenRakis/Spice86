@@ -18,10 +18,12 @@ public class TimerInt8Handler : InterruptHandler {
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public TimerInt8Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _timer = machine.ProgrammableSubsystem.Timer;
+    /// <param name="timer">The programmable interval timer chip</param>
+    /// <param name="dualPic">The two programmable interrupt controllers</param>
+    public TimerInt8Handler(Machine machine, ILoggerService loggerService, Timer timer, DualPic dualPic) : base(machine, loggerService) {
+        _timer = timer;
         _memory = machine.Memory;
-        _dualPic = machine.ProgrammableSubsystem.DualPic;
+        _dualPic = dualPic;
     }
 
     /// <inheritdoc />
@@ -38,7 +40,7 @@ public class TimerInt8Handler : InterruptHandler {
     /// Gets or set the value of the real time clock, in ticks.
     /// </summary>
     public uint TickCounterValue {
-        get => _machine.Bios.BiosDataArea.RealTimeClock; 
-        set => _machine.Bios.BiosDataArea.RealTimeClock = value;
+        get => _machine.BiosDataArea.RealTimeClock; 
+        set => _machine.BiosDataArea.RealTimeClock = value;
     }
 }

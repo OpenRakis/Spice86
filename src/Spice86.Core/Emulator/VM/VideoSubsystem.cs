@@ -65,8 +65,8 @@ public class VideoSubsystem {
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
         VgaRom = new VgaRom();
         machine.Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality(machine.Memory, machine.IoPortDispatcher, machine.Bios.BiosDataArea, VgaRom);
-        VideoInt10Handler = new VgaBios(machine, VgaFunctions, machine.Bios.BiosDataArea, loggerService);
+        VgaFunctions = new VgaFunctionality(machine.Memory, machine.IoPortDispatcher, machine.BiosDataArea, VgaRom);
+        VideoInt10Handler = new VgaBios(machine, VgaFunctions, machine.BiosDataArea, loggerService);
         machine.RegisterCallbackHandler(VideoInt10Handler);
     }
 }

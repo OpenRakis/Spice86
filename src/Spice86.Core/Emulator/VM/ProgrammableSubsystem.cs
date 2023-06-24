@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.VM;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Shared.Interfaces;
@@ -25,11 +26,11 @@ public class ProgrammableSubsystem {
     /// <param name="configuration"></param>
     /// <param name="loggerService"></param>
     /// <param name="counterConfigurator"></param>
-    public ProgrammableSubsystem(Machine machine, Configuration configuration, ILoggerService loggerService, CounterConfigurator counterConfigurator) {
+    public ProgrammableSubsystem(Machine machine, Configuration configuration, ILoggerService loggerService, CounterConfigurator counterConfigurator, Cpu cpu, IVideoCard videoCard) {
         DualPic = new DualPic(machine, configuration, loggerService);
         machine.RegisterIoPortHandler(DualPic);
 
-        Timer = new Timer(machine, configuration, loggerService, DualPic, counterConfigurator);
+        Timer = new Timer(machine, configuration, loggerService, DualPic, counterConfigurator, cpu, videoCard);
         machine.RegisterIoPortHandler(Timer);
     }
 }
