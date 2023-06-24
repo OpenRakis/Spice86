@@ -12,6 +12,7 @@ using Spice86.Shared.Interfaces;
 ///     Driver for the mouse.
 /// </summary>
 public class MouseDriver : IMouseDriver {
+    private const int VirtualScreenWidth = 640;
     private readonly Cpu _cpu;
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
@@ -159,7 +160,7 @@ public class MouseDriver : IMouseDriver {
 
     /// <inheritdoc />
     public short GetDeltaXMickeys() {
-        double deltaXPixels = _mouseDevice.DeltaX * _vgaMode.Width;
+        double deltaXPixels = _mouseDevice.DeltaX * VirtualScreenWidth;
         double deltaXMickeys = _mouseDevice.HorizontalMickeysPerPixel * deltaXPixels;
         return (short)deltaXMickeys;
     }
@@ -174,19 +175,18 @@ public class MouseDriver : IMouseDriver {
     /// <inheritdoc />
     public void Reset() {
         _vgaMode = _vgaFunctions.GetCurrentMode();
-        SetCursorPosition(_vgaMode.Width / 2, _vgaMode.Height / 2);
+        SetCursorPosition(VirtualScreenWidth / 2, _vgaMode.Height / 2);
         _mouseCursorHidden = -1;
         _gui?.HideMouseCursor();
         CurrentMinX = 0;
         CurrentMinY = 0;
-        CurrentMaxX = _vgaMode.Width - 1;
+        CurrentMaxX = VirtualScreenWidth - 1;
         CurrentMaxY = _vgaMode.Height - 1;
         HorizontalMickeysPerPixel = 8;
         VerticalMickeysPerPixel = 16;
     }
 
     private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
-        _vgaMode = e.NewMode;
         Reset();
     }
 
