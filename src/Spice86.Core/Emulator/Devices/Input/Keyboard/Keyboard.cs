@@ -9,7 +9,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Basic implementation of a keyboard
 /// </summary>
-public class Keyboard : DefaultIOPortHandler {
+public class Keyboard : DefaultIOPortHandler, IKeyboardDevice {
     private readonly IMainWindowViewModel? _gui;
 
     /// <summary>
@@ -43,23 +43,23 @@ public class Keyboard : DefaultIOPortHandler {
     }
 
     private void OnKeyDown(object? sender, KeyboardEventArgs e) {
-        LastKeyboardInput = e;
+        Input = e;
         _machine.ProgrammableSubsystem.DualPic.ProcessInterruptRequest(1);
     }
 
     private void OnKeyUp(object? sender, KeyboardEventArgs e) {
-        LastKeyboardInput = e;
+        Input = e;
         _machine.ProgrammableSubsystem.DualPic.ProcessInterruptRequest(1);
     }
 
     /// <summary>
     /// The latest keyboard event data (refreshed on KeyUp or on KeyDown)
     /// </summary>
-    public KeyboardEventArgs LastKeyboardInput { get; private set; } = KeyboardEventArgs.None;
+    public KeyboardEventArgs Input { get; private set; } = KeyboardEventArgs.None;
 
     /// <inheritdoc/>
     public override byte ReadByte(int port) {
-        byte? scancode = LastKeyboardInput.ScanCode;
+        byte? scancode = Input.ScanCode;
         if (scancode == null) {
             scancode = 0;
         }

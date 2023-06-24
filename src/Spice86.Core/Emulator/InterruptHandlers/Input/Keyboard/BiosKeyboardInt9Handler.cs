@@ -9,14 +9,23 @@ using Spice86.Shared.Interfaces;
 /// Crude implementation of Int9
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
-    private readonly Keyboard _keyboard;
+    private readonly IKeyboardDevice _keyboard;
 
-    public BiosKeyboardInt9Handler(Machine machine, Keyboard keyboard, ILoggerService loggerService) : base(machine, loggerService) {
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="machine">The emulator machine.</param>
+    /// <param name="keyboard">The keyboard device.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    public BiosKeyboardInt9Handler(Machine machine, IKeyboardDevice keyboard, ILoggerService loggerService) : base(machine, loggerService) {
         _keyboard = keyboard;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
         BiosKeyboardBuffer.Init();
     }
 
+    /// <summary>
+    /// The keyboard input buffer of ASCII scan codes
+    /// </summary>
     public BiosKeyboardBuffer BiosKeyboardBuffer { get; }
 
     /// <inheritdoc />
@@ -24,12 +33,12 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte? scancode = _keyboard.LastKeyboardInput.ScanCode;
+        byte? scancode = _keyboard.Input.ScanCode;
         if (scancode is null) {
             return;
         }
 
-        byte ascii = _keyboard.LastKeyboardInput.AsciiCode ?? 0;
+        byte ascii = _keyboard.Input.AsciiCode ?? 0;
 
         if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("{BiosInt9KeyReceived}", ascii);
