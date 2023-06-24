@@ -20,7 +20,6 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     public BiosKeyboardInt9Handler(Machine machine, IKeyboardDevice keyboard, ILoggerService loggerService) : base(machine, loggerService) {
         _keyboard = keyboard;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory);
-        BiosKeyboardBuffer.Init();
     }
 
     /// <summary>

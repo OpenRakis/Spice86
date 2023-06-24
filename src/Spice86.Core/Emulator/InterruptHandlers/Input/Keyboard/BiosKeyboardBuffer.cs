@@ -12,6 +12,10 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
     private const ushort Tail = 0x41C;
 
     public BiosKeyboardBuffer(Memory memory) : base(memory, 0) {
+        StartAddress = InitialStartAddress;
+        EndAddress = InitialStartAddress + InitialLength;
+        HeadAddress = InitialStartAddress;
+        TailAddress = InitialStartAddress;
     }
 
     public bool AddKeyCode(ushort code) {
@@ -61,14 +65,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
     public ushort StartAddress { get => GetUint16(Start); set => SetUint16(Start, value); }
 
     public ushort TailAddress { get => GetUint16(Tail); set => SetUint16(Tail, value); }
-
-    public void Init() {
-        StartAddress = InitialStartAddress;
-        EndAddress = InitialStartAddress + InitialLength;
-        HeadAddress = InitialStartAddress;
-        TailAddress = InitialStartAddress;
-    }
-
+    
     private ushort AdvancePointer(ushort value) {
         ushort res = (ushort)(value + 2);
         if (res >= EndAddress) {
