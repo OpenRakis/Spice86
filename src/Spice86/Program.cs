@@ -32,7 +32,6 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         using TopLevelContainer topLevelContainer = new();
-        Owned<Startup> startup = topLevelContainer.Resolve();
-        startup.Value.StartApp(args);
+        topLevelContainer.Run(startup => startup.StartApp(args));
     }
 }
