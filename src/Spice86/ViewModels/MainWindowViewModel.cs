@@ -366,14 +366,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
-        MouseButton spice86MouseButton = mouseButton.ToSpice86MouseButton();
-        MouseButtonDown?.Invoke(this, new MouseButtonEventArgs(spice86MouseButton, true));
+        MouseButtonDown?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, true));
     }
 
     public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
-        MouseButton spice86MouseButton = mouseButton.ToSpice86MouseButton();
-        MouseButtonUp?.Invoke(this, new MouseButtonEventArgs(spice86MouseButton, false));
+        MouseButtonUp?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, false));
     }
 
     public void OnMouseMoved(PointerEventArgs @event, Image image) {
