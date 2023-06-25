@@ -25,11 +25,11 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private long _sampleRateTicks;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="Keyboard" /> class.
+    ///     Initializes a new instance of the <see cref="Mouse" /> class.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
-    /// <param name="configuration"></param>
+    /// <param name="configuration">to get the mouse type from</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public Mouse(Machine machine, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _gui = gui;
