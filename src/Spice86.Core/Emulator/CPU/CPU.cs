@@ -1167,7 +1167,7 @@ public class Cpu {
         FarCall(State.CS, _internalIp, targetCS, targetIP);
     }
 
-    private void FarCall(ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
+    internal void FarCall(ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
         Stack.Push16(returnCS);
         Stack.Push16(returnIP);
         HandleCall(CallType.FAR, returnCS, returnIP, targetCS, targetIP);

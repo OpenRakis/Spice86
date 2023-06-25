@@ -263,6 +263,8 @@ public class VgaFunctionality : IVgaFunctionality {
                 return;
         }
         SetInterruptVectorAddress(0x43, address.Segment, address.Offset);
+        
+        VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(vgaMode));
     }
 
     /// <inheritdoc />
@@ -651,6 +653,9 @@ public class VgaFunctionality : IVgaFunctionality {
         _biosDataArea.ScreenRows = (byte)(rows - 1);
         _biosDataArea.CharacterHeight = height;
     }
+
+    /// <inheritdoc />
+    public event EventHandler<VideoModeChangedEventArgs>? VideoModeChanged;
 
     private ushort SetBiosDataArea(int modeId, ModeFlags flags, VgaMode vgaMode) {
         ushort width = vgaMode.Width;

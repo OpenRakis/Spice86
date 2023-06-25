@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
@@ -122,11 +123,6 @@ public class Machine : IDisposable {
     /// The General MIDI (MPU-401) or MT-32 device.
     /// </summary>
     public Midi MidiDevice { get; }
-
-    /// <summary>
-    /// INT33H handler.
-    /// </summary>
-    public MouseInt33Handler MouseInt33Handler { get; }
 
     /// <summary>
     /// PC Speaker device.
@@ -273,6 +269,8 @@ public class Machine : IDisposable {
         Register(Timer);
         Keyboard = new Keyboard(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui, machineCreationOptions.Configuration);
         Register(Keyboard);
+        MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        Register(MouseDevice);
         Joystick = new Joystick(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         Register(Joystick);
         PcSpeaker = new PcSpeaker(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
@@ -320,10 +318,15 @@ public class Machine : IDisposable {
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
         Dos.Initialize();
-        
-        MouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui);
-        Register(MouseInt33Handler);
-        
+
+        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
+        var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
+        Register(mouseInt33Handler);
+        var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, this, machineCreationOptions.LoggerService);
+        Register(mouseIrq12Handler);
+        var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
+        Register(mouseCleanupHandler);
+
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
@@ -333,6 +336,16 @@ public class Machine : IDisposable {
             Register(Ems);
         }
     }
+
+    /// <summary>
+    /// The mouse device hardware abstraction.
+    /// </summary>
+    public IMouseDevice MouseDevice { get; }
+
+    /// <summary>
+    /// The mouse driver.
+    /// </summary>
+    public IMouseDriver MouseDriver { get; }
 
     public IVgaFunctionality VgaFunctions { get; set; }
 
