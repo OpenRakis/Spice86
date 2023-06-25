@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
+using Spice86.Core.Emulator.Devices.Input.Mouse;
+
 /// <summary>
 ///     Mouse driver interface.
 /// </summary>

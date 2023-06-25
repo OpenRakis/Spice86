@@ -1,8 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
-using Spice86.Shared.Utils;
-
 using System.Text;
+
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Represents the state of the CPU

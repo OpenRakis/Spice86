@@ -109,7 +109,18 @@ public interface IGui {
     /// <param name="videoHeight">The height in pixels</param>
     void SetResolution(int videoWidth, int videoHeight);
 
+    /// <summary>
+    /// Indicate that the mouse has moved.
+    /// </summary>
     event EventHandler<MouseMoveEventArgs>? MouseMoved;
+
+    /// <summary>
+    /// Indicate that a mouse button has been pressed.
+    /// </summary>
     event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
+
+    /// <summary>
+    /// Indicate that a mouse button has been released.
+    /// </summary>
     event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 }

@@ -68,7 +68,6 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
             Ports.InputStatus1ReadAlt,
             Ports.MiscOutputRead,
             Ports.MiscOutputWrite,
-            Ports.SegmentSelect,
             Ports.SequencerAddress,
             Ports.SequencerData,
             Ports.CgaModeControl,
@@ -331,17 +330,12 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 break;
             case Ports.CgaModeControl:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("[{Port:X4}] Write to CgaModeControl: {Value:X2} Not Implemented", port, value);
+                    _logger.Debug("[{Port:X4}] Write to CgaModeControl: Not Implemented", port);
                 }
                 break;
             case Ports.CgaColorSelect:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("[{Port:X4}] Write to CgaColorSelect: {Value:X2} Not Implemented", port, value);
-                }
-                break;
-            case Ports.SegmentSelect:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("[{Port:X4}] Write to SegmentSelect: {Value:X2} Not Implemented", port, value);
+                    _logger.Debug("[{Port:X4}] Write to CgaColorSelect: Not Implemented", port);
                 }
                 break;
             default:

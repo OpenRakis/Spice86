@@ -137,7 +137,7 @@ public class Cpu {
     public Stack Stack { get; }
 
     public State State { get; }
-
+    
     public void InterruptRet() {
         FunctionHandlerInUse.Ret(CallType.INTERRUPT);
         _internalIp = Stack.Pop16();
@@ -160,9 +160,9 @@ public class Cpu {
     public uint NextUint32() {
         uint res = _memory.GetUint32(InternalIpPhysicalAddress);
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort)(_internalIp + 1));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort)(_internalIp + 2));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort)(_internalIp + 3));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+2));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+3));
         _internalIp += 4;
         return res;
     }
@@ -170,7 +170,7 @@ public class Cpu {
     public ushort NextUint16() {
         ushort res = _memory.GetUint16(InternalIpPhysicalAddress);
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort)(_internalIp + 1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
         _internalIp += 2;
         return res;
     }
@@ -196,7 +196,7 @@ public class Cpu {
 
     private void HandleCpuException(CpuException cpuException) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(cpuException, "{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
+            _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
         if (cpuException.Type is CpuExceptionType.Fault) {
             _instructions16Or32 = _instructions16;
@@ -313,7 +313,7 @@ public class Cpu {
                 _instructions32.Movsx();
                 break;
             default:
-                HandleInvalidOpcode((ushort)(subcode | 0x0F00));
+                HandleInvalidOpcode(subcode);
                 break;
         }
     }
@@ -565,8 +565,8 @@ public class Cpu {
             case 0x61:
                 _instructions16Or32.Popa();
                 break;
-            case 0x62: // BOUND
-            case 0x63: // ARPL
+            case 0x62:// BOUND
+            case 0x63:// ARPL
                 HandleInvalidOpcode(opcode);
                 break;
             case 0x64:
@@ -917,41 +917,41 @@ public class Cpu {
                 break;
             case 0xE0:
             case 0xE1: {
-                // zeroFlag==true => LOOPZ
-                // zeroFlag==false =>  LOOPNZ
-                bool zeroFlag = (opcode & 0x1) == 1;
-                sbyte address = (sbyte)NextUint8();
-                bool done = AddressSize switch {
-                    16 => --State.CX == 0,
-                    32 => --State.ECX == 0,
-                    _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                    // zeroFlag==true => LOOPZ
+                    // zeroFlag==false =>  LOOPNZ
+                    bool zeroFlag = (opcode & 0x1) == 1;
+                    sbyte address = (sbyte)NextUint8();
+                    bool done = AddressSize switch {
+                        16 => --State.CX == 0,
+                        32 => --State.ECX == 0,
+                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
 
-                };
-                if (!done && State.ZeroFlag == zeroFlag) {
-                    ushort targetIp = (ushort)(_internalIp + address);
-                    ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
-                    _internalIp = targetIp;
+                    };
+                    if (!done && State.ZeroFlag == zeroFlag) {
+                        ushort targetIp = (ushort)(_internalIp + address);
+                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                        _internalIp = targetIp;
+                    }
+
+                    break;
                 }
-
-                break;
-            }
             case 0xE2: {
-                // LOOP
-                sbyte address = (sbyte)NextUint8();
-                bool done = AddressSize switch {
-                    16 => --State.CX == 0,
-                    32 => --State.ECX == 0,
-                    _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
-                };
+                    // LOOP
+                    sbyte address = (sbyte)NextUint8();
+                    bool done = AddressSize switch {
+                        16 => --State.CX == 0,
+                        32 => --State.ECX == 0,
+                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                    };
 
-                if (!done) {
-                    ushort targetIp = (ushort)(_internalIp + address);
-                    ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
-                    _internalIp = targetIp;
+                    if (!done) {
+                        ushort targetIp = (ushort)(_internalIp + address);
+                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                        _internalIp = targetIp;
+                    }
+
+                    break;
                 }
-
-                break;
-            }
             case 0xE3: // JCXZ, JECXZ
                 Jcc(TestJumpConditionCXZ());
                 break;
@@ -968,29 +968,29 @@ public class Cpu {
                 _instructions16Or32.OutImm8();
                 break;
             case 0xE8: {
-                // CALL NEAR
-                ushort nextInstruction = (ushort)(_internalIp + 2);
-                short offset = (short)NextUint16();
-                ushort callAddress = (ushort)(nextInstruction + offset);
-                NearCall(nextInstruction, callAddress);
-                break;
-            }
+                    // CALL NEAR
+                    ushort nextInstruction = (ushort)(_internalIp + 2);
+                    short offset = (short)NextUint16();
+                    ushort callAddress = (ushort)(nextInstruction + offset);
+                    NearCall(nextInstruction, callAddress);
+                    break;
+                }
             case 0xE9: {
-                short offset = (short)NextUint16();
-                JumpNear((ushort)(_internalIp + offset));
-                break;
-            }
+                    short offset = (short)NextUint16();
+                    JumpNear((ushort)(_internalIp + offset));
+                    break;
+                }
             case 0xEA: {
-                ushort ip = NextUint16();
-                ushort cs = NextUint16();
-                JumpFar(cs, ip);
-                break;
-            }
+                    ushort ip = NextUint16();
+                    ushort cs = NextUint16();
+                    JumpFar(cs, ip);
+                    break;
+                }
             case 0xEB: {
-                sbyte offset = (sbyte)NextUint8();
-                JumpNear((ushort)(_internalIp + offset));
-                break;
-            }
+                    sbyte offset = (sbyte)NextUint8();
+                    JumpNear((ushort)(_internalIp + offset));
+                    break;
+                }
             case 0xEC:
                 _instructions8.InDx();
                 break;
@@ -1213,9 +1213,6 @@ public class Cpu {
     }
 
     private void Interrupt(byte? vectorNumber, bool external) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Interrupt {Vector:X2}, external: {External}", vectorNumber, external);
-        }
         if (vectorNumber == null) {
             return;
         }

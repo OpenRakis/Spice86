@@ -3,9 +3,11 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -16,25 +18,28 @@ public class MouseDriver : IMouseDriver {
     private readonly Cpu _cpu;
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
+    private readonly Memory _memory;
     private readonly IMouseDevice _mouseDevice;
     private readonly State _state;
 
     private readonly IVgaFunctionality _vgaFunctions;
+    private int _mouseCursorHidden;
     private MouseRegisters? _savedRegisters;
     private MouseUserCallback _userCallback;
     private VgaMode _vgaMode;
-    private int _mouseCursorHidden;
 
     /// <summary>
     ///     Create a new instance of the mouse driver.
     /// </summary>
     /// <param name="cpu">Cpu instance to use for calling functions and saving/restoring registers</param>
-    /// <param name="loggerService">The logger</param>
+    /// <param name="memory">Memory instance to look into the interrupt vector table</param>
     /// <param name="mouseDevice">The mouse device / hardware</param>
     /// <param name="gui">The gui to show, hide and position mouse cursor</param>
     /// <param name="vgaFunctions">Access to the current resolution</param>
-    public MouseDriver(Cpu cpu, ILoggerService loggerService, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions) {
+    /// <param name="loggerService">The logger</param>
+    public MouseDriver(Cpu cpu, Memory memory, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
         _cpu = cpu;
+        _memory = memory;
         _state = cpu.State;
         _logger = loggerService;
         _mouseDevice = mouseDevice;
@@ -101,12 +106,13 @@ public class MouseDriver : IMouseDriver {
     public void SetCursorPosition(int x, int y) {
         int mouseAreaWidth = CurrentMaxX - CurrentMinX;
         int mouseAreaHeight = CurrentMaxY - CurrentMinY;
+        _mouseDevice.MouseXRelative = (double)x / mouseAreaWidth;
+        _mouseDevice.MouseYRelative = (double)y / mouseAreaHeight;
+        // This does not do anything in Avalonia, but it could in a different UI.
         if (_gui != null) {
             _gui.MouseX = x;
             _gui.MouseY = y;
         }
-        _mouseDevice.MouseXRelative = (double)x / mouseAreaWidth;
-        _mouseDevice.MouseYRelative = (double)y / mouseAreaHeight;
     }
 
     /// <inheritdoc />
@@ -184,6 +190,7 @@ public class MouseDriver : IMouseDriver {
         CurrentMaxY = _vgaMode.Height - 1;
         HorizontalMickeysPerPixel = 8;
         VerticalMickeysPerPixel = 16;
+        DoubleSpeedThreshold = 64;
     }
 
     private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
@@ -207,10 +214,11 @@ public class MouseDriver : IMouseDriver {
         }
 
         // We're going to call the user specific subroutine, and then return to a special callback that will restore the registers.
-        const ushort returnCs = CustomMouseInt90Handler.CallAddressSegment;
-        const ushort returnIp = CustomMouseInt90Handler.CallAddressOffset;
+        const int int90HandlerVector = 0x90;
+        ushort callAddressSegment = _memory.GetUint16(4 * int90HandlerVector + 2);
+        ushort callAddressOffset = _memory.GetUint16(4 * int90HandlerVector);
 
-        _cpu.FarCall(returnCs, returnIp, _userCallback.Segment, _userCallback.Offset);
+        _cpu.FarCall(callAddressSegment, callAddressOffset, _userCallback.Segment, _userCallback.Offset);
     }
 
     private static int LinearInterpolate(double index, int min, int max) {

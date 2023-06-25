@@ -654,6 +654,7 @@ public class VgaFunctionality : IVgaFunctionality {
         _biosDataArea.CharacterHeight = height;
     }
 
+    /// <inheritdoc />
     public event EventHandler<VideoModeChangedEventArgs>? VideoModeChanged;
 
     private ushort SetBiosDataArea(int modeId, ModeFlags flags, VgaMode vgaMode) {
@@ -752,7 +753,7 @@ public class VgaFunctionality : IVgaFunctionality {
 
         byte foregroundAttribute = 0x00;
         const byte backgroundAttribute = 0x00;
-        byte[] lines = new byte[characterHeight]; 
+        byte[] lines = new byte[characterHeight];
 
         for (byte i = 0; i < characterHeight; i++, operation.Y++) {
             byte line = 0;

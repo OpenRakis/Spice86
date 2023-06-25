@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -7,8 +8,13 @@ using Spice86.Shared.Interfaces;
 ///     Handler for interrupt 0x74, which is used by the BIOS to update the mouse position.
 /// </summary>
 public class BiosMouseInt74Handler : InterruptHandler {
+    private readonly DualPic _hardwareInterruptHandler;
+    private readonly IMouseDriver _mouseDriver;
+
     /// <inheritdoc />
-    public BiosMouseInt74Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
+    public BiosMouseInt74Handler(IMouseDriver mouseDriver, DualPic hardwareInterruptHandler, Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
+        _mouseDriver = mouseDriver;
+        _hardwareInterruptHandler = hardwareInterruptHandler;
     }
 
     /// <inheritdoc />
@@ -16,7 +22,7 @@ public class BiosMouseInt74Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        _machine.MouseDriver.Update();
-        _machine.DualPic.AcknowledgeInterrupt(12);
+        _mouseDriver.Update();
+        _hardwareInterruptHandler.AcknowledgeInterrupt(12);
     }
 }

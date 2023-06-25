@@ -72,8 +72,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
             _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
 
-
-
     [ObservableProperty]
     private string _statusMessage = "Emulator: not started.";
 
@@ -477,9 +475,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     // We use async void, but thankfully this doesn't generate an exception.
-
     // So this is OK...
-
     private async void OnEmulatorErrorOccured(Exception e) {
         await Dispatcher.UIThread.InvokeAsync(async () => await ShowEmulationErrorMessage(e));
     }

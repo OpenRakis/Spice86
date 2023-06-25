@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-///     Basic implementation of a keyboard
+///     Basic implementation of a mouse
 /// </summary>
 public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private const int IrqNumber = 12;
@@ -21,6 +21,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private bool _previousIsRightButtonDown;
     private double _previousMouseXRelative;
     private double _previousMouseYRelative;
+    private int _sampleRate = 100;
+    private long _sampleRateTicks;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="Keyboard" /> class.
@@ -32,7 +34,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public Mouse(Machine machine, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
         _gui = gui;
         MouseType = configuration.Mouse;
-        _logger = loggerService.WithLogLevel(LogEventLevel.Verbose);
+        _logger = loggerService;
+        _sampleRateTicks = TimeSpan.TicksPerSecond / _sampleRate;
         Initialize();
     }
 
@@ -43,7 +46,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public double DeltaX { get; private set; }
 
     /// <inheritdoc />
-    public int ButtonCount { get; } = 3;
+    public int ButtonCount => 3;
 
     /// <inheritdoc />
     public double MouseXRelative { get; set; }
@@ -55,7 +58,13 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public MouseEventMask LastTrigger { get; private set; }
 
     /// <inheritdoc />
-    public int SampleRate { get; set; } = 100;
+    public int SampleRate {
+        get => _sampleRate;
+        set {
+            _sampleRate = value;
+            _sampleRateTicks = TimeSpan.TicksPerSecond / _sampleRate;
+        }
+    }
 
     /// <inheritdoc />
     public MouseType MouseType { get; }
@@ -127,9 +136,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
 
         long timestamp = DateTime.Now.Ticks;
         // Check sample rate to see if we need to send an update yet.
-        long ticksDuration = timestamp - _lastUpdateTimestamp;
-        long threshold = TimeSpan.TicksPerSecond / SampleRate;
-        if (ticksDuration < threshold) {
+        long ticksElapsed = timestamp - _lastUpdateTimestamp;
+        if (ticksElapsed < _sampleRateTicks) {
             return;
         }
         _lastUpdateTimestamp = timestamp;

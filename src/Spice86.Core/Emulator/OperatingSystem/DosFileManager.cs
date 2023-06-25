@@ -403,32 +403,6 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(writeLength);
     }
 
-    public DosFileOperationResult WriteByteToFileHandle(ushort fileHandle, byte data) {
-        if (!IsValidFileHandle(fileHandle)) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing.", fileHandle);
-            }
-
-            // Fake that we wrote, this could be used to write to stdout / stderr ...
-            return DosFileOperationResult.Value16(1);
-        }
-
-        OpenFile? file = GetOpenFile(fileHandle);
-        if (file == null) {
-            return FileNotOpenedError(fileHandle);
-        }
-
-        try {
-            file.RandomAccessFile.Write(data);
-        } catch (IOException e) {
-            e.Demystify();
-            throw new UnrecoverableException("IOException while writing file", e);
-        }
-
-        return DosFileOperationResult.Value16(1);
-    }
-    
-
     private int CountHandles(OpenFile openFileToCount) {
         int count = 0;
         foreach (var openFile in _openFiles) {
@@ -742,14 +716,5 @@ public class DosFileManager {
         dosDiskTransferArea.FileTime = ToDosTime(creationLocalTime);
         dosDiskTransferArea.FileSize = (ushort)attributes.Length;
         dosDiskTransferArea.FileName = Path.GetFileName(matchingFile);
-    }
-
-    public byte ReadByteFromFileHandle(ushort handle) {
-        OpenFile? openFile = GetOpenFile(handle);
-        if (openFile == null) {
-            throw new UnrecoverableException($"Could not find open file for handle {handle}");
-        }
-
-        return (byte)openFile.RandomAccessFile.ReadByte();
     }
 }

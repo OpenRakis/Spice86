@@ -53,7 +53,6 @@ public abstract class IndexBasedDispatcher {
         ICallback callback = GetCallback(index);
         SegmentedAddress? csIp = _machine.Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
         _loggerService.LoggerPropertyBag.CsIp = csIp ?? _loggerService.LoggerPropertyBag.CsIp;
-        _loggerService.Verbose("Callback {Index:X2} called", index);
         callback.Run();
     }
 

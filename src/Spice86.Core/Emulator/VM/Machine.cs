@@ -48,7 +48,7 @@ public class Machine : IDisposable {
     /// Gets or set if we record execution data, for reverse engineering purposes.
     /// </summary>
     public bool RecordData { get; set; }
-
+    
     /// <summary>
     /// Memory mapped BIOS values.
     /// </summary>
@@ -163,12 +163,12 @@ public class Machine : IDisposable {
     /// The VGA Card.
     /// </summary>
     public IVideoCard VgaCard { get; }
-
+    
     /// <summary>
     /// The Vga Registers
     /// </summary>
     public VideoState VgaRegisters { get; set; }
-
+    
     /// <summary>
     /// The VGA port handler
     /// </summary>
@@ -178,12 +178,12 @@ public class Machine : IDisposable {
     /// The class that handles converting video memory to a bitmap 
     /// </summary>
     public readonly IVgaRenderer VgaRenderer;
-
+    
     /// <summary>
     /// The Video BIOS interrupt handler.
     /// </summary>
     public IVideoInt10Handler VideoInt10Handler { get; }
-
+    
     /// <summary>
     /// The Video Rom containing fonts and other data.
     /// </summary>
@@ -223,7 +223,7 @@ public class Machine : IDisposable {
     /// The emulator configuration.
     /// </summary>
     public Configuration Configuration { get; }
-
+    
     /// <summary>
     /// Initializes a new instance
     /// <param name="machineCreationOptions">Describes how the machine will run, and what it will run.</param>
@@ -237,10 +237,6 @@ public class Machine : IDisposable {
         IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         BiosDataArea = new BiosDataArea(Memory);
-        if (machineCreationOptions.Configuration.Mouse is MouseType.PS2 or MouseType.PS2Wheel) {
-            ExtendedBiosDataArea = new ExtendedBiosDataArea(Memory);
-            BiosDataArea.ExtendedBiosDataAreaSegment = MemoryMap.ExtendedBiosDataAreaSegment;
-        }
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 
         // Breakpoints
@@ -292,7 +288,7 @@ public class Machine : IDisposable {
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
-
+        
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
@@ -323,15 +319,13 @@ public class Machine : IDisposable {
         Dos = new Dos(this, machineCreationOptions.LoggerService);
         Dos.Initialize();
 
-        MouseDriver = new MouseDriver(Cpu, machineCreationOptions.LoggerService, MouseDevice, machineCreationOptions.Gui, VgaFunctions);
+        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
         var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
         Register(mouseInt33Handler);
-        if (ExtendedBiosDataArea != null) {
-            var mouseIrq12Handler = new BiosMouseInt74Handler(this, machineCreationOptions.LoggerService);
-            Register(mouseIrq12Handler);
-            var mouseCleanupHandler = new CustomMouseInt90Handler(this, machineCreationOptions.LoggerService, MouseDriver);
-            Register(mouseCleanupHandler);
-        }
+        var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, this, machineCreationOptions.LoggerService);
+        Register(mouseIrq12Handler);
+        var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
+        Register(mouseCleanupHandler);
 
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
@@ -343,21 +337,16 @@ public class Machine : IDisposable {
         }
     }
 
-    public ExtendedBiosDataArea? ExtendedBiosDataArea { get; set; }
-
     /// <summary>
     /// The mouse device hardware abstraction.
     /// </summary>
-    public IMouseDevice MouseDevice { get; set; }
+    public IMouseDevice MouseDevice { get; }
 
     /// <summary>
     /// The mouse driver.
     /// </summary>
-    public IMouseDriver MouseDriver { get; set; }
+    public IMouseDriver MouseDriver { get; }
 
-    /// <summary>
-    /// The VGA functionality.
-    /// </summary>
     public IVgaFunctionality VgaFunctions { get; set; }
 
     /// <summary>
@@ -481,7 +470,8 @@ public class Machine : IDisposable {
         functionHandler.Ret(CallType.MACHINE);
     }
 
-    private void StartRunLoop(FunctionHandler functionHandler, State state) {
+    private void StartRunLoop(FunctionHandler functionHandler, State state)
+    {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         RunLoop();
@@ -521,7 +511,7 @@ public class Machine : IDisposable {
     }
 
     private void PauseIfAskedTo() {
-        if (Gui?.PauseEmulatorOnStart == true) {
+        if(Gui?.PauseEmulatorOnStart == true) {
             Gui?.PauseEmulationOnStart();
             Gui?.WaitForContinue();
         }

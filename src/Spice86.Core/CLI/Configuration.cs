@@ -2,6 +2,7 @@ namespace Spice86.Core.CLI;
 
 using CommandLine;
 
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Function;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
@@ -128,6 +129,6 @@ public class Configuration {
     /// <summary>
     /// Specify the type of mouse to use.
     /// </summary>
-    [Option(nameof(Mouse), Default = MouseType.PS2, Required = false, HelpText = "Specify the type of mouse to use. Valid values are None, PS2 (default), and PS2Wheel")]
+    [Option(nameof(Mouse), Default = MouseType.Ps2, Required = false, HelpText = "Specify the type of mouse to use. Valid values are None, PS2 (default), and PS2Wheel")]
     public MouseType Mouse { get; init; }
 }

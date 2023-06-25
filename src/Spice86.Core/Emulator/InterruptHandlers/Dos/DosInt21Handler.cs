@@ -617,8 +617,8 @@ public class DosInt21Handler : InterruptHandler {
         if (calledFromVm) {
             returnMessage = $"Int will return to {_machine.PeekReturn()}. ";
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("DOS operation failed with an error. {ReturnMessage}. State is {State}", returnMessage, _state.ToString());
+        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+            _loggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}", returnMessage, _state.ToString());
         }
     }
     

@@ -31,7 +31,7 @@ public sealed class ProgramExecutor : IDisposable {
     private bool _disposedValue;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
-    private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is true;
+    private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>

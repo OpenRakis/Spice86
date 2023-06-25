@@ -18,7 +18,6 @@ public static class Ports {
     public const int DacData = 0x03C9;
     public const int FeatureControlRead = 0x03CA;
     public const int MiscOutputRead = 0x03CC;
-    public const int SegmentSelect = 0x03CD;
     public const int GraphicsControllerAddress = 0x03CE;
     public const int GraphicsControllerData = 0x03CF;
     public const int CrtControllerAddressAltMirror1 = 0x03D0;
