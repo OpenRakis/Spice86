@@ -14,44 +14,45 @@ using Spice86.Shared.Interfaces;
 
 public class Startup {
     private readonly ILoggerService _loggerService;
+    private readonly Configuration _configuration;
     
-    
-    public Startup(ILoggerService loggerService) {
+    public Startup(ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
+        _configuration = configuration;
     }
     
-    public void StartApp(Configuration configuration) {
-        SetLoggingLevel(configuration, _loggerService);
-        if (!configuration.HeadlessMode) {
-            StartMainWindow(configuration, _loggerService);
+    public void StartApp() {
+        SetLoggingLevel();
+        if (!_configuration.HeadlessMode) {
+            StartMainWindow();
         } else {
-            StartConsole(configuration, _loggerService);
+            StartConsole();
         }
     }
 
-    private static void SetLoggingLevel(Configuration configuration, ILoggerService loggerService) {
-        if (configuration.SilencedLogs) {
-            loggerService.AreLogsSilenced = true;
+    private void SetLoggingLevel() {
+        if (_configuration.SilencedLogs) {
+            _loggerService.AreLogsSilenced = true;
         }
-        else if (configuration.WarningLogs) {
-            loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
+        else if (_configuration.WarningLogs) {
+            _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
         }
-        else if (configuration.VerboseLogs) {
-            loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+        else if (_configuration.VerboseLogs) {
+            _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
         }
     }
 
-    private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
-        ProgramExecutor programExecutor = new(loggerService, null, configuration);
+    private void StartConsole() {
+        ProgramExecutor programExecutor = new(_loggerService, null, _configuration);
         programExecutor.Run();
     }
 
-    private static void StartMainWindow(Configuration configuration, ILoggerService loggerService) {
+    private void StartMainWindow() {
         OxyPlotModule.EnsureLoaded();
         AppBuilder appBuilder = BuildAvaloniaApp();
         ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, Array.Empty<string>());
         App app = (App) appBuilder.Instance;
-        app.SetupMainWindow(configuration, loggerService);
+        app.SetupMainWindow(_configuration, _loggerService);
         desktop.Start(Array.Empty<string>());
     }
 

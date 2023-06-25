@@ -38,7 +38,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// </summary>
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
     /// <param name="gui">The GUI to use for user actions. Can be null for headless mode or unit tests.</param>
-    /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
+    /// <param name="configuration">The emulator Configuration to use.</param>
     public ProgramExecutor(ILoggerService loggerService, IMainWindowViewModel? gui, Configuration configuration) {
         _loggerService = loggerService;
         _configuration = configuration;

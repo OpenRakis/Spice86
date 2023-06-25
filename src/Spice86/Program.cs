@@ -3,8 +3,6 @@
 using Spice86.Core.CLI;
 using Spice86.DependencyInjection;
 
-using StrongInject;
-
 /// <summary>
 /// Entry point for Spice86 application.
 /// </summary>
@@ -31,8 +29,8 @@ public class Program {
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
     public static void Main(string[] args) {
-        using TopLevelContainer topLevelContainer = new();
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
-        topLevelContainer.Run(startup => startup.StartApp(configuration));
+        using TopLevelContainer topLevelContainer = new(configuration);
+        topLevelContainer.Run(startup => startup.StartApp());
     }
 }
