@@ -4,10 +4,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
-
-using Spice86.ViewModels;
-
-using System;
 using System.ComponentModel;
 
 internal partial class MainWindow : Window {
@@ -19,36 +15,29 @@ internal partial class MainWindow : Window {
 #endif
     }
 
-    private Image? _primaryDisplay = null;
+    private Image? _videoBufferImage;
 
     public void SetPrimaryDisplayControl(Image image) {
-        if(_primaryDisplay != image) {
-            _primaryDisplay = image;
-            FocusOnPrimaryVideoBuffer();
-            _primaryDisplay.KeyUp -= OnPrimaryDisplayOnKeyUp;
-            _primaryDisplay.KeyDown -= OnPrimaryDisplayOnKeyDown;
-            _primaryDisplay.KeyUp += OnPrimaryDisplayOnKeyUp;
-            _primaryDisplay.KeyDown += OnPrimaryDisplayOnKeyDown;
+        if(_videoBufferImage != image) {
+            _videoBufferImage = image;
+            FocusOnVideoBuffer();
         }
     }
 
-    void OnPrimaryDisplayOnKeyUp(object? _, KeyEventArgs e) => (DataContext as MainWindowViewModel)?.OnKeyUp(e);
-    void OnPrimaryDisplayOnKeyDown(object? _, KeyEventArgs e) => (DataContext as MainWindowViewModel)?.OnKeyDown(e);
-    
-    private void FocusOnPrimaryVideoBuffer() {
-        if (_primaryDisplay is not null) {
-            _primaryDisplay.IsEnabled = false;
-            FocusManager.Instance?.Focus(_primaryDisplay);
-            _primaryDisplay.IsEnabled = true;
+    private void FocusOnVideoBuffer() {
+        if (_videoBufferImage is not null) {
+            _videoBufferImage.IsEnabled = false;
+            FocusManager.Instance?.Focus(_videoBufferImage);
+            _videoBufferImage.IsEnabled = true;
         }
     }
 
     protected override void OnKeyUp(KeyEventArgs e) {
-        FocusOnPrimaryVideoBuffer();
+        FocusOnVideoBuffer();
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
-        FocusOnPrimaryVideoBuffer();
+        FocusOnVideoBuffer();
     }
 
     public static event EventHandler<CancelEventArgs>? AppClosing;
