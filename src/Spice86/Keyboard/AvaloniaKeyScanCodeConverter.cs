@@ -173,6 +173,11 @@ public class AvaloniaKeyScanCodeConverter {
         };
     }
 
+    /// <summary>
+    /// Gets the ASCII code from the input scancode.
+    /// </summary>
+    /// <param name="keyPressedScanCode">The scancode of the pressed keyboard key</param>
+    /// <returns>The corresponding ASCII code, or <c>null</c> if not found.</returns>
     public byte? GetAsciiCode(byte? keyPressedScanCode) {
         if (keyPressedScanCode > 0x7F) {
             keyPressedScanCode = (byte?) (keyPressedScanCode - 0x80);
