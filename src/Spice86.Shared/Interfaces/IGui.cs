@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Shared.Interfaces;
 
 using Spice86.Shared.Emulator.Keyboard;
+using Spice86.Shared.Emulator.Mouse;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -69,12 +70,12 @@ public interface IGui {
     /// <summary>
     /// X coordinates of the mouse cursor, in pixels.
     /// </summary>
-    int MouseX { get; set; }
+    double MouseX { get; set; }
 
     /// <summary>
     /// Y coordinates of the mouse cursor, in pixels.
     /// </summary>
-    int MouseY { get; set; }
+    double MouseY { get; set; }
 
     /// <summary>
     /// Indicates whether the LMB is down.
@@ -107,4 +108,19 @@ public interface IGui {
     /// <param name="videoWidth">The width in pixels</param>
     /// <param name="videoHeight">The height in pixels</param>
     void SetResolution(int videoWidth, int videoHeight);
+
+    /// <summary>
+    /// Indicate that the mouse has moved.
+    /// </summary>
+    event EventHandler<MouseMoveEventArgs>? MouseMoved;
+
+    /// <summary>
+    /// Indicate that a mouse button has been pressed.
+    /// </summary>
+    event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
+
+    /// <summary>
+    /// Indicate that a mouse button has been released.
+    /// </summary>
+    event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 }

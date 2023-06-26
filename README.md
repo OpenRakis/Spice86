@@ -290,7 +290,7 @@ DOS:
 
 Input:
 - Keyboard
-- Mouse (callback in mouse driver not implemented yet)
+- Mouse
 - No joystick for now
 
 CD-ROM:
