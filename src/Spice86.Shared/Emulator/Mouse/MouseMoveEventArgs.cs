@@ -3,7 +3,7 @@ namespace Spice86.Shared.Emulator.Mouse;
 /// <summary>
 /// Contains the details of a mouse movement event.
 /// </summary>
-public class MouseMoveEventArgs : EventArgs {
+public readonly record struct MouseMoveEventArgs {
     /// <summary>
     /// Instantiates a new instance of <see cref="MouseMoveEventArgs"/>.
     /// </summary>
