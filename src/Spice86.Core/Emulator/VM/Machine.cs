@@ -389,21 +389,6 @@ public class Machine : IDisposable {
     }
 
     /// <summary>
-    /// Returns a string that dumps the call stack.
-    /// </summary>
-    /// <returns>A string laying out the call stack.</returns>
-    public string DumpCallStack() {
-        FunctionHandler inUse = Cpu.FunctionHandlerInUse;
-        StringBuilder sb = new();
-        if (inUse.Equals(Cpu.FunctionHandlerInExternalInterrupt)) {
-            sb.AppendLine("From external interrupt:");
-        }
-
-        sb.Append(inUse.DumpCallStack());
-        return sb.ToString();
-    }
-
-    /// <summary>
     /// Installs all the callback in the dispatch table in emulated memory.
     /// </summary>
     public void InstallAllCallbacksInInterruptTable() {

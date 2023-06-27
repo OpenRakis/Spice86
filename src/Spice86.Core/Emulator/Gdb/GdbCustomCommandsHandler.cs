@@ -134,7 +134,22 @@ public class GdbCustomCommandsHandler {
     }
 
     private string CallStack() {
-        return _gdbIo.GenerateMessageToDisplayResponse(_machine.DumpCallStack());
+        return _gdbIo.GenerateMessageToDisplayResponse(DumpCallStack());
+    }
+    
+    /// <summary>
+    /// Returns a string that dumps the call stack.
+    /// </summary>
+    /// <returns>A string laying out the call stack.</returns>
+    public string DumpCallStack() {
+        FunctionHandler inUse = _machine.Cpu.FunctionHandlerInUse;
+        StringBuilder sb = new();
+        if (inUse.Equals(_machine.Cpu.FunctionHandlerInExternalInterrupt)) {
+            sb.AppendLine("From external interrupt:");
+        }
+
+        sb.Append(inUse.DumpCallStack());
+        return sb.ToString();
     }
 
     private string DoFileAction(string fileName, Action<string> fileNameConsumer,
