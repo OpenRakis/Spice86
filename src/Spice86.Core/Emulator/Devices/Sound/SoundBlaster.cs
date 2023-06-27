@@ -130,23 +130,23 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// </summary>
     /// <param name="machine">Virtual machine instance associated with the device.</param>
     /// <param name="configuration">The emulator config.</param>
-    /// <param name="irq">IRQ number for the Sound Blaster.</param>
-    /// <param name="dma8">8-bit DMA channel for the Sound Blaster.</param>
-    /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
     /// <param name="loggerService">The logging service for events such as non-fatal errors, warnings, or information</param>
-    public SoundBlaster(Machine machine, Configuration configuration, ILoggerService loggerService, byte irq = 7, int dma8 = 1, int dma16 = 5) : base(machine, configuration, loggerService) {
-        IRQ = irq;
-        DMA = dma8;
-        _dma16 = dma16;
+    public SoundBlaster(Machine machine, Configuration configuration, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(machine, configuration, loggerService) {
+        IRQ = soundBlasterHardwareConfig.Irq;
+        DMA = soundBlasterHardwareConfig.LowDma;
+        _dma16 = soundBlasterHardwareConfig.HighDma;
         _mixer = new Mixer(this);
         _dmaChannel = machine.DmaController.Channels[DMA];
-        _dsp = new Dsp(machine, this, dma8, dma16);
+        _dsp = new Dsp(machine, this, DMA, _dma16);
         _playbackThread = new Thread(AudioPlayback) {
             Name = "PCMAudio",
             Priority = ThreadPriority.AboveNormal
         };
     }
 
+    /// <summary>
+    /// The BLASTER environment variable
+    /// </summary>
     public string BlasterString => $"A220 I{IRQ} D{DMA} T4";
 
     /// <inheritdoc />

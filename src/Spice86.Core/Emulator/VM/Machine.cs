@@ -262,7 +262,7 @@ public class Machine : IDisposable {
         RegisterIoPortHandler(PcSpeaker);
         OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, new SoundBlasterHardwareConfig(7,1,5));
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
