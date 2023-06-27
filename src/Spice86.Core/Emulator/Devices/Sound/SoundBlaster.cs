@@ -16,7 +16,7 @@ using Spice86.Shared.Interfaces;
 /// Sound blaster implementation. <br/>
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
-public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IDisposable {
+public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt, IDisposable {
     /// <summary>
     /// The port number for checking if data is available to be read from the DSP.
     /// </summary>
@@ -140,8 +140,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _dma16 = dma16;
         _mixer = new Mixer(this);
         _dmaChannel = machine.DmaController.Channels[DMA];
-        _dsp = new Dsp(machine, dma8, dma16);
-        _dsp.AutoInitBufferComplete += (_, _) => RaiseInterrupt();
+        _dsp = new Dsp(machine, this, dma8, dma16);
         _playbackThread = new Thread(AudioPlayback) {
             Name = "PCMAudio",
             Priority = ThreadPriority.AboveNormal
@@ -294,7 +293,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
     void IDmaDevice8.SingleCycleComplete() {
         _dsp.IsEnabled = false;
-        RaiseInterrupt();
+        RaiseInterruptRequest();
     }
 
     void IDmaDevice16.SingleCycleComplete() => throw new NotImplementedException();
@@ -348,7 +347,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 }
 
                 _pauseDuration = 0;
-                RaiseInterrupt();
+                RaiseInterruptRequest();
             }
         }
     }
@@ -487,7 +486,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 break;
 
             case Commands.RaiseIrq8:
-                RaiseInterrupt();
+                RaiseInterruptRequest();
                 break;
 
             case Commands.SetInputSampleRate:
@@ -509,10 +508,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         return true;
     }
 
-    /// <summary>
-    /// Raises a hardware interrupt and prepares for an acknowledge response.
-    /// </summary>
-    private void RaiseInterrupt() {
+    /// <inheritdoc/>
+    public void RaiseInterruptRequest() {
         _mixer.InterruptStatusRegister = InterruptStatus.Dma8;
         _machine.DualPic.ProcessInterruptRequest(IRQ);
         //System.Diagnostics.Debug.WriteLine("Sound Blaster IRQ");

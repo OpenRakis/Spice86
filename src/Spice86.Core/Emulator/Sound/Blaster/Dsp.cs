@@ -1,5 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Blaster;
 
+using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound;
+
 using System;
 using System.Threading;
 
@@ -11,23 +14,27 @@ using Spice86.Core.Emulator.VM;
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
 public sealed class Dsp {
+    private IRequestInterrupt _soundCard;
+    
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
     /// <param name="vm">Virtual machine instance associated with the DSP.</param>
+    /// <param name="soundCard">The host sound-card, used to raise interrupts.</param>
     /// <param name="dma8">8-bit DMA channel for the DSP device.</param>
     /// <param name="dma16">16-bit DMA channel for the DSP device.</param>
-    public Dsp(Machine vm, int dma8, int dma16) {
+    public Dsp(Machine vm, IRequestInterrupt soundCard, int dma8, int dma16) {
         dmaChannel8 = vm.DmaController.Channels[dma8];
         dmaChannel16 = vm.DmaController.Channels[dma16];
         SampleRate = 22050;
         BlockTransferSize = 65536;
+        _soundCard = soundCard;
     }
 
     /// <summary>
     /// Occurs when a buffer has been transferred in auto-initialize mode.
     /// </summary>
-    public event EventHandler? AutoInitBufferComplete;
+    private void OnAutoInitBufferComplete() => _soundCard.RaiseInterruptRequest();
 
     /// <summary>
     /// Gets or sets the DSP's sample rate.
@@ -172,7 +179,7 @@ public sealed class Dsp {
             autoInitTotal += actualCount;
             if (autoInitTotal >= BlockTransferSize) {
                 autoInitTotal -= BlockTransferSize;
-                OnAutoInitBufferComplete(EventArgs.Empty);
+                OnAutoInitBufferComplete();
             }
         }
 
@@ -217,11 +224,6 @@ public sealed class Dsp {
             dest = dest[amt..];
         }
     }
-    /// <summary>
-    /// Raises the AutoInitBufferComplete event.
-    /// </summary>
-    /// <param name="e">Unused EventArgs instance.</param>
-    private void OnAutoInitBufferComplete(EventArgs e) => AutoInitBufferComplete?.Invoke(this, e);
 
     /// <summary>
     /// DMA channel used for 8-bit data transfers.
