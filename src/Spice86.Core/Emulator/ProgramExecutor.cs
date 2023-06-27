@@ -108,11 +108,21 @@ public sealed class ProgramExecutor : IDisposable {
             return new ExeLoader(
                 Machine,
                 _loggerService,
+                Machine.Cpu.State,
+                Machine.Dos.EnvironmentVariables,
+                Machine.Dos.FileManager,
+                Machine.Dos.MemoryManager,
                 entryPointSegment);
         }
 
         if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(Machine, entryPointSegment, _loggerService);
+            return new ComLoader(Machine,
+                _loggerService,
+                Machine.Cpu.State,
+                Machine.Dos.EnvironmentVariables,
+                Machine.Dos.FileManager,
+                Machine.Dos.MemoryManager,
+                entryPointSegment);
         }
 
         return new BiosLoader(Machine, _loggerService);

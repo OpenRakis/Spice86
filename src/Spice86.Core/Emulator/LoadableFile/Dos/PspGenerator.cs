@@ -2,7 +2,8 @@
 
 using System.Text;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
 /// <summary>
@@ -11,14 +12,24 @@ using Spice86.Shared.Utils;
 public class PspGenerator {
     private const ushort DTA_OR_COMMAND_LINE_OFFSET = 0x80;
     private const ushort LAST_FREE_SEGMENT_OFFSET = 0x02;
-    private readonly Machine _machine;
+    private const ushort ENVIRONMENT_SEGMENT_OFFSET = 0x2C;
+    private readonly Memory _memory;
+    private readonly EnvironmentBlockGenerator _environmentBlockGenerator;
+    private readonly DosMemoryManager _dosMemoryManager;
+    private readonly DosFileManager _dosFileManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PspGenerator"/> class with the specified <see cref="Machine"/> object.
     /// </summary>
-    /// <param name="machine">The <see cref="Machine"/> object.</param>
-    public PspGenerator(Machine machine) {
-        _machine = machine;
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="environmentVariables">The master environment block from the DOS kernel.</param>
+    /// <param name="dosMemoryManager">The DOS memory manager.</param>
+    /// <param name="dosFileManager">The DOS file manager.</param>
+    public PspGenerator(Memory memory, EnvironmentVariables environmentVariables, DosMemoryManager dosMemoryManager, DosFileManager dosFileManager) {
+        _memory = memory;
+        _dosMemoryManager = dosMemoryManager;
+        _dosFileManager = dosFileManager;
+        _environmentBlockGenerator = new(environmentVariables);
     }
 
     /// <summary>
@@ -27,24 +38,26 @@ public class PspGenerator {
     /// <param name="pspSegment">The segment address at which to generate the PSP.</param>
     /// <param name="arguments">The command-line arguments to pass to the program.</param>
     public void GeneratePsp(ushort pspSegment, string? arguments) {
-        Memory memory = _machine.Memory;
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 
         // Set the PSP's first 2 bytes to INT 20h.
-        memory.SetUint16(pspAddress, 0xCD20);
+        _memory.SetUint16(pspAddress, 0xCD20);
 
         // Set the PSP's last free segment value.
         const ushort lastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
-        memory.SetUint16(pspAddress + LAST_FREE_SEGMENT_OFFSET, lastFreeSegment);
+        _memory.SetUint16(pspAddress + LAST_FREE_SEGMENT_OFFSET, lastFreeSegment);
 
         // Load the command-line arguments into the PSP.
-        memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
-
+        _memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
+        
+        // Copy the DOS env vars into the PSP.
+        _memory.LoadData(pspAddress + ENVIRONMENT_SEGMENT_OFFSET, _environmentBlockGenerator.BuildEnvironmentBlock());
+        
         // Initialize the memory manager with the PSP segment and the last free segment value.
-        _machine.Dos.MemoryManager.Init(pspSegment, lastFreeSegment);
+        _dosMemoryManager.Init(pspSegment, lastFreeSegment);
 
         // Set the disk transfer area address to the command-line offset in the PSP.
-        _machine.Dos.FileManager.SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
+        _dosFileManager.SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
     }
 
     /// <summary>
