@@ -87,9 +87,9 @@ public class Dos {
             _logger.Verbose("Initializing DOS");
         }
 
-        _machine.Register(DosInt20Handler);
-        _machine.Register(DosInt21Handler);
-        _machine.Register(DosInt2FHandler);
+        _machine.RegisterCallbackHandler(DosInt20Handler);
+        _machine.RegisterCallbackHandler(DosInt21Handler);
+        _machine.RegisterCallbackHandler(DosInt2FHandler);
 
         AddDefaultDevices();
         OpenDefaultFileHandles();
