@@ -404,15 +404,6 @@ public class Machine : IDisposable {
     }
 
     /// <summary>
-    /// Peeks at the return address.
-    /// </summary>
-    /// <param name="returnCallType">The expected call type.</param>
-    /// <returns>The return address string.</returns>
-    public string PeekReturn(CallType returnCallType) {
-        return SegmentedAddress.ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
-    }
-
-    /// <summary>
     /// Implements the emulation loop.
     /// </summary>
     /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>

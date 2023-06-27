@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -349,11 +350,20 @@ Supported custom commands:
             }
 
             if (callType is CallType type) {
-                return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn(type));
+                return _gdbIo.GenerateMessageToDisplayResponse(PeekReturn(type));
             }
         }
 
         return "";
+    }
+    
+    /// <summary>
+    /// Peeks at the return address.
+    /// </summary>
+    /// <param name="returnCallType">The expected call type.</param>
+    /// <returns>The return address string.</returns>
+    public string PeekReturn(CallType returnCallType) {
+        return SegmentedAddress.ToString(_machine.Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
     }
 
     private string ResultIsInFile(string fileName) {
