@@ -99,4 +99,12 @@ public class SegmentedAddress : IComparable<SegmentedAddress> {
     public override string ToString() {
         return $"{ToSegmentOffsetRepresentation()}/{ConvertUtils.ToHex(ToPhysical())}";
     }
+    
+    public static string ToString(SegmentedAddress? segmentedAddress) {
+        if (segmentedAddress is not null) {
+            return segmentedAddress.ToString();
+        }
+
+        return "null";
+    }
 }

@@ -412,7 +412,7 @@ public class Machine : IDisposable {
     /// </summary>
     /// <returns>The return address string.</returns>
     public string PeekReturn() {
-        return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
+        return SegmentedAddress.ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
     }
 
     /// <summary>
@@ -421,7 +421,7 @@ public class Machine : IDisposable {
     /// <param name="returnCallType">The expected call type.</param>
     /// <returns>The return address string.</returns>
     public string PeekReturn(CallType returnCallType) {
-        return ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
+        return SegmentedAddress.ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
     }
 
     /// <summary>
@@ -513,14 +513,6 @@ public class Machine : IDisposable {
             }
             IsPaused = false;
         }
-    }
-
-    private static string ToString(SegmentedAddress? segmentedAddress) {
-        if (segmentedAddress is not null) {
-            return segmentedAddress.ToString();
-        }
-
-        return "null";
     }
 
     /// <summary>
