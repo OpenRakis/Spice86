@@ -210,16 +210,6 @@ public class Machine : IDisposable {
     public OPL3FM OPL3FM { get; }
 
     /// <summary>
-    /// The code invoked when emulation pauses.
-    /// </summary>
-    public event Action? Paused;
-
-    /// <summary>
-    /// The code invoked when emulation resumes.
-    /// </summary>
-    public event Action? Resumed;
-
-    /// <summary>
     /// The emulator configuration.
     /// </summary>
     public Configuration Configuration { get; }
@@ -517,12 +507,10 @@ public class Machine : IDisposable {
         }
         if (Gui?.IsPaused == true) {
             IsPaused = true;
-            Paused?.Invoke();
             if (!_programExecutor.Step()) {
                 Gui.IsPaused = true;
                 Gui?.WaitForContinue();
             }
-            Resumed?.Invoke();
             IsPaused = false;
         }
     }

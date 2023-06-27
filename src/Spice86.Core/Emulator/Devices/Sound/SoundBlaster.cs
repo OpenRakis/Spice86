@@ -122,7 +122,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private byte _currentCommand;
     private volatile bool _endPlayback;
     private int _pauseDuration;
-    private volatile bool _pausePlayback;
     private BlasterState _state;
     private bool _playbackStarted;
 
@@ -136,8 +135,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
     /// <param name="loggerService">The logging service for events such as non-fatal errors, warnings, or information</param>
     public SoundBlaster(Machine machine, Configuration configuration, ILoggerService loggerService, byte irq = 7, int dma8 = 1, int dma16 = 5) : base(machine, configuration, loggerService) {
-        _machine.Paused += MachinePaused;
-        _machine.Resumed += MachineResumed;
         IRQ = irq;
         DMA = dma8;
         _dma16 = dma16;
@@ -149,14 +146,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             Name = "PCMAudio",
             Priority = ThreadPriority.AboveNormal
         };
-    }
-
-    private void MachineResumed() {
-        _pausePlayback = false;
-    }
-
-    private void MachinePaused() {
-        _pausePlayback = true;
     }
 
     /// <inheritdoc />
@@ -342,8 +331,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
             Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
 
-            if (_pausePlayback) {
-                while (_pausePlayback) {
+            if (_machine.IsPaused) {
+                while (_machine.IsPaused) {
                     Thread.Sleep(1);
                     if (_endPlayback) {
                         return;
