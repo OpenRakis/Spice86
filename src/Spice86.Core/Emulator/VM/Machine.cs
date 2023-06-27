@@ -337,6 +337,9 @@ public class Machine : IDisposable {
     /// </summary>
     public IMouseDriver MouseDriver { get; }
 
+    /// <summary>
+    /// Defines all VGA high level functions, such as writing text to the screen.
+    /// </summary>
     public IVgaFunctionality VgaFunctions { get; set; }
 
     /// <summary>
