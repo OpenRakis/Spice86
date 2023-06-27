@@ -198,12 +198,7 @@ public class Machine : IDisposable {
     /// The DMA controller.
     /// </summary>
     public DmaController DmaController { get; }
-
-    /// <summary>
-    /// Gets the current DOS environment variables.
-    /// </summary>
-    public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
-
+    
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
@@ -269,7 +264,6 @@ public class Machine : IDisposable {
         RegisterIoPortHandler(OPL3FM);
         SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(SoundBlaster);
-        SoundBlaster.AddEnvironmentVariable();
         GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
         MidiDevice = new Midi(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
@@ -307,7 +301,7 @@ public class Machine : IDisposable {
 
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
-        Dos.Initialize();
+        Dos.Initialize(SoundBlaster);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
         var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
@@ -439,8 +433,7 @@ public class Machine : IDisposable {
         functionHandler.Ret(CallType.MACHINE);
     }
 
-    private void StartRunLoop(FunctionHandler functionHandler, State state)
-    {
+    private void StartRunLoop(FunctionHandler functionHandler, State state) {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         RunLoop();

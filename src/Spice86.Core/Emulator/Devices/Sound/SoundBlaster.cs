@@ -16,7 +16,7 @@ using Spice86.Shared.Interfaces;
 /// Sound blaster implementation. <br/>
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
-public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt, IDisposable {
+public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt, IBlasterEnvVarProvider, IDisposable {
     /// <summary>
     /// The port number for checking if data is available to be read from the DSP.
     /// </summary>
@@ -146,6 +146,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             Priority = ThreadPriority.AboveNormal
         };
     }
+
+    public string BlasterString => $"A220 I{IRQ} D{DMA} T4";
 
     /// <inheritdoc />
     public override byte ReadByte(int port) {
@@ -301,11 +303,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => _dsp.DmaWrite(source);
 
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
-
-    internal void AddEnvironmentVariable() {
-        _machine.EnvironmentVariables["BLASTER"] = $"A220 I{IRQ} D{DMA} T4";
-    }
-
+    
     private void AudioPlayback() {
         using AudioPlayer? player = Audio.CreatePlayer(48000, 2048);
         if (player is null) {

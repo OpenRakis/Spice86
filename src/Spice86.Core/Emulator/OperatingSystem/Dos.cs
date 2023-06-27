@@ -5,6 +5,7 @@ using System.Text;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -66,6 +67,11 @@ public class Dos {
     /// Gets the global DOS memory structures.
     /// </summary>
     public DosTables DosTables { get; } = new();
+    
+    /// <summary>
+    /// Gets the current DOS master environment variables.
+    /// </summary>
+    public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
 
     /// <summary>
     /// Initializes a new instance.
@@ -82,7 +88,7 @@ public class Dos {
         DosInt2FHandler = new DosInt2fHandler(_machine, _logger);
     }
 
-    internal void Initialize() {
+    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider) {
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("Initializing DOS");
         }
@@ -93,6 +99,11 @@ public class Dos {
 
         AddDefaultDevices();
         OpenDefaultFileHandles();
+        SetEnvironmentVariables(blasterEnvVarProvider);
+    }
+
+    private void SetEnvironmentVariables(IBlasterEnvVarProvider blasterEnvVarProvider) {
+        EnvironmentVariables["BLASTER"] = blasterEnvVarProvider.BlasterString;
     }
 
     private void OpenDefaultFileHandles() {
