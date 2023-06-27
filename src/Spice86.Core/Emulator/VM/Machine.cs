@@ -190,11 +190,6 @@ public class Machine : IDisposable {
     public VgaRom VgaRom { get; }
 
     /// <summary>
-    /// The EMS device driver.
-    /// </summary>
-    public ExpandedMemoryManager? Ems { get; set; }
-
-    /// <summary>
     /// The DMA controller.
     /// </summary>
     public DmaController DmaController { get; }
@@ -301,7 +296,7 @@ public class Machine : IDisposable {
 
         // Initialize DOS.
         Dos = new Dos(this, machineCreationOptions.LoggerService);
-        Dos.Initialize(SoundBlaster);
+        Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
         var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
@@ -314,11 +309,6 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-        
-        if(machineCreationOptions.Configuration.Ems) {
-            Ems = new(this, machineCreationOptions.LoggerService);
-            RegisterCallbackHandler(Ems);
-        }
     }
 
     /// <summary>

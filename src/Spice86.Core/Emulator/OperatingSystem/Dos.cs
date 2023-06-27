@@ -7,6 +7,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -21,7 +22,7 @@ using Spice86.Shared.Utils;
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;
     private readonly Machine _machine;
-    private readonly ILoggerService _logger;
+    private readonly ILoggerService _loggerService;
     
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -72,25 +73,30 @@ public class Dos {
     /// Gets the current DOS master environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
+    
+    /// <summary>
+    /// The EMS device driver.
+    /// </summary>
+    public ExpandedMemoryManager? Ems { get; set; }
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
-    /// <param name="logger">The logger service implementation.</param>
-    public Dos(Machine machine, ILoggerService logger) {
+    /// <param name="loggerService">The logger service implementation.</param>
+    public Dos(Machine machine, ILoggerService loggerService) {
         _machine = machine;
-        _logger = logger;
-        FileManager = new DosFileManager(_machine.Memory, _logger, this);
-        MemoryManager = new DosMemoryManager(_machine.Memory, _logger);
-        DosInt20Handler = new DosInt20Handler(_machine, _logger);
-        DosInt21Handler = new DosInt21Handler(_machine, _logger, this);
-        DosInt2FHandler = new DosInt2fHandler(_machine, _logger);
+        _loggerService = loggerService;
+        FileManager = new DosFileManager(_machine.Memory, _loggerService, this);
+        MemoryManager = new DosMemoryManager(_machine.Memory, _loggerService);
+        DosInt20Handler = new DosInt20Handler(_machine, _loggerService);
+        DosInt21Handler = new DosInt21Handler(_machine, _loggerService, this);
+        DosInt2FHandler = new DosInt2fHandler(_machine, _loggerService);
     }
 
-    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider) {
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("Initializing DOS");
+    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, Configuration configuration) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Initializing DOS");
         }
 
         _machine.RegisterCallbackHandler(DosInt20Handler);
@@ -100,11 +106,14 @@ public class Dos {
         AddDefaultDevices();
         OpenDefaultFileHandles();
         SetEnvironmentVariables(blasterEnvVarProvider);
+
+        if (configuration.Ems) {
+            Ems = new(_machine, _loggerService);
+            _machine.RegisterCallbackHandler(Ems);
+        }
     }
 
-    private void SetEnvironmentVariables(IBlasterEnvVarProvider blasterEnvVarProvider) {
-        EnvironmentVariables["BLASTER"] = blasterEnvVarProvider.BlasterString;
-    }
+    private void SetEnvironmentVariables(IBlasterEnvVarProvider blasterEnvVarProvider) => EnvironmentVariables["BLASTER"] = blasterEnvVarProvider.BlasterString;
 
     private void OpenDefaultFileHandles() {
         if (Devices.FirstOrDefault(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
@@ -123,10 +132,10 @@ public class Dos {
     }
 
     private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _machine, _logger));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _logger));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _logger));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _logger));
+        AddDevice(new ConsoleDevice(DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _machine, _loggerService));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _loggerService));
         AddDevice(new BlockDevice(DeviceAttributes.FatDevice, 1));
     }
 
