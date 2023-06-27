@@ -96,7 +96,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     [ObservableProperty]
     private WriteableBitmap? _bitmap;
 
-    private bool _showCursor = true;
+    private bool _showCursor = false;
 
     public bool ShowCursor {
         get => _showCursor;
