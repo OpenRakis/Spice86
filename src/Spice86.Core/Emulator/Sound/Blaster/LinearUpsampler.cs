@@ -144,8 +144,6 @@ internal static class LinearUpsampler {
 
         return length * 2;
     }
-
-
     
     /// <summary>
     /// Performs linear interpolation between two samples.
