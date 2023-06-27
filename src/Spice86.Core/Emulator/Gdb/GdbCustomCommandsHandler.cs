@@ -65,24 +65,6 @@ public class GdbCustomCommandsHandler {
         return ExecuteCustomCommand(customSplit);
     }
 
-    private static double ExtractScale(string[] args) {
-        if (args.Length != 5) {
-            // Not specified in input
-            return 1;
-        }
-
-        string scaleString = args[4];
-        if (!int.TryParse(scaleString, out int scale)) {
-            throw new ArgumentException($"Could not parse scale {scaleString}");
-        }
-
-        if (scale < 0.1) {
-            throw new ArgumentException("Scale cannot be less than 0.1");
-        }
-
-        return scale;
-    }
-
     private string BreakCycles(string[] args) {
         if (args.Length < 2) {
             return InvalidCommand("breakCycles can only work with one argument.");
@@ -151,23 +133,6 @@ public class GdbCustomCommandsHandler {
 
         sb.Append(inUse.DumpCallStack());
         return sb.ToString();
-    }
-
-    private string DoFileAction(string fileName, Action<string> fileNameConsumer,
-        string errorMessageInCaseIOException) {
-        try {
-            fileNameConsumer.Invoke(fileName);
-        } catch (IOException e) {
-            e.Demystify();
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(e, "{ErrorMessageInCaseIOException}", errorMessageInCaseIOException);
-            }
-
-            string errorWithException = $"{errorMessageInCaseIOException}: {e.Message}";
-            return _gdbIo.GenerateMessageToDisplayResponse(errorWithException);
-        }
-
-        return ResultIsInFile(fileName);
     }
 
     private string DumpAll() {
@@ -263,31 +228,6 @@ public class GdbCustomCommandsHandler {
         throw new ArgumentException("You need to specify an action. Valid actions are [refresh, add, remove]");
     }
 
-    private uint ExtractAddress(string[] args, string action) {
-        if (args.Length < 3) {
-            throw new ArgumentException(
-                $"You need to specify an address for action {action}. Format is 0x12AB (hex) or 1234 (decimal)");
-        }
-
-        string addressString = args[2];
-        try {
-            return ParseAddress(addressString);
-        } catch (FormatException nfe) {
-            nfe.Demystify();
-            throw new ArgumentException($"Could not parse address {addressString}", nfe);
-        }
-    }
-
-    private int[] ExtractResolution(string[] args, string action) {
-        if (args.Length < 4) {
-            throw new ArgumentException(
-                $"You need to specify a resolution for action {action}. Format is 320x200 for resolution");
-        }
-
-        string resolutionString = args[3];
-        return ParseResolution(resolutionString);
-    }
-
     private string GetValidRetValues() {
         return string.Join(", ", Enum.GetNames(typeof(CallType)));
     }
@@ -316,28 +256,6 @@ Supported custom commands:
         return Help($"Invalid command {command}\n");
     }
 
-    private uint ParseAddress(string address) {
-        if (address.Contains("0x")) {
-            return ConvertUtils.ParseHex32(address);
-        }
-
-        return uint.Parse(address);
-    }
-
-    private int[] ParseResolution(string resolution) {
-        string[] split = resolution.Split("x");
-        if (split.Length != 2) {
-            throw new ArgumentException($"Could not parse resolution {resolution}. Format is like 320x200");
-        }
-
-        try {
-            return new[] { int.Parse(split[0]), int.Parse(split[1]) };
-        } catch (FormatException nfe) {
-            nfe.Demystify();
-            throw new ArgumentException($"Could not parse numbers in resolution {resolution}", nfe);
-        }
-    }
-
     private string PeekRet(string[] args) {
         if (args.Length == 1) {
             return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn());
@@ -364,10 +282,6 @@ Supported custom commands:
     /// <returns>The return address string.</returns>
     public string PeekReturn(CallType returnCallType) {
         return SegmentedAddress.ToString(_machine.Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
-    }
-
-    private string ResultIsInFile(string fileName) {
-        return _gdbIo.GenerateMessageToDisplayResponse($"Result is in file {fileName}");
     }
 
     private string State() {
