@@ -371,10 +371,10 @@ public static class ConvertUtils {
     /// </summary>
     /// <param name="path">The folder path string to modify.</param>
     public static string ToSlashFolderPath(string path) {
-        string res = ToSlashPath(path);
-        if (!res.EndsWith('/')) {
-            res += '/';
+        string slashPath = ToSlashPath(path);
+        if (!slashPath.EndsWith('/')) {
+            slashPath += '/';
         }
-        return res;
+        return slashPath;
     }
 }

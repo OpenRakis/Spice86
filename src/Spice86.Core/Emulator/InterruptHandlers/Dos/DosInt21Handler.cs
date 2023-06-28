@@ -68,6 +68,7 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x35, new Callback(0x35, GetInterruptVector));
         _dispatchTable.Add(0x36, new Callback(0x36, GetFreeDiskSpace));
         _dispatchTable.Add(0x38, new Callback(0x38, () => SetCountryCode(true)));
+        _dispatchTable.Add(0x39, new Callback(0x39, () => CreateDirectory(true)));
         _dispatchTable.Add(0x3B, new Callback(0x3B, () => ChangeCurrentDirectory(true)));
         _dispatchTable.Add(0x3C, new Callback(0x3C, () => CreateFileUsingHandle(true)));
         _dispatchTable.Add(0x3D, new Callback(0x3D, () => OpenFile(true)));
@@ -87,6 +88,15 @@ public class DosInt21Handler : InterruptHandler {
         _dispatchTable.Add(0x4F, new Callback(0x4F, () => FindNextMatchingFile(true)));
         _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
         _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
+    }
+
+    /// <summary>
+    /// Creates a directory.
+    /// </summary>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
+    private void CreateDirectory(bool calledFromVm) {
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetStringAtDsDx());
+        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
     public void GetAllocationInfoForDefaultDrive() {
