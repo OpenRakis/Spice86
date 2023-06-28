@@ -28,6 +28,7 @@ public class Dos {
     /// Gets the DOS Swappable Data Area.
     /// </summary>
     public DosSwappableArea DosSwappableArea { get; }
+    
     /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
