@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
+using Spice86.Core.Emulator.Memory.Indexer;
+
 using System.Text;
 
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -33,6 +35,7 @@ public class Memory : IIndexed, IByteReaderWriter {
         UInt8 = new UInt8Indexer(this);
         UInt16 = new UInt16Indexer(this);
         UInt32 = new UInt32Indexer(this);
+        OffsetSegment = new OffsetSegmentIndexer(UInt16);
         A20Gate = new(configuration.A20Gate);
     }
 
@@ -52,7 +55,7 @@ public class Memory : IIndexed, IByteReaderWriter {
     /// <summary>
     /// Gets a copy of the current memory state.
     /// </summary>
-    public byte[] Ram {
+    public byte[] RamCopy {
         get {
             byte[] copy = new byte[_memoryDevices.Length];
             for (uint address = 0; address < copy.Length; address++) {
@@ -277,6 +280,11 @@ public class Memory : IIndexed, IByteReaderWriter {
 
     /// <inheritdoc/>
     public UInt32Indexer UInt32 {
+        get;
+    }
+    
+    /// <inheritdoc/>
+    public OffsetSegmentIndexer OffsetSegment {
         get;
     }
 

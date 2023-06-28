@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Callback;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 
 /// <summary>
 /// The base interface for classes that can be called back.

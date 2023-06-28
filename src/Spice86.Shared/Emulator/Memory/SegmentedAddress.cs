@@ -3,16 +3,32 @@
 using Spice86.Shared.Utils;
 
 using System;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// An address that is represented with a real mode segment and an offset.
 /// </summary>
 public class SegmentedAddress : IComparable<SegmentedAddress> {
     /// <summary>
+    /// Initializes a new instance of the SegmentedAddress class from another instance, creating a copy.
+    /// </summary>
+    /// <param name="other">The other object to initialize from.</param>
+    public SegmentedAddress(SegmentedAddress other) : this(other.Segment, other.Offset) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the SegmentedAddress class from a ValueTuple which first value is the segment and second is the offset
+    /// </summary>
+    /// <param name="segmentOffset">First value is the segment and second is the offset</param>
+    public SegmentedAddress(ValueTuple<ushort, ushort> segmentOffset) : this(segmentOffset.Item1, segmentOffset.Item2) {
+    }
+
+    /// <summary>
     /// Initializes a new instance of the SegmentedAddress class with the given segment and offset.
     /// </summary>
     /// <param name="segment">The segment value of the address.</param>
     /// <param name="offset">The offset value of the address.</param>
+    [JsonConstructor]
     public SegmentedAddress(ushort segment, ushort offset) {
         Segment = segment;
         Offset = offset;

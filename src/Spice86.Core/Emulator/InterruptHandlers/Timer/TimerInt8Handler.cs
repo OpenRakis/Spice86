@@ -25,7 +25,7 @@ public class TimerInt8Handler : InterruptHandler {
     }
 
     /// <inheritdoc />
-    public override byte Index => 0x8;
+    public override byte VectorNumber => 0x8;
 
     /// <inheritdoc />
     public override void Run() {

@@ -12,7 +12,7 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     }
 
     /// <inheritdoc />
-    public override byte Index => 0x11;
+    public override byte VectorNumber => 0x11;
 
     /// <inheritdoc />
     public override void Run() {

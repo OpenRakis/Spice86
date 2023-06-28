@@ -147,9 +147,6 @@ public sealed class ProgramExecutor : IDisposable {
             Machine.VgaFunctions.VgaSetMode(0x03, ModeFlags.Legacy);
             // Set up disk/filesystem.
             InitializeDOS(_configuration);
-            // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
-            // if needed
-            Machine.InstallAllCallbacksInInterruptTable();
             // Put HLT at the reset address
             Machine.Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         } else {

@@ -99,9 +99,9 @@ public class Dos {
             _loggerService.Verbose("Initializing DOS");
         }
 
-        _machine.RegisterCallbackHandler(DosInt20Handler);
-        _machine.RegisterCallbackHandler(DosInt21Handler);
-        _machine.RegisterCallbackHandler(DosInt2FHandler);
+        _machine.RegisterInterruptHandler(DosInt20Handler);
+        _machine.RegisterInterruptHandler(DosInt21Handler);
+        _machine.RegisterInterruptHandler(DosInt2FHandler);
 
         AddDefaultDevices();
         OpenDefaultFileHandles();
@@ -109,7 +109,7 @@ public class Dos {
 
         if (configuration.Ems) {
             Ems = new(_machine, _loggerService);
-            _machine.RegisterCallbackHandler(Ems);
+            _machine.RegisterInterruptHandler(Ems);
         }
     }
 

@@ -64,13 +64,40 @@ public class MouseDriver : IMouseDriver {
     public int CurrentMinY { get; set; }
 
     /// <inheritdoc />
-    public void Update() {
-        if ((_mouseDevice.LastTrigger & _userCallback.TriggerMask) == 0) {
-            // Event does not match trigger mask.
-            return;
+    public IAsmUserRoutineHandler? UserRoutineHandler { set; private get; }
+
+    /// <inheritdoc />
+    public void BeforeUserHandlerExecution() {
+        if (CanCallUserRoutine()) {
+            CallUserRoutine();
+        } else {
+            // User routine needs to be disabled because it is called unconditionally in interrupt handler ASM. Disabling means calling an empty function.
+            UserRoutineHandler?.DisableUserRoutine();
         }
-        if (_userCallback.Segment != 0 && _userCallback.Offset != 0) {
-            CallUserSubRoutine();
+    }
+
+    private bool CanCallUserRoutine() {
+        if ((_mouseDevice.LastTrigger & _userCallback.TriggerMask) == 0) {
+            // No new matching events
+            return false;
+        }
+        if (_userCallback.Segment == 0 || _userCallback.Offset == 0) {
+            // User callback disabled
+            return false;
+        }
+        return true;
+    }
+
+    private void CallUserRoutine() {
+        // Save registers so that we can restore them later when user routine is done
+        SaveRegisters();
+        // User handler is going to be called. Save registers, set them to their new values
+        SetRegistersToMouseState();
+        // Set the address of assembly routine to call. Set it every time to ensure it is what we want
+        UserRoutineHandler?.SetUserRoutineAddress(_userCallback.Segment, _userCallback.Offset);
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("{ClassName} {MethodName}: calling {Segment:X4}:{Offset:X4} with AX={AX:X4}, BX={BX:X4}, CX={CX:X4}, DX={DX:X4}, SI={SI:X4}, DI={DI:X4}",
+                nameof(MouseDriver), nameof(BeforeUserHandlerExecution), _userCallback.Segment, _userCallback.Offset, _state.AX, _state.BX, _state.CX, _state.DX, _state.SI, _state.DI);
         }
     }
 
@@ -148,20 +175,8 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
-    public void RestoreRegisters() {
-        if (_savedRegisters == null) {
-            return;
-        }
-        _state.ES = _savedRegisters.Es;
-        _state.DS = _savedRegisters.Ds;
-        _state.DI = _savedRegisters.Di;
-        _state.SI = _savedRegisters.Si;
-        _state.BP = _savedRegisters.Bp;
-        _state.SP = _savedRegisters.Sp;
-        _state.BX = _savedRegisters.Bx;
-        _state.DX = _savedRegisters.Dx;
-        _state.CX = _savedRegisters.Cx;
-        _state.AX = _savedRegisters.Ax;
+    public void AfterMouseDriverExecution() {
+        RestoreRegisters();
     }
 
     /// <inheritdoc />
@@ -197,8 +212,11 @@ public class MouseDriver : IMouseDriver {
         Reset();
     }
 
-    private void CallUserSubRoutine() {
-        SaveRegisters();
+    private static int LinearInterpolate(double index, int min, int max) {
+        return (int)(min + (max - min) * index);
+    }
+
+    private void SetRegistersToMouseState() {
         // Set mouse info
         MouseStatus status = GetCurrentMouseStatus();
         _state.AX = (ushort)_mouseDevice.LastTrigger;
@@ -207,26 +225,29 @@ public class MouseDriver : IMouseDriver {
         _state.DX = (ushort)status.Y;
         _state.SI = (ushort)GetDeltaXMickeys();
         _state.DI = (ushort)GetDeltaYMickeys();
-
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("{ClassName} {MethodName}: calling {Segment:X4}:{Offset:X4} with AX={AX:X4}, BX={BX:X4}, CX={CX:X4}, DX={DX:X4}, SI={SI:X4}, DI={DI:X4}",
-                nameof(MouseDriver), nameof(CallUserSubRoutine), _userCallback.Segment, _userCallback.Offset, _state.AX, _state.BX, _state.CX, _state.DX, _state.SI, _state.DI);
-        }
-
-        // We're going to call the user specific subroutine, and then return to a special callback that will restore the registers.
-        const int int90HandlerVector = 0x90;
-        ushort callAddressSegment = _memory.UInt16[4 * int90HandlerVector + 2];
-        ushort callAddressOffset = _memory.UInt16[4 * int90HandlerVector];
-
-        _cpu.FarCall(callAddressSegment, callAddressOffset, _userCallback.Segment, _userCallback.Offset);
-    }
-
-    private static int LinearInterpolate(double index, int min, int max) {
-        return (int)(min + (max - min) * index);
     }
 
     private void SaveRegisters() {
         _savedRegisters = new MouseRegisters(_state.ES, _state.DS, _state.DI, _state.SI, _state.BP, _state.SP, _state.BX, _state.DX, _state.CX, _state.AX);
+    }
+    
+    private void RestoreRegisters() {
+        if (_savedRegisters == null) {
+            return;
+        }
+        _state.ES = _savedRegisters.Es;
+        _state.DS = _savedRegisters.Ds;
+        _state.DI = _savedRegisters.Di;
+        _state.SI = _savedRegisters.Si;
+        _state.BP = _savedRegisters.Bp;
+        _state.SP = _savedRegisters.Sp;
+        _state.BX = _savedRegisters.Bx;
+        _state.DX = _savedRegisters.Dx;
+        _state.CX = _savedRegisters.Cx;
+        _state.AX = _savedRegisters.Ax;
+        // Make sure we cant restore them twice.
+        // This could happen when a program disables the mouse via event mask. In this case, save would not be called and we would create a mess by restoring old values unrelated to the call.
+        _savedRegisters = null;
     }
 
     private record MouseRegisters(ushort Es, ushort Ds, ushort Di, ushort Si, ushort Bp, ushort Sp, ushort Bx, ushort Dx, ushort Cx, ushort Ax);
