@@ -1,17 +1,16 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
-using System.Linq;
-
-using Serilog;
 using Serilog.Events;
 
-using Spice86.Core.Emulator.Callback;
-using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.Linq;
 
 /// <summary>
 /// Provides DOS applications with EMS memory. <br/>
@@ -67,10 +66,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// This is required so EMS can be detected by DOS applications. <br/>
     /// (this is one, of two, methods to do so).
     /// </summary>
-    public override ushort? InterruptHandlerSegment => 0xF100;
+    public const ushort DosDeviceSegment = 0xF100;
 
     /// <inheritdoc />
-    public override byte Index => 0x67;
+    public override byte VectorNumber => 0x67;
 
     /// <summary>
     /// Because the 8086, 8088, and 80286 (in real mode) microprocessors can
@@ -99,7 +98,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     public ExpandedMemoryManager(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier, loggerService);
-        machine.Dos.AddDevice(device, InterruptHandlerSegment, 0x0000);
+        machine.Dos.AddDevice(device, DosDeviceSegment, 0x0000);
         FillDispatchTable();
 
         // Allocation of system handle 0.
@@ -113,23 +112,36 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
     }
 
+    /// <inheritdoc />
+    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
+        // We are going to install the handler elsewhere.
+        // Let's make a backup so that other interrupt handlers don't get installed in our space.
+        SegmentedAddress beginningAddress = memoryAsmWriter.CurrentAddress;
+        memoryAsmWriter.CurrentAddress = new SegmentedAddress(DosDeviceSegment, 0);
+        // Install the handler normally, at our address
+        SegmentedAddress handlerAddress = base.WriteAssemblyInRam(memoryAsmWriter);
+        // Restore the address
+        memoryAsmWriter.CurrentAddress = beginningAddress;
+        return handlerAddress;
+    }
+
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x40, new Callback(0x40, GetStatus));
-        _dispatchTable.Add(0x41, new Callback(0x41, GetPageFrameSegment));
-        _dispatchTable.Add(0x42, new Callback(0x42, GetUnallocatedPageCount));
-        _dispatchTable.Add(0x43, new Callback(0x43, AllocatePages));
-        _dispatchTable.Add(0x44, new Callback(0x44, MapUnmapHandlePage));
-        _dispatchTable.Add(0x45, new Callback(0x45, DeallocatePages));
-        _dispatchTable.Add(0x46, new Callback(0x46, GetEmmVersion));
-        _dispatchTable.Add(0x47, new Callback(0x47, SavePageMap)); 
-        _dispatchTable.Add(0x48, new Callback(0x48, RestorePageMap));
-        _dispatchTable.Add(0x4B, new Callback(0x4B, GetEmmHandleCount));
-        _dispatchTable.Add(0x4C, new Callback(0x4C, GetHandlePages));
-        _dispatchTable.Add(0x4D, new Callback(0x4D, GetAllHandlePages));
-        _dispatchTable.Add(0x50, new Callback(0x50, MapUnmapMultipleHandlePages));
-        _dispatchTable.Add(0x51, new Callback(0x51, ReallocatePages));
-        _dispatchTable.Add(0x53, new Callback(0x53, GetSetHandleName));
-        _dispatchTable.Add(0x59, new Callback(0x59, GetExpandedMemoryHardwareInformation));
+        AddAction(0x40, GetStatus);
+        AddAction(0x41, GetPageFrameSegment);
+        AddAction(0x42, GetUnallocatedPageCount);
+        AddAction(0x43, AllocatePages);
+        AddAction(0x44, MapUnmapHandlePage);
+        AddAction(0x45, DeallocatePages);
+        AddAction(0x46, GetEmmVersion);
+        AddAction(0x47, SavePageMap); 
+        AddAction(0x48, RestorePageMap);
+        AddAction(0x4B, GetEmmHandleCount);
+        AddAction(0x4C, GetHandlePages);
+        AddAction(0x4D, GetAllHandlePages);
+        AddAction(0x50, MapUnmapMultipleHandlePages);
+        AddAction(0x51, ReallocatePages);
+        AddAction(0x53, GetSetHandleName);
+        AddAction(0x59, GetExpandedMemoryHardwareInformation);
     }
 
     /// <inheritdoc />
@@ -139,7 +151,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _loggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, _state.AL);
         }
 
-        if (!_dispatchTable.ContainsKey(operation)) {
+        if (!HasRunnable(operation)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("EMS function not provided: {@Function}", operation);
             }

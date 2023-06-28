@@ -17,7 +17,7 @@ public class DosInt20Handler : InterruptHandler {
     }
 
     /// <inheritdoc />
-    public override byte Index => 0x20;
+    public override byte VectorNumber => 0x20;
 
     /// <inheritdoc />
     public override void Run() {

@@ -2,14 +2,17 @@
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Common;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -25,6 +28,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly Encoding _cp850CharSet;
 
     private readonly DosMemoryManager _dosMemoryManager;
+    private readonly InterruptVectorTable _interruptVectorTable;
     private bool _isCtrlCFlag;
 
     // dosbox
@@ -46,47 +50,48 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dos.MemoryManager;
         _dosFileManager = dos.FileManager;
         _devices = dos.Devices;
+        _interruptVectorTable = new InterruptVectorTable(machine.Memory);
         FillDispatchTable();
     }
     
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x02, new Callback(0x02, DisplayOutput));
-        _dispatchTable.Add(0x06, new Callback(0x06, () => DirectConsoleIo(true)));
-        _dispatchTable.Add(0x09, new Callback(0x09, PrintString));
-        _dispatchTable.Add(0x0C, new Callback(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction));
-        _dispatchTable.Add(0x0D, new Callback(0x0D, DiskReset));
-        _dispatchTable.Add(0x0E, new Callback(0x0E, SelectDefaultDrive));
-        _dispatchTable.Add(0x1A, new Callback(0x1A, SetDiskTransferAddress));
-        _dispatchTable.Add(0x1B, new Callback(0x1B, GetAllocationInfoForDefaultDrive));
-        _dispatchTable.Add(0x19, new Callback(0x19, GetCurrentDefaultDrive));
-        _dispatchTable.Add(0x25, new Callback(0x25, SetInterruptVector));
-        _dispatchTable.Add(0x2A, new Callback(0x2A, GetDate));
-        _dispatchTable.Add(0x2C, new Callback(0x2C, GetTime));
-        _dispatchTable.Add(0x2F, new Callback(0x2F, GetDiskTransferAddress));
-        _dispatchTable.Add(0x30, new Callback(0x30, GetDosVersion));
-        _dispatchTable.Add(0x33, new Callback(0x33, GetSetControlBreak));
-        _dispatchTable.Add(0x35, new Callback(0x35, GetInterruptVector));
-        _dispatchTable.Add(0x36, new Callback(0x36, GetFreeDiskSpace));
-        _dispatchTable.Add(0x38, new Callback(0x38, () => SetCountryCode(true)));
-        _dispatchTable.Add(0x3B, new Callback(0x3B, () => ChangeCurrentDirectory(true)));
-        _dispatchTable.Add(0x3C, new Callback(0x3C, () => CreateFileUsingHandle(true)));
-        _dispatchTable.Add(0x3D, new Callback(0x3D, () => OpenFile(true)));
-        _dispatchTable.Add(0x3E, new Callback(0x3E, () => CloseFile(true)));
-        _dispatchTable.Add(0x3F, new Callback(0x3F, () => ReadFile(true)));
-        _dispatchTable.Add(0x40, new Callback(0x40, () => WriteFileUsingHandle(true)));
-        _dispatchTable.Add(0x43, new Callback(0x43, () => GetSetFileAttributes(true)));
-        _dispatchTable.Add(0x44, new Callback(0x44, () => IoControl(true)));
-        _dispatchTable.Add(0x42, new Callback(0x42, () => MoveFilePointerUsingHandle(true)));
-        _dispatchTable.Add(0x45, new Callback(0x45, () => DuplicateFileHandle(true)));
-        _dispatchTable.Add(0x47, new Callback(0x47, () => GetCurrentDirectory(true)));
-        _dispatchTable.Add(0x48, new Callback(0x48, () => AllocateMemoryBlock(true)));
-        _dispatchTable.Add(0x49, new Callback(0x49, () => FreeMemoryBlock(true)));
-        _dispatchTable.Add(0x4A, new Callback(0x4A, () => ModifyMemoryBlock(true)));
-        _dispatchTable.Add(0x4C, new Callback(0x4C, QuitWithExitCode));
-        _dispatchTable.Add(0x4E, new Callback(0x4E, () => FindFirstMatchingFile(true)));
-        _dispatchTable.Add(0x4F, new Callback(0x4F, () => FindNextMatchingFile(true)));
-        _dispatchTable.Add(0x51, new Callback(0x51, GetPspAddress));
-        _dispatchTable.Add(0x62, new Callback(0x62, GetPspAddress));
+        AddAction(0x02, DisplayOutput);
+        AddAction(0x06, () => DirectConsoleIo(true));
+        AddAction(0x09, PrintString);
+        AddAction(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction);
+        AddAction(0x0D, DiskReset);
+        AddAction(0x0E, SelectDefaultDrive);
+        AddAction(0x1A, SetDiskTransferAddress);
+        AddAction(0x1B, GetAllocationInfoForDefaultDrive);
+        AddAction(0x19, GetCurrentDefaultDrive);
+        AddAction(0x25, SetInterruptVector);
+        AddAction(0x2A, GetDate);
+        AddAction(0x2C, GetTime);
+        AddAction(0x2F, GetDiskTransferAddress);
+        AddAction(0x30, GetDosVersion);
+        AddAction(0x33, GetSetControlBreak);
+        AddAction(0x35, GetInterruptVector);
+        AddAction(0x36, GetFreeDiskSpace);
+        AddAction(0x38, () => SetCountryCode(true));
+        AddAction(0x3B, () => ChangeCurrentDirectory(true));
+        AddAction(0x3C, () => CreateFileUsingHandle(true));
+        AddAction(0x3D, () => OpenFile(true));
+        AddAction(0x3E, () => CloseFile(true));
+        AddAction(0x3F, () => ReadFile(true));
+        AddAction(0x40, () => WriteFileUsingHandle(true));
+        AddAction(0x43, () => GetSetFileAttributes(true));
+        AddAction(0x44, () => IoControl(true));
+        AddAction(0x42, () => MoveFilePointerUsingHandle(true));
+        AddAction(0x45, () => DuplicateFileHandle(true));
+        AddAction(0x47, () => GetCurrentDirectory(true));
+        AddAction(0x48, () => AllocateMemoryBlock(true));
+        AddAction(0x49, () => FreeMemoryBlock(true));
+        AddAction(0x4A, () => ModifyMemoryBlock(true));
+        AddAction(0x4C, QuitWithExitCode);
+        AddAction(0x4E, () => FindFirstMatchingFile(true));
+        AddAction(0x4F, () => FindNextMatchingFile(true));
+        AddAction(0x51, GetPspAddress);
+        AddAction(0x62, GetPspAddress);
     }
 
     public void GetAllocationInfoForDefaultDrive() {
@@ -317,7 +322,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <inheritdoc/>
-    public override byte Index => 0x21;
+    public override byte VectorNumber => 0x21;
 
     /// <summary>
     /// Function 35H returns the address stored in the interrupt vector table for the handler associated with the specified interrupt. <br/>
@@ -332,8 +337,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void GetInterruptVector() {
         byte vectorNumber = _state.AL;
-        ushort segment = _memory.GetUint16((uint)((4 * vectorNumber) + 2));
-        ushort offset = _memory.GetUint16((uint)(4 * vectorNumber));
+        (ushort segment, ushort offset) = _interruptVectorTable[vectorNumber];
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("GET INTERRUPT VECTOR INT {VectorInt}, got {SegmentedAddress}", ConvertUtils.ToHex8(vectorNumber),
                 ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
@@ -483,12 +487,12 @@ public class DosInt21Handler : InterruptHandler {
             _loggerService.Verbose("SET INTERRUPT VECTOR FOR INT {VectorNumber} at address {SegmentOffset}", ConvertUtils.ToHex(vectorNumber),
                 ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
         }
+        
         SetInterruptVector(vectorNumber, segment, offset);
     }
 
     public void SetInterruptVector(byte vectorNumber, ushort segment, ushort offset) {
-        _memory.SetUint16((ushort)((4 * vectorNumber) + 2), segment);
-        _memory.SetUint16((ushort)(4 * vectorNumber), offset);
+        _interruptVectorTable[vectorNumber] = (segment, offset);
     }
 
     public void WriteFileUsingHandle(bool calledFromVm) {

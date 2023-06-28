@@ -5,7 +5,6 @@ using System.Text;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -17,7 +16,9 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
@@ -68,6 +69,8 @@ public class Machine : IDisposable {
     /// Handles all the callbacks, most notably interrupts.
     /// </summary>
     public CallbackHandler CallbackHandler { get; }
+    
+    private InterruptInstaller InterruptInstaller { get; }
 
     /// <summary>
     /// The emulated CPU.
@@ -265,47 +268,48 @@ public class Machine : IDisposable {
         RegisterIoPortHandler(MidiDevice);
 
         // Services
-        CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
+        CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService);
         Cpu.CallbackHandler = CallbackHandler;
+        InterruptInstaller = new InterruptInstaller(Memory, CallbackHandler, Cpu.FunctionHandler);
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
         VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(VideoInt10Handler);
         
         TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(TimerInt8Handler);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(BiosKeyboardInt9Handler);
         
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(SystemBiosInt15Handler);
         KeyboardInt16Handler = new KeyboardInt16Handler(
             this,
             machineCreationOptions.LoggerService,
             BiosKeyboardInt9Handler.BiosKeyboardBuffer);
-        RegisterCallbackHandler(KeyboardInt16Handler);
         SystemClockInt1AHandler = new SystemClockInt1AHandler(
             this,
             machineCreationOptions.LoggerService,
             TimerInt8Handler);
-        RegisterCallbackHandler(SystemClockInt1AHandler);
-
-        // Initialize DOS.
-        Dos = new Dos(this, machineCreationOptions.LoggerService);
-        Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
-        RegisterCallbackHandler(mouseInt33Handler);
-        var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(mouseIrq12Handler);
-        var mouseCleanupHandler = new CustomMouseInt90Handler(MouseDriver, this, machineCreationOptions.LoggerService);
-        RegisterCallbackHandler(mouseCleanupHandler);
+        Dos = new Dos(this, machineCreationOptions.LoggerService);
 
+        if (Configuration.InitializeDOS is not false) {
+            // Register the interrupt handlers
+            RegisterInterruptHandler(VideoInt10Handler);
+            RegisterInterruptHandler(TimerInt8Handler);
+            RegisterInterruptHandler(BiosKeyboardInt9Handler);
+            RegisterInterruptHandler(BiosEquipmentDeterminationInt11Handler);
+            RegisterInterruptHandler(SystemBiosInt15Handler);
+            RegisterInterruptHandler(KeyboardInt16Handler);
+            RegisterInterruptHandler(SystemClockInt1AHandler);
+            // Initialize DOS.
+            Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
+            var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
+            var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, Memory);
+            RegisterInterruptHandler(mouseInt33Handler);
+            RegisterInterruptHandler(mouseIrq12Handler);
+        }
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
@@ -327,11 +331,11 @@ public class Machine : IDisposable {
     public IVgaFunctionality VgaFunctions { get; set; }
 
     /// <summary>
-    /// Registers a callback, such as an interrupt handler.
+    /// Registers an interrupt handler
     /// </summary>
-    /// <param name="callback">The callback implementation.</param>
-    public void RegisterCallbackHandler(ICallback callback) {
-        CallbackHandler.AddCallback(callback);
+    /// <param name="interruptHandler">The interrupt handler to install.</param>
+    public void RegisterInterruptHandler(IInterruptHandler interruptHandler) {
+        InterruptInstaller.InstallInterruptHandler(interruptHandler);
     }
 
     /// <summary>
@@ -370,13 +374,6 @@ public class Machine : IDisposable {
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Installs all the callback in the dispatch table in emulated memory.
-    /// </summary>
-    public void InstallAllCallbacksInInterruptTable() {
-        CallbackHandler.InstallAllCallbacksInInterruptTable();
     }
 
     /// <summary>

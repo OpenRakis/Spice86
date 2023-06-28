@@ -1,16 +1,19 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers;
 
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Base class for interrupt handlers.
 /// </summary>
-public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
+public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInterruptHandler {
     /// <summary>
     /// The emulator state.
     /// </summary>
@@ -43,17 +46,44 @@ public abstract class InterruptHandler : IndexBasedDispatcher, ICallback {
     }
 
     /// <inheritdoc />
-    public abstract byte Index { get; }
+    public abstract byte VectorNumber { get; }
 
-    /// <inheritdoc />
     public abstract void Run();
 
     /// <inheritdoc />
-    public virtual ushort? InterruptHandlerSegment => null;
+    public virtual SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
+        // Default implementation for most Interrupts:
+        //  - Create a callback That will call the Run method
+        //  - Write that in ram with an IRET
+        
+        // Write ASM
+        SegmentedAddress interruptHandlerAddress = new SegmentedAddress(memoryAsmWriter.CurrentAddress);
+        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
+        memoryAsmWriter.WriteIret();
+
+        return interruptHandlerAddress;
+    }
+
+    /// <summary>
+    /// Stores the Action at the given index
+    /// </summary>
+    /// <param name="index"></param>
+    /// <param name="action"></param>
+    public void AddAction(int index, Action action) {
+        AddRunnable(index, new RunnableAction(action));
+    }
+
+    /// <inheritdoc />
+    public override void Run(int index) {
+        // By default Log the CS:IP of the caller which is more useful in most situations
+        SegmentedAddress? csIp = _machine.Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
+        _loggerService.LoggerPropertyBag.CsIp = csIp ?? _loggerService.LoggerPropertyBag.CsIp;
+        base.Run(index);
+    }
 
     /// <inheritdoc />
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
-        return new UnhandledInterruptException(_machine, Index, index);
+        return new UnhandledInterruptException(_machine, VectorNumber, index);
     }
     
     /// <summary>

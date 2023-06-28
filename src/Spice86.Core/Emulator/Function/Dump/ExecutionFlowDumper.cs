@@ -3,7 +3,7 @@
 using System.Diagnostics;
 using System.IO;
 
-using Newtonsoft.Json;
+using System.Text.Json;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
@@ -31,7 +31,7 @@ public class ExecutionFlowDumper {
     /// <param name="destinationFilePath">The path to the destination file to create and write the execution flow data to.</param>
     public void Dump(ExecutionFlowRecorder executionFlowRecorder, string destinationFilePath) {
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);
-        string jsonString = JsonConvert.SerializeObject(executionFlowRecorder);
+        string jsonString = JsonSerializer.Serialize(executionFlowRecorder);
         printWriter.WriteLine(jsonString);
     }
 
@@ -42,18 +42,14 @@ public class ExecutionFlowDumper {
     /// <returns>An <see cref="ExecutionFlowRecorder"/> instance containing the data read from the file or a new <see cref="ExecutionFlowRecorder"/> object if the file does not exist.</returns>
     /// <exception cref="UnrecoverableException">Thrown if the file at the specified <paramref name="filePath"/> is not valid JSON.</exception>
     public ExecutionFlowRecorder ReadFromFileOrCreate(string filePath) {
-        if (!File.Exists(filePath)) {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("File doesn't exist");
+                _loggerService.Debug("File path \"{FilePath}\" is blank or doesn't exist", filePath);
             }
-            return new ExecutionFlowRecorder();
+            return new ();
         }
         try {
-            if (string.IsNullOrWhiteSpace(filePath) == false && File.Exists(filePath)) {
-                return JsonConvert.DeserializeObject<ExecutionFlowRecorder>(File.ReadAllText(filePath)) ?? new();
-            } else {
-                return new();
-            }
+            return JsonSerializer.Deserialize<ExecutionFlowRecorder>(File.ReadAllText(filePath)) ?? new();
         } catch (JsonException e) {
             e.Demystify();
             throw new UnrecoverableException($"File {filePath} is not valid", e);

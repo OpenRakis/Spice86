@@ -53,6 +53,11 @@ public interface IMouseDriver {
     int DoubleSpeedThreshold { get; set; }
 
     /// <summary>
+    ///     Set the handler for Mouse User routine manipulation.
+    /// </summary>
+    IAsmUserRoutineHandler? UserRoutineHandler { set; }
+
+    /// <summary>
     ///     Get the x, y position of the mouse as well as the button flags.
     /// </summary>
     MouseStatus GetCurrentMouseStatus();
@@ -60,7 +65,7 @@ public interface IMouseDriver {
     /// <summary>
     ///     Process the mouse input.
     /// </summary>
-    void Update();
+    void BeforeUserHandlerExecution();
 
     /// <summary>
     ///     Get the user-defined mouse callback.
@@ -94,7 +99,7 @@ public interface IMouseDriver {
     /// <summary>
     ///     Restores the registers that were saved by the driver before calling user code.
     /// </summary>
-    void RestoreRegisters();
+    void AfterMouseDriverExecution();
 
     /// <summary>
     ///     Get the number of mickeys of horizontal movement.

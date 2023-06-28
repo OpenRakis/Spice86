@@ -1,7 +1,6 @@
 ﻿
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -11,11 +10,11 @@ public class KeyboardInt16Handler : InterruptHandler {
 
     public KeyboardInt16Handler(Machine machine, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(machine, loggerService) {
         _biosKeyboardBuffer = biosKeyboardBuffer;
-        _dispatchTable.Add(0x00, new Callback(0x00, () => GetKeystroke()));
-        _dispatchTable.Add(0x01, new Callback(0x01, () => GetKeystrokeStatus(true)));
+        AddAction(0x00, () => GetKeystroke());
+        AddAction(0x01, () => GetKeystrokeStatus(true));
     }
 
-    public override byte Index => 0x16;
+    public override byte VectorNumber => 0x16;
 
     public void GetKeystroke() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {

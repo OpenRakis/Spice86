@@ -4,7 +4,6 @@ using System.Linq;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
@@ -452,6 +451,15 @@ public class CSharpOverrideHelper {
             returnAction.Invoke();
         });
     }
+
+    /// <summary>
+    /// Call the given callback number
+    /// </summary>
+    /// <param name="callbackNumber"></param>
+    public void Callback(byte callbackNumber) {
+        Machine.CallbackHandler.RunFromOverriden(callbackNumber);
+    }
+
     /// <summary>
     /// Performs an interrupt call by executing the given function and returning to the specified return address.
     /// </summary>
@@ -476,10 +484,8 @@ public class CSharpOverrideHelper {
     /// <param name="expectedReturnIp">The excepted value of the IP register after the interrupt call.</param>
     /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
-    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, int vectorNumber) {
-        ushort targetIP = Memory.GetUint16((ushort)(4 * vectorNumber));
-        ushort targetCS = Memory.GetUint16((ushort)((4 * vectorNumber) + 2));
-        SegmentedAddress target = new SegmentedAddress(targetCS, targetIP);
+    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
+        SegmentedAddress target = new SegmentedAddress(Cpu.InterruptVectorTable[vectorNumber]);
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function is null) {
             throw FailAsUntested($"Could not find an override at address {target}");
@@ -587,23 +593,6 @@ public class CSharpOverrideHelper {
             _ => action.Invoke()
             , false);
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
-    }
-
-    /// <summary>
-    /// Define functions for provided interrupt handlers, so that when overriden code generates an interrupt, it is executed.
-    /// </summary>
-    public void SetProvidedInterruptHandlersAsOverridden() {
-        CallbackHandler callbackHandler = Machine.CallbackHandler;
-        foreach (KeyValuePair<byte, SegmentedAddress> callbackAddressEntry in callbackHandler.GetCallbackAddresses()) {
-            byte callbackNumber = callbackAddressEntry.Key;
-            SegmentedAddress callbackAddress = callbackAddressEntry.Value;
-            Func<int, Action> runnable = _ => {
-                callbackHandler.Run(callbackNumber);
-                return InterruptRet();
-            };
-            DefineFunction(callbackAddress.Segment, callbackAddress.Offset, runnable, false,
-                $"provided_interrupt_handler_{ConvertUtils.ToHex(callbackNumber)}");
-        }
     }
 
     /// <summary>

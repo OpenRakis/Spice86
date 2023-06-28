@@ -1,12 +1,11 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Devices.Video;
 
 /// <summary>
 ///     Represents the VGA interrupt interface for managing video functionality.
 /// </summary>
-public interface IVideoInt10Handler : ICallback {
+public interface IVideoInt10Handler : IInterruptHandler {
     /// <summary>
     ///     Writes a string to the video buffer.
     /// </summary>
