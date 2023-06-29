@@ -141,10 +141,6 @@ public class Pic : IHardwareInterruptController {
                 rotatePriorities);
         }
 
-        if (rotatePriorities) {
-            _lowestPriorityIrq = interruptLevel;
-        }
-
         if (sendEndOfInterruptCommand) {
             if (sendSpecificCommand) {
                 ClearInServiceRegister(interruptLevel);
@@ -152,10 +148,15 @@ public class Pic : IHardwareInterruptController {
                 ClearHighestInServiceIrq();
             }
         }
+        
+        if (rotatePriorities) {
+            _lowestPriorityIrq = interruptLevel;
+        }
     }
 
     private int? ComputeHighestPriorityToSearchRequests() {
         if (_specialMask) {
+            // In special mask mode, we don't take into account other IRQs that may be in service
             return HighestPriorityIrq;
         }
 
@@ -183,11 +184,17 @@ public class Pic : IHardwareInterruptController {
 
     private byte EnabledInterruptRequests => (byte)(_interruptRequestRegister & ~_interruptMaskRegister);
 
-    private bool OnComputeVectorNumberFoundAnIrq(int irq) {
+    private bool IsRequestedButNotYetInService(byte irq) {
         int irqMask = GenerateIrqMask(irq);
-        bool irqInService = (_inServiceRegister & irqMask) != 0;
-        bool irqRequestExists = (EnabledInterruptRequests & irqMask) != 0;
-        return !(_specialMask && irqInService) && irqRequestExists;
+        if (!IsIrqRequested(irq)) {
+            // Request cannot be processed if it doesn't exist
+            return false;
+        }
+        if (IsIrqInService(irq)) {
+            // IRQ request cannot be processed since it is already in service
+            return false;
+        }
+        return true;
     }
 
     /// <inheritdoc />
@@ -203,7 +210,7 @@ public class Pic : IHardwareInterruptController {
         }
 
         // search for higher priority Requests
-        byte? irq = FindIrq((int)maxIrqToSearch, FindIrqMode.ComputeVectorNumber);
+        byte? irq = FindHighestPriorityIrq((int)maxIrqToSearch, IsRequestedButNotYetInService);
         if (irq == null) {
             return null;
         }
@@ -214,23 +221,25 @@ public class Pic : IHardwareInterruptController {
         return (byte)(_baseInterruptVector + irq);
     }
 
+    private bool IsIrqRequested(int irq) {
+        return (EnabledInterruptRequests & GenerateIrqMask(irq)) != 0;
+    }
+
+    private bool IsIrqInService(int irq) {
+        return (_inServiceRegister & GenerateIrqMask(irq)) != 0;
+    }
+
     private int GenerateIrqMask(int irq) {
         return 1 << irq;
     }
 
     private byte HighestPriorityIrq => (byte)((_lowestPriorityIrq + 1) % 8);
 
-    private enum FindIrqMode {
-        ComputeVectorNumber,
-        HighestIrqInService
-    }
-
-    private byte? FindIrq(int stopAt, FindIrqMode mode) {
+    private byte? FindHighestPriorityIrq(int stopAt, Func<byte, bool> foundCondition) {
         // Browse the irq space from the highest priority to the lowest.
         byte irq = HighestPriorityIrq;
         do {
-            if ((mode == FindIrqMode.ComputeVectorNumber && OnComputeVectorNumberFoundAnIrq(irq)) ||
-                mode == FindIrqMode.HighestIrqInService && OnFindHighestIrqInServiceFoundIrq(irq)) {
+            if (foundCondition.Invoke(irq)) {
                 return irq;
             }
 
@@ -240,21 +249,21 @@ public class Pic : IHardwareInterruptController {
         return null;
     }
 
-    private bool OnFindHighestIrqInServiceFoundIrq(int irq) {
+    private bool IsIrqInService(byte irq) {
         return (_inServiceRegister & GenerateIrqMask(irq)) != 0;
     }
 
     private byte? FindHighestIrqInService() {
-        return FindIrq(HighestPriorityIrq, FindIrqMode.HighestIrqInService);
+        return FindHighestPriorityIrq(HighestPriorityIrq, IsIrqInService);
     }
 
     private void ClearHighestInServiceIrq() {
-        int? highestIrqInService = FindHighestIrqInService();
+        byte? highestIrqInService = FindHighestIrqInService();
         if (highestIrqInService == null) {
             return;
         }
 
-        ClearInServiceRegister((int)highestIrqInService);
+        ClearInServiceRegister((byte)highestIrqInService);
     }
 
     private void SetInServiceRegister(byte irq) {
@@ -263,7 +272,7 @@ public class Pic : IHardwareInterruptController {
         }
     }
 
-    private void ClearInServiceRegister(int irq) {
+    private void ClearInServiceRegister(byte irq) {
         _inServiceRegister = (byte)(_inServiceRegister & ~GenerateIrqMask(irq));
     }
 
