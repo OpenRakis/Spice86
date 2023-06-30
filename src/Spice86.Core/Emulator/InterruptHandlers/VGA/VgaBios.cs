@@ -126,7 +126,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 VideoScreenOnOff();
                 break;
             default:
-                throw new NotSupportedException($"BL=0x{_state.BL:X2} is not a valid subFunction for INT 10 12");
+                // Do not fail in case the index is not valid.
+                // This is Qemu vga BIOS and Dosbox behaviour.
+                // Failing here will break games.
+                // See https://github.com/qemu/vgabios/blob/master/vgabios.c#L317
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning("BL={BL} is not a valid subFunction for INT 10 12", ConvertUtils.ToHex8(_state.BL));
+                }
+                break;
         }
     }
 
