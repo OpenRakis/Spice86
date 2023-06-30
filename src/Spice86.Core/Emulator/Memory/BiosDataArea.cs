@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -120,7 +121,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure {
     /// </summary>
     public SegmentedAddress Jump { get => SegmentedAddress[0x67]; set => SegmentedAddress[0x67] = value; }
 
-    /// Padding at 0x6B
+    // Padding at 0x6B
 
     /// <summary>
     /// Gets or sets the current value of the Int1A counter.
@@ -206,7 +207,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure {
 
     public byte RtcWaitFlag { get => UInt8[0xA0]; set => UInt8[0xA0] = value; }
 
-    /// 7 btyes of padding at 0xA1
+    // 7 btyes of padding at 0xA1
     
     public SegmentedAddress VideoSavetable { get => SegmentedAddress[0xA8]; set => SegmentedAddress[0xA8] = value; }
 

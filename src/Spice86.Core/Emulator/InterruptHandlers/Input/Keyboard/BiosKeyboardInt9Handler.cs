@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -12,9 +13,9 @@ using Spice86.Shared.Interfaces;
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
 
-    public BiosKeyboardInt9Handler(Machine machine, BiosDataArea biosDataArea, ILoggerService loggerService) : base(machine, loggerService) {
+    public BiosKeyboardInt9Handler(Machine machine, Indexable memory, BiosDataArea biosDataArea, ILoggerService loggerService) : base(machine, loggerService) {
         _keyboard = machine.Keyboard;
-        BiosKeyboardBuffer = new BiosKeyboardBuffer(machine.Memory, biosDataArea);
+        BiosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardBuffer.Init();
     }
 

@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -32,7 +33,7 @@ public class Cpu {
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Machine _machine;
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
     private readonly ModRM _modRM;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
@@ -66,7 +67,7 @@ public class Cpu {
         _loggerService = loggerService;
         _machine = machine;
         _memory = machine.Memory;
-        InterruptVectorTable = new(_memory);
+        InterruptVectorTable = new((Indexable)_memory);
         State = new State();
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);

@@ -12,9 +12,9 @@ using Spice86.Shared.Emulator.Memory;
 public class BiosMouseInt74Handler : IInterruptHandler, IAsmUserRoutineHandler {
     private readonly DualPic _hardwareInterruptHandler;
     private readonly IMouseDriver _mouseDriver;
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
 
-    public BiosMouseInt74Handler(IMouseDriver mouseDriver, DualPic hardwareInterruptHandler, Memory memory) {
+    public BiosMouseInt74Handler(IMouseDriver mouseDriver, DualPic hardwareInterruptHandler, IMemory memory) {
         _mouseDriver = mouseDriver;
         _hardwareInterruptHandler = hardwareInterruptHandler;
         _memory = memory;

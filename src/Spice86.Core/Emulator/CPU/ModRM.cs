@@ -9,7 +9,7 @@ using Spice86.Shared.Utils;
 public class ModRM {
     private readonly Cpu _cpu;
     private readonly Machine _machine;
-    private readonly Memory.Memory _memory;
+    private readonly Memory.IMemory _memory;
     private readonly State _state;
     private int _registerMemoryIndex;
 

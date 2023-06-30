@@ -2,6 +2,7 @@
 
 using System.Text;
 
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Shared.Utils;
@@ -24,8 +25,8 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     /// <param name="baseAddress">the address of the structure in memory.</param>
-    public DosMemoryControlBlock(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) { }
-
+    public DosMemoryControlBlock(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    }
     /// <summary>
     /// Gets or sets the name of the file associated with the MCB.
     /// </summary>

@@ -18,7 +18,7 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class DosFileManager {
     private const int MaxOpenFiles = 20;
-    private static readonly Dictionary<byte, string> _fileOpenMode = new();
+    private static readonly Dictionary<byte, string> FileOpenMode = new();
     private readonly ILoggerService _loggerService;
     
     /// <summary>
@@ -41,19 +41,19 @@ public class DosFileManager {
 
     private IEnumerator<string>? _matchingFilesIterator;
 
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
 
     /// <summary>
     /// All the files opened by DOS.
     /// </summary>
     public OpenFile?[] OpenFiles { get; } = new OpenFile[MaxOpenFiles];
     
-    private readonly Dos _dos;
+    private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
     static DosFileManager() {
-        _fileOpenMode.Add(0x00, "r");
-        _fileOpenMode.Add(0x01, "w");
-        _fileOpenMode.Add(0x02, "rw");
+        FileOpenMode.Add(0x00, "r");
+        FileOpenMode.Add(0x01, "w");
+        FileOpenMode.Add(0x02, "rw");
     }
 
     /// <summary>
@@ -61,11 +61,11 @@ public class DosFileManager {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="dos">The DOS kernel</param>
-    public DosFileManager(Memory memory, ILoggerService loggerService, Dos dos) {
+    /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
+    public DosFileManager(IMemory memory, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
         _memory = memory;
-        _dos = dos;
+        _dosVirtualDevices = dosVirtualDevices;
         CurrentHostDirectory = Environment.CurrentDirectory;
     }
 
@@ -271,9 +271,9 @@ public class DosFileManager {
     /// <param name="rwAccessMode">The read+write access mode</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult OpenFile(string fileName, byte rwAccessMode) {
-        string openMode = _fileOpenMode[rwAccessMode];
+        string openMode = FileOpenMode[rwAccessMode];
 
-        CharacterDevice? device = _dos.Devices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
+        CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
         if (device is not null) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
@@ -471,7 +471,7 @@ public class DosFileManager {
     }
 
     /// <summary>
-    /// Converts a dos filespec to a regex pattern
+    /// Converts a dosVirtualDevices filespec to a regex pattern
     /// </summary>
     /// <param name="fileSpec">The DOS filespec</param>
     /// <returns>The regex pattern</returns>

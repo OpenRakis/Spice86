@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -18,7 +19,7 @@ public class InterruptInstaller {
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly FunctionHandler _functionHandler;
 
-    public InterruptInstaller(Memory memory, CallbackHandler callbackHandler, FunctionHandler functionHandler) {
+    public InterruptInstaller(Indexable memory, CallbackHandler callbackHandler, FunctionHandler functionHandler) {
         _functionHandler = functionHandler;
         SegmentedAddress beginningAddress = new SegmentedAddress(MemoryMap.InterruptHandlersSegment, 0);
         _memoryAsmWriter = new MemoryAsmWriter(memory, beginningAddress, callbackHandler);

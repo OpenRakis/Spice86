@@ -6,9 +6,11 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public class Memory : Indexable.Indexable, IByteReaderWriter {
+public class Memory : Indexable.Indexable, IMemory {
     private readonly IMemoryDevice _ram;
-    public MemoryBreakpoints MemoryBreakpoints { get; }= new();
+
+    /// <inheritdoc/>
+    public MemoryBreakpoints MemoryBreakpoints { get; } = new();
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
 
@@ -154,7 +156,7 @@ public class Memory : Indexable.Indexable, IByteReaderWriter {
     public override SegmentedAddressValueIndexer SegmentedAddressValue {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override SegmentedAddressIndexer SegmentedAddress {
         get;

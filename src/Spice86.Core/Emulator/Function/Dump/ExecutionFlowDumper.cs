@@ -7,6 +7,7 @@ using System.Text.Json;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 

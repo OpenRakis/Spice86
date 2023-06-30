@@ -27,6 +27,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
@@ -120,7 +121,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The memory bus.
     /// </summary>
-    public Memory Memory { get; }
+    public IMemory Memory { get; }
 
     /// <summary>
     /// The General MIDI (MPU-401) or MT-32 device.
@@ -217,7 +218,7 @@ public class Machine : IDisposable {
         Gui = machineCreationOptions.Gui;
         RecordData = machineCreationOptions.RecordData;
 
-        IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
+        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
@@ -270,15 +271,15 @@ public class Machine : IDisposable {
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService);
         Cpu.CallbackHandler = CallbackHandler;
-        InterruptInstaller = new InterruptInstaller(Memory, CallbackHandler, Cpu.FunctionHandler);
+        InterruptInstaller = new InterruptInstaller((Indexable)Memory, CallbackHandler, Cpu.FunctionHandler);
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
+        VgaFunctions = new VgaFunctionality((Indexable)Memory, IoPortDispatcher, BiosDataArea, VgaRom);
         VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
         
         TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, BiosDataArea, machineCreationOptions.LoggerService);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, (Indexable)this.Memory, BiosDataArea, machineCreationOptions.LoggerService);
         
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
@@ -292,7 +293,7 @@ public class Machine : IDisposable {
             TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        Dos = new Dos(this, machineCreationOptions.LoggerService);
+        Dos = new Dos(this, (Indexable)Memory, machineCreationOptions.LoggerService);
 
         if (Configuration.InitializeDOS is not false) {
             // Register the interrupt handlers

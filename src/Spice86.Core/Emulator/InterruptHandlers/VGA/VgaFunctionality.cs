@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
@@ -15,18 +16,18 @@ public class VgaFunctionality : IVgaFunctionality {
     private const byte DefaultAttribute = 0x07;
     private readonly BiosDataArea _biosDataArea;
     private readonly IIOPortHandler _ioPortDispatcher;
-    private readonly Memory _memory;
+    private readonly Indexable _memory;
     private readonly VgaRom _vgaRom;
     private readonly InterruptVectorTable _interruptVectorTable;
 
     /// <summary>
     /// Creates a new instance of the <see cref="VgaFunctionality"/> class.
     /// </summary>
-    /// <param name="memory"></param>
+    /// <param name="memory">The emulator memory.</param>
     /// <param name="ioPortDispatcher"></param>
     /// <param name="biosDataArea"></param>
     /// <param name="vgaRom"></param>
-    public VgaFunctionality(Memory memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom) {
+    public VgaFunctionality(Indexable memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom) {
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;
         _biosDataArea = biosDataArea;

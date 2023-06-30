@@ -192,11 +192,11 @@ public sealed class DmaChannel {
     /// <summary>
     /// Performs a DMA transfer.
     /// </summary>
-    /// <param name="memory">Current PhysicalMemory instance.</param>
+    /// <param name="memory">The memory bus.</param>
     /// <remarks>
     /// This method should only be called if the channel is active.
     /// </remarks>
-    internal bool Transfer(Memory memory) {
+    internal bool Transfer(IMemory memory) {
         if (!MustTransferData) {
             return false;
         }

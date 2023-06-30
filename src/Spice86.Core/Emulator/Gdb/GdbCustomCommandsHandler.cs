@@ -194,7 +194,7 @@ public class GdbCustomCommandsHandler {
             return Help($"Invalid offset value ${offsetString}");
         }
         uint physicalAddress = MemoryUtils.ToPhysicalAddress(segment.Value, offset.Value);
-        Memory memory = _machine.Memory;
+        IMemory memory = _machine.Memory;
         return bits switch {
             8 => _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex8(memory.UInt8[physicalAddress])),
             16 => _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex16(memory.UInt16[physicalAddress])),

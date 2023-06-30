@@ -20,6 +20,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Spice86.Core.Emulator.Memory.Indexable;
 
 /// <summary>
 /// Reimplementation of INT21
@@ -42,15 +43,16 @@ public class DosInt21Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The emulator memory.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dos">The DOS kernel.</param>
-    public DosInt21Handler(Machine machine, ILoggerService loggerService, Dos dos) : base(machine, loggerService) {
+    public DosInt21Handler(Machine machine, Indexable memory, ILoggerService loggerService, Dos dos) : base(machine, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dosMemoryManager = dos.MemoryManager;
         _dosFileManager = dos.FileManager;
         _devices = dos.Devices;
-        _interruptVectorTable = new InterruptVectorTable(machine.Memory);
+        _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
     
@@ -538,7 +540,7 @@ public class DosInt21Handler : InterruptHandler {
         _memory.UInt8[responseAddress] = 0;
     }
 
-    private string GetDosString(Memory memory, ushort segment, ushort offset, char end) {
+    private string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
         StringBuilder stringBuilder = new();
         List<byte> sourceArray = new();
