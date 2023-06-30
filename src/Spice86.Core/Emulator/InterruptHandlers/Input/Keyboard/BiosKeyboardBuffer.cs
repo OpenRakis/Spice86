@@ -11,7 +11,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructureWithBaseAddress {
     private const ushort Start = 0x480;
     private const ushort Tail = 0x41C;
 
-    public BiosKeyboardBuffer(Memory memory) : base(memory, 0) {
+    public BiosKeyboardBuffer(IMemory memory) : base(memory, 0) {
     }
 
     public bool AddKeyCode(ushort code) {

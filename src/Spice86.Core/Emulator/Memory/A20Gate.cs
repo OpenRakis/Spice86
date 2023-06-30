@@ -8,6 +8,19 @@ using System.Diagnostics.Contracts;
 /// </summary>
 public class A20Gate {
     /// <summary>
+    /// This is the start of the HMA. <br/>
+    /// This value is equal to 1 MB.
+    /// </summary>
+    public const uint StartOfHighMemoryArea = 0x100000;
+
+    /// <summary>
+    /// This is the end of the HMA. <br/>
+    /// Real Mode cannot access memory beyond this. <br/>
+    /// This value equals to 1 MB + 65 519 bytes.
+    /// </summary>
+    public const uint EndOfHighMemoryArea = 0x10FFEF;
+    
+    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="enabled">Whether the 20th address line is enabled on emulator startup.</param>

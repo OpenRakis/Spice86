@@ -10,7 +10,7 @@ public abstract class MemoryBasedDataStructureWithBaseAddressProvider : MemoryBa
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    protected MemoryBasedDataStructureWithBaseAddressProvider(Memory memory) : base(memory) {
+    protected MemoryBasedDataStructureWithBaseAddressProvider(IMemory memory) : base(memory) {
     }
 
     /// <summary>

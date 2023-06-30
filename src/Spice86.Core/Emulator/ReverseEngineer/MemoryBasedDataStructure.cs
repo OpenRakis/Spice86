@@ -10,14 +10,14 @@ public class MemoryBasedDataStructure {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus</param>
-    public MemoryBasedDataStructure(Memory memory) {
+    public MemoryBasedDataStructure(IMemory memory) {
         Memory = memory;
     }
 
     /// <summary>
     /// The memory bus.
     /// </summary>
-    public Memory Memory { get; private set; }
+    public IMemory Memory { get; private set; }
 
     /// <summary>
     /// Reads a 2-byte value from RAM.

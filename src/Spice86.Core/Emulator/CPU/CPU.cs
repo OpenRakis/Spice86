@@ -33,7 +33,7 @@ public class Cpu {
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly Machine _machine;
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
     private readonly ModRM _modRM;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;

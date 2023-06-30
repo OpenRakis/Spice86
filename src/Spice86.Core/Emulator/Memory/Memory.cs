@@ -5,10 +5,8 @@ using System.Text;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
 
-/// <summary>
-/// Represents the memory bus of the IBM PC.
-/// </summary>
-public class Memory {
+/// <inheritdoc />
+public class Memory : IMemory {
     private readonly IMemoryDevice _ram;
     private readonly BreakPointHolder _readBreakPoints = new();
     private readonly BreakPointHolder _writeBreakPoints = new();
@@ -35,19 +33,6 @@ public class Memory {
         UInt32 = new UInt32Indexer(this);
         A20Gate = new(configuration.A20Gate);
     }
-
-    /// <summary>
-    /// This is the start of the HMA. <br/>
-    /// This value is equal to 1 MB.
-    /// </summary>
-    public const uint StartOfHighMemoryArea = 0x100000;
-
-    /// <summary>
-    /// This is the end of the HMA. <br/>
-    /// Real Mode cannot access memory beyond this. <br/>
-    /// This value equals to 1 MB + 65 519 bytes.
-    /// </summary>
-    public const uint EndOfHighMemoryArea = 0x10FFEF;
 
     /// <summary>
     /// Gets a copy of the current memory state.
@@ -172,6 +157,7 @@ public class Memory {
             Write((uint)(address + i), data[i]);
         }
     }
+    
     /// <summary>
     ///     Load data from a words array into memory.
     /// </summary>
@@ -287,8 +273,7 @@ public class Memory {
                 throw new NotSupportedException($"Trying to add unsupported breakpoint of type {type}");
         }
     }
-
-
+    
     /// <summary>
     ///     Allows write breakpoints to access the byte being written before it actually is.
     /// </summary>
@@ -380,7 +365,12 @@ public class Memory {
         SetUint8((uint)(address + i), 0);
     }
     
-        
+    /// <summary>
+    /// Gets a string from memory.
+    /// </summary>
+    /// <param name="address">The start address</param>
+    /// <param name="length">The length, in bytes</param>
+    /// <returns>The string from memory.</returns>
     public string GetString(uint address, int length) {
         StringBuilder res = new();
         for (int i = 0; i < length; i++) {
@@ -422,4 +412,3 @@ public class Memory {
     private record DeviceRegistration(uint StartAddress, uint EndAddress, IMemoryDevice Device);
 
 }
-

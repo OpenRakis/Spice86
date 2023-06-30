@@ -87,7 +87,8 @@ public class Dos {
     public Dos(Machine machine, ILoggerService loggerService) {
         _machine = machine;
         _loggerService = loggerService;
-        FileManager = new DosFileManager(_machine.Memory, _loggerService, this);
+        AddDefaultDevices();
+        FileManager = new DosFileManager(_machine.Memory, _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_machine.Memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_machine, _loggerService);
         DosInt21Handler = new DosInt21Handler(_machine, _loggerService, this);
@@ -103,7 +104,6 @@ public class Dos {
         _machine.RegisterCallbackHandler(DosInt21Handler);
         _machine.RegisterCallbackHandler(DosInt2FHandler);
 
-        AddDefaultDevices();
         OpenDefaultFileHandles();
         SetEnvironmentVariables(blasterEnvVarProvider);
 

@@ -13,7 +13,7 @@ public class MemoryBasedDataStructureWithBaseAddress : MemoryBasedDataStructureW
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="baseAddress">The base address of the data structure.</param>
-    public MemoryBasedDataStructureWithBaseAddress(Memory memory, uint baseAddress) : base(memory) {
+    public MemoryBasedDataStructureWithBaseAddress(IMemory memory, uint baseAddress) : base(memory) {
         _baseAddress = baseAddress;
     }
 

@@ -117,7 +117,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The memory bus.
     /// </summary>
-    public Memory Memory { get; }
+    public IMemory Memory { get; }
 
     /// <summary>
     /// The General MIDI (MPU-401) or MT-32 device.
@@ -214,7 +214,7 @@ public class Machine : IDisposable {
         Gui = machineCreationOptions.Gui;
         RecordData = machineCreationOptions.RecordData;
 
-        IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
+        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);

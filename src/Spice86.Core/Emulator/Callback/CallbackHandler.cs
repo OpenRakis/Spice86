@@ -30,7 +30,7 @@ public class CallbackHandler : IndexBasedDispatcher {
     /// </summary>
     private ushort _offset = 0;
 
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
 
     /// <summary>
     /// Initializes a new instance.

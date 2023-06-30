@@ -14,7 +14,7 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructureWithBaseAddr
     /// <param name="memory">The memory that the array is based on.</param>
     /// <param name="baseAddress">The base address of the array.</param>
     /// <param name="length">The length of the array.</param>
-    protected MemoryBasedArray(Memory memory, uint baseAddress, int length) : base(memory, baseAddress) {
+    protected MemoryBasedArray(IMemory memory, uint baseAddress, int length) : base(memory, baseAddress) {
         _length = length;
     }
 

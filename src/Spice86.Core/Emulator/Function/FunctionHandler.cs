@@ -152,7 +152,7 @@ public class FunctionHandler {
     /// <param name="stackPhysicalAddress">The physical address of the stack.</param>
     /// <returns>The return address of the specified call type from the machine stack at the specified physical address without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
-        Memory memory = _machine.Memory;
+        IMemory memory = _machine.Memory;
         State state = _machine.Cpu.State;
         return returnCallType switch {
             CallType.NEAR => new SegmentedAddress(state.CS, memory.GetUint16(stackPhysicalAddress)),

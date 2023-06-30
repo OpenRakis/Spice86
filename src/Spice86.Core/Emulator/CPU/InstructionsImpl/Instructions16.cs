@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.VM;
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public class Instructions16 : Instructions16Or32 {
-    public Instructions16(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm)
+    public Instructions16(Machine machine, Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm)
         : base(machine, alu, cpu, memory, modRm) {
     }
 

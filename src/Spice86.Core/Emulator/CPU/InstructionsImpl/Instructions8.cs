@@ -3,7 +3,7 @@ using Spice86.Core.Emulator.VM;
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public class Instructions8 : Instructions {
-    public Instructions8(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm) :
+    public Instructions8(Machine machine, Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) :
         base(machine, alu, cpu, memory, modRm) {
     }
 

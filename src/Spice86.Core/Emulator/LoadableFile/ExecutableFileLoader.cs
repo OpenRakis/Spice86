@@ -24,7 +24,7 @@ public abstract class ExecutableFileLoader {
     /// <summary>
     /// The memory bus.
     /// </summary>
-    protected Memory _memory;
+    protected IMemory _memory;
     
     private readonly ILoggerService _loggerService;
 

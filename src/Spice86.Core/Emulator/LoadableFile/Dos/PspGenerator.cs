@@ -13,7 +13,7 @@ public class PspGenerator {
     private const ushort DTA_OR_COMMAND_LINE_OFFSET = 0x80;
     private const ushort LAST_FREE_SEGMENT_OFFSET = 0x02;
     private const ushort ENVIRONMENT_SEGMENT_OFFSET = 0x2C;
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
     private readonly EnvironmentBlockGenerator _environmentBlockGenerator;
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosFileManager _dosFileManager;
@@ -25,7 +25,7 @@ public class PspGenerator {
     /// <param name="environmentVariables">The master environment block from the DOS kernel.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>
     /// <param name="dosFileManager">The DOS file manager.</param>
-    public PspGenerator(Memory memory, EnvironmentVariables environmentVariables, DosMemoryManager dosMemoryManager, DosFileManager dosFileManager) {
+    public PspGenerator(IMemory memory, EnvironmentVariables environmentVariables, DosMemoryManager dosMemoryManager, DosFileManager dosFileManager) {
         _memory = memory;
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;

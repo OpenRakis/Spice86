@@ -10,7 +10,7 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class DosMemoryManager {
     private readonly ILoggerService _loggerService;
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
     private ushort _pspSegment;
     private DosMemoryControlBlock? _start;
 
@@ -19,7 +19,7 @@ public class DosMemoryManager {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosMemoryManager(Memory memory, ILoggerService loggerService) {
+    public DosMemoryManager(IMemory memory, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
     }

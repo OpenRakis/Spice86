@@ -18,7 +18,7 @@ public class MouseDriver : IMouseDriver {
     private readonly Cpu _cpu;
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
     private readonly IMouseDevice _mouseDevice;
     private readonly State _state;
 
@@ -37,7 +37,7 @@ public class MouseDriver : IMouseDriver {
     /// <param name="gui">The gui to show, hide and position mouse cursor</param>
     /// <param name="vgaFunctions">Access to the current resolution</param>
     /// <param name="loggerService">The logger</param>
-    public MouseDriver(Cpu cpu, Memory memory, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
+    public MouseDriver(Cpu cpu, IMemory memory, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
         _cpu = cpu;
         _memory = memory;
         _state = cpu.State;

@@ -41,7 +41,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress {
     /// </summary>
     /// <param name="memory">The memory bus used for accessing the DTA.</param>
     /// <param name="baseAddress">The base address of the DTA within memory.</param>
-    public DosDiskTransferArea(Memory memory, uint baseAddress) : base(memory, baseAddress) { }
+    public DosDiskTransferArea(IMemory memory, uint baseAddress) : base(memory, baseAddress) { }
 
     /// <summary>
     /// Gets or sets the attribute field of the DTA.

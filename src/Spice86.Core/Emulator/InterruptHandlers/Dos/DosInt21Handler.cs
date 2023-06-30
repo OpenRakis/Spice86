@@ -534,7 +534,7 @@ public class DosInt21Handler : InterruptHandler {
         _memory.SetUint8(responseAddress, 0);
     }
 
-    private string GetDosString(Memory memory, ushort segment, ushort offset, char end) {
+    private string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
         StringBuilder stringBuilder = new();
         List<byte> sourceArray = new();
