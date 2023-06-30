@@ -88,7 +88,7 @@ public class Dos {
         _machine = machine;
         _loggerService = loggerService;
         AddDefaultDevices();
-        FileManager = new DosFileManager(_machine.Memory, _loggerService, this.Devices);
+        FileManager = new DosFileManager(_machine.Memory, _loggerService, this.Devices, new DosFilePathResolver(_loggerService));
         MemoryManager = new DosMemoryManager(_machine.Memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_machine, _loggerService);
         DosInt21Handler = new DosInt21Handler(_machine, _loggerService, this);
