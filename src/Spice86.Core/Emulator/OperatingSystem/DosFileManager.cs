@@ -542,7 +542,7 @@ public class DosFileManager {
             Stream? randomAccessFile = null;
             switch (openMode) {
                 case "r": {
-                    string? realFileName = _dosFilePathResolver.GetActualCaseForFileName(hostFileName);
+                    string? realFileName = _dosFilePathResolver.TryGetHostFullNameForFile(hostFileName);
                     if (File.Exists(hostFileName)) {
                         randomAccessFile = File.OpenRead(hostFileName);
                     } else if (File.Exists(realFileName)) {
@@ -557,7 +557,7 @@ public class DosFileManager {
                     randomAccessFile = File.OpenWrite(hostFileName);
                     break;
                 case "rw": {
-                    string? realFileName = _dosFilePathResolver.GetActualCaseForFileName(hostFileName);
+                    string? realFileName = _dosFilePathResolver.TryGetHostFullNameForFile(hostFileName);
                     if (File.Exists(hostFileName)) {
                         randomAccessFile = File.Open(hostFileName, FileMode.Open);
                     } else if (File.Exists(realFileName)) {

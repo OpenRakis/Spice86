@@ -22,7 +22,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
     public string? GetParentDirectoryFullPath(string path) => Directory.GetParent(path)?.FullName;
 
     /// <inheritdoc />
-    public string? GetActualCaseForFileName(string caseInsensitivePath) {
+    public string? TryGetHostFullNameForFile(string caseInsensitivePath) {
         string? directory = Path.GetDirectoryName(caseInsensitivePath);
         string? directoryCaseSensitive = TryGetFullNameOnDiskOfParentFolder(directory);
         if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false) {
@@ -36,9 +36,6 @@ public class DosFilePathResolver : IDosFilePathResolver {
             if (fileToUpper == searchedFile) {
                 realFileName = file;
             }
-        }
-        if (string.IsNullOrWhiteSpace(realFileName) || File.Exists(realFileName) == false) {
-            return null;
         }
         return realFileName;
     }
@@ -101,7 +98,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
 
         // Now that parent is for sure on the disk, let's find the current file
         try {
-            string? fileNameOnFileSystem = GetActualCaseForFileName(caseInsensitivePath);
+            string? fileNameOnFileSystem = TryGetHostFullNameForFile(caseInsensitivePath);
             if (string.IsNullOrWhiteSpace(fileNameOnFileSystem) == false) {
                 return fileNameOnFileSystem;
             }
