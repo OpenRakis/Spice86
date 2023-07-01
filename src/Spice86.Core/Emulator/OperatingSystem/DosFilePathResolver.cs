@@ -88,7 +88,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
         string fileToProcess = ConvertUtils.ToSlashPath(caseInsensitivePath);
         string? parentDir = Path.GetDirectoryName(fileToProcess);
         if (File.Exists(fileToProcess) || Directory.Exists(fileToProcess) ||
-            (!string.IsNullOrWhiteSpace(parentDir) && Directory.Exists(parentDir) && Directory.GetDirectories(parentDir).Length == 0)) {
+            (!string.IsNullOrWhiteSpace(parentDir) && Directory.Exists(parentDir))) {
             // file exists or root reached, no need to go further. Path found.
             return caseInsensitivePath;
         }
