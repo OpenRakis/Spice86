@@ -5,6 +5,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -17,13 +18,13 @@ public class DosFilePathResolver : IDosFilePathResolver {
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosFilePathResolver(ILoggerService loggerService) => _loggerService = loggerService;
-    
-    /// <inheritdoc />
-    public string? GetParentDirectoryFullPath(string path) => Directory.GetParent(path)?.FullName;
 
     /// <inheritdoc />
-    public string? TryGetHostFullNameForFile(string caseInsensitivePath) {
-        string? directory = Path.GetDirectoryName(caseInsensitivePath);
+    public string GetFullNameForParentDirectory(string path) => Directory.GetParent(path)?.FullName ?? path;
+
+    /// <inheritdoc />
+    public string? TryGetFullHostFileName(string dosFilePath) {
+        string? directory = Path.GetDirectoryName(dosFilePath);
         if(string.IsNullOrWhiteSpace(directory)) {
             return null;
         }
@@ -35,7 +36,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
         string[] array = Directory.GetFiles(directoryCaseSensitive);
         foreach (string file in array) {
             string fileToUpper = file.ToUpperInvariant();
-            string searchedFile = caseInsensitivePath.ToUpperInvariant();
+            string searchedFile = dosFilePath.ToUpperInvariant();
             if (fileToUpper == searchedFile) {
                 realFileName = file;
             }
@@ -80,20 +81,21 @@ public class DosFilePathResolver : IDosFilePathResolver {
     /// </summary>
     /// <param name="caseInsensitivePath">The case insensitive file path</param>
     /// <returns>The absolute host file path</returns>
-    private string? ToCaseSensitiveFileName(string? caseInsensitivePath) {
+    private string? ToCaseSensitiveFileName(string? caseInsensitivePath, bool forCreation) {
         if (string.IsNullOrWhiteSpace(caseInsensitivePath)) {
             return null;
         }
 
         string fileToProcess = ConvertUtils.ToSlashPath(caseInsensitivePath);
         string? parentDir = Path.GetDirectoryName(fileToProcess);
-        if (File.Exists(fileToProcess) || Directory.Exists(fileToProcess) ||
-            (!string.IsNullOrWhiteSpace(parentDir) && Directory.Exists(parentDir))) {
+        if (File.Exists(fileToProcess) || 
+            Directory.Exists(fileToProcess) ||
+            forCreation) {
             // file exists or root reached, no need to go further. Path found.
             return caseInsensitivePath;
         }
 
-        string? parent = ToCaseSensitiveFileName(parentDir);
+        string? parent = ToCaseSensitiveFileName(parentDir, forCreation);
         if (parent == null) {
             // End of recursion, root reached
             return null;
@@ -101,7 +103,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
 
         // Now that parent is for sure on the disk, let's find the current file
         try {
-            string? fileNameOnFileSystem = TryGetHostFullNameForFile(caseInsensitivePath);
+            string? fileNameOnFileSystem = TryGetFullHostFileName(caseInsensitivePath);
             if (!string.IsNullOrWhiteSpace(fileNameOnFileSystem)) {
                 return fileNameOnFileSystem;
             }
@@ -134,25 +136,24 @@ public class DosFilePathResolver : IDosFilePathResolver {
     }
     
     /// <inheritdoc />
-    public string? ToHostCaseSensitiveFileName(IDictionary<char, string> driveMap, string hostDirectory, string dosFileName, bool forCreation) {
-        string fileName = ToHostFilePath(driveMap, hostDirectory, dosFileName);
+    public string? ToHostCaseSensitiveFullName(IDictionary<char, string> driveMap, string hostDirectory, string dosFileName, bool forCreation) {
+        string fileName = PrefixWithHostDirectory(driveMap, hostDirectory, dosFileName);
         if (!forCreation) {
-            string? caseSensitivePath = ToCaseSensitiveFileName(fileName);
+            string? caseSensitivePath = ToCaseSensitiveFileName(fileName, forCreation);
             return caseSensitivePath;
         }
         
-        string? parent = ToCaseSensitiveFileName(fileName);
+        string? parent = ToCaseSensitiveFileName(fileName, forCreation);
         if (string.IsNullOrWhiteSpace(parent)) {
             return null;
         }
         
-        // Concat the folder to the requested file name
         return ConvertUtils.ToSlashPath(parent);
     }
 
     /// <inheritdoc />
-    public string ToHostFilePath(IDictionary<char, string> driveMap, string hostDirectory, string dosFileName) {
-        string fileName = ConvertUtils.ToSlashPath(dosFileName);
+    public string PrefixWithHostDirectory(IDictionary<char, string> driveMap, string hostDirectory, string dosPath) {
+        string fileName = ConvertUtils.ToSlashPath(dosPath);
         if (IsDosPathRooted(fileName)) {
             fileName = ReplaceDriveWithHostPath(driveMap, fileName);
         } else if (!string.IsNullOrWhiteSpace(hostDirectory)) {
@@ -168,5 +169,5 @@ public class DosFilePathResolver : IDosFilePathResolver {
     private static string[] DriveLetters { get; } = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
     
     /// <inheritdoc />
-    public bool IsDosPathRooted(string path) => path.Length >= 2 && DriveLetters.Contains(path[0].ToString().ToUpperInvariant()) && path[1] == ':';
+    public bool IsDosPathRooted(string dosPath) => dosPath.Length >= 2 && DriveLetters.Contains(dosPath[0].ToString().ToUpperInvariant()) && dosPath[1] == ':';
 }
