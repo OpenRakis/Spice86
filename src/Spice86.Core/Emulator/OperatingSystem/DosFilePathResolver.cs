@@ -19,7 +19,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
     public DosFilePathResolver(ILoggerService loggerService) => _loggerService = loggerService;
     
     /// <inheritdoc />
-    public string GetHostParentDirectory(string path) => Directory.GetParent(path)?.FullName ?? path;
+    public string? GetParentDirectoryFullPath(string path) => Directory.GetParent(path)?.FullName;
 
     /// <inheritdoc />
     public string? GetActualCaseForFileName(string caseInsensitivePath) {
