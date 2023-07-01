@@ -126,7 +126,11 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 VideoScreenOnOff();
                 break;
             default:
-                throw new NotSupportedException($"BL=0x{_state.BL:X2} is not a valid subFunction for INT 10 12");
+                // Do not fail in case the index is not valid, this is the behaviour of the VGA bios and some programs expect this (prince of persia, checkit).
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning("BL={BL} is not a valid subFunction for INT 10 12", ConvertUtils.ToHex8(_state.BL));
+                }
+                break;
         }
     }
 
