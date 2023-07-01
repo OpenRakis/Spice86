@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
 /// <summary>
-/// Translates DOS filepaths to host file paths and vice-versa.
+/// Translates DOS filepaths to host file paths.
 /// </summary>
 public interface IDosFilePathResolver {
     /// <summary>

@@ -63,6 +63,7 @@ public class DosFileManager {
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
+    /// <param name="dosFilePathResolver">The class used to resolve DOS paths to host paths.</param>
     public DosFileManager(IMemory memory, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices, IDosFilePathResolver dosFilePathResolver) {
         _loggerService = loggerService;
         _dosFilePathResolver = dosFilePathResolver;
