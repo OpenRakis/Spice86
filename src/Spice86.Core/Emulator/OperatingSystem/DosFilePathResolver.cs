@@ -28,7 +28,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
             return null;
         }
         string? directoryCaseSensitive = TryGetFullNameOnDiskOfParentDirectory(directory);
-        if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false) {
+        if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || !Directory.Exists(directoryCaseSensitive)) {
             return null;
         }
         string realFileName = "";
@@ -68,7 +68,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
         // Absolute path
         char driveLetter = fileName.ToUpperInvariant()[0];
 
-        if (driveMap.TryGetValue(driveLetter, out string? pathForDrive) == false) {
+        if (!driveMap.TryGetValue(driveLetter, out string? pathForDrive)) {
             throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
         }
 
@@ -88,7 +88,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
         string fileToProcess = ConvertUtils.ToSlashPath(caseInsensitivePath);
         string? parentDir = Path.GetDirectoryName(fileToProcess);
         if (File.Exists(fileToProcess) || Directory.Exists(fileToProcess) ||
-            (string.IsNullOrWhiteSpace(parentDir) == false && Directory.Exists(parentDir) && Directory.GetDirectories(parentDir).Length == 0)) {
+            (!string.IsNullOrWhiteSpace(parentDir) && Directory.Exists(parentDir) && Directory.GetDirectories(parentDir).Length == 0)) {
             // file exists or root reached, no need to go further. Path found.
             return caseInsensitivePath;
         }
@@ -102,7 +102,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
         // Now that parent is for sure on the disk, let's find the current file
         try {
             string? fileNameOnFileSystem = TryGetHostFullNameForFile(caseInsensitivePath);
-            if (string.IsNullOrWhiteSpace(fileNameOnFileSystem) == false) {
+            if (!string.IsNullOrWhiteSpace(fileNameOnFileSystem)) {
                 return fileNameOnFileSystem;
             }
             Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(fileToProcess));
@@ -155,7 +155,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
         string fileName = ConvertUtils.ToSlashPath(dosFileName);
         if (IsDosPathRooted(fileName)) {
             fileName = ReplaceDriveWithHostPath(driveMap, fileName);
-        } else if (string.IsNullOrWhiteSpace(hostDirectory) == false) {
+        } else if (!string.IsNullOrWhiteSpace(hostDirectory)) {
             fileName = Path.Combine(hostDirectory, fileName);
         }
 
