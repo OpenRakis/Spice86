@@ -73,7 +73,15 @@ public class DosFilePathResolver : IDosFilePathResolver {
             throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
         }
 
-        return Path.Combine(pathForDrive, fileName[2..]);
+        fileName = fileName[2..];
+
+        // Path.Combine won't combine if the filename begins with a slash.
+        // Fixes games asking for a rooted file name (example: 'C:/DUNE2.EXE')
+        while (fileName.StartsWith('/')) {
+            fileName = fileName[1..];
+        }
+
+        return Path.Combine(pathForDrive,  fileName);
     }
 
     /// <summary>
