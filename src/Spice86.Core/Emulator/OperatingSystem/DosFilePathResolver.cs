@@ -72,7 +72,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
             throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
         }
 
-        return Path.Combine(pathForDrive, fileName[3..]);
+        return Path.Combine(pathForDrive, fileName[2..]);
     }
 
     /// <summary>
