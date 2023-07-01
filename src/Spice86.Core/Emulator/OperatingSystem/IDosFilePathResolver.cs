@@ -47,10 +47,10 @@ public interface IDosFilePathResolver {
     bool IsDosPathRooted(string path);
 
     /// <summary>
-    /// Returns the host path to the parent directory.
+    /// Returns the host path to the parent directory, or <c>null</c> if not found.
     /// </summary>
     /// <param name="path">The starting path.</param>
-    /// <returns>The path to the parent directory.</returns>
-    public string GetHostParentDirectory(string path) => Directory.GetParent(path)?.FullName ?? path;
+    /// <returns>The path to the parent directory, or <c>null</c> if not found.</returns>
+    public string? GetParentDirectoryFullPath(string path) => Directory.GetParent(path)?.FullName ?? path;
 
 }

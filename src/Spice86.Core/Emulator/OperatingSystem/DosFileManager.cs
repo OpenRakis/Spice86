@@ -160,7 +160,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = _dosFilePathResolver.ToHostFilePath(DriveMap, CurrentHostDirectory, fileSpec);
-        _currentMatchingFileSearchFolder = Directory.GetParent(hostSearchSpec)?.FullName ?? hostSearchSpec;
+        _currentMatchingFileSearchFolder = _dosFilePathResolver.GetParentDirectoryFullPath(hostSearchSpec) ?? hostSearchSpec;
         if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
@@ -378,13 +378,13 @@ public class DosFileManager {
         }
 
         if (newPath == "..") {
-            CurrentHostDirectory = _dosFilePathResolver.GetHostParentDirectory(CurrentHostDirectory);
+            CurrentHostDirectory = _dosFilePathResolver.GetParentDirectoryFullPath(CurrentHostDirectory) ?? CurrentHostDirectory;
             return DosFileOperationResult.NoValue();
         }
 
         while (newPath.StartsWith("..\\")) {
             newPath = newPath[3..];
-            CurrentHostDirectory = _dosFilePathResolver.GetHostParentDirectory(CurrentHostDirectory);
+            CurrentHostDirectory = _dosFilePathResolver.GetParentDirectoryFullPath(CurrentHostDirectory) ?? CurrentHostDirectory;
         }
 
         CurrentHostDirectory = Path.GetFullPath(Path.Combine(CurrentHostDirectory, newPath));
@@ -624,13 +624,13 @@ public class DosFileManager {
             return FileNotFoundError(directory);
         }
 
-        DirectoryInfo? parentFolder = Directory.GetParent(fullPath);
+        string parentFolder = _dosFilePathResolver.GetParentDirectoryFullPath(fullPath) ?? fullPath;
 
-        if (parentFolder?.Exists is false or null) {
+        if (!Path.Exists(parentFolder)) {
             return FileNotFoundError(directory);
         }
 
-        if (IsThereAnyFolderOrFileWithTheSameName(directory, parentFolder)) {
+        if (IsThereAnyFolderOrFileWithTheSameName(directory, new DirectoryInfo(parentFolder))) {
             return FileNotFoundError(directory);
         }
 
