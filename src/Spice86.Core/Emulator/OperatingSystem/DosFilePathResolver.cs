@@ -24,7 +24,10 @@ public class DosFilePathResolver : IDosFilePathResolver {
     /// <inheritdoc />
     public string? TryGetHostFullNameForFile(string caseInsensitivePath) {
         string? directory = Path.GetDirectoryName(caseInsensitivePath);
-        string? directoryCaseSensitive = TryGetFullNameOnDiskOfParentFolder(directory);
+        if(string.IsNullOrWhiteSpace(directory)) {
+            return null;
+        }
+        string? directoryCaseSensitive = TryGetFullNameOnDiskOfParentDirectory(directory);
         if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false) {
             return null;
         }
@@ -40,7 +43,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
         return realFileName;
     }
 
-    private static string? TryGetFullNameOnDiskOfParentFolder(string? directory) {
+    private static string? TryGetFullNameOnDiskOfParentDirectory(string directory) {
         if (string.IsNullOrWhiteSpace(directory)) {
             return null;
         }
@@ -53,7 +56,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
             return null;
         }
 
-        string? parent = TryGetFullNameOnDiskOfParentFolder(directoryInfo.Parent.FullName);
+        string? parent = TryGetFullNameOnDiskOfParentDirectory(directoryInfo.Parent.FullName);
         if (parent == null) {
             return null;
         }
