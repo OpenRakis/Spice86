@@ -1,56 +1,49 @@
-namespace Spice86.Core.Emulator.OperatingSystem; 
+namespace Spice86.Core.Emulator.OperatingSystem;
 
 /// <summary>
 /// Translates DOS filepaths to host file paths and vice-versa.
 /// </summary>
 public interface IDosFilePathResolver {
     /// <summary>
-    /// Converts dosFileName to a host file name.<br/>
-    /// For this, this needs to:
-    /// <ul>
-    /// <li>Prefix either the current folder or the drive folder.</li>
-    /// <li>Replace backslashes with slashes</li>
-    /// <li>Find case sensitive matches for every path item (since DOS is case insensitive but some OS are not)</li>
-    /// </ul>
+    /// Converts the DOS path to a full host path.<br/>
     /// </summary>
     /// <param name="driveMap">THe map between DOS drive letters and host folder paths.</param>
-    /// <param name="hostDirectory">The host directory path to use for path resolution.</param>
-    /// <param name="dosFileName">The file name to convert.</param>
-    /// <param name="forCreation">if true will try to find case sensitive match for only the parent of the file</param>
-    /// <returns>the file name in the host file system, or null if nothing was found.</returns>
-    string? ToHostCaseSensitiveFileName(IDictionary<char, string> driveMap, string hostDirectory,  string dosFileName, bool forCreation);
+    /// <param name="hostDirectory">The host directory path to use as the current folder.</param>
+    /// <param name="dosPath">The file name to convert.</param>
+    /// <param name="forCreation">if true, it will try to find the case sensitive match for only the parent of the path</param>
+    /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
+    string? ToHostCaseSensitiveFullName(IDictionary<char, string> driveMap, string hostDirectory, string dosPath, bool forCreation);
 
     /// <summary>
-    /// Returns the host file path, including casing.
+    /// Returns the full host file path, including casing.
     /// </summary>
-    /// <param name="caseInsensitivePath">The DOS file path.</param>
-    /// <returns>The host file path.</returns>
-    string? TryGetHostFullNameForFile(string caseInsensitivePath);
+    /// <param name="dosFilePath">The DOS file path.</param>
+    /// <returns>A string containing the host file path, or <c>null</c> if not found.</returns>
+    string? TryGetFullHostFileName(string dosFilePath);
 
     /// <summary>
     /// Prefixes the given filename by either the mapped drive folder or the current folder depending on whether there is
-    /// a Drive in the filename or not.<br/>
+    /// a root in the filename or not.<br/>
     /// Does not convert to case sensitive filename. <br/>
     /// Does not search for the file or folder on disk.
     /// </summary>
-    /// <param name="hostDirectory">The host directory to use as the current directory.</param>
-    /// <param name="dosFileName">The file name to convert.</param>
     /// <param name="driveMap">The map between DOS drive letters and host folder paths.</param>
-    /// <returns>The converted file name.</returns>
-    string ToHostFilePath(IDictionary<char, string> driveMap, string hostDirectory, string dosFileName);
+    /// <param name="hostDirectory">The host directory to use as the current directory.</param>
+    /// <param name="dosPath">The DOS path to convert.</param>
+    /// <returns>A string containing the host directory, combined with the DOS file name.</returns>
+    string PrefixWithHostDirectory(IDictionary<char, string> driveMap, string hostDirectory, string dosPath);
 
     /// <summary>
     /// Returns whether the DOS path is absolute.
     /// </summary>
-    /// <param name="path">The path to test.</param>
+    /// <param name="dosPath">The path to test.</param>
     /// <returns>Whether the DOS path is absolute.</returns>
-    bool IsDosPathRooted(string path);
+    bool IsDosPathRooted(string dosPath);
 
     /// <summary>
-    /// Returns the host path to the parent directory, or <c>null</c> if not found.
+    /// Returns the full path to the parent directory.
     /// </summary>
     /// <param name="path">The starting path.</param>
-    /// <returns>The path to the parent directory, or <c>null</c> if not found.</returns>
-    public string? GetParentDirectoryFullPath(string path) => Directory.GetParent(path)?.FullName ?? path;
-
+    /// <returns>A string containing the full path to the parent directory, or the original value if not found.</returns>
+    string GetFullNameForParentDirectory(string path);
 }
