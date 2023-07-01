@@ -170,4 +170,10 @@ public class DosFilePathResolver : IDosFilePathResolver {
     
     /// <inheritdoc />
     public bool IsDosPathRooted(string dosPath) => dosPath.Length >= 2 && DriveLetters.Contains(dosPath[0].ToString().ToUpperInvariant()) && dosPath[1] == ':';
+
+    /// <inheritdoc />
+    public bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrFolderName, DirectoryInfo hostFolder) =>
+        hostFolder.GetDirectories().Select(x => x.Name)
+            .Concat(hostFolder.GetFiles().Select(x => x.Name))
+            .Any(x => string.Equals(x, newFileOrFolderName, StringComparison.InvariantCultureIgnoreCase));
 }

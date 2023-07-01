@@ -630,7 +630,7 @@ public class DosFileManager {
             CreateDirectory(Path.GetRelativePath(CurrentHostDirectory, parentFolder));
         }
 
-        if (IsThereAnyFolderOrFileWithTheSameName(directory, new DirectoryInfo(parentFolder))) {
+        if (_dosFilePathResolver.IsThereAnyDirectoryOrFileWithTheSameName(directory, new DirectoryInfo(parentFolder))) {
             return FileNotFoundError(directory);
         }
 
@@ -646,9 +646,4 @@ public class DosFileManager {
 
         return FileNotFoundError(directory);
     }
-
-    private static bool IsThereAnyFolderOrFileWithTheSameName(string directory, DirectoryInfo parentFolder) =>
-        parentFolder.GetDirectories().Select(x => x.Name)
-            .Concat(parentFolder.GetFiles().Select(x => x.Name))
-            .Any(x => string.Equals(x, directory, StringComparison.InvariantCultureIgnoreCase));
 }

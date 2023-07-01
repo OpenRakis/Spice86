@@ -46,4 +46,12 @@ public interface IDosFilePathResolver {
     /// <param name="path">The starting path.</param>
     /// <returns>A string containing the full path to the parent directory, or the original value if not found.</returns>
     string GetFullNameForParentDirectory(string path);
+
+    /// <summary>
+    /// Returnw whether if the folder or file name already exist.
+    /// </summary>
+    /// <param name="newFileOrFolderName">The name of new file or folder we try to create.</param>
+    /// <param name="hostFolder">The full path to the host folder to look into.</param>
+    /// <returns>A boolean value indicating if there is any folder or file with the same name.</returns>
+    bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrFolderName, DirectoryInfo hostFolder);
 }
