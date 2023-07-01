@@ -25,7 +25,7 @@ public interface IDosFilePathResolver {
     /// </summary>
     /// <param name="caseInsensitivePath">The DOS file path.</param>
     /// <returns>The host file path.</returns>
-    string? GetActualCaseForFileName(string caseInsensitivePath);
+    string? TryGetHostFullNameForFile(string caseInsensitivePath);
 
     /// <summary>
     /// Prefixes the given filename by either the mapped drive folder or the current folder depending on whether there is
