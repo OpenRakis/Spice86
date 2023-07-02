@@ -155,10 +155,9 @@ public class DosPathResolver : IDosPathResolver {
             if (!string.IsNullOrWhiteSpace(fileNameOnFileSystem)) {
                 return fileNameOnFileSystem;
             }
-            Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(hostPath));
+            string searchPattern = Path.GetFileName(hostPath);
             if (Directory.Exists(parent)) {
-                return Array.Find(Directory.GetFiles(parent), 
-                    x => fileToProcessRegex.IsMatch(x));
+                return Directory.GetFiles(parent, searchPattern).FirstOrDefault();
             }
         } catch (IOException e) {
             e.Demystify();
@@ -168,19 +167,6 @@ public class DosPathResolver : IDosPathResolver {
         }
 
         return null;
-    }
-    
-    /// <summary>
-    /// Converts a DOS filespec to a regex pattern
-    /// </summary>
-    /// <param name="fileSpec">The DOS filespec</param>
-    /// <returns>The regex pattern</returns>
-    private static Regex FileSpecToRegex(string fileSpec) {
-        string regex = fileSpec.ToLowerInvariant();
-        regex = regex.Replace(".", "[.]");
-        regex = regex.Replace("?", ".");
-        regex = regex.Replace("*", ".*");
-        return new Regex(regex);
     }
     
     /// <inheritdoc />
