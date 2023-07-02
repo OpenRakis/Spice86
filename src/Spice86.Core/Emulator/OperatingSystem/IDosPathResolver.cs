@@ -64,7 +64,7 @@ public interface IDosPathResolver {
     string GetFullNameForParentDirectory(string path);
 
     /// <summary>
-    /// Returnw whether if the folder or file name already exist.
+    /// Returns whether the folder or file name already exists.
     /// </summary>
     /// <param name="newFileOrFolderName">The name of new file or folder we try to create.</param>
     /// <param name="hostFolder">The full path to the host folder to look into.</param>
