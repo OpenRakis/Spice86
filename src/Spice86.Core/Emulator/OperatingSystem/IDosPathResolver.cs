@@ -9,6 +9,29 @@ using System.Collections.Generic;
 /// </summary>
 public interface IDosPathResolver {
     /// <summary>
+    /// The map between host paths and the root of DOS drives.
+    /// </summary>
+    IDictionary<char, MountedFolder> DriveMap { get; }
+
+    /// <summary>
+    /// The current DOS drive in use.
+    /// </summary>
+    char CurrentDrive { get; }
+
+    /// <summary>
+    /// The full host path to the folder used by DOS as the current folder.
+    /// </summary>
+    string CurrentHostDirectory { get; }
+
+    /// <summary>
+    /// Create a relative path from the current host directory to another. Paths will be resolved before calculating the difference.
+    /// Default path comparison for the active platform will be used (OrdinalIgnoreCase for Windows or Mac, Ordinal for Unix).
+    /// </summary>
+    /// <param name="path">The destination path.</param>
+    /// <returns>The relative path or <paramref name="path"/> if the paths don't share the same root.</returns>
+    string GetHostRelativePathToCurrentDirectory(string path);
+
+    /// <summary>
     /// Converts the DOS path to a full host path.<br/>
     /// </summary>
     /// <param name="dosPath">The file name to convert.</param>
@@ -41,11 +64,6 @@ public interface IDosPathResolver {
     bool IsDosPathRooted(string dosPath);
 
     /// <summary>
-    /// The current host folder used a the DOS current folder.
-    /// </summary>
-    string CurrentHostDirectory { get; }
-
-    /// <summary>
     /// Returns the full path to the parent directory.
     /// </summary>
     /// <param name="path">The starting path.</param>
@@ -70,7 +88,8 @@ public interface IDosPathResolver {
     /// <summary>
     /// Sets the current DOS folder, and the map between DOS drive letters and host folders paths.
     /// </summary>
+    /// <param name="currentDrive">The current DOS drive letter.</param>
     /// <param name="newCurrentDir">The new host folder to use as the current DOS folder.</param>
     /// <param name="driveMap">The map between DOS drive letters and host folders paths.</param>
-    void SetDiskParameters(string newCurrentDir, Dictionary<char, string> driveMap);
+    void SetDiskParameters(char currentDrive, string newCurrentDir, Dictionary<char, MountedFolder> driveMap);
 }
