@@ -57,11 +57,11 @@ public interface IDosPathResolver {
     string PrefixWithHostDirectory(string dosPath);
 
     /// <summary>
-    /// Returns the full path to the parent directory.
+    /// Returns the host full path to the parent directory.
     /// </summary>
-    /// <param name="dosOrHostPath">The starting path.</param>
+    /// <param name="hostPath">The starting path.</param>
     /// <returns>A string containing the full path to the parent directory, or the original value if not found.</returns>
-    string GetFullNameForParentDirectory(string dosOrHostPath);
+    string GetHostFullNameForParentDirectory(string hostPath);
 
     /// <summary>
     /// Returns whether the folder or file name already exists.

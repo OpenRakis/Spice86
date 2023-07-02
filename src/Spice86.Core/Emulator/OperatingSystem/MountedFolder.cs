@@ -8,19 +8,23 @@ public class MountedFolder {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="fullName">The full host path to the folder to be used as the DOS drive root.</param>
-    /// <param name="currentFolder">The full host path used by DOS as the current folder for the drive.</param>
-    public MountedFolder(string fullName, string currentFolder) {
-        FullName = fullName;
-        CurrentFolder = currentFolder;
+    public MountedFolder(string fullName) {
+        MountPoint = fullName;
+        CurrentDirectory = "";
     }
 
     /// <summary>
     /// The full host path to the mounted folder. This path serves as the root of the DOS drive.
     /// </summary>
-    public string FullName { get; init; }
+    public string MountPoint { get; init; }
 
     /// <summary>
-    /// The full host path set by DOS as the current folder for the drive.
+    /// The current directory in use on the drive. Relative to the <see cref="MountPoint"/>
     /// </summary>
-    public string CurrentFolder { get; set; }
+    public string CurrentDirectory { get; set; }
+
+    /// <summary>
+    /// The full host path. Combined from <see cref="MountPoint"/> and <see cref="CurrentDirectory"/>
+    /// </summary>
+    public string FullName => Path.Combine(MountPoint, CurrentDirectory);
 }

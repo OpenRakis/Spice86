@@ -222,7 +222,7 @@ public sealed class ProgramExecutor : IDisposable {
         cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
         ArgumentException.ThrowIfNullOrEmpty(parentFolder);
 
-        driveMap.Add('C', new MountedFolder(cDrive, cDrive));
+        driveMap.Add('C', new MountedFolder(cDrive));
         Machine.Dos.FileManager.SetDiskParameters('C', @".", driveMap);
     }
 

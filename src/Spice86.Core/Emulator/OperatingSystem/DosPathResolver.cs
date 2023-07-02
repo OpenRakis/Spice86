@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -19,10 +20,7 @@ public class DosPathResolver : IDosPathResolver {
     public char CurrentDrive { get; private set; }
 
     /// <inheritdoc />
-    public string CurrentHostDirectory {
-        get => DriveMap[CurrentDrive].CurrentFolder;
-        private set => DriveMap[CurrentDrive].CurrentFolder = value;
-    }
+    public string CurrentHostDirectory => DriveMap[CurrentDrive].FullName;
 
     private readonly ILoggerService _loggerService;
 
@@ -40,28 +38,37 @@ public class DosPathResolver : IDosPathResolver {
         if (IsPathRooted(dosPath)) {
             string? newCurrentDirectory = ToHostCaseSensitiveFullName(dosPath, false);
             if (!string.IsNullOrWhiteSpace(newCurrentDirectory)) {
-                CurrentHostDirectory = newCurrentDirectory;
+                DriveMap[dosPath[0]].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(newCurrentDirectory));
                 return DosFileOperationResult.NoValue();
             }
         }
 
-        if (dosPath == ".") {
+        if (dosPath == "." || dosPath == @".\") {
             return DosFileOperationResult.NoValue();
         }
 
-        if (dosPath == "..") {
-            CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory);
+        if (dosPath == ".." || dosPath == @"..\") {
+            DriveMap[CurrentDrive].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory));
             return DosFileOperationResult.NoValue();
         }
 
         while (dosPath.StartsWith("..\\")) {
             dosPath = dosPath[3..];
-            CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory);
+            DriveMap[CurrentDrive].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory));
         }
 
-        CurrentHostDirectory = Path.GetFullPath(Path.Combine(CurrentHostDirectory, dosPath));
+        while(dosPath.StartsWith(@"\")) {
+            dosPath = dosPath[1..];
+        }
+
+        string? hostFullPath = ToHostCaseSensitiveFullName(dosPath, false);
+
+        if(string.IsNullOrWhiteSpace(hostFullPath)) {
+            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        }
+        DriveMap[CurrentDrive].CurrentDirectory = GetHostRelativePathToCurrentDirectory(hostFullPath);
         return DosFileOperationResult.NoValue();
-    }
+}
 
     /// <inheritdoc/>
     public void SetDiskParameters(char currentDrive, string dosPath, Dictionary<char, MountedFolder> driveMap) {
@@ -71,7 +78,7 @@ public class DosPathResolver : IDosPathResolver {
     }
 
     /// <inheritdoc />
-    public string GetFullNameForParentDirectory(string dosOrHostPath) => Directory.GetParent(dosOrHostPath)?.FullName ?? dosOrHostPath;
+    public string GetHostFullNameForParentDirectory(string hostPath) => Directory.GetParent(hostPath)?.FullName ?? hostPath;
 
     /// <inheritdoc />
     public string? TryGetFullHostFileName(string dosFilePath) {
@@ -117,7 +124,7 @@ public class DosPathResolver : IDosPathResolver {
     }
 
     /// <summary>
-    /// Searches for the path on disk, and returns the first matching file or folder path.
+    /// Searches for the path on disk, and returns the first matching file or directory path.
     /// </summary>
     /// <param name="dosPath">The case insensitive file path</param>
     /// <param name="convertParentOnly"></param>
@@ -127,10 +134,10 @@ public class DosPathResolver : IDosPathResolver {
             return null;
         }
 
-        string fileToProcess = ConvertUtils.ToSlashPath(dosPath);
-        string? parentDir = Path.GetDirectoryName(fileToProcess);
-        if (File.Exists(fileToProcess) || 
-            Directory.Exists(fileToProcess) ||
+        string hostPath = ConvertUtils.ToSlashPath(dosPath);
+        string? parentDir = Path.GetDirectoryName(hostPath);
+        if (File.Exists(hostPath) || 
+            Directory.Exists(hostPath) ||
             convertParentOnly) {
             // file exists or root reached, no need to go further. Path found.
             return dosPath;
@@ -148,7 +155,7 @@ public class DosPathResolver : IDosPathResolver {
             if (!string.IsNullOrWhiteSpace(fileNameOnFileSystem)) {
                 return fileNameOnFileSystem;
             }
-            Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(fileToProcess));
+            Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(hostPath));
             if (Directory.Exists(parent)) {
                 return Array.Find(Directory.GetFiles(parent), 
                     x => fileToProcessRegex.IsMatch(x));
@@ -228,8 +235,8 @@ public class DosPathResolver : IDosPathResolver {
         (path[2] == '\\' || path[2] == '/');
 
     /// <inheritdoc />
-    public bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrFolderName, DirectoryInfo hostFolder) =>
+    public bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrDirectoryPath, DirectoryInfo hostFolder) =>
         hostFolder.GetDirectories().Select(x => x.Name)
             .Concat(hostFolder.GetFiles().Select(x => x.Name))
-            .Any(x => string.Equals(x, newFileOrFolderName, StringComparison.OrdinalIgnoreCase));
+            .Any(x => string.Equals(x, newFileOrDirectoryPath, StringComparison.OrdinalIgnoreCase));
 }
