@@ -171,7 +171,7 @@ public class DosPathResolver : IDosPathResolver {
     }
     
     /// <summary>
-    /// Converts a dosVirtualDevices filespec to a regex pattern
+    /// Converts a DOS filespec to a regex pattern
     /// </summary>
     /// <param name="fileSpec">The DOS filespec</param>
     /// <returns>The regex pattern</returns>
@@ -235,7 +235,7 @@ public class DosPathResolver : IDosPathResolver {
         (path[2] == '\\' || path[2] == '/');
 
     /// <inheritdoc />
-    public bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrDirectoryPath, DirectoryInfo hostFolder) =>
+    public bool AnyDirectoryOrFileWithTheSameName(string newFileOrDirectoryPath, DirectoryInfo hostFolder) =>
         hostFolder.GetDirectories().Select(x => x.Name)
             .Concat(hostFolder.GetFiles().Select(x => x.Name))
             .Any(x => string.Equals(x, newFileOrDirectoryPath, StringComparison.OrdinalIgnoreCase));
