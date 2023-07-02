@@ -57,13 +57,6 @@ public interface IDosPathResolver {
     string PrefixWithHostDirectory(string dosPath);
 
     /// <summary>
-    /// Returns whether the DOS path is absolute.
-    /// </summary>
-    /// <param name="dosPath">The path to test.</param>
-    /// <returns>Whether the DOS path is absolute.</returns>
-    bool IsDosPathRooted(string dosPath);
-
-    /// <summary>
     /// Returns the full path to the parent directory.
     /// </summary>
     /// <param name="path">The starting path.</param>

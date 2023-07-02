@@ -38,7 +38,7 @@ public class DosPathResolver : IDosPathResolver {
 
     /// <inheritdoc/>
     public DosFileOperationResult SetCurrentDir(string newCurrentDir) {
-        if (IsDosPathRooted(newCurrentDir)) {
+        if (IsPathRooted(newCurrentDir)) {
             string? newCurrentDirectory = ToHostCaseSensitiveFullName(newCurrentDir, false);
             if (!string.IsNullOrWhiteSpace(newCurrentDirectory)) {
                 CurrentHostDirectory = newCurrentDirectory;
@@ -115,25 +115,6 @@ public class DosPathResolver : IDosPathResolver {
         }
 
         return new DirectoryInfo(parent).GetDirectories(directoryInfo.Name, new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).FirstOrDefault()?.FullName;
-    }
-    
-    private string ReplaceDriveWithHostPath(string fileName) {
-        // Absolute path
-        char driveLetter = fileName.ToUpperInvariant()[0];
-
-        if (!DriveMap.TryGetValue(driveLetter, out MountedFolder? pathForDrive)) {
-            throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
-        }
-
-        fileName = fileName[2..];
-
-        // Path.Combine won't combine if the filename begins with a slash.
-        // Fixes games asking for a rooted file name (example: 'C:/DUNE2.EXE')
-        while (fileName.StartsWith('/')) {
-            fileName = fileName[1..];
-        }
-
-        return Path.Combine(pathForDrive.FullName,  fileName);
     }
 
     /// <summary>
@@ -214,23 +195,38 @@ public class DosPathResolver : IDosPathResolver {
 
     /// <inheritdoc />
     public string PrefixWithHostDirectory(string dosPath) {
-        string fileName = ConvertUtils.ToSlashPath(dosPath);
-        if (IsDosPathRooted(fileName)) {
-            fileName = ReplaceDriveWithHostPath(fileName);
-        } else if (!string.IsNullOrWhiteSpace(CurrentHostDirectory)) {
-            fileName = Path.Combine(CurrentHostDirectory, fileName);
+        string path = dosPath;
+
+        if(string.IsNullOrWhiteSpace(path)) {
+            return path;
         }
 
-        return ConvertUtils.ToSlashPath(fileName);
+        if(IsPathRooted(path)) {
+            path = Path.Combine(DriveMap[path[0]].FullName, path[3..]);
+        }
+        else if (StartsWithDosDrive(dosPath)) {
+            path = Path.Combine(CurrentHostDirectory, path[2..]);
+        } else {
+            path = Path.Combine(CurrentHostDirectory, path);
+        }
+
+        return ConvertUtils.ToSlashPath(path);
     }
 
     /// <summary>
     /// All the possible DOS drive letters
     /// </summary>
-    private static string[] DriveLetters { get; } = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
-    
-    /// <inheritdoc />
-    public bool IsDosPathRooted(string dosPath) => dosPath.Length >= 2 && DriveLetters.Contains(dosPath[0].ToString().ToUpperInvariant()) && dosPath[1] == ':';
+    private static string[] DriveLetters { get; } = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+
+    private bool StartsWithDosDrive(string path) => 
+        path.Length >= 2 &&
+        DriveLetters.Contains(path[0].ToString().ToUpperInvariant()) &&
+        path[1] == ':';
+
+    private bool IsPathRooted(string path) => 
+        path.Length >= 3 &&
+        StartsWithDosDrive(path) &&
+        (path[2] == '\\' || path[2] == '/');
 
     /// <inheritdoc />
     public bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrFolderName, DirectoryInfo hostFolder) =>
