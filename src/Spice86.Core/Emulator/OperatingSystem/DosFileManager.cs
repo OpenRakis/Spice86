@@ -151,7 +151,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = _dosPathResolver.PrefixWithHostDirectory(fileSpec);
-        _currentMatchingFileSearchFolder = _dosPathResolver.GetFullNameForParentDirectory(hostSearchSpec);
+        _currentMatchingFileSearchFolder = _dosPathResolver.GetHostFullNameForParentDirectory(hostSearchSpec);
         if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
@@ -586,7 +586,7 @@ public class DosFileManager {
             return FileNotFoundError(dosDirectory);
         }
 
-        string parentFolder = _dosPathResolver.GetFullNameForParentDirectory(fullPath);
+        string parentFolder = _dosPathResolver.GetHostFullNameForParentDirectory(fullPath);
 
         if (!Directory.Exists(parentFolder)) {
             CreateDirectory(_dosPathResolver.GetHostRelativePathToCurrentDirectory(parentFolder));
