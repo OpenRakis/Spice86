@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -51,13 +50,13 @@ public class DosPathResolver : IDosPathResolver {
         }
 
         if (newCurrentDir == "..") {
-            CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory) ?? CurrentHostDirectory;
+            CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory);
             return DosFileOperationResult.NoValue();
         }
 
         while (newCurrentDir.StartsWith("..\\")) {
             newCurrentDir = newCurrentDir[3..];
-            CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory) ?? CurrentHostDirectory;
+            CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory);
         }
 
         CurrentHostDirectory = Path.GetFullPath(Path.Combine(CurrentHostDirectory, newCurrentDir));
