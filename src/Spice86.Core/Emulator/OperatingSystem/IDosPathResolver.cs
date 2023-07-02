@@ -69,7 +69,7 @@ public interface IDosPathResolver {
     /// <param name="newFileOrFolderName">The name of new file or folder we try to create.</param>
     /// <param name="hostFolder">The full path to the host folder to look into.</param>
     /// <returns>A boolean value indicating if there is any folder or file with the same name.</returns>
-    bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrFolderName, DirectoryInfo hostFolder);
+    bool AnyDirectoryOrFileWithTheSameName(string newFileOrFolderName, DirectoryInfo hostFolder);
 
     /// <summary>
     /// Sets the current DOS folder.
