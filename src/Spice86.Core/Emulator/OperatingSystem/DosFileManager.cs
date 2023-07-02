@@ -149,7 +149,7 @@ public class DosFileManager {
     /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match. Case is insensitive</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
-        string hostSearchSpec = _dosPathResolver.PrefixWithHostDirectory( fileSpec);
+        string hostSearchSpec = _dosPathResolver.PrefixWithHostDirectory(fileSpec);
         _currentMatchingFileSearchFolder = _dosPathResolver.GetFullNameForParentDirectory(hostSearchSpec) ?? hostSearchSpec;
         if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
