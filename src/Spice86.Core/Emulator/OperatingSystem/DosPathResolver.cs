@@ -226,7 +226,7 @@ public class DosPathResolver : IDosPathResolver {
 
     private bool StartsWithDosDrive(string path) => 
         path.Length >= 2 &&
-        DriveLetters.Contains(path[0].ToString().ToUpperInvariant()) &&
+        DriveLetters.Contains(char.ToUpperInvariant(path[0])) &&
         path[1] == ':';
 
     private bool IsPathRooted(string path) => 
