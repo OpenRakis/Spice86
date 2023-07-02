@@ -231,5 +231,5 @@ public class DosPathResolver : IDosPathResolver {
     public bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrFolderName, DirectoryInfo hostFolder) =>
         hostFolder.GetDirectories().Select(x => x.Name)
             .Concat(hostFolder.GetFiles().Select(x => x.Name))
-            .Any(x => string.Equals(x, newFileOrFolderName, StringComparison.InvariantCultureIgnoreCase));
+            .Any(x => string.Equals(x, newFileOrFolderName, StringComparison.OrdinalIgnoreCase));
 }
