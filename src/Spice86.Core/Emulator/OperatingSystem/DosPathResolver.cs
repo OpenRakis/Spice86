@@ -1,36 +1,40 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
-using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
-
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
+
 /// <inheritdoc />
 public class DosPathResolver : IDosPathResolver {
 
     /// <inheritdoc />
-    public Dictionary<char, string> DriveMap { get; private set; } = new();
+    public IDictionary<char, MountedFolder> DriveMap { get; private set; } = new Dictionary<char, MountedFolder>();
+
+    /// <inheritdoc />
+    public char CurrentDrive { get; private set; }
+
+    /// <inheritdoc />
+    public string CurrentHostDirectory {
+        get => DriveMap[CurrentDrive].CurrentFolder;
+        private set => DriveMap[CurrentDrive].CurrentFolder = value;
+    }
 
     private readonly ILoggerService _loggerService;
-
-    /// <summary>
-    /// The current host directory in use by DOS.
-    /// </summary>
-    public string CurrentHostDirectory { get; private set; }
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosPathResolver(ILoggerService loggerService) {
-        _loggerService = loggerService;
-        CurrentHostDirectory = Environment.CurrentDirectory;
-    }
+    public DosPathResolver(ILoggerService loggerService) => _loggerService = loggerService;
+
+    /// <inheritdoc />
+    public string GetHostRelativePathToCurrentDirectory(string path) => Path.GetRelativePath(CurrentHostDirectory, path);
 
     /// <inheritdoc/>
     public DosFileOperationResult SetCurrentDir(string newCurrentDir) {
@@ -61,8 +65,9 @@ public class DosPathResolver : IDosPathResolver {
     }
 
     /// <inheritdoc/>
-    public void SetDiskParameters(string newCurrentDir, Dictionary<char, string> driveMap) {
-        DictionaryUtils.AddAll(DriveMap, driveMap);
+    public void SetDiskParameters(char currentDrive, string newCurrentDir, Dictionary<char, MountedFolder> driveMap) {
+        DriveMap = driveMap;
+        CurrentDrive = currentDrive;
         SetCurrentDir(newCurrentDir);
     }
 
@@ -116,7 +121,7 @@ public class DosPathResolver : IDosPathResolver {
         // Absolute path
         char driveLetter = fileName.ToUpperInvariant()[0];
 
-        if (!DriveMap.TryGetValue(driveLetter, out string? pathForDrive)) {
+        if (!DriveMap.TryGetValue(driveLetter, out MountedFolder? pathForDrive)) {
             throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
         }
 
@@ -128,7 +133,7 @@ public class DosPathResolver : IDosPathResolver {
             fileName = fileName[1..];
         }
 
-        return Path.Combine(pathForDrive,  fileName);
+        return Path.Combine(pathForDrive.FullName,  fileName);
     }
 
     /// <summary>

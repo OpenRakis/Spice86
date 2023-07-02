@@ -21,6 +21,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
+using Spice86.Core.Emulator.OperatingSystem;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -211,7 +212,7 @@ public sealed class ProgramExecutor : IDisposable {
 
     private void InitializeDOS(Configuration configuration) {
         string? parentFolder = GetExeParentFolder(configuration);
-        Dictionary<char, string> driveMap = new();
+        Dictionary<char, MountedFolder> driveMap = new();
         string? cDrive = configuration.CDrive;
         if (string.IsNullOrWhiteSpace(cDrive)) {
             cDrive = parentFolder;
@@ -221,8 +222,8 @@ public sealed class ProgramExecutor : IDisposable {
         cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
         ArgumentException.ThrowIfNullOrEmpty(parentFolder);
 
-        driveMap.Add('C', cDrive);
-        Machine.Dos.FileManager.SetDiskParameters(parentFolder, driveMap);
+        driveMap.Add('C', new MountedFolder(cDrive, cDrive));
+        Machine.Dos.FileManager.SetDiskParameters('C', parentFolder, driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration,

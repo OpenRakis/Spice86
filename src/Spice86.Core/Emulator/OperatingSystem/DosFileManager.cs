@@ -359,9 +359,10 @@ public class DosFileManager {
     /// <summary>
     /// Initializes disk parameters
     /// </summary>
-    /// <param name="currentDir">The current directory for the <see cref="DosFileManager"/>.</param>
+    /// <param name="currentDrive">The current DOS drive letter.</param>
+    /// <param name="currentDir">The current host directory on the DOS drive.</param>
     /// <param name="driveMap">The mapping between emulated drive roots and host directory paths.</param>
-    public void SetDiskParameters(string currentDir, Dictionary<char, string> driveMap) => _dosPathResolver.SetDiskParameters(currentDir, driveMap);
+    public void SetDiskParameters(char currentDrive, string currentDir, Dictionary<char, MountedFolder> driveMap) => _dosPathResolver.SetDiskParameters(currentDrive, currentDir, driveMap);
 
     /// <summary>
     /// Sets the segmented address to the DTA.
@@ -589,7 +590,7 @@ public class DosFileManager {
         string parentFolder = _dosPathResolver.GetFullNameForParentDirectory(fullPath);
 
         if (!Directory.Exists(parentFolder)) {
-            CreateDirectory(Path.GetRelativePath(_dosPathResolver.CurrentHostDirectory, parentFolder));
+            CreateDirectory(_dosPathResolver.GetHostRelativePathToCurrentDirectory(parentFolder));
         }
 
         if (_dosPathResolver.IsThereAnyDirectoryOrFileWithTheSameName(directory, new DirectoryInfo(parentFolder))) {
