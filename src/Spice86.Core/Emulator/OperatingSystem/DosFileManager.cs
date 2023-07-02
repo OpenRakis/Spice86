@@ -576,15 +576,15 @@ public class DosFileManager {
     /// <summary>
     /// Creates a directory on disk.
     /// </summary>
-    /// <param name="directory">The directory name to create</param>
+    /// <param name="dosDirectory">The directory name to create</param>
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult CreateDirectory(string directory) {
-        string hostPath = _dosPathResolver.PrefixWithHostDirectory(directory);
+    public DosFileOperationResult CreateDirectory(string dosDirectory) {
+        string hostPath = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
 
-        string? fullPath = _dosPathResolver.ToHostCaseSensitiveFullName(directory, true);
+        string? fullPath = _dosPathResolver.ToHostCaseSensitiveFullName(dosDirectory, true);
         if (string.IsNullOrWhiteSpace(fullPath)) {
-            return FileNotFoundError(directory);
+            return FileNotFoundError(dosDirectory);
         }
 
         string parentFolder = _dosPathResolver.GetFullNameForParentDirectory(fullPath);
@@ -593,8 +593,8 @@ public class DosFileManager {
             CreateDirectory(_dosPathResolver.GetHostRelativePathToCurrentDirectory(parentFolder));
         }
 
-        if (_dosPathResolver.IsThereAnyDirectoryOrFileWithTheSameName(directory, new DirectoryInfo(parentFolder))) {
-            return FileNotFoundError(directory);
+        if (_dosPathResolver.IsThereAnyDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
+            return FileNotFoundError(dosDirectory);
         }
 
         try {
@@ -607,6 +607,6 @@ public class DosFileManager {
             }
         }
 
-        return FileNotFoundError(directory);
+        return FileNotFoundError(dosDirectory);
     }
 }
