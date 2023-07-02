@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using System.Collections.Generic;
 
 /// <summary>
-/// Translates DOS filepaths to host file paths.
+/// Translates DOS filepaths to host file paths, and vice-versa.
 /// </summary>
 public interface IDosPathResolver {
     /// <summary>
@@ -27,9 +27,9 @@ public interface IDosPathResolver {
     /// Create a relative path from the current host directory to another. Paths will be resolved before calculating the difference.
     /// Default path comparison for the active platform will be used (OrdinalIgnoreCase for Windows or Mac, Ordinal for Unix).
     /// </summary>
-    /// <param name="path">The destination path.</param>
-    /// <returns>The relative path or <paramref name="path"/> if the paths don't share the same root.</returns>
-    string GetHostRelativePathToCurrentDirectory(string path);
+    /// <param name="hostPath">The destination path.</param>
+    /// <returns>The relative path or <paramref name="hostPath"/> if the paths don't share the same root.</returns>
+    string GetHostRelativePathToCurrentDirectory(string hostPath);
 
     /// <summary>
     /// Converts the DOS path to a full host path.<br/>

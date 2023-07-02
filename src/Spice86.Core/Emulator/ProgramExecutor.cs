@@ -223,7 +223,7 @@ public sealed class ProgramExecutor : IDisposable {
         ArgumentException.ThrowIfNullOrEmpty(parentFolder);
 
         driveMap.Add('C', new MountedFolder(cDrive, cDrive));
-        Machine.Dos.FileManager.SetDiskParameters('C', parentFolder, driveMap);
+        Machine.Dos.FileManager.SetDiskParameters('C', @".", driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration,

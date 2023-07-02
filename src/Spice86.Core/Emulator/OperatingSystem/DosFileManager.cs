@@ -361,9 +361,9 @@ public class DosFileManager {
     /// Initializes disk parameters
     /// </summary>
     /// <param name="currentDrive">The current DOS drive letter.</param>
-    /// <param name="currentDir">The current host directory on the DOS drive.</param>
+    /// <param name="dosPath">The current host directory on the DOS drive.</param>
     /// <param name="driveMap">The mapping between emulated drive roots and host directory paths.</param>
-    public void SetDiskParameters(char currentDrive, string currentDir, Dictionary<char, MountedFolder> driveMap) => _dosPathResolver.SetDiskParameters(currentDrive, currentDir, driveMap);
+    public void SetDiskParameters(char currentDrive, string dosPath, Dictionary<char, MountedFolder> driveMap) => _dosPathResolver.SetDiskParameters(currentDrive, dosPath, driveMap);
 
     /// <summary>
     /// Sets the segmented address to the DTA.

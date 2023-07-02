@@ -36,38 +36,38 @@ public class DosPathResolver : IDosPathResolver {
     public string GetHostRelativePathToCurrentDirectory(string path) => Path.GetRelativePath(CurrentHostDirectory, path);
 
     /// <inheritdoc/>
-    public DosFileOperationResult SetCurrentDir(string newCurrentDir) {
-        if (IsPathRooted(newCurrentDir)) {
-            string? newCurrentDirectory = ToHostCaseSensitiveFullName(newCurrentDir, false);
+    public DosFileOperationResult SetCurrentDir(string dosPath) {
+        if (IsPathRooted(dosPath)) {
+            string? newCurrentDirectory = ToHostCaseSensitiveFullName(dosPath, false);
             if (!string.IsNullOrWhiteSpace(newCurrentDirectory)) {
                 CurrentHostDirectory = newCurrentDirectory;
                 return DosFileOperationResult.NoValue();
             }
         }
 
-        if (newCurrentDir == ".") {
+        if (dosPath == ".") {
             return DosFileOperationResult.NoValue();
         }
 
-        if (newCurrentDir == "..") {
+        if (dosPath == "..") {
             CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory);
             return DosFileOperationResult.NoValue();
         }
 
-        while (newCurrentDir.StartsWith("..\\")) {
-            newCurrentDir = newCurrentDir[3..];
+        while (dosPath.StartsWith("..\\")) {
+            dosPath = dosPath[3..];
             CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory);
         }
 
-        CurrentHostDirectory = Path.GetFullPath(Path.Combine(CurrentHostDirectory, newCurrentDir));
+        CurrentHostDirectory = Path.GetFullPath(Path.Combine(CurrentHostDirectory, dosPath));
         return DosFileOperationResult.NoValue();
     }
 
     /// <inheritdoc/>
-    public void SetDiskParameters(char currentDrive, string newCurrentDir, Dictionary<char, MountedFolder> driveMap) {
+    public void SetDiskParameters(char currentDrive, string dosPath, Dictionary<char, MountedFolder> driveMap) {
         DriveMap = driveMap;
         CurrentDrive = currentDrive;
-        SetCurrentDir(newCurrentDir);
+        SetCurrentDir(dosPath);
     }
 
     /// <inheritdoc />
