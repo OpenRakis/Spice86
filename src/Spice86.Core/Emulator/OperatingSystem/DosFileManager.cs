@@ -471,9 +471,9 @@ public class DosFileManager {
     /// </ul>
     /// </summary>
     /// <param name="dosFileName">The file name to convert.</param>
-    /// <param name="forCreation">if true will try to find case sensitive match for only the parent of the file</param>
-    /// <returns>the file name in the host file system, or null if nothing was found.</returns>
-    internal string? ToHostCaseSensitiveFileName(string dosFileName, bool forCreation) => _dosPathResolver.ToHostCaseSensitiveFullName( dosFileName, forCreation);
+    /// <param name="convertParentOnly">if true will try to find case sensitive match for only the parent path</param>
+    /// <returns>A string containing the file name in the host file system, or <c>null</c> if nothing was found.</returns>
+    internal string? ToHostCaseSensitiveFileName(string dosFileName, bool convertParentOnly) => _dosPathResolver.ToHostCaseSensitiveFullName( dosFileName, convertParentOnly);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
