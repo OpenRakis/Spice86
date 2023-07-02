@@ -129,7 +129,7 @@ public class DosPathResolver : IDosPathResolver {
     /// <param name="dosPath">The case insensitive file path</param>
     /// <param name="convertParentOnly"></param>
     /// <returns>The absolute host file path</returns>
-    private string? ToCaseSensitiveFileName(string? dosPath, bool convertParentOnly) {
+    private string? ToCaseSensitivePath(string? dosPath, bool convertParentOnly) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
@@ -143,13 +143,13 @@ public class DosPathResolver : IDosPathResolver {
             return dosPath;
         }
 
-        string? parent = ToCaseSensitiveFileName(parentDir, convertParentOnly);
+        string? parent = ToCaseSensitivePath(parentDir, convertParentOnly);
         if (parent == null) {
             // End of recursion, root reached
             return null;
         }
 
-        // Now that parent is for sure on the disk, let's find the current file
+        // Now that parent is for sure on the host file system, let's find the actual path
         try {
             string? fileNameOnFileSystem = TryGetFullHostFileName(dosPath);
             if (!string.IsNullOrWhiteSpace(fileNameOnFileSystem)) {
@@ -157,7 +157,11 @@ public class DosPathResolver : IDosPathResolver {
             }
             string searchPattern = Path.GetFileName(hostPath);
             if (Directory.Exists(parent)) {
-                return Directory.GetFiles(parent, searchPattern).FirstOrDefault();
+                return
+                    Directory.GetDirectories(parent, searchPattern)
+                    .Concat(
+                    Directory.GetFiles(parent, searchPattern))
+                    .FirstOrDefault();
             }
         } catch (IOException e) {
             e.Demystify();
@@ -173,11 +177,11 @@ public class DosPathResolver : IDosPathResolver {
     public string? ToHostCaseSensitiveFullName(string dosPath, bool convertParentOnly) {
         string fileName = PrefixWithHostDirectory(dosPath);
         if (!convertParentOnly) {
-            string? caseSensitivePath = ToCaseSensitiveFileName(fileName, convertParentOnly);
+            string? caseSensitivePath = ToCaseSensitivePath(fileName, convertParentOnly);
             return caseSensitivePath;
         }
         
-        string? parent = ToCaseSensitiveFileName(fileName, convertParentOnly);
+        string? parent = ToCaseSensitivePath(fileName, convertParentOnly);
         if (string.IsNullOrWhiteSpace(parent)) {
             return null;
         }
