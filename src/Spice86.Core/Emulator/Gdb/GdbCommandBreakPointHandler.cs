@@ -3,6 +3,7 @@
 using System.Diagnostics;
 
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -96,8 +97,6 @@ public class GdbCommandBreakpointHandler {
         try {
             string[] commandSplit = command.Split(",");
             int type = int.Parse(commandSplit[0]);
-            long address = ConvertUtils.ParseHex32(commandSplit[1]);
-            // 3rd parameter kind is unused in our case
             BreakPointType? breakPointType = type switch {
                 0 => BreakPointType.EXECUTION,
                 1 => BreakPointType.EXECUTION,
@@ -109,6 +108,13 @@ public class GdbCommandBreakpointHandler {
             if (breakPointType == null) {
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error("Cannot parse breakpoint type {Type} for command {Command}", type, command);
+                }
+                return null;
+            }
+            long address = ConvertUtils.ParseHex32(commandSplit[1]);
+            if (address > Memory.EndOfHighMemoryArea) {
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("Cannot install breakpoint at address {Address} because it is higher than ram size {RamSize}", address, Memory.EndOfHighMemoryArea);
                 }
                 return null;
             }

@@ -1077,7 +1077,7 @@ public class VgaFunctionality : IVgaFunctionality {
 
     private void MemSetStride(ushort segment, ushort destination, byte value, int length, int stride, int lines) {
         for (; lines > 0; lines--, destination += (ushort)stride) {
-            _memory.Memset(MemoryUtils.ToPhysicalAddress(segment, destination), value, (uint)length);
+            _memory.Memset8(MemoryUtils.ToPhysicalAddress(segment, destination), value, (uint)length);
         }
     }
 
@@ -1392,7 +1392,7 @@ public class VgaFunctionality : IVgaFunctionality {
     private void MemSet16(ushort segment, ushort offset, ushort value, int amount) {
         amount /= 2;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-        _memory.Memset(address, value, (uint)amount);
+        _memory.Memset16(address, value, (uint)amount);
         for (int i = 0; i < amount; i += 2) {
             _memory.SetUint16((uint)(address + i), value);
         }

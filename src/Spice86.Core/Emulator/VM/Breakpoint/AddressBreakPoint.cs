@@ -28,14 +28,4 @@ public class AddressBreakPoint : BreakPoint {
     public override bool Matches(long address) {
         return Address == address;
     }
-
-    /// <summary>
-    /// Determines whether the breakpoint matches any memory addresses in the specified range.
-    /// </summary>
-    /// <param name="startAddress">The start of the memory range to match against the breakpoint.</param>
-    /// <param name="endAddress">The end of the memory range to match against the breakpoint.</param>
-    /// <returns>True if the breakpoint matches any address in the range, otherwise false.</returns>
-    public override bool Matches(long startAddress, long endAddress) {
-        return Address >= startAddress && Address < endAddress;
-    }
 }

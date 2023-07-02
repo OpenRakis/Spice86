@@ -40,14 +40,6 @@ public abstract class BreakPoint {
     public abstract bool Matches(long address);
 
     /// <summary>
-    /// Determines if the breakpoint matches the range of addresses between startAddress and endAddress (inclusive).
-    /// </summary>
-    /// <param name="startAddress">The start address of the range.</param>
-    /// <param name="endAddress">The end address of the range.</param>
-    /// <returns>True if the breakpoint matches the range of addresses, false otherwise.</returns>
-    public abstract bool Matches(long startAddress, long endAddress);
-
-    /// <summary>
     /// Triggers the breakpoint, calling the OnReached action.
     /// </summary>
     public void Trigger() {

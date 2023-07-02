@@ -63,15 +63,12 @@ public class Memory {
     }
 
     /// <summary>
-    ///     Writes a 4-byte value to ram.
+    ///     Writes a 1-byte value to ram.
     /// </summary>
     /// <param name="address">The address to write to</param>
     /// <param name="value">The value to write</param>
-    public void SetUint32(uint address, uint value) {
-        Write(address, (byte)value);
-        Write(address + 1, (byte)(value >> 8));
-        Write(address + 2, (byte)(value >> 16));
-        Write(address + 3, (byte)(value >> 24));
+    public void SetUint8(uint address, byte value) {
+        Write(address, value);
     }
 
     /// <summary>
@@ -85,12 +82,33 @@ public class Memory {
     }
 
     /// <summary>
-    ///     Writes a 1-byte value to ram.
+    ///     Writes a 4-byte value to ram.
     /// </summary>
     /// <param name="address">The address to write to</param>
     /// <param name="value">The value to write</param>
-    public void SetUint8(uint address, byte value) {
-        Write(address, value);
+    public void SetUint32(uint address, uint value) {
+        Write(address, (byte)value);
+        Write(address + 1, (byte)(value >> 8));
+        Write(address + 2, (byte)(value >> 16));
+        Write(address + 3, (byte)(value >> 24));
+    }
+
+    /// <summary>
+    ///     Read a 1-byte value from ram.
+    /// </summary>
+    /// <param name="address">The address to read from</param>
+    /// <returns>The value at that address</returns>
+    public byte GetUint8(uint address) {
+        return Read(address);
+    }
+
+    /// <summary>
+    ///     Read a 2-byte value from ram.
+    /// </summary>
+    /// <param name="address">The address to read from</param>
+    /// <returns>The value at that address</returns>
+    public ushort GetUint16(uint address) {
+        return (ushort)(Read(address) | Read(address + 1) << 8);
     }
 
     /// <summary>
@@ -135,24 +153,6 @@ public class Memory {
     }
 
     /// <summary>
-    ///     Read a 2-byte value from ram.
-    /// </summary>
-    /// <param name="address">The address to read from</param>
-    /// <returns>The value at that address</returns>
-    public ushort GetUint16(uint address) {
-        return (ushort)(Read(address) | Read(address + 1) << 8);
-    }
-
-    /// <summary>
-    ///     Read a 1-byte value from ram.
-    /// </summary>
-    /// <param name="address">The address to read from</param>
-    /// <returns>The value at that address</returns>
-    public byte GetUint8(uint address) {
-        return Read(address);
-    }
-
-    /// <summary>
     ///     Load data from a byte array into memory.
     /// </summary>
     /// <param name="address">The memory address to start writing</param>
@@ -172,6 +172,7 @@ public class Memory {
             Write((uint)(address + i), data[i]);
         }
     }
+
     /// <summary>
     ///     Load data from a words array into memory.
     /// </summary>
@@ -211,7 +212,7 @@ public class Memory {
     /// <param name="address">The memory address to start writing to</param>
     /// <param name="value">The byte value to write</param>
     /// <param name="amount">How many times to write the value</param>
-    public void Memset(uint address, byte value, uint amount) {
+    public void Memset8(uint address, byte value, uint amount) {
         for (int i = 0; i < amount; i++) {
             Write((uint)(address + i), value);
         }
@@ -223,7 +224,7 @@ public class Memory {
     /// <param name="address">The memory address to start writing to</param>
     /// <param name="value">The ushort value to write</param>
     /// <param name="amount">How many times to write the value</param>
-    public void Memset(uint address, ushort value, uint amount) {
+    public void Memset16(uint address, ushort value, uint amount) {
         for (int i = 0; i < amount; i += 2) {
             SetUint16((uint)(address + i), value);
         }

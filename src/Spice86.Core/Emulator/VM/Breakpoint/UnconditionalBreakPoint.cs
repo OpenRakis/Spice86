@@ -23,14 +23,4 @@ public class UnconditionalBreakPoint : BreakPoint {
     public override bool Matches(long address) {
         return true;
     }
-
-    /// <summary>
-    /// Determines whether the breakpoint matches the specified address range.
-    /// </summary>
-    /// <param name="startAddress">The starting address of the range to check against the breakpoint.</param>
-    /// <param name="endAddress">The ending address of the range to check against the breakpoint.</param>
-    /// <returns>Always returns <c>true</c>.</returns>
-    public override bool Matches(long startAddress, long endAddress) {
-        return true;
-    }
 }
