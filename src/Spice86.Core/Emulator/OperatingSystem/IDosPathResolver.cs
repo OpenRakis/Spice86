@@ -59,9 +59,9 @@ public interface IDosPathResolver {
     /// <summary>
     /// Returns the full path to the parent directory.
     /// </summary>
-    /// <param name="path">The starting path.</param>
+    /// <param name="dosOrHostPath">The starting path.</param>
     /// <returns>A string containing the full path to the parent directory, or the original value if not found.</returns>
-    string GetFullNameForParentDirectory(string path);
+    string GetFullNameForParentDirectory(string dosOrHostPath);
 
     /// <summary>
     /// Returns whether the folder or file name already exists.
