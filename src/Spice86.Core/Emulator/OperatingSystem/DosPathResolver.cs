@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -10,14 +11,60 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 /// <inheritdoc />
-public class DosFilePathResolver : IDosFilePathResolver {
+public class DosPathResolver : IDosPathResolver {
+
+    /// <inheritdoc />
+    public Dictionary<char, string> DriveMap { get; private set; } = new();
+
     private readonly ILoggerService _loggerService;
+
+    /// <summary>
+    /// The current host directory in use by DOS.
+    /// </summary>
+    public string CurrentHostDirectory { get; private set; }
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosFilePathResolver(ILoggerService loggerService) => _loggerService = loggerService;
+    public DosPathResolver(ILoggerService loggerService) {
+        _loggerService = loggerService;
+        CurrentHostDirectory = Environment.CurrentDirectory;
+    }
+
+    /// <inheritdoc/>
+    public DosFileOperationResult SetCurrentDir(string newCurrentDir) {
+        if (IsDosPathRooted(newCurrentDir)) {
+            string? newCurrentDirectory = ToHostCaseSensitiveFullName(newCurrentDir, false);
+            if (!string.IsNullOrWhiteSpace(newCurrentDirectory)) {
+                CurrentHostDirectory = newCurrentDirectory;
+                return DosFileOperationResult.NoValue();
+            }
+        }
+
+        if (newCurrentDir == ".") {
+            return DosFileOperationResult.NoValue();
+        }
+
+        if (newCurrentDir == "..") {
+            CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory) ?? CurrentHostDirectory;
+            return DosFileOperationResult.NoValue();
+        }
+
+        while (newCurrentDir.StartsWith("..\\")) {
+            newCurrentDir = newCurrentDir[3..];
+            CurrentHostDirectory = GetFullNameForParentDirectory(CurrentHostDirectory) ?? CurrentHostDirectory;
+        }
+
+        CurrentHostDirectory = Path.GetFullPath(Path.Combine(CurrentHostDirectory, newCurrentDir));
+        return DosFileOperationResult.NoValue();
+    }
+
+    /// <inheritdoc/>
+    public void SetDiskParameters(string newCurrentDir, Dictionary<char, string> driveMap) {
+        DictionaryUtils.AddAll(DriveMap, driveMap);
+        SetCurrentDir(newCurrentDir);
+    }
 
     /// <inheritdoc />
     public string GetFullNameForParentDirectory(string path) => Directory.GetParent(path)?.FullName ?? path;
@@ -65,11 +112,11 @@ public class DosFilePathResolver : IDosFilePathResolver {
         return new DirectoryInfo(parent).GetDirectories(directoryInfo.Name, new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).FirstOrDefault()?.FullName;
     }
     
-    private static string ReplaceDriveWithHostPath(IDictionary<char, string> driveMap, string fileName) {
+    private string ReplaceDriveWithHostPath(string fileName) {
         // Absolute path
         char driveLetter = fileName.ToUpperInvariant()[0];
 
-        if (!driveMap.TryGetValue(driveLetter, out string? pathForDrive)) {
+        if (!DriveMap.TryGetValue(driveLetter, out string? pathForDrive)) {
             throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
         }
 
@@ -88,6 +135,7 @@ public class DosFilePathResolver : IDosFilePathResolver {
     /// Searches for the path on disk, and returns the first matching file or folder path.
     /// </summary>
     /// <param name="caseInsensitivePath">The case insensitive file path</param>
+    /// <param name="forCreation"></param>
     /// <returns>The absolute host file path</returns>
     private string? ToCaseSensitiveFileName(string? caseInsensitivePath, bool forCreation) {
         if (string.IsNullOrWhiteSpace(caseInsensitivePath)) {
@@ -144,8 +192,8 @@ public class DosFilePathResolver : IDosFilePathResolver {
     }
     
     /// <inheritdoc />
-    public string? ToHostCaseSensitiveFullName(IDictionary<char, string> driveMap, string hostDirectory, string dosFileName, bool forCreation) {
-        string fileName = PrefixWithHostDirectory(driveMap, hostDirectory, dosFileName);
+    public string? ToHostCaseSensitiveFullName(string dosFileName, bool forCreation) {
+        string fileName = PrefixWithHostDirectory(dosFileName);
         if (!forCreation) {
             string? caseSensitivePath = ToCaseSensitiveFileName(fileName, forCreation);
             return caseSensitivePath;
@@ -160,12 +208,12 @@ public class DosFilePathResolver : IDosFilePathResolver {
     }
 
     /// <inheritdoc />
-    public string PrefixWithHostDirectory(IDictionary<char, string> driveMap, string hostDirectory, string dosPath) {
+    public string PrefixWithHostDirectory(string dosPath) {
         string fileName = ConvertUtils.ToSlashPath(dosPath);
         if (IsDosPathRooted(fileName)) {
-            fileName = ReplaceDriveWithHostPath(driveMap, fileName);
-        } else if (!string.IsNullOrWhiteSpace(hostDirectory)) {
-            fileName = Path.Combine(hostDirectory, fileName);
+            fileName = ReplaceDriveWithHostPath(fileName);
+        } else if (!string.IsNullOrWhiteSpace(CurrentHostDirectory)) {
+            fileName = Path.Combine(CurrentHostDirectory, fileName);
         }
 
         return ConvertUtils.ToSlashPath(fileName);

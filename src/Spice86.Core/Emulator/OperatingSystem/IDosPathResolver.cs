@@ -1,18 +1,20 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+
+using System.Collections.Generic;
+
 /// <summary>
 /// Translates DOS filepaths to host file paths.
 /// </summary>
-public interface IDosFilePathResolver {
+public interface IDosPathResolver {
     /// <summary>
     /// Converts the DOS path to a full host path.<br/>
     /// </summary>
-    /// <param name="driveMap">THe map between DOS drive letters and host folder paths.</param>
-    /// <param name="hostDirectory">The host directory path to use as the current folder.</param>
     /// <param name="dosPath">The file name to convert.</param>
     /// <param name="forCreation">if true, it will try to find the case sensitive match for only the parent of the path</param>
     /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
-    string? ToHostCaseSensitiveFullName(IDictionary<char, string> driveMap, string hostDirectory, string dosPath, bool forCreation);
+    string? ToHostCaseSensitiveFullName(string dosPath, bool forCreation);
 
     /// <summary>
     /// Returns the full host file path, including casing.
@@ -27,11 +29,9 @@ public interface IDosFilePathResolver {
     /// Does not convert to case sensitive filename. <br/>
     /// Does not search for the file or folder on disk.
     /// </summary>
-    /// <param name="driveMap">The map between DOS drive letters and host folder paths.</param>
-    /// <param name="hostDirectory">The host directory to use as the current directory.</param>
     /// <param name="dosPath">The DOS path to convert.</param>
     /// <returns>A string containing the host directory, combined with the DOS file name.</returns>
-    string PrefixWithHostDirectory(IDictionary<char, string> driveMap, string hostDirectory, string dosPath);
+    string PrefixWithHostDirectory(string dosPath);
 
     /// <summary>
     /// Returns whether the DOS path is absolute.
@@ -39,6 +39,11 @@ public interface IDosFilePathResolver {
     /// <param name="dosPath">The path to test.</param>
     /// <returns>Whether the DOS path is absolute.</returns>
     bool IsDosPathRooted(string dosPath);
+
+    /// <summary>
+    /// The current host folder used a the DOS current folder.
+    /// </summary>
+    string CurrentHostDirectory { get; }
 
     /// <summary>
     /// Returns the full path to the parent directory.
@@ -54,4 +59,18 @@ public interface IDosFilePathResolver {
     /// <param name="hostFolder">The full path to the host folder to look into.</param>
     /// <returns>A boolean value indicating if there is any folder or file with the same name.</returns>
     bool IsThereAnyDirectoryOrFileWithTheSameName(string newFileOrFolderName, DirectoryInfo hostFolder);
+
+    /// <summary>
+    /// Sets the current DOS folder.
+    /// </summary>
+    /// <param name="newCurrentDir">The new host folder to use as the current DOS folder.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> that details the result of the operation.</returns>
+    DosFileOperationResult SetCurrentDir(string newCurrentDir);
+
+    /// <summary>
+    /// Sets the current DOS folder, and the map between DOS drive letters and host folders paths.
+    /// </summary>
+    /// <param name="newCurrentDir">The new host folder to use as the current DOS folder.</param>
+    /// <param name="driveMap">The map between DOS drive letters and host folders paths.</param>
+    void SetDiskParameters(string newCurrentDir, Dictionary<char, string> driveMap);
 }
