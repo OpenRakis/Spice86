@@ -580,9 +580,7 @@ public class DosFileManager {
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
-        string hostPath = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
-
-        string? fullPath = _dosPathResolver.ToHostCaseSensitiveFullName(dosDirectory, true);
+         string? fullPath = _dosPathResolver.ToHostCaseSensitiveFullName(dosDirectory, true);
         if (string.IsNullOrWhiteSpace(fullPath)) {
             return FileNotFoundError(dosDirectory);
         }
@@ -597,6 +595,7 @@ public class DosFileManager {
             return FileNotFoundError(dosDirectory);
         }
 
+        string hostPath = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
         try {
             Directory.CreateDirectory(hostPath);
             return DosFileOperationResult.NoValue();
