@@ -32,6 +32,8 @@ public class DosFileManager {
 
     private readonly IMemory _memory;
 
+    private readonly IDosPathResolver _dosPathResolver;
+
     /// <summary>
     /// All the files opened by DOS.
     /// </summary>
@@ -45,7 +47,6 @@ public class DosFileManager {
         FileOpenMode.Add(0x02, "rw");
     }
 
-    private IDosPathResolver _dosPathResolver;
 
     /// <summary>
     /// Initializes a new instance.
