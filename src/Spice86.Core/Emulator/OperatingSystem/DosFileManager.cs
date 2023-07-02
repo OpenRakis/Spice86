@@ -150,7 +150,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = _dosPathResolver.PrefixWithHostDirectory(fileSpec);
-        _currentMatchingFileSearchFolder = _dosPathResolver.GetFullNameForParentDirectory(hostSearchSpec) ?? hostSearchSpec;
+        _currentMatchingFileSearchFolder = _dosPathResolver.GetFullNameForParentDirectory(hostSearchSpec);
         if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
