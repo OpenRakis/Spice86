@@ -376,3 +376,6 @@ MigrationBackup/
 
 #Sonar
 .sonarqube
+
+#VSharp
+VSharp.*
