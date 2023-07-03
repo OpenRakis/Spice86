@@ -591,7 +591,7 @@ public class DosFileManager {
             CreateDirectory(_dosPathResolver.GetHostRelativePathToCurrentDirectory(parentFolder));
         }
 
-        if (_dosPathResolver.AnyDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
+        if (_dosPathResolver.AnyDosDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
             return FileNotFoundError(dosDirectory);
         }
 
