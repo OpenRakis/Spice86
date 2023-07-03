@@ -144,7 +144,11 @@ public class DosPathResolver : IDosPathResolver {
         }
 
         if (IsPathRooted(path)) {
-            path = Path.Combine(DriveMap[path[0]].FullName, path[3..]);
+            int length = 1;
+            if(StartsWithDosDrive(path)) {
+                length = 3;
+            }
+            path = Path.Combine(DriveMap[path[0]].FullName,path[length..]);
         } else if (StartsWithDosDrive(dosPath)) {
             path = Path.Combine(CurrentHostDirectory, path[2..]);
         } else {
@@ -165,6 +169,7 @@ public class DosPathResolver : IDosPathResolver {
         path[1] == ':';
 
     private bool IsPathRooted(string path) =>
+        path.StartsWith(@"\") ||
         path.Length >= 3 &&
         StartsWithDosDrive(path) &&
         (path[2] == '\\' || path[2] == '/');
