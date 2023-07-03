@@ -36,7 +36,7 @@ public class DosPathResolver : IDosPathResolver {
     /// <inheritdoc/>
     public DosFileOperationResult SetCurrentDir(string dosPath) {
         if (IsPathRooted(dosPath)) {
-            string? newCurrentDirectory = ToHostCaseSensitiveFullName(dosPath, false);
+            string? newCurrentDirectory = TryGetFullHostPath(dosPath, false);
             if (!string.IsNullOrWhiteSpace(newCurrentDirectory)) {
                 DriveMap[dosPath[0]].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(newCurrentDirectory));
                 return DosFileOperationResult.NoValue();
@@ -57,18 +57,18 @@ public class DosPathResolver : IDosPathResolver {
             DriveMap[CurrentDrive].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory));
         }
 
-        while(dosPath.StartsWith(@"\")) {
+        while (dosPath.StartsWith(@"\")) {
             dosPath = dosPath[1..];
         }
 
-        string? hostFullPath = ToHostCaseSensitiveFullName(dosPath, false);
+        string? hostFullPath = TryGetFullHostPath(dosPath, false);
 
-        if(string.IsNullOrWhiteSpace(hostFullPath)) {
+        if (string.IsNullOrWhiteSpace(hostFullPath)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
         DriveMap[CurrentDrive].CurrentDirectory = GetHostRelativePathToCurrentDirectory(hostFullPath);
         return DosFileOperationResult.NoValue();
-}
+    }
 
     /// <inheritdoc/>
     public void SetDiskParameters(char currentDrive, string dosPath, IDictionary<char, MountedFolder> driveMap) {
@@ -80,50 +80,21 @@ public class DosPathResolver : IDosPathResolver {
     /// <inheritdoc />
     public string GetHostFullNameForParentDirectory(string hostPath) => Directory.GetParent(hostPath)?.FullName ?? hostPath;
 
-
-
-    private static string? TryGetFullNameOnDiskOfParentDirectory(string hostDirectory) {
-        if (string.IsNullOrWhiteSpace(hostDirectory)) {
-            return null;
-        }
-        DirectoryInfo hostDirectoryInfo = new(hostDirectory);
-        if (hostDirectoryInfo.Exists) {
-            return hostDirectory;
-        }
-
-        if (hostDirectoryInfo.Parent == null) {
-            return null;
-        }
-
-        string? parent = TryGetFullNameOnDiskOfParentDirectory(hostDirectoryInfo.Parent.FullName);
-        if (parent == null) {
-            return null;
-        }
-
-        return new DirectoryInfo(parent).GetDirectories(hostDirectoryInfo.Name, new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).FirstOrDefault()?.FullName;
-    }
-
-    /// <summary>
-    /// Searches for the path on disk, and returns the first matching file or directory path.
-    /// </summary>
-    /// <param name="dosPath">The case insensitive file path</param>
-    /// <param name="convertParentOnly"></param>
-    /// <returns>The absolute host file path</returns>
-    private string? ToCaseSensitivePath(string? dosPath, bool convertParentOnly) {
+    private string? RecursivelySearchForFullHostPath(string? dosPath, bool convertParentOnly) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
 
         string hostPath = ConvertUtils.ToSlashPath(dosPath);
         string? parentDir = Path.GetDirectoryName(hostPath);
-        if (File.Exists(hostPath) || 
+        if (File.Exists(hostPath) ||
             Directory.Exists(hostPath) ||
             convertParentOnly) {
             // file exists or root reached, no need to go further. Path found.
-            return dosPath;
+            return hostPath;
         }
 
-        string? parent = ToCaseSensitivePath(parentDir, convertParentOnly);
+        string? parent = RecursivelySearchForFullHostPath(parentDir, convertParentOnly);
         if (parent == null) {
             // End of recursion, root reached
             return null;
@@ -131,17 +102,9 @@ public class DosPathResolver : IDosPathResolver {
 
         // Now that parent is for sure on the host file system, let's find the actual path
         try {
-            string? fileNameOnFileSystem = TryGetFullHostFileName(dosPath);
-            if (!string.IsNullOrWhiteSpace(fileNameOnFileSystem)) {
-                return fileNameOnFileSystem;
-            }
             string searchPattern = Path.GetFileName(hostPath);
             if (Directory.Exists(parent)) {
-                return
-                    Directory.GetDirectories(parent, searchPattern)
-                    .Concat(
-                    Directory.GetFiles(parent, searchPattern))
-                    .FirstOrDefault();
+                return GetTopLevelDirsAndFiles(hostPath, searchPattern).FirstOrDefault();
             }
         } catch (IOException e) {
             e.Demystify();
@@ -154,39 +117,18 @@ public class DosPathResolver : IDosPathResolver {
     }
 
     /// <inheritdoc />
-    public string? TryGetFullHostFileName(string dosFilePath) {
-        string? directory = Path.GetDirectoryName(dosFilePath);
-        if (string.IsNullOrWhiteSpace(directory)) {
-            return null;
-        }
-        string? directoryCaseSensitive = TryGetFullNameOnDiskOfParentDirectory(directory);
-        if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || !Directory.Exists(directoryCaseSensitive)) {
-            return null;
-        }
-        string hostFileName = "";
-        IEnumerable<string> array = Directory.GetFiles(directoryCaseSensitive).Select(x => x.ToUpperInvariant());
-        string searchedFile = dosFilePath.ToUpperInvariant();
-        foreach (string file in array) {
-            if (file == searchedFile) {
-                hostFileName = file;
-            }
-        }
-        return hostFileName;
-    }
-
-    /// <inheritdoc />
-    public string? ToHostCaseSensitiveFullName(string dosPath, bool convertParentOnly) {
+    public string? TryGetFullHostPath(string dosPath, bool convertParentOnly = false) {
         string fileName = PrefixWithHostDirectory(dosPath);
         if (!convertParentOnly) {
-            string? caseSensitivePath = ToCaseSensitivePath(fileName, convertParentOnly);
+            string? caseSensitivePath = RecursivelySearchForFullHostPath(fileName, convertParentOnly);
             return caseSensitivePath;
         }
-        
-        string? parent = ToCaseSensitivePath(fileName, convertParentOnly);
+
+        string? parent = RecursivelySearchForFullHostPath(fileName, convertParentOnly);
         if (string.IsNullOrWhiteSpace(parent)) {
             return null;
         }
-        
+
         return ConvertUtils.ToSlashPath(parent);
     }
 
@@ -194,14 +136,13 @@ public class DosPathResolver : IDosPathResolver {
     public string PrefixWithHostDirectory(string dosPath) {
         string path = dosPath;
 
-        if(string.IsNullOrWhiteSpace(path)) {
+        if (string.IsNullOrWhiteSpace(path)) {
             return path;
         }
 
-        if(IsPathRooted(path)) {
+        if (IsPathRooted(path)) {
             path = Path.Combine(DriveMap[path[0]].FullName, path[3..]);
-        }
-        else if (StartsWithDosDrive(dosPath)) {
+        } else if (StartsWithDosDrive(dosPath)) {
             path = Path.Combine(CurrentHostDirectory, path[2..]);
         } else {
             path = Path.Combine(CurrentHostDirectory, path);
@@ -215,19 +156,23 @@ public class DosPathResolver : IDosPathResolver {
     /// </summary>
     private static IEnumerable<char> DriveLetters => "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    private bool StartsWithDosDrive(string path) => 
+    private bool StartsWithDosDrive(string path) =>
         path.Length >= 2 &&
         DriveLetters.Contains(char.ToUpperInvariant(path[0])) &&
         path[1] == ':';
 
-    private bool IsPathRooted(string path) => 
+    private bool IsPathRooted(string path) =>
         path.Length >= 3 &&
         StartsWithDosDrive(path) &&
         (path[2] == '\\' || path[2] == '/');
 
     /// <inheritdoc />
     public bool AnyDirectoryOrFileWithTheSameName(string newFileOrDirectoryPath, DirectoryInfo hostFolder) =>
-        hostFolder.GetDirectories().Select(x => x.Name)
-            .Concat(hostFolder.GetFiles().Select(x => x.Name))
-            .Any(x => string.Equals(x, newFileOrDirectoryPath, StringComparison.OrdinalIgnoreCase));
+        GetTopLevelDirsAndFiles(hostFolder.FullName).Any(x => string.Equals(x, newFileOrDirectoryPath, StringComparison.OrdinalIgnoreCase));
+
+    private static IEnumerable<string> GetTopLevelDirsAndFiles(string hostPath, string searchPattern = "*") {
+        return Directory
+            .GetDirectories(hostPath, searchPattern)
+            .Concat(Directory.GetFiles(hostPath, searchPattern));
+    }
 }
