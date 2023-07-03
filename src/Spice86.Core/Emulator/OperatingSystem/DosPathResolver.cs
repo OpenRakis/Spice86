@@ -20,7 +20,7 @@ public class DosPathResolver : IDosPathResolver {
     public char CurrentDrive { get; private set; }
 
     /// <inheritdoc />
-    public string CurrentHostDirectory => DriveMap[CurrentDrive].FullName;
+    public string CurrentHostDirectory => ConvertUtils.ToSlashPath(DriveMap[CurrentDrive].FullName);
 
     private readonly ILoggerService _loggerService;
 
