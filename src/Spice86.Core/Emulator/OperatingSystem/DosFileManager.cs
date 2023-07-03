@@ -100,7 +100,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
-        string? hostFileName = _dosPathResolver.ToHostCaseSensitiveFullName( fileName, true);
+        string? hostFileName = _dosPathResolver.TryGetFullHostPath( fileName, true);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             return FileOperationErrorWithLog($"Could not find parent of {fileName} so cannot create file.", ErrorCode.PathNotFound);
         }
@@ -274,7 +274,7 @@ public class DosFileManager {
             return OpenDeviceInternal(device, openMode);
         }
         
-        string? hostFileName = _dosPathResolver.ToHostCaseSensitiveFullName( fileName, false);
+        string? hostFileName = _dosPathResolver.TryGetFullHostPath( fileName, false);
         if (hostFileName == null) {
             return FileNotFoundError(fileName);
         }
@@ -474,7 +474,7 @@ public class DosFileManager {
     /// <param name="dosFileName">The file name to convert.</param>
     /// <param name="convertParentOnly">if true will try to find case sensitive match for only the parent path</param>
     /// <returns>A string containing the file name in the host file system, or <c>null</c> if nothing was found.</returns>
-    internal string? ToHostCaseSensitiveFileName(string dosFileName, bool convertParentOnly) => _dosPathResolver.ToHostCaseSensitiveFullName( dosFileName, convertParentOnly);
+    internal string? ToHostCaseSensitiveFileName(string dosFileName, bool convertParentOnly) => _dosPathResolver.TryGetFullHostPath( dosFileName, convertParentOnly);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
@@ -506,7 +506,7 @@ public class DosFileManager {
             Stream? randomAccessFile = null;
             switch (openMode) {
                 case "r": {
-                    string? realFileName = _dosPathResolver.TryGetFullHostFileName(hostFileName);
+                    string? realFileName = _dosPathResolver.TryGetFullHostPath(hostFileName);
                     if (File.Exists(hostFileName)) {
                         randomAccessFile = File.OpenRead(hostFileName);
                     } else if (File.Exists(realFileName)) {
@@ -521,7 +521,7 @@ public class DosFileManager {
                     randomAccessFile = File.OpenWrite(hostFileName);
                     break;
                 case "rw": {
-                    string? realFileName = _dosPathResolver.TryGetFullHostFileName(hostFileName);
+                    string? realFileName = _dosPathResolver.TryGetFullHostPath(hostFileName);
                     if (File.Exists(hostFileName)) {
                         randomAccessFile = File.Open(hostFileName, FileMode.Open);
                     } else if (File.Exists(realFileName)) {
@@ -581,7 +581,7 @@ public class DosFileManager {
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
-         string? fullPath = _dosPathResolver.ToHostCaseSensitiveFullName(dosDirectory, true);
+         string? fullPath = _dosPathResolver.TryGetFullHostPath(dosDirectory, true);
         if (string.IsNullOrWhiteSpace(fullPath)) {
             return FileNotFoundError(dosDirectory);
         }

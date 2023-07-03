@@ -37,14 +37,7 @@ public interface IDosPathResolver {
     /// <param name="dosPath">The file name to convert.</param>
     /// <param name="convertParentOnly">if true, it will try to find the case sensitive match for only the parent of the path</param>
     /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
-    string? ToHostCaseSensitiveFullName(string dosPath, bool convertParentOnly);
-
-    /// <summary>
-    /// Returns the full host file path, including casing.
-    /// </summary>
-    /// <param name="dosFilePath">The DOS file path.</param>
-    /// <returns>A string containing the host file path, or <c>null</c> if not found.</returns>
-    string? TryGetFullHostFileName(string dosFilePath);
+    string? TryGetFullHostPath(string dosPath, bool convertParentOnly = false);
 
     /// <summary>
     /// Prefixes the given filename by either the mapped drive folder or the current folder depending on whether there is
