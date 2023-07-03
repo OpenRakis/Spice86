@@ -33,12 +33,21 @@ public class DosPathResolver : IDosPathResolver {
     /// <inheritdoc />
     public string GetHostRelativePathToCurrentDirectory(string hostPath) => Path.GetRelativePath(CurrentHostDirectory, hostPath);
 
+    private string GetSafeHostRelativePathToCurrentDirectory(string hostPath, string fallbackValue) {
+        string newCurrentFolder = GetHostRelativePathToCurrentDirectory(hostPath);
+        if(newCurrentFolder.StartsWith(@"..\") || newCurrentFolder.StartsWith("../")) {
+            return fallbackValue;
+        }
+        return newCurrentFolder;
+    }
+
     /// <inheritdoc/>
     public DosFileOperationResult SetCurrentDir(string dosPath) {
         if (IsPathRooted(dosPath)) {
-            string? newCurrentDirectory = TryGetFullHostPath(dosPath);
-            if (!string.IsNullOrWhiteSpace(newCurrentDirectory)) {
-                DriveMap[dosPath[0]].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(newCurrentDirectory));
+            string? hostPath = TryGetFullHostPath(dosPath);
+            if (!string.IsNullOrWhiteSpace(hostPath)) {
+                char driveLetter = StartsWithDosDrive(dosPath) ? dosPath[0] : CurrentDrive;
+                DriveMap[driveLetter].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(hostPath, DriveMap[driveLetter].MountPoint);
                 return DosFileOperationResult.NoValue();
             }
         }
@@ -48,13 +57,13 @@ public class DosPathResolver : IDosPathResolver {
         }
 
         if (dosPath == ".." || dosPath == @"..\") {
-            DriveMap[CurrentDrive].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory));
+            DriveMap[CurrentDrive].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory), DriveMap[CurrentDrive].MountPoint);
             return DosFileOperationResult.NoValue();
         }
 
         while (dosPath.StartsWith("..\\")) {
             dosPath = dosPath[3..];
-            DriveMap[CurrentDrive].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory));
+            DriveMap[CurrentDrive].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory), DriveMap[CurrentDrive].MountPoint);
         }
 
         while (dosPath.StartsWith(@"\")) {
@@ -66,7 +75,7 @@ public class DosPathResolver : IDosPathResolver {
         if (string.IsNullOrWhiteSpace(hostFullPath)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
-        DriveMap[CurrentDrive].CurrentDirectory = GetHostRelativePathToCurrentDirectory(hostFullPath);
+        DriveMap[CurrentDrive].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(hostFullPath, DriveMap[CurrentDrive].MountPoint);
         return DosFileOperationResult.NoValue();
     }
 
