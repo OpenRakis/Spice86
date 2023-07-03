@@ -84,5 +84,5 @@ public interface IDosPathResolver {
     /// <param name="currentDrive">The current DOS drive letter.</param>
     /// <param name="newCurrentDir">The new host folder to use as the current DOS folder.</param>
     /// <param name="driveMap">The map between DOS drive letters and host folders paths.</param>
-    void SetDiskParameters(char currentDrive, string newCurrentDir, Dictionary<char, MountedFolder> driveMap);
+    void SetDiskParameters(char currentDrive, string newCurrentDir, IDictionary<char, MountedFolder> driveMap);
 }

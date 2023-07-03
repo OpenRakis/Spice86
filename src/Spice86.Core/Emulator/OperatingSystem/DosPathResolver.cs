@@ -71,7 +71,7 @@ public class DosPathResolver : IDosPathResolver {
 }
 
     /// <inheritdoc/>
-    public void SetDiskParameters(char currentDrive, string dosPath, Dictionary<char, MountedFolder> driveMap) {
+    public void SetDiskParameters(char currentDrive, string dosPath, IDictionary<char, MountedFolder> driveMap) {
         DriveMap = driveMap;
         CurrentDrive = currentDrive;
         SetCurrentDir(dosPath);
