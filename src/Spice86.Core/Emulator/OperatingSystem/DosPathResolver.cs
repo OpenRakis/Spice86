@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -28,7 +27,15 @@ public class DosPathResolver : IDosPathResolver {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosPathResolver(ILoggerService loggerService) => _loggerService = loggerService;
+    /// <param name="currentDrive">The current DOS drive letter.</param>
+    /// <param name="newCurrentDir">The new host folder to use as the current DOS folder.</param>
+    /// <param name="driveMap">The map between DOS drive letters and host folders paths.</param>
+    public DosPathResolver(ILoggerService loggerService, char currentDrive, string newCurrentDir, IDictionary<char, MountedFolder> driveMap) {
+        _loggerService = loggerService;
+        DriveMap = driveMap;
+        CurrentDrive = currentDrive;
+        SetCurrentDir(newCurrentDir);
+    }
 
     /// <inheritdoc />
     public string GetHostRelativePathToCurrentDirectory(string hostPath) => Path.GetRelativePath(CurrentHostDirectory, hostPath);
@@ -77,13 +84,6 @@ public class DosPathResolver : IDosPathResolver {
         }
         DriveMap[CurrentDrive].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(hostFullPath, DriveMap[CurrentDrive].MountPoint);
         return DosFileOperationResult.NoValue();
-    }
-
-    /// <inheritdoc/>
-    public void SetDiskParameters(char currentDrive, string dosPath, IDictionary<char, MountedFolder> driveMap) {
-        DriveMap = driveMap;
-        CurrentDrive = currentDrive;
-        SetCurrentDir(dosPath);
     }
 
     /// <inheritdoc />

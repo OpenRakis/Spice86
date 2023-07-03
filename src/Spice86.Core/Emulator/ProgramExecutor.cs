@@ -146,8 +146,6 @@ public sealed class ProgramExecutor : IDisposable {
         if (_configuration.InitializeDOS is true) {
             // Initialize VGA text mode.
             Machine.VgaFunctions.VgaSetMode(0x03, ModeFlags.Legacy);
-            // Set up disk/filesystem.
-            InitializeDOS(_configuration);
             // Doing this after function Handler init so that custom code there can have a chance to register some callbacks
             // if needed
             Machine.InstallAllCallbacksInInterruptTable();
@@ -192,41 +190,11 @@ public sealed class ProgramExecutor : IDisposable {
         return res;
     }
 
-    private static string? GetExeParentFolder(Configuration configuration) {
-        string? exe = configuration.Exe;
-        if (exe == null) {
-            return null;
-        }
-
-        DirectoryInfo? parentDir = Directory.GetParent(exe);
-        // Must be in the current directory
-        parentDir ??= new DirectoryInfo(Environment.CurrentDirectory);
-
-        string parent = Path.GetFullPath(parentDir.FullName);
-        return parent.Replace('\\', '/') + '/';
-    }
-
     private void InitializeCpu() {
         Cpu cpu = Machine.Cpu;
         cpu.ErrorOnUninitializedInterruptHandler = true;
         State state = cpu.State;
         state.Flags.IsDOSBoxCompatible = true;
-    }
-
-    private void InitializeDOS(Configuration configuration) {
-        string? parentFolder = GetExeParentFolder(configuration);
-        Dictionary<char, MountedFolder> driveMap = new();
-        string? cDrive = configuration.CDrive;
-        if (string.IsNullOrWhiteSpace(cDrive)) {
-            cDrive = parentFolder;
-        }
-        ArgumentException.ThrowIfNullOrEmpty(cDrive);
-
-        cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
-        ArgumentException.ThrowIfNullOrEmpty(parentFolder);
-
-        driveMap.Add('C', new MountedFolder(cDrive));
-        Machine.Dos.FileManager.SetDiskParameters('C', @".", driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration,

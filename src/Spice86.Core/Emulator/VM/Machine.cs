@@ -30,6 +30,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Emulates an IBM PC
@@ -203,7 +204,21 @@ public class Machine : IDisposable {
     /// The emulator configuration.
     /// </summary>
     public Configuration Configuration { get; }
-    
+
+    private static string GetExeParentFolder(Configuration configuration) {
+        string? exe = configuration.Exe;
+        if (string.IsNullOrWhiteSpace(exe)) {
+            return Environment.CurrentDirectory;
+        }
+
+        DirectoryInfo? parentDir = Directory.GetParent(exe);
+        // Must be in the current directory
+        parentDir ??= new DirectoryInfo(Environment.CurrentDirectory);
+
+        string parent = Path.GetFullPath(parentDir.FullName);
+        return ConvertUtils.ToSlashFolderPath(parent);
+    }
+
     /// <summary>
     /// Initializes a new instance
     /// <param name="machineCreationOptions">Describes how the machine will run, and what it will run.</param>
@@ -244,7 +259,7 @@ public class Machine : IDisposable {
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(machineCreationOptions.Gui, VgaRenderer, machineCreationOptions.LoggerService);
-        
+
         Timer = new Timer(this, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
         RegisterIoPortHandler(Timer);
         Keyboard = new Keyboard(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui, machineCreationOptions.Configuration);
@@ -257,7 +272,7 @@ public class Machine : IDisposable {
         RegisterIoPortHandler(PcSpeaker);
         OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, new SoundBlasterHardwareConfig(7,1,5));
+        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, new SoundBlasterHardwareConfig(7, 1, 5));
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
@@ -267,18 +282,18 @@ public class Machine : IDisposable {
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService, MemoryMap.InterruptHandlersSegment);
         Cpu.CallbackHandler = CallbackHandler;
-        
+
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
         VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(VideoInt10Handler);
-        
+
         TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(TimerInt8Handler);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(BiosKeyboardInt9Handler);
-        
+
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
         RegisterCallbackHandler(BiosEquipmentDeterminationInt11Handler);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
@@ -295,7 +310,9 @@ public class Machine : IDisposable {
         RegisterCallbackHandler(SystemClockInt1AHandler);
 
         // Initialize DOS.
-        Dos = new Dos(this, machineCreationOptions.LoggerService);
+        IDictionary<char, MountedFolder> driveMap = InitializeDriveMap();
+
+        Dos = new Dos(this, machineCreationOptions.LoggerService, new DosPathResolver(machineCreationOptions.LoggerService, 'C', @".", driveMap));
         Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
@@ -309,6 +326,18 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
+    }
+
+    private IDictionary<char, MountedFolder> InitializeDriveMap() {
+        string parentFolder = GetExeParentFolder(Configuration);
+        Dictionary<char, MountedFolder> driveMap = new();
+        string? cDrive = Configuration.CDrive;
+        if (string.IsNullOrWhiteSpace(cDrive)) {
+            cDrive = parentFolder;
+        }
+        cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
+        driveMap.Add('C', new MountedFolder(cDrive));
+        return driveMap;
     }
 
     /// <summary>
