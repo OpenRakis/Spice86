@@ -100,7 +100,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
-        string? hostFileName = _dosPathResolver.TryGetFullHostPath( fileName, true);
+        string? hostFileName = _dosPathResolver.TryGetFullParentHostPath( fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             return FileOperationErrorWithLog($"Could not find parent of {fileName} so cannot create file.", ErrorCode.PathNotFound);
         }
@@ -274,7 +274,7 @@ public class DosFileManager {
             return OpenDeviceInternal(device, openMode);
         }
         
-        string? hostFileName = _dosPathResolver.TryGetFullHostPath( fileName, false);
+        string? hostFileName = _dosPathResolver.TryGetFullHostPath( fileName);
         if (hostFileName == null) {
             return FileNotFoundError(fileName);
         }
@@ -472,9 +472,8 @@ public class DosFileManager {
     /// </ul>
     /// </summary>
     /// <param name="dosFileName">The file name to convert.</param>
-    /// <param name="convertParentOnly">if true will try to find case sensitive match for only the parent path</param>
     /// <returns>A string containing the file name in the host file system, or <c>null</c> if nothing was found.</returns>
-    internal string? ToHostCaseSensitiveFileName(string dosFileName, bool convertParentOnly) => _dosPathResolver.TryGetFullHostPath( dosFileName, convertParentOnly);
+    internal string? ToHostCaseSensitiveFileName(string dosFileName, bool convertParentOnly) => _dosPathResolver.TryGetFullHostPath( dosFileName);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
@@ -581,7 +580,7 @@ public class DosFileManager {
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
-         string? fullPath = _dosPathResolver.TryGetFullHostPath(dosDirectory, true);
+         string? fullPath = _dosPathResolver.TryGetFullParentHostPath(dosDirectory);
         if (string.IsNullOrWhiteSpace(fullPath)) {
             return FileNotFoundError(dosDirectory);
         }

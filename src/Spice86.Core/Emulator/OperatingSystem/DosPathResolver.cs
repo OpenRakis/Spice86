@@ -36,7 +36,7 @@ public class DosPathResolver : IDosPathResolver {
     /// <inheritdoc/>
     public DosFileOperationResult SetCurrentDir(string dosPath) {
         if (IsPathRooted(dosPath)) {
-            string? newCurrentDirectory = TryGetFullHostPath(dosPath, false);
+            string? newCurrentDirectory = TryGetFullHostPath(dosPath);
             if (!string.IsNullOrWhiteSpace(newCurrentDirectory)) {
                 DriveMap[dosPath[0]].CurrentDirectory = GetHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(newCurrentDirectory));
                 return DosFileOperationResult.NoValue();
@@ -61,7 +61,7 @@ public class DosPathResolver : IDosPathResolver {
             dosPath = dosPath[1..];
         }
 
-        string? hostFullPath = TryGetFullHostPath(dosPath, false);
+        string? hostFullPath = TryGetFullHostPath(dosPath);
 
         if (string.IsNullOrWhiteSpace(hostFullPath)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
@@ -117,19 +117,22 @@ public class DosPathResolver : IDosPathResolver {
     }
 
     /// <inheritdoc />
-    public string? TryGetFullHostPath(string dosPath, bool convertParentOnly = false) {
+    public string? TryGetFullParentHostPath(string dosPath) {
         string fileName = PrefixWithHostDirectory(dosPath);
-        if (!convertParentOnly) {
-            string? caseSensitivePath = RecursivelySearchForFullHostPath(fileName, convertParentOnly);
-            return caseSensitivePath;
-        }
 
-        string? parent = RecursivelySearchForFullHostPath(fileName, convertParentOnly);
+        string? parent = RecursivelySearchForFullHostPath(fileName, true);
         if (string.IsNullOrWhiteSpace(parent)) {
             return null;
         }
 
         return ConvertUtils.ToSlashPath(parent);
+    }
+
+    /// <inheritdoc />
+    public string? TryGetFullHostPath(string dosPath) {
+        string fileName = PrefixWithHostDirectory(dosPath);
+        string? caseSensitivePath = RecursivelySearchForFullHostPath(fileName, false);
+        return caseSensitivePath;
     }
 
     /// <inheritdoc />
