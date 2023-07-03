@@ -80,27 +80,7 @@ public class DosPathResolver : IDosPathResolver {
     /// <inheritdoc />
     public string GetHostFullNameForParentDirectory(string hostPath) => Directory.GetParent(hostPath)?.FullName ?? hostPath;
 
-    /// <inheritdoc />
-    public string? TryGetFullHostFileName(string dosFilePath) {
-        string? directory = Path.GetDirectoryName(dosFilePath);
-        if(string.IsNullOrWhiteSpace(directory)) {
-            return null;
-        }
-        string? directoryCaseSensitive = TryGetFullNameOnDiskOfParentDirectory(directory);
-        if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || !Directory.Exists(directoryCaseSensitive)) {
-            return null;
-        }
-        string hostFileName = "";
-        string[] array = Directory.GetFiles(directoryCaseSensitive);
-        foreach (string file in array) {
-            string fileToUpper = file.ToUpperInvariant();
-            string searchedFile = dosFilePath.ToUpperInvariant();
-            if (fileToUpper == searchedFile) {
-                hostFileName = file;
-            }
-        }
-        return hostFileName;
-    }
+
 
     private static string? TryGetFullNameOnDiskOfParentDirectory(string hostDirectory) {
         if (string.IsNullOrWhiteSpace(hostDirectory)) {
@@ -172,7 +152,28 @@ public class DosPathResolver : IDosPathResolver {
 
         return null;
     }
-    
+
+    /// <inheritdoc />
+    public string? TryGetFullHostFileName(string dosFilePath) {
+        string? directory = Path.GetDirectoryName(dosFilePath);
+        if (string.IsNullOrWhiteSpace(directory)) {
+            return null;
+        }
+        string? directoryCaseSensitive = TryGetFullNameOnDiskOfParentDirectory(directory);
+        if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || !Directory.Exists(directoryCaseSensitive)) {
+            return null;
+        }
+        string hostFileName = "";
+        IEnumerable<string> array = Directory.GetFiles(directoryCaseSensitive).Select(x => x.ToUpperInvariant());
+        string searchedFile = dosFilePath.ToUpperInvariant();
+        foreach (string file in array) {
+            if (file == searchedFile) {
+                hostFileName = file;
+            }
+        }
+        return hostFileName;
+    }
+
     /// <inheritdoc />
     public string? ToHostCaseSensitiveFullName(string dosPath, bool convertParentOnly) {
         string fileName = PrefixWithHostDirectory(dosPath);
