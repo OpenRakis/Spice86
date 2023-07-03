@@ -76,12 +76,4 @@ public interface IDosPathResolver {
     /// <param name="newCurrentDir">The new host folder to use as the current DOS folder.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> that details the result of the operation.</returns>
     DosFileOperationResult SetCurrentDir(string newCurrentDir);
-
-    /// <summary>
-    /// Sets the current DOS folder, and the map between DOS drive letters and host folders paths.
-    /// </summary>
-    /// <param name="currentDrive">The current DOS drive letter.</param>
-    /// <param name="newCurrentDir">The new host folder to use as the current DOS folder.</param>
-    /// <param name="driveMap">The map between DOS drive letters and host folders paths.</param>
-    void SetDiskParameters(char currentDrive, string newCurrentDir, IDictionary<char, MountedFolder> driveMap);
 }

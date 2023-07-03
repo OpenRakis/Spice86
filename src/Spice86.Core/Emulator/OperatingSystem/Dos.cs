@@ -86,11 +86,12 @@ public class Dos {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Dos(Machine machine, Indexable memory, ILoggerService loggerService) {
+    /// <param name="dosPathResolver"></param>
+    public Dos(Machine machine, Indexable memory, ILoggerService loggerService, IDosPathResolver dosPathResolver) {
         _machine = machine;
         _loggerService = loggerService;
         AddDefaultDevices();
-        FileManager = new DosFileManager(_machine.Memory, _loggerService, this.Devices, new DosPathResolver(_loggerService));
+        FileManager = new DosFileManager(_machine.Memory, _loggerService, this.Devices, dosPathResolver);
         MemoryManager = new DosMemoryManager(_machine.Memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_machine, _loggerService);
         DosInt21Handler = new DosInt21Handler(_machine, memory, _loggerService, this);
