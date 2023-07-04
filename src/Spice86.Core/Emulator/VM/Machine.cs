@@ -205,20 +205,6 @@ public class Machine : IDisposable {
     /// </summary>
     public Configuration Configuration { get; }
 
-    private static string GetExeParentFolder(Configuration configuration) {
-        string? exe = configuration.Exe;
-        if (string.IsNullOrWhiteSpace(exe)) {
-            return Environment.CurrentDirectory;
-        }
-
-        DirectoryInfo? parentDir = Directory.GetParent(exe);
-        // Must be in the current directory
-        parentDir ??= new DirectoryInfo(Environment.CurrentDirectory);
-
-        string parent = Path.GetFullPath(parentDir.FullName);
-        return ConvertUtils.ToSlashFolderPath(parent);
-    }
-
     /// <summary>
     /// Initializes a new instance
     /// <param name="machineCreationOptions">Describes how the machine will run, and what it will run.</param>
@@ -310,9 +296,7 @@ public class Machine : IDisposable {
         RegisterCallbackHandler(SystemClockInt1AHandler);
 
         // Initialize DOS.
-        IDictionary<char, MountedFolder> driveMap = InitializeDriveMap();
-
-        Dos = new Dos(this, machineCreationOptions.LoggerService, new DosPathResolver(machineCreationOptions.LoggerService, 'C', @".", driveMap));
+        Dos = new Dos(this, machineCreationOptions.LoggerService, new DosPathResolver(machineCreationOptions.LoggerService, Configuration));
         Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
@@ -326,18 +310,6 @@ public class Machine : IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
-    }
-
-    private IDictionary<char, MountedFolder> InitializeDriveMap() {
-        string parentFolder = GetExeParentFolder(Configuration);
-        Dictionary<char, MountedFolder> driveMap = new();
-        string? cDrive = Configuration.CDrive;
-        if (string.IsNullOrWhiteSpace(cDrive)) {
-            cDrive = parentFolder;
-        }
-        cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
-        driveMap.Add('C', new MountedFolder(cDrive));
-        return driveMap;
     }
 
     /// <summary>
