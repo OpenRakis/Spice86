@@ -630,4 +630,12 @@ public class DosFileManager {
 
         return PathNotFoundError(dosDirectory);
     }
+
+    /// <summary>
+    /// Gets the current DOS directory.
+    /// </summary>
+    /// <param name="driveNumber">The drive number (0x0: default, 0x1: A:, 0x2: B:, 0x3: C:, ...)</param>
+    /// <param name="currentDir">The string variable receiving the current DOS directory.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) => _dosPathResolver.GetCurrentDosDirectory(driveNumber, out currentDir);
 }

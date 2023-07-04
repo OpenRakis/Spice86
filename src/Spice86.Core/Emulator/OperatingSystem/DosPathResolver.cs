@@ -22,6 +22,23 @@ public class DosPathResolver : IDosPathResolver {
     /// <inheritdoc />
     public string CurrentHostDirectory => ConvertUtils.ToSlashPath(DriveMap[CurrentDrive].FullName);
 
+    /// <inheritdoc />
+    public DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir) {
+        //default drives
+        if (driveNumber == 0 && DriveMap.Any()) {
+            MountedFolder mountedFolder = DriveMap[CurrentDrive];
+            currentDir = Path.GetRelativePath(mountedFolder.MountPoint, mountedFolder.CurrentDirectory).ToUpperInvariant();
+            return DosFileOperationResult.NoValue();
+        }
+        else if (DriveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
+            currentDir = Path.GetRelativePath(mountedFolder.MountPoint, mountedFolder.CurrentDirectory).ToUpperInvariant();
+            return DosFileOperationResult.NoValue();
+        }
+        currentDir = "";
+        return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
+    }
+
+
     private readonly ILoggerService _loggerService;
 
     /// <summary>
@@ -193,7 +210,7 @@ public class DosPathResolver : IDosPathResolver {
     /// <summary>
     /// All the possible DOS drive letters
     /// </summary>
-    private static IEnumerable<char> DriveLetters => "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static char[] DriveLetters => new char[] {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'};
 
     private bool StartsWithDosDrive(string path) =>
         path.Length >= 2 &&
