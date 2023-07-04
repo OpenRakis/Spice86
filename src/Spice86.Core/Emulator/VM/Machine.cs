@@ -294,7 +294,7 @@ public class Machine : IDisposable {
             TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        Dos = new Dos(this, (Indexable)Memory, machineCreationOptions.LoggerService, new DosPathResolver(machineCreationOptions.LoggerService), Configuration);
+        Dos = new Dos(this, (Indexable)Memory, machineCreationOptions.LoggerService, new DosPathResolver(machineCreationOptions.LoggerService, Configuration));
 
         if (Configuration.InitializeDOS is not false) {
             // Register the interrupt handlers

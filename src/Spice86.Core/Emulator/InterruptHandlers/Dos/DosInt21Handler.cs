@@ -21,6 +21,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
 /// Reimplementation of INT21
@@ -539,15 +540,32 @@ public class DosInt21Handler : InterruptHandler {
         return _cp850CharSet.GetString(characterBytes.ToArray());
     }
     
+    /// <summary>
+    /// Gets an ASCIZ pathname containing the current DOS directory in the address at DS:DI. <br/>
+    /// Params: <br/>
+    /// DL = drive number (0x0: default, 0x1: A:, 0x2: B:, 0x3: C:, ...)
+    /// </summary>
+    /// <remarks>
+    /// Does not include a drive, or the initial backslash
+    /// </remarks>
+    /// <returns>
+    /// DS:DI = ASCIZ pathname containing the current DOS directory. <br/>
+    /// CF is clear if sucessful. <br/>
+    /// CF is set on error. Possible error code in AX: 0xF (InvalidDrive).
+    /// </returns>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void GetCurrentDirectory(bool calledFromVm) {
-        SetCarryFlag(false, calledFromVm);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("GET CURRENT DIRECTORY {ResponseAddress}",
-                ConvertUtils.ToSegmentedAddressRepresentation(_state.DS, _state.SI));
-        }
         uint responseAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
-        // Fake that we are always at the root of the drive (empty String)
-        _memory.UInt8[responseAddress] = 0;
+        DosFileOperationResult result = _dosFileManager.GetCurrentDir(_state.DL, out string currentDir);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("GET CURRENT DIRECTORY {ResponseAddress}: {CurrentDpsDirectory}",
+                ConvertUtils.ToSegmentedAddressRepresentation(_state.DS, _state.SI), currentDir);
+        }
+        _memory.LoadData(responseAddress, Encoding.ASCII.GetBytes(currentDir).Concat(Encoding.ASCII.GetBytes("0")).ToArray());
+        SetCarryFlag(false, calledFromVm);
+        // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
+        _state.AX = 0x0100;
+        SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
     private string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {

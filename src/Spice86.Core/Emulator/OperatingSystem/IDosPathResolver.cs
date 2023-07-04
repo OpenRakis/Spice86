@@ -24,6 +24,11 @@ public interface IDosPathResolver {
     string CurrentHostDirectory { get; }
 
     /// <summary>
+    /// Gets the current DOS directory.
+    /// </summary>
+    DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir);
+
+    /// <summary>
     /// Create a relative path from the current host directory to another. Paths will be resolved before calculating the difference.
     /// Default path comparison for the active platform will be used (OrdinalIgnoreCase for Windows or Mac, Ordinal for Unix).
     /// </summary>
