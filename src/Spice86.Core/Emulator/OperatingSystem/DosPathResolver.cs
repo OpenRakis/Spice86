@@ -57,6 +57,9 @@ public class DosPathResolver : IDosPathResolver {
                 DriveMap[driveLetter].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(hostPath, DriveMap[driveLetter].MountPoint);
                 return DosFileOperationResult.NoValue();
             }
+            else {
+                return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+            }
         }
 
         if (dosPath == "." || dosPath == @".\") {
