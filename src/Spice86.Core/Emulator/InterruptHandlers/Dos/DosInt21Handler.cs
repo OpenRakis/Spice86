@@ -76,6 +76,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x36, GetFreeDiskSpace);
         AddAction(0x38, () => SetCountryCode(true));
         AddAction(0x39, () => CreateDirectory(true));
+        AddAction(0x3A, () => RemoveDirectory(true));
         AddAction(0x3B, () => ChangeCurrentDirectory(true));
         AddAction(0x3C, () => CreateFileUsingHandle(true));
         AddAction(0x3D, () => OpenFile(true));
@@ -103,6 +104,15 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     private void CreateDirectory(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetStringAtDsDx());
+        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+    }
+
+    /// <summary>
+    /// Removes a directory.
+    /// </summary>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
+    private void RemoveDirectory(bool calledFromVm) {
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(GetStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
