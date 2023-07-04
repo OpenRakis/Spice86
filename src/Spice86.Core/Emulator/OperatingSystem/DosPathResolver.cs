@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -40,7 +41,7 @@ public class DosPathResolver : IDosPathResolver {
     /// <inheritdoc />
     public string GetHostRelativePathToCurrentDirectory(string hostPath) => Path.GetRelativePath(CurrentHostDirectory, hostPath);
 
-    private string GetSafeHostRelativePathToCurrentDirectory(string hostPath, string fallbackValue) {
+    private string GetHostRelativePathToCurrentDirectoryWithinMountPoint(string hostPath, string fallbackValue) {
         string newCurrentFolder = GetHostRelativePathToCurrentDirectory(hostPath);
         if(newCurrentFolder.StartsWith(@"..\") || newCurrentFolder.StartsWith("../")) {
             return fallbackValue;
@@ -54,10 +55,9 @@ public class DosPathResolver : IDosPathResolver {
             string? hostPath = TryGetFullHostPath(dosPath);
             if (!string.IsNullOrWhiteSpace(hostPath)) {
                 char driveLetter = StartsWithDosDrive(dosPath) ? dosPath[0] : CurrentDrive;
-                DriveMap[driveLetter].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(hostPath, DriveMap[driveLetter].MountPoint);
-                return DosFileOperationResult.NoValue();
-            }
-            else {
+                string newCurrentDir = GetHostRelativePathToCurrentDirectoryWithinMountPoint(hostPath, DriveMap[driveLetter].MountPoint);
+                return SetCurrentDirValue(driveLetter, newCurrentDir);
+            } else {
                 return DosFileOperationResult.Error(ErrorCode.PathNotFound);
             }
         }
@@ -67,13 +67,12 @@ public class DosPathResolver : IDosPathResolver {
         }
 
         if (dosPath == ".." || dosPath == @"..\") {
-            DriveMap[CurrentDrive].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory), DriveMap[CurrentDrive].MountPoint);
-            return DosFileOperationResult.NoValue();
+            return SetCurrentDirValue(CurrentDrive, GetHostRelativePathToCurrentDirectoryWithinMountPoint(GetHostFullNameForParentDirectory(CurrentHostDirectory), DriveMap[CurrentDrive].MountPoint));
         }
 
         while (dosPath.StartsWith("..\\")) {
             dosPath = dosPath[3..];
-            DriveMap[CurrentDrive].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(GetHostFullNameForParentDirectory(CurrentHostDirectory), DriveMap[CurrentDrive].MountPoint);
+            SetCurrentDirValue(CurrentDrive, GetHostRelativePathToCurrentDirectoryWithinMountPoint(GetHostFullNameForParentDirectory(CurrentHostDirectory), DriveMap[CurrentDrive].MountPoint));
         }
 
         while (dosPath.StartsWith(@"\")) {
@@ -85,8 +84,16 @@ public class DosPathResolver : IDosPathResolver {
         if (string.IsNullOrWhiteSpace(hostFullPath)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
-        DriveMap[CurrentDrive].CurrentDirectory = GetSafeHostRelativePathToCurrentDirectory(hostFullPath, DriveMap[CurrentDrive].MountPoint);
-        return DosFileOperationResult.NoValue();
+        return SetCurrentDirValue(CurrentDrive, GetHostRelativePathToCurrentDirectoryWithinMountPoint(hostFullPath, DriveMap[CurrentDrive].MountPoint));
+    }
+
+    private DosFileOperationResult SetCurrentDirValue(char driveLetter, string newCurrentDir) {
+        if (Encoding.ASCII.GetByteCount(newCurrentDir) > 63) {
+            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        } else {
+            DriveMap[driveLetter].CurrentDirectory = newCurrentDir;
+            return DosFileOperationResult.NoValue();
+        }
     }
 
     /// <inheritdoc />
