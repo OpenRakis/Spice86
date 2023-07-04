@@ -411,6 +411,10 @@ public class DosFileManager {
         return FileOperationErrorWithLog($"File {fileName} not found!", ErrorCode.FileNotFound);
     }
 
+    private DosFileOperationResult PathNotFoundError(string? path) {
+        return FileOperationErrorWithLog($"File {path} not found!", ErrorCode.PathNotFound);
+    }
+
     private DosFileOperationResult FileOperationErrorWithLog(string message, ErrorCode errorCode) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
             _loggerService.Warning("{FileNotFoundErrorWithLog}: {Message}", nameof(FileOperationErrorWithLog), message);
@@ -574,7 +578,7 @@ public class DosFileManager {
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
         string? fullPath = _dosPathResolver.TryGetFullParentHostPath(dosDirectory);
         if (string.IsNullOrWhiteSpace(fullPath)) {
-            return FileNotFoundError(dosDirectory);
+            return PathNotFoundError(dosDirectory);
         }
 
         string parentFolder = _dosPathResolver.GetHostFullNameForParentDirectory(fullPath);
@@ -584,7 +588,7 @@ public class DosFileManager {
         }
 
         if (_dosPathResolver.AnyDosDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
-            return FileNotFoundError(dosDirectory);
+            return PathNotFoundError(dosDirectory);
         }
 
         string hostPath = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
@@ -598,6 +602,6 @@ public class DosFileManager {
             }
         }
 
-        return FileNotFoundError(dosDirectory);
+        return PathNotFoundError(dosDirectory);
     }
 }
