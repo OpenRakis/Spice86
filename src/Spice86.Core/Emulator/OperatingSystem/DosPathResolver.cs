@@ -9,7 +9,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-/// <inheritdoc />
+/// <inheritdoc cref="IDosPathResolver" />
 public class DosPathResolver : IDosPathResolver {
 
     /// <inheritdoc />
@@ -146,22 +146,21 @@ public class DosPathResolver : IDosPathResolver {
 
     /// <inheritdoc />
     public string PrefixWithHostDirectory(string dosPath) {
-        string path = dosPath;
-
-        if (string.IsNullOrWhiteSpace(path)) {
-            return path;
+        if (string.IsNullOrWhiteSpace(dosPath)) {
+            return dosPath;
         }
 
-        if (IsPathRooted(path)) {
+        string path;
+        if (IsPathRooted(dosPath)) {
             int length = 1;
-            if(StartsWithDosDrive(path)) {
+            if (StartsWithDosDrive(dosPath)) {
                 length = 3;
             }
-            path = Path.Combine(DriveMap[path[0]].FullName,path[length..]);
+            path = Path.Combine(DriveMap[dosPath[0]].MountPoint, dosPath[length..]);
         } else if (StartsWithDosDrive(dosPath)) {
-            path = Path.Combine(CurrentHostDirectory, path[2..]);
+            path = Path.Combine(DriveMap[dosPath[0]].MountPoint, dosPath[2..]);
         } else {
-            path = Path.Combine(CurrentHostDirectory, path);
+            path = Path.Combine(DriveMap[CurrentDrive].MountPoint, dosPath);
         }
 
         return ConvertUtils.ToSlashPath(path);
@@ -181,7 +180,7 @@ public class DosPathResolver : IDosPathResolver {
         path.StartsWith(@"\") ||
         path.Length >= 3 &&
         StartsWithDosDrive(path) &&
-        (path[2] == '\\' || path[2] == '/');
+        path[2] == '\\';
 
     /// <inheritdoc />
     public bool AnyDosDirectoryOrFileWithTheSameName(string newFileOrDirectoryPath, DirectoryInfo hostFolder) =>
