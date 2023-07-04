@@ -28,14 +28,38 @@ public class DosPathResolver : IDosPathResolver {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="currentDrive">The current DOS drive letter.</param>
-    /// <param name="newCurrentDir">The new host folder to use as the current DOS folder.</param>
-    /// <param name="driveMap">The map between DOS drive letters and host folders paths.</param>
-    public DosPathResolver(ILoggerService loggerService, char currentDrive, string newCurrentDir, IDictionary<char, MountedFolder> driveMap) {
+    /// <param name="configuration">The emulator configuration.</param>
+    public DosPathResolver(ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
-        DriveMap = driveMap;
-        CurrentDrive = currentDrive;
-        SetCurrentDir(newCurrentDir);
+        DriveMap = InitializeDriveMap(configuration);
+        CurrentDrive = 'C';
+        SetCurrentDir(@"C:\");
+    }
+
+    private static string GetExeParentFolder(Configuration configuration) {
+        string? exe = configuration.Exe;
+        if (string.IsNullOrWhiteSpace(exe)) {
+            return Environment.CurrentDirectory;
+        }
+
+        DirectoryInfo? parentDir = Directory.GetParent(exe);
+        // Must be in the current directory
+        parentDir ??= new DirectoryInfo(Environment.CurrentDirectory);
+
+        string parent = Path.GetFullPath(parentDir.FullName);
+        return ConvertUtils.ToSlashFolderPath(parent);
+    }
+
+    private IDictionary<char, MountedFolder> InitializeDriveMap(Configuration configuration) {
+        string parentFolder = GetExeParentFolder(configuration);
+        Dictionary<char, MountedFolder> driveMap = new();
+        string? cDrive = configuration.CDrive;
+        if (string.IsNullOrWhiteSpace(cDrive)) {
+            cDrive = parentFolder;
+        }
+        cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
+        driveMap.Add('C', new MountedFolder(cDrive));
+        return driveMap;
     }
 
     /// <inheritdoc />
