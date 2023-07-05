@@ -75,7 +75,7 @@ public class DosPathResolver : IDosPathResolver {
             cDrive = parentFolder;
         }
         cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
-        driveMap.Add('C', new MountedFolder(cDrive));
+        driveMap.Add('C', new MountedFolder('C', cDrive));
         return driveMap;
     }
 
