@@ -4,6 +4,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+
+using Spice86.ViewModels;
+
 using System.ComponentModel;
 
 internal partial class MainWindow : Window {
@@ -31,10 +34,12 @@ internal partial class MainWindow : Window {
 
     protected override void OnKeyUp(KeyEventArgs e) {
         FocusOnVideoBuffer();
+        (DataContext as MainWindowViewModel)?.OnKeyUp(e);
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
         FocusOnVideoBuffer();
+        (DataContext as MainWindowViewModel)?.OnKeyDown(e);
     }
 
     public static event EventHandler<CancelEventArgs>? AppClosing;
