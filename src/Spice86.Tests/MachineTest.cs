@@ -83,13 +83,13 @@ public class MachineTest {
 
         // Memset
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
-            memory.Memset(0, 0, 6);
+            memory.Memset8(0, 0, 6);
             // Should not trigger for this
-            memory.Memset(0, 0, 5);
-            memory.Memset(6, 0, 5);
+            memory.Memset8(0, 0, 5);
+            memory.Memset8(6, 0, 5);
         });
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
-            memory.Memset(5, 0, 5);
+            memory.Memset8(5, 0, 5);
         });
 
         // GetData
@@ -142,43 +142,12 @@ public class MachineTest {
             memory.SetUint16(0, 0);
             memory.SetUint32(0, 0);
         });
-        
-        // Range
-        AssertAddressRangeMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 0, 2, 3, false, () => {
-            memory.SetUint8(0, 0);
-            memory.SetUint8(1, 0);
-            memory.SetUint8(2, 0);
-        });
-        AssertAddressRangeMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 3, 11, false, () => {
-            // Inclusion of breakpoint range
-            memory.Memset(0, 0, 5);
-            // Start is the same
-            memory.Memset(1, 0, 5);
-            // End is the same
-            memory.Memset(2, 0, 1);
-            // Start in range
-            memory.Memset(2, 0, 10);
-            // End in range
-            memory.Memset(0, 0, 3);
-            // Not triggered
-            memory.Memset(10, 0, 10);
-        });
     }
     
     [AssertionMethod]
     private void AssertAddressMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
         int count = 0;
         AddressBreakPoint breakPoint = new AddressBreakPoint(breakPointType, address, breakpoint => { count++; }, isRemovedOnTrigger);
-        machineBreakpoints.ToggleBreakPoint(breakPoint, true);
-        action.Invoke();
-        machineBreakpoints.ToggleBreakPoint(breakPoint, false);
-        Assert.Equal(expectedTriggers, count);
-    }
-
-    [AssertionMethod]
-    private void AssertAddressRangeMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint startAddress, uint endAddress, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
-        int count = 0;
-        AddressRangeBreakPoint breakPoint = new AddressRangeBreakPoint(breakPointType, startAddress, endAddress, breakpoint => { count++; }, isRemovedOnTrigger);
         machineBreakpoints.ToggleBreakPoint(breakPoint, true);
         action.Invoke();
         machineBreakpoints.ToggleBreakPoint(breakPoint, false);
