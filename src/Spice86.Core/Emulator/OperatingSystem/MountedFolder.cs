@@ -7,11 +7,18 @@ public class MountedFolder {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="driveLetter">The DOS driver letter.</param>
     /// <param name="fullName">The full host path to the folder to be used as the DOS drive root.</param>
-    public MountedFolder(string fullName) {
+    public MountedFolder(char driveLetter, string fullName) {
+        DriveLetter = driveLetter;
         MountPoint = fullName;
         CurrentDirectory = "";
     }
+
+    /// <summary>
+    /// Gets the DOS drive letter.
+    /// </summary>
+    public char DriveLetter { get; init; }
 
     /// <summary>
     /// The full host path to the mounted folder. This path serves as the root of the DOS drive.
