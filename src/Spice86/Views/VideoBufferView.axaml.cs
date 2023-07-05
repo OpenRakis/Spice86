@@ -17,11 +17,12 @@ internal partial class VideoBufferView : UserControl {
         MainWindow.AppClosing += MainWindow_AppClosing;
     }
 
+    private MainWindowViewModel? _mainVm;
+
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
     }
     private bool _appClosing;
-    private MainWindowViewModel? _mainVm;
 
     protected override void OnKeyUp(KeyEventArgs e) {
         _mainVm?.OnKeyUp(e);
@@ -40,6 +41,7 @@ internal partial class VideoBufferView : UserControl {
         }
 
         if (Image is not null && desktop.MainWindow is MainWindow mainWindow && desktop.MainWindow.DataContext is MainWindowViewModel mainVm) {
+            _mainVm = mainVm;
             mainWindow.SetPrimaryDisplayControl(Image);
             Image.PointerMoved -= (s, e) => mainVm.OnMouseMoved(e, Image);
             Image.PointerPressed -= (s, e) => mainVm.OnMouseButtonDown(e, Image);
