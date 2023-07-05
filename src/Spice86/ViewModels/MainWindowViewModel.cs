@@ -232,13 +232,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
             IReadOnlyList<IStorageFile> files = await storageProvider.OpenFilePickerAsync(options);
 
-            if (string.IsNullOrWhiteSpace(filePath)) {
-                if (!File.Exists(filePath) && desktop.MainWindow is not null) {
-                    if (files.Any()) {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
+                if (files.Any()) {
                         filePath = files[0].Path.AbsolutePath;
                         await RestartEmulatorWithNewProgram(filePath);
                     }
-                }
+                
             } else {
                 await RestartEmulatorWithNewProgram(filePath);
             }
