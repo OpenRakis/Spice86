@@ -459,8 +459,15 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     [ObservableProperty]
     private string _currentLogLevel = "";
 
-    [RelayCommand]
-    public void SetLogLevel(string logLevel) {
+    [RelayCommand] public void SetLogLevelToSilent() => SetLogLevel("Silent");
+    [RelayCommand] public void SetLogLevelToVerbose() => SetLogLevel("Verbose");
+    [RelayCommand] public void SetLogLevelToDebug() => SetLogLevel("Debug");
+    [RelayCommand] public void SetLogLevelToInformation() => SetLogLevel("Information");
+    [RelayCommand] public void SetLogLevelToWarning() => SetLogLevel("Warning");
+    [RelayCommand] public void SetLogLevelToError() => SetLogLevel("Error");
+    [RelayCommand] public void SetLogLevelToFatal() => SetLogLevel("Fatal");
+
+    private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;
             _loggerService.AreLogsSilenced = true;

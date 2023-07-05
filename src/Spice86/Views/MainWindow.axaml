@@ -35,13 +35,13 @@
 					<MenuItem Header="Color Palette" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowColorPaletteCommand}" />
 					<MenuItem Header="Performance" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowPerformanceCommand}" />
 					<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
-						<MenuItem Header="Silent" Command="{Binding SetLogLevel}" CommandParameter="Silent"></MenuItem>
-						<MenuItem Header="Verbose" Command="{Binding SetLogLevel}" CommandParameter="Verbose"></MenuItem>
-						<MenuItem Header="Debug" Command="{Binding SetLogLevel}" CommandParameter="Debug"></MenuItem>
-						<MenuItem Header="Information" Command="{Binding SetLogLevel}" CommandParameter="Information"></MenuItem>
-						<MenuItem Header="Warning" Command="{Binding SetLogLevel}" CommandParameter="Warning"></MenuItem>
-						<MenuItem Header="Error" Command="{Binding SetLogLevel}" CommandParameter="Error"></MenuItem>
-						<MenuItem Header="Fatal" Command="{Binding SetLogLevel}" CommandParameter="Fatal"></MenuItem>
+						<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
+						<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
+						<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
+						<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
+						<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
+						<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
+						<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
 					</MenuItem>
 					<MenuItem Header="Dump emulator state to directory..." IsEnabled="{Binding IsMachineRunning}" Command="{Binding DumpEmulatorStateToFileCommand}" />
 				</MenuItem>
