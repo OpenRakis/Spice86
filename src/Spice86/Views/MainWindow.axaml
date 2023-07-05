@@ -9,8 +9,6 @@
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Icon/Spice86.ico"
 		Title="{Binding MainTitle}"
-		MinWidth="1152"
-		MinHeight="864"
 		Width="1024"
 		Height="768"
 		WindowStartupLocation="CenterScreen"
