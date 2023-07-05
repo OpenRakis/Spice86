@@ -39,22 +39,22 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="OxyPlot.Avalonia" Version="2.1.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
-		<PackageReference Include="MessageBox.Avalonia" Version="1.7.1" />
+		<PackageReference Include="MessageBox.Avalonia" Version="2.2.0" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0" />
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-		<PackageReference Include="Avalonia" Version="0.10.21" />
-		<PackageReference Include="Avalonia.Desktop" Version="0.10.21" />
+		<PackageReference Include="Avalonia" Version="11.0.0-rc1.1" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0-rc1.1" />
+		<PackageReference Include="Avalonia.Desktop" Version="11.0.0-rc1.1" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.21" />
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.0-rc1.1" />
 	</ItemGroup>
 	<ItemGroup>
 		<AvaloniaResource Include="Icon\Spice86.ico" />

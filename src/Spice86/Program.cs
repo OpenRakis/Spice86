@@ -1,5 +1,4 @@
 ﻿using Avalonia;
-using OxyPlot.Avalonia;
 using Microsoft.Extensions.DependencyInjection;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
@@ -10,8 +9,7 @@ namespace Spice86;
 /// <summary>
 /// Entry point for Spice86 application.
 /// </summary>
-public class Program
-{
+public class Program {
     /// <summary>
     /// Alternate entry point to use when injecting a class that defines C# overrides of the x86 assembly code found in the target DOS program.
     /// </summary>
@@ -19,8 +17,7 @@ public class Program
     /// <param name="args">The command-line arguments.</param>
     /// <param name="expectedChecksum">The expected checksum of the target DOS program.</param>
     [STAThread]
-    public static void RunWithOverrides<T>(string[] args, string expectedChecksum) where T : class, new()
-    {
+    public static void RunWithOverrides<T>(string[] args, string expectedChecksum) where T : class, new() {
         List<string> argsList = args.ToList();
 
         // Inject override
@@ -34,21 +31,16 @@ public class Program
     /// </summary>
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
-    public static void Main(string[] args)
-    {
+    public static void Main(string[] args) {
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
 
-        if (!configuration.HeadlessMode)
-        {
-            OxyPlotModule.EnsureLoaded();
+        if (!configuration.HeadlessMode) {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
         }
-        else
-        {
+        else {
             ServiceProvider serviceProvider = Startup.StartupInjectedServices(args);
             ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>();
-            if (loggerService is null)
-            {
+            if (loggerService is null) {
                 throw new InvalidOperationException("Could not get logging service from DI !");
             }
 
@@ -61,8 +53,7 @@ public class Program
     /// Configures and builds an Avalonia application instance.
     /// </summary>
     /// <returns>The built <see cref="AppBuilder"/> instance.</returns>
-    public static AppBuilder BuildAvaloniaApp()
-    {
+    public static AppBuilder BuildAvaloniaApp() {
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace();

@@ -6,15 +6,19 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Views;
+using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
+using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IVideoBufferViewModel" />
 public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel {
@@ -23,8 +27,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private Thread? _drawThread;
 
     private bool _exitDrawThread;
-
-    private readonly ManualResetEvent _manualResetEvent = new(false);
 
     /// <summary>
     /// For AvaloniaUI Designer
@@ -52,9 +54,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private void DrawThreadMethod() {
         while (!_exitDrawThread) {
             _drawAction?.Invoke();
-            if (!_exitDrawThread) {
-                _manualResetEvent.WaitOne();
-            }
         }
     }
 
@@ -66,14 +65,18 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
 
     [RelayCommand]
     public async Task SaveBitmap() {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            SaveFileDialog picker = new SaveFileDialog {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow is not null &&
+            desktop.MainWindow.StorageProvider.CanSave &&
+            desktop.MainWindow.StorageProvider.CanPickFolder) {
+            IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
+            FilePickerSaveOptions options = new() {
+                Title = "Save bitmap image...",
                 DefaultExtension = "bmp",
-                InitialFileName = "screenshot.bmp",
-                Title = "Save Bitmap"
+                SuggestedStartLocation = await storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
             };
-            string? file = await picker.ShowAsync(desktop.MainWindow);
-            if (string.IsNullOrWhiteSpace(file) == false) {
+            string? file = (await storageProvider.SaveFilePickerAsync(options))?.TryGetLocalPath();
+            if (!string.IsNullOrWhiteSpace(file)) {
                 Bitmap?.Save(file);
             }
         }
@@ -82,6 +85,8 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
     }
+
+    public uint Address { get; private set; }
 
     /// <summary>
     /// TODO : Get current DPI from Avalonia or Skia.
@@ -144,7 +149,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private Action? _drawAction;
 
     public void Draw() {
-        if (_appClosing || _disposedValue || UIUpdateMethod is null || Bitmap is null) {
+        if (_appClosing || _disposedValue || _videoCard is null || UIUpdateMethod is null || Bitmap is null) {
             return;
         }
         if (_drawThread is null) {
@@ -153,6 +158,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
             };
             _drawThread.Start();
         }
+        
         _drawAction ??= () => {
             unsafe {
                 _frameRenderTimeWatch.Restart();
@@ -168,10 +174,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
                 LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
             }
         };
-        if (!_exitDrawThread) {
-            _manualResetEvent.Set();
-            _manualResetEvent.Reset();
-        }
     }
 
     [ObservableProperty]
@@ -183,11 +185,9 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         if (!_disposedValue) {
             if (disposing) {
                 _exitDrawThread = true;
-                _manualResetEvent.Set();
                 if (_drawThread?.IsAlive == true) {
                     _drawThread.Join();
                 }
-                _manualResetEvent.Dispose();
                 Dispatcher.UIThread.Post(() => {
                     Bitmap?.Dispose();
                     Bitmap = null;

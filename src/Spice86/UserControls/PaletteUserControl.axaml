@@ -5,7 +5,7 @@
             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
             x:Class="Spice86.UserControls.PaletteUserControl">
-    <ItemsControl Items="{Binding Palette}">
+    <ItemsControl ItemsSource="{Binding Palette}">
         <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
                 <UniformGrid Rows="16" Columns="16" />

@@ -11,13 +11,6 @@ internal partial class PaletteWindow : Window {
 
     public PaletteWindow() {
         InitializeComponent();
-#if DEBUG
-        this.AttachDevTools();
-#endif
-    }
-
-    private void InitializeComponent() {
-        AvaloniaXamlLoader.Load(this);
     }
 
     public PaletteWindow(PaletteViewModel paletteViewModel) {

@@ -41,24 +41,5 @@
 					StringFormat={}{0:N0} ms}"/>
 			</WrapPanel>
 		</TabItem>
-		<TabItem Header="History">
-			<WrapPanel>
-				<StackPanel Orientation="Vertical">
-					<oxy:Plot Title="CPU" Subtitle="Last 10 minutes"
-					  Width="{Binding $parent[StackPanel].Bounds.Width}"
-					  Height="{Binding $parent[StackPanel].Bounds.Height}"
-					  MinWidth="600"
-					  MinHeight="300"
-			          PlotMargins="50 0 0 0"
-			          PlotAreaBorderColor="#999999">
-						<oxy:AreaSeries 
-							DataFieldX="Number"
-							DataFieldY="Value"
-							Items="{Binding CpuHistoryDataPoints}"
-							Color="#fd6d00" />
-					</oxy:Plot>
-				</StackPanel>
-			</WrapPanel>
-		</TabItem>
 	</TabControl>
 </Window>
