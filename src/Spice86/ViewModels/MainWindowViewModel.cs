@@ -20,9 +20,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using MessageBox.Avalonia.BaseWindows.Base;
-using MessageBox.Avalonia.Enums;
-
 using Spice86.Keyboard;
 using Spice86.Views;
 using Spice86.Core.CLI;
@@ -272,7 +269,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
-    public async Task ShowPerformance() {
+    public void ShowPerformance() {
         if (_performanceWindow != null) {
             _performanceWindow.Activate();
         } else if (_programExecutor is not null) {
@@ -282,9 +279,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             };
             _performanceWindow.Closed += (_, _) => _performanceWindow = null;
             _performanceWindow.Show();
-        } else if(Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            await MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("", "Please start a program first")
-                .ShowDialog(desktop.MainWindow);
         }
     }
 
@@ -440,17 +434,26 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         return CommandLineParser.ParseCommandLine(args);
     }
 
-    private async Task ShowEmulationErrorMessage(Exception e) {
-        IMsBoxWindow<ButtonResult> errorMessage = MessageBox.Avalonia.MessageBoxManager
-            .GetMessageBoxStandardWindow("An unhandled exception occured", 
-                $"""
-                Method name: {e.GetBaseException().TargetSite?.Name},
-                Exception message: {e.GetBaseException().Message},
-                Stack trace (first line): {e.GetBaseException().StackTrace?.Split(Environment.NewLine).FirstOrDefault()}
-                """);
-        if (!_disposed && !_isMainWindowClosing && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            await errorMessage.ShowDialog(desktop.MainWindow);
-        }
+    [ObservableProperty]
+    private bool _isDialogVisible;
+
+    [ObservableProperty]
+    private string? _dialogTitle;
+
+    [ObservableProperty]
+    private string? _dialogMessage;
+
+    [RelayCommand]
+    public void ClearDialog() => IsDialogVisible = false;
+
+    private void ShowEmulationErrorMessage(Exception e) {
+        DialogTitle = "An unhandled exception occured";
+        DialogMessage = $"""
+            Method name: {e.GetBaseException().TargetSite?.Name},
+            Exception message: {e.GetBaseException().Message},
+            Stack trace (first line): {e.GetBaseException().StackTrace?.Split(Environment.NewLine).FirstOrDefault()}
+            """;
+        IsDialogVisible = true;
     }
 
     [ObservableProperty]
@@ -483,13 +486,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         _emulatorThread.Start();
     }
 
-    // We use async void, but thankfully this doesn't generate an exception.
-    // So this is OK...
-    private async void OnEmulatorErrorOccured(Exception e) {
-        await Dispatcher.UIThread.InvokeAsync(async () => await ShowEmulationErrorMessage(e));
+    private void OnEmulatorErrorOccured(Exception e) {
+        Dispatcher.UIThread.Post(() => {
+            StatusMessage = "Emulator crashed.";
+            ShowEmulationErrorMessage(e);
+        });
     }
-
-    private event Action<Exception>? EmulatorErrorOccured;
 
     [ObservableProperty]
     private bool _showVideo = true;
@@ -508,9 +510,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
                     if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                         _loggerService.Error(e, "An error occurred during execution");
                     }
-                    EmulatorErrorOccured += OnEmulatorErrorOccured;
-                    EmulatorErrorOccured?.Invoke(e);
-                    EmulatorErrorOccured -= OnEmulatorErrorOccured;
+                    OnEmulatorErrorOccured(e);
                 }
             }
         }  finally {

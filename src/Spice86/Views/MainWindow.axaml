@@ -19,13 +19,13 @@
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<Grid RowDefinitions="Auto,*,Auto">
-		<Grid Grid.Row="0" ColumnDefinitions="Auto, *">
+	<Grid RowDefinitions="Auto,*,Auto" >
+		<Grid IsVisible="{Binding !IsDialogVisible}" Grid.Row="0" ColumnDefinitions="Auto, *">
 			<Menu Grid.Column="0">
 				<MenuItem Header="Program">
 					<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
 					<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
-					<Separator IsVisible="{Binding !!MostRecentlyUsed.Count}"/>
+					<Separator IsVisible="{Binding !!MostRecentlyUsed.Count}" />
 					<MenuItem Command="{Binding StartExecutableCommand}" CommandParameter="{Binding MostRecentlyUsed[0].FullName}" Header="{Binding MostRecentlyUsed[0].Name}" IsVisible="{Binding !!MostRecentlyUsed.Count}" />
 					<MenuItem Header="{Binding MostRecentlyUsed[1].Name}" CommandParameter="{Binding MostRecentlyUsed[1].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" />
 					<MenuItem Header="{Binding MostRecentlyUsed[2].Name}" CommandParameter="{Binding MostRecentlyUsed[2].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=3}" />
@@ -77,10 +77,19 @@
 		<local:VideoBufferView Grid.Row="1" DataContext="{Binding VideoBuffer}" />
 		<WrapPanel Grid.Row="2" Orientation="Horizontal">
 			<TextBlock Text="{Binding StatusMessage}" />
-			<TextBlock Margin="5,0,0,0" Text="|" />
+			<Line Margin="5,0,0,0" />
 			<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
-			<TextBlock Margin="5,0,0,0" Text="|" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
+			<Line Margin="5,0,0,0" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 			<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 		</WrapPanel>
+		<Border IsVisible="{Binding IsDialogVisible}" Grid.RowSpan="3" Background="#40000000">
+			<WrapPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+				<Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
+					<Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="{Binding DialogTitle}" />
+					<TextBlock Grid.Row="1" Grid.ColumnSpan="3" TextWrapping="Wrap"  Text="{Binding DialogMessage}" />
+					<Button Content="OK" Margin="10" MinWidth="80" MinHeight="40" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
+				</Grid>
+			</WrapPanel>
+		</Border>
 	</Grid>
 </Window>
