@@ -39,7 +39,7 @@ public class MainMemoryTest {
         _memory.UInt8[0x1234] = 0x12;
 
         // Act
-        byte actual = _memory.GetUint8(0x1234);
+        byte actual = _memory.UInt8[0x1234];
 
         // Assert
         Assert.Equal(0x12, actual);
@@ -52,7 +52,7 @@ public class MainMemoryTest {
         _memory.UInt8[0x1235] = 0x12;
 
         // Act
-        ushort actual = _memory.GetUint16(0x1234);
+        ushort actual = _memory.UInt16[0x1234];
 
         // Assert
         Assert.Equal(0x1234, actual);
@@ -67,7 +67,7 @@ public class MainMemoryTest {
         _memory.UInt8[0x1237] = 0x56;
 
         // Act
-        uint actual = _memory.GetUint32(0x1234);
+        uint actual = _memory.UInt32[0x1234];
 
         // Assert
         Assert.Equal(0x56781234u, actual);
@@ -79,7 +79,7 @@ public class MainMemoryTest {
         _memory.UInt8[0x1234] = 0x00;
 
         // Act
-        _memory.SetUint8(0x1234, 0x12);
+        _memory.UInt8[0x1234] = 0x12;
 
         // Assert
         Assert.Equal(0x12, _memory.UInt8[0x1234]);
@@ -92,7 +92,7 @@ public class MainMemoryTest {
         _memory.UInt8[0x1235] = 0x00;
 
         // Act
-        _memory.SetUint16(0x1234, 0x1234);
+        _memory.UInt16[0x1234] = 0x1234;
 
         // Assert
         Assert.Equal(0x34, _memory.UInt8[0x1234]);
@@ -108,7 +108,7 @@ public class MainMemoryTest {
         _memory.UInt8[0x1237] = 0x00;
 
         // Act
-        _memory.SetUint32(0x1234, 0x56781234u);
+        _memory.UInt32[0x1234] = 0x56781234u;
 
         // Assert
         Assert.Equal(0x34, _memory.UInt8[0x1234]);
@@ -127,7 +127,7 @@ public class MainMemoryTest {
         _memory.RegisterMapping(0x1234, 4, newMem);
 
         // Act
-        byte actual = _memory.GetUint8(0x1234);
+        byte actual = _memory.UInt8[0x1234];
 
         // Assert
         Assert.Equal(0xDE, actual);
@@ -158,7 +158,7 @@ public class MainMemoryTest {
         _memory.RegisterMapping(0x1234, 4, newMem);
 
         // Act
-        uint actual = _memory.GetUint16(testAddress);
+        uint actual = _memory.UInt16[testAddress];
 
         // Assert
         Assert.Equal(expected, actual);
@@ -195,7 +195,7 @@ public class MainMemoryTest {
         _memory.RegisterMapping(0x1238, 4, newMem);
 
         // Act
-        uint actual = _memory.GetUint32(testAddress);
+        uint actual = _memory.UInt32[testAddress];
 
         // Assert
         Assert.Equal(expected, actual);
@@ -210,7 +210,7 @@ public class MainMemoryTest {
         _memory.RegisterMapping(0x1234, 4, newMem);
 
         // Act
-        _memory.SetUint8(0x1234, 0x12);
+        _memory.UInt8[0x1234] = 0x12;
 
         // Assert
         Assert.Equal(0x12, newMem.Read(0x1234));
@@ -240,7 +240,7 @@ public class MainMemoryTest {
         _memory.RegisterMapping(0x1234, 4, newMem);
 
         // Act
-        _memory.SetUint16(testAddress, 0xBEEF);
+        _memory.UInt16[testAddress] = 0xBEEF;
 
         // Assert
         Assert.Equal(expected1, newMem.Read(0x1234));
@@ -264,7 +264,7 @@ public class MainMemoryTest {
         _memory.RegisterMapping(0x1234, 4, newMem);
     
         // Act
-        _memory.SetUint32(0x1234, 0x12345678);
+        _memory.UInt32[0x1234] = 0x12345678;
     
         // Assert
         Assert.Equal(0x78, newMem.Read(0x1234));
@@ -294,7 +294,7 @@ public class MainMemoryTest {
         _memory.RegisterMapping(0x1234, 4, newMem);
     
         // Act
-        _memory.SetUint32(0x1233, 0x12345678);
+        _memory.UInt32[0x1233] = 0x12345678;
     
         // Assert
         Assert.Equal(0x00, newMem.Read(0x1233));
@@ -325,7 +325,7 @@ public class MainMemoryTest {
         _memory.RegisterMapping(0x1234, 4, newMem);
     
         // Act
-        _memory.SetUint32(0x1235, 0x12345678);
+        _memory.UInt32[0x1235] = 0x12345678;
     
         // Assert
         Assert.Equal(0xDE, newMem.Read(0x1234));

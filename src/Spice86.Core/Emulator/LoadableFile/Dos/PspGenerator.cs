@@ -41,11 +41,11 @@ public class PspGenerator {
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 
         // Set the PSP's first 2 bytes to INT 20h.
-        _memory.SetUint16(pspAddress, 0xCD20);
+        _memory.UInt16[pspAddress] = 0xCD20;
 
         // Set the PSP's last free segment value.
         const ushort lastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
-        _memory.SetUint16(pspAddress + LAST_FREE_SEGMENT_OFFSET, lastFreeSegment);
+        _memory.UInt16[pspAddress + LAST_FREE_SEGMENT_OFFSET] = lastFreeSegment;
 
         // Load the command-line arguments into the PSP.
         _memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));

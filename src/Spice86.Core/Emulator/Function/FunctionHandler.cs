@@ -155,10 +155,10 @@ public class FunctionHandler {
         Memory memory = _machine.Memory;
         State state = _machine.Cpu.State;
         return returnCallType switch {
-            CallType.NEAR => new SegmentedAddress(state.CS, memory.GetUint16(stackPhysicalAddress)),
+            CallType.NEAR => new SegmentedAddress(state.CS, memory.UInt16[stackPhysicalAddress]),
             CallType.FAR or CallType.INTERRUPT => new SegmentedAddress(
-                memory.GetUint16(stackPhysicalAddress + 2),
-                memory.GetUint16(stackPhysicalAddress)),
+                memory.UInt16[stackPhysicalAddress + 2],
+                memory.UInt16[stackPhysicalAddress]),
             CallType.MACHINE => null,
             _ => null
         };

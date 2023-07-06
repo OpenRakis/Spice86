@@ -79,9 +79,9 @@ public class ExeLoader : DosFileLoader {
             SegmentedAddress address = exeFile.RelocationTable[i];
             // Read value from memory, add the start segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset) + physicalStartAddress;
-            int segmentToRelocate = _memory.GetUint16(addressToEdit);
+            int segmentToRelocate = _memory.UInt16[addressToEdit];
             segmentToRelocate += startSegment;
-            _memory.SetUint16(addressToEdit, (ushort)segmentToRelocate);
+            _memory.UInt16[addressToEdit] = (ushort)segmentToRelocate;
         }
     }
 

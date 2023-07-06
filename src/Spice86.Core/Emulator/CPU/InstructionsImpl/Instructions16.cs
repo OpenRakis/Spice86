@@ -235,14 +235,14 @@ public class Instructions16 : Instructions16Or32 {
     }
 
     public override void Movs() {
-        ushort value = Memory.GetUint16(MemoryAddressOverridableDsSi);
-        Memory.SetUint16(MemoryAddressEsDi, value);
+        ushort value = Memory.UInt16[MemoryAddressOverridableDsSi];
+        Memory.UInt16[MemoryAddressEsDi] = value;
         AdvanceSIDI();
     }
 
     public override void Cmps() {
-        ushort value = Memory.GetUint16(MemoryAddressOverridableDsSi);
-        Alu.Sub16(value, Memory.GetUint16(MemoryAddressEsDi));
+        ushort value = Memory.UInt16[MemoryAddressOverridableDsSi];
+        Alu.Sub16(value, Memory.UInt16[MemoryAddressEsDi]);
         AdvanceSIDI();
     }
 
@@ -258,30 +258,30 @@ public class Instructions16 : Instructions16Or32 {
     }
 
     public override void Stos() {
-        Memory.SetUint16(MemoryAddressEsDi, State.AX);
+        Memory.UInt16[MemoryAddressEsDi] = State.AX;
         AdvanceDI();
     }
 
     public override void Lods() {
-        State.AX = Memory.GetUint16(MemoryAddressOverridableDsSi);
+        State.AX = Memory.UInt16[MemoryAddressOverridableDsSi];
         AdvanceSI();
     }
 
     public override void Scas() {
-        Alu.Sub16(State.AX, Memory.GetUint16(MemoryAddressEsDi));
+        Alu.Sub16(State.AX, Memory.UInt16[MemoryAddressEsDi]);
         AdvanceDI();
     }
 
     public override void Ins() {
         ushort port = State.DX;
         ushort value = Cpu.In16(port);
-        Memory.SetUint16(MemoryAddressEsDi, value);
+        Memory.UInt16[MemoryAddressEsDi] = value;
         AdvanceDI();
     }
 
     public override void Outs() {
         ushort port = State.DX;
-        ushort value = Memory.GetUint16(MemoryAddressOverridableDsSi);
+        ushort value = Memory.UInt16[MemoryAddressOverridableDsSi];
         Cpu.Out16(port, value);
         AdvanceSI();
     }
@@ -428,12 +428,12 @@ public class Instructions16 : Instructions16Or32 {
 
     public override void MovAccMoffs() {
         // MOV AX moffs16
-        State.AX = Memory.GetUint16(DsNextUint16Address);
+        State.AX = Memory.UInt16[DsNextUint16Address];
     }
 
     public override void MovMoffsAcc() {
         // MOV moffs16 AX
-        Memory.SetUint16(DsNextUint16Address, State.AX);
+        Memory.UInt16[DsNextUint16Address] = State.AX;
     }
     
     public override void MovRmImm() {
@@ -495,8 +495,8 @@ public class Instructions16 : Instructions16Or32 {
 
     protected override ushort DoLxsAndReturnSegmentValue() {
         uint memoryAddress = ReadLxsMemoryAddress();
-        ModRM.R16 = Memory.GetUint16(memoryAddress);
-        return Memory.GetUint16(memoryAddress + 2);
+        ModRM.R16 = Memory.UInt16[memoryAddress];
+        return Memory.UInt16[memoryAddress + 2];
     }
     
     public override void InImm8() {

@@ -153,14 +153,14 @@ public class Instructions8 : Instructions {
     }
 
     public override void Movs() {
-        byte value = Memory.GetUint8(MemoryAddressOverridableDsSi);
-        Memory.SetUint8(MemoryAddressEsDi, value);
+        byte value = Memory.UInt8[MemoryAddressOverridableDsSi];
+        Memory.UInt8[MemoryAddressEsDi] = value;
         AdvanceSIDI();
     }
 
     public override void Cmps() {
-        byte value = Memory.GetUint8(MemoryAddressOverridableDsSi);
-        Alu.Sub8(value, Memory.GetUint8(MemoryAddressEsDi));
+        byte value = Memory.UInt8[MemoryAddressOverridableDsSi];
+        Alu.Sub8(value, Memory.UInt8[MemoryAddressEsDi]);
         AdvanceSIDI();
     }
 
@@ -176,30 +176,30 @@ public class Instructions8 : Instructions {
     }
 
     public override void Stos() {
-        Memory.SetUint8(MemoryAddressEsDi, State.AL);
+        Memory.UInt8[MemoryAddressEsDi] = State.AL;
         AdvanceDI();
     }
 
     public override void Lods() {
-        State.AL = Memory.GetUint8(MemoryAddressOverridableDsSi);
+        State.AL = Memory.UInt8[MemoryAddressOverridableDsSi];
         AdvanceSI();
     }
 
     public override void Scas() {
-        Alu.Sub8(State.AL, Memory.GetUint8(MemoryAddressEsDi));
+        Alu.Sub8(State.AL, Memory.UInt8[MemoryAddressEsDi]);
         AdvanceDI();
     }
 
     public override void Ins() {
         ushort port = State.DX;
         byte value = Cpu.In8(port);
-        Memory.SetUint8(MemoryAddressEsDi, value);
+        Memory.UInt8[MemoryAddressEsDi] = value;
         AdvanceDI();
     }
 
     public override void Outs() {
         ushort port = State.DX;
-        byte value = Memory.GetUint8(MemoryAddressOverridableDsSi);
+        byte value = Memory.UInt8[MemoryAddressOverridableDsSi];
         Cpu.Out8(port, value);
         AdvanceSI();
     }
@@ -349,12 +349,12 @@ public class Instructions8 : Instructions {
 
     public override void MovAccMoffs() {
         // MOV AL moffs8
-        State.AL = Memory.GetUint8(DsNextUint16Address);
+        State.AL = Memory.UInt8[DsNextUint16Address];
     }
 
     public override void MovMoffsAcc() {
         // MOV moffs8 AL
-        Memory.SetUint8(DsNextUint16Address, State.AL);
+        Memory.UInt8[DsNextUint16Address] = State.AL;
     }
 
     public override void MovRmImm() {
@@ -391,7 +391,7 @@ public class Instructions8 : Instructions {
     public void Xlat() {
         // XLAT
         uint address = ModRM.GetAddress(SegmentRegisters.DsIndex, State.BX) + State.AL;
-        State.AL = Memory.GetUint8(address);
+        State.AL = Memory.UInt8[address];
     }
 
 

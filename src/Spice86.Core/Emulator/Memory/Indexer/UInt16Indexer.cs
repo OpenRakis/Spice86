@@ -6,14 +6,14 @@ using Spice86.Shared.Utils;
 /// Provides indexed unsigned 16-byte access over memory.
 /// </summary>
 public class UInt16Indexer {
-    private readonly Memory _memory;
+    private readonly IByteReaderWriter _byteReaderWriter;
 
     /// <summary>
     /// Creates a new instance of the <see cref="UInt16Indexer"/> class
-    /// with the specified <see cref="Memory"/> instance.
+    /// with the specified <see cref="IByteReaderWriter"/> instance.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    public UInt16Indexer(Memory memory) => _memory = memory;
+    /// <param name="byteReaderWriter">The object where to read / write bytes.</param>
+    public UInt16Indexer(IByteReaderWriter byteReaderWriter) => _byteReaderWriter = byteReaderWriter;
 
     /// <summary>
     /// Gets or sets the unsigned 16-bit integer at the specified physical address.
@@ -21,8 +21,11 @@ public class UInt16Indexer {
     /// <param name="address">The physical address of the value to get or set.</param>
     /// <returns>The unsigned 16-bit integer at the specified physical address.</returns>
     public ushort this[uint address] {
-        get => _memory.GetUint16(address);
-        set => _memory.SetUint16(address, value);
+        get => (ushort)(_byteReaderWriter[address] | _byteReaderWriter[address + 1] << 8);
+        set {
+            _byteReaderWriter[address] = (byte)value;
+            _byteReaderWriter[address + 1] = (byte)(value >> 8);
+        }
     }
 
     /// <summary>

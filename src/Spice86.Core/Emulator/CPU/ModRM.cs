@@ -44,21 +44,21 @@ public class ModRM {
         if (MemoryAddress == null) {
             return _state.Registers.GetRegister32(_registerMemoryIndex);
         }
-        return _memory.GetUint32((uint)MemoryAddress);
+        return _memory.UInt32[(uint)MemoryAddress];
     }
 
     public ushort GetRm16() {
         if (MemoryAddress == null) {
             return _state.Registers.GetRegister16(_registerMemoryIndex);
         }
-        return _memory.GetUint16((uint)MemoryAddress);
+        return _memory.UInt16[(uint)MemoryAddress];
     }
 
     public byte GetRm8() {
         if (MemoryAddress == null) {
             return _state.Registers.GetRegisterFromHighLowIndex8(_registerMemoryIndex);
         }
-        return _memory.GetUint8((uint)MemoryAddress);
+        return _memory.UInt8[(uint)MemoryAddress];
     }
 
     public ushort SegmentRegister { get => _state.SegmentRegisters.GetRegister16(RegisterIndex); set => _state.SegmentRegisters.SetRegister16(RegisterIndex, value); }
@@ -110,7 +110,7 @@ public class ModRM {
         if (MemoryAddress == null) {
             _state.Registers.SetRegister32(_registerMemoryIndex, value);
         } else {
-            _memory.SetUint32((uint)MemoryAddress, value);
+            _memory.UInt32[(uint)MemoryAddress] = value;
         }
     }
 
@@ -118,7 +118,7 @@ public class ModRM {
         if (MemoryAddress == null) {
             _state.Registers.SetRegister16(_registerMemoryIndex, value);
         } else {
-            _memory.SetUint16((uint)MemoryAddress, value);
+            _memory.UInt16[(uint)MemoryAddress] = value;
         }
     }
 
@@ -126,7 +126,7 @@ public class ModRM {
         if (MemoryAddress == null) {
             _state.Registers.SetRegisterFromHighLowIndex8(_registerMemoryIndex, value);
         } else {
-            _memory.SetUint8((uint)MemoryAddress, value);
+            _memory.UInt8[(uint)MemoryAddress] = value;
         }
     }
 

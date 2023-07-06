@@ -61,24 +61,24 @@ public class MachineTest {
         // simple read
         // 2 reads, but breakpoint is removed after first
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
-            memory.GetUint8(0);
-            memory.GetUint8(0);
+            _ = memory.UInt8[0];
+            _ = memory.UInt8[0];
         });
 
         // simple write
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 0, 1, true, () => {
-            memory.SetUint8(0, 0);
+            memory.UInt8[0] = 0;
         });
 
         // read / write with remove
         int readWrite0Triggered = 0;
         AddressBreakPoint readWrite0 = new AddressBreakPoint(BreakPointType.ACCESS, 0, breakpoint => { readWrite0Triggered++; }, false);
         machineBreakpoints.ToggleBreakPoint(readWrite0, true);
-        memory.GetUint8(0);
-        memory.SetUint8(0, 0);
+        _ =  memory.UInt8[0];
+        memory.UInt8[0] = 0;
         machineBreakpoints.ToggleBreakPoint(readWrite0, false);
         // Should not trigger
-        memory.GetUint8(0);
+        _ =  memory.UInt8[0];
         Assert.Equal(2, readWrite0Triggered);
 
         // Memset
@@ -133,14 +133,14 @@ public class MachineTest {
 
         // Long reads
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 1, 2, false, () => {
-            memory.GetUint16(0);
-            memory.GetUint32(0);
+            _ = memory.UInt16[0];
+            _ = memory.UInt32[0];
         });
 
         // Long writes
         AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 2, false, () => {
-            memory.SetUint16(0, 0);
-            memory.SetUint32(0, 0);
+            memory.UInt16[0] = 0;
+            memory.UInt32[0] = 0;
         });
     }
     
