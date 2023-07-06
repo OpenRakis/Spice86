@@ -23,7 +23,6 @@ using CommunityToolkit.Mvvm.Input;
 using MessageBox.Avalonia.BaseWindows.Base;
 using MessageBox.Avalonia.Enums;
 
-using Spice86.Converters;
 using Spice86.Keyboard;
 using Spice86.Views;
 using Spice86.Core.CLI;
@@ -234,10 +233,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
                 if (files.Any()) {
-                        filePath = files[0].Path.AbsolutePath;
-                        await RestartEmulatorWithNewProgram(filePath);
-                    }
-                
+                    filePath = files[0].Path.AbsolutePath;
+                    await RestartEmulatorWithNewProgram(filePath);
+                }
             } else {
                 await RestartEmulatorWithNewProgram(filePath);
             }
