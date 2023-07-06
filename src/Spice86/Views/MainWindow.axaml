@@ -27,8 +27,8 @@
 					<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
 					<Separator IsVisible="{Binding !!MostRecentlyUsed.Count}" />
 					<MenuItem Command="{Binding StartExecutableCommand}" CommandParameter="{Binding MostRecentlyUsed[0].FullName}" Header="{Binding MostRecentlyUsed[0].Name}" IsVisible="{Binding !!MostRecentlyUsed.Count}" />
-					<MenuItem Header="{Binding MostRecentlyUsed[1].Name}" CommandParameter="{Binding MostRecentlyUsed[1].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" />
-					<MenuItem Header="{Binding MostRecentlyUsed[2].Name}" CommandParameter="{Binding MostRecentlyUsed[2].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=3}" />
+					<MenuItem Command="{Binding StartExecutableCommand}" Header="{Binding MostRecentlyUsed[1].Name}" CommandParameter="{Binding MostRecentlyUsed[1].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" />
+					<MenuItem Command="{Binding StartExecutableCommand}" Header="{Binding MostRecentlyUsed[2].Name}" CommandParameter="{Binding MostRecentlyUsed[2].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=3}" />
 				</MenuItem>
 				<MenuItem Header="Debug">
 					<MenuItem Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowDebugWindowCommand}" />

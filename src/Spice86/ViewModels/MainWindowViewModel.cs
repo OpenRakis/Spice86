@@ -198,13 +198,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    public async Task StartExecutable(string? filePath) {
+    public async Task StartExecutable(object? filePath) {
         _closeAppOnEmulatorExit = false;
-        await StartNewExecutable(filePath);
+        await StartNewExecutable(filePath as string);
     }
 
     private async Task StartNewExecutable(string? filePath = null) {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+        if(!string.IsNullOrWhiteSpace(filePath) &&
+            File.Exists(filePath)) {
+            await RestartEmulatorWithNewProgram(filePath);
+
+        }
+        else if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
             desktop.MainWindow is not null &&
             desktop.MainWindow.StorageProvider.CanOpen) {
             IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
@@ -228,12 +233,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
             IReadOnlyList<IStorageFile> files = await storageProvider.OpenFilePickerAsync(options);
 
-            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
-                if (files.Any()) {
-                    filePath = files[0].Path.AbsolutePath;
-                    await RestartEmulatorWithNewProgram(filePath);
-                }
-            } else {
+            if (files.Any()) {
+                filePath = files[0].Path.AbsolutePath;
                 await RestartEmulatorWithNewProgram(filePath);
             }
         }
