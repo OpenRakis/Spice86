@@ -17,6 +17,16 @@ internal partial class MainWindow : Window {
 
     private Image? _videoBufferImage;
 
+    protected override void OnOpened(EventArgs e) {
+        base.OnOpened(e);
+        (DataContext as MainWindowViewModel)?.OnMainWindowOpened();
+    }
+
+    protected override void OnClosed(EventArgs e) {
+        (DataContext as MainWindowViewModel)?.Dispose();
+        base.OnClosed(e);
+    }
+
     public void SetPrimaryDisplayControl(Image image) {
         if(_videoBufferImage != image) {
             _videoBufferImage = image;
