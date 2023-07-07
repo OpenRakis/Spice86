@@ -54,7 +54,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     }
 
     private void RenderThreadMethod() {
-        if (_audioPlayer is null) {
+        if (_audioPlayer is null || !File.Exists(SoundFont)) {
             return;
         }
         // General MIDI needs a large buffer to store preset PCM data of musical instruments.
