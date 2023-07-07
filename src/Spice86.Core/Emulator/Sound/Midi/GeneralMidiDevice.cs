@@ -129,9 +129,11 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if(disposing) {
-                if (_midiOutHandle != IntPtr.Zero & OperatingSystem.IsWindows()) {
-                    NativeMethods.midiOutClose(_midiOutHandle);
-                    _midiOutHandle = IntPtr.Zero;
+                if(OperatingSystem.IsWindows()) {
+                    if (_midiOutHandle != IntPtr.Zero) {
+                        NativeMethods.midiOutClose(_midiOutHandle);
+                        _midiOutHandle = IntPtr.Zero;
+                    }
                 }
                 _endThread = true;
                 _fillBufferEvent.Set();
