@@ -100,15 +100,15 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
-        string? hostFileName = _dosPathResolver.TryGetFullParentHostPath( fileName);
-        if (string.IsNullOrWhiteSpace(hostFileName)) {
+        string? hostParentDirectory = _dosPathResolver.TryGetFullHostParentPathFromDos(fileName);
+        if (string.IsNullOrWhiteSpace(hostParentDirectory)) {
             return FileOperationErrorWithLog($"Could not find parent of {fileName} so cannot create file.", ErrorCode.PathNotFound);
         }
 
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Creating file {HostFileName} with attribute {FileAttribute}", hostFileName, fileAttribute);
+            _loggerService.Verbose("Creating file {HostFileName} with attribute {FileAttribute}", hostParentDirectory, fileAttribute);
         }
-        FileInfo path = new FileInfo(hostFileName);
+        FileInfo path = new FileInfo(Path.Combine(hostParentDirectory, Path.GetFileName(fileName)));
         try {
             if (File.Exists(path.FullName)) {
                 File.Delete(path.FullName);
@@ -120,7 +120,7 @@ public class DosFileManager {
             throw new UnrecoverableException("IOException while creating file", e);
         }
 
-        return OpenFileInternal(fileName, hostFileName, "rw");
+        return OpenFileInternal(fileName, hostParentDirectory, "rw");
     }
 
     /// <summary>
@@ -151,7 +151,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
         string hostSearchSpec = _dosPathResolver.PrefixWithHostDirectory(fileSpec);
-        _currentMatchingFileSearchFolder = _dosPathResolver.GetHostFullNameForParentDirectory(hostSearchSpec);
+        _currentMatchingFileSearchFolder = Directory.GetParent(hostSearchSpec)?.FullName;
         if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
@@ -274,7 +274,7 @@ public class DosFileManager {
             return OpenDeviceInternal(device, openMode);
         }
         
-        string? hostFileName = _dosPathResolver.TryGetFullHostPath( fileName);
+        string? hostFileName = _dosPathResolver.TryGetFullHostPathFromDos( fileName);
         if (hostFileName == null) {
             return FileNotFoundError(fileName);
         }
@@ -458,18 +458,7 @@ public class DosFileManager {
         return DosFileOperationResult.Error(ErrorCode.TooManyOpenFiles);
     }
     
-    /// <summary>
-    /// Converts dosFileName to a host file name.<br/>
-    /// For this, this needs to:
-    /// <ul>
-    /// <li>Prefix either the current folder or the drive folder.</li>
-    /// <li>Replace backslashes with slashes</li>
-    /// <li>Find case sensitive matches for every path item (since DOS is case insensitive but some OS are not)</li>
-    /// </ul>
-    /// </summary>
-    /// <param name="dosFileName">The file name to convert.</param>
-    /// <returns>A string containing the file name in the host file system, or <c>null</c> if nothing was found.</returns>
-    internal string? ToHostCaseSensitiveFileName(string dosFileName, bool convertParentOnly) => _dosPathResolver.TryGetFullHostPath( dosFileName);
+    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.TryGetFullHostPathFromDos(dosPath);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
@@ -501,7 +490,7 @@ public class DosFileManager {
             Stream? randomAccessFile = null;
             switch (openMode) {
                 case "r": {
-                    string? realFileName = _dosPathResolver.TryGetFullHostPath(hostFileName);
+                    string? realFileName = _dosPathResolver.TryGetFullHostPathFromDos(hostFileName);
                     if (File.Exists(hostFileName)) {
                         randomAccessFile = File.OpenRead(hostFileName);
                     } else if (File.Exists(realFileName)) {
@@ -516,7 +505,7 @@ public class DosFileManager {
                     randomAccessFile = File.OpenWrite(hostFileName);
                     break;
                 case "rw": {
-                    string? realFileName = _dosPathResolver.TryGetFullHostPath(hostFileName);
+                    string? realFileName = _dosPathResolver.TryGetFullHostPathFromDos(hostFileName);
                     if (File.Exists(hostFileName)) {
                         randomAccessFile = File.Open(hostFileName, FileMode.Open);
                     } else if (File.Exists(realFileName)) {
@@ -576,29 +565,33 @@ public class DosFileManager {
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
-        string? fullPath = _dosPathResolver.TryGetFullParentHostPath(dosDirectory);
-        if (string.IsNullOrWhiteSpace(fullPath)) {
+        string? hostPath = _dosPathResolver.TryGetFullHostParentPathFromDos(dosDirectory);
+        if (string.IsNullOrWhiteSpace(hostPath)) {
             return PathNotFoundError(dosDirectory);
         }
 
-        string parentFolder = _dosPathResolver.GetHostFullNameForParentDirectory(fullPath);
+        string? parentFolder = Directory.GetParent(hostPath)?.FullName;
+
+        if(string.IsNullOrWhiteSpace(parentFolder)) {
+            return PathNotFoundError(dosDirectory);
+        }
 
         if (!Directory.Exists(parentFolder)) {
-            CreateDirectory(_dosPathResolver.GetHostRelativePathToCurrentDirectory(parentFolder));
+            CreateDirectory(_dosPathResolver.GetRelativeHostPathToCurrentDirectory(parentFolder));
         }
 
         if (_dosPathResolver.AnyDosDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
             return PathNotFoundError(dosDirectory);
         }
 
-        string hostPath = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
+        string prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
         try {
-            Directory.CreateDirectory(hostPath);
+            Directory.CreateDirectory(prefixedDosDirectory);
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _loggerService.Warning(e, "Error while creating directory {CaseInsensitivePath}: {Exception}",
-                    hostPath, e);
+                    prefixedDosDirectory, e);
             }
         }
 
@@ -612,7 +605,7 @@ public class DosFileManager {
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
-        string? fullPath = _dosPathResolver.TryGetFullParentHostPath(dosDirectory);
+        string? fullPath = _dosPathResolver.TryGetFullHostParentPathFromDos(dosDirectory);
         if (string.IsNullOrWhiteSpace(fullPath)) {
             return PathNotFoundError(dosDirectory);
         }

@@ -7,7 +7,6 @@ using Xunit;
 using Moq;
 using FluentAssertions;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -27,7 +26,6 @@ public class DosFileManagerTests {
             CDrive = tempDir
         };
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        IMemory memory = new Memory(ram, configuration);
         Mock<ILoggerService> loggerServiceMock = new Mock<ILoggerService>();
         Mock<IVirtualDevice> chracterDeviceMock = new Mock<IVirtualDevice>();
         List<IVirtualDevice> dosDevicesMock = new List<IVirtualDevice>() { chracterDeviceMock.Object };

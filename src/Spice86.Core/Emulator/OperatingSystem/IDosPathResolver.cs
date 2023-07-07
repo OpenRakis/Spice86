@@ -9,7 +9,7 @@ using System.Collections.Generic;
 /// </summary>
 public interface IDosPathResolver {
     /// <summary>
-    /// The map between host paths and the root of DOS drives.
+    /// Gets the map between DOS drive letters and <see cref="MountedFolder"/> structures
     /// </summary>
     IDictionary<char, MountedFolder> DriveMap { get; }
 
@@ -33,39 +33,31 @@ public interface IDosPathResolver {
     /// Default path comparison for the active platform will be used (OrdinalIgnoreCase for Windows or Mac, Ordinal for Unix).
     /// </summary>
     /// <param name="hostPath">The destination path.</param>
-    /// <returns>The relative path or <paramref name="hostPath"/> if the paths don't share the same root.</returns>
-    string GetHostRelativePathToCurrentDirectory(string hostPath);
+    /// <returns>A string containing the relative host path, or <paramref name="hostPath"/> if the paths don't share the same root.</returns>
+    string GetRelativeHostPathToCurrentDirectory(string hostPath);
 
     /// <summary>
     /// Converts the DOS path to a full host path.<br/>
     /// </summary>
-    /// <param name="dosPath">The file name to convert.</param>
+    /// <param name="dosPath">The DOS path to convert.</param>
     /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
-    string? TryGetFullHostPath(string dosPath);
+    string? TryGetFullHostPathFromDos(string dosPath);
 
     /// <summary>
-    /// Converts the DOS path to a full host path. It will try to find the case sensitive match for only the parent of the path<br/>
+    /// Converts the DOS path to a full host path of the parent directory.<br/>
     /// </summary>
-    /// <param name="dosPath">The file name to convert.</param>
-    /// <returns>A string containing the parent full file path in the host file system, or <c>null</c> if nothing was found.</returns>
-    string? TryGetFullParentHostPath(string dosPath);
+    /// <param name="dosPath">The DOS path to convert.</param>
+    /// <returns>A string containing the full path to the parent directory in the host file system, or <c>null</c> if nothing was found.</returns>
+    string? TryGetFullHostParentPathFromDos(string dosPath);
 
     /// <summary>
-    /// Prefixes the given filename by either the mapped drive folder or the current folder depending on whether there is
-    /// a root in the filename or not.<br/>
-    /// Does not convert to case sensitive filename. <br/>
+    /// Prefixes the given DOS path by either the mapped drive folder or the current host folder depending on whether there is a root in the path.<br/>
+    /// Does not convert to a case sensitive path. <br/>
     /// Does not search for the file or folder on disk.
     /// </summary>
     /// <param name="dosPath">The DOS path to convert.</param>
-    /// <returns>A string containing the host directory, combined with the DOS file name.</returns>
+    /// <returns>A string containing the combination of the host path and the DOS path.</returns>
     string PrefixWithHostDirectory(string dosPath);
-
-    /// <summary>
-    /// Returns the host full path to the parent directory.
-    /// </summary>
-    /// <param name="hostPath">The starting path.</param>
-    /// <returns>A string containing the full path to the parent directory, or the original value if not found.</returns>
-    string GetHostFullNameForParentDirectory(string hostPath);
 
     /// <summary>
     /// Returns whether the folder or file name already exists, in DOS's case insensitive point of view.

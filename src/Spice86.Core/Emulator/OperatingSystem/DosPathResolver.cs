@@ -1,6 +1,5 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -12,6 +11,7 @@ using Spice86.Shared.Utils;
 
 /// <inheritdoc cref="IDosPathResolver" />
 public class DosPathResolver : IDosPathResolver {
+    private readonly ILoggerService _loggerService;
 
     /// <inheritdoc />
     public IDictionary<char, MountedFolder> DriveMap { get; private set; } = new Dictionary<char, MountedFolder>();
@@ -38,9 +38,6 @@ public class DosPathResolver : IDosPathResolver {
         return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
     }
 
-
-    private readonly ILoggerService _loggerService;
-
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -50,21 +47,17 @@ public class DosPathResolver : IDosPathResolver {
         _loggerService = loggerService;
         DriveMap = InitializeDriveMap(configuration);
         CurrentDrive = 'C';
-        SetCurrentDir(@"C:\");
+        SetCurrentDirValue(CurrentDrive, DriveMap[CurrentDrive].MountPoint);
     }
 
     private static string GetExeParentFolder(Configuration configuration) {
         string? exe = configuration.Exe;
+        string fallbackValue = ConvertUtils.ToSlashFolderPath(Environment.CurrentDirectory);
         if (string.IsNullOrWhiteSpace(exe)) {
-            return Environment.CurrentDirectory;
+            return fallbackValue;
         }
-
-        DirectoryInfo? parentDir = Directory.GetParent(exe);
-        // Must be in the current directory
-        parentDir ??= new DirectoryInfo(Environment.CurrentDirectory);
-
-        string parent = Path.GetFullPath(parentDir.FullName);
-        return ConvertUtils.ToSlashFolderPath(parent);
+        string? parent = Path.GetDirectoryName(exe);
+        return string.IsNullOrWhiteSpace(parent) ? fallbackValue : ConvertUtils.ToSlashFolderPath(parent);
     }
 
     private IDictionary<char, MountedFolder> InitializeDriveMap(Configuration configuration) {
@@ -80,7 +73,7 @@ public class DosPathResolver : IDosPathResolver {
     }
 
     /// <inheritdoc />
-    public string GetHostRelativePathToCurrentDirectory(string hostPath) => Path.GetRelativePath(CurrentHostDirectory, hostPath);
+    public string GetRelativeHostPathToCurrentDirectory(string hostPath) => Path.GetRelativePath(CurrentHostDirectory, hostPath);
 
     private static bool IsWithinMountPoint(string hostFullPath, MountedFolder mountedFolder) =>
         hostFullPath.StartsWith(mountedFolder.MountPoint);
@@ -88,10 +81,10 @@ public class DosPathResolver : IDosPathResolver {
     /// <inheritdoc/>
     public DosFileOperationResult SetCurrentDir(string dosPath) {
         if (IsPathRooted(dosPath)) {
-            string? hostPath = TryGetFullHostPath(dosPath);
+            string? hostPath = TryGetFullHostPathFromDos(dosPath);
             if (!string.IsNullOrWhiteSpace(hostPath)) {
                 char driveLetter = StartsWithDosDrive(dosPath) ? dosPath[0] : CurrentDrive;
-                return SetCurrentDirValue(driveLetter, GetHostRelativePathToCurrentDirectory(hostPath));
+                return SetCurrentDirValue(driveLetter, hostPath);
             } else {
                 return DosFileOperationResult.Error(ErrorCode.PathNotFound);
             }
@@ -102,23 +95,23 @@ public class DosPathResolver : IDosPathResolver {
         }
 
         if (dosPath == ".." || dosPath == @"..\") {
-            string newCurrentDir = GetHostFullNameForParentDirectory(CurrentHostDirectory);
+            string? newCurrentDir = Directory.GetParent(CurrentHostDirectory)?.FullName;
             return SetCurrentDirValue(CurrentDrive, newCurrentDir);
         }
 
         while (dosPath.StartsWith("..\\")) {
             dosPath = dosPath[3..];
-            string newCurrentDir = GetHostFullNameForParentDirectory(CurrentHostDirectory);
+            string? newCurrentDir = Directory.GetParent(CurrentHostDirectory)?.FullName;
             SetCurrentDirValue(CurrentDrive, newCurrentDir);
         }
 
-        string? hostFullPath = TryGetFullHostPath(dosPath);
+        string? hostFullPath = TryGetFullHostPathFromDos(dosPath);
         return SetCurrentDirValue(CurrentDrive, hostFullPath);
     }
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath) {
         if (string.IsNullOrWhiteSpace(hostFullPath) ||
-            !IsWithinMountPoint(hostFullPath, DriveMap[CurrentDrive]) ||
+            !IsWithinMountPoint(hostFullPath, DriveMap[driveLetter]) ||
             Encoding.ASCII.GetByteCount(hostFullPath) > 255) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
@@ -128,49 +121,12 @@ public class DosPathResolver : IDosPathResolver {
     }
 
     /// <inheritdoc />
-    public string GetHostFullNameForParentDirectory(string hostPath) => Directory.GetParent(hostPath)?.FullName ?? hostPath;
-
-    private string? RecursivelySearchForFullHostPath(string? dosPath, bool convertParentOnly) {
-        if (string.IsNullOrWhiteSpace(dosPath)) {
+    public string? TryGetFullHostParentPathFromDos(string dosPath) {
+        string? fullHostPath = TryGetFullHostPathFromDos(dosPath);
+        if(string.IsNullOrWhiteSpace(fullHostPath)) {
             return null;
         }
-
-        string hostPath = ConvertUtils.ToSlashPath(dosPath);
-        string? parentDir = Path.GetDirectoryName(hostPath);
-        if (File.Exists(hostPath) ||
-            Directory.Exists(hostPath) ||
-            convertParentOnly) {
-            // file exists or root reached, no need to go further. Path found.
-            return hostPath;
-        }
-
-        string? parent = RecursivelySearchForFullHostPath(parentDir, convertParentOnly);
-        if (parent == null) {
-            // End of recursion, root reached
-            return null;
-        }
-
-        // Now that parent is for sure on the host file system, let's find the actual path
-        try {
-            string searchPattern = Path.GetFileName(hostPath);
-            if (Directory.Exists(parent)) {
-                return GetTopLevelDirsAndFiles(hostPath, searchPattern).FirstOrDefault();
-            }
-        } catch (IOException e) {
-            e.Demystify();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning(e, "Error while checking file {CaseInsensitivePath}: {Exception}", dosPath, e);
-            }
-        }
-
-        return null;
-    }
-
-    /// <inheritdoc />
-    public string? TryGetFullParentHostPath(string dosPath) {
-        string fileName = PrefixWithHostDirectory(dosPath);
-
-        string? parent = RecursivelySearchForFullHostPath(fileName, true);
+        string? parent = Directory.GetParent(fullHostPath)?.FullName;
         if (string.IsNullOrWhiteSpace(parent)) {
             return null;
         }
@@ -178,11 +134,52 @@ public class DosPathResolver : IDosPathResolver {
         return ConvertUtils.ToSlashPath(parent);
     }
 
+    private (string HostPrefixPath, string DosRelativePath) DeconstructDosPath(string dosPath) {
+        if (IsPathRooted(dosPath)) {
+            int length = 1;
+            if (StartsWithDosDrive(dosPath)) {
+                length = 3;
+            }
+            return (DriveMap[dosPath[0]].MountPoint, dosPath[length..]);
+        } else if (StartsWithDosDrive(dosPath)) {
+            return (DriveMap[dosPath[0]].MountPoint, dosPath[2..]);
+        } else {
+            return (DriveMap[CurrentDrive].MountPoint, dosPath);
+        }
+    }
+
     /// <inheritdoc />
-    public string? TryGetFullHostPath(string dosPath) {
-        string fileName = PrefixWithHostDirectory(dosPath);
-        string? caseSensitivePath = RecursivelySearchForFullHostPath(fileName, false);
-        return caseSensitivePath;
+    public string? TryGetFullHostPathFromDos(string dosPath) {
+        if(string.IsNullOrWhiteSpace(dosPath)) {
+            return null;
+        }
+        (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
+
+        if(string.IsNullOrWhiteSpace(DosRelativePath)) {
+            return ConvertUtils.ToSlashPath(HostPrefix);
+        }
+
+        DirectoryInfo hostDirInfo = new DirectoryInfo(HostPrefix);
+
+        string? relativeHostPath = hostDirInfo
+            .EnumerateDirectories("*", new EnumerationOptions() {
+                RecurseSubdirectories = true,
+            })
+            .Select(x => x.FullName)
+            .Concat(
+            hostDirInfo.EnumerateFiles("*",
+            new EnumerationOptions() {
+                RecurseSubdirectories = true,
+            }).Select(x => x.FullName))
+            .Select(x => x[HostPrefix.Length..])
+            .OrderBy(x => x.Length)
+            .FirstOrDefault(x => string.Equals(ConvertUtils.ToSlashPath(x), ConvertUtils.ToSlashPath(DosRelativePath), StringComparison.OrdinalIgnoreCase));
+
+        if(string.IsNullOrWhiteSpace(relativeHostPath)) {
+            return null;
+        }
+
+        return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, relativeHostPath));
     }
 
     /// <inheritdoc />
@@ -190,21 +187,8 @@ public class DosPathResolver : IDosPathResolver {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return dosPath;
         }
-
-        string path;
-        if (IsPathRooted(dosPath)) {
-            int length = 1;
-            if (StartsWithDosDrive(dosPath)) {
-                length = 3;
-            }
-            path = Path.Combine(DriveMap[dosPath[0]].MountPoint, dosPath[length..]);
-        } else if (StartsWithDosDrive(dosPath)) {
-            path = Path.Combine(DriveMap[dosPath[0]].MountPoint, dosPath[2..]);
-        } else {
-            path = Path.Combine(DriveMap[CurrentDrive].MountPoint, dosPath);
-        }
-
-        return ConvertUtils.ToSlashPath(path);
+        (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
+        return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, DosRelativePath));
     }
 
     /// <summary>

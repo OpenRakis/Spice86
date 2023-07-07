@@ -1,4 +1,4 @@
-namespace Spice86.Tests;
+namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
@@ -29,7 +29,7 @@ public class DosPathResolverTests {
     [InlineData(@"d:bar", @"/foo/bar")]
     public void SetCurrentDir(string newCurrentDir, string expected) {
         // Arrange
-        DosPathResolver dosPathResolver = ArrangeDosPathResolver('D', @"foo");
+        DosPathResolver dosPathResolver = ArrangeDosPathResolver('D', @"D:\foo");
 
         // Act
         dosPathResolver.SetCurrentDir(newCurrentDir);
@@ -57,7 +57,7 @@ public class DosPathResolverTests {
         DosPathResolver dosPathResolver = ArrangeDosPathResolver('D', @"foo");
 
         // Act
-        string? actual = dosPathResolver.TryGetFullHostPath(dosPath);
+        string? actual = dosPathResolver.TryGetFullHostPathFromDos(dosPath);
 
         // Assert
         actual.Should().NotBeNull($"'{dosPath}' should be resolvable");
@@ -74,7 +74,7 @@ public class DosPathResolverTests {
     public void AbsolutePaths(string dosPath) {
         // Arrange
         DosPathResolver dosPathResolver = ArrangeDosPathResolver('D', @"foo");
-        string? actual = dosPathResolver.TryGetFullHostPath(dosPath);
+        string? actual = dosPathResolver.TryGetFullHostPathFromDos(dosPath);
 
         // Assert
         actual.Should().NotBeNull($"'{dosPath}' should be resolvable");
@@ -88,7 +88,7 @@ public class DosPathResolverTests {
         // Arrange
         DosPathResolver dosPathResolver = ArrangeDosPathResolver('D', @"foo");
         dosPathResolver.DriveMap.Add('E', new MountedFolder('E', Path.GetFullPath(@"Resources\MountPoint\drive2")));
-        string? actual = dosPathResolver.TryGetFullHostPath(dosPath);
+        string? actual = dosPathResolver.TryGetFullHostPathFromDos(dosPath);
 
         // Assert
         actual.Should().NotBeNull($"'{dosPath}' should be resolvable");
@@ -97,7 +97,7 @@ public class DosPathResolverTests {
 
     private static DosPathResolver ArrangeDosPathResolver(char currentDriveLetter, string currentDosPath) {
         var loggerService = new Mock<ILoggerService>();
-        var configuration = new Configuration {CDrive = MountPoint};
+        var configuration = new Configuration { CDrive = MountPoint };
         var dosPathResolver = new DosPathResolver(loggerService.Object, configuration);
         dosPathResolver.DriveMap.Add(currentDriveLetter, new MountedFolder(currentDriveLetter, MountPoint));
         dosPathResolver.SetCurrentDir(currentDosPath);

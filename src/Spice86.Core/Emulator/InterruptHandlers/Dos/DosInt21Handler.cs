@@ -583,7 +583,7 @@ public class DosInt21Handler : InterruptHandler {
     public void GetSetFileAttributes(bool calledFromVm) {
         byte op = _state.AL;
         string dosFileName = GetStringAtDsDx();
-        string? fileName = _dosFileManager.ToHostCaseSensitiveFileName(dosFileName, false);
+        string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);
