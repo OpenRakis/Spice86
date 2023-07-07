@@ -55,7 +55,7 @@ public class GdbCommandMemoryHandler {
                     break;
                 }
 
-                byte b = memory.GetUint8((uint)readAddress);
+                byte b = memory.UInt8[(uint)readAddress];
                 string value = _gdbFormatter.FormatValueAsHex8(b);
                 response.Append(value);
             }

@@ -158,7 +158,7 @@ public class Cpu {
     }
 
     public uint NextUint32() {
-        uint res = _memory.GetUint32(InternalIpPhysicalAddress);
+        uint res = _memory.UInt32[InternalIpPhysicalAddress];
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+2));
@@ -168,7 +168,7 @@ public class Cpu {
     }
 
     public ushort NextUint16() {
-        ushort res = _memory.GetUint16(InternalIpPhysicalAddress);
+        ushort res = _memory.UInt16[InternalIpPhysicalAddress];
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
         _internalIp += 2;
@@ -176,7 +176,7 @@ public class Cpu {
     }
 
     public byte NextUint8() {
-        byte res = _memory.GetUint8(InternalIpPhysicalAddress);
+        byte res = _memory.UInt8[InternalIpPhysicalAddress];
         ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
         _internalIp++;
         return res;
@@ -184,14 +184,14 @@ public class Cpu {
 
     public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
         uint flagsAddress = MemoryUtils.ToPhysicalAddress(State.SS, (ushort)(State.SP + 4));
-        int value = _memory.GetUint16(flagsAddress);
+        int value = _memory.UInt16[flagsAddress];
         if (flagValue) {
             value |= flagMask;
         } else {
             value &= ~flagMask;
         }
 
-        _memory.SetUint16(flagsAddress, (ushort)value);
+        _memory.UInt16[flagsAddress] = (ushort)value;
     }
 
     private void HandleCpuException(CpuException cpuException) {
@@ -1217,8 +1217,8 @@ public class Cpu {
             return;
         }
 
-        ushort targetIP = _memory.GetUint16((ushort)(4 * vectorNumber.Value));
-        ushort targetCS = _memory.GetUint16((ushort)((4 * vectorNumber.Value) + 2));
+        ushort targetIP = _memory.UInt16[(ushort)(4 * vectorNumber.Value)];
+        ushort targetCS = _memory.UInt16[(ushort)((4 * vectorNumber.Value) + 2)];
         if (ErrorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0) {
             throw new UnhandledOperationException(_machine,
                 $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");

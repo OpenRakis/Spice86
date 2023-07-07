@@ -25,7 +25,7 @@ public class MemoryBasedDataStructure {
     /// <param name="baseAddress">The base address of the structure.</param>
     /// <param name="offset">The offset added to the address.</param>
     public ushort GetUint16(uint baseAddress, int offset) {
-        return Memory.GetUint16((uint)(baseAddress + offset));
+        return Memory.UInt16[(uint)(baseAddress + offset)];
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public class MemoryBasedDataStructure {
     /// <param name="baseAddress">The base address of the structure.</param>
     /// <param name="offset">The offset added to the address.</param>
     public uint GetUint32(uint baseAddress, int offset) {
-        return Memory.GetUint32((uint)(baseAddress + offset));
+        return Memory.UInt32[(uint)(baseAddress + offset)];
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public class MemoryBasedDataStructure {
     /// <param name="baseAddress">The base address of the structure.</param>
     /// <param name="offset">The offset added to the address.</param>
     public byte GetUint8(uint baseAddress, int offset) {
-        return Memory.GetUint8((uint)(baseAddress + offset));
+        return Memory.UInt8[(uint)(baseAddress + offset)];
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public class MemoryBasedDataStructure {
     /// <param name="offset">The offset added to the address.</param>
     /// <param name="value">The value to write</param>
     public void SetUint16(uint baseAddress, int offset, ushort value) {
-        Memory.SetUint16((uint)(baseAddress + offset), value);
+        Memory.UInt16[(uint)(baseAddress + offset)] = value;
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public class MemoryBasedDataStructure {
     /// <param name="offset">The offset added to the address.</param>
     /// <param name="value">The value to write</param>
     public void SetUint32(uint baseAddress, int offset, uint value) {
-        Memory.SetUint32((uint)(baseAddress + offset), value);
+        Memory.UInt32[(uint)(baseAddress + offset)] = value;
     }
 
     /// <summary>
@@ -93,6 +93,6 @@ public class MemoryBasedDataStructure {
     /// <param name="offset">The offset added to the address.</param>
     /// <param name="value">The value to write</param>
     public void SetUint8(uint baseAddress, int offset, byte value) {
-        Memory.SetUint8((uint)(baseAddress + offset), value);
+        Memory.UInt8[(uint)(baseAddress + offset)] = value;
     }
 }

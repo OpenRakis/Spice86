@@ -332,8 +332,8 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void GetInterruptVector() {
         byte vectorNumber = _state.AL;
-        ushort segment = _memory.GetUint16((uint)((4 * vectorNumber) + 2));
-        ushort offset = _memory.GetUint16((uint)(4 * vectorNumber));
+        ushort segment = _memory.UInt16[(uint)((4 * vectorNumber) + 2)];
+        ushort offset = _memory.UInt16[(uint)(4 * vectorNumber)];
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("GET INTERRUPT VECTOR INT {VectorInt}, got {SegmentedAddress}", ConvertUtils.ToHex8(vectorNumber),
                 ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
@@ -487,8 +487,8 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void SetInterruptVector(byte vectorNumber, ushort segment, ushort offset) {
-        _memory.SetUint16((ushort)((4 * vectorNumber) + 2), segment);
-        _memory.SetUint16((ushort)(4 * vectorNumber), offset);
+        _memory.UInt16[(ushort)((4 * vectorNumber) + 2)] = segment;
+        _memory.UInt16[(ushort)(4 * vectorNumber)] = offset;
     }
 
     public void WriteFileUsingHandle(bool calledFromVm) {
@@ -521,15 +521,15 @@ public class DosInt21Handler : InterruptHandler {
         }
         uint responseAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
         // Fake that we are always at the root of the drive (empty String)
-        _memory.SetUint8(responseAddress, 0);
+        _memory.UInt8[responseAddress] = 0;
     }
 
     private string GetDosString(Memory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
         StringBuilder stringBuilder = new();
         List<byte> sourceArray = new();
-        while (memory.GetUint8(stringStart) != end) {
-            sourceArray.Add(memory.GetUint8(stringStart++));
+        while (memory.UInt8[stringStart] != end) {
+            sourceArray.Add(memory.UInt8[stringStart++]);
         }
         string convertedString = ConvertDosChars(sourceArray);
         stringBuilder.Append(convertedString);

@@ -499,9 +499,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     
     public byte GetAllHandlePages(uint tableAddress) {
         foreach(KeyValuePair<int, EmmHandle> allocatedHandle in EmmHandles) {
-            _memory.SetUint16(tableAddress, allocatedHandle.Value.HandleNumber);
+            _memory.UInt16[tableAddress] = allocatedHandle.Value.HandleNumber;
             tableAddress += 2;
-            _memory.SetUint16(tableAddress, (ushort)allocatedHandle.Value.LogicalPages.Count);
+            _memory.UInt16[tableAddress] = (ushort)allocatedHandle.Value.LogicalPages.Count;
             tableAddress += 2;
         }
         return EmmStatus.EmmNoError;
@@ -529,9 +529,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         switch (operation) {
             case EmmSubFunctions.UsePhysicalPageNumbers:
                 for (int i = 0; i < numberOfPages; i++) {
-                    ushort logicalPage = _memory.GetUint16(mapAddress);
+                    ushort logicalPage = _memory.UInt16[mapAddress];
                     mapAddress += 2;
-                    ushort physicalPage = _memory.GetUint16(mapAddress);
+                    ushort physicalPage = _memory.UInt16[mapAddress];
                     mapAddress += 2;
                     MapUnmapHandlePage(logicalPage, physicalPage, handleId);
                     if (_state.AH != EmmStatus.EmmNoError) {
@@ -541,9 +541,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
             case EmmSubFunctions.UseSegmentedAddress:
                 for (int i = 0; i < numberOfPages; i++) {
-                    ushort logicalPage = _memory.GetUint16(mapAddress);
+                    ushort logicalPage = _memory.UInt16[mapAddress];
                     mapAddress += 2;
-                    ushort segment = _memory.GetUint16(mapAddress);
+                    ushort segment = _memory.UInt16[mapAddress];
                     mapAddress += 2;
                     MapSegment(logicalPage, segment, handleId);
                     if (_state.AH != EmmStatus.EmmNoError) {
@@ -668,19 +668,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             case EmmSubFunctions.GetHardwareConfigurationArray:
                 uint data = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
                 // 1 page is 1K paragraphs (16KB)
-                _memory.SetUint16(data,0x0400);
+                _memory.UInt16[data] =0x0400;
                 data+=2;
                 // No alternate register sets
-                _memory.SetUint16(data,0x0000);
+                _memory.UInt16[data] = 0x0000;
                 data+=2;
                 // Context save area size
-                _memory.SetUint16(data, (ushort)EmmHandles.SelectMany(static x => x.Value.LogicalPages).Count());
+                _memory.UInt16[data] = (ushort)EmmHandles.SelectMany(static x => x.Value.LogicalPages).Count();
                 data+=2;
                 // No DMA channels
-                _memory.SetUint16(data,0x0000);
+                _memory.UInt16[data] = 0x0000;
                 data+=2;
                 // Always 0 for LIM standard
-                _memory.SetUint16(data,0x0000);
+                _memory.UInt16[data] = 0x0000;
                 break;
             case EmmSubFunctions.GetUnallocatedRawPages:
                 // Return number of pages available in BX.

@@ -110,8 +110,8 @@ public abstract class Instructions16Or32 : Instructions {
             return;
         }
 
-        ushort ip = Memory.GetUint16(ipAddress.Value);
-        ushort cs = Memory.GetUint16(ipAddress.Value + 2);
+        ushort ip = Memory.UInt16[ipAddress.Value];
+        ushort cs = Memory.UInt16[ipAddress.Value + 2];
         Cpu.FarCallWithReturnIpNextInstruction(cs, ip);
     }
 
@@ -126,8 +126,8 @@ public abstract class Instructions16Or32 : Instructions {
             return;
         }
 
-        ushort ip = Memory.GetUint16(ipAddress.Value);
-        ushort cs = Memory.GetUint16(ipAddress.Value + 2);
+        ushort ip = Memory.UInt16[ipAddress.Value];
+        ushort cs = Memory.UInt16[ipAddress.Value + 2];
         Cpu.JumpFar(cs, ip);
     }
 

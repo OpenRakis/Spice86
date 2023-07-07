@@ -215,8 +215,8 @@ public class MouseDriver : IMouseDriver {
 
         // We're going to call the user specific subroutine, and then return to a special callback that will restore the registers.
         const int int90HandlerVector = 0x90;
-        ushort callAddressSegment = _memory.GetUint16(4 * int90HandlerVector + 2);
-        ushort callAddressOffset = _memory.GetUint16(4 * int90HandlerVector);
+        ushort callAddressSegment = _memory.UInt16[4 * int90HandlerVector + 2];
+        ushort callAddressOffset = _memory.UInt16[4 * int90HandlerVector];
 
         _cpu.FarCall(callAddressSegment, callAddressOffset, _userCallback.Segment, _userCallback.Offset);
     }

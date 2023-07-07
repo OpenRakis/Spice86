@@ -477,8 +477,8 @@ public class CSharpOverrideHelper {
     /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, int vectorNumber) {
-        ushort targetIP = Memory.GetUint16((ushort)(4 * vectorNumber));
-        ushort targetCS = Memory.GetUint16((ushort)((4 * vectorNumber) + 2));
+        ushort targetIP = Memory.UInt16[(ushort)(4 * vectorNumber)];
+        ushort targetCS = Memory.UInt16[(ushort)((4 * vectorNumber) + 2)];
         SegmentedAddress target = new SegmentedAddress(targetCS, targetIP);
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function is null) {
@@ -619,8 +619,8 @@ public class CSharpOverrideHelper {
         ushort expectedSegment,
         ushort expectedOffset) {
         uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.GetRegister16(segmentRegisterIndex), offset);
-        ushort foundOffset = Memory.GetUint16(address);
-        ushort foundSegment = Memory.GetUint16(address + 2);
+        ushort foundOffset = Memory.UInt16[address];
+        ushort foundSegment = Memory.UInt16[address + 2];
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
             throw FailAsUntested(
                 $"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");

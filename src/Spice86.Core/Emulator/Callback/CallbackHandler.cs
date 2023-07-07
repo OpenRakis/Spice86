@@ -124,8 +124,8 @@ public class CallbackHandler : IndexBasedDispatcher {
     /// <param name="offset">The offset address of the vector.</param>
     private void InstallVectorInTable(byte vectorNumber, ushort segment, ushort offset) {
         // install the vector in the vector table
-        _memory.SetUint16((ushort)((4 * vectorNumber) + 2), segment);
-        _memory.SetUint16((ushort)(4 * vectorNumber), offset);
+        _memory.UInt16[(ushort)((4 * vectorNumber) + 2)] = segment;
+        _memory.UInt16[(ushort)(4 * vectorNumber)] = offset;
     }
 
     /// <summary>
@@ -140,14 +140,14 @@ public class CallbackHandler : IndexBasedDispatcher {
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
 
         // CALLBACK opcode (custom instruction, FE38 + 16 bits callback number)
-        _memory.SetUint8(address, 0xFE);
-        _memory.SetUint8(address + 1, 0x38);
+        _memory.UInt8[address] = 0xFE;
+        _memory.UInt8[address + 1] = 0x38;
 
         // vector to call
-        _memory.SetUint8(address + 2, vectorNumber);
+        _memory.UInt8[address + 2] = vectorNumber;
 
         // IRET
-        _memory.SetUint8(address + 3, 0xCF);
+        _memory.UInt8[address + 3] = 0xCF;
 
         // 4 bytes used
         return CallbackSize;
