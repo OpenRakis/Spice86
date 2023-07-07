@@ -328,7 +328,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     public bool IsRightButtonClicked { get; private set; }
     
-    public void OnMainWindowOpened(object? sender, EventArgs e) {
+    public void OnMainWindowOpened() {
         if(RunEmulator()) {
             _closeAppOnEmulatorExit = true;
         }

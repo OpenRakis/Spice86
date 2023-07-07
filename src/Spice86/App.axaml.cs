@@ -49,8 +49,6 @@ internal partial class App : Application {
         MainWindowViewModel mainViewModel = new(loggerService);
         desktop.MainWindow.DataContext = mainViewModel;
         mainViewModel.SetConfiguration(desktop.Args ?? Array.Empty<string>());
-        desktop.MainWindow.Closed += (_, _) => mainViewModel.Dispose();
-        desktop.MainWindow.Opened += mainViewModel.OnMainWindowOpened;
         base.OnFrameworkInitializationCompleted();
     }
 
