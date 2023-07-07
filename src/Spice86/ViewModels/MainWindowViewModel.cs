@@ -31,6 +31,7 @@ using Spice86.Shared.Interfaces;
 
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
+using Avalonia.Input.Platform;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
@@ -439,21 +440,21 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private bool _isDialogVisible;
 
     [ObservableProperty]
-    private string? _dialogTitle;
+    private Exception? _exception;
 
-    [ObservableProperty]
-    private string? _dialogMessage;
+    [RelayCommand]
+    public async Task CopyToClipboard() {
+        if(Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Exception is not null &&
+            desktop.MainWindow?.Clipboard is IClipboard clipboard) {
+            await clipboard.SetTextAsync(Exception.StackTrace);
+        }
+    }
 
     [RelayCommand]
     public void ClearDialog() => IsDialogVisible = false;
 
     private void ShowEmulationErrorMessage(Exception e) {
-        DialogTitle = "An unhandled exception occured";
-        DialogMessage = $"""
-            Method name: {e.GetBaseException().TargetSite?.Name},
-            Exception message: {e.GetBaseException().Message},
-            Stack trace (first line): {e.GetBaseException().StackTrace?.Split(Environment.NewLine).FirstOrDefault()}
-            """;
+        Exception = e.GetBaseException();
         IsDialogVisible = true;
     }
 

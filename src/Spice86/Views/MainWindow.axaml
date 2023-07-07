@@ -12,9 +12,11 @@
 		Width="1024"
 		Height="768"
 		WindowStartupLocation="CenterScreen"
-		CanResize="True">
+		CanResize="True"
+		x:Name="MainWin">
 	<Window.Resources>
 		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
+		<converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
 	</Window.Resources>
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
@@ -82,12 +84,25 @@
 			<Line Margin="5,0,0,0" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 			<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 		</WrapPanel>
-		<Border IsVisible="{Binding IsDialogVisible}" Grid.RowSpan="3" Background="#40000000">
-			<WrapPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+		<Border IsVisible="{Binding IsDialogVisible}" Grid.RowSpan="3" Background="DarkBlue" Opacity="0.5">
+			<WrapPanel Opacity="1" Background="{Binding Background, ElementName=MainWin}" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
 				<Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
-					<Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="{Binding DialogTitle}" />
-					<TextBlock Grid.Row="1" Grid.ColumnSpan="3" TextWrapping="Wrap"  Text="{Binding DialogMessage}" />
-					<Button Content="OK" Margin="10" MinWidth="80" MinHeight="40" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
+					<Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
+					<WrapPanel Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
+						<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*">
+							<Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">Method Name</Label>
+							<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Exception.TargetSite.Name}" />
+							<Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">Exception Type</Label>
+							<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Exception, Converter={StaticResource ClassToTypeStringConverter}}" />
+						</Grid>
+						<Expander Header="Stack Trace" IsExpanded="False">
+							<StackPanel Orientation="Vertical">
+								<Button Content="Copy To Clipboard" Command="{Binding CopyToClipboardCommand}" />
+								<TextBlock TextWrapping="Wrap" Text="{Binding Exception.StackTrace, Converter={StaticResource ClassToTypeStringConverter}}" />
+							</StackPanel>
+						</Expander>
+					</WrapPanel>
+					<Button Content="OK" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
 				</Grid>
 			</WrapPanel>
 		</Border>
