@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.VM;
@@ -14,17 +13,17 @@ public class SystemClockInt1AHandler : InterruptHandler {
 
     public SystemClockInt1AHandler(Machine machine, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(machine, loggerService) {
         _timerHandler = timerHandler;
-        _dispatchTable.Add(0x00, new Callback(0x00, SetSystemClockCounter));
-        _dispatchTable.Add(0x01, new Callback(0x01, GetSystemClockCounter));
-        _dispatchTable.Add(0x81, new Callback(0x81, TandySoundSystemUnhandled));
-        _dispatchTable.Add(0x82, new Callback(0x82, TandySoundSystemUnhandled));
-        _dispatchTable.Add(0x83, new Callback(0x83, TandySoundSystemUnhandled));
-        _dispatchTable.Add(0x84, new Callback(0x84, TandySoundSystemUnhandled));
-        _dispatchTable.Add(0x85, new Callback(0x85, TandySoundSystemUnhandled));
+        AddAction(0x00, SetSystemClockCounter);
+        AddAction(0x01, GetSystemClockCounter);
+        AddAction(0x81, TandySoundSystemUnhandled);
+        AddAction(0x82, TandySoundSystemUnhandled);
+        AddAction(0x83, TandySoundSystemUnhandled);
+        AddAction(0x84, TandySoundSystemUnhandled);
+        AddAction(0x85, TandySoundSystemUnhandled);
     }
 
     /// <inheritdoc />
-    public override byte Index => 0x1A;
+    public override byte VectorNumber => 0x1A;
 
     public void GetSystemClockCounter() {
         uint value = _timerHandler.TickCounterValue;

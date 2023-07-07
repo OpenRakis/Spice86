@@ -356,7 +356,7 @@ public class MachineTest {
 
     [AssertionMethod]
     private void CompareMemoryWithExpected(Memory memory, byte[] expected, int start, int end) {
-        byte[] actual = memory.Ram;
+        byte[] actual = memory.RamCopy;
         actual[start..end].Should().BeEquivalentTo(expected[start..end]);
     }
 

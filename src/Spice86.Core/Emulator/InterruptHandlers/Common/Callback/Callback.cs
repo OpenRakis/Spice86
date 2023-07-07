@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Callback;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+
+using Spice86.Shared.Emulator.Memory;
 
 using System;
 
@@ -7,22 +9,22 @@ using System;
 /// </summary>
 public class Callback : ICallback {
     private readonly Action _runnable;
+    /// <inheritdoc/>
+    public byte Index { get; }
+    /// <inheritdoc />
+    public SegmentedAddress InstructionAddress { get; }
 
     /// <summary>
     /// Initializes a new instance of a <see cref="Callback"/>
     /// </summary>
     /// <param name="index">The callback number.</param>
     /// <param name="runnable">The code the callback will run.</param>
-    public Callback(byte index, Action runnable) {
+    /// <param name="instructionAddress">Physical address of the callback instruction.</param>
+    public Callback(byte index, Action runnable, SegmentedAddress instructionAddress) {
         Index = index;
         _runnable = runnable;
+        InstructionAddress = instructionAddress;
     }
-
-    /// <inheritdoc/>
-    public byte Index { get; private set; }
-
-    /// <inheritdoc />
-    public ushort? InterruptHandlerSegment => null;
 
     /// <inheritdoc/>
     public void Run() {

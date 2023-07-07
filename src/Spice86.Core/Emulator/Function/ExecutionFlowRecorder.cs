@@ -20,36 +20,36 @@ public class ExecutionFlowRecorder {
     /// <summary>
     /// Gets or sets whether we register calls, jumps, returns, and unaligned returns.
     /// </summary>
-    public bool RecordData { set; get; }
+    public bool RecordData { get; set; }
     
     /// <summary>
     /// Gets a dictionary of calls from one address to another.
     /// </summary>
-    public IDictionary<uint, ISet<SegmentedAddress>> CallsFromTo { get; }
+    public IDictionary<uint, ISet<SegmentedAddress>> CallsFromTo { get; set; }
     private readonly ISet<ulong> _callsEncountered = new HashSet<ulong>();
     
     /// <summary>
     /// Gets a dictionary of jumps from one address to another.
     /// </summary>
-    public IDictionary<uint, ISet<SegmentedAddress>> JumpsFromTo { get; }
+    public IDictionary<uint, ISet<SegmentedAddress>> JumpsFromTo { get; set; }
     private readonly ISet<ulong> _jumpsEncountered = new HashSet<ulong>();
     
     /// <summary>
     /// Gets a dictionary of returns from one address to another.
     /// </summary>
-    public IDictionary<uint, ISet<SegmentedAddress>> RetsFromTo { get; }
+    public IDictionary<uint, ISet<SegmentedAddress>> RetsFromTo { get; set; }
     private readonly ISet<ulong> _retsEncountered = new HashSet<ulong>();
     
     /// <summary>
     /// Gets a dictionary of unaligned returns from one address to another.
     /// </summary>
-    public IDictionary<uint, ISet<SegmentedAddress>> UnalignedRetsFromTo { get; }
+    public IDictionary<uint, ISet<SegmentedAddress>> UnalignedRetsFromTo { get; set; }
     private readonly ISet<ulong> _unalignedRetsEncountered = new HashSet<ulong>();
     
     /// <summary>
     /// Gets the set of executed instructions.
     /// </summary>
-    public ISet<SegmentedAddress> ExecutedInstructions { get; }
+    public ISet<SegmentedAddress> ExecutedInstructions { get; set; }
     private readonly ISet<uint> _instructionsEncountered = new HashSet<uint>();
     private readonly ISet<uint> _executableCodeAreasEncountered = new HashSet<uint>();
 

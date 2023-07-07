@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Shared.Utils;
 

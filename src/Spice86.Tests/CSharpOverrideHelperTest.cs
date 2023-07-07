@@ -2,7 +2,6 @@ namespace Spice86.Tests;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -13,7 +12,6 @@ using System.Collections.Generic;
 using Xunit;
 using Moq;
 
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Memory;
 
 public class CSharpOverrideHelperTest {

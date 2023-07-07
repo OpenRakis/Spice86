@@ -60,18 +60,13 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <param name="suffix">The suffix to add to the file name.</param>
     public void DumpMemory(string suffix) {
         string path = GenerateDumpFileName($"MemoryDump{suffix}.bin");
-        File.WriteAllBytes(path, GenerateRelevantRam());
-    }
-
-    /// <summary>
-    /// Generates a byte array containing relevant RAM data to be written to the memory dump file.
-    /// </summary>
-    /// <returns>A byte array containing relevant RAM data.</returns>
-    private byte[] GenerateRelevantRam() {
+        File.WriteAllBytes(path, GenerateToolingCompliantRamDump());    }
+    
+    private byte[] GenerateToolingCompliantRamDump() {
         if (_machine.Configuration.InitializeDOS is true) {
-            return _machine.CallbackHandler.NopCallbackInstructionInRamCopy();
+            return _machine.CallbackHandler.ReplaceAllCallbacksInRamImage(_machine.Memory);
         }
-        return _machine.Memory.Ram;
+        return _machine.Memory.RamCopy;
     }
 
     /// <summary>
