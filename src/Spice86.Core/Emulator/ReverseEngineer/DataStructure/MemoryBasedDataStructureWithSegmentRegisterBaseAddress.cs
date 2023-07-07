@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.ReverseEngineer;
+﻿namespace Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
@@ -7,7 +7,7 @@ using Spice86.Core.Emulator.VM;
 /// Provides a base class for memory-based data structures that have a segmented base address. <br/>
 /// That segmented address is stored in a CPU segment register.
 /// </summary>
-public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : MemoryBasedDataStructureWithBaseAddressProvider {
+public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : AbstractMemoryBasedDataStructure {
     private readonly int _segmentRegisterIndex;
 
     private readonly SegmentRegisters _segmentRegisters;

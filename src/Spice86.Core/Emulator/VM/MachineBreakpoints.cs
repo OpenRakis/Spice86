@@ -92,7 +92,7 @@ public sealed class MachineBreakpoints : IDisposable {
         } else if (breakPointType == BreakPointType.MACHINE_STOP) {
             _machineStopBreakPoint = breakPoint;
         } else {
-            _memory.ToggleBreakPoint(breakPoint, on);
+            _memory.MemoryBreakpoints.ToggleBreakPoint(breakPoint, on);
         }
     }
 

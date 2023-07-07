@@ -3,10 +3,11 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -52,7 +53,13 @@ public class ExeLoader : DosFileLoader {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Exe size: {ExeSize}", exe.Length);
         }
-        ExeFile exeFile = new ExeFile(exe);
+        ExeFile exeFile = new ExeFile(new ByteArrayByteReaderWriter(exe));
+        if (!exeFile.IsValid) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Invalid EXE file {file}", file);
+            }
+            throw new UnrecoverableException($"Invalid EXE file {file}");
+        }
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Read header: {ReadHeader}", exeFile);
         }
@@ -75,13 +82,10 @@ public class ExeLoader : DosFileLoader {
     private void LoadExeFileInMemory(ExeFile exeFile, ushort startSegment) {
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
         _memory.LoadData(physicalStartAddress, exeFile.ProgramImage);
-        for (int i = 0; i < exeFile.RelocationTable.Count; i++) {
-            SegmentedAddress address = exeFile.RelocationTable[i];
+        foreach (SegmentedAddress address in exeFile.RelocationTable) {
             // Read value from memory, add the start segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset) + physicalStartAddress;
-            int segmentToRelocate = _memory.UInt16[addressToEdit];
-            segmentToRelocate += startSegment;
-            _memory.UInt16[addressToEdit] = (ushort)segmentToRelocate;
+            _memory.UInt16[addressToEdit] += startSegment;
         }
     }
 

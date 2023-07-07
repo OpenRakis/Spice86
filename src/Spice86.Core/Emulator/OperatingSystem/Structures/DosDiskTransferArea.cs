@@ -2,10 +2,12 @@
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
 /// <summary>
 /// Represents a DTA (Disk Transfer Area) in memory.
 /// </summary>
-public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress {
+public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// <summary>
     /// The offset in bytes where the attribute field is located within the DTA.
     /// </summary>
@@ -46,12 +48,12 @@ public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress {
     /// <summary>
     /// Gets or sets the attribute field of the DTA.
     /// </summary>
-    public byte Attribute { get => GetUint8(AttributeOffset); set => SetUint8(AttributeOffset, value); }
+    public byte Attribute { get => UInt8[AttributeOffset]; set => UInt8[AttributeOffset] = value; }
 
     /// <summary>
     /// Gets or sets the file date field of the DTA.
     /// </summary>
-    public ushort FileDate { get => GetUint16(FileDateOffset); set => SetUint16(FileDateOffset, value); }
+    public ushort FileDate { get => UInt16[FileDateOffset]; set => UInt16[FileDateOffset] = value; }
 
     /// <summary>
     /// Gets or sets the file name field of the DTA.
@@ -64,10 +66,10 @@ public class DosDiskTransferArea : MemoryBasedDataStructureWithBaseAddress {
     /// <summary>
     /// Gets or sets the file size field of the DTA.
     /// </summary>
-    public ushort FileSize { get => GetUint16(FileSizeOffset); set => SetUint16(FileSizeOffset, value); }
+    public ushort FileSize { get => UInt16[FileSizeOffset]; set => UInt16[FileSizeOffset] = value; }
 
     /// <summary>
     /// Gets or sets the file time field of the DTA.
     /// </summary>
-    public ushort FileTime { get => GetUint16(FileTimeOffset); set => SetUint16(FileTimeOffset, value); }
+    public ushort FileTime { get => UInt16[FileTimeOffset]; set => UInt16[FileTimeOffset] = value; }
 }

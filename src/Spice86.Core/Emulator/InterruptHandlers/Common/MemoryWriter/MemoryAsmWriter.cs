@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Shared.Emulator.Memory;
 
@@ -17,7 +18,7 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <param name="memory">Memory BUS to where instructions are going to be written</param>
     /// <param name="beginningAddress">Where to start writing</param>
     /// <param name="callbackHandler">CallbackHandler instance to use to register the callbacks we create</param>
-    public MemoryAsmWriter(IIndexed memory, SegmentedAddress beginningAddress, CallbackHandler callbackHandler) : base(memory, beginningAddress) {
+    public MemoryAsmWriter(Indexable memory, SegmentedAddress beginningAddress, CallbackHandler callbackHandler) : base(memory, beginningAddress) {
         _callbackHandler = callbackHandler;
     }
 
