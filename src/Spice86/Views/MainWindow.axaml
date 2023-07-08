@@ -79,9 +79,7 @@
 		<local:VideoBufferView Grid.Row="1" DataContext="{Binding VideoBuffer}" />
 		<WrapPanel Grid.Row="2" Orientation="Horizontal">
 			<TextBlock Text="{Binding StatusMessage}" />
-			<Line Margin="5,0,0,0" />
 			<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
-			<Line Margin="5,0,0,0" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 			<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 		</WrapPanel>
 		<Border IsVisible="{Binding IsDialogVisible}" Grid.RowSpan="3" Background="DarkBlue" Opacity="0.5">

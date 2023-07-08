@@ -10,13 +10,10 @@ internal class CountToBooleanConverter : IValueConverter {
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        switch (value as bool?) {
-            case false:
-                return 0;
-            case true:
-                return 1;
-            default:
-                return 0;
-        }
+        return (value as bool?) switch {
+            false => 0,
+            true => 1,
+            _ => (object)0,
+        };
     }
 }
