@@ -378,6 +378,6 @@ This project uses JetBrains Rider licenses, thanks to JetBrains' [Open Source Co
 
 ![](jetbrainsrider.svg)
 
-The UI is powered by [Avalonia UI](https://avaloniaui.net/)https://avaloniaui.net/.
+The UI is powered by [Avalonia UI](https://avaloniaui.net/).
 
 ![](avalonia.png)
