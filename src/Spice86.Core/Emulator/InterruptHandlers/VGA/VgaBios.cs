@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
@@ -41,7 +40,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <summary>
     ///     The interrupt vector this class handles.
     /// </summary>
-    public override byte Index => 0x10;
+    public override byte VectorNumber => 0x10;
 
     /// <inheritdoc />
     public void WriteString() {
@@ -576,28 +575,28 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     }
 
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x00, new Callback(0x00, SetVideoMode));
-        _dispatchTable.Add(0x01, new Callback(0x01, SetCursorType));
-        _dispatchTable.Add(0x02, new Callback(0x02, SetCursorPosition));
-        _dispatchTable.Add(0x03, new Callback(0x03, GetCursorPosition));
-        _dispatchTable.Add(0x04, new Callback(0x04, ReadLightPenPosition));
-        _dispatchTable.Add(0x05, new Callback(0x05, SelectActiveDisplayPage));
-        _dispatchTable.Add(0x06, new Callback(0x06, ScrollPageUp));
-        _dispatchTable.Add(0x07, new Callback(0x07, ScrollPageDown));
-        _dispatchTable.Add(0x08, new Callback(0x08, ReadCharacterAndAttributeAtCursor));
-        _dispatchTable.Add(0x09, new Callback(0x09, WriteCharacterAndAttributeAtCursor));
-        _dispatchTable.Add(0x0A, new Callback(0x0A, WriteCharacterAtCursor));
-        _dispatchTable.Add(0x0B, new Callback(0x0B, SetColorPaletteOrBackGroundColor));
-        _dispatchTable.Add(0x0C, new Callback(0x0C, WriteDot));
-        _dispatchTable.Add(0x0D, new Callback(0x0D, ReadDot));
-        _dispatchTable.Add(0x0E, new Callback(0x0E, WriteTextInTeletypeMode));
-        _dispatchTable.Add(0x0F, new Callback(0x0F, GetVideoState));
-        _dispatchTable.Add(0x10, new Callback(0x10, SetPaletteRegisters));
-        _dispatchTable.Add(0x11, new Callback(0x11, LoadFontInfo));
-        _dispatchTable.Add(0x12, new Callback(0x12, VideoSubsystemConfiguration));
-        _dispatchTable.Add(0x13, new Callback(0x13, WriteString));
-        _dispatchTable.Add(0x1A, new Callback(0x1A, GetSetDisplayCombinationCode));
-        _dispatchTable.Add(0x1B, new Callback(0x1B, () => GetFunctionalityInfo()));
+        AddAction(0x00, SetVideoMode);
+        AddAction(0x01, SetCursorType);
+        AddAction(0x02, SetCursorPosition);
+        AddAction(0x03, GetCursorPosition);
+        AddAction(0x04, ReadLightPenPosition);
+        AddAction(0x05, SelectActiveDisplayPage);
+        AddAction(0x06, ScrollPageUp);
+        AddAction(0x07, ScrollPageDown);
+        AddAction(0x08, ReadCharacterAndAttributeAtCursor);
+        AddAction(0x09, WriteCharacterAndAttributeAtCursor);
+        AddAction(0x0A, WriteCharacterAtCursor);
+        AddAction(0x0B, SetColorPaletteOrBackGroundColor);
+        AddAction(0x0C, WriteDot);
+        AddAction(0x0D, ReadDot);
+        AddAction(0x0E, WriteTextInTeletypeMode);
+        AddAction(0x0F, GetVideoState);
+        AddAction(0x10, SetPaletteRegisters);
+        AddAction(0x11, LoadFontInfo);
+        AddAction(0x12, VideoSubsystemConfiguration);
+        AddAction(0x13, WriteString);
+        AddAction(0x1A, GetSetDisplayCombinationCode);
+        AddAction(0x1B, () => GetFunctionalityInfo());
     }
 
     // public VideoFunctionalityInfo GetFunctionalityInfo() {

@@ -4,7 +4,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.Callback;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -22,16 +21,16 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x24, new Callback(0x24, () => ToggleA20GateOrGetStatus(true)));
-        _dispatchTable.Add(0x6, new Callback(0x6, Unsupported));
-        _dispatchTable.Add(0xC0, new Callback(0xC0, Unsupported));
-        _dispatchTable.Add(0xC2, new Callback(0xC2, Unsupported));
-        _dispatchTable.Add(0xC4, new Callback(0xC4, Unsupported));
-        _dispatchTable.Add(0x88, new Callback(0x88, GetExtendedMemorySize));
+        AddAction(0x24, () => ToggleA20GateOrGetStatus(true));
+        AddAction(0x6, Unsupported);
+        AddAction(0xC0, Unsupported);
+        AddAction(0xC2, Unsupported);
+        AddAction(0xC4, Unsupported);
+        AddAction(0x88, GetExtendedMemorySize);
     }
 
     /// <inheritdoc />
-    public override byte Index => 0x15;
+    public override byte VectorNumber => 0x15;
 
     /// <inheritdoc />
     public override void Run() {

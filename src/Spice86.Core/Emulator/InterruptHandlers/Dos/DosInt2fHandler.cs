@@ -4,7 +4,6 @@ using Spice86.Shared.Interfaces;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.Callback;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
@@ -18,7 +17,7 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <inheritdoc />
-    public override byte Index => 0x2f;
+    public override byte VectorNumber => 0x2f;
 
     /// <inheritdoc />
     public override void Run() {
@@ -27,10 +26,10 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     private void FillDispatchTable() {
-        _dispatchTable.Add(0x16, new Callback(0x16, () => ClearCFAndCX(true)));
-        _dispatchTable.Add(0x15, new Callback(0x15, SendDeviceDriverRequest));
-        _dispatchTable.Add(0x43, new Callback(0x43, () => ClearCFAndCX(true)));
-        _dispatchTable.Add(0x46, new Callback(0x46, () => ClearCFAndCX(true)));
+        AddAction(0x16, () => ClearCFAndCX(true));
+        AddAction(0x15, SendDeviceDriverRequest);
+        AddAction(0x43, () => ClearCFAndCX(true));
+        AddAction(0x46, () => ClearCFAndCX(true));
     }
 
     /// <summary>

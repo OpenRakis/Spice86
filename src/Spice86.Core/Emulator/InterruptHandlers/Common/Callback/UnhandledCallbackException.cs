@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Callback;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;

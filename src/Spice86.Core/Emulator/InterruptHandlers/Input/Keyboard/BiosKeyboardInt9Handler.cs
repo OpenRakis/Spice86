@@ -20,7 +20,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     public BiosKeyboardBuffer BiosKeyboardBuffer { get; }
 
     /// <inheritdoc />
-    public override byte Index => 0x9;
+    public override byte VectorNumber => 0x9;
 
     /// <inheritdoc />
     public override void Run() {

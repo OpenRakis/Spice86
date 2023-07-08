@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
@@ -16,6 +17,7 @@ public class VgaFunctionality : IVgaFunctionality {
     private readonly IIOPortHandler _ioPortDispatcher;
     private readonly Memory _memory;
     private readonly VgaRom _vgaRom;
+    private readonly InterruptVectorTable _interruptVectorTable;
 
     /// <summary>
     /// Creates a new instance of the <see cref="VgaFunctionality"/> class.
@@ -29,6 +31,7 @@ public class VgaFunctionality : IVgaFunctionality {
         _ioPortDispatcher = ioPortDispatcher;
         _biosDataArea = biosDataArea;
         _vgaRom = vgaRom;
+        _interruptVectorTable = new (memory);
     }
 
     /// <inheritdoc />
@@ -779,11 +782,8 @@ public class VgaFunctionality : IVgaFunctionality {
         return new CharacterPlusAttribute((char)0, 0, false);
     }
 
-    private SegmentedAddress GetInterruptVectorAddress(int vector) {
-        int tableOffset = 4 * vector;
-        ushort segment = _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)(tableOffset + 2)];
-        ushort offset = _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)tableOffset];
-        return new SegmentedAddress(segment, offset);
+    private SegmentedAddress GetInterruptVectorAddress(byte vector) {
+        return new SegmentedAddress(_interruptVectorTable[vector]);
     }
 
     private int MemCmp(IReadOnlyList<byte> bytes, ushort segment, ushort offset, int length) {
@@ -886,10 +886,8 @@ public class VgaFunctionality : IVgaFunctionality {
         HandleGraphicsOperation(operation);
     }
 
-    private void SetInterruptVectorAddress(int vector, ushort segment, ushort offset) {
-        int tableOffset = 4 * vector;
-        _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)tableOffset] = offset;
-        _memory.UInt16[MemoryMap.InterruptVectorSegment, (ushort)(tableOffset + 2)] = segment;
+    private void SetInterruptVectorAddress(byte vector, ushort segment, ushort offset) {
+        _interruptVectorTable[vector] = (segment, offset);
     }
 
     private void GraphicalClearCharacters(VgaMode vgaMode, CursorPosition startPosition, Area area, CharacterPlusAttribute ca) {
