@@ -3,6 +3,7 @@
 using Spice86.Shared.Emulator.Memory;
 
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -376,5 +377,16 @@ public static class ConvertUtils {
             slashPath += '/';
         }
         return slashPath;
+    }
+
+    /// <summary>
+    /// Replaces all occurrences of slashes with back slashes in the given path string.
+    /// </summary>
+    /// <param name="path">The folder path string to modify.</param>
+    public static string ToBackSlashPath(string path) {
+        if(string.IsNullOrWhiteSpace(path)) {
+            return path;
+        }
+        return path.Replace('/', '\\').Replace("//", @"\");
     }
 }

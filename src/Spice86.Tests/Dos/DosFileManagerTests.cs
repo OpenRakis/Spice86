@@ -13,30 +13,63 @@ using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 public class DosFileManagerTests {
+    private static readonly string MountPoint = Path.GetFullPath(@"Resources\MountPoint");
 
-    [Fact]
-    public void GetCurrentDrive_IsValidFormat() {
-        //Arrange
-        string tempDir = Path.GetTempPath();
-        if(!Directory.Exists($"{tempDir}/TEST")) {
-            Directory.CreateDirectory($"{ tempDir}/TEST");
-        }
+    [Theory]
+    [InlineData(@"\FoO", "FOO")]
+    [InlineData(@"/FOo", "FOO")]
+    [InlineData(@"/fOO/", "FOO")]
+    [InlineData(@"/Foo\", "FOO")]
+    [InlineData(@"\FoO\", "FOO")]
+    [InlineData(@"C:\FoO\BAR\", @"FOO\BAR")]
+    [InlineData(@"C:\", "")]
+    public void AbsolutePaths(string dosPath, string expected) {
+        // Arrange
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+
+        // Act
+        dosFileManager.SetCurrentDir(dosPath);
+
+        // Assert
+        DosFileOperationResult result = dosFileManager.GetCurrentDir(0x0, out string currentDir);
+        result.Should().BeEquivalentTo(DosFileOperationResult.NoValue());
+        currentDir.Should().BeEquivalentTo(expected);
+    }
+
+    [Theory]
+    [InlineData(@"foo", "FOO")]
+    [InlineData(@"foo/", "FOO")]
+    [InlineData(@"foo\", "FOO")]
+    [InlineData(@".\FOO", "FOO")]
+    [InlineData(@"C:FOO", "FOO")]
+    [InlineData(@"C:FOO\", "FOO")]
+    [InlineData(@"C:FOO/", "FOO")]
+    [InlineData(@"C:foo\bar", @"FOO\BAR")]
+    [InlineData(@"../foo/BAR", @"FOO\BAR")]
+    [InlineData(@"..\foo\BAR", @"FOO\BAR")]
+    [InlineData(@"./FOO/BAR", @"FOO\BAR")]
+    public void RelativePaths(string dosPath, string expected) {
+        // Arrange
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+
+        // Act
+        dosFileManager.SetCurrentDir(dosPath);
+
+        // Assert
+        DosFileOperationResult result = dosFileManager.GetCurrentDir(0x0, out string currentDir);
+        result.Should().BeEquivalentTo(DosFileOperationResult.NoValue());
+        currentDir.Should().BeEquivalentTo(expected);
+    }
+
+    private static DosFileManager ArrangeDosFileManager(string mountPoint) {
         Configuration configuration = new Configuration() {
             DumpDataOnExit = false,
-            CDrive = tempDir
+            CDrive = mountPoint
         };
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         Mock<ILoggerService> loggerServiceMock = new Mock<ILoggerService>();
         Mock<IVirtualDevice> chracterDeviceMock = new Mock<IVirtualDevice>();
         List<IVirtualDevice> dosDevicesMock = new List<IVirtualDevice>() { chracterDeviceMock.Object };
-        DosFileManager dosFileManager = new DosFileManager(new Memory(ram, configuration), configuration, loggerServiceMock.Object, dosDevicesMock);
-
-        //Act
-        dosFileManager.SetCurrentDir("TEST");
-        DosFileOperationResult result = dosFileManager.GetCurrentDir(0x0, out string currentDir);
-
-        //Assert
-        result.Should().BeEquivalentTo(DosFileOperationResult.NoValue());
-        currentDir.Should().BeEquivalentTo("TEST").And.BeUpperCased();
+        return new DosFileManager(new Memory(ram, configuration), configuration, loggerServiceMock.Object, dosDevicesMock);
     }
 }

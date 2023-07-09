@@ -19,10 +19,10 @@ internal class DosPathResolver {
     public DosPathResolver(Configuration configuration) {
         _driveMap = InitializeDriveMap(configuration);
         _currentDrive = 'C';
-        SetCurrentDirValue(_currentDrive, _driveMap[_currentDrive].MountPoint);
+        SetCurrentDirValue(_currentDrive, _driveMap[_currentDrive].MountedHostDirectory);
     }
 
-    private Dictionary<char, MountedFolder> _driveMap = new();
+    private readonly Dictionary<char, MountedFolder> _driveMap = new();
 
     /// <summary>
     /// The current DOS drive in use.
@@ -32,7 +32,7 @@ internal class DosPathResolver {
     /// <summary>
     /// The full host path to the folder used by DOS as the current folder.
     /// </summary>
-    public string CurrentHostDirectory => ConvertUtils.ToSlashPath(_driveMap[_currentDrive].FullName);
+    private string CurrentHostDirectory => ConvertUtils.ToSlashPath(_driveMap[_currentDrive].FullHostCurrentDirectory);
 
     /// <summary>
     /// Gets the current DOS directory.
@@ -41,11 +41,11 @@ internal class DosPathResolver {
         //0 = default drive
         if (driveNumber == 0 && _driveMap.Any()) {
             MountedFolder mountedFolder = _driveMap[_currentDrive];
-            currentDir = Path.GetRelativePath(mountedFolder.MountPoint, mountedFolder.CurrentDirectory).ToUpperInvariant();
+            currentDir = mountedFolder.FullDosCurrentDirectory[mountedFolder.DosDriveRoot.Length..];
             return DosFileOperationResult.NoValue();
         }
         else if (_driveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
-            currentDir = Path.GetRelativePath(mountedFolder.MountPoint, mountedFolder.CurrentDirectory).ToUpperInvariant();
+            currentDir = mountedFolder.FullDosCurrentDirectory[mountedFolder.DosDriveRoot.Length..];
             return DosFileOperationResult.NoValue();
         }
         currentDir = "";
@@ -82,8 +82,7 @@ internal class DosPathResolver {
     /// <returns>A string containing the relative host path, or <paramref name="hostPath"/> if the paths don't share the same root.</returns>
     public string GetRelativeHostPathToCurrentDirectory(string hostPath) => Path.GetRelativePath(CurrentHostDirectory, hostPath);
 
-    private static bool IsWithinMountPoint(string hostFullPath, MountedFolder mountedFolder) =>
-        hostFullPath.StartsWith(mountedFolder.MountPoint);
+    private static bool IsWithinMountPoint(string hostFullPath, MountedFolder mountedFolder) => hostFullPath.StartsWith(mountedFolder.MountedHostDirectory);
 
     /// <summary>
     /// Sets the current DOS folder.
@@ -91,34 +90,33 @@ internal class DosPathResolver {
     /// <param name="dosPath">The new DOS path to use as the current DOS folder.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> that details the result of the operation.</returns>
     public DosFileOperationResult SetCurrentDir(string dosPath) {
-        if (IsPathRooted(dosPath)) {
-            string? hostPath = TryGetFullHostPathFromDos(dosPath);
-            if (!string.IsNullOrWhiteSpace(hostPath)) {
-                char driveLetter = StartsWithDosDrive(dosPath) ? dosPath[0] : _currentDrive;
-                return SetCurrentDirValue(driveLetter, hostPath);
-            } else {
-                return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        dosPath = GetFullDosPath(dosPath);
+
+        if (!IsPathRooted(dosPath)) {
+            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        }
+
+        string? hostPath = TryGetFullHostPathFromDos(dosPath);
+        if (!string.IsNullOrWhiteSpace(hostPath)) {
+            return SetCurrentDirValue(dosPath[0], hostPath);
+        } else {
+            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        }
+    }
+
+    private string GetDosPathRoot(string dosPath) {
+        if(IsPathRooted(dosPath)) {
+            if(StartsWithDosDrive(dosPath)) {
+                string? root = Path.GetPathRoot(dosPath);
+                if(!string.IsNullOrWhiteSpace(root)) {
+                    return root;
+                }
             }
         }
-
-        if (dosPath == "." || dosPath == @".\") {
-            return DosFileOperationResult.NoValue();
-        }
-
-        if (dosPath == ".." || dosPath == @"..\") {
-            string? newCurrentDir = Directory.GetParent(CurrentHostDirectory)?.FullName;
-            return SetCurrentDirValue(_currentDrive, newCurrentDir);
-        }
-
-        while (dosPath.StartsWith("..\\")) {
-            dosPath = dosPath[3..];
-            string? newCurrentDir = Directory.GetParent(CurrentHostDirectory)?.FullName;
-            SetCurrentDirValue(_currentDrive, newCurrentDir);
-        }
-
-        string? hostFullPath = TryGetFullHostPathFromDos(dosPath);
-        return SetCurrentDirValue(_currentDrive, hostFullPath);
+        return _driveMap[_currentDrive].DosDriveRoot;
     }
+
+    private string GetFullDosPath(string dosPath) => Path.GetFullPath(dosPath, GetDosPathRoot(dosPath));
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath) {
         if (string.IsNullOrWhiteSpace(hostFullPath) ||
@@ -127,7 +125,7 @@ internal class DosPathResolver {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
 
-        _driveMap[driveLetter].CurrentDirectory = hostFullPath;
+        _driveMap[driveLetter].FullHostCurrentDirectory = hostFullPath;
         return DosFileOperationResult.NoValue();
     }
 
@@ -151,15 +149,15 @@ internal class DosPathResolver {
 
     private (string HostPrefixPath, string DosRelativePath) DeconstructDosPath(string dosPath) {
         if (IsPathRooted(dosPath)) {
-            int length = 1;
+            int length = dosPath.TakeWhile(x => x == '\\' || x == '/').Count();
             if (StartsWithDosDrive(dosPath)) {
                 length = 3;
             }
-            return (_driveMap[dosPath[0]].MountPoint, dosPath[length..]);
+            return (_driveMap[_currentDrive].MountedHostDirectory, dosPath[length..]);
         } else if (StartsWithDosDrive(dosPath)) {
-            return (_driveMap[dosPath[0]].MountPoint, dosPath[2..]);
+            return (_driveMap[dosPath[0]].MountedHostDirectory, dosPath[2..]);
         } else {
-            return (_driveMap[_currentDrive].MountPoint, dosPath);
+            return (_driveMap[_currentDrive].MountedHostDirectory, dosPath);
         }
     }
 
@@ -170,12 +168,14 @@ internal class DosPathResolver {
     /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
 
     public string? TryGetFullHostPathFromDos(string dosPath) {
-        if(string.IsNullOrWhiteSpace(dosPath)) {
+        if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
+        dosPath = GetFullDosPath(dosPath);
+
         (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
 
-        if(string.IsNullOrWhiteSpace(DosRelativePath)) {
+        if (string.IsNullOrWhiteSpace(DosRelativePath)) {
             return ConvertUtils.ToSlashPath(HostPrefix);
         }
 
@@ -185,21 +185,31 @@ internal class DosPathResolver {
             .EnumerateDirectories("*", new EnumerationOptions() {
                 RecurseSubdirectories = true,
             })
-            .Select(x => x.FullName)
+            .Select(x => (FileSystemInfo)x)
             .Concat(
-            hostDirInfo.EnumerateFiles("*",
-            new EnumerationOptions() {
+            hostDirInfo.EnumerateFiles("*", new EnumerationOptions() {
                 RecurseSubdirectories = true,
-            }).Select(x => x.FullName))
-            .Select(x => x[HostPrefix.Length..])
-            .OrderBy(x => x.Length)
-            .FirstOrDefault(x => string.Equals(ConvertUtils.ToSlashPath(x), ConvertUtils.ToSlashPath(DosRelativePath), StringComparison.OrdinalIgnoreCase));
+            }))
+            .FirstOrDefault(x => IsRelativeHostFileOrFolderPathEqualIgnoreCase(x, HostPrefix, DosRelativePath))?.FullName;
 
-        if(string.IsNullOrWhiteSpace(relativeHostPath)) {
+        if (string.IsNullOrWhiteSpace(relativeHostPath)) {
             return null;
         }
 
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, relativeHostPath));
+    }
+
+    private static bool IsRelativeHostFileOrFolderPathEqualIgnoreCase(FileSystemInfo fileOrDirInfo, string HostPrefix, string DosRelativePath) {
+        string relativePath = fileOrDirInfo.FullName[HostPrefix.Length..];
+        if (fileOrDirInfo is FileInfo) {
+            return string.Equals(ConvertUtils.ToSlashPath(relativePath),
+                ConvertUtils.ToSlashPath(DosRelativePath),
+                    StringComparison.OrdinalIgnoreCase);
+        } else {
+            return string.Equals(ConvertUtils.ToSlashFolderPath(relativePath),
+                ConvertUtils.ToSlashFolderPath(DosRelativePath),
+                    StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     /// <summary>
@@ -213,6 +223,7 @@ internal class DosPathResolver {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return dosPath;
         }
+        dosPath = GetFullDosPath(dosPath);
         (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, DosRelativePath));
     }
@@ -232,13 +243,14 @@ internal class DosPathResolver {
 
     public byte NumberOfPotentiallyValidDriveLetters => (byte)_driveMap.Count;
 
-    private bool StartsWithDosDrive(string path) =>
-        path.Length >= 2 &&
-        DriveLetters.Contains(char.ToUpperInvariant(path[0])) &&
-        path[1] == ':';
+    private bool StartsWithDosDrive(string dosPath) =>
+        dosPath.Length >= 2 &&
+        DriveLetters.Contains(char.ToUpperInvariant(dosPath[0])) &&
+        dosPath[1] == ':';
 
     private bool IsPathRooted(string path) =>
         path.StartsWith(@"\") ||
+        path.StartsWith("/") ||
         path.Length >= 3 &&
         StartsWithDosDrive(path) &&
         path[2] == '\\';

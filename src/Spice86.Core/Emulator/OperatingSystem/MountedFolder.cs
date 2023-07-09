@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Shared.Utils;
+
 /// <summary>
 /// Represents a host folder used as a drive by DOS.
 /// </summary>
@@ -8,11 +10,11 @@ public class MountedFolder {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="driveLetter">The DOS driver letter.</param>
-    /// <param name="fullName">The full host path to the folder to be used as the DOS drive root.</param>
-    public MountedFolder(char driveLetter, string fullName) {
+    /// <param name="mountedHostDirectory">The full host path to the folder to be used as the DOS drive root.</param>
+    public MountedFolder(char driveLetter, string mountedHostDirectory) {
         DriveLetter = driveLetter;
-        MountPoint = fullName;
-        CurrentDirectory = "";
+        MountedHostDirectory = mountedHostDirectory;
+        FullHostCurrentDirectory = "";
     }
 
     /// <summary>
@@ -21,17 +23,22 @@ public class MountedFolder {
     public char DriveLetter { get; init; }
 
     /// <summary>
+    /// Gets the DOS drive root path.
+    /// </summary>
+    public string DosDriveRoot => @$"{DriveLetter}:\";
+
+    /// <summary>
     /// The full host path to the mounted folder. This path serves as the root of the DOS drive.
     /// </summary>
-    public string MountPoint { get; init; }
+    public string MountedHostDirectory { get; init; }
 
     /// <summary>
-    /// The current directory in use on the drive. Relative to the <see cref="MountPoint"/>
+    /// The full path to the current host directory in use on the drive.
     /// </summary>
-    public string CurrentDirectory { get; set; }
+    public string FullHostCurrentDirectory { get; set; }
 
     /// <summary>
-    /// The full host path. Combined from <see cref="MountPoint"/> and <see cref="CurrentDirectory"/>
+    /// The full path to the current DOS directory in use on the drive.
     /// </summary>
-    public string FullName => Path.Combine(MountPoint, CurrentDirectory);
+    public string FullDosCurrentDirectory => $"{DriveLetter}:{ConvertUtils.ToBackSlashPath($@"\{FullHostCurrentDirectory[MountedHostDirectory.Length..]}")}".ToUpperInvariant();
 }
