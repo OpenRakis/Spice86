@@ -481,8 +481,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("SELECT DEFAULT DRIVE {DefaultDrive}", _dosFileManager.DefaultDrive);
         }
-        // Number of potentially valid drive letters
-        _state.AL = _dosFileManager.NumberOfPotentiallyDriveLetters;
+        _state.AL = _dosFileManager.NumberOfPotentiallyValidDriveLetters;
     }
 
     public void SetDiskTransferAddress() {

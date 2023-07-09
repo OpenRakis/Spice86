@@ -229,7 +229,8 @@ internal class DosPathResolver {
         get  => (byte)Array.IndexOf(DriveLetters, _currentDrive);
         set => _currentDrive = DriveLetters[value];
     }
-    public byte NumberOfPotentiallyDriveLetters => (byte)_driveMap.Count;
+
+    public byte NumberOfPotentiallyValidDriveLetters => (byte)_driveMap.Count;
 
     private bool StartsWithDosDrive(string path) =>
         path.Length >= 2 &&
