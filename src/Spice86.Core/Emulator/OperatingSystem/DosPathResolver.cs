@@ -6,7 +6,6 @@ using System.Text;
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -18,42 +17,34 @@ internal class DosPathResolver {
     /// </summary>
     /// <param name="configuration">The emulator configuration.</param>
     public DosPathResolver(Configuration configuration) {
-        DriveMap = InitializeDriveMap(configuration);
-        CurrentDrive = 'C';
-        SetCurrentDirValue(CurrentDrive, DriveMap[CurrentDrive].MountPoint);
+        _driveMap = InitializeDriveMap(configuration);
+        _currentDrive = 'C';
+        SetCurrentDirValue(_currentDrive, _driveMap[_currentDrive].MountPoint);
     }
 
-    private IDictionary<char, MountedFolder> driveMap = new Dictionary<char, MountedFolder>();
-
-    /// <summary>
-    /// Gets the map between DOS drive letters and <see cref="MountedFolder"/> structures <br/>
-    /// <remarks>
-    /// Read-only outisde of the class.
-    /// </remarks>
-    /// </summary>
-    public IDictionary<char, MountedFolder> DriveMap { get => driveMap.AsReadOnly(); private set => driveMap = value; }
+    private Dictionary<char, MountedFolder> _driveMap = new();
 
     /// <summary>
     /// The current DOS drive in use.
     /// </summary>
-    public char CurrentDrive { get; private set; }
+    private char _currentDrive;
 
     /// <summary>
     /// The full host path to the folder used by DOS as the current folder.
     /// </summary>
-    public string CurrentHostDirectory => ConvertUtils.ToSlashPath(DriveMap[CurrentDrive].FullName);
+    public string CurrentHostDirectory => ConvertUtils.ToSlashPath(_driveMap[_currentDrive].FullName);
 
     /// <summary>
     /// Gets the current DOS directory.
     /// </summary>
     public DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir) {
-        //default drives
-        if (driveNumber == 0 && DriveMap.Any()) {
-            MountedFolder mountedFolder = DriveMap[CurrentDrive];
+        //0 = default drive
+        if (driveNumber == 0 && _driveMap.Any()) {
+            MountedFolder mountedFolder = _driveMap[_currentDrive];
             currentDir = Path.GetRelativePath(mountedFolder.MountPoint, mountedFolder.CurrentDirectory).ToUpperInvariant();
             return DosFileOperationResult.NoValue();
         }
-        else if (DriveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
+        else if (_driveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
             currentDir = Path.GetRelativePath(mountedFolder.MountPoint, mountedFolder.CurrentDirectory).ToUpperInvariant();
             return DosFileOperationResult.NoValue();
         }
@@ -71,7 +62,7 @@ internal class DosPathResolver {
         return string.IsNullOrWhiteSpace(parent) ? fallbackValue : ConvertUtils.ToSlashFolderPath(parent);
     }
 
-    private IDictionary<char, MountedFolder> InitializeDriveMap(Configuration configuration) {
+    private Dictionary<char, MountedFolder> InitializeDriveMap(Configuration configuration) {
         string parentFolder = GetExeParentFolder(configuration);
         Dictionary<char, MountedFolder> driveMap = new();
         string? cDrive = configuration.CDrive;
@@ -103,7 +94,7 @@ internal class DosPathResolver {
         if (IsPathRooted(dosPath)) {
             string? hostPath = TryGetFullHostPathFromDos(dosPath);
             if (!string.IsNullOrWhiteSpace(hostPath)) {
-                char driveLetter = StartsWithDosDrive(dosPath) ? dosPath[0] : CurrentDrive;
+                char driveLetter = StartsWithDosDrive(dosPath) ? dosPath[0] : _currentDrive;
                 return SetCurrentDirValue(driveLetter, hostPath);
             } else {
                 return DosFileOperationResult.Error(ErrorCode.PathNotFound);
@@ -116,27 +107,27 @@ internal class DosPathResolver {
 
         if (dosPath == ".." || dosPath == @"..\") {
             string? newCurrentDir = Directory.GetParent(CurrentHostDirectory)?.FullName;
-            return SetCurrentDirValue(CurrentDrive, newCurrentDir);
+            return SetCurrentDirValue(_currentDrive, newCurrentDir);
         }
 
         while (dosPath.StartsWith("..\\")) {
             dosPath = dosPath[3..];
             string? newCurrentDir = Directory.GetParent(CurrentHostDirectory)?.FullName;
-            SetCurrentDirValue(CurrentDrive, newCurrentDir);
+            SetCurrentDirValue(_currentDrive, newCurrentDir);
         }
 
         string? hostFullPath = TryGetFullHostPathFromDos(dosPath);
-        return SetCurrentDirValue(CurrentDrive, hostFullPath);
+        return SetCurrentDirValue(_currentDrive, hostFullPath);
     }
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath) {
         if (string.IsNullOrWhiteSpace(hostFullPath) ||
-            !IsWithinMountPoint(hostFullPath, DriveMap[driveLetter]) ||
+            !IsWithinMountPoint(hostFullPath, _driveMap[driveLetter]) ||
             Encoding.ASCII.GetByteCount(hostFullPath) > 255) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
 
-        DriveMap[driveLetter].CurrentDirectory = hostFullPath;
+        _driveMap[driveLetter].CurrentDirectory = hostFullPath;
         return DosFileOperationResult.NoValue();
     }
 
@@ -164,11 +155,11 @@ internal class DosPathResolver {
             if (StartsWithDosDrive(dosPath)) {
                 length = 3;
             }
-            return (DriveMap[dosPath[0]].MountPoint, dosPath[length..]);
+            return (_driveMap[dosPath[0]].MountPoint, dosPath[length..]);
         } else if (StartsWithDosDrive(dosPath)) {
-            return (DriveMap[dosPath[0]].MountPoint, dosPath[2..]);
+            return (_driveMap[dosPath[0]].MountPoint, dosPath[2..]);
         } else {
-            return (DriveMap[CurrentDrive].MountPoint, dosPath);
+            return (_driveMap[_currentDrive].MountPoint, dosPath);
         }
     }
 
@@ -232,12 +223,13 @@ internal class DosPathResolver {
     private static char[] DriveLetters => new char[] {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'};
 
     /// <summary>
-    /// Gets or sets the <see cref="CurrentDrive"/> with a byte value (0x0: A:, 0x1: B:, ...)
+    /// Gets or sets the <see cref="_currentDrive"/> with a byte value (0x0: A:, 0x1: B:, ...)
     /// </summary>
     public byte CurrentDriveIndex {
-        get  => (byte)Array.IndexOf(DriveLetters, CurrentDrive);
-        set => CurrentDrive = DriveLetters[value];
+        get  => (byte)Array.IndexOf(DriveLetters, _currentDrive);
+        set => _currentDrive = DriveLetters[value];
     }
+    public byte NumberOfPotentiallyDriveLetters => (byte)_driveMap.Count;
 
     private bool StartsWithDosDrive(string path) =>
         path.Length >= 2 &&

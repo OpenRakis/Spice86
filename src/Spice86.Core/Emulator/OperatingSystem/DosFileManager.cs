@@ -646,5 +646,5 @@ public class DosFileManager {
     /// <summary>
     /// Gets the number of potentially valid drive letters
     /// </summary>
-    public byte NumberOfPotentiallyDriveLetters => (byte)_dosPathResolver.DriveMap.Count;
+    public byte NumberOfPotentiallyDriveLetters => (byte)_dosPathResolver.NumberOfPotentiallyDriveLetters;
 }
