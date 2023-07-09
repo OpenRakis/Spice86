@@ -47,7 +47,6 @@ public class DosFileManager {
         FileOpenMode.Add(0x02, "rw");
     }
 
-
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -57,7 +56,7 @@ public class DosFileManager {
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
     public DosFileManager(IMemory memory, Configuration configuration, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
-        _dosPathResolver = new(loggerService, configuration);
+        _dosPathResolver = new(configuration);
         _memory = memory;
         _dosVirtualDevices = dosVirtualDevices;
     }
@@ -631,4 +630,21 @@ public class DosFileManager {
     /// <param name="currentDir">The string variable receiving the current DOS directory.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) => _dosPathResolver.GetCurrentDosDirectory(driveNumber, out currentDir);
+
+
+    /// <summary>
+    /// Gets the current default drive. 0x0: A:, 0x1: B:, ...
+    /// </summary>
+    public byte DefaultDrive => _dosPathResolver.CurrentDriveIndex;
+
+    /// <summary>
+    /// Selects the DOS defautlt drive.
+    /// </summary>
+    /// <param name="driveIndex">The index of the drive. 0x0: A:, 0x1: B:, ...</param>
+    public void SelectDefaultDrive(byte driveIndex) => _dosPathResolver.CurrentDriveIndex = driveIndex;
+
+    /// <summary>
+    /// Gets the number of potentially valid drive letters
+    /// </summary>
+    public byte NumberOfPotentiallyDriveLetters => (byte)_dosPathResolver.DriveMap.Count;
 }

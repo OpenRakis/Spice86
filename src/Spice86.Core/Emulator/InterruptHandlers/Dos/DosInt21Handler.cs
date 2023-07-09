@@ -6,13 +6,10 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.InterruptHandlers.Common;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -21,7 +18,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Spice86.Core.Emulator.Memory.Indexable;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
 /// Reimplementation of INT21
@@ -32,9 +28,6 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly InterruptVectorTable _interruptVectorTable;
     private bool _isCtrlCFlag;
-
-    // dosbox
-    private byte _defaultDrive = 2;
 
     private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
@@ -127,7 +120,7 @@ public class DosInt21Handler : InterruptHandler {
         // Media Id
         _state.DS = 0x8010;
         // From DOSBox source code...
-        _state.BX = ConvertUtils.Uint16((ushort) (0x8010 + _defaultDrive * 9)) ;
+        _state.BX = ConvertUtils.Uint16((ushort) (0x8010 + _dosFileManager.DefaultDrive * 9)) ;
         _state.AH = 0;
     }
 
@@ -292,7 +285,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("GET CURRENT DEFAULT DRIVE");
         }
-        _state.AL = _defaultDrive;
+        _state.AL = _dosFileManager.DefaultDrive;
     }
 
     public void GetDate() {
@@ -484,12 +477,12 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void SelectDefaultDrive() {
-        _defaultDrive = _state.DL;
+        _dosFileManager.SelectDefaultDrive(_state.DL);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SELECT DEFAULT DRIVE {DefaultDrive}", _defaultDrive);
+            _loggerService.Verbose("SELECT DEFAULT DRIVE {DefaultDrive}", _dosFileManager.DefaultDrive);
         }
-        // Number of valid drive letters
-        _state.AL = 26;
+        // Number of potentially valid drive letters
+        _state.AL = _dosFileManager.NumberOfPotentiallyDriveLetters;
     }
 
     public void SetDiskTransferAddress() {

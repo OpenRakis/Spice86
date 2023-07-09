@@ -13,7 +13,16 @@ using Spice86.Shared.Utils;
 /// Translates DOS filepaths to host file paths, and vice-versa.
 /// </summary>
 internal class DosPathResolver {
-    private readonly ILoggerService _loggerService;
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="configuration">The emulator configuration.</param>
+    public DosPathResolver(Configuration configuration) {
+        DriveMap = InitializeDriveMap(configuration);
+        CurrentDrive = 'C';
+        SetCurrentDirValue(CurrentDrive, DriveMap[CurrentDrive].MountPoint);
+    }
+
     private IDictionary<char, MountedFolder> driveMap = new Dictionary<char, MountedFolder>();
 
     /// <summary>
@@ -50,18 +59,6 @@ internal class DosPathResolver {
         }
         currentDir = "";
         return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
-    }
-
-    /// <summary>
-    /// Initializes a new instance.
-    /// </summary>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="configuration">The emulator configuration.</param>
-    public DosPathResolver(ILoggerService loggerService, Configuration configuration) {
-        _loggerService = loggerService;
-        DriveMap = InitializeDriveMap(configuration);
-        CurrentDrive = 'C';
-        SetCurrentDirValue(CurrentDrive, DriveMap[CurrentDrive].MountPoint);
     }
 
     private static string GetExeParentFolder(Configuration configuration) {
@@ -233,6 +230,14 @@ internal class DosPathResolver {
     /// All the possible DOS drive letters
     /// </summary>
     private static char[] DriveLetters => new char[] {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'};
+
+    /// <summary>
+    /// Gets or sets the <see cref="CurrentDrive"/> with a byte value (0x0: A:, 0x1: B:, ...)
+    /// </summary>
+    public byte CurrentDriveIndex {
+        get  => (byte)Array.IndexOf(DriveLetters, CurrentDrive);
+        set => CurrentDrive = DriveLetters[value];
+    }
 
     private bool StartsWithDosDrive(string path) =>
         path.Length >= 2 &&
