@@ -598,25 +598,24 @@ public class DosFileManager {
     }
 
     /// <summary>
-    /// Creates a directory on disk.
+    /// Removes a directory on disk.
     /// </summary>
     /// <param name="dosDirectory">The directory name to create</param>
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
-        string? fullPath = _dosPathResolver.TryGetFullHostParentPathFromDos(dosDirectory);
-        if (string.IsNullOrWhiteSpace(fullPath)) {
+        string? fullHostPath = _dosPathResolver.TryGetFullHostPathFromDos(dosDirectory);
+        if (string.IsNullOrWhiteSpace(fullHostPath)) {
             return PathNotFoundError(dosDirectory);
         }
 
-        string hostPath = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
         try {
-            Directory.Delete(hostPath);
+            Directory.Delete(fullHostPath);
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _loggerService.Warning(e, "Error while creating directory {CaseInsensitivePath}: {Exception}",
-                    hostPath, e);
+                    fullHostPath, e);
             }
         }
 
