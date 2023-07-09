@@ -29,7 +29,7 @@ public class DosFileManagerTests {
         Mock<ILoggerService> loggerServiceMock = new Mock<ILoggerService>();
         Mock<IVirtualDevice> chracterDeviceMock = new Mock<IVirtualDevice>();
         List<IVirtualDevice> dosDevicesMock = new List<IVirtualDevice>() { chracterDeviceMock.Object };
-        DosFileManager dosFileManager = new DosFileManager(new Memory(ram, configuration), loggerServiceMock.Object, dosDevicesMock, new DosPathResolver(loggerServiceMock.Object, configuration));
+        DosFileManager dosFileManager = new DosFileManager(new Memory(ram, configuration), configuration, loggerServiceMock.Object, dosDevicesMock);
 
         //Act
         dosFileManager.SetCurrentDir("TEST");

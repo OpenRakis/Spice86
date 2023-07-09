@@ -32,7 +32,7 @@ public class DosFileManager {
 
     private readonly IMemory _memory;
 
-    private readonly IDosPathResolver _dosPathResolver;
+    private readonly DosPathResolver _dosPathResolver;
 
     /// <summary>
     /// All the files opened by DOS.
@@ -52,12 +52,12 @@ public class DosFileManager {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
-    /// <param name="dosFilePathResolver">The class used to resolve DOS paths to host paths.</param>
-    public DosFileManager(IMemory memory, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices, IDosPathResolver dosFilePathResolver) {
+    public DosFileManager(IMemory memory, Configuration configuration, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
-        _dosPathResolver = dosFilePathResolver;
+        _dosPathResolver = new(loggerService, configuration);
         _memory = memory;
         _dosVirtualDevices = dosVirtualDevices;
     }

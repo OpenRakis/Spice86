@@ -1,8 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
-using System.Diagnostics;
-using System.Text;
-
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
@@ -19,7 +16,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -29,10 +25,10 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Emulates an IBM PC
@@ -288,13 +284,14 @@ public class Machine : IDisposable {
             this,
             machineCreationOptions.LoggerService,
             BiosKeyboardInt9Handler.BiosKeyboardBuffer);
+
         SystemClockInt1AHandler = new SystemClockInt1AHandler(
             this,
             machineCreationOptions.LoggerService,
             TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        Dos = new Dos(this, (Indexable)Memory, machineCreationOptions.LoggerService, new DosPathResolver(machineCreationOptions.LoggerService, Configuration));
+        Dos = new Dos(this, Configuration, (Indexable)Memory, machineCreationOptions.LoggerService);
 
         if (Configuration.InitializeDOS is not false) {
             // Register the interrupt handlers

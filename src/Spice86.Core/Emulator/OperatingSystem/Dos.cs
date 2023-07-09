@@ -1,21 +1,21 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
-using System.Linq;
-using System.Text;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.Memory.Indexable;
+
+using System.Linq;
+using System.Text;
 
 /// <summary>
 /// Represents the DOS kernel.
@@ -85,13 +85,14 @@ public class Dos {
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="memory">The emulator memory.</param>
+    /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosPathResolver"></param>
-    public Dos(Machine machine, Indexable memory, ILoggerService loggerService, IDosPathResolver dosPathResolver) {
+    public Dos(Machine machine, Configuration configuration, Indexable memory, ILoggerService loggerService) {
         _machine = machine;
         _loggerService = loggerService;
         AddDefaultDevices();
-        FileManager = new DosFileManager(_machine.Memory, _loggerService, this.Devices, dosPathResolver);
+        FileManager = new DosFileManager(_machine.Memory, configuration, _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_machine.Memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_machine, _loggerService);
         DosInt21Handler = new DosInt21Handler(_machine, memory, _loggerService, this);

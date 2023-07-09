@@ -9,20 +9,34 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-/// <inheritdoc cref="IDosPathResolver" />
-public class DosPathResolver : IDosPathResolver {
+/// <summary>
+/// Translates DOS filepaths to host file paths, and vice-versa.
+/// </summary>
+internal class DosPathResolver {
     private readonly ILoggerService _loggerService;
+    private IDictionary<char, MountedFolder> driveMap = new Dictionary<char, MountedFolder>();
 
-    /// <inheritdoc />
-    public IDictionary<char, MountedFolder> DriveMap { get; private set; } = new Dictionary<char, MountedFolder>();
+    /// <summary>
+    /// Gets the map between DOS drive letters and <see cref="MountedFolder"/> structures <br/>
+    /// <remarks>
+    /// Read-only outisde of the class.
+    /// </remarks>
+    /// </summary>
+    public IDictionary<char, MountedFolder> DriveMap { get => driveMap.AsReadOnly(); private set => driveMap = value; }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// The current DOS drive in use.
+    /// </summary>
     public char CurrentDrive { get; private set; }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// The full host path to the folder used by DOS as the current folder.
+    /// </summary>
     public string CurrentHostDirectory => ConvertUtils.ToSlashPath(DriveMap[CurrentDrive].FullName);
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Gets the current DOS directory.
+    /// </summary>
     public DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir) {
         //default drives
         if (driveNumber == 0 && DriveMap.Any()) {
@@ -72,13 +86,22 @@ public class DosPathResolver : IDosPathResolver {
         return driveMap;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Create a relative path from the current host directory to another. Paths will be resolved before calculating the difference.
+    /// Default path comparison for the active platform will be used (OrdinalIgnoreCase for Windows or Mac, Ordinal for Unix).
+    /// </summary>
+    /// <param name="hostPath">The destination path.</param>
+    /// <returns>A string containing the relative host path, or <paramref name="hostPath"/> if the paths don't share the same root.</returns>
     public string GetRelativeHostPathToCurrentDirectory(string hostPath) => Path.GetRelativePath(CurrentHostDirectory, hostPath);
 
     private static bool IsWithinMountPoint(string hostFullPath, MountedFolder mountedFolder) =>
         hostFullPath.StartsWith(mountedFolder.MountPoint);
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Sets the current DOS folder.
+    /// </summary>
+    /// <param name="dosPath">The new DOS path to use as the current DOS folder.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> that details the result of the operation.</returns>
     public DosFileOperationResult SetCurrentDir(string dosPath) {
         if (IsPathRooted(dosPath)) {
             string? hostPath = TryGetFullHostPathFromDos(dosPath);
@@ -120,7 +143,11 @@ public class DosPathResolver : IDosPathResolver {
         return DosFileOperationResult.NoValue();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Converts the DOS path to a full host path of the parent directory.<br/>
+    /// </summary>
+    /// <param name="dosPath">The DOS path to convert.</param>
+    /// <returns>A string containing the full path to the parent directory in the host file system, or <c>null</c> if nothing was found.</returns>
     public string? TryGetFullHostParentPathFromDos(string dosPath) {
         string? fullHostPath = TryGetFullHostPathFromDos(dosPath);
         if(string.IsNullOrWhiteSpace(fullHostPath)) {
@@ -148,7 +175,12 @@ public class DosPathResolver : IDosPathResolver {
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Converts the DOS path to a full host path.<br/>
+    /// </summary>
+    /// <param name="dosPath">The DOS path to convert.</param>
+    /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
+
     public string? TryGetFullHostPathFromDos(string dosPath) {
         if(string.IsNullOrWhiteSpace(dosPath)) {
             return null;
@@ -182,7 +214,13 @@ public class DosPathResolver : IDosPathResolver {
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, relativeHostPath));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Prefixes the given DOS path by either the mapped drive folder or the current host folder depending on whether there is a root in the path.<br/>
+    /// Does not convert to a case sensitive path. <br/>
+    /// Does not search for the file or folder on disk.
+    /// </summary>
+    /// <param name="dosPath">The DOS path to convert.</param>
+    /// <returns>A string containing the combination of the host path and the DOS path.</returns>
     public string PrefixWithHostDirectory(string dosPath) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return dosPath;
@@ -207,7 +245,12 @@ public class DosPathResolver : IDosPathResolver {
         StartsWithDosDrive(path) &&
         path[2] == '\\';
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns whether the folder or file name already exists, in DOS's case insensitive point of view.
+    /// </summary>
+    /// <param name="newFileOrDirectoryPath">The name of new file or folder we try to create.</param>
+    /// <param name="hostFolder">The full path to the host folder to look into.</param>
+    /// <returns>A boolean value indicating if there is any folder or file with the same name.</returns>
     public bool AnyDosDirectoryOrFileWithTheSameName(string newFileOrDirectoryPath, DirectoryInfo hostFolder) =>
         GetTopLevelDirsAndFiles(hostFolder.FullName).Any(x => string.Equals(x, newFileOrDirectoryPath, StringComparison.OrdinalIgnoreCase));
 
