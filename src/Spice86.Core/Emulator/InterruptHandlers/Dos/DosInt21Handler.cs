@@ -553,7 +553,7 @@ public class DosInt21Handler : InterruptHandler {
             _loggerService.Verbose("GET CURRENT DIRECTORY {ResponseAddress}: {CurrentDpsDirectory}",
                 ConvertUtils.ToSegmentedAddressRepresentation(_state.DS, _state.SI), currentDir);
         }
-        _memory.LoadData(responseAddress, Encoding.ASCII.GetBytes(currentDir).Concat(Encoding.ASCII.GetBytes("0")).ToArray());
+        _memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length);
         SetCarryFlag(false, calledFromVm);
         // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
         _state.AX = 0x0100;
