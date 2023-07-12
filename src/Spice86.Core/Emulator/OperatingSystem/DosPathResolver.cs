@@ -46,10 +46,10 @@ internal class DosPathResolver {
         //0 = default drive
         if (driveNumber == 0 && _driveMap.Any()) {
             MountedFolder mountedFolder = _driveMap[_currentDrive];
-            currentDir = mountedFolder.FullDosCurrentDirectory[mountedFolder.DosDriveRootPath.Length..];
+            currentDir = mountedFolder.FullDosCurrentDirectory[$"{mountedFolder.DosDriveRootPath}{DirectorySeparatorChar}".Length..];
             return DosFileOperationResult.NoValue();
         } else if (_driveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
-            currentDir = mountedFolder.FullDosCurrentDirectory[mountedFolder.DosDriveRootPath.Length..];
+            currentDir = mountedFolder.FullDosCurrentDirectory[$"{mountedFolder.DosDriveRootPath}{DirectorySeparatorChar}".Length..];
             return DosFileOperationResult.NoValue();
         }
         currentDir = "";
@@ -108,36 +108,40 @@ internal class DosPathResolver {
         }
     }
 
-    private string ResolveDosPathDriveRoot(string absoluteOrRelativeDosPath) {
+    private string GetAbsoluteStartPathFromDosPath(string absoluteOrRelativeDosPath) {
         if (IsPathRooted(absoluteOrRelativeDosPath)) {
             if (StartsWithDosDriveAndVolumeSeparator(absoluteOrRelativeDosPath)) {
                 return $"{absoluteOrRelativeDosPath[0]}{VolumeSeparatorChar}";
             }
         }
-        return _driveMap[_currentDrive].DosDriveRootPath;
+        return _driveMap[_currentDrive].FullDosCurrentDirectory;
     }
 
     private string GetFullDosPathIncludingRoot(string dosPath) {
+        if(string.IsNullOrWhiteSpace(dosPath)) {
+            return dosPath;
+        }
         StringBuilder normalizedDosPath = new();
 
         string backslashedDosPath = ConvertUtils.ToBackSlashPath(dosPath);
 
-        string driveRoot = ResolveDosPathDriveRoot(backslashedDosPath);
+        string driveRoot = GetAbsoluteStartPathFromDosPath(backslashedDosPath);
         normalizedDosPath.Append(driveRoot);
 
         if(backslashedDosPath.StartsWith(driveRoot)) {
-            backslashedDosPath = backslashedDosPath[driveRoot.Length..];
+            backslashedDosPath = backslashedDosPath[3..];
+        }
+        else if (backslashedDosPath.StartsWith(driveRoot[..1])) {
+            backslashedDosPath = backslashedDosPath[2..];
         }
 
         IEnumerable<string> pathElements = backslashedDosPath.Split(DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(x => x.Trim(DirectorySeparatorChar));
 
         bool moveNext = false;
         bool appendedFolder = false;
+        bool mustPrependDirectorySeparator = false;
         foreach (string pathElement in pathElements) {
-            if(pathElement == "." || pathElement.Contains(VolumeSeparatorChar)) {
-                continue;
-            }
-            else if(pathElement == ".." && appendedFolder) {
+            if(pathElement == ".." && appendedFolder) {
                 moveNext = true;
             }
             else {
@@ -147,12 +151,16 @@ internal class DosPathResolver {
                 }
                 if(pathElement != "." && pathElement != ".." && !pathElement.Contains(VolumeSeparatorChar)) {
                     appendedFolder = true;
-                    normalizedDosPath.Append(DirectorySeparatorChar).Append(pathElement.ToUpperInvariant());
+                    if(mustPrependDirectorySeparator) {
+                        normalizedDosPath.Append(DirectorySeparatorChar);
+                    }
+                    normalizedDosPath.Append(pathElement.ToUpperInvariant());
+                    mustPrependDirectorySeparator = true;
                 }
             }
         }
-        
-        return normalizedDosPath.ToString();
+
+        return ConvertUtils.ToBackSlashPath(normalizedDosPath.ToString());
     }
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath) {
@@ -172,16 +180,15 @@ internal class DosPathResolver {
     /// <param name="dosPath">The DOS path to convert.</param>
     /// <returns>A string containing the full path to the parent directory in the host file system, or <c>null</c> if nothing was found.</returns>
     public string? TryGetFullHostParentPathFromDos(string dosPath) {
-        string? fullHostPath = TryGetFullHostPathFromDos(dosPath);
+        string? parentPath = Path.GetDirectoryName(dosPath);
+        if(string.IsNullOrWhiteSpace(parentPath)) {
+            parentPath = _driveMap[_currentDrive].FullDosCurrentDirectory;
+        }
+        string? fullHostPath = TryGetFullHostPathFromDos(parentPath);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
             return null;
         }
-        string? parent = Directory.GetParent(fullHostPath)?.FullName;
-        if (string.IsNullOrWhiteSpace(parent)) {
-            return null;
-        }
-
-        return ConvertUtils.ToSlashPath(parent);
+        return ConvertUtils.ToSlashFolderPath(fullHostPath);
     }
 
     private (string HostPrefixPath, string DosRelativePath) DeconstructDosPath(string dosPath) {
@@ -235,15 +242,15 @@ internal class DosPathResolver {
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, relativeHostPath));
     }
 
-    private static bool IsRelativeHostFileOrFolderPathEqualIgnoreCase(FileSystemInfo fileOrDirInfo, string HostPrefix, string DosRelativePath) {
-        string relativePath = fileOrDirInfo.FullName[HostPrefix.Length..];
+    private static bool IsRelativeHostFileOrFolderPathEqualIgnoreCase(FileSystemInfo fileOrDirInfo, string hostPrefix, string dosRelativePath) {
+        string relativePath = fileOrDirInfo.FullName[hostPrefix.Length..];
         if (fileOrDirInfo is FileInfo) {
             return string.Equals(ConvertUtils.ToSlashPath(relativePath),
-                ConvertUtils.ToSlashPath(DosRelativePath),
+                ConvertUtils.ToSlashPath(dosRelativePath),
                     StringComparison.OrdinalIgnoreCase);
         } else {
             return string.Equals(ConvertUtils.ToSlashFolderPath(relativePath),
-                ConvertUtils.ToSlashFolderPath(DosRelativePath),
+                ConvertUtils.ToSlashFolderPath(dosRelativePath),
                     StringComparison.OrdinalIgnoreCase);
         }
     }

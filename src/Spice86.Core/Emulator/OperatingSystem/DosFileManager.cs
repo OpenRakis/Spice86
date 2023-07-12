@@ -108,15 +108,18 @@ public class DosFileManager {
             _loggerService.Verbose("Creating file {HostFileName} with attribute {FileAttribute}", hostParentDirectory, fileAttribute);
         }
         FileInfo path = new FileInfo(Path.Combine(hostParentDirectory, Path.GetFileName(fileName)));
+        FileStream? testFileStream = null;
         try {
             if (File.Exists(path.FullName)) {
                 File.Delete(path.FullName);
             }
 
-            File.Create(path.FullName).Close();
+            testFileStream = File.Create(path.FullName);
         } catch (IOException e) {
             e.Demystify();
             throw new UnrecoverableException("IOException while creating file", e);
+        } finally {
+            testFileStream?.Dispose();
         }
 
         return OpenFileInternal(fileName, hostParentDirectory, "rw");
@@ -273,8 +276,8 @@ public class DosFileManager {
             return OpenDeviceInternal(device, openMode);
         }
         
-        string? hostFileName = _dosPathResolver.TryGetFullHostPathFromDos( fileName);
-        if (hostFileName == null) {
+        string? hostFileName = _dosPathResolver.TryGetFullHostPathFromDos(fileName);
+        if (string.IsNullOrWhiteSpace(hostFileName)) {
             return FileNotFoundError(fileName);
         }
 
@@ -473,10 +476,10 @@ public class DosFileManager {
         return (ushort)((dosSeconds & 0b11111) | (minutes & 0b111111) << 5 | (hours & 0b11111) << 11);
     }
     
-    private DosFileOperationResult OpenFileInternal(string fileName, string? hostFileName, string openMode) {
-        if (hostFileName == null) {
+    private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, string openMode) {
+        if (string.IsNullOrWhiteSpace(hostFileName)) {
             // Not found
-            return FileNotFoundError(fileName);
+            return FileNotFoundError(dosFileName);
         }
 
         int? freeIndex = FindNextFreeFileIndex();
@@ -489,41 +492,41 @@ public class DosFileManager {
             Stream? randomAccessFile = null;
             switch (openMode) {
                 case "r": {
-                    string? realFileName = _dosPathResolver.TryGetFullHostPathFromDos(hostFileName);
-                    if (File.Exists(hostFileName)) {
-                        randomAccessFile = File.OpenRead(hostFileName);
-                    } else if (File.Exists(realFileName)) {
-                        randomAccessFile = File.OpenRead(realFileName);
-                    } else {
-                        return FileNotFoundError(fileName);
-                    }
+                        string? realFileName = _dosPathResolver.TryGetFullHostPathFromDos(dosFileName);
+                        if (File.Exists(hostFileName)) {
+                            randomAccessFile = File.OpenRead(hostFileName);
+                        } else if (File.Exists(realFileName)) {
+                            randomAccessFile = File.OpenRead(realFileName);
+                        } else {
+                            return FileNotFoundError(dosFileName);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 case "w":
                     randomAccessFile = File.OpenWrite(hostFileName);
                     break;
                 case "rw": {
-                    string? realFileName = _dosPathResolver.TryGetFullHostPathFromDos(hostFileName);
-                    if (File.Exists(hostFileName)) {
-                        randomAccessFile = File.Open(hostFileName, FileMode.Open);
-                    } else if (File.Exists(realFileName)) {
-                        randomAccessFile = File.Open(realFileName, FileMode.Open);
-                    } else {
-                        return FileNotFoundError(fileName);
-                    }
+                        string? realFileName = _dosPathResolver.TryGetFullHostPathFromDos(dosFileName);
+                        if (File.Exists(hostFileName)) {
+                            randomAccessFile = File.Open(hostFileName, FileMode.Open);
+                        } else if (File.Exists(realFileName)) {
+                            randomAccessFile = File.Open(realFileName, FileMode.Open);
+                        } else {
+                            return FileNotFoundError(dosFileName);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
 
             if (randomAccessFile != null) {
-                SetOpenFile(dosIndex, new OpenFile(fileName, dosIndex, randomAccessFile));
+                SetOpenFile(dosIndex, new OpenFile(dosFileName, dosIndex, randomAccessFile));
             }
         } catch (FileNotFoundException) {
-            return FileNotFoundError(fileName);
+            return FileNotFoundError(dosFileName);
         } catch (IOException) {
-            return FileAccessDeniedError(fileName);
+            return FileAccessDeniedError(dosFileName);
         }
 
         return DosFileOperationResult.Value16(dosIndex);
