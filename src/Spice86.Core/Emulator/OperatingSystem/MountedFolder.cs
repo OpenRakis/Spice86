@@ -25,7 +25,7 @@ public class MountedFolder {
     /// <summary>
     /// Gets the DOS drive root path.
     /// </summary>
-    public string DosDriveRoot => @$"{DriveLetter}:\";
+    public string DosDriveRootPath => $"{DriveLetter}{DosPathResolver.VolumeSeparatorChar}";
 
     /// <summary>
     /// The full host path to the mounted folder. This path serves as the root of the DOS drive.
@@ -40,5 +40,5 @@ public class MountedFolder {
     /// <summary>
     /// The full path to the current DOS directory in use on the drive.
     /// </summary>
-    public string FullDosCurrentDirectory => $"{DriveLetter}:{ConvertUtils.ToBackSlashPath($@"\{FullHostCurrentDirectory[MountedHostDirectory.Length..]}")}".ToUpperInvariant();
+    public string FullDosCurrentDirectory => $"{DosDriveRootPath}{ConvertUtils.ToBackSlashPath(FullHostCurrentDirectory[MountedHostDirectory.Length..])}".ToUpperInvariant();
 }

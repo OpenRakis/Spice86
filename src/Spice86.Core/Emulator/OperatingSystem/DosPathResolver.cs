@@ -1,17 +1,22 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
-using System.IO;
-using System.Linq;
-using System.Text;
-
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
+
+using System.IO;
+using System.Linq;
+using System.Text;
 
 /// <summary>
 /// Translates DOS filepaths to host file paths, and vice-versa.
 /// </summary>
 internal class DosPathResolver {
+    internal const char VolumeSeparatorChar = ':';
+    internal const char DirectorySeparatorChar = '\\';
+    private const char AltDirectorySeparatorChar = '/';
+    private const int MaxPathLength = 255;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -41,11 +46,10 @@ internal class DosPathResolver {
         //0 = default drive
         if (driveNumber == 0 && _driveMap.Any()) {
             MountedFolder mountedFolder = _driveMap[_currentDrive];
-            currentDir = mountedFolder.FullDosCurrentDirectory[mountedFolder.DosDriveRoot.Length..];
+            currentDir = mountedFolder.FullDosCurrentDirectory[mountedFolder.DosDriveRootPath.Length..];
             return DosFileOperationResult.NoValue();
-        }
-        else if (_driveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
-            currentDir = mountedFolder.FullDosCurrentDirectory[mountedFolder.DosDriveRoot.Length..];
+        } else if (_driveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
+            currentDir = mountedFolder.FullDosCurrentDirectory[mountedFolder.DosDriveRootPath.Length..];
             return DosFileOperationResult.NoValue();
         }
         currentDir = "";
@@ -90,38 +94,71 @@ internal class DosPathResolver {
     /// <param name="dosPath">The new DOS path to use as the current DOS folder.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> that details the result of the operation.</returns>
     public DosFileOperationResult SetCurrentDir(string dosPath) {
-        dosPath = GetFullDosPath(dosPath);
+        string fullDosPath = GetFullDosPathIncludingRoot(dosPath);
 
-        if (!IsPathRooted(dosPath)) {
+        if (!StartsWithDosDriveAndVolumeSeparator(fullDosPath)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
 
-        string? hostPath = TryGetFullHostPathFromDos(dosPath);
+        string? hostPath = TryGetFullHostPathFromDos(fullDosPath);
         if (!string.IsNullOrWhiteSpace(hostPath)) {
-            return SetCurrentDirValue(dosPath[0], hostPath);
+            return SetCurrentDirValue(fullDosPath[0], hostPath);
         } else {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
     }
 
-    private string GetDosPathRoot(string dosPath) {
-        if(IsPathRooted(dosPath)) {
-            if(StartsWithDosDrive(dosPath)) {
-                string? root = Path.GetPathRoot(dosPath);
-                if(!string.IsNullOrWhiteSpace(root)) {
-                    return root;
+    private string ResolveDosPathDriveRoot(string absoluteOrRelativeDosPath) {
+        if (IsPathRooted(absoluteOrRelativeDosPath)) {
+            if (StartsWithDosDriveAndVolumeSeparator(absoluteOrRelativeDosPath)) {
+                return $"{absoluteOrRelativeDosPath[0]}{VolumeSeparatorChar}";
+            }
+        }
+        return _driveMap[_currentDrive].DosDriveRootPath;
+    }
+
+    private string GetFullDosPathIncludingRoot(string dosPath) {
+        StringBuilder normalizedDosPath = new();
+
+        string backslashedDosPath = ConvertUtils.ToBackSlashPath(dosPath);
+
+        string driveRoot = ResolveDosPathDriveRoot(backslashedDosPath);
+        normalizedDosPath.Append(driveRoot);
+
+        if(backslashedDosPath.StartsWith(driveRoot)) {
+            backslashedDosPath = backslashedDosPath[driveRoot.Length..];
+        }
+
+        IEnumerable<string> pathElements = backslashedDosPath.Split(DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(x => x.Trim(DirectorySeparatorChar));
+
+        bool moveNext = false;
+        bool appendedFolder = false;
+        foreach (string pathElement in pathElements) {
+            if(pathElement == "." || pathElement.Contains(VolumeSeparatorChar)) {
+                continue;
+            }
+            else if(pathElement == ".." && appendedFolder) {
+                moveNext = true;
+            }
+            else {
+                if(moveNext) {
+                    moveNext = false;
+                    continue;
+                }
+                if(pathElement != "." && pathElement != ".." && !pathElement.Contains(VolumeSeparatorChar)) {
+                    appendedFolder = true;
+                    normalizedDosPath.Append(DirectorySeparatorChar).Append(pathElement.ToUpperInvariant());
                 }
             }
         }
-        return _driveMap[_currentDrive].DosDriveRoot;
+        
+        return normalizedDosPath.ToString();
     }
-
-    private string GetFullDosPath(string dosPath) => Path.GetFullPath(dosPath, GetDosPathRoot(dosPath));
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath) {
         if (string.IsNullOrWhiteSpace(hostFullPath) ||
             !IsWithinMountPoint(hostFullPath, _driveMap[driveLetter]) ||
-            Encoding.ASCII.GetByteCount(hostFullPath) > 255) {
+            Encoding.ASCII.GetByteCount(hostFullPath) > MaxPathLength) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
 
@@ -136,7 +173,7 @@ internal class DosPathResolver {
     /// <returns>A string containing the full path to the parent directory in the host file system, or <c>null</c> if nothing was found.</returns>
     public string? TryGetFullHostParentPathFromDos(string dosPath) {
         string? fullHostPath = TryGetFullHostPathFromDos(dosPath);
-        if(string.IsNullOrWhiteSpace(fullHostPath)) {
+        if (string.IsNullOrWhiteSpace(fullHostPath)) {
             return null;
         }
         string? parent = Directory.GetParent(fullHostPath)?.FullName;
@@ -149,12 +186,12 @@ internal class DosPathResolver {
 
     private (string HostPrefixPath, string DosRelativePath) DeconstructDosPath(string dosPath) {
         if (IsPathRooted(dosPath)) {
-            int length = dosPath.TakeWhile(x => x == '\\' || x == '/').Count();
-            if (StartsWithDosDrive(dosPath)) {
+            int length = 1;
+            if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
                 length = 3;
             }
             return (_driveMap[_currentDrive].MountedHostDirectory, dosPath[length..]);
-        } else if (StartsWithDosDrive(dosPath)) {
+        } else if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
             return (_driveMap[dosPath[0]].MountedHostDirectory, dosPath[2..]);
         } else {
             return (_driveMap[_currentDrive].MountedHostDirectory, dosPath);
@@ -166,12 +203,11 @@ internal class DosPathResolver {
     /// </summary>
     /// <param name="dosPath">The DOS path to convert.</param>
     /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
-
     public string? TryGetFullHostPathFromDos(string dosPath) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
-        dosPath = GetFullDosPath(dosPath);
+        dosPath = GetFullDosPathIncludingRoot(dosPath);
 
         (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
 
@@ -185,7 +221,7 @@ internal class DosPathResolver {
             .EnumerateDirectories("*", new EnumerationOptions() {
                 RecurseSubdirectories = true,
             })
-            .Select(x => (FileSystemInfo)x)
+            .Cast<FileSystemInfo>()
             .Concat(
             hostDirInfo.EnumerateFiles("*", new EnumerationOptions() {
                 RecurseSubdirectories = true,
@@ -223,7 +259,7 @@ internal class DosPathResolver {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return dosPath;
         }
-        dosPath = GetFullDosPath(dosPath);
+        dosPath = GetFullDosPathIncludingRoot(dosPath);
         (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, DosRelativePath));
     }
@@ -231,29 +267,29 @@ internal class DosPathResolver {
     /// <summary>
     /// All the possible DOS drive letters
     /// </summary>
-    private static char[] DriveLetters => new char[] {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'};
+    private static char[] DriveLetters => new char[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
 
     /// <summary>
     /// Gets or sets the <see cref="_currentDrive"/> with a byte value (0x0: A:, 0x1: B:, ...)
     /// </summary>
     public byte CurrentDriveIndex {
-        get  => (byte)Array.IndexOf(DriveLetters, _currentDrive);
+        get => (byte)Array.IndexOf(DriveLetters, _currentDrive);
         set => _currentDrive = DriveLetters[value];
     }
 
     public byte NumberOfPotentiallyValidDriveLetters => (byte)_driveMap.Count;
 
-    private bool StartsWithDosDrive(string dosPath) =>
+    private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>
         dosPath.Length >= 2 &&
         DriveLetters.Contains(char.ToUpperInvariant(dosPath[0])) &&
-        dosPath[1] == ':';
+        dosPath[1] == VolumeSeparatorChar;
 
     private bool IsPathRooted(string path) =>
-        path.StartsWith(@"\") ||
-        path.StartsWith("/") ||
-        path.Length >= 3 &&
-        StartsWithDosDrive(path) &&
-        path[2] == '\\';
+        path.StartsWith(DirectorySeparatorChar) ||
+        path.StartsWith(AltDirectorySeparatorChar) ||
+        (path.Length >= 3 &&
+        StartsWithDosDriveAndVolumeSeparator(path) &&
+        path[2] == DirectorySeparatorChar);
 
     /// <summary>
     /// Returns whether the folder or file name already exists, in DOS's case insensitive point of view.
