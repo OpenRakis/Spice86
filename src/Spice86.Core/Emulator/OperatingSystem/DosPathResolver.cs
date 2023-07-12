@@ -108,24 +108,24 @@ internal class DosPathResolver {
         }
     }
 
-    private string GetAbsoluteStartPathFromDosPath(string absoluteOrRelativeDosPath) {
+    private string GetDosDrivePathFromDosPath(string absoluteOrRelativeDosPath) {
         if (IsPathRooted(absoluteOrRelativeDosPath)) {
             if (StartsWithDosDriveAndVolumeSeparator(absoluteOrRelativeDosPath)) {
                 return $"{absoluteOrRelativeDosPath[0]}{VolumeSeparatorChar}";
             }
         }
-        return _driveMap[_currentDrive].FullDosCurrentDirectory;
+        return _driveMap[_currentDrive].DosDriveRootPath;
     }
 
-    private string GetFullDosPathIncludingRoot(string dosPath) {
-        if(string.IsNullOrWhiteSpace(dosPath)) {
-            return dosPath;
+    private string GetFullDosPathIncludingRoot(string absoluteOrRelativeDosPath) {
+        if(string.IsNullOrWhiteSpace(absoluteOrRelativeDosPath)) {
+            return absoluteOrRelativeDosPath;
         }
         StringBuilder normalizedDosPath = new();
 
-        string backslashedDosPath = ConvertUtils.ToBackSlashPath(dosPath);
+        string backslashedDosPath = ConvertUtils.ToBackSlashPath(absoluteOrRelativeDosPath);
 
-        string driveRoot = GetAbsoluteStartPathFromDosPath(backslashedDosPath);
+        string driveRoot = $"{GetDosDrivePathFromDosPath(backslashedDosPath)}{DirectorySeparatorChar}";
         normalizedDosPath.Append(driveRoot);
 
         if(backslashedDosPath.StartsWith(driveRoot)) {
@@ -135,7 +135,7 @@ internal class DosPathResolver {
             backslashedDosPath = backslashedDosPath[2..];
         }
 
-        IEnumerable<string> pathElements = backslashedDosPath.Split(DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(x => x.Trim(DirectorySeparatorChar));
+        IEnumerable<string> pathElements = backslashedDosPath.Split(DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         bool moveNext = false;
         bool appendedFolder = false;
