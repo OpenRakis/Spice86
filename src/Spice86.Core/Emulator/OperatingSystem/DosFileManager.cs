@@ -567,14 +567,8 @@ public class DosFileManager {
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
-        string? hostPath = _dosPathResolver.TryGetFullHostParentPathFromDos(dosDirectory);
-        if (string.IsNullOrWhiteSpace(hostPath)) {
-            return PathNotFoundError(dosDirectory);
-        }
-
-        string? parentFolder = Directory.GetParent(hostPath)?.FullName;
-
-        if(string.IsNullOrWhiteSpace(parentFolder)) {
+        string? parentFolder = _dosPathResolver.TryGetFullHostParentPathFromDos(dosDirectory);
+        if (string.IsNullOrWhiteSpace(parentFolder)) {
             return PathNotFoundError(dosDirectory);
         }
 
