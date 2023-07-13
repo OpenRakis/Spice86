@@ -368,9 +368,9 @@ public class Machine : IDisposable {
                 if (Gui?.IsPaused == true || IsPaused) {
                     Gui?.WaitForContinue();
                 }
-                dmaChannel.Transfer(Memory);
-                if (!_exitDmaLoop) {
-                    _dmaResetEvent.WaitOne(1);
+                bool transfered = dmaChannel.Transfer(Memory);
+                if (!_exitDmaLoop && !transfered) {
+                    _dmaResetEvent.WaitOne(Timeout.Infinite);
                 }
             }
         }
