@@ -276,8 +276,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _performanceWindow.Activate();
         } else if (_programExecutor is not null) {
             _performanceWindow = new PerformanceWindow() {
-                DataContext = new PerformanceViewModel(
-                    _programExecutor.Machine, this)
+                DataContext = new PerformanceViewModel(_programExecutor.Machine)
             };
             _performanceWindow.Closed += (_, _) => _performanceWindow = null;
             _performanceWindow.Show();

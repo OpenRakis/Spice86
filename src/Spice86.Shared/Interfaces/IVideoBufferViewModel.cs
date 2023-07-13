@@ -5,17 +5,12 @@
 /// </summary>
 public interface IVideoBufferViewModel : IDisposable {
     /// <summary>
-    /// How long the last frame took to render, in milliseconds.
-    /// </summary>
-    long LastFrameRenderTimeMs { get; }
-    
-    /// <summary>
     /// Draws the content of the video buffer onto the UI.
     /// </summary>
     void Draw();
     
     /// <summary>
-    /// Whether the mouse cursor is shown. 
+    /// Whether the mouse cursor is shown.
     /// </summary>
     bool ShowCursor { get; set; }
     
@@ -30,9 +25,4 @@ public interface IVideoBufferViewModel : IDisposable {
     /// </summary>
     /// <value></value>
     int Height { get; }
-
-    /// <summary>
-    /// The number of frames rendered since its creation
-    /// </summary>
-    long FramesRendered { get; }
 }

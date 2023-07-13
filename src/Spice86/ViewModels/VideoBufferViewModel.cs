@@ -13,11 +13,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Views;
-using Spice86.Shared;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IVideoBufferViewModel" />
@@ -38,7 +36,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         Width = 320;
         Height = 200;
         Scale = 1;
-        _frameRenderTimeWatch = new Stopwatch();
     }
 
     public VideoBufferViewModel(IVideoCard videoCard, double scale, int width, int height) {
@@ -47,7 +44,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         Height = height;
         Scale = scale;
         MainWindow.AppClosing += MainWindow_AppClosing;
-        _frameRenderTimeWatch = new Stopwatch();
         _bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
     }
 
@@ -85,8 +81,6 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
         _appClosing = true;
     }
-
-    public uint Address { get; private set; }
 
     /// <summary>
     /// TODO : Get current DPI from Avalonia or Skia.
@@ -133,18 +127,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
     [ObservableProperty]
     private int _width = 320;
 
-    [ObservableProperty]
-    private long _framesRendered;
-
     private bool _appClosing;
-
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    private readonly Stopwatch _frameRenderTimeWatch;
 
     private Action? _drawAction;
 
@@ -161,23 +144,22 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         
         _drawAction ??= () => {
             unsafe {
-                _frameRenderTimeWatch.Restart();
                 using ILockedFramebuffer pixels = Bitmap.Lock();
                 var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
                 _videoCard?.Render(buffer);
 
                 Dispatcher.UIThread.Post(() => {
                     UIUpdateMethod?.Invoke();
-                    FramesRendered++;
                 }, DispatcherPriority.Render);
-                _frameRenderTimeWatch.Stop();
-                LastFrameRenderTimeMs = _frameRenderTimeWatch.ElapsedMilliseconds;
             }
         };
     }
 
-    [ObservableProperty]
-    private long _lastFrameRenderTimeMs;
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
 
     private readonly IVideoCard? _videoCard;
 

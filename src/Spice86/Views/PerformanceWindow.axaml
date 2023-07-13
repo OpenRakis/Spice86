@@ -7,38 +7,26 @@
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.PerformanceWindow"
 		Icon="/Icon/Spice86.ico"
-		CanResize="True"
 		WindowStartupLocation="CenterOwner"
-		Title="Performance" MinWidth="640" MinHeight="400" Width="640" Height="400">
+		CanResize="False"
+		Title="Performance" MinWidth="300" MinHeight="200" Width="300" Height="200">
 	<Design.DataContext>
 		<vm:PerformanceViewModel />
 	</Design.DataContext>
 	<Window.Resources>
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</Window.Resources>
-	<TabControl>
-		<TabItem Header="Now">
-			<WrapPanel Orientation="Vertical">
-				<Label Content="Instructions executed" />
-				<TextBlock Text="{Binding InstructionsExecuted,
-					StringFormat={}{0:N0}}"/>
-				<Label Content="Instructions per second" />
-				<TextBlock Text="{Binding InstructionsPerSecond,
-					Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-					StringFormat={}{0:N0}}"/>
-				<Label Content="Instructions per second (avg)" />
-				<TextBlock Text="{Binding AverageInstructionsPerSecond,
-					Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-					StringFormat={}{0:N0}}"/>
-				<Label Content="Frames per second (avg across all video buffers)" />
-				<TextBlock Text="{Binding FramesPerSecond,
-					Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-					StringFormat={}{0:N0}}"/>
-				<Label Content="Last frame render time (avg across all video buffers)" />
-				<TextBlock Text="{Binding VideoBuffersLastFrameRenderTime,
-					Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-					StringFormat={}{0:N0} ms}"/>
-			</WrapPanel>
-		</TabItem>
-	</TabControl>
+		<WrapPanel Orientation="Vertical">
+			<Label Content="Instructions executed" />
+			<TextBlock Text="{Binding InstructionsExecuted,
+				StringFormat={}{0:N0}}"/>
+			<Label Content="Instructions per second" />
+			<TextBlock Text="{Binding InstructionsPerSecond,
+				Converter={StaticResource InvalidNumberToQuestionMarkConverter},
+				StringFormat={}{0:N0}}"/>
+			<Label Content="Instructions per second (avg)" />
+			<TextBlock Text="{Binding AverageInstructionsPerSecond,
+				Converter={StaticResource InvalidNumberToQuestionMarkConverter},
+				StringFormat={}{0:N0}}"/>
+		</WrapPanel>
 </Window>
