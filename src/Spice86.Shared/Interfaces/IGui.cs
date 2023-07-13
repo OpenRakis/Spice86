@@ -14,7 +14,7 @@ public interface IGui {
     /// Represents the video source displayed by the GUI.
     /// </summary>
     IVideoBufferViewModel VideoBuffer { get; }
-    
+
     /// <summary>
     /// Shows the UI mouse cursor
     /// </summary>
@@ -24,13 +24,13 @@ public interface IGui {
     /// Hides the UI mouse cursor
     /// </summary>
     void HideMouseCursor();
-    
+
     /// <summary>
     /// Indicates whether the GUI considers the Emulator is paused. <br/>
     /// When True, the Play button is displayed <br/>
     /// When False, the Pause button is displayed <br/>
     /// </summary>
-    bool IsPaused { get; set; }
+    bool IsPaused { get; }
 
     /// <summary>
     /// Indicates whether a keyboard key is up.
@@ -65,7 +65,8 @@ public interface IGui {
     /// <summary>
     /// Blocks the current thread until the GUI's WaitHandle receives a signal.
     /// </summary>
-    void WaitForContinue();
+    /// <param name="isPaused">Whether the <see cref="IsPaused"/> property must be set to <c>True</c></param>
+    void WaitForContinue(bool isPaused = false);
 
     /// <summary>
     /// X coordinates of the mouse cursor, in pixels.

@@ -543,7 +543,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     /// <inheritdoc />
-    public void WaitForContinue() {
+    public void WaitForContinue(bool isPaused) {
+        if(isPaused) {
+            IsPaused = true;
+        }
         _okayToContinueEvent.WaitOne(Timeout.Infinite);
     }
 }
