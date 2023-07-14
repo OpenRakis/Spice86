@@ -11,7 +11,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Shared.Emulator.Video;
 
-public partial class PaletteViewModel : ObservableObject {
+public partial class PaletteViewModel : ViewModelBase {
     private readonly ArgbPalette? _argbPalette;
     private DispatcherTimer _timer;
 

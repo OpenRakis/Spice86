@@ -9,7 +9,7 @@ using Spice86.Core.Emulator.CPU;
 
 using System;
 
-public partial class PerformanceViewModel : ObservableObject {
+public partial class PerformanceViewModel : ViewModelBase {
     private readonly DispatcherTimer? _timer;
     private readonly State? _state;
 

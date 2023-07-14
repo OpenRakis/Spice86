@@ -19,7 +19,7 @@ using System;
 using System.Threading.Tasks;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IVideoBufferViewModel" />
-public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBufferViewModel {
+public sealed partial class VideoBufferViewModel : ViewModelBase, IVideoBufferViewModel {
     private bool _disposedValue;
 
     private Thread? _drawThread;

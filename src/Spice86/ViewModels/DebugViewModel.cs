@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Models.Debugging;
 
-public partial class DebugViewModel : ObservableObject {
+public partial class DebugViewModel : ViewModelBase {
     [ObservableProperty]
     private MachineInfo _machine = new();
     

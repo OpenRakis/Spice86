@@ -34,7 +34,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Input.Platform;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
     [ObservableProperty]
