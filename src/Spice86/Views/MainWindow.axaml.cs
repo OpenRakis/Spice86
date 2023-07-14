@@ -28,8 +28,8 @@ internal partial class MainWindow : Window {
     public void SetPrimaryDisplayControl(Image image) {
         if(_videoBufferImage != image) {
             _videoBufferImage = image;
-            FocusOnVideoBuffer();
         }
+        FocusOnVideoBuffer();
     }
 
     private void FocusOnVideoBuffer() {
@@ -41,13 +41,13 @@ internal partial class MainWindow : Window {
     }
 
     protected override void OnKeyUp(KeyEventArgs e) {
-        FocusOnVideoBuffer();
         (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+        FocusOnVideoBuffer();
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
-        FocusOnVideoBuffer();
         (DataContext as MainWindowViewModel)?.OnKeyDown(e);
+        FocusOnVideoBuffer();
     }
 
     public static event EventHandler<CancelEventArgs>? AppClosing;

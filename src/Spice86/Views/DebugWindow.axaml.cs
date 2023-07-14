@@ -5,7 +5,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.VM;
 using Spice86.ViewModels;
 
 public partial class DebugWindow : Window {
