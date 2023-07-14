@@ -2,7 +2,6 @@ namespace Spice86.Views;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Markup.Xaml;
 
 internal partial class PerformanceWindow : Window {
     public PerformanceWindow() {

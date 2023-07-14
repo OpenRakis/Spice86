@@ -1,9 +1,7 @@
 namespace Spice86.Views;
 
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Markup.Xaml;
 
 using Spice86.ViewModels;
 
@@ -54,7 +52,5 @@ internal partial class MainWindow : Window {
 
     public static event EventHandler<CancelEventArgs>? AppClosing;
 
-    private void MainWindow_Closing(object? sender, CancelEventArgs e) {
-        AppClosing?.Invoke(sender, e);
-    }
+    private void MainWindow_Closing(object? sender, CancelEventArgs e) => AppClosing?.Invoke(sender, e);
 }

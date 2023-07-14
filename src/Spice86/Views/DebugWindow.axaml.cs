@@ -2,7 +2,6 @@ namespace Spice86.Views;
 
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using Avalonia.Controls.ApplicationLifetimes;
 
 using Spice86.Core.Emulator.VM;

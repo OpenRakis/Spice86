@@ -14,13 +14,11 @@ using Spice86.Shared.Emulator.Video;
 /// Code-behind file for the display of RGB colors.
 /// </summary>
 public partial class PaletteUserControl : UserControl {
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PaletteUserControl"/> class.
     /// </summary>
-    public PaletteUserControl() {
-        InitializeComponent();
-    }
+    public PaletteUserControl() => InitializeComponent();
 
     /// <summary>
     /// Loads the XAML content of the control.

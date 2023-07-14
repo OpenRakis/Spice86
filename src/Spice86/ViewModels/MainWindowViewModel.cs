@@ -90,7 +90,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     
     private bool _isMainWindowClosing;
 
-    public MainWindowViewModel(ILoggerService loggerService) {
+    public MainWindowViewModel(Configuration configuration, ILoggerService loggerService) {
+        Configuration = configuration;
         _loggerService = loggerService;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is not null) {
             desktop.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
@@ -176,12 +177,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
         _okayToContinueEvent.Set();
         IsPaused = false;
-    }
-
-    public void SetConfiguration(string[] args) {
-        Configuration = GenerateConfiguration(args);
-        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
-        SetMainTitle();
     }
 
     private void SetMainTitle() {
@@ -346,6 +341,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private bool RunEmulator() {
         if (string.IsNullOrWhiteSpace(Configuration.Exe) ||
+            !File.Exists(Configuration.Exe) ||
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
             return false;
         }
@@ -359,6 +355,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         } else {
             AsmOverrideStatus = $"ASM code overrides: none.";
         }
+        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
+        SetMainTitle();
         RunMachine();
         return true;
     }
@@ -429,10 +427,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private void DisposeEmulator() {
         DisposeVideoBuffer();
         _programExecutor?.Dispose();
-    }
-
-    private static Configuration GenerateConfiguration(string[] args) {
-        return CommandLineParser.ParseCommandLine(args);
     }
 
     [ObservableProperty]
