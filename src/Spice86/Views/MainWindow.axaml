@@ -2,6 +2,7 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="using:Spice86.ViewModels"
 		xmlns:local="using:Spice86.Views"
+		xmlns:uc="using:Spice86.UserControls"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
@@ -76,7 +77,7 @@
 				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 			</Grid>
 		</Grid>
-		<local:VideoBufferView Grid.Row="1" DataContext="{Binding VideoBuffer}" />
+		<uc:VideoBufferUserControl Grid.Row="1" DataContext="{Binding VideoBuffer}" />
 		<WrapPanel Grid.Row="2" Orientation="Horizontal">
 			<TextBlock Text="{Binding StatusMessage}" />
 			<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />

@@ -8,14 +8,8 @@ using Spice86.Core.Emulator.VM;
 using Spice86.ViewModels;
 
 public partial class DebugWindow : Window {
-    public DebugWindow() {
-        InitializeComponent();
-        if (!Design.IsDesignMode &&
-            Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            Owner = desktop.MainWindow;
-        }
-    }
-    
+    public DebugWindow() => InitializeComponent();
+
     public DebugWindow(Machine machine) {
         InitializeComponent();
         if (!Design.IsDesignMode &&

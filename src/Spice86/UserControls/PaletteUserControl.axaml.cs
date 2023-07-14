@@ -1,13 +1,11 @@
+namespace Spice86.UserControls;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace Spice86.UserControls;
 
 using Avalonia.Collections;
-using Avalonia.Controls.Shapes;
-
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Video;
 
 /// <summary>
@@ -23,10 +21,8 @@ public partial class PaletteUserControl : UserControl {
     /// <summary>
     /// Loads the XAML content of the control.
     /// </summary>
-    private void InitializeComponent() {
-        AvaloniaXamlLoader.Load(this);
-    }
-    
+    private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
+
     /// <summary>
     /// Defines a <see cref="StyledProperty{TValue}"/> for the <see cref="Palette"/> property.
     /// </summary>

@@ -1,5 +1,4 @@
-﻿
-namespace Spice86.ViewModels;
+﻿namespace Spice86.ViewModels;
 
 using Avalonia.Controls;
 using Avalonia.Threading;

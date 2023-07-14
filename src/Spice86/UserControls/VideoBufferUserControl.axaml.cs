@@ -1,15 +1,16 @@
-namespace Spice86.Views;
+namespace Spice86.UserControls;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 
 using Spice86.ViewModels;
+using Spice86.Views;
 
 using System;
 
-internal partial class VideoBufferView : UserControl {
-    public VideoBufferView() {
+internal partial class VideoBufferUserControl : UserControl {
+    public VideoBufferUserControl() {
         InitializeComponent();
         DataContextChanged += VideoBufferView_DataContextChanged;
         MainWindow.AppClosing += MainWindow_AppClosing;

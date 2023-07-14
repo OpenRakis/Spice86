@@ -70,6 +70,11 @@
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Compile Update="UserControls\VideoBufferUserControl.axaml.cs">
+	    <DependentUpon>VideoBufferUserControl.axaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
 
 	<ItemGroup>
 		<None Update="libs\PortAudio\win-x64\libportaudio.dll">
