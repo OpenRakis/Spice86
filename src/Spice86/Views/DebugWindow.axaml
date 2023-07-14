@@ -7,6 +7,7 @@
         Title="Debug"
         xmlns:vm="using:Spice86.ViewModels"
         xmlns:converters="clr-namespace:Spice86.Converters"
+		x:CompileBindings="True" x:DataType="vm:DebugViewModel"
         Icon="/Icon/Spice86.ico"
         CanResize="True"
         WindowStartupLocation="CenterOwner"

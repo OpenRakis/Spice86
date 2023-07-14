@@ -8,6 +8,7 @@
 		x:Class="Spice86.Views.PerformanceWindow"
 		Icon="/Icon/Spice86.ico"
 		WindowStartupLocation="CenterOwner"
+		x:CompileBindings="True" x:DataType="vm:PerformanceViewModel"
 		CanResize="False"
 		Title="Performance" MinWidth="300" MinHeight="200" Width="300" Height="200">
 	<Design.DataContext>
