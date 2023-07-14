@@ -6,7 +6,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.VM;
 
 using System;
 

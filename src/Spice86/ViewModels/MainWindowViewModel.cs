@@ -288,7 +288,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
         } else if(_programExecutor is not null) {
-            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.Machine));
+            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.Machine.VgaRegisters.DacRegisters.ArgbPalette));
             _paletteWindow.Closed += (_, _) => _paletteWindow = null;
             _paletteWindow.Show();
         }
