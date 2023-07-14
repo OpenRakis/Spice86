@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Keyboard;
 
 using Spice86.Shared.Emulator.Keyboard;
-using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
 

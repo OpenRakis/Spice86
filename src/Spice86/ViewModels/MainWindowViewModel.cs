@@ -102,24 +102,20 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         Pause();
         PauseEmulatorOnStart = false;
     }
-    
-    public void HideMouseCursor() {
-        Dispatcher.UIThread.Post(() => {
-            if (VideoBuffer is null) {
-                return;
-            }
-            VideoBuffer.ShowCursor = false;
-        });
-    }
 
-    public void ShowMouseCursor() {
-        Dispatcher.UIThread.Post(() => {
-            if (VideoBuffer is null) {
-                return;
-            }
-            VideoBuffer.ShowCursor = true;
-        });
-    }
+    public void HideMouseCursor() => Dispatcher.UIThread.Post(() => {
+        if (VideoBuffer is null) {
+            return;
+        }
+        VideoBuffer.ShowCursor = false;
+    });
+
+    public void ShowMouseCursor() => Dispatcher.UIThread.Post(() => {
+        if (VideoBuffer is null) {
+            return;
+        }
+        VideoBuffer.ShowCursor = true;
+    });
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
@@ -179,9 +175,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         IsPaused = false;
     }
 
-    private void SetMainTitle() {
-        MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
-    }
+    private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
 
     [ObservableProperty]
     private string? _mainTitle;
@@ -301,10 +295,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     [RelayCommand]
-    public void ResetTimeMultiplier() {
-        TimeMultiplier = Configuration.TimeMultiplier;
-    }
-    
+    public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
+
     public void UpdateScreen() {
         if (_disposed || _isSettingResolution || _isMainWindowClosing) {
             return;
@@ -379,26 +371,22 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
         MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
     }
-    
-    public void SetResolution(int width, int height) {
-        Dispatcher.UIThread.Post(() => {
-            _isSettingResolution = true;
-            DisposeVideoBuffer();
-            Width = width;
-            Height = height;
-            IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(_videoCard, scale:1, width, height);
-            Dispatcher.UIThread.Post(() => {
-                    VideoBuffer?.Dispose();
-                    VideoBuffer = videoBuffer;
-                }
-            );
-            _isSettingResolution = false;
-        }, DispatcherPriority.MaxValue);
-    }
 
-    private void DisposeVideoBuffer() {
-        VideoBuffer?.Dispose();
-    }
+    public void SetResolution(int width, int height) => Dispatcher.UIThread.Post(() => {
+        _isSettingResolution = true;
+        DisposeVideoBuffer();
+        Width = width;
+        Height = height;
+        IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(_videoCard, scale: 1, width, height);
+        Dispatcher.UIThread.Post(() => {
+            VideoBuffer?.Dispose();
+            VideoBuffer = videoBuffer;
+        }
+        );
+        _isSettingResolution = false;
+    }, DispatcherPriority.MaxValue);
+
+    private void DisposeVideoBuffer() => VideoBuffer?.Dispose();
 
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -481,12 +469,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         _emulatorThread.Start();
     }
 
-    private void OnEmulatorErrorOccured(Exception e) {
-        Dispatcher.UIThread.Post(() => {
-            StatusMessage = "Emulator crashed.";
-            ShowEmulationErrorMessage(e);
-        });
-    }
+    private void OnEmulatorErrorOccured(Exception e) => Dispatcher.UIThread.Post(() => {
+        StatusMessage = "Emulator crashed.";
+        ShowEmulationErrorMessage(e);
+    });
 
     [ObservableProperty]
     private bool _showVideo = true;

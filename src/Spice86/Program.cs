@@ -66,11 +66,9 @@ public class Program {
     /// Configures and builds an Avalonia application instance.
     /// </summary>
     /// <returns>The built <see cref="AppBuilder"/> instance.</returns>
-    private static AppBuilder BuildAvaloniaApp() {
-        return AppBuilder.Configure<App>()
+    private static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace();
-    }
 
     private static ClassicDesktopStyleApplicationLifetime SetuptWithClassicDesktopLifetime(
         AppBuilder builder, string[] args) {

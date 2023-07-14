@@ -55,9 +55,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
 
     private Action? UIUpdateMethod { get; set; }
 
-    internal void SetUIUpdateMethod(Action invalidateImageAction) {
-        UIUpdateMethod = invalidateImageAction;
-    }
+    internal void SetUIUpdateMethod(Action invalidateImageAction) => UIUpdateMethod = invalidateImageAction;
 
     [RelayCommand]
     public async Task SaveBitmap() {
@@ -78,9 +76,7 @@ public sealed partial class VideoBufferViewModel : ObservableObject, IVideoBuffe
         }
     }
 
-    private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
-        _appClosing = true;
-    }
+    private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) => _appClosing = true;
 
     /// <summary>
     /// TODO : Get current DPI from Avalonia or Skia.

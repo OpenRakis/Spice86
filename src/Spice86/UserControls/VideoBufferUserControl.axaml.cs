@@ -16,9 +16,7 @@ internal partial class VideoBufferUserControl : UserControl {
         MainWindow.AppClosing += MainWindow_AppClosing;
     }
 
-    private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) {
-        _appClosing = true;
-    }
+    private void MainWindow_AppClosing(object? sender, System.ComponentModel.CancelEventArgs e) => _appClosing = true;
     private bool _appClosing;
 
     private void VideoBufferView_DataContextChanged(object? sender, EventArgs @event) {

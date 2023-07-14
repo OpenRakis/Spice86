@@ -17,9 +17,7 @@ internal partial class App : Application {
     /// <summary>
     /// Initializes the Spice86 UI.
     /// </summary>
-    public override void Initialize() {
-        AvaloniaXamlLoader.Load(this);
-    }
+    public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public void SetupMainWindow(Configuration configuration, ILoggerService loggerService) {
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
@@ -27,8 +25,6 @@ internal partial class App : Application {
         }
 
         desktop.MainWindow = new MainWindow();
-        MainWindowViewModel mainViewModel = new(configuration, loggerService);
-        desktop.MainWindow.DataContext = mainViewModel;
-        desktop.MainWindow.Closed += (_, _) => mainViewModel.Dispose();
+        desktop.MainWindow.DataContext = new MainWindowViewModel(configuration, loggerService);
     }
 }
