@@ -277,7 +277,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         if (_debugWindow != null) {
             _debugWindow.Activate();
         } else if(_programExecutor is not null) {
-            _debugWindow = new DebugWindow(_programExecutor.Machine);
+            _debugWindow = new DebugWindow(_programExecutor.Machine.VgaRegisters, _programExecutor.Machine.VgaRenderer);
             _debugWindow.Closed += (_, _) => _debugWindow = null;
             _debugWindow.Show();
         }
