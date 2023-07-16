@@ -20,12 +20,12 @@ public class InterruptVectorTable {
         get {
             // Table starts at memory address 0.
             uint offsetAddress = (uint)(4 * vectorNumber);
-            return _memory.OffsetSegment[offsetAddress];
+            return _memory.SegmentedAddressValue[offsetAddress];
         }
         set {
             // install the vector in the vector table. Table starts at memory address 0.
             uint offsetAddress = (uint)(4 * vectorNumber);
-            _memory.OffsetSegment[offsetAddress] = (value.Segment, value.Offset);
+            _memory.SegmentedAddressValue[offsetAddress] = (value.Segment, value.Offset);
         }
     }
 }

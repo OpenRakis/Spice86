@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Shared.Emulator.Memory;
 
@@ -8,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 /// Keeps track of where to write next via CurrentAddress field that is automatically incremented each write. 
 /// </summary>
 public class MemoryWriter {
-    private readonly IIndexed _memory;
+    private readonly Indexable _memory;
     /// <summary>
     /// Where next data will be written
     /// </summary>
@@ -19,7 +20,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="memory">memory bus to write to</param>
     /// <param name="beginningAddress">Address at which first write will be performed</param>
-    public MemoryWriter(IIndexed memory, SegmentedAddress beginningAddress) {
+    public MemoryWriter(Indexable memory, SegmentedAddress beginningAddress) {
         _memory = memory;
         CurrentAddress = beginningAddress;
     }
@@ -57,7 +58,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="address">data to write</param>
     public void WriteSegmentedAddress(SegmentedAddress address) {
-        _memory.OffsetSegment[CurrentAddress.Segment, CurrentAddress.Offset] = (address.Segment, address.Offset);
+        _memory.SegmentedAddressValue[CurrentAddress.Segment, CurrentAddress.Offset] = (address.Segment, address.Offset);
         CurrentAddress.Offset += 4;
     }
 

@@ -53,7 +53,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         bool updateCursorPosition = (_state.AL & 0x01) != 0;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-            string str = _memory.GetString(address, _state.CX);
+            string str = _memory.GetZeroTerminatedString(address, _state.CX);
             _logger.Debug("{ClassName} INT 10 13 {MethodName}: {String} at {X},{Y} attribute: 0x{Attribute:X2}",
                 nameof(VgaBios), nameof(WriteString), str, cursorPosition.X, cursorPosition.Y, includeAttributes ? "included" : attribute);
         }

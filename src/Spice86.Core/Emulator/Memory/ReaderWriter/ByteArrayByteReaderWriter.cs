@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Memory.Indexer;
+namespace Spice86.Core.Emulator.Memory.ReaderWriter;
 
 
 /// <summary>
@@ -7,11 +7,13 @@ namespace Spice86.Core.Emulator.Memory.Indexer;
 public class ByteArrayByteReaderWriter : IByteReaderWriter {
     public byte[] Array { get; }
 
+    /// <inheritdoc/>
     public byte this[uint address] {
         get => Array[address];
         set => Array[address] = value;
     }
 
+    /// <inheritdoc/>
     public uint Length { get => (uint)Array.Length; }
 
     public ByteArrayByteReaderWriter(byte[] array) {

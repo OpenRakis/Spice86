@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
@@ -45,13 +46,13 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     }
 
     public byte[] ReplaceAllCallbacksInRamImage(Memory memory) {
-        ByteArrayBasedIndexer indexer = new ByteArrayBasedIndexer(memory.RamCopy);
-        MemoryAsmWriter memoryAsmWriter = new MemoryAsmWriter(indexer, new SegmentedAddress(0, 0), this);
+        ByteArrayBasedIndexable indexable = new ByteArrayBasedIndexable(memory.RamCopy);
+        MemoryAsmWriter memoryAsmWriter = new MemoryAsmWriter(indexable, new SegmentedAddress(0, 0), this);
         foreach (ICallback callback in this.AllRunnables) {
             memoryAsmWriter.CurrentAddress = callback.InstructionAddress;
             memoryAsmWriter.EraseCallbackWithInt(callback.Index);
         }
 
-        return indexer.Array;
+        return indexable.Array;
     }
 }

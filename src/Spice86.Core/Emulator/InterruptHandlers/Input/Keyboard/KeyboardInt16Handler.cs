@@ -41,7 +41,7 @@ public class KeyboardInt16Handler : InterruptHandler {
             SetZeroFlag(true, calledFromVm);
             _state.AX = 0;
         } else {
-            ushort? keyCode = _biosKeyboardBuffer.GetKeyCodeStatus();
+            ushort? keyCode = _biosKeyboardBuffer.PeekKeyCode();
             if (keyCode != null) {
                 SetZeroFlag(false, calledFromVm);
                 _state.AX = keyCode.Value;
@@ -50,7 +50,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public ushort? GetNextKeyCode() {
-        return _biosKeyboardBuffer.GetKeyCode();
+        return _biosKeyboardBuffer.DequeueKeyCode();
     }
 
     public override void Run() {

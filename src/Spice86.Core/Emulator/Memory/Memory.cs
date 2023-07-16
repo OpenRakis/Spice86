@@ -1,19 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Memory.Indexer;
-
-using System.Text;
-
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Emulator.Errors;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public class Memory : IIndexed, IByteReaderWriter {
+public class Memory : Indexable.Indexable, IByteReaderWriter {
     private readonly IMemoryDevice _ram;
-    private readonly BreakPointHolder _readBreakPoints = new();
-    private readonly BreakPointHolder _writeBreakPoints = new();
+    public MemoryBreakpoints MemoryBreakpoints { get; }= new();
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
 
@@ -32,10 +27,7 @@ public class Memory : IIndexed, IByteReaderWriter {
         _memoryDevices = new IMemoryDevice[memorySize];
         _ram = new Ram(memorySize);
         RegisterMapping(0, memorySize, _ram);
-        UInt8 = new UInt8Indexer(this);
-        UInt16 = new UInt16Indexer(this);
-        UInt32 = new UInt32Indexer(this);
-        OffsetSegment = new OffsetSegmentIndexer(UInt16);
+        (UInt8, UInt16, UInt32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
         A20Gate = new(configuration.A20Gate);
     }
 
@@ -53,7 +45,7 @@ public class Memory : IIndexed, IByteReaderWriter {
     public const uint EndOfHighMemoryArea = 0x10FFEF;
 
     /// <summary>
-    /// Gets a copy of the current memory state.
+    /// Gets a copy of the current memory state, not triggering any breakpoints.
     /// </summary>
     public byte[] RamCopy {
         get {
@@ -70,18 +62,27 @@ public class Memory : IIndexed, IByteReaderWriter {
     public byte this[uint address] {
         get {
             address = A20Gate.TransformAddress(address);
-            MonitorReadAccess(address);
+            MemoryBreakpoints.MonitorReadAccess(address);
             return _memoryDevices[address].Read(address);
         }
         set {
             address = A20Gate.TransformAddress(address);
-            MonitorWriteAccess(address, value);
+            CurrentlyWritingByte = value;
+            MemoryBreakpoints.MonitorWriteAccess(address, value);
             _memoryDevices[address].Write(address, value);
         }
     }
+    
+    /// <summary>
+    ///     Allows write breakpoints to access the byte being written before it actually is.
+    /// </summary>
+    public byte CurrentlyWritingByte {
+        get;
+        private set;
+    }
 
     /// <inheritdoc/>
-    public uint Length => EndOfHighMemoryArea;
+    public uint Length => (uint)_memoryDevices.Length;
 
     /// <summary>
     /// Returns a <see cref="Span{T}"/> that represents the specified range of memory.
@@ -94,105 +95,12 @@ public class Memory : IIndexed, IByteReaderWriter {
         address = A20Gate.TransformAddress(address);
         foreach (DeviceRegistration device in _devices) {
             if (address >= device.StartAddress && address + length <= device.EndAddress) {
-                MonitorRangeReadAccess((uint)address, (uint)(address + length));
+                MemoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
                 return device.Device.GetSpan(address, length);
             }
         }
 
         throw new InvalidOperationException($"No Memory Device supports a span from {address} to {address + length}");
-    }
-
-    /// <summary>
-    /// Returns an array of bytes read from RAM.
-    /// </summary>
-    /// <param name="address">The start address.</param>
-    /// <param name="length">The length of the array.</param>
-    /// <returns>The array of bytes, read from RAM.</returns>
-    public byte[] GetData(uint address, uint length) {
-        byte[] data = new byte[length];
-        for (uint i = 0; i < length; i++) {
-            data[i] = UInt8[address + i];
-        }
-
-        return data;
-    }
-
-    /// <summary>
-    ///     Load data from a byte array into memory.
-    /// </summary>
-    /// <param name="address">The memory address to start writing</param>
-    /// <param name="data">The array of bytes to write</param>
-    public void LoadData(uint address, byte[] data) {
-        LoadData(address, data, data.Length);
-    }
-
-    /// <summary>
-    ///     Load data from a byte array into memory.
-    /// </summary>
-    /// <param name="address">The memory address to start writing</param>
-    /// <param name="data">The array of bytes to write</param>
-    /// <param name="length">How many bytes to read from the byte array</param>
-    public void LoadData(uint address, byte[] data, int length) {
-        for (int i = 0; i < length; i++) {
-            UInt8[(uint)(address + i)] = data[i];
-        }
-    }
-
-    /// <summary>
-    ///     Load data from a words array into memory.
-    /// </summary>
-    /// <param name="address">The memory address to start writing</param>
-    /// <param name="data">The array of words to write</param>
-    public void LoadData(uint address, ushort[] data) {
-        LoadData(address, data, data.Length);
-    }
-
-    /// <summary>
-    ///     Load data from a word array into memory.
-    /// </summary>
-    /// <param name="address">The memory address to start writing</param>
-    /// <param name="data">The array of words to write</param>
-    /// <param name="length">How many words to read from the byte array</param>
-    public void LoadData(uint address, ushort[] data, int length) {
-        for (int i = 0; i < length; i++) {
-            UInt16[(uint)(address + i)] = data[i];
-        }
-    }
-
-    /// <summary>
-    ///     Copy bytes from one memory address to another.
-    /// </summary>
-    /// <param name="sourceAddress">The address in memory to start reading from</param>
-    /// <param name="destinationAddress">The address in memory to start writing to</param>
-    /// <param name="length">How many bytes to copy</param>
-    public void MemCopy(uint sourceAddress, uint destinationAddress, uint length) {
-        for (int i = 0; i < length; i++) {
-            UInt8[(uint)(destinationAddress + i)] = UInt8[(uint)(sourceAddress + i)];
-        }
-    }
-
-    /// <summary>
-    ///     Fill a range of memory with a value.
-    /// </summary>
-    /// <param name="address">The memory address to start writing to</param>
-    /// <param name="value">The byte value to write</param>
-    /// <param name="amount">How many times to write the value</param>
-    public void Memset8(uint address, byte value, uint amount) {
-        for (int i = 0; i < amount; i++) {
-            UInt8[(uint)(address + i)] = value;
-        }
-    }
-
-    /// <summary>
-    ///     Fill a range of memory with a value.
-    /// </summary>
-    /// <param name="address">The memory address to start writing to</param>
-    /// <param name="value">The ushort value to write</param>
-    /// <param name="amount">How many times to write the value</param>
-    public void Memset16(uint address, ushort value, uint amount) {
-        for (int i = 0; i < amount; i += 2) {
-            UInt16[(uint)(address + i)] = value;
-        }
     }
 
     /// <summary>
@@ -227,64 +135,28 @@ public class Memory : IIndexed, IByteReaderWriter {
         return null;
     }
 
-    /// <summary>
-    ///     Enable or disable a memory breakpoint.
-    /// </summary>
-    /// <param name="breakPoint">The breakpoint to enable or disable</param>
-    /// <param name="on">true to enable a breakpoint, false to disable it</param>
-    /// <exception cref="NotSupportedException"></exception>
-    public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
-        BreakPointType type = breakPoint.BreakPointType;
-        switch (type) {
-            case BreakPointType.READ:
-                _readBreakPoints.ToggleBreakPoint(breakPoint, on);
-                break;
-            case BreakPointType.WRITE:
-                _writeBreakPoints.ToggleBreakPoint(breakPoint, on);
-                break;
-            case BreakPointType.ACCESS:
-                _readBreakPoints.ToggleBreakPoint(breakPoint, on);
-                _writeBreakPoints.ToggleBreakPoint(breakPoint, on);
-                break;
-            case BreakPointType.EXECUTION:
-            case BreakPointType.CYCLES:
-            case BreakPointType.MACHINE_STOP:
-            default:
-                throw new NotSupportedException($"Trying to add unsupported breakpoint of type {type}");
-        }
-    }
-
-
-    /// <summary>
-    ///     Allows write breakpoints to access the byte being written before it actually is.
-    /// </summary>
-    public byte CurrentlyWritingByte {
-        get;
-        set;
-    }
-
-    /// <summary>
-    ///     The number of bytes in the memory map.
-    /// </summary>
-    public int Size => _memoryDevices.Length;
-
     /// <inheritdoc/>
-    public UInt8Indexer UInt8 {
+    public override UInt8Indexer UInt8 {
         get;
     }
 
     /// <inheritdoc/>
-    public UInt16Indexer UInt16 {
+    public override UInt16Indexer UInt16 {
         get;
     }
 
     /// <inheritdoc/>
-    public UInt32Indexer UInt32 {
+    public override UInt32Indexer UInt32 {
         get;
     }
     
     /// <inheritdoc/>
-    public OffsetSegmentIndexer OffsetSegment {
+    public override SegmentedAddressValueIndexer SegmentedAddressValue {
+        get;
+    }
+    
+    /// <inheritdoc/>
+    public override SegmentedAddressIndexer SegmentedAddress {
         get;
     }
 
@@ -305,78 +177,6 @@ public class Memory : IIndexed, IByteReaderWriter {
         }
 
         _devices.Add(new DeviceRegistration(baseAddress, endAddress, memoryDevice));
-    }
-
-    /// <summary>
-    /// Read a string from memory.
-    /// </summary>
-    /// <param name="address">The address in memory from where to read</param>
-    /// <param name="maxLength">The maximum string length</param>
-    /// <returns></returns>
-    public string GetZeroTerminatedString(uint address, int maxLength) {
-        StringBuilder res = new();
-        for (int i = 0; i < maxLength; i++) {
-            byte characterByte = UInt8[(uint)(address + i)];
-            if (characterByte == 0) {
-                break;
-            }
-
-            char character = Convert.ToChar(characterByte);
-            res.Append(character);
-        }
-
-        return res.ToString();
-    }
-
-    /// <summary>
-    /// Writes a string directly to memory.
-    /// </summary>
-    /// <param name="address">The address at which to write the string</param>
-    /// <param name="value">The string to write</param>
-    /// <param name="maxLength">The maximum length to write</param>
-    /// <exception cref="UnrecoverableException"></exception>
-    public void SetZeroTerminatedString(uint address, string value, int maxLength) {
-        if (value.Length + 1 > maxLength) {
-            throw new UnrecoverableException(
-                $"String {value} is more than {maxLength} cannot write it at offset {address}");
-        }
-
-        int i = 0;
-        for (; i < value.Length; i++) {
-            char character = value[i];
-            byte charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
-            UInt8[(uint)(address + i)] = charFirstByte;
-        }
-
-        UInt8[(uint)(address + i)] = 0;
-    }
-
-
-    public string GetString(uint address, int length) {
-        StringBuilder res = new();
-        for (int i = 0; i < length; i++) {
-            char character = (char)UInt8[(uint)(address + i)];
-            res.Append(character);
-        }
-
-        return res.ToString();
-    }
-
-    private void MonitorReadAccess(uint address) {
-        _readBreakPoints.TriggerMatchingBreakPoints(address);
-    }
-
-    private void MonitorWriteAccess(uint address, byte value) {
-        CurrentlyWritingByte = value;
-        _writeBreakPoints.TriggerMatchingBreakPoints(address);
-    }
-
-    private void MonitorRangeReadAccess(uint startAddress, uint endAddress) {
-        _readBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
-    }
-
-    private void MonitorRangeWriteAccess(uint startAddress, uint endAddress) {
-        _writeBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
     }
 
     private record DeviceRegistration(uint StartAddress, uint EndAddress, IMemoryDevice Device);

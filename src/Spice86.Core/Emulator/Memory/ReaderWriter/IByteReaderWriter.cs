@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Memory;
+namespace Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Interface for objects that allow to read and write bytes at specific addresses
@@ -9,11 +9,10 @@ public interface IByteReaderWriter {
     /// </summary>
     /// <param name="address">Address where to perform the operation</param>
     public byte this[uint address] { get; set; }
-
+    
     /// <summary>
     /// Length of the address space
     /// </summary>
-    public uint Length {
-        get;
-    }
+    public uint Length { get; }
+
 }

@@ -35,7 +35,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
             _loggerService.Verbose("{BiosInt9KeyReceived}", ascii);
         }
 
-        BiosKeyboardBuffer.AddKeyCode((ushort)(scancode.Value << 8 | ascii));
+        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scancode.Value << 8 | ascii));
         _machine.DualPic.AcknowledgeInterrupt(1);
     }
 }

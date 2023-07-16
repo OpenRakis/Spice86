@@ -610,7 +610,7 @@ public class CSharpOverrideHelper {
         ushort expectedSegment,
         ushort expectedOffset) {
         uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.GetRegister16(segmentRegisterIndex), offset);
-        (ushort foundSegment, ushort foundOffset) = Memory.OffsetSegment[address];
+        (ushort foundSegment, ushort foundOffset) = Memory.SegmentedAddressValue[address];
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
             throw FailAsUntested(
                 $"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");
