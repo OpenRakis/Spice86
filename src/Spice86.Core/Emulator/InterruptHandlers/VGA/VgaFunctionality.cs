@@ -75,7 +75,7 @@ public class VgaFunctionality : IVgaFunctionality {
 
         // Update BIOS cursor pos
         int position = cursorPosition.Y << 8 | cursorPosition.X;
-        _biosDataArea.SetCursorPosition(cursorPosition.Page, (ushort)position);
+        _biosDataArea.CursorPosition[cursorPosition.Page] = (ushort)position;
     }
 
     /// <inheritdoc />
@@ -426,7 +426,7 @@ public class VgaFunctionality : IVgaFunctionality {
         if (page > 7) {
             return new CursorPosition(0, 0, 0);
         }
-        ushort xy = _biosDataArea.GetCursorPosition(page);
+        ushort xy = _biosDataArea.CursorPosition[page];
         return new CursorPosition(xy & 0xFF, xy >> 8, page);
     }
 
@@ -683,7 +683,7 @@ public class VgaFunctionality : IVgaFunctionality {
         _biosDataArea.FeatureSwitches = 0xF9;
         _biosDataArea.ModesetCtl &= 0x7F;
         for (int i = 0; i < 8; i++) {
-            _biosDataArea.SetCursorPosition(i, 0x0000);
+            _biosDataArea.CursorPosition[i] = 0x0000;
         }
         _biosDataArea.VideoPageStart = 0x0000;
         _biosDataArea.CurrentVideoPage = 0x00;
