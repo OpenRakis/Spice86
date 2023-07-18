@@ -278,7 +278,7 @@ public class Machine : IDisposable {
         VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
         
         TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, machineCreationOptions.LoggerService);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, BiosDataArea, machineCreationOptions.LoggerService);
         
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);

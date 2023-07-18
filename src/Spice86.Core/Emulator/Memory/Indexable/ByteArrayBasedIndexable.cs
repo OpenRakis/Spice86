@@ -7,6 +7,10 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// Implementation of Indexable over a byte array.
 /// </summary>
 public class ByteArrayBasedIndexable : Indexable {
+    
+    /// <summary>
+    /// Access to underlying ReaderWriter
+    /// </summary>
     public ByteArrayByteReaderWriter ReaderWriter { get; }
 
     /// <summary>

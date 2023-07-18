@@ -304,7 +304,7 @@ public class VgaFunctionality : IVgaFunctionality {
     /// <inheritdoc />
     public void SelectScanLines(int lines) {
         byte modeSetCtl = _biosDataArea.ModesetCtl;
-        byte featureSwitches = _biosDataArea.FeatureSwitches;
+        byte featureSwitches = _biosDataArea.VideoFeatureSwitches;
         switch (lines) {
             case 200:
                 modeSetCtl = (byte)(modeSetCtl & ~0x10 | 0x80);
@@ -322,12 +322,12 @@ public class VgaFunctionality : IVgaFunctionality {
                 throw new NotSupportedException($"{lines}  is not a valid scan line amount");
         }
         _biosDataArea.ModesetCtl = modeSetCtl;
-        _biosDataArea.FeatureSwitches = featureSwitches;
+        _biosDataArea.VideoFeatureSwitches = featureSwitches;
     }
 
     /// <inheritdoc />
     public byte GetFeatureSwitches() {
-        return (byte)(_biosDataArea.FeatureSwitches & 0x0F);
+        return (byte)(_biosDataArea.VideoFeatureSwitches & 0x0F);
     }
 
     /// <inheritdoc />
@@ -680,7 +680,7 @@ public class VgaFunctionality : IVgaFunctionality {
         _biosDataArea.CrtControllerBaseAddress = (ushort)GetCrtControllerPort();
         _biosDataArea.CharacterHeight = characterHeight;
         _biosDataArea.VideoCtl = (byte)(0x60 | (flags.HasFlag(ModeFlags.NoClearMem) ? 0x80 : 0x00));
-        _biosDataArea.FeatureSwitches = 0xF9;
+        _biosDataArea.VideoFeatureSwitches = 0xF9;
         _biosDataArea.ModesetCtl &= 0x7F;
         for (int i = 0; i < 8; i++) {
             _biosDataArea.CursorPosition[i] = 0x0000;

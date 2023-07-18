@@ -1,48 +1,48 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Core.Emulator.Memory.Indexable;
 
 /// <summary>
 /// This is a memory based FIFO Queue used to store key codes
+/// Data about buffer start, end and positions are stored in the Bios Data Area.
 /// </summary>
-public class BiosKeyboardBuffer : MemoryBasedDataStructure {
-    private const ushort End = 0x482;
-    private const ushort Head = 0x41A;
-    private const int InitialLength = 0x20;
-    private const ushort InitialStartAddress = 0x41E;
-    private const ushort Start = 0x480;
-    private const ushort Tail = 0x41C;
+public class BiosKeyboardBuffer {
+    private readonly Indexable _indexable;
+    private readonly BiosDataArea _biosDataArea;
 
-    public BiosKeyboardBuffer(Memory memory) : base(memory, 0) {
+    public BiosKeyboardBuffer(Indexable indexable, BiosDataArea biosDataArea) {
+        _indexable = indexable;
+        _biosDataArea = biosDataArea;
     }
 
     public void Init() {
-        StartAddress = InitialStartAddress;
-        EndAddress = InitialStartAddress + InitialLength;
-        HeadAddress = InitialStartAddress;
-        TailAddress = InitialStartAddress;
+        // absolute base address is uint but BDA is low in memory so it fits in ushort
+        StartAddress = (ushort)_biosDataArea.KbdBuf.BaseAddress;
+        EndAddress = (ushort)(StartAddress + _biosDataArea.KbdBuf.Count);
+        HeadAddress = StartAddress;
+        TailAddress = StartAddress;
     }
 
     /// <summary>
     /// Address of the start of the buffer
     /// </summary>
-    public ushort StartAddress { get => UInt16[Start]; set => UInt16[Start] = value; }
+    private ushort StartAddress { get => _biosDataArea.KbdBufStartOffset; set => _biosDataArea.KbdBufStartOffset = value; }
 
     /// <summary>
     /// Address of the end of the buffer
     /// </summary>
-    public ushort EndAddress { get => UInt16[End]; set => UInt16[End] = value; }
+    private ushort EndAddress { get => _biosDataArea.KbdBufEndOffset; set => _biosDataArea.KbdBufEndOffset = value; }
 
     /// <summary>
     /// Address where newest item is enqueued
     /// </summary>
-    public ushort HeadAddress { get => UInt16[Head]; set => UInt16[Head] = value; }
+    private ushort HeadAddress { get => _biosDataArea.KbdBufHead; set => _biosDataArea.KbdBufHead = value; }
 
     /// <summary>
     /// Address where the oldest item is enqueued
     /// </summary>
-    public ushort TailAddress { get => UInt16[Tail]; set => UInt16[Tail] = value; }
+    private ushort TailAddress { get => _biosDataArea.KbdBufTail; set => _biosDataArea.KbdBufTail = value; }
 
     /// <summary>
     /// Returns whether there is any keycode in the buffer or not
@@ -68,7 +68,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructure {
             return false;
         }
 
-        UInt16[tail] = code;
+        _indexable.UInt16[0, tail] = code;
         TailAddress = newTail;
         return true;
     }
@@ -96,7 +96,7 @@ public class BiosKeyboardBuffer : MemoryBasedDataStructure {
             return null;
         }
 
-        return UInt16[HeadAddress];
+        return _indexable.UInt16[0, HeadAddress];
     }
 
     private ushort AdvancePointer(ushort value) {
