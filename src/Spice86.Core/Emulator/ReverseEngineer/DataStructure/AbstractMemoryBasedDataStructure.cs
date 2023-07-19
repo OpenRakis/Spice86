@@ -63,14 +63,15 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     protected uint ComputeAddressFromOffset(uint offset) {
         return (uint)(BaseAddress + offset);
     }
+
     /// <summary>
     /// Gets an 8-bit unsigned integer array from the data structure starting at the specified offset and with the specified length.
     /// </summary>
     /// <param name="start">The offset from the base address to start reading values from.</param>
     /// <param name="length">The length of the array.</param>
     /// <returns>The array of uint8 values.</returns>
-    public Uint8Array GetUint8Array(uint start, int length) {
-        return new Uint8Array(ByteReaderWriterShiftedToBaseAddress, ComputeAddressFromOffset(start), length);
+    public UInt8Array GetUInt8Array(uint start, int length) {
+        return new UInt8Array(ByteReaderWriter, ComputeAddressFromOffset(start), length);
     }
 
     /// <summary>
@@ -79,8 +80,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// <param name="start">The offset from the base address to start reading values from.</param>
     /// <param name="length">The length of the array.</param>
     /// <returns>The array of uint16 values.</returns>
-    public Uint16Array GetUint16Array(uint start, int length) {
-        return new Uint16Array(ByteReaderWriterShiftedToBaseAddress, ComputeAddressFromOffset(start), length);
+    public UInt16Array GetUInt16Array(uint start, int length) {
+        return new UInt16Array(ByteReaderWriter, ComputeAddressFromOffset(start), length);
     }
     
     /// <summary>
@@ -89,8 +90,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// <param name="start">The offset from the base address to start reading values from.</param>
     /// <param name="length">The length of the array.</param>
     /// <returns>The array of uint8 values.</returns>
-    public Uint32Array GetUint32Array(uint start, int length) {
-        return new Uint32Array(ByteReaderWriterShiftedToBaseAddress, ComputeAddressFromOffset(start), length);
+    public UInt32Array GetUInt32Array(uint start, int length) {
+        return new UInt32Array(ByteReaderWriter, ComputeAddressFromOffset(start), length);
     }
 
     /// <summary>
@@ -100,6 +101,6 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// <param name="length">The length of the array.</param>
     /// <returns>The array of uint8 values.</returns>
     public SegmentedAddressArray GetSegmentedAddressArray(uint start, int length) {
-        return new SegmentedAddressArray(ByteReaderWriterShiftedToBaseAddress, ComputeAddressFromOffset(start), length);
+        return new SegmentedAddressArray(ByteReaderWriter, ComputeAddressFromOffset(start), length);
     }
 }

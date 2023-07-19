@@ -38,7 +38,7 @@ public class TimerInt8Handler : InterruptHandler {
     /// Gets or set the value of the real time clock, in ticks.
     /// </summary>
     public uint TickCounterValue {
-        get => _machine.BiosDataArea.RealTimeClock; 
-        set => _machine.BiosDataArea.RealTimeClock = value;
+        get => _machine.BiosDataArea.TimerCounter; 
+        set => _machine.BiosDataArea.TimerCounter = value;
     }
 }

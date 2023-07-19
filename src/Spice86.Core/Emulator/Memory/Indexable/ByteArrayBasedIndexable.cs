@@ -7,12 +7,16 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// Implementation of Indexable over a byte array.
 /// </summary>
 public class ByteArrayBasedIndexable : Indexable {
-    private readonly ByteArrayByteReaderWriter _readerWriter;
+    
+    /// <summary>
+    /// Access to underlying ReaderWriter
+    /// </summary>
+    public ByteArrayByteReaderWriter ReaderWriter { get; }
 
     /// <summary>
     /// Underlying array beeing wrapped
     /// </summary>
-    public byte[] Array { get => _readerWriter.Array; }
+    public byte[] Array { get => ReaderWriter.Array; }
 
     /// <inheritdoc/>
     public override UInt8Indexer UInt8 { get; }
@@ -32,7 +36,7 @@ public class ByteArrayBasedIndexable : Indexable {
     }
 
     public ByteArrayBasedIndexable(byte[] array) {
-        _readerWriter = new ByteArrayByteReaderWriter(array);
-        (UInt8, UInt16, UInt32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(_readerWriter);
+        ReaderWriter = new ByteArrayByteReaderWriter(array);
+        (UInt8, UInt16, UInt32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(ReaderWriter);
     }
 }

@@ -5,14 +5,14 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// <summary>
 /// Represents an array of unsigned 8-bit integers stored in memory.
 /// </summary>
-public class Uint8Array : MemoryBasedArray<byte> {
+public class UInt8Array : MemoryBasedArray<byte> {
     /// <summary>
-    /// Initializes a new instance of the <see cref="Uint8Array"/> class.
+    /// Initializes a new instance of the <see cref="UInt8Array"/> class.
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     /// <param name="baseAddress">The base address of the array in memory.</param>
     /// <param name="length">The length of the array.</param>
-    public Uint8Array(IByteReaderWriter byteReaderWriter, uint baseAddress, int length) : base(byteReaderWriter, baseAddress, length) {
+    public UInt8Array(IByteReaderWriter byteReaderWriter, uint baseAddress, int length) : base(byteReaderWriter, baseAddress, length) {
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public class SegmentedAddressArray : MemoryBasedArray<SegmentedAddress> {
     /// <summary>
-    /// Initializes a new instance of the <see cref="Uint32Array"/> class with the specified memory, base address, and length.
+    /// Initializes a new instance of the <see cref="UInt32Array"/> class with the specified memory, base address, and length.
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     /// <param name="baseAddress">The base address of the array.</param>
