@@ -8,11 +8,11 @@ using Spice86.Core.Emulator.Memory.Indexable;
 /// Data about buffer start, end and positions are stored in the Bios Data Area.
 /// </summary>
 public class BiosKeyboardBuffer {
-    private readonly Indexable _indexable;
+    private readonly Indexable _memory;
     private readonly BiosDataArea _biosDataArea;
 
-    public BiosKeyboardBuffer(Indexable indexable, BiosDataArea biosDataArea) {
-        _indexable = indexable;
+    public BiosKeyboardBuffer(Indexable memory, BiosDataArea biosDataArea) {
+        _memory = memory;
         _biosDataArea = biosDataArea;
     }
 
@@ -61,14 +61,13 @@ public class BiosKeyboardBuffer {
     /// <param name="code">keycode to enqueue</param>
     /// <returns>false when buffer is full, true otherwise</returns>
     public bool EnqueueKeyCode(ushort code) {
-        ushort tail = TailAddress;
-        ushort newTail = AdvancePointer(tail);
+        ushort newTail = ComputeNextAddress(TailAddress);
         if (newTail == HeadAddress) {
             // buffer full
             return false;
         }
 
-        _indexable.UInt16[0, tail] = code;
+        _memory.UInt16[0, TailAddress] = code;
         TailAddress = newTail;
         return true;
     }
@@ -83,7 +82,7 @@ public class BiosKeyboardBuffer {
             // Don't dequeue if nothing in the buffer
             return null;
         }
-        HeadAddress = AdvancePointer(HeadAddress);
+        HeadAddress = ComputeNextAddress(HeadAddress);
         return res;
     }
 
@@ -96,14 +95,14 @@ public class BiosKeyboardBuffer {
             return null;
         }
 
-        return _indexable.UInt16[0, HeadAddress];
+        return _memory.UInt16[0, HeadAddress];
     }
 
-    private ushort AdvancePointer(ushort value) {
-        ushort res = (ushort)(value + 2);
-        if (res >= EndAddress) {
+    private ushort ComputeNextAddress(ushort address) {
+        ushort next = (ushort)(address + 2);
+        if (next >= EndAddress) {
             return StartAddress;
         }
-        return res;
+        return next;
     }
 }
