@@ -1,10 +1,14 @@
-﻿using Avalonia;
+﻿namespace Spice86;
+
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls;
+
 using Microsoft.Extensions.DependencyInjection;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Shared.Interfaces;
 
-namespace Spice86; 
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -34,28 +38,45 @@ public class Program {
     public static void Main(string[] args) {
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
 
+        ServiceProvider serviceProvider = Startup.StartupInjectedServices(configuration);
+        ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>() ?? throw new InvalidOperationException("Could not get logging service from DI !");
+
         if (!configuration.HeadlessMode) {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
+            StartMainWindow(configuration, loggerService, args);
         }
         else {
-            ServiceProvider serviceProvider = Startup.StartupInjectedServices(args);
-            ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>();
-            if (loggerService is null) {
-                throw new InvalidOperationException("Could not get logging service from DI !");
-            }
-
-            ProgramExecutor programExecutor = new ProgramExecutor(loggerService, null, configuration);
-            programExecutor.Run();
+            StartConsole(configuration, loggerService);
         }
+    }
+
+    private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
+        ProgramExecutor programExecutor = new(loggerService, null, configuration);
+        programExecutor.Run();
+    }
+
+    private static void StartMainWindow(Configuration configuration, ILoggerService loggerService, string[] args) {
+        AppBuilder appBuilder = BuildAvaloniaApp();
+        ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, args);
+        App? app = (App?)appBuilder.Instance;
+        app?.SetupMainWindow(configuration, loggerService);
+        desktop.Start(args);
     }
 
     /// <summary>
     /// Configures and builds an Avalonia application instance.
     /// </summary>
     /// <returns>The built <see cref="AppBuilder"/> instance.</returns>
-    public static AppBuilder BuildAvaloniaApp() {
-        return AppBuilder.Configure<App>()
+    private static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace();
+
+    private static ClassicDesktopStyleApplicationLifetime SetuptWithClassicDesktopLifetime(
+        AppBuilder builder, string[] args) {
+        var lifetime = new ClassicDesktopStyleApplicationLifetime {
+            Args = args,
+            ShutdownMode = ShutdownMode.OnMainWindowClose
+        };
+        builder.SetupWithLifetime(lifetime);
+        return lifetime;
     }
 }

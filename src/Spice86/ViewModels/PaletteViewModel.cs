@@ -9,12 +9,10 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.VM;
-using Spice86.Shared;
 using Spice86.Shared.Emulator.Video;
 
-public partial class PaletteViewModel : ObservableObject {
-    private readonly Machine? _machine;
+public partial class PaletteViewModel : ViewModelBase {
+    private readonly ArgbPalette? _argbPalette;
     private DispatcherTimer _timer;
 
     public PaletteViewModel() {
@@ -25,8 +23,8 @@ public partial class PaletteViewModel : ObservableObject {
     }
 
     
-    public PaletteViewModel(Machine? machine) {
-        _machine = machine;
+    public PaletteViewModel(ArgbPalette argbPalette) {
+        _argbPalette = argbPalette;
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
@@ -43,15 +41,12 @@ public partial class PaletteViewModel : ObservableObject {
     /// <param name="sender">Source of the event.</param>
     /// <param name="e">Unused EventArgs instance.</param>
     private void UpdateColors(object? sender, EventArgs e) {
-        IVideoState? videoState = _machine?.VgaRegisters;
-        if (videoState is null) {
+        if(_argbPalette is null) {
             return;
         }
-
-        ArgbPalette palette = videoState.DacRegisters.ArgbPalette;
         for(int i = 0; i < Palette.Count; i++) {
             Rectangle rectangle = Palette[i];
-            uint source = palette[i];
+            uint source = _argbPalette[i];
             Rgb rgb = Rgb.FromUint(source);
             if (rectangle.Fill is SolidColorBrush fill) {
                 fill.Color = Color.FromRgb(rgb.R, rgb.G, rgb.B);

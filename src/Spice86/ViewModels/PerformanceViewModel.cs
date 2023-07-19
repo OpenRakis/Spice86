@@ -1,39 +1,25 @@
-﻿
-namespace Spice86.ViewModels;
+﻿namespace Spice86.ViewModels;
 
-using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Spice86.Core.Emulator.VM;
-using Spice86.Models.Performance;
+using Spice86.Core.Emulator.CPU;
 
 using System;
 
-public partial class PerformanceViewModel : ObservableObject {
+public partial class PerformanceViewModel : ViewModelBase {
     private readonly DispatcherTimer? _timer;
-    private readonly MainWindowViewModel? _mainViewModel;
-    private readonly Machine? _machine;
-
-    private List<long> _framesRendered = new();
+    private readonly State? _state;
 
     private DateTimeOffset _lastUpdateTime;
 
-    [ObservableProperty]
-    private AvaloniaList<Measurement> _cpuHistoryDataPoints = new();
 
     [ObservableProperty]
     private double _averageInstructionsPerSecond;
 
     private long _instructionsPerSecondSampleNumber;
-
-    private const int CpuHistoryTimeSpanInMinutes = 10;
-
-    private DateTimeOffset _cpuHistoryFirstUpdate;
-
-    private DateTimeOffset _cpuHistoryLastUpdate;
 
     public PerformanceViewModel() {
         if (!Design.IsDesignMode) {
@@ -41,15 +27,13 @@ public partial class PerformanceViewModel : ObservableObject {
         }
     }
 
-    public PerformanceViewModel(Machine machine, MainWindowViewModel mainViewModel) {
-        _mainViewModel = mainViewModel;
-        _machine = machine;
-        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(300), DispatcherPriority.Normal, UpdatePerformanceInfo);
+    public PerformanceViewModel(State state) {
+        _state = state;
+        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
         _timer.Start();
     }
     
     private static double ApproxRollingAverage(double currentAverage, double instructionsPerSecond, long instructionsPerSecondSampleNumber) {
-
         currentAverage -= currentAverage / instructionsPerSecondSampleNumber;
         currentAverage += instructionsPerSecond / instructionsPerSecondSampleNumber;
 
@@ -57,55 +41,19 @@ public partial class PerformanceViewModel : ObservableObject {
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
-        if (_machine is null) {
+        if (_state is null) {
             return;
         }
-        if (DateTimeOffset.Now - _lastUpdateTime >= TimeSpan.FromSeconds(1)) {
-            if (_lastUpdateTime != DateTimeOffset.MinValue) {
-                InstructionsPerSecond = _machine.Cpu.State.Cycles - InstructionsExecuted;
-                if (double.IsNaN(AverageInstructionsPerSecond)) {
-                    AverageInstructionsPerSecond = InstructionsPerSecond;
-                }
-                AverageInstructionsPerSecond = ApproxRollingAverage(AverageInstructionsPerSecond, InstructionsPerSecond,
-                    _instructionsPerSecondSampleNumber++);
-                if(_mainViewModel?.VideoBuffer is not null) {
-                    FramesPerSecond = _mainViewModel.VideoBuffer.FramesRendered;
-                    VideoBuffersLastFrameRenderTime = _mainViewModel.VideoBuffer.LastFrameRenderTimeMs;
-                }
+        if (_lastUpdateTime != DateTimeOffset.MinValue) {
+            InstructionsPerSecond = _state.Cycles - InstructionsExecuted;
+            if (double.IsNaN(AverageInstructionsPerSecond)) {
+                AverageInstructionsPerSecond = InstructionsPerSecond;
             }
-            _lastUpdateTime = DateTimeOffset.Now;
+            AverageInstructionsPerSecond = ApproxRollingAverage(AverageInstructionsPerSecond, InstructionsPerSecond,
+                _instructionsPerSecondSampleNumber++);
         }
-        InstructionsExecuted = _machine.Cpu.State.Cycles;
-        UpdateCpuHistory(_lastUpdateTime);
-        if(_mainViewModel?.VideoBuffer is not null) {
-            _framesRendered = new() { _mainViewModel.VideoBuffer.FramesRendered };
-        }
-    }
-
-    private void UpdateCpuHistory(DateTimeOffset timeOfUpdate) {
-        if(_mainViewModel?.IsPaused is true ||
-            InstructionsPerSecond <= 0) {
-            return;
-        }
-
-        if(CpuHistoryDataPoints.Count is 0) {
-            _cpuHistoryFirstUpdate = timeOfUpdate;
-        }
-
-        TimeSpan cpuHistoryTimeSpan = _cpuHistoryLastUpdate - _cpuHistoryFirstUpdate;
-        if(cpuHistoryTimeSpan > TimeSpan.FromMinutes(CpuHistoryTimeSpanInMinutes)) {
-            CpuHistoryDataPoints.Clear();
-        }
-
-        CpuHistoryDataPoints.Add(new Measurement()
-        {
-            Number = CpuHistoryDataPoints.Count + 1,
-            Value = InstructionsPerSecond
-        });
-
-        _cpuHistoryLastUpdate = timeOfUpdate;
-        // Notify AvaloniaUI to make the added points show up.
-        OnPropertyChanged(nameof(CpuHistoryDataPoints));
+        _lastUpdateTime = DateTimeOffset.Now;
+        InstructionsExecuted = _state.Cycles;
     }
 
     [ObservableProperty]
@@ -113,10 +61,4 @@ public partial class PerformanceViewModel : ObservableObject {
 
     [ObservableProperty]
     private long _instructionsPerSecond = -1;
-
-    [ObservableProperty]
-    private double _framesPerSecond = -1;
-
-    [ObservableProperty]
-    private double _videoBuffersLastFrameRenderTime;
 }

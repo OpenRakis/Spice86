@@ -48,7 +48,6 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 		<PackageReference Include="Avalonia" Version="11.0.0" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0" />
 		<PackageReference Include="Avalonia.Desktop" Version="11.0.0" />
@@ -70,6 +69,11 @@
 		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Compile Update="UserControls\VideoBufferUserControl.axaml.cs">
+	    <DependentUpon>VideoBufferUserControl.axaml</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 
 	<ItemGroup>

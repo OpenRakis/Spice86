@@ -34,7 +34,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Input.Platform;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
     [ObservableProperty]
@@ -90,7 +90,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     
     private bool _isMainWindowClosing;
 
-    public MainWindowViewModel(ILoggerService loggerService) {
+    public MainWindowViewModel(Configuration configuration, ILoggerService loggerService) {
+        Configuration = configuration;
         _loggerService = loggerService;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is not null) {
             desktop.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
@@ -101,24 +102,20 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         Pause();
         PauseEmulatorOnStart = false;
     }
-    
-    public void HideMouseCursor() {
-        Dispatcher.UIThread.Post(() => {
-            if (VideoBuffer is null) {
-                return;
-            }
-            VideoBuffer.ShowCursor = false;
-        });
-    }
 
-    public void ShowMouseCursor() {
-        Dispatcher.UIThread.Post(() => {
-            if (VideoBuffer is null) {
-                return;
-            }
-            VideoBuffer.ShowCursor = true;
-        });
-    }
+    public void HideMouseCursor() => Dispatcher.UIThread.Post(() => {
+        if (VideoBuffer is null) {
+            return;
+        }
+        VideoBuffer.ShowCursor = false;
+    });
+
+    public void ShowMouseCursor() => Dispatcher.UIThread.Post(() => {
+        if (VideoBuffer is null) {
+            return;
+        }
+        VideoBuffer.ShowCursor = true;
+    });
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
@@ -178,15 +175,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         IsPaused = false;
     }
 
-    public void SetConfiguration(string[] args) {
-        Configuration = GenerateConfiguration(args);
-        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
-        SetMainTitle();
-    }
-
-    private void SetMainTitle() {
-        MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
-    }
+    private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
 
     [ObservableProperty]
     private string? _mainTitle;
@@ -276,8 +265,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
             _performanceWindow.Activate();
         } else if (_programExecutor is not null) {
             _performanceWindow = new PerformanceWindow() {
-                DataContext = new PerformanceViewModel(
-                    _programExecutor.Machine, this)
+                DataContext = new PerformanceViewModel(_programExecutor.Machine.Cpu.State)
             };
             _performanceWindow.Closed += (_, _) => _performanceWindow = null;
             _performanceWindow.Show();
@@ -289,7 +277,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         if (_debugWindow != null) {
             _debugWindow.Activate();
         } else if(_programExecutor is not null) {
-            _debugWindow = new DebugWindow(_programExecutor.Machine);
+            _debugWindow = new DebugWindow(_programExecutor.Machine.VgaRegisters, _programExecutor.Machine.VgaRenderer);
             _debugWindow.Closed += (_, _) => _debugWindow = null;
             _debugWindow.Show();
         }
@@ -300,17 +288,15 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
         } else if(_programExecutor is not null) {
-            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.Machine));
+            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.Machine.VgaRegisters.DacRegisters.ArgbPalette));
             _paletteWindow.Closed += (_, _) => _paletteWindow = null;
             _paletteWindow.Show();
         }
     }
 
     [RelayCommand]
-    public void ResetTimeMultiplier() {
-        TimeMultiplier = Configuration.TimeMultiplier;
-    }
-    
+    public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
+
     public void UpdateScreen() {
         if (_disposed || _isSettingResolution || _isMainWindowClosing) {
             return;
@@ -347,6 +333,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
 
     private bool RunEmulator() {
         if (string.IsNullOrWhiteSpace(Configuration.Exe) ||
+            !File.Exists(Configuration.Exe) ||
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
             return false;
         }
@@ -360,6 +347,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         } else {
             AsmOverrideStatus = $"ASM code overrides: none.";
         }
+        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
+        SetMainTitle();
         RunMachine();
         return true;
     }
@@ -382,26 +371,22 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
         MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
     }
-    
-    public void SetResolution(int width, int height) {
-        Dispatcher.UIThread.Post(() => {
-            _isSettingResolution = true;
-            DisposeVideoBuffer();
-            Width = width;
-            Height = height;
-            IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(_videoCard, scale:1, width, height);
-            Dispatcher.UIThread.Post(() => {
-                    VideoBuffer?.Dispose();
-                    VideoBuffer = videoBuffer;
-                }
-            );
-            _isSettingResolution = false;
-        }, DispatcherPriority.MaxValue);
-    }
 
-    private void DisposeVideoBuffer() {
-        VideoBuffer?.Dispose();
-    }
+    public void SetResolution(int width, int height) => Dispatcher.UIThread.Post(() => {
+        _isSettingResolution = true;
+        DisposeVideoBuffer();
+        Width = width;
+        Height = height;
+        IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(_videoCard, scale: 1, width, height);
+        Dispatcher.UIThread.Post(() => {
+            VideoBuffer?.Dispose();
+            VideoBuffer = videoBuffer;
+        }
+        );
+        _isSettingResolution = false;
+    }, DispatcherPriority.MaxValue);
+
+    private void DisposeVideoBuffer() => VideoBuffer?.Dispose();
 
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -430,10 +415,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     private void DisposeEmulator() {
         DisposeVideoBuffer();
         _programExecutor?.Dispose();
-    }
-
-    private static Configuration GenerateConfiguration(string[] args) {
-        return CommandLineParser.ParseCommandLine(args);
     }
 
     [ObservableProperty]
@@ -488,12 +469,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
         _emulatorThread.Start();
     }
 
-    private void OnEmulatorErrorOccured(Exception e) {
-        Dispatcher.UIThread.Post(() => {
-            StatusMessage = "Emulator crashed.";
-            ShowEmulationErrorMessage(e);
-        });
-    }
+    private void OnEmulatorErrorOccured(Exception e) => Dispatcher.UIThread.Post(() => {
+        StatusMessage = "Emulator crashed.";
+        ShowEmulationErrorMessage(e);
+    });
 
     [ObservableProperty]
     private bool _showVideo = true;
@@ -543,7 +522,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IGui, IDispo
     }
 
     /// <inheritdoc />
-    public void WaitForContinue() {
+    public void WaitForContinue(bool isPaused) {
+        if(isPaused) {
+            IsPaused = true;
+        }
         _okayToContinueEvent.WaitOne(Timeout.Infinite);
     }
 }

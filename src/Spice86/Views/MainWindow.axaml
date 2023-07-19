@@ -2,6 +2,7 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="using:Spice86.ViewModels"
 		xmlns:local="using:Spice86.Views"
+		xmlns:uc="using:Spice86.UserControls"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
@@ -9,11 +10,11 @@
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Icon/Spice86.ico"
 		Title="{Binding MainTitle}"
+		x:CompileBindings="True" x:DataType="vm:MainWindowViewModel"
 		Width="1024"
 		Height="768"
 		WindowStartupLocation="CenterScreen"
-		CanResize="True"
-		x:Name="MainWin">
+		CanResize="True">
 	<Window.Resources>
 		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
 		<converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
@@ -28,9 +29,9 @@
 					<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
 					<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
 					<Separator IsVisible="{Binding !!MostRecentlyUsed.Count}" />
-					<MenuItem Command="{Binding StartExecutableCommand}" CommandParameter="{Binding MostRecentlyUsed[0].FullName}" Header="{Binding MostRecentlyUsed[0].Name}" IsVisible="{Binding !!MostRecentlyUsed.Count}" />
-					<MenuItem Command="{Binding StartExecutableCommand}" Header="{Binding MostRecentlyUsed[1].Name}" CommandParameter="{Binding MostRecentlyUsed[1].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" />
-					<MenuItem Command="{Binding StartExecutableCommand}" Header="{Binding MostRecentlyUsed[2].Name}" CommandParameter="{Binding MostRecentlyUsed[2].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=3}" />
+					<MenuItem x:CompileBindings="False" Command="{Binding StartExecutableCommand}" CommandParameter="{Binding MostRecentlyUsed[0].FullName}" Header="{Binding MostRecentlyUsed[0].Name}" IsVisible="{Binding !!MostRecentlyUsed.Count}" />
+					<MenuItem x:CompileBindings="False" Command="{Binding StartExecutableCommand}" Header="{Binding MostRecentlyUsed[1].Name}" CommandParameter="{Binding MostRecentlyUsed[1].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" />
+					<MenuItem x:CompileBindings="False" Command="{Binding StartExecutableCommand}" Header="{Binding MostRecentlyUsed[2].Name}" CommandParameter="{Binding MostRecentlyUsed[2].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=3}" />
 				</MenuItem>
 				<MenuItem Header="Debug">
 					<MenuItem Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowDebugWindowCommand}" />
@@ -52,7 +53,7 @@
 						<MenuItem.Header>
 							<Grid ColumnDefinitions="Auto,Auto">
 								<Label Grid.Column="0" Content="Scale" HorizontalContentAlignment="Center" />
-								<NumericUpDown Grid.Column="1" Text="{Binding Scale}" Margin="5,0,0,0" />
+								<NumericUpDown Grid.Column="1" x:CompileBindings="False" Text="{Binding Scale}" Margin="5,0,0,0" />
 							</Grid>
 						</MenuItem.Header>
 					</MenuItem>
@@ -61,7 +62,7 @@
 							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 						</MenuItem.Header>
 					</MenuItem>
-					<MenuItem DataContext="{Binding VideoBuffer}" Command="{Binding SaveBitmapCommand}">
+					<MenuItem DataContext="{Binding VideoBuffer}" x:CompileBindings="False" Command="{Binding SaveBitmapCommand}">
 						<MenuItem.Header>
 							<Label Content="Save Bitmap" />
 						</MenuItem.Header>
@@ -76,14 +77,16 @@
 				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 			</Grid>
 		</Grid>
-		<local:VideoBufferView Grid.Row="1" DataContext="{Binding VideoBuffer}" />
-		<WrapPanel Grid.Row="2" Orientation="Horizontal">
-			<TextBlock Text="{Binding StatusMessage}" />
-			<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
-			<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
-		</WrapPanel>
+		<uc:VideoBufferUserControl Grid.Row="1" DataContext="{Binding VideoBuffer}" />
+		<Border Grid.Row="2" Background="DarkBlue">
+			<WrapPanel Orientation="Horizontal">
+				<TextBlock Text="{Binding StatusMessage}" />
+				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
+				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
+			</WrapPanel>
+		</Border>
 		<Border IsVisible="{Binding IsDialogVisible}" Grid.RowSpan="3" Background="DarkBlue" Opacity="0.5">
-			<WrapPanel Opacity="1" Background="{Binding Background, ElementName=MainWin}" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+			<WrapPanel Opacity="1" Background="{Binding $parent[Window].Background}" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
 				<Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
 					<Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
 					<WrapPanel Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
