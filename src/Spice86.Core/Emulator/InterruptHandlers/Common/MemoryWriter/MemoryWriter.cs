@@ -1,7 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 
 using Spice86.Core.Emulator.Memory.Indexable;
-using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -14,6 +13,14 @@ public class MemoryWriter {
     /// Where next data will be written
     /// </summary>
     public SegmentedAddress CurrentAddress { get; set; }
+
+    /// <summary>
+    /// Creates and returns a copy of CurrentAddress so that the returned instance is not impacted by changes to CurrentAddress.
+    /// </summary>
+    /// <returns>a copy of CurrentAddress</returns>
+    public SegmentedAddress GetCurrentAddressCopy() {
+        return new SegmentedAddress(CurrentAddress);
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryWriter"/> class with the specified memory as a data sink and beginningAddress for position for the first write.

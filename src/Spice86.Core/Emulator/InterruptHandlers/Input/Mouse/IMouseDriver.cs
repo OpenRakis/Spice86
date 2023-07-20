@@ -1,11 +1,12 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
 using Spice86.Core.Emulator.Devices.Input.Mouse;
+using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 
 /// <summary>
 ///     Mouse driver interface.
 /// </summary>
-public interface IMouseDriver {
+public interface IMouseDriver : IAssemblyRoutineWriter {
     /// <summary>
     ///     Get the amount of buttons the mouse reports.
     /// </summary>
@@ -53,11 +54,6 @@ public interface IMouseDriver {
     int DoubleSpeedThreshold { get; set; }
 
     /// <summary>
-    ///     Set the handler for Mouse User routine manipulation.
-    /// </summary>
-    IAsmUserRoutineHandler? UserRoutineHandler { set; }
-
-    /// <summary>
     ///     Get the x, y position of the mouse as well as the button flags.
     /// </summary>
     MouseStatus GetCurrentMouseStatus();
@@ -99,7 +95,7 @@ public interface IMouseDriver {
     /// <summary>
     ///     Restores the registers that were saved by the driver before calling user code.
     /// </summary>
-    void AfterMouseDriverExecution();
+    void AfterUserHandlerExecution();
 
     /// <summary>
     ///     Get the number of mickeys of horizontal movement.
