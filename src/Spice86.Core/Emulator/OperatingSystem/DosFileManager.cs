@@ -572,10 +572,6 @@ public class DosFileManager {
             return PathNotFoundError(dosDirectory);
         }
 
-        if (!Directory.Exists(parentFolder)) {
-            CreateDirectory(_dosPathResolver.GetRelativeHostPathToCurrentDirectory(parentFolder));
-        }
-
         if (_dosPathResolver.AnyDosDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
             return FileAccessDeniedError(dosDirectory);
         }
