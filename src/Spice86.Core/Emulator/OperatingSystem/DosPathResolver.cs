@@ -90,7 +90,7 @@ internal class DosPathResolver {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
 
-        string? hostPath = TryGetFullHostPathFromDos(fullDosPath);
+        string? hostPath = GetFullHostPathFromDosOrDefault(fullDosPath);
         if (!string.IsNullOrWhiteSpace(hostPath)) {
             return SetCurrentDirValue(fullDosPath[0], hostPath);
         } else {
@@ -174,7 +174,7 @@ internal class DosPathResolver {
         if(string.IsNullOrWhiteSpace(parentPath)) {
             parentPath = GetFullCurrentDosPathOnDrive(_driveMap[_currentDrive]);
         }
-        string? fullHostPath = TryGetFullHostPathFromDos(parentPath);
+        string? fullHostPath = GetFullHostPathFromDosOrDefault(parentPath);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
             return null;
         }
@@ -200,7 +200,7 @@ internal class DosPathResolver {
     /// </summary>
     /// <param name="dosPath">The DOS path to convert.</param>
     /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
-    public string? TryGetFullHostPathFromDos(string dosPath) {
+    public string? GetFullHostPathFromDosOrDefault(string dosPath) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }

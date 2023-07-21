@@ -276,7 +276,7 @@ public class DosFileManager {
             return OpenDeviceInternal(device, openMode);
         }
         
-        string? hostFileName = _dosPathResolver.TryGetFullHostPathFromDos(fileName);
+        string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             return FileNotFoundError(fileName);
         }
@@ -460,7 +460,7 @@ public class DosFileManager {
         return DosFileOperationResult.Error(ErrorCode.TooManyOpenFiles);
     }
     
-    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.TryGetFullHostPathFromDos(dosPath);
+    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
@@ -492,7 +492,7 @@ public class DosFileManager {
             Stream? randomAccessFile = null;
             switch (openMode) {
                 case "r": {
-                        string? realFileName = _dosPathResolver.TryGetFullHostPathFromDos(dosFileName);
+                        string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.OpenRead(hostFileName);
                         } else if (File.Exists(realFileName)) {
@@ -507,7 +507,7 @@ public class DosFileManager {
                     randomAccessFile = File.OpenWrite(hostFileName);
                     break;
                 case "rw": {
-                        string? realFileName = _dosPathResolver.TryGetFullHostPathFromDos(dosFileName);
+                        string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.Open(hostFileName, FileMode.Open);
                         } else if (File.Exists(realFileName)) {
@@ -597,7 +597,7 @@ public class DosFileManager {
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
-        string? fullHostPath = _dosPathResolver.TryGetFullHostPathFromDos(dosDirectory);
+        string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosDirectory);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
             return PathNotFoundError(dosDirectory);
         }
