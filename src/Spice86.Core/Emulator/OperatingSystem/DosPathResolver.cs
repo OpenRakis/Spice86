@@ -21,13 +21,14 @@ internal class DosPathResolver {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="configuration">The emulator configuration.</param>
-    public DosPathResolver(Configuration configuration) {
+    /// <param name="currentDrive">The drive in use on emulator startup. Defaults to C.</param>
+    public DosPathResolver(Configuration configuration, char currentDrive = 'C') {
         _driveMap = InitializeDriveMap(configuration);
-        _currentDrive = 'C';
+        _currentDrive = currentDrive;
         SetCurrentDirValue(_currentDrive, _driveMap[_currentDrive].MountedHostDirectory);
     }
 
-    private readonly Dictionary<char, MountedFolder> _driveMap = new();
+    private readonly Dictionary<char, MountedFolder> _driveMap;
 
     /// <summary>
     /// The current DOS drive in use.
@@ -274,7 +275,7 @@ internal class DosPathResolver {
     /// <summary>
     /// All the possible DOS drive letters
     /// </summary>
-    private static char[] DriveLetters => new char[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
+    private static char[] DriveLetters => new[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
 
     /// <summary>
     /// Gets or sets the <see cref="_currentDrive"/> with a byte value (0x0: A:, 0x1: B:, ...)
