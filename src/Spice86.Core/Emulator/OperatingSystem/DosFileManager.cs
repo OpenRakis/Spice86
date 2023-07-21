@@ -577,7 +577,7 @@ public class DosFileManager {
         }
 
         if (_dosPathResolver.AnyDosDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
-            return PathNotFoundError(dosDirectory);
+            return FileAccessDeniedError(dosDirectory);
         }
 
         string prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
