@@ -179,7 +179,7 @@ internal class DosPathResolver {
     /// </summary>
     /// <param name="dosPath">The DOS path to convert.</param>
     /// <returns>A string containing the full path to the parent directory in the host file system, or <c>null</c> if nothing was found.</returns>
-    public string? TryGetFullHostParentPathFromDos(string dosPath) {
+    public string? GetFullHostParentPathFromDosOrDefault(string dosPath) {
         string? parentPath = Path.GetDirectoryName(dosPath);
         if(string.IsNullOrWhiteSpace(parentPath)) {
             parentPath = _driveMap[_currentDrive].FullDosCurrentDirectory;

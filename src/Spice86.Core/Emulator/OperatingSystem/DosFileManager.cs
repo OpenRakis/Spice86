@@ -99,7 +99,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
-        string? hostParentDirectory = _dosPathResolver.TryGetFullHostParentPathFromDos(fileName);
+        string? hostParentDirectory = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostParentDirectory)) {
             return FileOperationErrorWithLog($"Could not find parent of {fileName} so cannot create file.", ErrorCode.PathNotFound);
         }
@@ -567,7 +567,7 @@ public class DosFileManager {
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
-        string? parentFolder = _dosPathResolver.TryGetFullHostParentPathFromDos(dosDirectory);
+        string? parentFolder = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(dosDirectory);
         if (string.IsNullOrWhiteSpace(parentFolder)) {
             return PathNotFoundError(dosDirectory);
         }
