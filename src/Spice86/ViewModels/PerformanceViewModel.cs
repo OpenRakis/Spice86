@@ -6,17 +6,20 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Shared.Interfaces;
 
 using System;
 
 public partial class PerformanceViewModel : ViewModelBase {
     private readonly DispatcherTimer? _timer;
     private readonly State? _state;
-    private readonly IPerformanceMeasurer? _performanceMeasurer;
-    
+
+    private DateTimeOffset _lastUpdateTime;
+
+
     [ObservableProperty]
     private double _averageInstructionsPerSecond;
+
+    private long _instructionsPerSecondSampleNumber;
 
     public PerformanceViewModel() {
         if (!Design.IsDesignMode) {
@@ -24,27 +27,38 @@ public partial class PerformanceViewModel : ViewModelBase {
         }
     }
 
-    public PerformanceViewModel(State state, IPerformanceMeasurer performanceMeasurer) {
+    public PerformanceViewModel(State state) {
         _state = state;
-        _performanceMeasurer = performanceMeasurer;
-        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
+        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
         _timer.Start();
+    }
+    
+    private static double ApproxRollingAverage(double currentAverage, double instructionsPerSecond, long instructionsPerSecondSampleNumber) {
+        currentAverage -= currentAverage / instructionsPerSecondSampleNumber;
+        currentAverage += instructionsPerSecond / instructionsPerSecondSampleNumber;
+
+        return currentAverage;
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
-        if (_state is null || _performanceMeasurer is null) {
+        if (_state is null) {
             return;
         }
-
+        if (_lastUpdateTime != DateTimeOffset.MinValue) {
+            InstructionsPerSecond = _state.Cycles - InstructionsExecuted;
+            if (double.IsNaN(AverageInstructionsPerSecond)) {
+                AverageInstructionsPerSecond = InstructionsPerSecond;
+            }
+            AverageInstructionsPerSecond = ApproxRollingAverage(AverageInstructionsPerSecond, InstructionsPerSecond,
+                _instructionsPerSecondSampleNumber++);
+        }
+        _lastUpdateTime = DateTimeOffset.Now;
         InstructionsExecuted = _state.Cycles;
-        _performanceMeasurer.UpdateValue(_state.Cycles);
-        InstructionsPerSecond = _performanceMeasurer.ValuePerSecond;
-        AverageInstructionsPerSecond = _performanceMeasurer.AverageValuePerSecond;
     }
 
     [ObservableProperty]
-    private double _instructionsExecuted;
+    private long _instructionsExecuted;
 
     [ObservableProperty]
-    private double _instructionsPerSecond = -1;
+    private long _instructionsPerSecond = -1;
 }

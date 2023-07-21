@@ -33,8 +33,6 @@ using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Input.Platform;
 
-using Spice86.Shared.Diagnostics;
-
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
@@ -267,7 +265,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             _performanceWindow.Activate();
         } else if (_programExecutor is not null) {
             _performanceWindow = new PerformanceWindow() {
-                DataContext = new PerformanceViewModel(_programExecutor.Machine.Cpu.State, new PerformanceMeasurer())
+                DataContext = new PerformanceViewModel(_programExecutor.Machine.Cpu.State)
             };
             _performanceWindow.Closed += (_, _) => _performanceWindow = null;
             _performanceWindow.Show();
