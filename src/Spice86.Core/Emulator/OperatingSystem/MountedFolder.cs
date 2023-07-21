@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
-using Spice86.Shared.Utils;
-
 /// <summary>
 /// Represents a host folder used as a drive by DOS.
 /// </summary>

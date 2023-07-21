@@ -36,11 +36,6 @@ internal class DosPathResolver {
     private char _currentDrive;
 
     /// <summary>
-    /// The full host path to the folder used by DOS as the current folder.
-    /// </summary>
-    private string CurrentHostDirectory => ConvertUtils.ToSlashPath(_driveMap[_currentDrive].FullHostCurrentDirectory);
-
-    /// <summary>
     /// Gets the current DOS directory.
     /// </summary>
     public DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir) {
@@ -80,14 +75,6 @@ internal class DosPathResolver {
         driveMap.Add('C', new MountedFolder('C', cDrive));
         return driveMap;
     }
-
-    /// <summary>
-    /// Create a relative path from the current host directory to another. Paths will be resolved before calculating the difference.
-    /// Default path comparison for the active platform will be used (OrdinalIgnoreCase for Windows or Mac, Ordinal for Unix).
-    /// </summary>
-    /// <param name="hostPath">The destination path.</param>
-    /// <returns>A string containing the relative host path, or <paramref name="hostPath"/> if the paths don't share the same root.</returns>
-    public string GetRelativeHostPathToCurrentDirectory(string hostPath) => Path.GetRelativePath(CurrentHostDirectory, hostPath);
 
     private static bool IsWithinMountPoint(string hostFullPath, MountedFolder mountedFolder) => hostFullPath.StartsWith(mountedFolder.MountedHostDirectory);
 
