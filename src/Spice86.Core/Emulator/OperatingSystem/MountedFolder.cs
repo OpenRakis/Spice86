@@ -36,9 +36,4 @@ public class MountedFolder {
     /// The full path to the current host directory in use on the drive.
     /// </summary>
     public string FullHostCurrentDirectory { get; set; }
-
-    /// <summary>
-    /// The full path to the current DOS directory in use on the drive.
-    /// </summary>
-    public string FullDosCurrentDirectory => $"{DosDriveRootPath}{DosPathResolver.DirectorySeparatorChar}{ConvertUtils.ToBackSlashPath(FullHostCurrentDirectory[MountedHostDirectory.Length..])}".ToUpperInvariant();
 }

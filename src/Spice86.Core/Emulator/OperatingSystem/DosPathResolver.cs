@@ -47,15 +47,17 @@ internal class DosPathResolver {
         //0 = default drive
         if (driveNumber == 0 && _driveMap.Any()) {
             MountedFolder mountedFolder = _driveMap[_currentDrive];
-            currentDir = mountedFolder.FullDosCurrentDirectory[$"{mountedFolder.DosDriveRootPath}{DirectorySeparatorChar}".Length..];
+            currentDir = GetFullCurrentDosPathOnDrive(mountedFolder)[$"{mountedFolder.DosDriveRootPath}{DirectorySeparatorChar}".Length..];
             return DosFileOperationResult.NoValue();
         } else if (_driveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
-            currentDir = mountedFolder.FullDosCurrentDirectory[$"{mountedFolder.DosDriveRootPath}{DirectorySeparatorChar}".Length..];
+            currentDir = GetFullCurrentDosPathOnDrive(mountedFolder)[$"{mountedFolder.DosDriveRootPath}{DirectorySeparatorChar}".Length..];
             return DosFileOperationResult.NoValue();
         }
         currentDir = "";
         return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
     }
+
+    private string GetFullCurrentDosPathOnDrive(MountedFolder mountedFolder) => $"{mountedFolder.DosDriveRootPath}{DosPathResolver.DirectorySeparatorChar}{ConvertUtils.ToBackSlashPath(mountedFolder.FullHostCurrentDirectory[mountedFolder.MountedHostDirectory.Length..])}".ToUpperInvariant();
 
     private static string GetExeParentFolder(Configuration configuration) {
         string? exe = configuration.Exe;
@@ -183,7 +185,7 @@ internal class DosPathResolver {
     public string? GetFullHostParentPathFromDosOrDefault(string dosPath) {
         string? parentPath = Path.GetDirectoryName(dosPath);
         if(string.IsNullOrWhiteSpace(parentPath)) {
-            parentPath = _driveMap[_currentDrive].FullDosCurrentDirectory;
+            parentPath = GetFullCurrentDosPathOnDrive(_driveMap[_currentDrive]);
         }
         string? fullHostPath = TryGetFullHostPathFromDos(parentPath);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
