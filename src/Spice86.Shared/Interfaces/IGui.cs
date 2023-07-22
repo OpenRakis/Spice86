@@ -11,9 +11,9 @@ using Spice86.Shared.Emulator.Mouse;
 /// </summary>
 public interface IGui {
     /// <summary>
-    /// Represents the video source displayed by the GUI.
+    /// Whether the mouse cursor is shown.
     /// </summary>
-    IVideoBufferViewModel VideoBuffer { get; }
+    bool ShowCursor { get; set; }
 
     /// <summary>
     /// Shows the UI mouse cursor

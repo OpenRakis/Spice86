@@ -32,6 +32,8 @@ using Spice86.Shared.Interfaces;
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Input.Platform;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 using Spice86.Shared.Diagnostics;
 
@@ -48,26 +50,102 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private PaletteWindow? _paletteWindow;
     private PerformanceWindow? _performanceWindow;
     private string _lastExecutableDirectory = string.Empty;
-
     private bool _closeAppOnEmulatorExit;
+
+    private Action? _uiUpdateMethod;
+    private bool _exitDrawThread;
+    private Action? _drawAction;
+    private Thread? _drawThread;
 
     public bool PauseEmulatorOnStart { get; private set; }
 
-    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this, 
-        new((Key) e.Key, 
+    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this,
+        new KeyboardEventArgs((Key) e.Key,
             false,
             _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
             _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
 
     private ProgramExecutor? _programExecutor;
 
+    [RelayCommand]
+    public async Task SaveBitmap() {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow is not null &&
+            desktop.MainWindow.StorageProvider.CanSave &&
+            desktop.MainWindow.StorageProvider.CanPickFolder) {
+            IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
+            FilePickerSaveOptions options = new() {
+                Title = "Save bitmap image...",
+                DefaultExtension = "bmp",
+                SuggestedStartLocation = await storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
+            };
+            string? file = (await storageProvider.SaveFilePickerAsync(options))?.TryGetLocalPath();
+            if (!string.IsNullOrWhiteSpace(file)) {
+                Bitmap?.Save(file);
+            }
+        }
+    }
+
+    private bool _showCursor = false;
+
+    public bool ShowCursor {
+        get => _showCursor;
+        set {
+            SetProperty(ref _showCursor, value);
+            if (_showCursor) {
+                Cursor?.Dispose();
+                Cursor = Cursor.Default;
+            } else {
+                Cursor?.Dispose();
+                Cursor = new Cursor(StandardCursorType.None);
+            }
+        }
+    }
+
+    private double _scale = 1;
+
+    public double Scale {
+        get => _scale;
+        set => SetProperty(ref _scale, Math.Max(value, 1));
+    }
+
+    private void DrawThreadMethod() {
+        while (!_exitDrawThread) {
+            _drawAction?.Invoke();
+        }
+    }
+
+    private void Draw() {
+        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || _videoCard is null) {
+            return;
+        }
+        if (_drawThread is null) {
+            _drawThread = new Thread(DrawThreadMethod) {
+                Name = "UIRenderThread"
+            };
+            _drawThread.Start();
+        }
+
+        _drawAction ??= () => {
+            unsafe {
+                using ILockedFramebuffer pixels = Bitmap.Lock();
+                var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                _videoCard.Render(buffer);
+                Dispatcher.UIThread.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
+            }
+        };
+    }
+
     [ObservableProperty]
-    private IVideoBufferViewModel? _videoBuffer;
-    
+    private Cursor? _cursor = Cursor.Default;
+
+    [ObservableProperty]
+    private WriteableBitmap? _bitmap;
+
     private ManualResetEvent _okayToContinueEvent = new(true);
 
-    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this, 
-        new((Key) e.Key, 
+    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this,
+        new KeyboardEventArgs((Key) e.Key,
             true,
             _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
             _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
@@ -82,6 +160,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private bool _isPaused;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
     private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
@@ -90,13 +169,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     
-    private bool _isMainWindowClosing;
+    private bool _isAppClosing;
 
     public MainWindowViewModel(Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
         _loggerService = loggerService;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is not null) {
-            desktop.MainWindow.Closing += (_, _) => _isMainWindowClosing = true;
+            desktop.MainWindow.Closing += (_, _) => _isAppClosing = true;
         }
     }
 
@@ -105,19 +184,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         PauseEmulatorOnStart = false;
     }
 
-    public void HideMouseCursor() => Dispatcher.UIThread.Post(() => {
-        if (VideoBuffer is null) {
-            return;
-        }
-        VideoBuffer.ShowCursor = false;
-    });
+    public int Width { get; private set; }
 
-    public void ShowMouseCursor() => Dispatcher.UIThread.Post(() => {
-        if (VideoBuffer is null) {
-            return;
-        }
-        VideoBuffer.ShowCursor = true;
-    });
+    public int Height { get; private set; }
+    
+    public void HideMouseCursor() => Dispatcher.UIThread.Post(() => ShowCursor = false);
+
+    public void ShowMouseCursor() => Dispatcher.UIThread.Post(() => ShowCursor = true);
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
@@ -182,6 +255,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     [ObservableProperty]
     private string? _mainTitle;
 
+    [RelayCommand(CanExecute = nameof(CanStartMostRecentlyUsed))]
+    public async Task StartMostRecentlyUsed(object? parameter) {
+        int index = System.Convert.ToInt32(parameter);
+        if (MostRecentlyUsed.Count > index) {
+            await StartNewExecutable(MostRecentlyUsed[index].FullName);
+        }
+    }
+
+    private bool CanStartMostRecentlyUsed() => MostRecentlyUsed.Count > 0;
+
     [RelayCommand]
     public async Task DebugExecutable() {
         _closeAppOnEmulatorExit = false;
@@ -199,7 +282,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if(!string.IsNullOrWhiteSpace(filePath) &&
             File.Exists(filePath)) {
             await RestartEmulatorWithNewProgram(filePath);
-
         }
         else if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
             desktop.MainWindow is not null &&
@@ -299,29 +381,30 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
-    public void UpdateScreen() {
-        if (_disposed || _isSettingResolution || _isMainWindowClosing) {
-            return;
-        }
-        VideoBuffer?.Draw();
-    }
-
-    public int Height { get; private set; }
+    public void UpdateScreen() => Draw();
 
     public double MouseX { get; set; }
-
     public double MouseY { get; set; }
-    public int Width { get; private set; }
 
     public bool IsLeftButtonClicked { get; private set; }
 
     public bool IsRightButtonClicked { get; private set; }
-    
-    public void OnMainWindowOpened() {
+
+    public void OnMainWindowInitialized(Action uiUpdateMethod) {
+        _uiUpdateMethod = uiUpdateMethod;
         if(RunEmulator()) {
             _closeAppOnEmulatorExit = true;
         }
     }
+    
+    [ObservableProperty]
+    private string? _firstProgramName = "";
+
+    [ObservableProperty]
+    private string? _secondProgramName = "";
+
+    [ObservableProperty]
+    private string? _thirdProgramName = "";
 
     private void AddOrReplaceMostRecentlyUsed(string filePath) {
         if (MostRecentlyUsed.Any(x => x.FullName == filePath)) {
@@ -331,6 +414,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (MostRecentlyUsed.Count > 3) {
             MostRecentlyUsed.RemoveAt(3);
         }
+        FirstProgramName = MostRecentlyUsed.ElementAtOrDefault(0)?.Name;
+        SecondProgramName = MostRecentlyUsed.ElementAtOrDefault(1)?.Name;
+        ThirdProgramName = MostRecentlyUsed.ElementAtOrDefault(2)?.Name;
     }
 
     private bool RunEmulator() {
@@ -376,19 +462,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     public void SetResolution(int width, int height) => Dispatcher.UIThread.Post(() => {
         _isSettingResolution = true;
-        DisposeVideoBuffer();
-        Width = width;
-        Height = height;
-        IVideoBufferViewModel videoBuffer = new VideoBufferViewModel(_videoCard, scale: 1, width, height);
-        Dispatcher.UIThread.Post(() => {
-            VideoBuffer?.Dispose();
-            VideoBuffer = videoBuffer;
+        Scale = 1;
+        if (Width != width || Height != height) {
+            Width = width;
+            Height = height;
+            Bitmap?.Dispose();
+            Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
         }
-        );
         _isSettingResolution = false;
     }, DispatcherPriority.MaxValue);
-
-    private void DisposeVideoBuffer() => VideoBuffer?.Dispose();
 
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -399,6 +481,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                _exitDrawThread = true;
+                if (_drawThread?.IsAlive == true) {
+                    _drawThread.Join();
+                }
+                Dispatcher.UIThread.Post(() => {
+                    Bitmap?.Dispose();
+                    Cursor?.Dispose();
+                }, DispatcherPriority.MaxValue);
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
@@ -414,10 +504,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         }
     }
 
-    private void DisposeEmulator() {
-        DisposeVideoBuffer();
-        _programExecutor?.Dispose();
-    }
+    private void DisposeEmulator() => _programExecutor?.Dispose();
 
     [ObservableProperty]
     private bool _isDialogVisible;
@@ -476,10 +563,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         ShowEmulationErrorMessage(e);
     });
 
-    [ObservableProperty]
-    private bool _showVideo = true;
-
-    private IVideoCard _videoCard = null!;
+    private IVideoCard? _videoCard;
 
     private void MachineThread() {
         try {
@@ -513,7 +597,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         _videoCard = _programExecutor.Machine.VgaCard;
         Dispatcher.UIThread.Post(() => IsMachineRunning = true);
         Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
-        Dispatcher.UIThread.Post(() => ShowVideo = true);
         _programExecutor.Run();
         if (_closeAppOnEmulatorExit &&
             Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime {
