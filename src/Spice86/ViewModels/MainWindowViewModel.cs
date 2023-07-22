@@ -69,11 +69,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     [RelayCommand]
     public async Task SaveBitmap() {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
-            desktop.MainWindow is not null &&
-            desktop.MainWindow.StorageProvider.CanSave &&
-            desktop.MainWindow.StorageProvider.CanPickFolder) {
-            IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
+        if (_desktop.MainWindow?.StorageProvider is { CanSave: true, CanPickFolder: true }) {
+            IStorageProvider storageProvider = _desktop.MainWindow.StorageProvider;
             FilePickerSaveOptions options = new() {
                 Title = "Save bitmap image...",
                 DefaultExtension = "bmp",
@@ -168,14 +165,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
-    
+
     private bool _isAppClosing;
 
-    public MainWindowViewModel(Configuration configuration, ILoggerService loggerService) {
+    private readonly IClassicDesktopStyleApplicationLifetime _desktop;
+
+    public MainWindowViewModel(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
         _loggerService = loggerService;
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is not null) {
-            desktop.MainWindow.Closing += (_, _) => _isAppClosing = true;
+        _desktop = desktop;
+        if (desktop.MainWindow is not null) {
+            desktop.MainWindow.Closing += (_,_) => _isAppClosing = true;
         }
     }
 
@@ -207,11 +207,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             return;
         }
 
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
-            && desktop.MainWindow is not null &&
-            desktop.MainWindow.StorageProvider.CanSave &&
-            desktop.MainWindow.StorageProvider.CanPickFolder) {
-            IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
+        if (_desktop.MainWindow?.StorageProvider is { CanSave: true, CanPickFolder: true }) {
+            IStorageProvider storageProvider = _desktop.MainWindow.StorageProvider;
             FolderPickerOpenOptions options = new() {
                 Title = "Dump emulator state to directory...",
                 AllowMultiple = false,
@@ -283,10 +280,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             File.Exists(filePath)) {
             await RestartEmulatorWithNewProgram(filePath);
         }
-        else if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
-            desktop.MainWindow is not null &&
-            desktop.MainWindow.StorageProvider.CanOpen) {
-            IStorageProvider storageProvider = desktop.MainWindow.StorageProvider;
+        else if (_desktop.MainWindow?.StorageProvider.CanOpen == true) {
+            IStorageProvider storageProvider = _desktop.MainWindow.StorageProvider;
             FilePickerOpenOptions options = new() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
@@ -396,7 +391,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             _closeAppOnEmulatorExit = true;
         }
     }
-    
+
     [ObservableProperty]
     private string? _firstProgramName = "";
 
@@ -514,8 +509,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     [RelayCommand]
     public async Task CopyToClipboard() {
-        if(Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Exception is not null &&
-            desktop.MainWindow?.Clipboard is IClipboard clipboard) {
+        if(Exception is not null &&
+            _desktop.MainWindow?.Clipboard is IClipboard clipboard) {
             await clipboard.SetTextAsync(Exception.StackTrace);
         }
     }
@@ -599,10 +594,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
         _programExecutor.Run();
         if (_closeAppOnEmulatorExit &&
-            Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime {
-                MainWindow: MainWindow mainWindow
-            }) {
-            Dispatcher.UIThread.Post(() => mainWindow.Close());
+            _desktop.MainWindow is not null) {
+            Dispatcher.UIThread.Post(() => _desktop.MainWindow.Close());
         }
     }
 

@@ -25,6 +25,6 @@ internal partial class App : Application {
         }
 
         desktop.MainWindow = new MainWindow();
-        desktop.MainWindow.DataContext = new MainWindowViewModel(configuration, loggerService);
+        desktop.MainWindow.DataContext = new MainWindowViewModel(desktop, configuration, loggerService);
     }
 }
