@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
+		<OutputType>WinExe</OutputType>
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
@@ -9,6 +9,9 @@
 		<EnablePackageValidation>true</EnablePackageValidation>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
+		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
 	<!-- Properties geared towards NuGet -->
 	<PropertyGroup>
@@ -51,6 +54,7 @@
 		<PackageReference Include="Avalonia" Version="11.0.0" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0" />
 		<PackageReference Include="Avalonia.Desktop" Version="11.0.0" />
+		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.0" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.0" />
 		<PackageReference Include="Roslynator.Analyzers" Version="4.3.0">
@@ -69,11 +73,6 @@
 		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Compile Update="UserControls\VideoBufferUserControl.axaml.cs">
-	    <DependentUpon>VideoBufferUserControl.axaml</DependentUpon>
-	  </Compile>
 	</ItemGroup>
 
 	<ItemGroup>

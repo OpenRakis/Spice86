@@ -10,9 +10,10 @@
 		WindowStartupLocation="CenterOwner"
 		CanResize="False"
         Title="Color Palette" Height="300" Width="300"
-        DataContext="{Binding}">
+        x:CompileBindings="True"
+        x:DataType="vm:PaletteViewModel">
 	<Design.DataContext>
 		<vm:PaletteViewModel />
 	</Design.DataContext>
-	<userControls:PaletteUserControl Palette="{Binding Palette}" />
+	<userControls:PaletteUserControl x:DataType="vm:PaletteViewModel" Palette="{Binding Palette}" />
 </Window>

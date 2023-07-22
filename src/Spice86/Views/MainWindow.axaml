@@ -49,20 +49,20 @@
 					<MenuItem Header="Dump emulator state to directory..." IsEnabled="{Binding IsMachineRunning}" Command="{Binding DumpEmulatorStateToFileCommand}" />
 				</MenuItem>
 				<MenuItem Header="Video" IsEnabled="{Binding IsMachineRunning}">
-					<MenuItem DataContext="{Binding VideoBuffer}">
+					<MenuItem>
 						<MenuItem.Header>
 							<Grid ColumnDefinitions="Auto,Auto">
 								<Label Grid.Column="0" Content="Scale" HorizontalContentAlignment="Center" />
-								<NumericUpDown Grid.Column="1" x:CompileBindings="False" Text="{Binding Scale}" Margin="5,0,0,0" />
+								<NumericUpDown Grid.Column="1" Text="{Binding Scale}" Margin="5,0,0,0" />
 							</Grid>
 						</MenuItem.Header>
 					</MenuItem>
-					<MenuItem DataContext="{Binding VideoBuffer}">
+					<MenuItem>
 						<MenuItem.Header>
 							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 						</MenuItem.Header>
 					</MenuItem>
-					<MenuItem DataContext="{Binding VideoBuffer}" x:CompileBindings="False" Command="{Binding SaveBitmapCommand}">
+					<MenuItem x:CompileBindings="False" Command="{Binding SaveBitmapCommand}">
 						<MenuItem.Header>
 							<Label Content="Save Bitmap" />
 						</MenuItem.Header>
@@ -77,7 +77,20 @@
 				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 			</Grid>
 		</Grid>
-		<uc:VideoBufferUserControl Grid.Row="1" DataContext="{Binding VideoBuffer}" />
+		<LayoutTransformControl Grid.Row="1">
+			<LayoutTransformControl.RenderTransform>
+				<ScaleTransform
+					ScaleX="{Binding Scale}"
+					ScaleY="{Binding Scale}">
+				</ScaleTransform>
+			</LayoutTransformControl.RenderTransform>
+			<Viewbox>
+				<Image x:Name="Image"
+				       RenderOptions.BitmapInterpolationMode="None"
+				       Cursor="{Binding Cursor}"
+				       Source="{Binding Bitmap}" />
+			</Viewbox>
+		</LayoutTransformControl>
 		<Border Grid.Row="2" Background="DarkBlue">
 			<WrapPanel Orientation="Horizontal">
 				<TextBlock Text="{Binding StatusMessage}" />
