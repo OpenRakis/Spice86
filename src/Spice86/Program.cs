@@ -9,7 +9,6 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Shared.Interfaces;
 
-
 /// <summary>
 /// Entry point for Spice86 application.
 /// </summary>
