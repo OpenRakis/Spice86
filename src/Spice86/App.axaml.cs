@@ -19,11 +19,7 @@ internal partial class App : Application {
     /// </summary>
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
-    public void SetupMainWindow(Configuration configuration, ILoggerService loggerService) {
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) {
-            throw new PlatformNotSupportedException("Spice86 needs the desktop Linux/Mac/Windows platform in order to run.");
-        }
-
+    public void SetupMainWindow(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
         desktop.MainWindow = new MainWindow(desktop, configuration, loggerService);
     }
 }
