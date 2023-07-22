@@ -108,15 +108,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         get => _scale;
         set => SetProperty(ref _scale, Math.Max(value, 1));
     }
-    
+
     private void DrawThreadMethod() {
         while (!_exitDrawThread) {
             _drawAction?.Invoke();
         }
     }
 
-    /// <inheritdoc/>
-    public void Draw() {
+    private void Draw() {
         if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || _videoCard is null) {
             return;
         }
@@ -136,8 +135,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             }
         };
     }
-
-    public void SetUIUpdateMethod(Action uiUpdateMethod) => _uiUpdateMethod = uiUpdateMethod;
 
     [ObservableProperty]
     private Cursor? _cursor = Cursor.Default;
@@ -163,6 +160,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private bool _isPaused;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
     private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
@@ -256,6 +254,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     [ObservableProperty]
     private string? _mainTitle;
+
+    [RelayCommand(CanExecute = nameof(CanStartMostRecentlyUsed))]
+    public async Task StartMostRecentlyUsed(object? parameter) {
+        int index = System.Convert.ToInt32(parameter);
+        if (MostRecentlyUsed.Count > index) {
+            await StartNewExecutable(MostRecentlyUsed[index].FullName);
+        }
+    }
+
+    private bool CanStartMostRecentlyUsed() => MostRecentlyUsed.Count > 0;
 
     [RelayCommand]
     public async Task DebugExecutable() {
@@ -382,18 +390,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     public bool IsRightButtonClicked { get; private set; }
 
-    public void OnMainWindowInitialized(Action invalidateImage) {
-        SetUIUpdateMethod(invalidateImage);
+    public void OnMainWindowInitialized(Action uiUpdateMethod) {
+        _uiUpdateMethod = uiUpdateMethod;
         if(RunEmulator()) {
             _closeAppOnEmulatorExit = true;
         }
     }
+    
+    [ObservableProperty]
+    private string? _firstProgramName = "";
 
-    public void OnMainWindowShown(double imageWidth, double imageHeight) {
-        Width = (int)imageWidth;
-        Height = (int)imageHeight;
-        Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
-    }
+    [ObservableProperty]
+    private string? _secondProgramName = "";
+
+    [ObservableProperty]
+    private string? _thirdProgramName = "";
 
     private void AddOrReplaceMostRecentlyUsed(string filePath) {
         if (MostRecentlyUsed.Any(x => x.FullName == filePath)) {
@@ -403,6 +414,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (MostRecentlyUsed.Count > 3) {
             MostRecentlyUsed.RemoveAt(3);
         }
+        FirstProgramName = MostRecentlyUsed.ElementAtOrDefault(0)?.Name;
+        SecondProgramName = MostRecentlyUsed.ElementAtOrDefault(1)?.Name;
+        ThirdProgramName = MostRecentlyUsed.ElementAtOrDefault(2)?.Name;
     }
 
     private bool RunEmulator() {

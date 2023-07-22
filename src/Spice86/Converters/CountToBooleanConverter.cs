@@ -5,7 +5,7 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 
 internal class CountToBooleanConverter : IValueConverter {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => (value as int?) >= System.Convert.ToInt32(parameter);
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => (value as int?) > System.Convert.ToInt32(parameter);
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => (value as bool?) switch {
         false => 0,

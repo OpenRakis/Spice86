@@ -28,10 +28,10 @@
 				<MenuItem Header="Program">
 					<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
 					<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
-					<Separator IsVisible="{Binding !!MostRecentlyUsed.Count}" />
-					<MenuItem x:CompileBindings="False" Command="{Binding StartExecutableCommand}" CommandParameter="{Binding MostRecentlyUsed[0].FullName}" Header="{Binding MostRecentlyUsed[0].Name}" IsVisible="{Binding !!MostRecentlyUsed.Count}" />
-					<MenuItem x:CompileBindings="False" Command="{Binding StartExecutableCommand}" Header="{Binding MostRecentlyUsed[1].Name}" CommandParameter="{Binding MostRecentlyUsed[1].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" />
-					<MenuItem x:CompileBindings="False" Command="{Binding StartExecutableCommand}" Header="{Binding MostRecentlyUsed[2].Name}" CommandParameter="{Binding MostRecentlyUsed[2].FullName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=3}" />
+					<Separator IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
+					<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding FirstProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" CommandParameter="0" />
+					<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding SecondProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=1}" CommandParameter="1" />
+					<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding ThirdProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" CommandParameter="2" />
 				</MenuItem>
 				<MenuItem Header="Debug">
 					<MenuItem Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowDebugWindowCommand}" />
@@ -62,7 +62,7 @@
 							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 						</MenuItem.Header>
 					</MenuItem>
-					<MenuItem x:CompileBindings="False" Command="{Binding SaveBitmapCommand}">
+					<MenuItem Command="{Binding SaveBitmapCommand}">
 						<MenuItem.Header>
 							<Label Content="Save Bitmap" />
 						</MenuItem.Header>
