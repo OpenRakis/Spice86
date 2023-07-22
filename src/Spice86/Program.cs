@@ -39,7 +39,7 @@ public class Program {
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
 
         ServiceProvider serviceProvider = Startup.StartupInjectedServices(configuration);
-        ILoggerService? loggerService = serviceProvider.GetService<ILoggerService>() ?? throw new InvalidOperationException("Could not get logging service from DI !");
+        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
 
         if (!configuration.HeadlessMode) {
             StartMainWindow(configuration, loggerService, args);
