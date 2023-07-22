@@ -24,7 +24,6 @@ internal partial class App : Application {
             throw new PlatformNotSupportedException("Spice86 needs the desktop Linux/Mac/Windows platform in order to run.");
         }
 
-        desktop.MainWindow = new MainWindow();
-        desktop.MainWindow.DataContext = new MainWindowViewModel(desktop, configuration, loggerService);
+        desktop.MainWindow = new MainWindow(desktop, configuration, loggerService);
     }
 }
