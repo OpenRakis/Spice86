@@ -14,9 +14,9 @@ using Spice86.Shared.Interfaces;
 /// Entry point for Spice86 application.
 /// </summary>
 public class Program {
-    private static ILoggerService? _loggerService;
+    private readonly ILoggerService _loggerService;
     internal Program(ILoggerService loggerService) => _loggerService = loggerService;
-    
+
     /// <summary>
     /// Alternate entry point to use when injecting a class that defines C# overrides of the x86 assembly code found in the target DOS program.
     /// </summary>
@@ -40,10 +40,11 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
-        new Composition().Resolve<Program>();
-        if (_loggerService is null) {
-            throw new UnrecoverableException("Could not get logger from DI !");
-        }
+        Program program = new Composition().Resolve<Program>();
+        program.StartApp(configuration, args);
+    }
+
+    private void StartApp(Configuration configuration, string[] args) {
         Startup.SetLoggingLevel(_loggerService, configuration);
         if (!configuration.HeadlessMode) {
             StartMainWindow(configuration, _loggerService, args);
