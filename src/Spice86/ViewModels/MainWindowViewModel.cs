@@ -40,9 +40,9 @@ using Spice86.Shared.Diagnostics;
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
-    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
+    private AvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     [ObservableProperty]
-    private Configuration _configuration = new();
+    private Configuration _configuration;
     private bool _disposed;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
@@ -59,11 +59,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     public bool PauseEmulatorOnStart { get; private set; }
 
-    internal void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(this,
-        new KeyboardEventArgs((Key) e.Key,
-            false,
-            _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
-            _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
+    internal void OnKeyUp(KeyEventArgs e) {
+        _avaloniaKeyScanCodeConverter ??= new();
+        KeyUp?.Invoke(this,
+            new KeyboardEventArgs((Key)e.Key,
+                false,
+                _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
+                _avaloniaKeyScanCodeConverter.GetAsciiCode(
+                    _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
+    }
 
     private ProgramExecutor? _programExecutor;
 
@@ -141,11 +145,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     private ManualResetEvent _okayToContinueEvent = new(true);
 
-    internal void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(this,
-        new KeyboardEventArgs((Key) e.Key,
-            true,
-            _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
-            _avaloniaKeyScanCodeConverter.GetAsciiCode(_avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
+    internal void OnKeyDown(KeyEventArgs e) {
+        _avaloniaKeyScanCodeConverter ??= new();
+        KeyDown?.Invoke(this,
+            new KeyboardEventArgs((Key)e.Key,
+                true,
+                _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
+                _avaloniaKeyScanCodeConverter.GetAsciiCode(
+                    _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
+    }
 
     [ObservableProperty]
     private string _statusMessage = "Emulator: not started.";
