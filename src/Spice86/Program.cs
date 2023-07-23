@@ -4,15 +4,19 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 
-using Microsoft.Extensions.DependencyInjection;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
+using Spice86.DependencyInjection;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Entry point for Spice86 application.
 /// </summary>
 public class Program {
+    private readonly ILoggerService _loggerService;
+    internal Program(ILoggerService loggerService) => _loggerService = loggerService;
+
     /// <summary>
     /// Alternate entry point to use when injecting a class that defines C# overrides of the x86 assembly code found in the target DOS program.
     /// </summary>
@@ -36,15 +40,17 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
+        Program program = new Composition().Resolve<Program>();
+        program.StartApp(configuration, args);
+    }
 
-        ServiceProvider serviceProvider = Startup.StartupInjectedServices(configuration);
-        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-
+    private void StartApp(Configuration configuration, string[] args) {
+        Startup.SetLoggingLevel(_loggerService, configuration);
         if (!configuration.HeadlessMode) {
-            StartMainWindow(configuration, loggerService, args);
+            StartMainWindow(configuration, _loggerService, args);
         }
         else {
-            StartConsole(configuration, loggerService);
+            StartConsole(configuration, _loggerService);
         }
     }
 
