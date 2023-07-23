@@ -143,7 +143,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     [ObservableProperty]
     private WriteableBitmap? _bitmap;
 
-    private ManualResetEvent _okayToContinueEvent = new(true);
+    private ManualResetEvent? _okayToContinueEvent;
 
     internal void OnKeyDown(KeyEventArgs e) {
         _avaloniaKeyScanCodeConverter ??= new();
@@ -241,7 +241,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             return;
         }
 
-        _okayToContinueEvent.Reset();
+        _okayToContinueEvent?.Reset();
         IsPaused = true;
     }
 
@@ -251,7 +251,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             return;
         }
 
-        _okayToContinueEvent.Set();
+        _okayToContinueEvent?.Set();
         IsPaused = false;
     }
 
@@ -497,11 +497,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
                 DisposeEmulator();
                 _performanceWindow?.Close();
                 _paletteWindow?.Close();
-                _okayToContinueEvent.Set();
+                _okayToContinueEvent?.Set();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
-                _okayToContinueEvent.Dispose();
+                _okayToContinueEvent?.Dispose();
             }
             _disposed = true;
         }
@@ -592,7 +592,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     private void StartProgramExecutor() {
         if (!_disposed) {
-            _okayToContinueEvent.Set();
+            _okayToContinueEvent?.Set();
         }
 
         _programExecutor = new ProgramExecutor(_loggerService, this, Configuration);
@@ -612,6 +612,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if(isPaused) {
             IsPaused = true;
         }
-        _okayToContinueEvent.WaitOne(Timeout.Infinite);
+        _okayToContinueEvent?.WaitOne(Timeout.Infinite);
     }
 }
