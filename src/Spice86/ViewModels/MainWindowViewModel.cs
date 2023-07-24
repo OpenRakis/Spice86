@@ -530,8 +530,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         IsDialogVisible = true;
     }
 
-    [ObservableProperty]
+    private bool _isInitLogLevelSet = false;
+
     private string _currentLogLevel = "";
+
+    public string CurrentLogLevel {
+        get {
+            if (_isInitLogLevelSet) {
+                return _currentLogLevel;
+            }
+            SetLogLevel(_loggerService.AreLogsSilenced ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
+            _isInitLogLevelSet = true;
+            return _currentLogLevel;
+        }
+        set => SetProperty(ref _currentLogLevel, value, nameof(CurrentLogLevel));
+    }
 
     [RelayCommand] public void SetLogLevelToSilent() => SetLogLevel("Silent");
     [RelayCommand] public void SetLogLevelToVerbose() => SetLogLevel("Verbose");

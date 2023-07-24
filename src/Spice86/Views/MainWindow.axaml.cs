@@ -40,6 +40,7 @@ internal partial class MainWindow : Window {
         Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, Image);
         Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, Image);
         Image.PointerReleased += (s, e) => mainVm?.OnMouseButtonUp(e, Image);
+        Startup.SetLoggingLevel(_loggerService, _configuration);
         DataContext = mainVm;
     }
 

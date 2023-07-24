@@ -45,11 +45,11 @@ public class Program {
     }
 
     private void StartApp(Configuration configuration, string[] args) {
-        Startup.SetLoggingLevel(_loggerService, configuration);
         if (!configuration.HeadlessMode) {
             StartMainWindow(configuration, _loggerService, args);
         }
         else {
+            Startup.SetLoggingLevel(_loggerService, configuration);
             StartConsole(configuration, _loggerService);
         }
     }
