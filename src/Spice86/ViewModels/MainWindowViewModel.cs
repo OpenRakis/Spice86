@@ -468,6 +468,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (Width != width || Height != height) {
             Width = width;
             Height = height;
+            _drawAction = null;
             Bitmap?.Dispose();
             Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
         }
