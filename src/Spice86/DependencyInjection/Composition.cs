@@ -5,7 +5,7 @@ using Spice86.Shared.Interfaces;
 using Pure.DI;
 
 /// <summary>
-/// The DI composition root for the UI.
+/// The DI composition root for both the UI and headless mode.
 /// </summary>
 public partial class Composition {
     private static void Setup() =>
