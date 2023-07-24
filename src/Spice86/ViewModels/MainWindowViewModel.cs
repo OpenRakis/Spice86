@@ -57,6 +57,24 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private Action? _drawAction;
     private Thread? _drawThread;
 
+    public event EventHandler<KeyboardEventArgs>? KeyUp;
+    public event EventHandler<KeyboardEventArgs>? KeyDown;
+    public event EventHandler<MouseMoveEventArgs>? MouseMoved;
+    public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
+    public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+
+    private bool _isAppClosing;
+
+    private readonly IClassicDesktopStyleApplicationLifetime _desktop;
+
+    public MainWindowViewModel(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
+        Configuration = configuration;
+        _loggerService = loggerService;
+        _desktop = desktop;
+    }
+
+    internal void OnMainWindowClosing() => _isAppClosing = true;
+
     public bool PauseEmulatorOnStart { get; private set; }
 
     internal void OnKeyUp(KeyEventArgs e) {
@@ -167,25 +185,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
     private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
-
-    public event EventHandler<KeyboardEventArgs>? KeyUp;
-    public event EventHandler<KeyboardEventArgs>? KeyDown;
-    public event EventHandler<MouseMoveEventArgs>? MouseMoved;
-    public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
-    public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
-
-    private bool _isAppClosing;
-
-    private readonly IClassicDesktopStyleApplicationLifetime _desktop;
-
-    public MainWindowViewModel(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
-        Configuration = configuration;
-        _loggerService = loggerService;
-        _desktop = desktop;
-        if (desktop.MainWindow is not null) {
-            desktop.MainWindow.Closing += (_,_) => _isAppClosing = true;
-        }
-    }
 
     public void PauseEmulationOnStart() {
         Pause();

@@ -65,9 +65,7 @@ internal partial class MainWindow : Window {
     }
 
     protected override void OnClosing(WindowClosingEventArgs e) {
-        AppClosing?.Invoke(this, e);
+        (DataContext as MainWindowViewModel)?.OnMainWindowClosing();
         base.OnClosing(e);
     }
-
-    public static event EventHandler<CancelEventArgs>? AppClosing;
 }
