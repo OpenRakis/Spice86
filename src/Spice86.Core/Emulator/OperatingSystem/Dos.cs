@@ -87,8 +87,7 @@ public class Dos {
     /// <param name="memory">The emulator memory.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="dosPathResolver"></param>
-    public Dos(Machine machine, Configuration configuration, Indexable memory, ILoggerService loggerService) {
+    public Dos(Machine machine, Configuration configuration, IIndexable memory, ILoggerService loggerService) {
         _machine = machine;
         _loggerService = loggerService;
         AddDefaultDevices();

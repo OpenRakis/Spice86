@@ -19,7 +19,7 @@ public class InterruptInstaller {
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly FunctionHandler _functionHandler;
 
-    public InterruptInstaller(Indexable memory, CallbackHandler callbackHandler, FunctionHandler functionHandler) {
+    public InterruptInstaller(IIndexable memory, CallbackHandler callbackHandler, FunctionHandler functionHandler) {
         _functionHandler = functionHandler;
         SegmentedAddress beginningAddress = new SegmentedAddress(MemoryMap.InterruptHandlersSegment, 0);
         _memoryAsmWriter = new MemoryAsmWriter(memory, beginningAddress, callbackHandler);

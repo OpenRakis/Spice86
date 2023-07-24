@@ -8,10 +8,10 @@ using Spice86.Core.Emulator.Memory.Indexable;
 /// Data about buffer start, end and positions are stored in the Bios Data Area.
 /// </summary>
 public class BiosKeyboardBuffer {
-    private readonly Indexable _memory;
+    private readonly IIndexable _memory;
     private readonly BiosDataArea _biosDataArea;
 
-    public BiosKeyboardBuffer(Indexable memory, BiosDataArea biosDataArea) {
+    public BiosKeyboardBuffer(IIndexable memory, BiosDataArea biosDataArea) {
         _memory = memory;
         _biosDataArea = biosDataArea;
     }

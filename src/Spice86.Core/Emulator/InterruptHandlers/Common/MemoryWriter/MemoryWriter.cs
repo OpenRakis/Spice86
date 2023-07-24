@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 /// Keeps track of where to write next via CurrentAddress field that is automatically incremented each write. 
 /// </summary>
 public class MemoryWriter {
-    private readonly Indexable _memory;
+    private readonly IIndexable _memory;
     /// <summary>
     /// Where next data will be written
     /// </summary>
@@ -20,7 +20,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="memory">memory bus to write to</param>
     /// <param name="beginningAddress">Address at which first write will be performed</param>
-    public MemoryWriter(Indexable memory, SegmentedAddress beginningAddress) {
+    public MemoryWriter(IIndexable memory, SegmentedAddress beginningAddress) {
         _memory = memory;
         CurrentAddress = beginningAddress;
     }

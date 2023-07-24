@@ -268,15 +268,15 @@ public class Machine : IDisposable {
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService);
         Cpu.CallbackHandler = CallbackHandler;
-        InterruptInstaller = new InterruptInstaller((Indexable)Memory, CallbackHandler, Cpu.FunctionHandler);
+        InterruptInstaller = new InterruptInstaller(Memory, CallbackHandler, Cpu.FunctionHandler);
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality((Indexable)Memory, IoPortDispatcher, BiosDataArea, VgaRom);
+        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
         VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
         
         TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, (Indexable)this.Memory, BiosDataArea, machineCreationOptions.LoggerService);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, this.Memory, BiosDataArea, machineCreationOptions.LoggerService);
         
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
@@ -291,7 +291,7 @@ public class Machine : IDisposable {
             TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        Dos = new Dos(this, Configuration, (Indexable)Memory, machineCreationOptions.LoggerService);
+        Dos = new Dos(this, Configuration, Memory, machineCreationOptions.LoggerService);
 
         if (Configuration.InitializeDOS is not false) {
             // Register the interrupt handlers

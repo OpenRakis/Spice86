@@ -16,7 +16,7 @@ public class VgaFunctionality : IVgaFunctionality {
     private const byte DefaultAttribute = 0x07;
     private readonly BiosDataArea _biosDataArea;
     private readonly IIOPortHandler _ioPortDispatcher;
-    private readonly Indexable _memory;
+    private readonly IIndexable _memory;
     private readonly VgaRom _vgaRom;
     private readonly InterruptVectorTable _interruptVectorTable;
 
@@ -27,7 +27,7 @@ public class VgaFunctionality : IVgaFunctionality {
     /// <param name="ioPortDispatcher"></param>
     /// <param name="biosDataArea"></param>
     /// <param name="vgaRom"></param>
-    public VgaFunctionality(Indexable memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom) {
+    public VgaFunctionality(IIndexable memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom) {
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;
         _biosDataArea = biosDataArea;

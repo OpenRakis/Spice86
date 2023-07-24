@@ -6,9 +6,9 @@ using Spice86.Core.Emulator.Memory.Indexable;
 /// Wraps reads and writes to the Interrupt Vector Table (IVT)
 /// </summary>
 public class InterruptVectorTable {
-    private readonly Indexable _memory;
+    private readonly IIndexable _memory;
 
-    public InterruptVectorTable(Indexable memory) {
+    public InterruptVectorTable(IIndexable memory) {
         _memory = memory;
     }
 
