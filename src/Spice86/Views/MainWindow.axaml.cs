@@ -27,10 +27,6 @@ internal partial class MainWindow : Window {
         _loggerService = loggerService;
     }
 
-    private void InvalidateImage() {
-        Image.InvalidateVisual();
-    }
-
     protected override void OnOpened(EventArgs e) {
         base.OnOpened(e);
         Dispatcher.UIThread.Post(InitializeDataContext, DispatcherPriority.Background);
