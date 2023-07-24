@@ -77,20 +77,22 @@
 				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 			</Grid>
 		</Grid>
-		<LayoutTransformControl Grid.Row="1">
-			<LayoutTransformControl.RenderTransform>
-				<ScaleTransform
-					ScaleX="{Binding Scale}"
-					ScaleY="{Binding Scale}">
-				</ScaleTransform>
-			</LayoutTransformControl.RenderTransform>
-			<Viewbox>
-				<Image x:Name="Image"
-				       RenderOptions.BitmapInterpolationMode="None"
-				       Cursor="{Binding Cursor}"
-				       Source="{Binding Bitmap}" />
-			</Viewbox>
-		</LayoutTransformControl>
+		<Viewbox Grid.Row="1">
+			<LayoutTransformControl>
+				<LayoutTransformControl.RenderTransform>
+					<ScaleTransform
+						ScaleX="{Binding Scale}"
+						ScaleY="{Binding Scale}">
+					</ScaleTransform>
+				</LayoutTransformControl.RenderTransform>
+				<Viewbox>
+					<Image x:Name="Image"
+					       RenderOptions.BitmapInterpolationMode="None"
+					       Cursor="{Binding Cursor}"
+					       Source="{Binding Bitmap}" />
+				</Viewbox>
+			</LayoutTransformControl>
+		</Viewbox>
 		<Border Grid.Row="2" Background="DarkBlue">
 			<WrapPanel Orientation="Horizontal">
 				<TextBlock Text="{Binding StatusMessage}" />
