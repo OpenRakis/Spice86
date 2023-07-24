@@ -128,6 +128,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         set => SetProperty(ref _scale, Math.Max(value, 1));
     }
 
+    private bool _isDrawThreadInitialized;
+
     private void DrawThreadMethod() {
         while (!_exitDrawThread) {
             _drawAction?.Invoke();
@@ -135,18 +137,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     }
 
     private void Draw() {
-        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || _videoCard is null) {
+        if (_disposed || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || _videoCard is null) {
             return;
         }
-        if (_drawThread is null) {
+        if (!_isDrawThreadInitialized) {
             _drawThread = new Thread(DrawThreadMethod) {
                 Name = "UIRenderThread"
             };
             _drawThread.Start();
+            _isDrawThreadInitialized = true;
         }
 
         _drawAction ??= () => {
             unsafe {
+                if (_isSettingResolution) {
+                    return;
+                }
                 using ILockedFramebuffer pixels = Bitmap.Lock();
                 var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
                 _videoCard.Render(buffer);
@@ -468,7 +474,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (Width != width || Height != height) {
             Width = width;
             Height = height;
-            _drawAction = null;
             Bitmap?.Dispose();
             Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
         }
@@ -484,10 +489,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _exitDrawThread = true;
-                if (_drawThread?.IsAlive == true) {
-                    _drawThread.Join();
-                }
+                DisposeDrawThread();
                 Dispatcher.UIThread.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
@@ -505,6 +507,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             }
             _disposed = true;
         }
+    }
+
+    private void DisposeDrawThread() {
+        _drawAction = null;
+        _exitDrawThread = true;
+        if (_drawThread?.IsAlive == true) {
+            _drawThread.Join();
+        }
+        _isDrawThreadInitialized = false;
     }
 
     private void DisposeEmulator() => _programExecutor?.Dispose();
