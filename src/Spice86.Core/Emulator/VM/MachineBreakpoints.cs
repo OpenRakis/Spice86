@@ -22,7 +22,7 @@ public sealed class MachineBreakpoints : IDisposable {
     /// <summary>
     /// The memory associated with the machine.
     /// </summary>
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
 
     /// <summary>
     /// The state associated with the machine.

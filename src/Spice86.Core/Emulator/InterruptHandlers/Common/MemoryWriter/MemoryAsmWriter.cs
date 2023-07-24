@@ -18,7 +18,7 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <param name="memory">Memory BUS to where instructions are going to be written</param>
     /// <param name="beginningAddress">Where to start writing</param>
     /// <param name="callbackHandler">CallbackHandler instance to use to register the callbacks we create</param>
-    public MemoryAsmWriter(Indexable memory, SegmentedAddress beginningAddress, CallbackHandler callbackHandler) : base(memory, beginningAddress) {
+    public MemoryAsmWriter(IIndexable memory, SegmentedAddress beginningAddress, CallbackHandler callbackHandler) : base(memory, beginningAddress) {
         _callbackHandler = callbackHandler;
     }
 

@@ -1,8 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
-using System.Diagnostics;
-using System.Text;
-
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
@@ -19,7 +16,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -27,10 +23,12 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Emulates an IBM PC
@@ -120,7 +118,7 @@ public class Machine : IDisposable {
     /// <summary>
     /// The memory bus.
     /// </summary>
-    public Memory Memory { get; }
+    public IMemory Memory { get; }
 
     /// <summary>
     /// The General MIDI (MPU-401) or MT-32 device.
@@ -206,7 +204,7 @@ public class Machine : IDisposable {
     /// The emulator configuration.
     /// </summary>
     public Configuration Configuration { get; }
-    
+
     /// <summary>
     /// Initializes a new instance
     /// <param name="machineCreationOptions">Describes how the machine will run, and what it will run.</param>
@@ -217,7 +215,7 @@ public class Machine : IDisposable {
         Gui = machineCreationOptions.Gui;
         RecordData = machineCreationOptions.RecordData;
 
-        IMemoryDevice ram = new Ram(Memory.EndOfHighMemoryArea);
+        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         BiosDataArea = new BiosDataArea(Memory);
         Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
@@ -247,7 +245,7 @@ public class Machine : IDisposable {
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(machineCreationOptions.Gui, VgaRenderer, machineCreationOptions.LoggerService);
-        
+
         Timer = new Timer(this, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
         RegisterIoPortHandler(Timer);
         Keyboard = new Keyboard(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui, machineCreationOptions.Configuration);
@@ -260,7 +258,7 @@ public class Machine : IDisposable {
         RegisterIoPortHandler(PcSpeaker);
         OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, new SoundBlasterHardwareConfig(7,1,5));
+        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, new SoundBlasterHardwareConfig(7, 1, 5));
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
@@ -278,7 +276,7 @@ public class Machine : IDisposable {
         VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
         
         TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, BiosDataArea, machineCreationOptions.LoggerService);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, this.Memory, BiosDataArea, machineCreationOptions.LoggerService);
         
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
@@ -286,13 +284,14 @@ public class Machine : IDisposable {
             this,
             machineCreationOptions.LoggerService,
             BiosKeyboardInt9Handler.BiosKeyboardBuffer);
+
         SystemClockInt1AHandler = new SystemClockInt1AHandler(
             this,
             machineCreationOptions.LoggerService,
             TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        Dos = new Dos(this, machineCreationOptions.LoggerService);
+        Dos = new Dos(this, Configuration, Memory, machineCreationOptions.LoggerService);
 
         if (Configuration.InitializeDOS is not false) {
             // Register the interrupt handlers

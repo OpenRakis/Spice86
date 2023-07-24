@@ -1,17 +1,17 @@
 namespace Spice86.Core.Emulator.CPU;
 
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 
 /// <summary>
 /// Wraps reads and writes to the Interrupt Vector Table (IVT)
 /// </summary>
 public class InterruptVectorTable {
-    private readonly Memory _memory;
+    private readonly IIndexable _memory;
 
-    public InterruptVectorTable(Memory memory) {
+    public InterruptVectorTable(IIndexable memory) {
         _memory = memory;
     }
-    
+
     /// <summary>
     /// Reads or writes to the interrupt vector table
     /// </summary>

@@ -21,6 +21,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
+using Spice86.Core.Emulator.OperatingSystem;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -145,8 +146,6 @@ public sealed class ProgramExecutor : IDisposable {
         if (_configuration.InitializeDOS is true) {
             // Initialize VGA text mode.
             Machine.VgaFunctions.VgaSetMode(0x03, ModeFlags.Legacy);
-            // Set up disk/filesystem.
-            InitializeDOS(_configuration);
             // Put HLT at the reset address
             Machine.Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         } else {
@@ -188,41 +187,11 @@ public sealed class ProgramExecutor : IDisposable {
         return res;
     }
 
-    private static string? GetExeParentFolder(Configuration configuration) {
-        string? exe = configuration.Exe;
-        if (exe == null) {
-            return null;
-        }
-
-        DirectoryInfo? parentDir = Directory.GetParent(exe);
-        // Must be in the current directory
-        parentDir ??= new DirectoryInfo(Environment.CurrentDirectory);
-
-        string parent = Path.GetFullPath(parentDir.FullName);
-        return parent.Replace('\\', '/') + '/';
-    }
-
     private void InitializeCpu() {
         Cpu cpu = Machine.Cpu;
         cpu.ErrorOnUninitializedInterruptHandler = true;
         State state = cpu.State;
         state.Flags.IsDOSBoxCompatible = true;
-    }
-
-    private void InitializeDOS(Configuration configuration) {
-        string? parentFolder = GetExeParentFolder(configuration);
-        Dictionary<char, string> driveMap = new();
-        string? cDrive = configuration.CDrive;
-        if (string.IsNullOrWhiteSpace(cDrive)) {
-            cDrive = parentFolder;
-        }
-        ArgumentException.ThrowIfNullOrEmpty(cDrive);
-
-        cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
-        ArgumentException.ThrowIfNullOrEmpty(parentFolder);
-
-        driveMap.Add('C', cDrive);
-        Machine.Dos.FileManager.SetDiskParameters(parentFolder, driveMap);
     }
 
     private void InitializeFunctionHandlers(Configuration configuration,

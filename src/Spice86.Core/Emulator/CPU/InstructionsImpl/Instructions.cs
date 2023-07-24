@@ -12,7 +12,7 @@ public abstract class Instructions {
     protected readonly Cpu Cpu;
     protected readonly State State;
     protected readonly Stack Stack;
-    protected readonly Memory.Memory Memory;
+    protected readonly Memory.IMemory Memory;
     protected readonly ModRM ModRM;
 
     protected uint MemoryAddressEsDi => MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
@@ -21,7 +21,7 @@ public abstract class Instructions {
 
     protected uint DsNextUint16Address => ModRM.GetAddress(SegmentRegisters.DsIndex, Cpu.NextUint16());
 
-    public Instructions(Machine machine, Alu alu, Cpu cpu, Memory.Memory memory, ModRM modRm) {
+    public Instructions(Machine machine, Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) {
         Machine = machine;
         Alu = alu;
         Cpu = cpu;

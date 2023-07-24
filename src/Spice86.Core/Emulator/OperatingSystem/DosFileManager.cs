@@ -2,7 +2,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Diagnostics;
 
 using Spice86.Core.Emulator.Memory;
@@ -18,9 +17,8 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class DosFileManager {
     private const int MaxOpenFiles = 20;
-    private static readonly Dictionary<byte, string> _fileOpenMode = new();
+    private static readonly Dictionary<byte, string> FileOpenMode = new();
     private readonly ILoggerService _loggerService;
-    private string? _currentDir;
 
     private string? _currentMatchingFileSearchFolder;
 
@@ -30,32 +28,37 @@ public class DosFileManager {
 
     private ushort _diskTransferAreaAddressSegment;
 
-    private Dictionary<char, string> _driveMap = new();
-
     private IEnumerator<string>? _matchingFilesIterator;
 
-    private readonly Memory _memory;
+    private readonly IMemory _memory;
 
-    private readonly OpenFile?[] _openFiles = new OpenFile[MaxOpenFiles];
+    private readonly DosPathResolver _dosPathResolver;
+
+    /// <summary>
+    /// All the files opened by DOS.
+    /// </summary>
+    public OpenFile?[] OpenFiles { get; } = new OpenFile[MaxOpenFiles];
     
-    private readonly Dos _dos;
+    private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
     static DosFileManager() {
-        _fileOpenMode.Add(0x00, "r");
-        _fileOpenMode.Add(0x01, "w");
-        _fileOpenMode.Add(0x02, "rw");
+        FileOpenMode.Add(0x00, "r");
+        FileOpenMode.Add(0x01, "w");
+        FileOpenMode.Add(0x02, "rw");
     }
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="dos">The DOS kernel</param>
-    public DosFileManager(Memory memory, ILoggerService loggerService, Dos dos) {
+    /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
+    public DosFileManager(IMemory memory, Configuration configuration, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
+        _dosPathResolver = new(configuration);
         _memory = memory;
-        _dos = dos;
+        _dosVirtualDevices = dosVirtualDevices;
     }
 
     /// <summary>
@@ -96,27 +99,30 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
-        string? hostFileName = ToHostCaseSensitiveFileName(fileName, true);
-        if (hostFileName == null) {
+        string? hostParentDirectory = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(fileName);
+        if (string.IsNullOrWhiteSpace(hostParentDirectory)) {
             return FileOperationErrorWithLog($"Could not find parent of {fileName} so cannot create file.", ErrorCode.PathNotFound);
         }
 
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Creating file {HostFileName} with attribute {FileAttribute}", hostFileName, fileAttribute);
+            _loggerService.Verbose("Creating file {HostFileName} with attribute {FileAttribute}", hostParentDirectory, fileAttribute);
         }
-        FileInfo path = new FileInfo(hostFileName);
+        FileInfo path = new FileInfo(Path.Combine(hostParentDirectory, Path.GetFileName(fileName)));
+        FileStream? testFileStream = null;
         try {
             if (File.Exists(path.FullName)) {
                 File.Delete(path.FullName);
             }
 
-            File.Create(path.FullName).Close();
+            testFileStream = File.Create(path.FullName);
         } catch (IOException e) {
             e.Demystify();
             throw new UnrecoverableException("IOException while creating file", e);
+        } finally {
+            testFileStream?.Dispose();
         }
 
-        return OpenFileInternal(fileName, hostFileName, "rw");
+        return OpenFileInternal(fileName, hostParentDirectory, "rw");
     }
 
     /// <summary>
@@ -146,26 +152,33 @@ public class DosFileManager {
     /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match. Case is insensitive</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
-        string hostSearchSpec = ToHostFileName(fileSpec);
-        _currentMatchingFileSearchFolder = hostSearchSpec[..(hostSearchSpec.LastIndexOf('/') + 1)];
-        if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder) == false) {
-            _currentMatchingFileSearchSpec = hostSearchSpec.Replace(_currentMatchingFileSearchFolder, "");
-            try {
-                List<string> matchingPaths = Directory.GetFiles(
-                    _currentMatchingFileSearchFolder,
-                    _currentMatchingFileSearchSpec,
-                    new EnumerationOptions() {
-                        AttributesToSkip = FileAttributes.Directory,
-                        IgnoreInaccessible = true,
-                        RecurseSubdirectories = false
-                    }).ToList();
-                _matchingFilesIterator = matchingPaths.GetEnumerator();
-                return FindNextMatchingFile();
-            } catch (IOException e) {
-                e.Demystify();
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _loggerService.Error(e, "Error while walking path {CurrentMatchingFileSearchFolder} or getting attributes", _currentMatchingFileSearchFolder);
-                }
+        string hostSearchSpec = _dosPathResolver.PrefixWithHostDirectory(fileSpec);
+        _currentMatchingFileSearchFolder = Directory.GetParent(hostSearchSpec)?.FullName;
+        if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder)) {
+            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        }
+        
+        if (!Directory.Exists(_currentMatchingFileSearchFolder)) {
+            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        }
+        
+        _currentMatchingFileSearchSpec = Path.GetRelativePath(_currentMatchingFileSearchFolder, hostSearchSpec);
+
+        try {
+            List<string> matchingPaths = Directory.GetFiles(
+                _currentMatchingFileSearchFolder,
+                _currentMatchingFileSearchSpec,
+                new EnumerationOptions {
+                    AttributesToSkip = FileAttributes.Directory,
+                    IgnoreInaccessible = true,
+                    RecurseSubdirectories = false
+                }).ToList();
+            _matchingFilesIterator = matchingPaths.GetEnumerator();
+            return FindNextMatchingFile();
+        } catch (IOException e) {
+            e.Demystify();
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(e, "Error while walking path {CurrentMatchingFileSearchFolder} or getting attributes", _currentMatchingFileSearchFolder);
             }
         }
         return DosFileOperationResult.Error(ErrorCode.PathNotFound);
@@ -253,9 +266,9 @@ public class DosFileManager {
     /// <param name="rwAccessMode">The read+write access mode</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult OpenFile(string fileName, byte rwAccessMode) {
-        string openMode = _fileOpenMode[rwAccessMode];
+        string openMode = FileOpenMode[rwAccessMode];
 
-        CharacterDevice? device = _dos.Devices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
+        CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
         if (device is not null) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
@@ -263,8 +276,8 @@ public class DosFileManager {
             return OpenDeviceInternal(device, openMode);
         }
         
-        string? hostFileName = ToHostCaseSensitiveFileName(fileName, false);
-        if (hostFileName == null) {
+        string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
+        if (string.IsNullOrWhiteSpace(hostFileName)) {
             return FileNotFoundError(fileName);
         }
 
@@ -342,22 +355,9 @@ public class DosFileManager {
     /// <summary>
     /// Sets the current directory for the <see cref="DosFileManager"/>
     /// </summary>
-    /// <param name="currentDir">The new current directory path</param>
+    /// <param name="newPath">The new current directory path</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult SetCurrentDir(string currentDir) {
-        _currentDir = ToHostCaseSensitiveFileName(currentDir, false);
-        return DosFileOperationResult.NoValue();
-    }
-
-    /// <summary>
-    /// Initializes disk parameters
-    /// </summary>
-    /// <param name="currentDir">The current directory for the <see cref="DosFileManager"/>.</param>
-    /// <param name="driveMap">The mapping between emulated drive roots and host directory paths.</param>
-    public void SetDiskParameters(string currentDir, Dictionary<char, string> driveMap) {
-        _currentDir = currentDir;
-        _driveMap = driveMap;
-    }
+    public DosFileOperationResult SetCurrentDir(string newPath) => _dosPathResolver.SetCurrentDir(newPath);
 
     /// <summary>
     /// Sets the segmented address to the DTA.
@@ -403,16 +403,7 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(writeLength);
     }
 
-    private int CountHandles(OpenFile openFileToCount) {
-        int count = 0;
-        foreach (var openFile in _openFiles) {
-            if (openFile == openFileToCount) {
-                count++;
-            }
-        }
-
-        return count;
-    }
+    private int CountHandles(OpenFile openFileToCount) => OpenFiles.Count(openFile => openFile == openFileToCount);
 
     private DosFileOperationResult FileAccessDeniedError(string? filename) {
         return FileOperationErrorWithLog($"File {filename} already in use!", ErrorCode.AccessDenied);
@@ -420,6 +411,10 @@ public class DosFileManager {
 
     private DosFileOperationResult FileNotFoundError(string? fileName) {
         return FileOperationErrorWithLog($"File {fileName} not found!", ErrorCode.FileNotFound);
+    }
+
+    private DosFileOperationResult PathNotFoundError(string? path) {
+        return FileOperationErrorWithLog($"File {path} not found!", ErrorCode.PathNotFound);
     }
 
     private DosFileOperationResult FileOperationErrorWithLog(string message, ErrorCode errorCode) {
@@ -437,22 +432,9 @@ public class DosFileManager {
         return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
     }
 
-    /// <summary>
-    /// Converts a dos filespec to a regex pattern
-    /// </summary>
-    /// <param name="fileSpec">The DOS filespec</param>
-    /// <returns>The regex pattern</returns>
-    private Regex FileSpecToRegex(string fileSpec) {
-        string regex = fileSpec.ToLowerInvariant();
-        regex = regex.Replace(".", "[.]");
-        regex = regex.Replace("?", ".");
-        regex = regex.Replace("*", ".*");
-        return new Regex(regex);
-    }
-
     private int? FindNextFreeFileIndex() {
-        for (int i = 0; i < _openFiles.Length; i++) {
-            if (_openFiles[i] == null) {
+        for (int i = 0; i < OpenFiles.Length; i++) {
+            if (OpenFiles[i] == null) {
                 return i;
             }
         }
@@ -460,20 +442,16 @@ public class DosFileManager {
         return null;
     }
 
-    private uint GetDiskTransferAreaAddressPhysical() {
-        return MemoryUtils.ToPhysicalAddress(_diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
-    }
+    private uint GetDiskTransferAreaAddressPhysical() => MemoryUtils.ToPhysicalAddress(_diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
 
     private OpenFile? GetOpenFile(ushort fileHandle) {
-        if (fileHandle >= _openFiles.Length) {
+        if (fileHandle >= OpenFiles.Length) {
             return null;
         }
-        return _openFiles[fileHandle];
+        return OpenFiles[fileHandle];
     }
 
-    private static bool IsValidFileHandle(ushort fileHandle) {
-        return fileHandle <= MaxOpenFiles;
-    }
+    private static bool IsValidFileHandle(ushort fileHandle) => fileHandle <= MaxOpenFiles;
 
     private DosFileOperationResult NoFreeHandleError() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
@@ -481,170 +459,8 @@ public class DosFileManager {
         }
         return DosFileOperationResult.Error(ErrorCode.TooManyOpenFiles);
     }
-
-    private string? GetActualCaseForFileName(string caseInsensitivePath) {
-        string? directory = Path.GetDirectoryName(caseInsensitivePath);
-        string? directoryCaseSensitive = GetDirectoryCaseSensitive(directory);
-        if (string.IsNullOrWhiteSpace(directoryCaseSensitive) || Directory.Exists(directoryCaseSensitive) == false) {
-            return null;
-        }
-        string realFileName = "";
-        string[] array = Directory.GetFiles(directoryCaseSensitive);
-        foreach (string file in array) {
-            string fileToUpper = file.ToUpperInvariant();
-            string searchedFile = caseInsensitivePath.ToUpperInvariant();
-            if (fileToUpper == searchedFile) {
-                realFileName = file;
-            }
-        }
-        if (string.IsNullOrWhiteSpace(realFileName) || File.Exists(realFileName) == false) {
-            return null;
-        }
-        return realFileName;
-    }
-
-    private string? GetDirectoryCaseSensitive(string? directory) {
-        if (string.IsNullOrWhiteSpace(directory)) {
-            return null;
-        }
-        DirectoryInfo directoryInfo = new(directory);
-        if (directoryInfo.Exists) {
-            return directory;
-        }
-
-        if (directoryInfo.Parent == null) {
-            return null;
-        }
-
-        string? parent = GetDirectoryCaseSensitive(directoryInfo.Parent.FullName);
-        if (parent == null) {
-            return null;
-        }
-
-        return new DirectoryInfo(parent).GetDirectories(directoryInfo.Name, new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).FirstOrDefault()?.FullName;
-    }
-
-    private DosFileOperationResult OpenFileInternal(string fileName, string? hostFileName, string openMode) {
-        if (hostFileName == null) {
-            // Not found
-            return FileNotFoundError(fileName);
-        }
-
-        int? freeIndex = FindNextFreeFileIndex();
-        if (freeIndex == null) {
-            return NoFreeHandleError();
-        }
-
-        ushort dosIndex = (ushort)freeIndex.Value;
-        try {
-            Stream? randomAccessFile = null;
-            switch (openMode) {
-                case "r": {
-                    string? realFileName = GetActualCaseForFileName(hostFileName);
-                    if (File.Exists(hostFileName)) {
-                        randomAccessFile = File.OpenRead(hostFileName);
-                    } else if (File.Exists(realFileName)) {
-                        randomAccessFile = File.OpenRead(realFileName);
-                    } else {
-                        return FileNotFoundError(fileName);
-                    }
-
-                    break;
-                }
-                case "w":
-                    randomAccessFile = File.OpenWrite(hostFileName);
-                    break;
-                case "rw": {
-                    string? realFileName = GetActualCaseForFileName(hostFileName);
-                    if (File.Exists(hostFileName)) {
-                        randomAccessFile = File.Open(hostFileName, FileMode.Open);
-                    } else if (File.Exists(realFileName)) {
-                        randomAccessFile = File.Open(realFileName, FileMode.Open);
-                    } else {
-                        return FileNotFoundError(fileName);
-                    }
-
-                    break;
-                }
-            }
-
-            if (randomAccessFile != null) {
-                SetOpenFile(dosIndex, new OpenFile(fileName, dosIndex, randomAccessFile));
-            }
-        } catch (FileNotFoundException) {
-            return FileNotFoundError(fileName);
-        } catch (IOException) {
-            return FileAccessDeniedError(fileName);
-        }
-
-        return DosFileOperationResult.Value16(dosIndex);
-    }
-
-    private string ReplaceDriveWithHostPath(string fileName) {
-        // Absolute path
-        char driveLetter = fileName.ToUpper()[0];
-
-        if (_driveMap.TryGetValue(driveLetter, out string? pathForDrive) == false) {
-            throw new UnrecoverableException($"Could not find a mapping for drive {driveLetter}");
-        }
-
-        return fileName.Replace($"{driveLetter}:", pathForDrive);
-    }
-
-    private static uint Seek(Stream randomAccessFile, byte originOfMove, uint offset) {
-        long newOffset = originOfMove switch {
-            0 => offset,
-            1 => randomAccessFile.Position + offset,
-            _ => randomAccessFile.Length - offset
-        };
-
-        randomAccessFile.Seek(newOffset, SeekOrigin.Begin);
-        return (uint)newOffset;
-    }
-
-    private void SetOpenFile(ushort fileHandle, OpenFile? openFile) {
-        _openFiles[fileHandle] = openFile;
-    }
-
-    private string? ToCaseSensitiveFileName(string? caseInsensitivePath) {
-        if (string.IsNullOrWhiteSpace(caseInsensitivePath)) {
-            return null;
-        }
-
-        string fileToProcess = ConvertUtils.ToSlashPath(caseInsensitivePath);
-        string? parentDir = Path.GetDirectoryName(fileToProcess);
-        if (File.Exists(fileToProcess) || Directory.Exists(fileToProcess) ||
-            (string.IsNullOrWhiteSpace(parentDir) == false && Directory.Exists(parentDir) && Directory.GetDirectories(parentDir).Length == 0)) {
-            // file exists or root reached, no need to go further. Path found.
-            return caseInsensitivePath;
-        }
-
-        string? parent = ToCaseSensitiveFileName(parentDir);
-        if (parent == null) {
-            // End of recursion, root reached
-            return null;
-        }
-
-        // Now that parent is for sure on the disk, let's find the current file
-        try {
-            string? fileNameOnFileSystem = GetActualCaseForFileName(caseInsensitivePath);
-            if (string.IsNullOrWhiteSpace(fileNameOnFileSystem) == false) {
-                return fileNameOnFileSystem;
-            }
-            Regex fileToProcessRegex = FileSpecToRegex(Path.GetFileName(fileToProcess));
-            if (Directory.Exists(parent)) {
-                return Array.Find(Directory
-                    .GetFiles(parent), x => fileToProcessRegex.IsMatch(x));
-            }
-        } catch (IOException e) {
-            e.Demystify();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning(e, "Error while checking file {CaseInsensitivePath}: {Exception}", caseInsensitivePath, e);
-            }
-        }
-
-        return null;
-    }
+    
+    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
@@ -659,50 +475,76 @@ public class DosFileManager {
         int hours = localTime.Hour;
         return (ushort)((dosSeconds & 0b11111) | (minutes & 0b111111) << 5 | (hours & 0b11111) << 11);
     }
+    
+    private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, string openMode) {
+        if (string.IsNullOrWhiteSpace(hostFileName)) {
+            // Not found
+            return FileNotFoundError(dosFileName);
+        }
 
-    /// <summary>
-    /// Converts dosFileName to a host file name.<br/>
-    /// For this, this needs to:
-    /// <ul>
-    /// <li>Prefix either the current folder or the drive folder.</li>
-    /// <li>Replace backslashes with slashes</li>
-    /// <li>Find case sensitive matches for every path item (since DOS is case insensitive but some OS are not)</li>
-    /// </ul>
-    /// </summary>
-    /// <param name="dosFileName">The file name to convert.</param>
-    /// <param name="forCreation">if true will try to find case sensitive match for only the parent of the file</param>
-    /// <returns>the file name in the host file system, or null if nothing was found.</returns>
-    public string? ToHostCaseSensitiveFileName(string dosFileName, bool forCreation) {
-        string fileName = ToHostFileName(dosFileName);
-        if (!forCreation) {
-            return ToCaseSensitiveFileName(fileName);
+        int? freeIndex = FindNextFreeFileIndex();
+        if (freeIndex == null) {
+            return NoFreeHandleError();
         }
-        string? parent = ToCaseSensitiveFileName(Path.GetDirectoryName(fileName));
-        if (parent == null) {
-            return null;
+
+        ushort dosIndex = (ushort)freeIndex.Value;
+        try {
+            Stream? randomAccessFile = null;
+            switch (openMode) {
+                case "r": {
+                        string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
+                        if (File.Exists(hostFileName)) {
+                            randomAccessFile = File.OpenRead(hostFileName);
+                        } else if (File.Exists(realFileName)) {
+                            randomAccessFile = File.OpenRead(realFileName);
+                        } else {
+                            return FileNotFoundError(dosFileName);
+                        }
+
+                        break;
+                    }
+                case "w":
+                    randomAccessFile = File.OpenWrite(hostFileName);
+                    break;
+                case "rw": {
+                        string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
+                        if (File.Exists(hostFileName)) {
+                            randomAccessFile = File.Open(hostFileName, FileMode.Open);
+                        } else if (File.Exists(realFileName)) {
+                            randomAccessFile = File.Open(realFileName, FileMode.Open);
+                        } else {
+                            return FileNotFoundError(dosFileName);
+                        }
+
+                        break;
+                    }
+            }
+
+            if (randomAccessFile != null) {
+                SetOpenFile(dosIndex, new OpenFile(dosFileName, dosIndex, randomAccessFile));
+            }
+        } catch (FileNotFoundException) {
+            return FileNotFoundError(dosFileName);
+        } catch (IOException) {
+            return FileAccessDeniedError(dosFileName);
         }
-        // Concat the folder to the requested file name
-        return Path.Combine(parent, dosFileName);
+
+        return DosFileOperationResult.Value16(dosIndex);
     }
 
-    /// <summary>
-    /// Prefixes the given filename by either the mapped drive folder or the current folder depending on whether there is
-    /// a Drive in the filename or not.<br/>
-    /// Does not convert to case sensitive filename.
-    /// </summary>
-    /// <param name="dosFileName">The file name to convert.</param>
-    /// <returns>The converted file name.</returns>
-    private string ToHostFileName(string dosFileName) {
-        string fileName = ConvertUtils.ToSlashPath(dosFileName);
-        if (fileName.Length >= 2 && fileName[1] == ':') {
-            fileName = ReplaceDriveWithHostPath(fileName);
-        } else if (string.IsNullOrWhiteSpace(_currentDir) == false) {
-            fileName = Path.Combine(_currentDir, fileName);
-        }
+    private static uint Seek(Stream randomAccessFile, byte originOfMove, uint offset) {
+        long newOffset = originOfMove switch {
+            0 => offset,
+            1 => randomAccessFile.Position + offset,
+            _ => randomAccessFile.Length - offset
+        };
 
-        return ConvertUtils.ToSlashPath(fileName);
+        randomAccessFile.Seek(newOffset, SeekOrigin.Begin);
+        return (uint)newOffset;
     }
 
+    private void SetOpenFile(ushort fileHandle, OpenFile? openFile) => OpenFiles[fileHandle] = openFile;
+    
     private void UpdateDosTransferAreaFromFile(string matchingFile) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("Found matching file {MatchingFile}", matchingFile);
@@ -717,4 +559,84 @@ public class DosFileManager {
         dosDiskTransferArea.FileSize = (ushort)attributes.Length;
         dosDiskTransferArea.FileName = Path.GetFileName(matchingFile);
     }
+
+    /// <summary>
+    /// Creates a directory on disk.
+    /// </summary>
+    /// <param name="dosDirectory">The directory name to create</param>
+    /// <returns></returns>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult CreateDirectory(string dosDirectory) {
+        string? parentFolder = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(dosDirectory);
+        if (string.IsNullOrWhiteSpace(parentFolder)) {
+            return PathNotFoundError(dosDirectory);
+        }
+
+        if (_dosPathResolver.AnyDosDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
+            return FileAccessDeniedError(dosDirectory);
+        }
+
+        string prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
+        try {
+            Directory.CreateDirectory(prefixedDosDirectory);
+            return DosFileOperationResult.NoValue();
+        } catch (IOException e) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _loggerService.Warning(e, "Error while creating directory {CaseInsensitivePath}: {Exception}",
+                    prefixedDosDirectory, e);
+            }
+        }
+
+        return PathNotFoundError(dosDirectory);
+    }
+
+    /// <summary>
+    /// Removes a directory on disk.
+    /// </summary>
+    /// <param name="dosDirectory">The directory name to create</param>
+    /// <returns></returns>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult RemoveDirectory(string dosDirectory) {
+        string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosDirectory);
+        if (string.IsNullOrWhiteSpace(fullHostPath)) {
+            return PathNotFoundError(dosDirectory);
+        }
+
+        try {
+            Directory.Delete(fullHostPath);
+            return DosFileOperationResult.NoValue();
+        } catch (IOException e) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _loggerService.Warning(e, "Error while creating directory {CaseInsensitivePath}: {Exception}",
+                    fullHostPath, e);
+            }
+        }
+
+        return PathNotFoundError(dosDirectory);
+    }
+
+    /// <summary>
+    /// Gets the current DOS directory.
+    /// </summary>
+    /// <param name="driveNumber">The drive number (0x0: default, 0x1: A:, 0x2: B:, 0x3: C:, ...)</param>
+    /// <param name="currentDir">The string variable receiving the current DOS directory.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) => _dosPathResolver.GetCurrentDosDirectory(driveNumber, out currentDir);
+
+
+    /// <summary>
+    /// Gets the current default drive. 0x0: A:, 0x1: B:, ...
+    /// </summary>
+    public byte DefaultDrive => _dosPathResolver.CurrentDriveIndex;
+
+    /// <summary>
+    /// Selects the DOS defautlt drive.
+    /// </summary>
+    /// <param name="driveIndex">The index of the drive. 0x0: A:, 0x1: B:, ...</param>
+    public void SelectDefaultDrive(byte driveIndex) => _dosPathResolver.CurrentDriveIndex = driveIndex;
+
+    /// <summary>
+    /// Gets the number of potentially valid drive letters
+    /// </summary>
+    public byte NumberOfPotentiallyValidDriveLetters => _dosPathResolver.NumberOfPotentiallyValidDriveLetters;
 }

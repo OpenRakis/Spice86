@@ -45,7 +45,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
         GetRunnable(index).RunFromOverriden();
     }
 
-    public byte[] ReplaceAllCallbacksInRamImage(Memory memory) {
+    public byte[] ReplaceAllCallbacksInRamImage(IMemory memory) {
         ByteArrayBasedIndexable indexable = new ByteArrayBasedIndexable(memory.RamCopy);
         MemoryAsmWriter memoryAsmWriter = new MemoryAsmWriter(indexable, new SegmentedAddress(0, 0), this);
         foreach (ICallback callback in this.AllRunnables) {

@@ -27,7 +27,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <summary>
     /// The memory bus.
     /// </summary>
-    protected Memory _memory;
+    protected IMemory _memory;
 
     /// <summary>
     /// Indicates whether the interrupt stack is present.

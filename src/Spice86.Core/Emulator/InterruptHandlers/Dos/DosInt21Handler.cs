@@ -6,13 +6,10 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.InterruptHandlers.Common;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -20,6 +17,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Spice86.Core.Emulator.Memory.Indexable;
 
 /// <summary>
 /// Reimplementation of INT21
@@ -31,9 +29,6 @@ public class DosInt21Handler : InterruptHandler {
     private readonly InterruptVectorTable _interruptVectorTable;
     private bool _isCtrlCFlag;
 
-    // dosbox
-    private byte _defaultDrive = 2;
-
     private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
     private readonly List<IVirtualDevice> _devices;
@@ -42,15 +37,16 @@ public class DosInt21Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The emulator memory.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dos">The DOS kernel.</param>
-    public DosInt21Handler(Machine machine, ILoggerService loggerService, Dos dos) : base(machine, loggerService) {
+    public DosInt21Handler(Machine machine, IIndexable memory, ILoggerService loggerService, Dos dos) : base(machine, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dosMemoryManager = dos.MemoryManager;
         _dosFileManager = dos.FileManager;
         _devices = dos.Devices;
-        _interruptVectorTable = new InterruptVectorTable(machine.Memory);
+        _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
     
@@ -73,6 +69,8 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x35, GetInterruptVector);
         AddAction(0x36, GetFreeDiskSpace);
         AddAction(0x38, () => SetCountryCode(true));
+        AddAction(0x39, () => CreateDirectory(true));
+        AddAction(0x3A, () => RemoveDirectory(true));
         AddAction(0x3B, () => ChangeCurrentDirectory(true));
         AddAction(0x3C, () => CreateFileUsingHandle(true));
         AddAction(0x3D, () => OpenFile(true));
@@ -94,6 +92,24 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x62, GetPspAddress);
     }
 
+    /// <summary>
+    /// Creates a directory.
+    /// </summary>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
+    private void CreateDirectory(bool calledFromVm) {
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetStringAtDsDx());
+        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+    }
+
+    /// <summary>
+    /// Removes a directory.
+    /// </summary>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
+    private void RemoveDirectory(bool calledFromVm) {
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(GetStringAtDsDx());
+        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+    }
+
     public void GetAllocationInfoForDefaultDrive() {
         // Bytes per sector
         _state.CX = 0x200;
@@ -104,7 +120,7 @@ public class DosInt21Handler : InterruptHandler {
         // Media Id
         _state.DS = 0x8010;
         // From DOSBox source code...
-        _state.BX = ConvertUtils.Uint16((ushort) (0x8010 + _defaultDrive * 9)) ;
+        _state.BX = ConvertUtils.Uint16((ushort) (0x8010 + _dosFileManager.DefaultDrive * 9)) ;
         _state.AH = 0;
     }
 
@@ -269,7 +285,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("GET CURRENT DEFAULT DRIVE");
         }
-        _state.AL = _defaultDrive;
+        _state.AL = _dosFileManager.DefaultDrive;
     }
 
     public void GetDate() {
@@ -461,12 +477,11 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void SelectDefaultDrive() {
-        _defaultDrive = _state.DL;
+        _dosFileManager.SelectDefaultDrive(_state.DL);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SELECT DEFAULT DRIVE {DefaultDrive}", _defaultDrive);
+            _loggerService.Verbose("SELECT DEFAULT DRIVE {DefaultDrive}", _dosFileManager.DefaultDrive);
         }
-        // Number of valid drive letters
-        _state.AL = 26;
+        _state.AL = _dosFileManager.NumberOfPotentiallyValidDriveLetters;
     }
 
     public void SetDiskTransferAddress() {
@@ -517,18 +532,35 @@ public class DosInt21Handler : InterruptHandler {
         return _cp850CharSet.GetString(characterBytes.ToArray());
     }
     
+    /// <summary>
+    /// Gets an ASCIZ pathname containing the current DOS directory in the address at DS:DI. <br/>
+    /// Params: <br/>
+    /// DL = drive number (0x0: default, 0x1: A:, 0x2: B:, 0x3: C:, ...)
+    /// </summary>
+    /// <remarks>
+    /// Does not include a drive, or the initial backslash
+    /// </remarks>
+    /// <returns>
+    /// DS:DI = ASCIZ pathname containing the current DOS directory. <br/>
+    /// CF is clear if sucessful. <br/>
+    /// CF is set on error. Possible error code in AX: 0xF (InvalidDrive).
+    /// </returns>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void GetCurrentDirectory(bool calledFromVm) {
-        SetCarryFlag(false, calledFromVm);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("GET CURRENT DIRECTORY {ResponseAddress}",
-                ConvertUtils.ToSegmentedAddressRepresentation(_state.DS, _state.SI));
-        }
         uint responseAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
-        // Fake that we are always at the root of the drive (empty String)
-        _memory.UInt8[responseAddress] = 0;
+        DosFileOperationResult result = _dosFileManager.GetCurrentDir(_state.DL, out string currentDir);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("GET CURRENT DIRECTORY {ResponseAddress}: {CurrentDpsDirectory}",
+                ConvertUtils.ToSegmentedAddressRepresentation(_state.DS, _state.SI), currentDir);
+        }
+        _memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length);
+        SetCarryFlag(false, calledFromVm);
+        // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
+        _state.AX = 0x0100;
+        SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
-    private string GetDosString(Memory memory, ushort segment, ushort offset, char end) {
+    private string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
         StringBuilder stringBuilder = new();
         List<byte> sourceArray = new();
@@ -543,7 +575,7 @@ public class DosInt21Handler : InterruptHandler {
     public void GetSetFileAttributes(bool calledFromVm) {
         byte op = _state.AL;
         string dosFileName = GetStringAtDsDx();
-        string? fileName = _dosFileManager.ToHostCaseSensitiveFileName(dosFileName, false);
+        string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);

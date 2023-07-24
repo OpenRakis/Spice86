@@ -37,7 +37,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <summary>
     /// The memory bus.
     /// </summary>
-    protected readonly Memory _memory;
+    protected readonly IMemory _memory;
 
     /// <summary>
     /// The emulator configuration

@@ -38,7 +38,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The memory bus of the IBM PC.
     /// </summary>
-    public Memory Memory => Machine.Memory;
+    public IMemory Memory => Machine.Memory;
 
     /// <summary>
     /// Gets the 8-bit indexer of the memory bus.
