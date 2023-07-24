@@ -3,6 +3,7 @@ namespace Spice86.Views;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Threading;
 
 using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
@@ -32,18 +33,22 @@ internal partial class MainWindow : Window {
 
     protected override void OnOpened(EventArgs e) {
         base.OnOpened(e);
+        Dispatcher.UIThread.Post(InitializeDataContext, DispatcherPriority.Background);
+    }
+
+    private void InitializeDataContext() {
         if (_desktop is null || _configuration is null || _loggerService is null) {
             return;
         }
         var mainVm = new MainWindowViewModel(_desktop, _configuration, _loggerService);
-        mainVm.OnMainWindowInitialized(this.InvalidateImage);
+        mainVm.OnMainWindowInitialized(Image.InvalidateVisual);
         Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, Image);
         Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, Image);
-        Image.PointerReleased += (s, e) => mainVm?.OnMouseButtonUp(e, Image);
+        Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, Image);
         Startup.SetLoggingLevel(_loggerService, _configuration);
         DataContext = mainVm;
     }
-
+    
     protected override void OnClosed(EventArgs e) {
         (DataContext as MainWindowViewModel)?.Dispose();
         base.OnClosed(e);
