@@ -54,8 +54,7 @@ internal class DosPathResolver {
 
     private static string GetFullCurrentDosPathOnDrive(MountedFolder mountedFolder) => Path.Combine($"{mountedFolder.DosDriveRootPath}{DosPathResolver.DirectorySeparatorChar}", mountedFolder.CurrentDosDirectory);
 
-    private static string GetExeParentFolder(Configuration configuration) {
-        string? exe = configuration.Exe;
+    private static string GetExeParentFolder(string? exe) {
         string fallbackValue = ConvertUtils.ToSlashFolderPath(Environment.CurrentDirectory);
         if (string.IsNullOrWhiteSpace(exe)) {
             return fallbackValue;
@@ -65,11 +64,10 @@ internal class DosPathResolver {
     }
 
     private static Dictionary<char, MountedFolder> InitializeDriveMap(Configuration configuration) {
-        string parentFolder = GetExeParentFolder(configuration);
         Dictionary<char, MountedFolder> driveMap = new();
         string? cDrive = configuration.CDrive;
         if (string.IsNullOrWhiteSpace(cDrive)) {
-            cDrive = parentFolder;
+            cDrive = GetExeParentFolder(configuration.Exe);
         }
         cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
         driveMap.Add('C', new MountedFolder('C', cDrive));
