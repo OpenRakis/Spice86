@@ -25,7 +25,7 @@ internal class DosPathResolver {
     public DosPathResolver(Configuration configuration, char currentDrive = 'C') {
         _driveMap = InitializeDriveMap(configuration);
         _currentDrive = currentDrive;
-        SetCurrentDirValue(_currentDrive, _driveMap[_currentDrive].MountedHostDirectory);
+        SetCurrentDirValue(_currentDrive, _driveMap[_currentDrive].MountedHostDirectory, $@"{currentDrive}:\");
     }
 
     private readonly Dictionary<char, MountedFolder> _driveMap;
@@ -42,17 +42,17 @@ internal class DosPathResolver {
         //0 = default drive
         if (driveNumber == 0 && _driveMap.Any()) {
             MountedFolder mountedFolder = _driveMap[_currentDrive];
-            currentDir = GetFullCurrentDosPathOnDrive(mountedFolder)[$"{mountedFolder.DosDriveRootPath}{DirectorySeparatorChar}".Length..];
+            currentDir = mountedFolder.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
         } else if (_driveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
-            currentDir = GetFullCurrentDosPathOnDrive(mountedFolder)[$"{mountedFolder.DosDriveRootPath}{DirectorySeparatorChar}".Length..];
+            currentDir = mountedFolder.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
         }
         currentDir = "";
         return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
     }
 
-    private string GetFullCurrentDosPathOnDrive(MountedFolder mountedFolder) => $"{mountedFolder.DosDriveRootPath}{DosPathResolver.DirectorySeparatorChar}{ConvertUtils.ToBackSlashPath(mountedFolder.FullHostCurrentDirectory[mountedFolder.MountedHostDirectory.Length..])}".ToUpperInvariant();
+    private static string GetFullCurrentDosPathOnDrive(MountedFolder mountedFolder) => Path.Combine($"{mountedFolder.DosDriveRootPath}{DosPathResolver.DirectorySeparatorChar}", mountedFolder.CurrentDosDirectory);
 
     private static string GetExeParentFolder(Configuration configuration) {
         string? exe = configuration.Exe;
@@ -64,7 +64,7 @@ internal class DosPathResolver {
         return string.IsNullOrWhiteSpace(parent) ? fallbackValue : ConvertUtils.ToSlashFolderPath(parent);
     }
 
-    private Dictionary<char, MountedFolder> InitializeDriveMap(Configuration configuration) {
+    private static Dictionary<char, MountedFolder> InitializeDriveMap(Configuration configuration) {
         string parentFolder = GetExeParentFolder(configuration);
         Dictionary<char, MountedFolder> driveMap = new();
         string? cDrive = configuration.CDrive;
@@ -92,7 +92,7 @@ internal class DosPathResolver {
 
         string? hostPath = GetFullHostPathFromDosOrDefault(fullDosPath);
         if (!string.IsNullOrWhiteSpace(hostPath)) {
-            return SetCurrentDirValue(fullDosPath[0], hostPath);
+            return SetCurrentDirValue(fullDosPath[0], hostPath, fullDosPath);
         } else {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
@@ -105,6 +105,17 @@ internal class DosPathResolver {
             }
         }
         return _driveMap[_currentDrive].DosDriveRootPath;
+    }
+
+    private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath, string fullDosPath) {
+        if (string.IsNullOrWhiteSpace(hostFullPath) ||
+            !IsWithinMountPoint(hostFullPath, _driveMap[driveLetter]) ||
+            Encoding.ASCII.GetByteCount(fullDosPath) > MaxPathLength) {
+            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        }
+
+        _driveMap[driveLetter].CurrentDosDirectory = fullDosPath[3..];
+        return DosFileOperationResult.NoValue();
     }
 
     private string GetFullDosPathIncludingRoot(string absoluteOrRelativeDosPath) {
@@ -151,17 +162,6 @@ internal class DosPathResolver {
         }
 
         return ConvertUtils.ToBackSlashPath(normalizedDosPath.ToString());
-    }
-
-    private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath) {
-        if (string.IsNullOrWhiteSpace(hostFullPath) ||
-            !IsWithinMountPoint(hostFullPath, _driveMap[driveLetter]) ||
-            Encoding.ASCII.GetByteCount(hostFullPath) > MaxPathLength) {
-            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
-        }
-
-        _driveMap[driveLetter].FullHostCurrentDirectory = hostFullPath;
-        return DosFileOperationResult.NoValue();
     }
 
     /// <summary>

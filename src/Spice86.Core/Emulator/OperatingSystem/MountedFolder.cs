@@ -12,7 +12,7 @@ public class MountedFolder {
     public MountedFolder(char driveLetter, string mountedHostDirectory) {
         DriveLetter = driveLetter;
         MountedHostDirectory = mountedHostDirectory;
-        FullHostCurrentDirectory = "";
+        CurrentDosDirectory = "";
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ public class MountedFolder {
     public string MountedHostDirectory { get; init; }
 
     /// <summary>
-    /// The full path to the current host directory in use on the drive.
+    /// The current DOS directory in use on the drive.
     /// </summary>
-    public string FullHostCurrentDirectory { get; set; }
+    public string CurrentDosDirectory { get; set; }
 }
