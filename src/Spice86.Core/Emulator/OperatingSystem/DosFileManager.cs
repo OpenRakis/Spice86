@@ -1,6 +1,9 @@
 ﻿
 namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Serilog;
+using Serilog.Events;
+
 using System.Linq;
 using System.Diagnostics;
 
@@ -99,30 +102,25 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
-        string? hostParentDirectory = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(fileName);
-        if (string.IsNullOrWhiteSpace(hostParentDirectory)) {
-            return FileOperationErrorWithLog($"Could not find parent of {fileName} so cannot create file.", ErrorCode.PathNotFound);
-        }
+        string? prefixedPath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Creating file {HostFileName} with attribute {FileAttribute}", hostParentDirectory, fileAttribute);
-        }
-        FileInfo path = new FileInfo(Path.Combine(hostParentDirectory, Path.GetFileName(fileName)));
         FileStream? testFileStream = null;
         try {
-            if (File.Exists(path.FullName)) {
-                File.Delete(path.FullName);
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Creating file using handle: {PrefixedPath} with (ignored) {Attributes}", prefixedPath, fileAttribute);
+            }
+            if (File.Exists(prefixedPath)) {
+                File.Delete(prefixedPath);
             }
 
-            testFileStream = File.Create(path.FullName);
+            testFileStream = File.Create(prefixedPath);
         } catch (IOException e) {
-            e.Demystify();
-            throw new UnrecoverableException("IOException while creating file", e);
+            return PathNotFoundError(fileName);
         } finally {
             testFileStream?.Dispose();
         }
 
-        return OpenFileInternal(fileName, hostParentDirectory, "rw");
+        return OpenFileInternal(fileName, prefixedPath, "rw");
     }
 
     /// <summary>
@@ -515,7 +513,6 @@ public class DosFileManager {
                         } else {
                             return FileNotFoundError(dosFileName);
                         }
-
                         break;
                     }
             }
@@ -579,6 +576,9 @@ public class DosFileManager {
         string prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
         try {
             Directory.CreateDirectory(prefixedDosDirectory);
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Created dir: {CreatedDirPath}", prefixedDosDirectory);
+            }
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
@@ -604,6 +604,10 @@ public class DosFileManager {
 
         try {
             Directory.Delete(fullHostPath);
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Deleted dir: {DeletedDirPath}", fullHostPath);
+            }
+
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
@@ -622,7 +626,6 @@ public class DosFileManager {
     /// <param name="currentDir">The string variable receiving the current DOS directory.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) => _dosPathResolver.GetCurrentDosDirectory(driveNumber, out currentDir);
-
 
     /// <summary>
     /// Gets the current default drive. 0x0: A:, 0x1: B:, ...
