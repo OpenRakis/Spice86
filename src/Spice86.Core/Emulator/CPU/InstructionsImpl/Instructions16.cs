@@ -495,8 +495,8 @@ public class Instructions16 : Instructions16Or32 {
 
     protected override ushort DoLxsAndReturnSegmentValue() {
         uint memoryAddress = ReadLxsMemoryAddress();
-        ModRM.R16 = Memory.UInt16[memoryAddress];
-        return Memory.UInt16[memoryAddress + 2];
+        (ushort segment, ModRM.R16) = Memory.SegmentedAddressValue[memoryAddress];
+        return segment;
     }
     
     public override void InImm8() {
