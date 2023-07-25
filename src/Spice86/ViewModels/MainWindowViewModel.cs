@@ -316,7 +316,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             IReadOnlyList<IStorageFile> files = await storageProvider.OpenFilePickerAsync(options);
 
             if (files.Any()) {
-                filePath = files[0].Path.AbsolutePath;
+                filePath = files[0].Path.LocalPath;
                 await RestartEmulatorWithNewProgram(filePath);
             }
         }
@@ -328,8 +328,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         Configuration.CDrive = Path.GetDirectoryName(Configuration.Exe);
         Configuration.UseCodeOverride = false;
         Play();
-        await Dispatcher.UIThread.InvokeAsync(() => DisposeEmulator(), DispatcherPriority.MaxValue);
-        SetMainTitle();
+        await Dispatcher.UIThread.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         _okayToContinueEvent = new(true);
         _programExecutor?.Machine.ExitEmulationLoop();
         while (_emulatorThread?.IsAlive == true) {
@@ -429,7 +428,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     private bool RunEmulator() {
         if (string.IsNullOrWhiteSpace(Configuration.Exe) ||
-            !File.Exists(Configuration.Exe) ||
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
             return false;
         }
