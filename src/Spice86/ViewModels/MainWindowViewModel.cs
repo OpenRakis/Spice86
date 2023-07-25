@@ -56,6 +56,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private bool _exitDrawThread;
     private Action? _drawAction;
     private Thread? _drawThread;
+    private SemaphoreSlim? _drawingSemaphoreSlim;
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -137,25 +138,28 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     }
 
     private void Draw() {
-        if (_disposed || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || _videoCard is null) {
+        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || _videoCard is null) {
             return;
         }
         if (!_isDrawThreadInitialized) {
             _drawThread = new Thread(DrawThreadMethod) {
                 Name = "UIRenderThread"
             };
+            _drawingSemaphoreSlim = new(1, 1);
             _drawThread.Start();
             _isDrawThreadInitialized = true;
         }
 
         _drawAction ??= () => {
             unsafe {
-                if (_isSettingResolution) {
-                    return;
+                _drawingSemaphoreSlim?.Wait();
+                try {
+                    using ILockedFramebuffer pixels = Bitmap.Lock();
+                    var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                    _videoCard.Render(buffer);
+                } finally {
+                    _drawingSemaphoreSlim?.Release();
                 }
-                using ILockedFramebuffer pixels = Bitmap.Lock();
-                var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                _videoCard.Render(buffer);
                 Dispatcher.UIThread.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
             }
         };
@@ -472,8 +476,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (Width != width || Height != height) {
             Width = width;
             Height = height;
-            Bitmap?.Dispose();
-            Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+            _drawingSemaphoreSlim?.Wait();
+            try {
+                Bitmap?.Dispose();
+                Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+            } finally {
+                _drawingSemaphoreSlim?.Release();
+            }
         }
         _isSettingResolution = false;
     }, DispatcherPriority.MaxValue);
