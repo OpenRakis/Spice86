@@ -269,7 +269,12 @@ internal class DosPathResolver {
     /// </summary>
     public byte CurrentDriveIndex {
         get => (byte)Array.IndexOf(DriveLetters, _currentDrive);
-        set => _currentDrive = DriveLetters[value];
+        set {
+            // Where in Space is Carmen Sandiego ? tries to set this to 119...
+            if (value < (DriveLetters.Length - 1)) {
+                _currentDrive = DriveLetters[value];
+            }
+        }
     }
 
     public byte NumberOfPotentiallyValidDriveLetters => (byte)_driveMap.Count;
