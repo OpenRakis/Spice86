@@ -5,28 +5,33 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 ///     Driver for the mouse.
 /// </summary>
 public class MouseDriver : IMouseDriver {
+    private const byte BeforeUserHandlerExecutionCallbackNumber = 0xFE;
+    private const byte AfterUserHandlerExecutionCallbackNumber = 0xFF;
     private const int VirtualScreenWidth = 640;
-    private readonly Cpu _cpu;
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
-    private readonly IMemory _memory;
     private readonly IMouseDevice _mouseDevice;
     private readonly State _state;
 
     private readonly IVgaFunctionality _vgaFunctions;
+    private readonly InMemoryAddressSwitcher _userHandlerAddressSwitcher;
+
     private int _mouseCursorHidden;
     private MouseRegisters? _savedRegisters;
     private MouseUserCallback _userCallback;
     private VgaMode _vgaMode;
+    private bool _userHandlerIsBeingCalled;
 
     /// <summary>
     ///     Create a new instance of the mouse driver.
@@ -37,9 +42,7 @@ public class MouseDriver : IMouseDriver {
     /// <param name="gui">The gui to show, hide and position mouse cursor</param>
     /// <param name="vgaFunctions">Access to the current resolution</param>
     /// <param name="loggerService">The logger</param>
-    public MouseDriver(Cpu cpu, IMemory memory, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
-        _cpu = cpu;
-        _memory = memory;
+    public MouseDriver(Cpu cpu, IIndexable memory, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
         _state = cpu.State;
         _logger = loggerService;
         _mouseDevice = mouseDevice;
@@ -47,7 +50,7 @@ public class MouseDriver : IMouseDriver {
         _vgaFunctions = vgaFunctions;
 
         _vgaFunctions.VideoModeChanged += OnVideoModeChanged;
-
+        _userHandlerAddressSwitcher = new(memory);
         Reset();
     }
 
@@ -64,15 +67,12 @@ public class MouseDriver : IMouseDriver {
     public int CurrentMinY { get; set; }
 
     /// <inheritdoc />
-    public IAsmUserRoutineHandler? UserRoutineHandler { set; private get; }
-
-    /// <inheritdoc />
     public void BeforeUserHandlerExecution() {
         if (CanCallUserRoutine()) {
-            CallUserRoutine();
+            PrepareUserRoutineCall();
+            EnsureUserRoutineWillBeCalledNextInstruction();
         } else {
-            // User routine needs to be disabled because it is called unconditionally in interrupt handler ASM. Disabling means calling an empty function.
-            UserRoutineHandler?.DisableUserRoutine();
+            EnsureUserRoutineWillBeNotCalledNextInstruction();
         }
     }
 
@@ -85,20 +85,35 @@ public class MouseDriver : IMouseDriver {
             // User callback disabled
             return false;
         }
+        if (_userHandlerIsBeingCalled) {
+            // Call already in progress
+            return false;
+        }
         return true;
     }
 
-    private void CallUserRoutine() {
+    private void PrepareUserRoutineCall() {
+        _userHandlerIsBeingCalled = true;
+        // Re-enable interrupts to allow for higher prio ints to occur (sound)
+        _state.InterruptFlag = true;
         // Save registers so that we can restore them later when user routine is done
         SaveRegisters();
         // User handler is going to be called. Save registers, set them to their new values
         SetRegistersToMouseState();
-        // Set the address of assembly routine to call. Set it every time to ensure it is what we want
-        UserRoutineHandler?.SetUserRoutineAddress(_userCallback.Segment, _userCallback.Offset);
+    }
+
+    private void EnsureUserRoutineWillBeCalledNextInstruction() {
+        // Address is written to the call instruction that is supposed to be just after this code runs.
+        _userHandlerAddressSwitcher.SetAddress(_userCallback.Segment, _userCallback.Offset);
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("{ClassName} {MethodName}: calling {Segment:X4}:{Offset:X4} with AX={AX:X4}, BX={BX:X4}, CX={CX:X4}, DX={DX:X4}, SI={SI:X4}, DI={DI:X4}",
                 nameof(MouseDriver), nameof(BeforeUserHandlerExecution), _userCallback.Segment, _userCallback.Offset, _state.AX, _state.BX, _state.CX, _state.DX, _state.SI, _state.DI);
         }
+    }
+
+    private void EnsureUserRoutineWillBeNotCalledNextInstruction() {
+        // User routine needs to be disabled because it is called unconditionally in interrupt handler ASM. Disabling means calling an empty function.
+        _userHandlerAddressSwitcher.SetAddressToDefault();
     }
 
     /// <inheritdoc />
@@ -175,8 +190,9 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
-    public void AfterMouseDriverExecution() {
+    public void AfterUserHandlerExecution() {
         RestoreRegisters();
+        _userHandlerIsBeingCalled = false;
     }
 
     /// <inheritdoc />
@@ -251,4 +267,28 @@ public class MouseDriver : IMouseDriver {
     }
 
     private record MouseRegisters(ushort Es, ushort Ds, ushort Di, ushort Si, ushort Bp, ushort Sp, ushort Bx, ushort Dx, ushort Cx, ushort Ax);
+    
+    /// <inheritdoc />
+    public SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
+        // Mouse driver implementation:
+        //  - Create a FAR ret which is the default user handler (called when program does not provide anything else)
+        //  - Create a callback (0xFE) that will call the BeforeUserHandlerExecution method
+        //  - Create a modifiable Far call instruction that is calling the default handler
+        //  - Create a callback (0xFF) that does the cleanup with AfterUserHandlerExecution
+        //  - Create a FAR ret
+        
+        // Write ASM
+        // Default user handler: nothing, just a far ret. 
+        _userHandlerAddressSwitcher.DefaultAddress = memoryAsmWriter.GetCurrentAddressCopy();
+        memoryAsmWriter.WriteFarRet();
+        
+        SegmentedAddress driverAddress = memoryAsmWriter.GetCurrentAddressCopy();
+        memoryAsmWriter.RegisterAndWriteCallback(BeforeUserHandlerExecutionCallbackNumber, BeforeUserHandlerExecution);
+        // Far call to default handler, can be changed via _inMemoryAddressSwitcher
+        memoryAsmWriter.WriteFarCallToSwitcherDefaultAddress(_userHandlerAddressSwitcher);
+        memoryAsmWriter.RegisterAndWriteCallback(AfterUserHandlerExecutionCallbackNumber, AfterUserHandlerExecution);
+        // Far ret to return to caller
+        memoryAsmWriter.WriteFarRet();
+        return driverAddress;
+    }
 }

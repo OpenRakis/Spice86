@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -31,7 +32,7 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <param name="callbackNumber">Callback index</param>
     /// <param name="runnable">Action to run when this callback is executed by the CPU</param>
     public void RegisterAndWriteCallback(byte callbackNumber, Action runnable) {
-        ICallback callback = new Callback(callbackNumber, runnable, new SegmentedAddress(CurrentAddress));
+        ICallback callback = new Callback(callbackNumber, runnable, GetCurrentAddressCopy());
         _callbackHandler.AddCallback(callback);
         WriteCallback(callback.Index);
     }
@@ -42,7 +43,7 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteUInt8(callbackNumber);
     }
 
-    
+
     /// <summary>
     /// Erases a callback instruction at current address and replaces it with an INT + a NOP. Useful to dump memory and avoid unsupported opcodes in ghidra.
     /// </summary>
@@ -66,6 +67,19 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
+    /// Writes a far CALL instruction to the given inMemoryAddressSwitcher default address.
+    /// Throws UnrecoverableException if DefaultAddressValue is not initialized.
+    /// If successful, sets the switcher PhysicalLocation to the location of the far call address, making it possible to change it dynamically.
+    /// </summary>
+    /// <returns>Returns the address of the call destination segmented address</returns>
+    public void WriteFarCallToSwitcherDefaultAddress(InMemoryAddressSwitcher inMemoryAddressSwitcher) {
+        if (inMemoryAddressSwitcher.DefaultAddress is null) {
+            throw new UnrecoverableException("Cannot write a FAR call to a null address.");
+        }
+        inMemoryAddressSwitcher.PhysicalLocation = WriteFarCall(inMemoryAddressSwitcher.DefaultAddress).ToPhysical();
+    }
+
+    /// <summary>
     /// Writes a far CALL instruction. 
     /// </summary>
     /// <param name="destination">Segmented address of the function to call</param>
@@ -73,10 +87,9 @@ public class MemoryAsmWriter : MemoryWriter {
     public SegmentedAddress WriteFarCall(SegmentedAddress destination) {
         WriteUInt8(0x9A);
         // Make a copy of the address since it is going to be modified by our writes.
-        SegmentedAddress ret = new SegmentedAddress(CurrentAddress);
+        SegmentedAddress ret = GetCurrentAddressCopy();
         WriteSegmentedAddress(destination);
         return ret;
-
     }
 
     public void WriteFarRet() {

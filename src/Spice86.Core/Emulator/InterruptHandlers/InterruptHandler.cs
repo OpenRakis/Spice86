@@ -57,7 +57,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
         //  - Write that in ram with an IRET
         
         // Write ASM
-        SegmentedAddress interruptHandlerAddress = new SegmentedAddress(memoryAsmWriter.CurrentAddress);
+        SegmentedAddress interruptHandlerAddress = memoryAsmWriter.GetCurrentAddressCopy();
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
         memoryAsmWriter.WriteIret();
 

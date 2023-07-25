@@ -16,6 +16,8 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
+using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -23,7 +25,6 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -69,6 +70,8 @@ public class Machine : IDisposable {
     public CallbackHandler CallbackHandler { get; }
     
     private InterruptInstaller InterruptInstaller { get; }
+
+    private AssemblyRoutineInstaller AssemblyRoutineInstaller { get; }
 
     /// <summary>
     /// The emulated CPU.
@@ -268,7 +271,11 @@ public class Machine : IDisposable {
         // Services
         CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService);
         Cpu.CallbackHandler = CallbackHandler;
-        InterruptInstaller = new InterruptInstaller(Memory, CallbackHandler, Cpu.FunctionHandler);
+        // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
+        MemoryAsmWriter memoryAsmWriter = new MemoryAsmWriter(Memory, new SegmentedAddress(MemoryMap.InterruptHandlersSegment, 0), CallbackHandler);
+        InterruptInstaller =
+            new InterruptInstaller(new InterruptVectorTable(Memory), memoryAsmWriter, Cpu.FunctionHandler);
+        AssemblyRoutineInstaller = new AssemblyRoutineInstaller(memoryAsmWriter, Cpu.FunctionHandler);
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
@@ -304,10 +311,15 @@ public class Machine : IDisposable {
             RegisterInterruptHandler(SystemClockInt1AHandler);
             // Initialize DOS.
             Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
+
             var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
-            var mouseIrq12Handler = new BiosMouseInt74Handler(MouseDriver, DualPic, Memory);
             RegisterInterruptHandler(mouseInt33Handler);
+
+            var mouseIrq12Handler = new BiosMouseInt74Handler(DualPic, Memory);
             RegisterInterruptHandler(mouseIrq12Handler);
+
+            SegmentedAddress mouseDriverAddress = AssemblyRoutineInstaller.InstallAssemblyRoutine(MouseDriver);
+            mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
         }
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
