@@ -27,9 +27,8 @@ public class MachineTest {
 
     [Fact]
     public void TestExecutionBreakpoints() {
-        ProgramExecutor programExecutor = CreateProgramExecutor("add");
+        ProgramExecutor programExecutor = CreateProgramExecutor("add", true);
         Machine machine = programExecutor.Machine;
-        machine.RecordData = true;
         State state = machine.Cpu.State;
         MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
         int triggers = 0;
@@ -338,8 +337,8 @@ public class MachineTest {
         return machine;
     }
 
-    private ProgramExecutor CreateProgramExecutor(string binName) {
-        return new MachineCreator().CreateProgramExecutorFromBinName(binName);
+    private ProgramExecutor CreateProgramExecutor(string binName, bool recordData = false) {
+        return new MachineCreator().CreateProgramExecutorFromBinName(binName, recordData);
     }
 
     private Machine Execute(string binName) {

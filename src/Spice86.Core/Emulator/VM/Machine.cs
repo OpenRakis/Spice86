@@ -46,7 +46,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// Gets or set if we record execution data, for reverse engineering purposes.
     /// </summary>
-    public bool RecordData { get; set; }
+    public bool RecordData { get; }
     
     /// <summary>
     /// Memory mapped BIOS values.
@@ -426,7 +426,11 @@ public sealed class Machine : IDisposable {
     private void StartRunLoop(FunctionHandler functionHandler, State state) {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
-        RunLoop();
+        if (RecordData) {
+            RunLoopWhileRecordingExecutionData();
+        } else {
+            RunLoop();
+        }
     }
 
     /// <summary>
@@ -439,12 +443,18 @@ public sealed class Machine : IDisposable {
     /// </summary>
     public void ExitEmulationLoop() => Cpu.IsRunning = false;
 
+    private void RunLoopWhileRecordingExecutionData() {
+        while (Cpu.IsRunning) {
+            PauseIfAskedTo();
+            MachineBreakpoints.CheckBreakPoint();
+            Cpu.ExecuteNextInstruction();
+            Timer.Tick();
+        }
+    }
+    
     private void RunLoop() {
         while (Cpu.IsRunning) {
             PauseIfAskedTo();
-            if (RecordData) {
-                MachineBreakpoints.CheckBreakPoint();
-            }
             Cpu.ExecuteNextInstruction();
             Timer.Tick();
         }
