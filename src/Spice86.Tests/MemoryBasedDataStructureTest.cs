@@ -192,7 +192,12 @@ public class MemoryBasedDataStructureTest {
 
         int index = 0;
         foreach (T actual in collection) {
-            Assert.Equal(expectedArray[index++], actual);
+            T expected = expectedArray[index];
+            if (!EqualityComparer<T>.Default.Equals(expected, actual)) {
+                Assert.Fail($"Values at index {index} do not match. Expected {expected} but got {actual}");
+            }
+
+            index++;
         }
     }
 
