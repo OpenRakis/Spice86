@@ -496,6 +496,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                _drawingSemaphoreSlim?.Dispose();
                 DisposeDrawThread();
                 Dispatcher.UIThread.Post(() => {
                     Bitmap?.Dispose();
