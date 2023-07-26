@@ -13,18 +13,19 @@ using Moq;
 using Spice86.Logging;
 
 public class MachineCreator {
-    public ProgramExecutor CreateProgramExecutorFromBinName(string binName) {
-        return CreateProgramExecutorForBin($"Resources/cpuTests/{binName}.bin");
+    public ProgramExecutor CreateProgramExecutorFromBinName(string binName, bool recordData = false) {
+        return CreateProgramExecutorForBin($"Resources/cpuTests/{binName}.bin", recordData);
     }
 
-    public ProgramExecutor CreateProgramExecutorForBin(string binPath) {
+    public ProgramExecutor CreateProgramExecutorForBin(string binPath, bool recordData = false) {
         Configuration configuration = new Configuration {
             // making sure int8 is not going to be triggered during the tests
             InstructionsPerSecond = 10000000,
             Exe = binPath,
             // Don't expect any hash for the exe
             ExpectedChecksumValue = Array.Empty<byte>(),
-            InitializeDOS = false
+            InitializeDOS = false,
+            DumpDataOnExit = recordData
         };
 
         ILoggerService loggerService = new Mock<LoggerService>(new LoggerPropertyBag()).Object;
