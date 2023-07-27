@@ -21,9 +21,13 @@ public class FunctionHandler {
 
     private readonly bool _recordData;
 
-    private readonly Machine _machine;
+    private readonly State _state;
 
-    private uint StackPhysicalAddress => _machine.Cpu.State.StackPhysicalAddress;
+    private readonly IMemory _memory;
+
+    private readonly ExecutionFlowRecorder _executionFlowRecorder;
+
+    private uint StackPhysicalAddress => _state.StackPhysicalAddress;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="FunctionHandler"/> class.
@@ -31,9 +35,11 @@ public class FunctionHandler {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="recordData">Whether we record execution data. If not, <see cref="Call"/> and <see cref="Ret"/> won't record execution flow.</param>
-    public FunctionHandler(Machine machine, ILoggerService loggerService, bool recordData) {
+    public FunctionHandler(IMemory memory, State state, ExecutionFlowRecorder executionFlowRecorder, ILoggerService loggerService, bool recordData) {
+        _memory = memory;
+        _state = state;
+        _executionFlowRecorder = executionFlowRecorder;
         _loggerService = loggerService;
-        _machine = machine;
         _recordData = recordData;
     }
 
@@ -152,10 +158,9 @@ public class FunctionHandler {
     /// <param name="stackPhysicalAddress">The physical address of the stack.</param>
     /// <returns>The return address of the specified call type from the machine stack at the specified physical address without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
-        IMemory memory = _machine.Memory;
-        State state = _machine.Cpu.State;
+        IMemory memory = _memory;
         return returnCallType switch {
-            CallType.NEAR => new SegmentedAddress(state.CS, memory.UInt16[stackPhysicalAddress]),
+            CallType.NEAR => new SegmentedAddress(_state.CS, memory.UInt16[stackPhysicalAddress]),
             CallType.FAR or CallType.INTERRUPT => new SegmentedAddress(memory.SegmentedAddressValue[stackPhysicalAddress]),
             CallType.MACHINE => null,
             _ => null
@@ -226,10 +231,8 @@ public class FunctionHandler {
     }
 
     private FunctionReturn GenerateCurrentFunctionReturn(CallType returnCallType) {
-        Cpu cpu = _machine.Cpu;
-        State state = cpu.State;
-        ushort cs = state.CS;
-        ushort ip = state.IP;
+        ushort cs = _state.CS;
+        ushort ip = _state.IP;
         return new FunctionReturn(returnCallType, new SegmentedAddress(cs, ip));
     }
 
@@ -243,12 +246,7 @@ public class FunctionHandler {
     }
 
 
-    private SegmentedAddress CurrentStackAddress {
-        get {
-            State state = _machine.Cpu.State;
-            return new SegmentedAddress(state.SS, state.SP);
-        }
-    }
+    private SegmentedAddress CurrentStackAddress => new(_state.SS, _state.SP);
 
     private FunctionInformation? GetFunctionInformation(FunctionCall? functionCall) {
         if (functionCall == null) {
@@ -269,11 +267,9 @@ public class FunctionHandler {
             // Everything is normal
             return true;
         }
-        
-        Cpu cpu  = _machine.Cpu;
-        State state = cpu.State;
+
         // Record the unexpected behaviour. Generated code will see this as well.
-        cpu.ExecutionFlowRecorder.RegisterUnalignedReturn(state.CS, state.IP, actualReturnAddress.Segment,
+        _executionFlowRecorder.RegisterUnalignedReturn(_state.CS, _state.IP, actualReturnAddress.Segment,
             actualReturnAddress.Offset);
         FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose) && currentFunctionInformation != null

@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
+using IMemory = Spice86.Core.Emulator.Memory.IMemory;
+
 /// <summary>
 /// A class that records machine code execution flow.
 /// </summary>
@@ -84,7 +86,7 @@ public class ExecutionFlowRecorder {
     /// Speeds up the emulator quite a bit.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
-    internal void PreAllocatePossibleExecutionFlowBreakPoints(Machine machine) {
+    internal void PreAllocatePossibleExecutionFlowBreakPoints(IMemory memory, State state) {
         //Avoid re-entry.
         if (_addressBreakPoints.Count != 0) {
             return;
@@ -93,7 +95,7 @@ public class ExecutionFlowRecorder {
         // Beyond that, this code would have to be deleted,
         // as the allocation would take way too much time.
         for (uint i = 0; i < Memory.A20Gate.EndOfHighMemoryArea; i++) {
-            _addressBreakPoints.Add(i, GenerateBreakPoint(machine, i));
+            _addressBreakPoints.Add(i, GenerateBreakPoint(memory, state, i));
         }
     }
 
@@ -174,45 +176,43 @@ public class ExecutionFlowRecorder {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="cs">The value of the CS register, for the segment.</param>
     /// <param name="ip">The value of the IP register, for the offset.</param>
-    public void RegisterExecutableByte(Machine machine, ushort cs, ushort ip) {
+    public void RegisterExecutableByte(IMemory memory, State state, MachineBreakpoints machineBreakpoints, ushort cs, ushort ip) {
         // Note: this is not enough, instructions modified before they are discovered are not counted as rewritten.
         // If we saved the coverage to reload it each time, we would get a different picture of the rewritten code but that would come with other issues.
         // Code modified before being ever executed is arguably not self modifying code. 
         uint address = MemoryUtils.ToPhysicalAddress(cs, ip);
-        RegisterExecutableByteModificationBreakPoint(machine, address);
+        RegisterExecutableByteModificationBreakPoint(memory, state, machineBreakpoints, address);
     }
-
     /// <summary>
     /// Creates a memory write breakpoint on the given executable address.
     /// When triggered will fill <see cref="ExecutableAddressWrittenBy"/> appropriately:
     ///  - key of the map is the address being modified
     ///  - value is a dictionary of instruction addresses that modified it, with for each instruction a list of the before and after values.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="machineBreakpoints">The emulator machine.</param>
     /// <param name="physicalAddress">The address to set the breakpoint at.</param>
-    public void RegisterExecutableByteModificationBreakPoint(Machine machine, uint physicalAddress) {
+    public void RegisterExecutableByteModificationBreakPoint(IMemory memory, State state, MachineBreakpoints machineBreakpoints, uint physicalAddress) {
         if (!_executableCodeAreasEncountered.Add(physicalAddress)) {
             return;
         }
 
         AddressBreakPoint? breakPoint;
         if (!_addressBreakPoints.TryGetValue(physicalAddress, out breakPoint)) {
-            breakPoint = GenerateBreakPoint(machine, physicalAddress);
+            breakPoint = GenerateBreakPoint(memory, state, physicalAddress);
         }
         
-        machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        machineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
-    private AddressBreakPoint GenerateBreakPoint(Machine machine, uint physicalAddress) {
+    private AddressBreakPoint GenerateBreakPoint(IMemory memory, State state, uint physicalAddress) {
         AddressBreakPoint breakPoint = new(BreakPointType.WRITE, physicalAddress, _ => {
             if (!IsRegisterExecutableCodeModificationEnabled) {
                 return;
             }
 
-            byte oldValue = machine.Memory.UInt8[physicalAddress];
-            byte newValue = machine.Memory.CurrentlyWritingByte;
+            byte oldValue = memory.UInt8[physicalAddress];
+            byte newValue = memory.CurrentlyWritingByte;
             if (oldValue != newValue) {
-                State state = machine.Cpu.State;
                 RegisterExecutableByteModification(
                     new SegmentedAddress(state.CS, state.IP), physicalAddress, oldValue, newValue);
             }

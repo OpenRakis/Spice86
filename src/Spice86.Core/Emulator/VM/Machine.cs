@@ -220,11 +220,13 @@ public sealed class Machine : IDisposable {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         BiosDataArea = new BiosDataArea(Memory);
-        Cpu = new Cpu(this, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
+        
+        Cpu = new Cpu(Memory, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 
         // Breakpoints
-        MachineBreakpoints = new MachineBreakpoints(this, machineCreationOptions.LoggerService);
-
+        MachineBreakpoints = new MachineBreakpoints(Memory, Cpu.State, machineCreationOptions.Gui, machineCreationOptions.LoggerService);
+        Cpu.SetMachineBreakPoints(MachineBreakpoints);
+        
         // IO devices
         IoPortDispatcher = new IOPortDispatcher(
             Memory,
@@ -239,7 +241,8 @@ public sealed class Machine : IDisposable {
 
         DualPic = new DualPic(Memory, Cpu, Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(DualPic);
-
+        Cpu.SetDualPic(DualPic);
+        
         VgaRegisters = new VideoState();
         VgaIoPortHandler = new VgaIoPortHandler(Memory, Cpu, Cpu.State, machineCreationOptions.LoggerService, machineCreationOptions.Configuration, VgaRegisters);
         RegisterIoPortHandler(VgaIoPortHandler);

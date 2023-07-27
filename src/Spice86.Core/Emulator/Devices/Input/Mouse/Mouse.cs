@@ -138,10 +138,6 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void UpdateMouse() {
-        if (_gui?.IsPaused is true) {
-            return;
-        }
-
         long timestamp = DateTime.Now.Ticks;
         // Check sample rate to see if we need to send an update yet.
         long ticksElapsed = timestamp - _lastUpdateTimestamp;

@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.InstructionsImpl;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -33,9 +34,10 @@ public class Cpu {
     private static readonly HashSet<int> _stringOpCodes = new()
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
-    private readonly Machine _machine;
     private readonly IMemory _memory;
+    private DualPic? _dualPic;
     private readonly ModRM _modRM;
+    private MachineBreakpoints? _machineBreakpoints;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
     private readonly Instructions32 _instructions32;
@@ -64,17 +66,16 @@ public class Cpu {
 
     public InterruptVectorTable InterruptVectorTable { get; }
 
-    public Cpu(Machine machine, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+    public Cpu(IMemory memory, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
         _loggerService = loggerService;
-        _machine = machine;
-        _memory = machine.Memory;
+        _memory = memory;
         InterruptVectorTable = new((Indexable)_memory);
         State = new State();
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);
         ExecutionFlowRecorder = executionFlowRecorder;
-        FunctionHandler = new FunctionHandler(machine, _loggerService, recordData);
-        FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, _loggerService, recordData);
+        FunctionHandler = new FunctionHandler(_memory, State, ExecutionFlowRecorder, _loggerService, recordData);
+        FunctionHandlerInExternalInterrupt = new FunctionHandler(_memory, State, ExecutionFlowRecorder, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
         _modRM = new ModRM(_memory, this, State);
         _instructions8 = new Instructions8(Alu, this, _memory, _modRM);
@@ -83,6 +84,11 @@ public class Cpu {
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
     }
+
+    internal void SetDualPic(DualPic dualPic) => _dualPic = dualPic;
+
+    internal void SetMachineBreakPoints(MachineBreakpoints machineBreakpoints) =>
+        _machineBreakpoints = machineBreakpoints;
 
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
@@ -163,25 +169,31 @@ public class Cpu {
 
     public uint NextUint32() {
         uint res = _memory.UInt32[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+2));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+3));
+        if (_machineBreakpoints is not null) {
+            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, _internalIp);
+            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, (ushort) (_internalIp+1));
+            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, (ushort) (_internalIp+2));
+            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, (ushort) (_internalIp+3));
+        }
         _internalIp += 4;
         return res;
     }
 
     public ushort NextUint16() {
         ushort res = _memory.UInt16[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
+        if (_machineBreakpoints is not null) {
+            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, _internalIp);
+            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, (ushort) (_internalIp+1));
+        }
         _internalIp += 2;
         return res;
     }
 
     public byte NextUint8() {
         byte res = _memory.UInt8[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
+        if (_machineBreakpoints is not null) {
+            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, _internalIp);
+        }
         _internalIp++;
         return res;
     }
@@ -1194,7 +1206,7 @@ public class Cpu {
         }
 
         // Check the PIC in case this was not directly set by rewritten code
-        ExternalInterruptVectorNumber ??= _machine.DualPic.ComputeVectorNumber();
+        ExternalInterruptVectorNumber ??= _dualPic?.ComputeVectorNumber();
 
         if (ExternalInterruptVectorNumber == null) {
             return;

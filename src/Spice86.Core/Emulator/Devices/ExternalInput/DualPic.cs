@@ -103,9 +103,9 @@ public class DualPic : DefaultIOPortHandler {
     /// <summary>
     /// Computes the interrupt vector number from the first PIC that has a pending request,
     /// or from the second PIC if the first PIC has no pending requests.
-    /// If neither PIC has a pending request, returns null.
+    /// If neither PIC has a pending request, returns <c>null</c>.
     /// </summary>
-    /// <returns>The interrupt vector number, or null if no pending request.</returns>
+    /// <returns>The interrupt vector number, or <c>null</c> if no pending request.</returns>
     public byte? ComputeVectorNumber() {
         if (_pic1.HasPendingRequest()) {
             return _pic1.ComputeVectorNumber();
