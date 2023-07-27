@@ -76,7 +76,7 @@ public class Cpu {
         FunctionHandler = new FunctionHandler(machine, _loggerService, recordData);
         FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
-        _modRM = new ModRM(machine, this);
+        _modRM = new ModRM(_memory, this, State);
         _instructions8 = new Instructions8(Alu, this, _memory, _modRM);
         _instructions16 = new Instructions16(Alu, this, _memory, _modRM);
         _instructions32 = new Instructions32(Alu, this, _memory, _modRM);

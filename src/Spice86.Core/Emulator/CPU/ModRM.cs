@@ -8,16 +8,14 @@ using Spice86.Shared.Utils;
 
 public class ModRM {
     private readonly Cpu _cpu;
-    private readonly Machine _machine;
     private readonly Memory.IMemory _memory;
     private readonly State _state;
     private int _registerMemoryIndex;
 
-    public ModRM(Machine machine, Cpu cpu) {
-        _machine = machine;
+    public ModRM(IMemory memory, Cpu cpu, State state) {
         _cpu = cpu;
-        _memory = machine.Memory;
-        _state = cpu.State;
+        _memory = memory;
+        _state = state;
     }
 
     public uint GetAddress(int defaultSegmentRegisterIndex, ushort offset) {
