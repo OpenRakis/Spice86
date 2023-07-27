@@ -376,9 +376,6 @@ public sealed class Machine : IDisposable {
         while (Cpu.IsRunning && !_exitDmaLoop && !_exitEmulationLoop && !_disposed) {
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                if (Gui?.IsPaused == true || IsPaused) {
-                    Gui?.WaitForContinue();
-                }
                 bool transfered = dmaChannel.Transfer(Memory);
                 if (!_exitDmaLoop && !transfered) {
                     _dmaResetEvent.WaitOne(Timeout.Infinite);
@@ -434,10 +431,6 @@ public sealed class Machine : IDisposable {
     private void StartRunLoop(FunctionHandler functionHandler, State state) {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
-        if(Gui?.PauseEmulatorOnStart == true) {
-            Gui?.PauseEmulationOnStart();
-            Gui?.WaitForContinue();
-        }
         RunLoop();
     }
 
@@ -475,13 +468,16 @@ public sealed class Machine : IDisposable {
     }
 
     private void PauseIfAskedTo() {
-        if (Gui?.IsPaused == true) {
+        bool signaledGdb = false;
+        while (Gui?.IsPaused == true) {
             IsPaused = true;
-            if (!_programExecutor.Step()) {
-                Gui?.WaitForContinue(true);
+            if (!signaledGdb) {
+                _programExecutor.Step();
+                signaledGdb = true;
             }
-            IsPaused = false;
+            Thread.Sleep(1);
         }
+        IsPaused = false;
     }
 
     /// <summary>

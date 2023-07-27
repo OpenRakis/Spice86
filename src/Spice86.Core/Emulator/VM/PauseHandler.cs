@@ -58,7 +58,7 @@ public sealed class PauseHandler : IDisposable {
         _pauseRequested = false;
         if(!_disposed) {
             _manualResetEvent.Set();
-            if(_gui is not null && _gui.IsPaused) {
+            if(_gui?.IsPaused == true) {
                 _gui.Play();
             }
         }

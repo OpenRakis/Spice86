@@ -27,10 +27,15 @@ public interface IGui {
 
     /// <summary>
     /// Indicates whether the GUI considers the Emulator is paused. <br/>
-    /// When True, the Play button is displayed <br/>
-    /// When False, the Pause button is displayed <br/>
+    /// When <c>true</c>, the Play button is displayed <br/>
+    /// When <c>false</c>, the Pause button is displayed <br/>
     /// </summary>
     bool IsPaused { get; }
+
+    /// <summary>
+    /// Makes the UI display the Pause button, and hide the Pause button.
+    /// </summary>
+    void Play();
 
     /// <summary>
     /// Indicates whether a keyboard key is up.
@@ -41,32 +46,6 @@ public interface IGui {
     /// Indicates whether a keyboard key is down.
     /// </summary>
     public event EventHandler<KeyboardEventArgs>? KeyDown;
-
-    /// <summary>
-    /// Pauses the Emulator, displays the Play button.
-    /// </summary>
-    public void Pause();
-
-    /// <summary>
-    /// Plays the Emulator, displays the Pause button.
-    /// </summary>
-    public void Play();
-
-    /// <summary>
-    /// Whether the GUI wants to pause the emulation on startup
-    /// </summary>
-    bool PauseEmulatorOnStart { get; }
-
-    /// <summary>
-    /// For when the GUI wants to pause the emulation on startup, the emulator calls this to pause the thread.
-    /// </summary>
-    void PauseEmulationOnStart();
-
-    /// <summary>
-    /// Blocks the current thread until the GUI's WaitHandle receives a signal.
-    /// </summary>
-    /// <param name="isPaused">Whether the <see cref="IsPaused"/> property must be set to <c>True</c></param>
-    void WaitForContinue(bool isPaused = false);
 
     /// <summary>
     /// X coordinates of the mouse cursor, in pixels.

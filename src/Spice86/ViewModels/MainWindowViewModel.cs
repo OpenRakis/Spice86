@@ -76,8 +76,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
-    public bool PauseEmulatorOnStart { get; private set; }
-
     internal void OnKeyUp(KeyEventArgs e) {
         _avaloniaKeyScanCodeConverter ??= new();
         KeyUp?.Invoke(this,
@@ -171,8 +169,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     [ObservableProperty]
     private WriteableBitmap? _bitmap;
 
-    private ManualResetEvent? _okayToContinueEvent;
-
     internal void OnKeyDown(KeyEventArgs e) {
         _avaloniaKeyScanCodeConverter ??= new();
         KeyDown?.Invoke(this,
@@ -195,11 +191,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
     private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
-
-    public void PauseEmulationOnStart() {
-        Pause();
-        PauseEmulatorOnStart = false;
-    }
 
     public int Width { get; private set; }
 
@@ -250,7 +241,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             return;
         }
 
-        _okayToContinueEvent?.Reset();
         IsPaused = true;
     }
 
@@ -259,8 +249,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (_emulatorThread is null) {
             return;
         }
-
-        _okayToContinueEvent?.Set();
         IsPaused = false;
     }
 
@@ -283,7 +271,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     public async Task DebugExecutable() {
         _closeAppOnEmulatorExit = false;
         await StartNewExecutable();
-        PauseEmulatorOnStart = true;
+        Pause();
     }
 
     [RelayCommand]
@@ -333,7 +321,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         Configuration.UseCodeOverride = false;
         Play();
         await Dispatcher.UIThread.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
-        _okayToContinueEvent = new(true);
         _programExecutor?.Machine.ExitEmulationLoop();
         while (_emulatorThread?.IsAlive == true) {
             Dispatcher.UIThread.RunJobs();
@@ -507,11 +494,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
                 DisposeEmulator();
                 _performanceWindow?.Close();
                 _paletteWindow?.Close();
-                _okayToContinueEvent?.Set();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
-                _okayToContinueEvent?.Dispose();
             }
             _disposed = true;
         }
@@ -623,10 +608,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     }
 
     private void StartProgramExecutor() {
-        if (!_disposed) {
-            _okayToContinueEvent?.Set();
-        }
-
         _programExecutor = new ProgramExecutor(_loggerService, this, Configuration);
         TimeMultiplier = Configuration.TimeMultiplier;
         _videoCard = _programExecutor.Machine.VgaCard;
@@ -637,13 +618,5 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             _desktop.MainWindow is not null) {
             Dispatcher.UIThread.Post(() => _desktop.MainWindow.Close());
         }
-    }
-
-    /// <inheritdoc />
-    public void WaitForContinue(bool isPaused) {
-        if(isPaused) {
-            IsPaused = true;
-        }
-        _okayToContinueEvent?.WaitOne(Timeout.Infinite);
     }
 }
