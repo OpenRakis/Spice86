@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -21,7 +22,6 @@ public class ExeLoader : DosFileLoader {
     private readonly EnvironmentVariables _environmentVariables;
     private readonly DosFileManager _dosFileManager;
     private readonly DosMemoryManager _dosMemoryManager;
-    private readonly State _state;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExeLoader"/> class with the specified machine, logger service, and starting segment.
@@ -33,7 +33,7 @@ public class ExeLoader : DosFileLoader {
     /// <param name="dosFileManager">The DOS file manager.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>
     /// <param name="startSegment">The starting segment for the executable.</param>
-    public ExeLoader(Machine machine, ILoggerService loggerService, State state, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(machine, loggerService) {
+    public ExeLoader(IMemory memory, State state, ILoggerService loggerService, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(memory, state, loggerService) {
         _loggerService = loggerService;
         _startSegment = startSegment;
         _state = state;
@@ -69,7 +69,7 @@ public class ExeLoader : DosFileLoader {
         SetupCpuForExe(exeFile, _startSegment, pspSegment);
         new PspGenerator(_memory, _environmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(pspSegment, arguments);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Initial CPU State: {CpuState}", _cpu.State);
+            _loggerService.Debug("Initial CPU State: {CpuState}", _state);
         }
         return exe;
     }

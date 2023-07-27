@@ -17,7 +17,6 @@ public class ComLoader : DosFileLoader {
     private readonly EnvironmentVariables _environmentVariables;
     private readonly DosFileManager _dosFileManager;
     private readonly DosMemoryManager _dosMemoryManager;
-    private readonly State _state;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ComLoader"/> class with the specified parameters.
@@ -29,7 +28,7 @@ public class ComLoader : DosFileLoader {
     /// <param name="dosFileManager">The DOS file manager.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>
     /// <param name="startSegment">The starting segment of the program.</param>
-    public ComLoader(Machine machine, ILoggerService loggerService, State state, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(machine, loggerService) {
+    public ComLoader(IMemory memory, State state, ILoggerService loggerService, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(memory, state, loggerService) {
         _startSegment = startSegment;
         _environmentVariables = environmentVariables;
         _dosFileManager = dosFileManager;

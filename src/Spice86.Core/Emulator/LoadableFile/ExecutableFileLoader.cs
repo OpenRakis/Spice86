@@ -14,12 +14,7 @@ public abstract class ExecutableFileLoader {
     /// <summary>
     /// The emulator CPU.
     /// </summary>
-    protected Cpu _cpu;
-    
-    /// <summary>
-    /// The emulator machine.
-    /// </summary>
-    protected Machine _machine;
+    protected State _state;
     
     /// <summary>
     /// The memory bus.
@@ -33,11 +28,10 @@ public abstract class ExecutableFileLoader {
     /// </summary>
     /// <param name="machine">The <see cref="Machine"/> instance.</param>
     /// <param name="loggerService">The <see cref="ILoggerService"/> instance.</param>
-    protected ExecutableFileLoader(Machine machine, ILoggerService loggerService) {
+    protected ExecutableFileLoader(IMemory memory, State state, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _machine = machine;
-        _cpu = machine.Cpu;
-        _memory = machine.Memory;
+        _memory = memory;
+        _state = state;
     }
 
     /// <summary>
@@ -68,9 +62,8 @@ public abstract class ExecutableFileLoader {
     /// <param name="cs">The segment value of the entry point.</param>
     /// <param name="ip">The offset value of the entry point.</param>
     protected void SetEntryPoint(ushort cs, ushort ip) {
-        State state = _cpu.State;
-        state.CS = cs;
-        state.IP = ip;
+        _state.CS = cs;
+        _state.IP = ip;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }

@@ -106,10 +106,9 @@ public sealed class ProgramExecutor : IDisposable {
         string lowerCaseFileName = executableFileName.ToLowerInvariant();
         ushort entryPointSegment = (ushort)configuration.ProgramEntryPointSegment;
         if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(
-                Machine,
-                _loggerService,
+            return new ExeLoader(Machine.Memory,
                 Machine.Cpu.State,
+                _loggerService,
                 Machine.Dos.EnvironmentVariables,
                 Machine.Dos.FileManager,
                 Machine.Dos.MemoryManager,
@@ -117,16 +116,16 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(Machine,
-                _loggerService,
+            return new ComLoader(Machine.Memory,
                 Machine.Cpu.State,
+                _loggerService,
                 Machine.Dos.EnvironmentVariables,
                 Machine.Dos.FileManager,
                 Machine.Dos.MemoryManager,
                 entryPointSegment);
         }
 
-        return new BiosLoader(Machine, _loggerService);
+        return new BiosLoader(Machine.Memory, Machine.Cpu.State, _loggerService);
     }
 
     private Machine CreateMachine(IGui? gui) {
