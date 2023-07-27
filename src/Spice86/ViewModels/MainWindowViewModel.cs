@@ -496,12 +496,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _drawingSemaphoreSlim?.Dispose();
                 DisposeDrawThread();
                 Dispatcher.UIThread.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
                 }, DispatcherPriority.MaxValue);
+                _drawingSemaphoreSlim?.Dispose();
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
