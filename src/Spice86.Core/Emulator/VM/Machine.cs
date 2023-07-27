@@ -468,14 +468,13 @@ public sealed class Machine : IDisposable {
     }
 
     private void PauseIfAskedTo() {
-        bool signaledGdb = false;
-        while (Gui?.IsPaused == true) {
+        if (Gui?.IsPaused is true) {
             IsPaused = true;
-            if (!signaledGdb) {
-                _programExecutor.Step();
-                signaledGdb = true;
+            if (!_programExecutor.Step()) {
+                while (Gui?.IsPaused is true) {
+                    Thread.Sleep(1);
+                }
             }
-            Thread.Sleep(1);
         }
         IsPaused = false;
     }
