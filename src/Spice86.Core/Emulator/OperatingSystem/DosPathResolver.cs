@@ -130,7 +130,7 @@ internal class DosPathResolver {
         if(backslashedDosPath.StartsWith(driveRoot)) {
             backslashedDosPath = backslashedDosPath[3..];
         }
-        else if (backslashedDosPath.StartsWith(driveRoot[..1])) {
+        else if (backslashedDosPath.StartsWith(driveRoot[..2])) {
             backslashedDosPath = backslashedDosPath[2..];
         }
 

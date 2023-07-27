@@ -36,6 +36,19 @@ public class DosFileManagerTests {
         currentDir.Should().BeEquivalentTo(expected);
     }
 
+    [Fact]
+    public void CanOpenFileBeginningWithC() {
+        // Arrange
+        DosFileManager dosFileManager = ArrangeDosFileManager(@$"{MountPoint}\foo\bar");
+
+        // Act
+        var result = dosFileManager.OpenFile("C.txt", 1);
+
+        // Assert
+        result.Should().BeEquivalentTo(DosFileOperationResult.Value16(0));
+        dosFileManager.OpenFiles.ElementAtOrDefault(0)?.Name.Should().Be("C.txt");
+    }
+
     [Theory]
     [InlineData(@"foo", "FOO")]
     [InlineData(@"foo/", "FOO")]
