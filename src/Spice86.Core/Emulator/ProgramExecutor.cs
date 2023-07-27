@@ -155,7 +155,7 @@ public sealed class ProgramExecutor : IDisposable {
 
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
         LoadFileToRun(_configuration, loader);
-        executionFlowRecorder.PreAllocatePossibleExecutionFlowBreakPoints(Machine);
+        executionFlowRecorder.PreAllocatePossibleExecutionFlowBreakPoints(Machine.Memory, Machine.Cpu.State);
         return Machine;
     }
 

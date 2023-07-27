@@ -335,13 +335,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
             Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
 
-            while (_gui?.IsPaused is true) {
-                Thread.Sleep(1);
-                if (_endPlayback) {
-                    return;
-                }
-            }
-
             if (_pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = (_pauseDuration / (1024 / 2)) + 1;
