@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.LoadableFile.Dos;
 
-using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -11,9 +12,8 @@ public abstract class DosFileLoader : ExecutableFileLoader {
     /// <summary>
     /// Initializes a new instance of the <see cref="DosFileLoader"/> class with the specified <paramref name="machine"/> and <paramref name="loggerService"/>.
     /// </summary>
-    /// <param name="machine">The <see cref="Machine"/> instance.</param>
     /// <param name="loggerService">The <see cref="ILoggerService"/> instance.</param>
-    protected DosFileLoader(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
+    protected DosFileLoader(IMemory memory, State state, ILoggerService loggerService) : base(memory, state, loggerService) {
     }
 
     /// <summary>
