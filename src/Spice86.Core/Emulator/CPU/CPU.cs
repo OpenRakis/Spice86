@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -76,9 +77,9 @@ public class Cpu {
         FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
         _modRM = new ModRM(machine, this);
-        _instructions8 = new Instructions8(machine, Alu, this, _memory, _modRM);
-        _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM);
-        _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM);
+        _instructions8 = new Instructions8(Alu, this, _memory, _modRM);
+        _instructions16 = new Instructions16(Alu, this, _memory, _modRM);
+        _instructions32 = new Instructions32(Alu, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
     }
@@ -877,7 +878,7 @@ public class Cpu {
 
                         break;
                     }
-                    default: throw new InvalidGroupIndexException(_machine, groupIndex);
+                    default: throw new InvalidGroupIndexException(State, groupIndex);
                 }
                 break;
             }
@@ -909,7 +910,7 @@ public class Cpu {
                         _modRM.SetRm16(0xFF);
                         break;
                     default:
-                        throw new InvalidGroupIndexException(_machine, groupIndex);
+                        throw new InvalidGroupIndexException(State, groupIndex);
                 }
                 break;
             }
@@ -1204,10 +1205,10 @@ public class Cpu {
     }
 
     private void HandleInvalidOpcode(ushort opcode) =>
-        throw new InvalidOpCodeException(_machine, opcode, false);
+        throw new InvalidOpCodeException(State, opcode, false);
 
     private void HandleInvalidOpcodeBecausePrefix(byte opcode) =>
-        throw new InvalidOpCodeException(_machine, opcode, true);
+        throw new InvalidOpCodeException(State, opcode, true);
 
     private void HandleJump(ushort cs, ushort ip) {
         ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, cs, ip);
@@ -1222,7 +1223,7 @@ public class Cpu {
 
         (ushort targetCS, ushort targetIP) = InterruptVectorTable[vectorNumber.Value];
         if (ErrorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0) {
-            throw new UnhandledOperationException(_machine,
+            throw new UnhandledOperationException(State,
                 $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");
         }
 
@@ -1295,7 +1296,7 @@ public class Cpu {
             0xE => State.ZeroFlag || State.SignFlag != State.OverflowFlag,
             // JG
             0xF => !State.ZeroFlag && State.SignFlag == State.OverflowFlag,
-            _ => throw new InvalidOpCodeException(_machine, opcode, false)
+            _ => throw new InvalidOpCodeException(State, opcode, false)
         };
     }
 
@@ -1435,4 +1436,10 @@ public class Cpu {
         }
         State.CX = cx;
     }
+
+    /// <summary>
+    /// Peeks at the return address.
+    /// </summary>
+    /// <returns>The return address string.</returns>
+    public string PeekReturn() => SegmentedAddress.ToString(FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
 }

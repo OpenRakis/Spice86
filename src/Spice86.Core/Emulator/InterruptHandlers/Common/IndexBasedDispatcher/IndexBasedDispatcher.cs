@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -22,17 +23,17 @@ public abstract class IndexBasedDispatcher<T> where T: IRunnable {
     protected readonly ILoggerService _loggerService;
 
     /// <summary>
-    /// The emulator machine.
+    /// The CPU state.
     /// </summary>
-    protected readonly Machine _machine;
+    protected readonly State _state;
 
     /// <summary>
     /// Initializes a new instance of an <see cref="IndexBasedDispatcher"/>
     /// </summary>
-    /// <param name="machine">The emulator machine instance</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logging service to be used (eg. for recording warnings or errors).</param>
-    public IndexBasedDispatcher(Machine machine, ILoggerService loggerService) {
-        _machine = machine;
+    public IndexBasedDispatcher(State state, ILoggerService loggerService) {
+        _state = state;
         _loggerService = loggerService;
     }
 
@@ -58,6 +59,11 @@ public abstract class IndexBasedDispatcher<T> where T: IRunnable {
         GetRunnable(index).Run();
     }
 
+    /// <summary>
+    /// Returns whether the dispatch table contains this key.
+    /// </summary>
+    /// <param name="index">The index key.</param>
+    /// <returns>A boolean value indicating whether the index is recognized.</returns>
     public bool HasRunnable(int index) {
         return _dispatchTable.ContainsKey(index);
     }

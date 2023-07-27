@@ -44,7 +44,7 @@ public sealed class ProgramExecutor : IDisposable {
         _loggerService = loggerService;
         _configuration = configuration;
         Machine = CreateMachine(gui);
-        _gdbServer = CreateGdbServer();
+        _gdbServer = CreateGdbServer(Machine.Cpu);
     }
 
     /// <summary>
@@ -159,10 +159,10 @@ public sealed class ProgramExecutor : IDisposable {
         return Machine;
     }
 
-    private GdbServer? CreateGdbServer() {
+    private GdbServer? CreateGdbServer(Cpu cpu) {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
-            return new GdbServer(Machine,
+            return new GdbServer(cpu, Machine,
                 _loggerService,
                 _configuration);
         }

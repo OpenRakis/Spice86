@@ -227,19 +227,21 @@ public sealed class Machine : IDisposable {
 
         // IO devices
         IoPortDispatcher = new IOPortDispatcher(
-            this,
+            Memory,
+            Cpu,
+            Cpu.State,
             machineCreationOptions.LoggerService,
             machineCreationOptions.Configuration);
         Cpu.IoPortDispatcher = IoPortDispatcher;
 
-        DmaController = new DmaController(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        DmaController = new DmaController(Memory, this.Cpu, this.Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(DmaController);
 
-        DualPic = new DualPic(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        DualPic = new DualPic(Memory, Cpu, Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(DualPic);
 
         VgaRegisters = new VideoState();
-        VgaIoPortHandler = new VgaIoPortHandler(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration, VgaRegisters);
+        VgaIoPortHandler = new VgaIoPortHandler(Memory, Cpu, Cpu.State, machineCreationOptions.LoggerService, machineCreationOptions.Configuration, VgaRegisters);
         RegisterIoPortHandler(VgaIoPortHandler);
 
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
@@ -248,27 +250,28 @@ public sealed class Machine : IDisposable {
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(machineCreationOptions.Gui, VgaRenderer, machineCreationOptions.LoggerService);
 
-        Timer = new Timer(this, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
+        Timer = new Timer(Memory, Cpu, Cpu.State, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
         RegisterIoPortHandler(Timer);
-        Keyboard = new Keyboard(this, machineCreationOptions.LoggerService, machineCreationOptions.Gui, machineCreationOptions.Configuration);
+        Keyboard = new Keyboard(Memory, Memory.A20Gate, Cpu, Cpu.State, DualPic, machineCreationOptions.LoggerService, machineCreationOptions.Gui, machineCreationOptions.Configuration);
         RegisterIoPortHandler(Keyboard);
-        MouseDevice = new Mouse(this, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        MouseDevice = new Mouse(Memory, Cpu, Cpu.State, DualPic, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MouseDevice);
-        Joystick = new Joystick(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        Joystick = new Joystick(Memory, Cpu, Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(Joystick);
-        PcSpeaker = new PcSpeaker(this, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
+        PcSpeaker = new PcSpeaker(Memory, Cpu, Cpu.State, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        OPL3FM = new OPL3FM(Memory, Cpu, Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(OPL3FM);
-        SoundBlaster = new SoundBlaster(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService, new SoundBlasterHardwareConfig(7, 1, 5));
+        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
+        SoundBlaster = new SoundBlaster(this, Memory, Cpu, Cpu.State, DualPic, machineCreationOptions.Gui, DmaController.Channels[soundBlasterHardwareConfig.LowDma], DmaController.Channels[soundBlasterHardwareConfig.HighDma], machineCreationOptions.Configuration, machineCreationOptions.LoggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
-        GravisUltraSound = new GravisUltraSound(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        GravisUltraSound = new GravisUltraSound(Memory, Cpu, Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(this, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        MidiDevice = new Midi(Memory, Cpu, Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MidiDevice);
 
         // Services
-        CallbackHandler = new CallbackHandler(this, machineCreationOptions.LoggerService);
+        CallbackHandler = new CallbackHandler(Cpu.State, machineCreationOptions.LoggerService);
         Cpu.CallbackHandler = CallbackHandler;
         // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
         MemoryAsmWriter memoryAsmWriter = new MemoryAsmWriter(Memory, new SegmentedAddress(MemoryMap.InterruptHandlersSegment, 0), CallbackHandler);
@@ -279,25 +282,24 @@ public sealed class Machine : IDisposable {
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
-        VideoInt10Handler = new VgaBios(this, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
+        VideoInt10Handler = new VgaBios(Memory, Cpu, Cpu.State, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
         
-        TimerInt8Handler = new TimerInt8Handler(this, machineCreationOptions.LoggerService);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(this, this.Memory, BiosDataArea, machineCreationOptions.LoggerService);
+        TimerInt8Handler = new TimerInt8Handler(Memory, Cpu, Cpu.State, DualPic, Timer, BiosDataArea, machineCreationOptions.LoggerService);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(Memory, Cpu, Cpu.State, DualPic, Keyboard, BiosDataArea, machineCreationOptions.LoggerService);
         
-        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(this, machineCreationOptions.LoggerService);
-        SystemBiosInt15Handler = new SystemBiosInt15Handler(this, machineCreationOptions.LoggerService);
-        KeyboardInt16Handler = new KeyboardInt16Handler(
-            this,
+        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(Memory, Cpu, Cpu.State, machineCreationOptions.LoggerService);
+        SystemBiosInt15Handler = new SystemBiosInt15Handler(Memory, Cpu, Cpu.State, Memory.A20Gate, machineCreationOptions.LoggerService);
+        KeyboardInt16Handler = new KeyboardInt16Handler(Memory, Cpu, Cpu.State,
             machineCreationOptions.LoggerService,
             BiosKeyboardInt9Handler.BiosKeyboardBuffer);
 
         SystemClockInt1AHandler = new SystemClockInt1AHandler(
-            this,
+            Memory, Cpu, Cpu.State,
             machineCreationOptions.LoggerService,
             TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        Dos = new Dos(this, Configuration, Memory, machineCreationOptions.LoggerService);
+        Dos = new Dos(Memory, Cpu, Cpu.State, KeyboardInt16Handler, VgaFunctions, Configuration, machineCreationOptions.LoggerService);
 
         if (Configuration.InitializeDOS is not false) {
             // Register the interrupt handlers
@@ -308,10 +310,17 @@ public sealed class Machine : IDisposable {
             RegisterInterruptHandler(SystemBiosInt15Handler);
             RegisterInterruptHandler(KeyboardInt16Handler);
             RegisterInterruptHandler(SystemClockInt1AHandler);
-            // Initialize DOS.
-            Dos.Initialize(SoundBlaster, machineCreationOptions.Configuration);
+            RegisterInterruptHandler(Dos.DosInt20Handler);
+            RegisterInterruptHandler(Dos.DosInt21Handler);
+            RegisterInterruptHandler(Dos.DosInt2FHandler);
 
-            var mouseInt33Handler = new MouseInt33Handler(this, machineCreationOptions.LoggerService, MouseDriver);
+            // Initialize DOS.
+            Dos.Initialize(SoundBlaster, Cpu.State, machineCreationOptions.Configuration);
+            if (machineCreationOptions.Configuration.Ems && Dos.Ems is not null) {
+                RegisterInterruptHandler(Dos.Ems);
+            }
+
+            var mouseInt33Handler = new MouseInt33Handler(Memory, Cpu, Cpu.State, machineCreationOptions.LoggerService, MouseDriver);
             RegisterInterruptHandler(mouseInt33Handler);
 
             var mouseIrq12Handler = new BiosMouseInt74Handler(DualPic, Memory);
@@ -382,12 +391,6 @@ public sealed class Machine : IDisposable {
     }
 
     /// <summary>
-    /// Peeks at the return address.
-    /// </summary>
-    /// <returns>The return address string.</returns>
-    public string PeekReturn() => SegmentedAddress.ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
-
-    /// <summary>
     /// Implements the emulation loop.
     /// </summary>
     /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>
@@ -416,7 +419,7 @@ public sealed class Machine : IDisposable {
                 Dispose(disposing: true);
             } catch (Exception e) {
                 e.Demystify();
-                throw new InvalidVMOperationException(this, e);
+                throw new InvalidVMOperationException(this.Cpu.State, e);
             }
         }
         MachineBreakpoints.OnMachineStop();

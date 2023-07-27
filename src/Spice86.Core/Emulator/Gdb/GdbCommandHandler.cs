@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using System;
@@ -17,6 +18,7 @@ public class GdbCommandHandler {
     private readonly GdbCustomCommandsHandler _gdbCustomCommandsHandler;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
+    private readonly Cpu _cpu;
 
     /// <summary>
     /// Constructs a new instance of <see cref="GdbCommandHandler"/>
@@ -25,14 +27,15 @@ public class GdbCommandHandler {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration object containing GDB settings.</param>
-    public GdbCommandHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService, Configuration configuration) {
+    public GdbCommandHandler(Cpu cpu, GdbIo gdbIo, Machine machine, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
+        _cpu = cpu;
         _gdbIo = gdbIo;
         _machine = machine;
         _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine, _loggerService);
         _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine, _loggerService);
         _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine, _loggerService);
-        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine,
+        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(_cpu, gdbIo, machine,
             _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }

@@ -1,12 +1,11 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
-using Spice86.Core.Emulator.Memory.Indexer;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -18,14 +17,14 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public CallbackHandler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
+    public CallbackHandler(State state, ILoggerService loggerService) : base(state, loggerService) {
     }
 
     /// <inheritdoc/>
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
-        return new UnhandledCallbackException(_machine, index);
+        return new UnhandledCallbackException(_state, index);
     }
 
     /// <summary>

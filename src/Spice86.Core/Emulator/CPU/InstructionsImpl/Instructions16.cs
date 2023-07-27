@@ -4,8 +4,8 @@ using Spice86.Core.Emulator.VM;
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public class Instructions16 : Instructions16Or32 {
-    public Instructions16(Machine machine, Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm)
-        : base(machine, alu, cpu, memory, modRm) {
+    public Instructions16(Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm)
+        : base(alu, cpu, memory, modRm) {
     }
 
     public override void AddRmReg() {
@@ -306,7 +306,7 @@ public class Instructions16 : Instructions16Or32 {
             5 => Alu.Sub16(op1, op2),
             6 => Alu.Xor16(op1, op2),
             7 => Alu.Sub16(op1, op2),
-            _ => throw new InvalidGroupIndexException(Machine, groupIndex)
+            _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
         // 7 is CMP so no memory to set
         if (groupIndex != 7) {
@@ -328,7 +328,7 @@ public class Instructions16 : Instructions16Or32 {
             4 => Alu.Shl16(value, count),
             5 => Alu.Shr16(value, count),
             7 => Alu.Sar16(value, count),
-            _ => throw new InvalidGroupIndexException(Machine, groupIndex)
+            _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
         ModRM.SetRm16(res);
     }

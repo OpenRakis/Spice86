@@ -1,7 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
@@ -11,6 +13,8 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class Keyboard : DefaultIOPortHandler {
     private readonly IGui? _gui;
+    private readonly A20Gate _a20Gate;
+    private readonly DualPic _dualPic;
 
     /// <summary>
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
@@ -30,12 +34,18 @@ public class Keyboard : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="Keyboard"/> class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="a20Gate">The A20 Gate.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public Keyboard(Machine machine, ILoggerService loggerService, IGui? gui, Configuration configuration) : base(machine, configuration, loggerService) {
+    public Keyboard(IMemory memory, A20Gate a20Gate, Cpu cpu, State state, DualPic dualPic, ILoggerService loggerService, IGui? gui, Configuration configuration) : base(memory, cpu, state, configuration, loggerService) {
         _gui = gui;
+        _a20Gate = a20Gate;
+        _dualPic = dualPic;
         if (_gui is not null) {
             _gui.KeyUp += OnKeyUp;
             _gui.KeyDown += OnKeyDown;
@@ -44,12 +54,12 @@ public class Keyboard : DefaultIOPortHandler {
 
     private void OnKeyDown(object? sender, KeyboardEventArgs e) {
         LastKeyboardInput = e;
-        _machine.DualPic.ProcessInterruptRequest(1);
+        _dualPic.ProcessInterruptRequest(1);
     }
 
     private void OnKeyUp(object? sender, KeyboardEventArgs e) {
         LastKeyboardInput = e;
-        _machine.DualPic.ProcessInterruptRequest(1);
+        _dualPic.ProcessInterruptRequest(1);
     }
 
     /// <summary>
@@ -70,18 +80,17 @@ public class Keyboard : DefaultIOPortHandler {
             KeyboardPorts.StatusRegister => SystemTestStatusMask | KeyboardEnableStatusMask,
             _ => 0
         };
-        
     }
 
     /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         switch (port) {
             case KeyboardPorts.Data:
-                _machine.Memory.A20Gate.IsEnabled = Command switch {
+                _a20Gate.IsEnabled = Command switch {
                     KeyboardCommand.SetOutputPort => (value & 2) > 0,
                     KeyboardCommand.EnableA20Gate => false,
                     KeyboardCommand.DisableA20Gate => true,
-                    _ => _machine.Memory.A20Gate.IsEnabled
+                    _ => _a20Gate.IsEnabled
                 };
                 Command = KeyboardCommand.None;
                 break;

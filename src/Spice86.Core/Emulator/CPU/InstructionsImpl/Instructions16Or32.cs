@@ -4,8 +4,8 @@ using Spice86.Core.Emulator.VM;
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public abstract class Instructions16Or32 : Instructions {
-    protected Instructions16Or32(Machine machine, Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) 
-        : base(machine, alu, cpu, memory, modRm) {
+    protected Instructions16Or32(Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) 
+        : base(alu, cpu, memory, modRm) {
     }
 
     // Inc Reg
@@ -47,7 +47,7 @@ public abstract class Instructions16Or32 : Instructions {
         ModRM.Read();
         ushort? memoryOffset = ModRM.MemoryOffset;
         if (memoryOffset == null) {
-            throw new InvalidVMOperationException(Machine,
+            throw new InvalidVMOperationException(State,
                 "Memory address was not read by Mod R/M but it is needed for LEA");
         }
 
@@ -93,7 +93,7 @@ public abstract class Instructions16Or32 : Instructions {
                 Grp5RmPush();
                 break;
             default:
-                throw new InvalidGroupIndexException(Machine, groupIndex);
+                throw new InvalidGroupIndexException(State, groupIndex);
         }
     }
 
@@ -138,7 +138,7 @@ public abstract class Instructions16Or32 : Instructions {
         ModRM.Read();
         uint? memoryAddress = ModRM.MemoryAddress;
         if (memoryAddress == null) {
-            throw new InvalidVMOperationException(Machine,
+            throw new InvalidVMOperationException(State,
                 "Memory address was not read by Mod R/M but it is needed for LES / LDS");
         }
 

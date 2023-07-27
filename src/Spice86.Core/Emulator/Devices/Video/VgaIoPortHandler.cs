@@ -2,9 +2,11 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Enums;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -24,12 +26,14 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <summary>
     ///     Create a new VGA I/O port handler.
     /// </summary>
-    /// <param name="machine"></param>
-    /// <param name="loggerService"></param>
-    /// <param name="configuration"></param>
-    /// <param name="videoState"></param>
-    public VgaIoPortHandler(Machine machine, ILoggerService loggerService, Configuration configuration, IVideoState videoState) :
-        base(machine, configuration, loggerService) {
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="videoState">Represents the state of the video card.</param>
+    public VgaIoPortHandler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, Configuration configuration, IVideoState videoState) :
+        base(memory, cpu, state, configuration, loggerService) {
         _logger = loggerService;
 
         // Initialize registers.

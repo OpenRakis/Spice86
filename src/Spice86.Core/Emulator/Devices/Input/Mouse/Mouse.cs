@@ -2,8 +2,11 @@ namespace Spice86.Core.Emulator.Devices.Input.Mouse;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
@@ -23,16 +26,21 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private double _previousMouseYRelative;
     private int _sampleRate = 100;
     private long _sampleRateTicks;
+    private DualPic _dualPic;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="Mouse" /> class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="dualPic">The two Programmable Interrupt Controllers.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">to get the mouse type from</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Mouse(Machine machine, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    public Mouse(IMemory memory, Cpu cpu, State state, DualPic dualPic, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, state, configuration, loggerService) {
         _gui = gui;
+        _dualPic = dualPic;
         MouseType = configuration.Mouse;
         _logger = loggerService;
         _sampleRateTicks = TimeSpan.TicksPerSecond / _sampleRate;
@@ -130,7 +138,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void UpdateMouse() {
-        if (_machine.IsPaused) {
+        if (_gui?.IsPaused is true) {
             return;
         }
 
@@ -171,6 +179,6 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void TriggerInterruptRequest() {
-        _machine.DualPic.ProcessInterruptRequest(IrqNumber);
+        _dualPic.ProcessInterruptRequest(IrqNumber);
     }
 }

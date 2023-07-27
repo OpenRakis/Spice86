@@ -15,7 +15,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInterruptHandler {
     /// <summary>
-    /// The emulator state.
+    /// The CPU state.
     /// </summary>
     protected readonly State _state;
 
@@ -37,12 +37,14 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <summary>
     /// Constructs a new instance of the InterruptHandler class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    protected InterruptHandler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _memory = machine.Memory;
-        _cpu = machine.Cpu;
-        _state = _cpu.State;
+    protected InterruptHandler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService) : base(state, loggerService) {
+        _memory = memory;
+        _cpu = cpu;
+        _state = state;
     }
 
     /// <inheritdoc />
@@ -76,14 +78,14 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <inheritdoc />
     public override void Run(int index) {
         // By default Log the CS:IP of the caller which is more useful in most situations
-        SegmentedAddress? csIp = _machine.Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
+        SegmentedAddress? csIp = _cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
         _loggerService.LoggerPropertyBag.CsIp = csIp ?? _loggerService.LoggerPropertyBag.CsIp;
         base.Run(index);
     }
 
     /// <inheritdoc />
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
-        return new UnhandledInterruptException(_machine, VectorNumber, index);
+        return new UnhandledInterruptException(_state, VectorNumber, index);
     }
     
     /// <summary>
@@ -110,7 +112,10 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
         }
     }
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Runs the C# code that replaces the machine code. <br/>
+    /// While the C# code is run, the interrupt stack is disabled.
+    /// </summary>
     public void RunFromOverriden() {
         // When running from overriden code, this is a direct C# code so there is no stack to edit.
         _interruptStackPresent = false;

@@ -7,7 +7,6 @@ namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Shared.Utils;
 
 public abstract class Instructions {
-    protected readonly Machine Machine;
     protected readonly Alu Alu;
     protected readonly Cpu Cpu;
     protected readonly State State;
@@ -21,8 +20,7 @@ public abstract class Instructions {
 
     protected uint DsNextUint16Address => ModRM.GetAddress(SegmentRegisters.DsIndex, Cpu.NextUint16());
 
-    public Instructions(Machine machine, Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) {
-        Machine = machine;
+    public Instructions(Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) {
         Alu = alu;
         Cpu = cpu;
         State = cpu.State;
@@ -117,7 +115,7 @@ public abstract class Instructions {
             Grp2CountSource.One => 1,
             Grp2CountSource.CL => State.CL,
             Grp2CountSource.NextUint8 => Cpu.NextUint8(),
-            _ => throw new InvalidVMOperationException(Machine, $"Invalid count source {countSource}")
+            _ => throw new InvalidVMOperationException(State, $"Invalid count source {countSource}")
         };
     }
 
@@ -149,7 +147,7 @@ public abstract class Instructions {
                 Grp3IdivRmAcc();
                 break;
             default:
-                throw new InvalidGroupIndexException(Machine, groupIndex);
+                throw new InvalidGroupIndexException(State, groupIndex);
         }
     }
     // No ModRM read

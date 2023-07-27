@@ -28,6 +28,7 @@ public class GdbCustomCommandsHandler {
     private readonly RecorderDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
     private readonly Machine _machine;
+    private readonly Cpu _cpu;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
     /// <summary>
@@ -38,9 +39,10 @@ public class GdbCustomCommandsHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
     /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
-    public GdbCustomCommandsHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
+    public GdbCustomCommandsHandler(Cpu cpu,GdbIo gdbIo, Machine machine, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
+        _cpu = cpu;
         _gdbIo = gdbIo;
         _machine = machine;
         _onBreakpointReached = onBreakpointReached;
@@ -258,7 +260,7 @@ Supported custom commands:
 
     private string PeekRet(string[] args) {
         if (args.Length == 1) {
-            return _gdbIo.GenerateMessageToDisplayResponse(_machine.PeekReturn());
+            return _gdbIo.GenerateMessageToDisplayResponse(_cpu.PeekReturn());
         } else {
             string returnType = args[1];
             bool parsed = Enum.TryParse(typeof(CallType), returnType, out object? callType);

@@ -3,8 +3,8 @@ using Spice86.Core.Emulator.VM;
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public class Instructions8 : Instructions {
-    public Instructions8(Machine machine, Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) :
-        base(machine, alu, cpu, memory, modRm) {
+    public Instructions8(Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) :
+        base(alu, cpu, memory, modRm) {
     }
 
     public override void AddRmReg() {
@@ -218,7 +218,7 @@ public class Instructions8 : Instructions {
             5 => Alu.Sub8(op1, op2),
             6 => Alu.Xor8(op1, op2),
             7 => Alu.Sub8(op1, op2),
-            _ => throw new InvalidGroupIndexException(Machine, groupIndex)
+            _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
         // 7 is CMP so no memory to set
         if (groupIndex != 7) {
@@ -240,7 +240,7 @@ public class Instructions8 : Instructions {
             4 => Alu.Shl8(value, count),
             5 => Alu.Shr8(value, count),
             7 => Alu.Sar8(value, count),
-            _ => throw new InvalidGroupIndexException(Machine, groupIndex)
+            _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
         ModRM.SetRm8(res);
     }
@@ -307,7 +307,7 @@ public class Instructions8 : Instructions {
                 Cpu.Callback(Cpu.NextUint8());
                 break;
             default:
-                throw new InvalidGroupIndexException(Machine, groupIndex);
+                throw new InvalidGroupIndexException(State, groupIndex);
         }
     }
 

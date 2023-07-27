@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 /// </summary>
 public interface IInterruptHandler : IAssemblyRoutineWriter {
     /// <summary>
-    /// Vector number of the interrupt beeing represented
+    /// Vector number of the interrupt being represented
     /// </summary>
     public byte VectorNumber { get; }
 }

@@ -14,7 +14,7 @@ public class ByteArrayBasedIndexable : Indexable {
     public ByteArrayByteReaderWriter ReaderWriter { get; }
 
     /// <summary>
-    /// Underlying array beeing wrapped
+    /// Underlying array being wrapped
     /// </summary>
     public byte[] Array { get => ReaderWriter.Array; }
 

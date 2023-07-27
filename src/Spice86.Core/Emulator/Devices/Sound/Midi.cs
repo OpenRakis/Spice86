@@ -1,8 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Sound.Midi;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -25,10 +26,12 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    public Midi(IMemory memory, Cpu cpu, State state, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, state, configuration, loggerService) {
         _generalMidi = new GeneralMidi(configuration, loggerService);
     }
     

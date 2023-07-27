@@ -142,7 +142,7 @@ public class ModRM {
             5 => SegmentRegisters.DsIndex,
             6 => mode == 0 ? SegmentRegisters.DsIndex : SegmentRegisters.SsIndex,
             7 => SegmentRegisters.DsIndex,
-            _ => throw new InvalidModeException(_machine, _registerMemoryIndex)
+            _ => throw new InvalidModeException(_state, _registerMemoryIndex)
         };
     }
 
@@ -156,7 +156,7 @@ public class ModRM {
             5 => _state.DI,
             6 => mode == 0 ? _cpu.NextUint16() : _state.BP,
             7 => _state.BX,
-            _ => throw new InvalidModeException(_machine, _registerMemoryIndex)
+            _ => throw new InvalidModeException(_state, _registerMemoryIndex)
         };
     }
 
