@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
@@ -12,9 +14,11 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
+    private readonly DualPic _dualPic;
 
-    public BiosKeyboardInt9Handler(Machine machine, IIndexable memory, BiosDataArea biosDataArea, ILoggerService loggerService) : base(machine, loggerService) {
-        _keyboard = machine.Keyboard;
+    public BiosKeyboardInt9Handler(IMemory memory, Cpu cpu, State state, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
+        _keyboard = keyboard;
+        _dualPic = dualPic;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardBuffer.Init();
     }
@@ -38,6 +42,6 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         }
 
         BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scancode.Value << 8 | ascii));
-        _machine.DualPic.AcknowledgeInterrupt(1);
+        _dualPic.AcknowledgeInterrupt(1);
     }
 }

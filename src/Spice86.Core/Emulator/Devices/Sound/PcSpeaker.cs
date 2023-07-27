@@ -1,8 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -22,7 +23,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public PcSpeaker(Machine machine, ILoggerService loggerService, Configuration configuration) : base(machine, configuration, loggerService) {
+    public PcSpeaker(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, Configuration configuration) : base(memory, cpu, state, configuration, loggerService) {
         _pcSpeaker = new(configuration);
     }
 

@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
@@ -32,10 +34,12 @@ public class DualPic : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="DualPic"/> class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DualPic(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    public DualPic(IMemory memory, Cpu cpu, State state, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, state, configuration, loggerService) {
         _pic1 = new Pic(loggerService);
         _pic2 = new Pic(loggerService);
         Initialize();
@@ -82,7 +86,7 @@ public class DualPic : DefaultIOPortHandler {
         } else if (irq < 15) {
             _pic2.InterruptRequest((byte)(irq - 8));
         } else {
-            throw new UnhandledOperationException(_machine, $"IRQ {irq} not supported at the moment");
+            throw new UnhandledOperationException(_state, $"IRQ {irq} not supported at the moment");
         }
     }
     
@@ -125,7 +129,7 @@ public class DualPic : DefaultIOPortHandler {
             _pic2.AcknowledgeInterrupt();
             _pic1.AcknowledgeInterrupt();
         } else {
-            throw new UnhandledOperationException(_machine, $"IRQ {irq} not supported at the moment");
+            throw new UnhandledOperationException(_state, $"IRQ {irq} not supported at the moment");
         }
     }
 

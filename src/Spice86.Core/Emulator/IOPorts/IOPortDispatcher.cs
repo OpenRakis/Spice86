@@ -2,6 +2,8 @@
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -14,10 +16,12 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="IOPortDispatcher"/> class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public IOPortDispatcher(Machine machine, ILoggerService loggerService, Configuration configuration) : base(machine, configuration, loggerService) {
+    public IOPortDispatcher(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, Configuration configuration) : base(memory, cpu, state, configuration, loggerService) {
         _failOnUnhandledPort = configuration.FailOnUnhandledPort;
     }
 

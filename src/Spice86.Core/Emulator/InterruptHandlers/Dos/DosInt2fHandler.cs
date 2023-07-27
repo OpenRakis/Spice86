@@ -4,7 +4,9 @@ using Spice86.Shared.Interfaces;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
 
@@ -12,7 +14,7 @@ using Spice86.Shared.Utils;
 /// Reimplementation of int2f
 /// </summary>
 public class DosInt2fHandler : InterruptHandler {
-    public DosInt2fHandler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
+    public DosInt2fHandler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
         FillDispatchTable();
     }
 

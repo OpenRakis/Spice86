@@ -1,14 +1,16 @@
 ﻿
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
-    public KeyboardInt16Handler(Machine machine, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(machine, loggerService) {
+    public KeyboardInt16Handler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(memory, cpu, state, loggerService) {
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, () => GetKeystroke());
         AddAction(0x01, () => GetKeystrokeStatus(true));

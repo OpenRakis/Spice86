@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using System.Diagnostics;
@@ -16,6 +17,7 @@ public sealed class GdbServer : IDisposable {
     private bool _isRunning = true;
     private Thread? _gdbServerThread;
     private GdbIo? _gdbIo;
+    private readonly Cpu _cpu;
 
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
@@ -23,8 +25,9 @@ public sealed class GdbServer : IDisposable {
     /// <param name="machine">The Machine instance to be debugged remotely.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
-    public GdbServer(Machine machine, ILoggerService loggerService, Configuration configuration) {
+    public GdbServer(Cpu cpu, Machine machine, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
+        _cpu = cpu;
         _machine = machine;
         _configuration = configuration;
     }
@@ -68,7 +71,7 @@ public sealed class GdbServer : IDisposable {
     /// <param name="gdbIo">The GdbIo instance used to communicate with the GDB client.</param>
     private void AcceptOneConnection(GdbIo gdbIo) {
         gdbIo.WaitForConnection();
-        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(gdbIo,
+        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(_cpu, gdbIo,
             _machine,
             _loggerService,
             _configuration);

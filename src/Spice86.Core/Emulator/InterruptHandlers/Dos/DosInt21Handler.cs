@@ -3,9 +3,11 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -32,6 +34,9 @@ public class DosInt21Handler : InterruptHandler {
     private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
     private readonly List<IVirtualDevice> _devices;
+    private readonly Dos _dos;
+    private readonly KeyboardInt16Handler _keyboardInt16Handler;
+    private readonly IVgaFunctionality _vgaFunctionality;
 
     /// <summary>
     /// Initializes a new instance.
@@ -40,9 +45,12 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="memory">The emulator memory.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dos">The DOS kernel.</param>
-    public DosInt21Handler(Machine machine, IIndexable memory, ILoggerService loggerService, Dos dos) : base(machine, loggerService) {
+    public DosInt21Handler(IMemory memory, Cpu cpu, State state, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Dos dos, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
+        _dos = dos;
+        _vgaFunctionality = vgaFunctionality;
+        _keyboardInt16Handler = keyboardInt16Handler;
         _dosMemoryManager = dos.MemoryManager;
         _dosFileManager = dos.FileManager;
         _devices = dos.Devices;
@@ -128,7 +136,7 @@ public class DosInt21Handler : InterruptHandler {
         switch (_state.AL) {
             case 0: //Get country specific information
                 uint dest = MemoryUtils.ToPhysicalAddress(_state.DS, _state.DX);
-                _memory.LoadData(dest, BitConverter.GetBytes((ushort)_machine.Dos.DosTables.CountryInfo.Country));
+                _memory.LoadData(dest, BitConverter.GetBytes((ushort)_dos.CurrentCountryId));
                 _state.AX = (ushort) (_state.BX + 1);
                 SetCarryFlag(false, calledFromVm);
                 break;
@@ -199,7 +207,7 @@ public class DosInt21Handler : InterruptHandler {
         if (character == 0xFF) {
             _loggerService.Debug("DIRECT CONSOLE IO, INPUT REQUESTED");
             // Read from STDIN, not implemented, return no character ready
-            ushort? scancode = _machine.KeyboardInt16Handler.GetNextKeyCode();
+            ushort? scancode = _keyboardInt16Handler.GetNextKeyCode();
             if (scancode == null) {
                 SetZeroFlag(true, calledFromVm);
                 _state.AL = 0;
@@ -382,7 +390,7 @@ public class DosInt21Handler : InterruptHandler {
             // SET
             _isCtrlCFlag = _state.DL == 1;
         } else {
-            throw new UnhandledOperationException(_machine, "Ctrl-C get/set operation unhandled: " + op);
+            throw new UnhandledOperationException(_state, "Ctrl-C get/set operation unhandled: " + op);
         }
     }
 
@@ -444,7 +452,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort offset = _state.DX;
         string str = GetDosString(_memory, segment, offset, '$');
 
-        _machine.VgaFunctions.WriteString(str);
+        _vgaFunctionality.WriteString(str);
         
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PRINT STRING: {String}", str);
@@ -602,7 +610,7 @@ public class DosInt21Handler : InterruptHandler {
                     }
                     break;
                 }
-            default: throw new UnhandledOperationException(_machine, "getSetFileAttribute operation unhandled: " + op);
+            default: throw new UnhandledOperationException(_state, "getSetFileAttribute operation unhandled: " + op);
         }
     }
 
@@ -644,14 +652,14 @@ public class DosInt21Handler : InterruptHandler {
                     _state.AL = 0;
                     break;
                 }
-            default: throw new UnhandledOperationException(_machine, $"IO Control operation unhandled: {op}");
+            default: throw new UnhandledOperationException(_state, $"IO Control operation unhandled: {op}");
         }
     }
 
     private void LogDosError(bool calledFromVm) {
         string returnMessage = "";
         if (calledFromVm) {
-            returnMessage = $"Int will return to {_machine.PeekReturn()}. ";
+            returnMessage = $"Int will return to {_cpu.PeekReturn()}. ";
         }
         if (_loggerService.IsEnabled(LogEventLevel.Error)) {
             _loggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}", returnMessage, _state.ToString());

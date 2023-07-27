@@ -30,9 +30,9 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     protected bool _failOnUnhandledPort;
 
     /// <summary>
-    /// The emulator machine.
+    /// The CPU state.
     /// </summary>
-    protected readonly Machine _machine;
+    protected readonly State _state;
 
     /// <summary>
     /// The memory bus.
@@ -47,15 +47,17 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <summary>
     /// Constructor for DefaultIOPortHandler
     /// </summary>
-    /// <param name="machine">Machine being emulated.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU State.</param>
     /// <param name="configuration">Configuration used by the handler.</param>
     /// <param name="loggerService">Logger service implementation.</param>
-    protected DefaultIOPortHandler(Machine machine, Configuration configuration, ILoggerService loggerService) {
+    /// <param name="memory">The memory bus.</param>
+    protected DefaultIOPortHandler(IMemory memory, Cpu cpu, State state, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
-        _machine = machine;
         _loggerService = loggerService;
-        _memory = machine.Memory;
-        _cpu = machine.Cpu;
+        _memory = memory;
+        _state = state;
+        _cpu = cpu;
         _failOnUnhandledPort = Configuration.FailOnUnhandledPort;
     }
 
@@ -110,7 +112,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     public virtual ushort ReadWord(int port) {
         LogUnhandledPortRead(port);
         if (_failOnUnhandledPort) {
-            throw new UnhandledIOPortException(_machine, port);
+            throw new UnhandledIOPortException(_state, port);
         }
 
         return ushort.MaxValue;
@@ -124,7 +126,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     public virtual uint ReadDWord(int port) {
         LogUnhandledPortRead(port);
         if (_failOnUnhandledPort) {
-            throw new UnhandledIOPortException(_machine, port);
+            throw new UnhandledIOPortException(_state, port);
         }
 
         return uint.MaxValue;
@@ -177,7 +179,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <param name="port">The port number.</param>
     protected virtual void OnUnhandledPort(int port) {
         if (_failOnUnhandledPort) {
-            throw new UnhandledIOPortException(_machine, port);
+            throw new UnhandledIOPortException(_state, port);
         }
     }
 }

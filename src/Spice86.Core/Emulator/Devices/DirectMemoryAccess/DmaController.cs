@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
 using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -31,14 +32,16 @@ public sealed class DmaController : DefaultIOPortHandler {
     private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
 
     private readonly List<DmaChannel> _channels = new(8);
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DmaController"/> class.
     /// </summary>
-    /// <param name="machine">Machine where the DMA controller is located.</param>
-    /// <param name="configuration">Configuration of the machine where the DMA controller is located.</param>
-    /// <param name="loggerService">Service used to log information about the DMA controller.</param>
-    public DmaController(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    public DmaController(IMemory memory, Cpu cpu, State state, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, state, configuration, loggerService) {
         for (int i = 0; i < 8; i++) {
             DmaChannel channel = new DmaChannel();
             _channels.Add(channel);

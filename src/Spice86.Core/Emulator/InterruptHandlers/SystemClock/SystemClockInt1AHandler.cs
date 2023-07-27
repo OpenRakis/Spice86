@@ -1,7 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -11,7 +13,7 @@ using Spice86.Shared.Interfaces;
 public class SystemClockInt1AHandler : InterruptHandler {
     private readonly TimerInt8Handler _timerHandler;
 
-    public SystemClockInt1AHandler(Machine machine, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(machine, loggerService) {
+    public SystemClockInt1AHandler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(memory, cpu, state, loggerService) {
         _timerHandler = timerHandler;
         AddAction(0x00, SetSystemClockCounter);
         AddAction(0x01, GetSystemClockCounter);

@@ -19,13 +19,12 @@ public sealed class Dsp {
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
-    /// <param name="vm">Virtual machine instance associated with the DSP.</param>
     /// <param name="soundCard">The host sound-card, used to raise interrupts.</param>
     /// <param name="dma8">8-bit DMA channel for the DSP device.</param>
     /// <param name="dma16">16-bit DMA channel for the DSP device.</param>
-    public Dsp(Machine vm, IRequestInterrupt soundCard, int dma8, int dma16) {
-        dmaChannel8 = vm.DmaController.Channels[dma8];
-        dmaChannel16 = vm.DmaController.Channels[dma16];
+    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, IRequestInterrupt soundCard, int dma8, int dma16) {
+        dmaChannel8 = eightBitDmaChannel;
+        dmaChannel16 = sixteenBitDmaChannel;
         SampleRate = 22050;
         BlockTransferSize = 65536;
         _soundCard = soundCard;

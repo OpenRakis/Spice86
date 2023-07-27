@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
 
@@ -9,10 +10,18 @@ public class UnhandledInterruptException : UnhandledOperationException {
     /// <summary>
     /// Initializes a new instance of <see cref="UnhandledOperationException"/>
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="state">The CPU state when the exception occured.</param>
     /// <param name="callbackNumber">The callback that was called..</param>
     /// <param name="operation">The operation we tried to call on the callback.</param>
-    public UnhandledInterruptException(Machine machine, int callbackNumber, int operation) : base(machine, FormatMessage(callbackNumber, operation)) {
+    public UnhandledInterruptException(State state, int callbackNumber, int operation) : base(state, FormatMessage(callbackNumber, operation)) {
+    }
+
+    /// <inheritdoc />
+    public UnhandledInterruptException(State state, string message) : base(state, message) {
+    }
+
+    /// <inheritdoc />
+    public UnhandledInterruptException(State state, Exception e) : base(state, e) {
     }
 
     private static string FormatMessage(int callbackNumber, int operation) {

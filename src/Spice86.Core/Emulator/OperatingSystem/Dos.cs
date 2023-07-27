@@ -2,9 +2,12 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -22,7 +25,10 @@ using System.Text;
 /// </summary>
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;
-    private readonly Machine _machine;
+    private readonly IMemory _memory;
+    private readonly Cpu _cpu;
+    private readonly State _state;
+    private readonly IVgaFunctionality _vgaFunctionality;
     private readonly ILoggerService _loggerService;
     
     /// <summary>
@@ -39,6 +45,11 @@ public class Dos {
     /// Gets the INT 2Fh DOS services.
     /// </summary>
     public DosInt2fHandler DosInt2FHandler { get; }
+
+    /// <summary>
+    /// Gets the country ID from the CountryInfo table
+    /// </summary>
+    public byte CurrentCountryId => DosTables.CountryInfo.Country;
 
     /// <summary>
     /// Gets the list of virtual devices.
@@ -78,64 +89,61 @@ public class Dos {
     /// <summary>
     /// The EMS device driver.
     /// </summary>
-    public ExpandedMemoryManager? Ems { get; set; }
+    public ExpandedMemoryManager? Ems { get; private set; }
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Dos(Machine machine, Configuration configuration, IIndexable memory, ILoggerService loggerService) {
-        _machine = machine;
+    public Dos(IMemory memory, Cpu cpu, State state, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Configuration configuration, ILoggerService loggerService) {
         _loggerService = loggerService;
+        _memory = memory;
+        _cpu = cpu;
+        _state = state;
+        _vgaFunctionality = vgaFunctionality;
         AddDefaultDevices();
-        FileManager = new DosFileManager(_machine.Memory, configuration, _loggerService, this.Devices);
-        MemoryManager = new DosMemoryManager(_machine.Memory, _loggerService);
-        DosInt20Handler = new DosInt20Handler(_machine, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_machine, memory, _loggerService, this);
-        DosInt2FHandler = new DosInt2fHandler(_machine, _loggerService);
+        FileManager = new DosFileManager(_memory, configuration, _loggerService, this.Devices);
+        MemoryManager = new DosMemoryManager(_memory, _loggerService);
+        DosInt20Handler = new DosInt20Handler(_memory, _cpu, state, _loggerService);
+        DosInt21Handler = new DosInt21Handler(_memory, _cpu, state, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(_memory, _cpu, state, _loggerService);
     }
 
-    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, Configuration configuration) {
+    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, Configuration configuration) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }
-
-        _machine.RegisterInterruptHandler(DosInt20Handler);
-        _machine.RegisterInterruptHandler(DosInt21Handler);
-        _machine.RegisterInterruptHandler(DosInt2FHandler);
-
+        
         OpenDefaultFileHandles();
         SetEnvironmentVariables(blasterEnvVarProvider);
 
         if (configuration.Ems) {
-            Ems = new(_machine, _loggerService);
-            _machine.RegisterInterruptHandler(Ems);
+            Ems = new(_memory, _cpu, state, this, _loggerService);
         }
     }
 
     private void SetEnvironmentVariables(IBlasterEnvVarProvider blasterEnvVarProvider) => EnvironmentVariables["BLASTER"] = blasterEnvVarProvider.BlasterString;
 
     private void OpenDefaultFileHandles() {
-        if (Devices.FirstOrDefault(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
+        if (Devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
             FileManager.OpenDevice(con, "r", "STDIN");
             FileManager.OpenDevice(con, "w", "STDOUT");
             FileManager.OpenDevice(con, "w", "STDERR");
         }
 
-        if (Devices.FirstOrDefault(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
+        if (Devices.Find(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
             FileManager.OpenDevice(aux, "rw", "STDAUX");
         }
 
-        if (Devices.FirstOrDefault(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
+        if (Devices.Find(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
             FileManager.OpenDevice(prn, "w", "STDPRN");
         }
     }
 
     private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _machine, _loggerService));
+        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _loggerService));
@@ -154,32 +162,32 @@ public class Dos {
         device.Offset = offset ?? (ushort)(Devices.Count * DeviceDriverHeaderLength);
         // Write the DOS device driver header to memory
         ushort index = device.Offset;
-        _machine.Memory.UInt16[device.Segment, index] = 0xFFFF;
+        _memory.UInt16[device.Segment, index] = 0xFFFF;
         index += 2;
-        _machine.Memory.UInt16[device.Segment, index] = 0xFFFF;
+        _memory.UInt16[device.Segment, index] = 0xFFFF;
         index += 2;
-        _machine.Memory.UInt16[device.Segment, index] = (ushort)device.Attributes;
+        _memory.UInt16[device.Segment, index] = (ushort)device.Attributes;
         index += 2;
-        _machine.Memory.UInt16[device.Segment, index] = device.StrategyEntryPoint;
+        _memory.UInt16[device.Segment, index] = device.StrategyEntryPoint;
         index += 2;
-        _machine.Memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
+        _memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
         index += 2;
         if (device.Attributes.HasFlag(DeviceAttributes.Character)) {
             var characterDevice = (CharacterDevice)device;
-            _machine.Memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
                 Encoding.ASCII.GetBytes( $"{characterDevice.Name,-8}"));
         } else {
             var blockDevice = (BlockDevice)device;
-            _machine.Memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
-            index += 1;
-            _machine.Memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
+            _memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
+            index++;
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
                 Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
         }
 
         // Make the previous device point to this one
         if (Devices.Count > 0) {
             IVirtualDevice previousDevice = Devices[^1];
-            _machine.Memory.SegmentedAddressValue[previousDevice.Segment, previousDevice.Offset] =
+            _memory.SegmentedAddressValue[previousDevice.Segment, previousDevice.Offset] =
                 (device.Segment, device.Offset);
         }
 
