@@ -14,13 +14,21 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
 /// </summary>
-public sealed class DmaController : DefaultIOPortHandler {
+public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     private const int ModeRegister8 = 0x0B;
     private const int ModeRegister16 = 0xD6;
     private const int MaskRegister8 = 0x0A;
     private const int MaskRegister16 = 0xD4;
     private const int AutoInitFlag = 1 << 4;
     private const int ClearBytePointerFlipFlop = 0xC;
+    private readonly List<DmaChannel> _dmaDeviceChannels = new();
+    private readonly List<DmaChannel> _channels = new(8);
+
+    private bool _disposed;
+    private bool _exitDmaLoop;
+    private readonly Thread _dmaThread;
+    private bool _dmaThreadStarted;
+    private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private static readonly int[] _otherOutputPorts = new int[] {
             ModeRegister8,
@@ -30,8 +38,6 @@ public sealed class DmaController : DefaultIOPortHandler {
             ClearBytePointerFlipFlop};
 
     private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
-
-    private readonly List<DmaChannel> _channels = new(8);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DmaController"/> class.
@@ -48,6 +54,49 @@ public sealed class DmaController : DefaultIOPortHandler {
         }
 
         Channels = new ReadOnlyCollection<DmaChannel>(_channels);
+        
+        _dmaThread = new Thread(DmaLoop) {
+            Name = "DMAThread"
+        };
+    }
+
+    internal void StartDmaThread() {
+        if (!_dmaThreadStarted) {
+            _dmaThread.Start();
+            _dmaThreadStarted = true;
+        }
+    }
+    
+    /// <summary>
+    /// https://techgenix.com/direct-memory-access/
+    /// </summary>
+    private void DmaLoop() {
+        while (!_exitDmaLoop) {
+            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
+                DmaChannel dmaChannel = _dmaDeviceChannels[i];
+                bool transferred = dmaChannel.Transfer(_memory);
+                if (!transferred) {
+                    _dmaResetEvent.WaitOne(1);
+                }
+            }
+        }
+    }
+
+    internal void SetupDmaDeviceChannel(IDmaDevice8 dmaDevice) {
+        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= Channels.Count) {
+            throw new ArgumentException("Invalid DMA channel on DMA device.");
+        }
+        Channels[dmaDevice.Channel].Device = dmaDevice;
+        _dmaDeviceChannels.Add(Channels[dmaDevice.Channel]);
+    }
+
+    /// <summary>
+    /// Performs all pending DMA transfers for all the active DMA channels.
+    /// </summary>
+    public void PerformDmaTransfers() {
+        if (!_disposed) {
+            _dmaResetEvent.Set();
+        }
     }
 
     /// <summary>
@@ -198,5 +247,25 @@ public sealed class DmaController : DefaultIOPortHandler {
                 _channels[index / 3].WriteCountByte(value);
                 break;
         }
+    }
+
+    private void Dispose(bool disposing) {
+        if (!_disposed) {
+            if (disposing) {
+                _exitDmaLoop = true;
+                if (_dmaThread.IsAlive && _dmaThreadStarted) {
+                    _dmaThread.Join();
+                }
+                _dmaResetEvent.Dispose();
+            }
+            _disposed = true;
+        }
+    }
+    
+    /// <inheritdoc />
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

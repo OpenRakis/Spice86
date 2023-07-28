@@ -6,6 +6,7 @@ using Serilog.Events;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -126,9 +127,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private int _pauseDuration;
     private BlasterState _blasterState;
     private bool _playbackStarted;
-    private DualPic _dualPic;
-    private IGui? _gui;
-    private readonly Machine _machine;
+    private readonly DualPic _dualPic;
+    private readonly IGui? _gui;
+    private readonly DmaController _dmaController;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -136,11 +137,11 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="machine">Virtual machine instance associated with the device.</param>
     /// <param name="configuration">The emulator config.</param>
     /// <param name="loggerService">The logging service for events such as non-fatal errors, warnings, or information</param>
-    public SoundBlaster(Machine machine, IMemory memory, Cpu cpu, State state, DualPic dualPic, IGui? gui, DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, Configuration configuration, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(memory, cpu, state, configuration, loggerService) {
-        _machine = machine;
+    public SoundBlaster(DmaController dmaController, IMemory memory, Cpu cpu, State state, DualPic dualPic, IGui? gui, DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, Configuration configuration, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(memory, cpu, state, configuration, loggerService) {
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
+        _dmaController = dmaController;
         _gui = gui;
         _dualPic = dualPic;
         _mixer = new Mixer(this);
@@ -150,6 +151,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             Name = "PCMAudio",
             Priority = ThreadPriority.AboveNormal
         };
+        _dmaController.SetupDmaDeviceChannel(this);
     }
 
     /// <summary>
@@ -381,37 +383,37 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             case Commands.SingleCycleDmaOutput8_Alt:
             case Commands.SingleCycleDmaOutput8Fifo_Alt:
                 _dsp.Begin(false, false, false);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, true);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, false);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, true);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, false);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, true);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, false);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.AutoInitDmaOutput8:

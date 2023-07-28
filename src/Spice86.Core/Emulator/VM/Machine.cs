@@ -36,10 +36,6 @@ using System.Diagnostics;
 /// </summary>
 public sealed class Machine : IDisposable {
     private readonly ProgramExecutor _programExecutor;
-    private readonly List<DmaChannel> _dmaDeviceChannels = new();
-    private readonly Thread _dmaThread;
-    private bool _dmaThreadStarted;
-    private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private bool _disposed;
 
@@ -266,7 +262,7 @@ public sealed class Machine : IDisposable {
         OPL3FM = new OPL3FM(Memory, Cpu, Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
-        SoundBlaster = new SoundBlaster(this, Memory, Cpu, Cpu.State, DualPic, machineCreationOptions.Gui, DmaController.Channels[soundBlasterHardwareConfig.LowDma], DmaController.Channels[soundBlasterHardwareConfig.HighDma], machineCreationOptions.Configuration, machineCreationOptions.LoggerService, soundBlasterHardwareConfig);
+        SoundBlaster = new SoundBlaster(DmaController, Memory, Cpu, Cpu.State, DualPic, machineCreationOptions.Gui, DmaController.Channels[soundBlasterHardwareConfig.LowDma], DmaController.Channels[soundBlasterHardwareConfig.HighDma], machineCreationOptions.Configuration, machineCreationOptions.LoggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(Memory, Cpu, Cpu.State, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
@@ -332,9 +328,6 @@ public sealed class Machine : IDisposable {
             SegmentedAddress mouseDriverAddress = AssemblyRoutineInstaller.InstallAssemblyRoutine(MouseDriver);
             mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
         }
-        _dmaThread = new Thread(DmaLoop) {
-            Name = "DMAThread"
-        };
     }
 
     /// <summary>
@@ -363,35 +356,7 @@ public sealed class Machine : IDisposable {
     /// </summary>
     /// <param name="ioPortHandler">The I/O port handler.</param>
     /// <exception cref="ArgumentException"></exception>
-    public void RegisterIoPortHandler(IIOPortHandler ioPortHandler) {
-        ioPortHandler.InitPortHandlers(IoPortDispatcher);
-
-        if (ioPortHandler is not IDmaDevice8 dmaDevice) {
-            return;
-        }
-
-        if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count) {
-            throw new ArgumentException("Invalid DMA channel on DMA device.");
-        }
-
-        DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-        _dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-    }
-
-    /// <summary>
-    /// https://techgenix.com/direct-memory-access/
-    /// </summary>
-    private void DmaLoop() {
-        while (Cpu.IsRunning) {
-            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                bool transferred = dmaChannel.Transfer(Memory);
-                if (!transferred) {
-                    _dmaResetEvent.WaitOne(Timeout.Infinite);
-                }
-            }
-        }
-    }
+    public void RegisterIoPortHandler(IIOPortHandler ioPortHandler) => ioPortHandler.InitPortHandlers(IoPortDispatcher);
 
     /// <summary>
     /// Implements the emulation loop.
@@ -400,10 +365,6 @@ public sealed class Machine : IDisposable {
     public void Run() {
         State state = Cpu.State;
         FunctionHandler functionHandler = Cpu.FunctionHandler;
-        if (!_dmaThreadStarted) {
-            _dmaThread.Start();
-            _dmaThreadStarted = true;
-        }
         if (Debugger.IsAttached) {
             try {
                 StartRunLoop(functionHandler, state);
@@ -432,6 +393,7 @@ public sealed class Machine : IDisposable {
     private void StartRunLoop(FunctionHandler functionHandler, State state) {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
+        DmaController.StartDmaThread();
         if (RecordData) {
             RunLoopWhileRecordingExecutionData();
         } else {
@@ -466,11 +428,6 @@ public sealed class Machine : IDisposable {
         }
     }
 
-    /// <summary>
-    /// Performs DMA transfers when invoked.
-    /// </summary>
-    public void PerformDmaTransfers() => _dmaResetEvent.Set();
-
     private void PauseIfAskedTo() {
         if (!IsPaused) {
             return;
@@ -493,13 +450,9 @@ public sealed class Machine : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 ExitEmulationLoop();
-                _dmaResetEvent.Set();
-                if (_dmaThread.IsAlive && _dmaThreadStarted) {
-                    _dmaThread.Join();
-                }
-                _dmaResetEvent.Dispose();
                 MidiDevice.Dispose();
                 SoundBlaster.Dispose();
+                DmaController.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 MachineBreakpoints.Dispose();
