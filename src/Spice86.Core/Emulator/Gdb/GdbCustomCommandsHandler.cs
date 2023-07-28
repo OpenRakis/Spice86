@@ -11,7 +11,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
-
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -27,8 +27,11 @@ public class GdbCustomCommandsHandler {
     private readonly ILoggerService _loggerService;
     private readonly RecorderDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
-    private readonly Machine _machine;
     private readonly Cpu _cpu;
+    private readonly State _state;
+    private readonly IGui? _gui;
+    private readonly IMemory _memory;
+    private readonly MachineBreakpoints _machineBreakpoints;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
     /// <summary>
@@ -39,14 +42,17 @@ public class GdbCustomCommandsHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
     /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
-    public GdbCustomCommandsHandler(Cpu cpu,GdbIo gdbIo, Machine machine, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
+    public GdbCustomCommandsHandler(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, GdbIo gdbIo, IGui? gui, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
+        _state = state;
+        _memory = memory;
+        _machineBreakpoints = machineBreakpoints;
+        _gui = gui;
         _cpu = cpu;
         _gdbIo = gdbIo;
-        _machine = machine;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecorderDataWriter(recordedDataDirectory, machine, _loggerService);
+        _recordedDataWriter = new RecorderDataWriter(_memory, cpu, callbackHandler, configuration, executionFlowRecorder, recordedDataDirectory, _loggerService);
     }
 
     
@@ -55,7 +61,7 @@ public class GdbCustomCommandsHandler {
     /// </summary>
     /// <param name="command">The command string passed from GDB.</param>
     /// <returns>A response string to be sent back to GDB.</returns>
-    public string HandleCustomCommands(string command) {
+    public string HandleCustomCommands(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, string command) {
         string[] commandSplit = command.Split(",");
         if (commandSplit.Length != 2) {
             return _gdbIo.GenerateResponse("");
@@ -64,7 +70,7 @@ public class GdbCustomCommandsHandler {
         byte[] customHex = ConvertUtils.HexToByteArray(commandSplit[1]);
         string custom = Encoding.UTF8.GetString(customHex);
         string[] customSplit = custom.Split(" ");
-        return ExecuteCustomCommand(customSplit);
+        return ExecuteCustomCommand(executionFlowRecorder, functionHandler, customSplit);
     }
 
     private string BreakCycles(string[] args) {
@@ -74,10 +80,10 @@ public class GdbCustomCommandsHandler {
 
         string cyclesToWaitString = args[1];
         if (long.TryParse(cyclesToWaitString, out long cyclesToWait)) {
-            long currentCycles = _machine.Cpu.State.Cycles;
+            long currentCycles = _state.Cycles;
             long cyclesBreak = currentCycles + cyclesToWait;
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
-            _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
             }
@@ -96,13 +102,13 @@ public class GdbCustomCommandsHandler {
             uint cs = ConvertUtils.ParseHex32(args[1]);
             uint ip = ConvertUtils.ParseHex32(args[2]);
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
-            _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added for cs:ip!\n@{@BreakPoint}", breakPoint);
             }
 
             return _gdbIo.GenerateMessageToDisplayResponse(
-                $"Breakpoint added for cs:ip. Current cs:ip is {_machine.Cpu.State.CS}:{_machine.Cpu.State.IpPhysicalAddress}. Will stop at {cs}:{ip}");
+                $"Breakpoint added for cs:ip. Current cs:ip is {_state.CS}:{_state.IpPhysicalAddress}. Will stop at {cs}:{ip}");
         } catch (FormatException) {
             return InvalidCommand($"breakCsIp arguments need to be two numbers. You gave {args[1]}:{args[2]}");
         }
@@ -110,7 +116,7 @@ public class GdbCustomCommandsHandler {
 
     private string BreakStop() {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
-        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint added for end of execution!@\n{@BreakPoint}", breakPoint);
         }
@@ -127,9 +133,9 @@ public class GdbCustomCommandsHandler {
     /// </summary>
     /// <returns>A string laying out the call stack.</returns>
     public string DumpCallStack() {
-        FunctionHandler inUse = _machine.Cpu.FunctionHandlerInUse;
+        FunctionHandler inUse = _cpu.FunctionHandlerInUse;
         StringBuilder sb = new();
-        if (inUse.Equals(_machine.Cpu.FunctionHandlerInExternalInterrupt)) {
+        if (inUse.Equals(_cpu.FunctionHandlerInExternalInterrupt)) {
             sb.AppendLine("From external interrupt:");
         }
 
@@ -137,9 +143,9 @@ public class GdbCustomCommandsHandler {
         return sb.ToString();
     }
 
-    private string DumpAll() {
+    private string DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
         try {
-            _recordedDataWriter.DumpAll();
+            _recordedDataWriter.DumpAll(executionFlowRecorder, functionHandler);
             return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_recordedDataWriter.DumpDirectory}");
         } catch (IOException e) {
             e.Demystify();
@@ -147,7 +153,7 @@ public class GdbCustomCommandsHandler {
         }
     }
 
-    private string ExecuteCustomCommand(params string[] args) {
+    private string ExecuteCustomCommand(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, params string[] args) {
         string originalCommand = args[0];
         string command = originalCommand.ToLowerInvariant();
         if (command.StartsWith("ram")) {
@@ -160,7 +166,7 @@ public class GdbCustomCommandsHandler {
             "breakstop" => BreakStop(),
             "callstack" => CallStack(),
             "peekret" => PeekRet(args),
-            "dumpall" => DumpAll(),
+            "dumpall" => DumpAll(executionFlowRecorder, functionHandler),
             "breakcycles" => BreakCycles(args),
             "breakcsip" => BreakCsIp(args),
             "vbuffer" => Vbuffer(args),
@@ -196,20 +202,18 @@ public class GdbCustomCommandsHandler {
             return Help($"Invalid offset value ${offsetString}");
         }
         uint physicalAddress = MemoryUtils.ToPhysicalAddress(segment.Value, offset.Value);
-        IMemory memory = _machine.Memory;
         return bits switch {
-            8 => _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex8(memory.UInt8[physicalAddress])),
-            16 => _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex16(memory.UInt16[physicalAddress])),
-            32 => _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex(memory.UInt32[physicalAddress])),
+            8 => _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex8(_memory.UInt8[physicalAddress])),
+            16 => _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex16(_memory.UInt16[physicalAddress])),
+            32 => _gdbIo.GenerateMessageToDisplayResponse(ConvertUtils.ToHex(_memory.UInt32[physicalAddress])),
             _ => Help($"ram command needs to take a valid bit size. value {bits} is not supported."),
         };
     }
 
     private ushort? ExtractValueFromHexOrRegisterName(string valueOrRegisterName) {
-        State state = _machine.Cpu.State;
-        PropertyInfo? registerProperty = state.GetType().GetProperty(valueOrRegisterName);
+        PropertyInfo? registerProperty = _state.GetType().GetProperty(valueOrRegisterName);
         if (registerProperty != null) {
-            return (ushort?)registerProperty.GetValue(state, null);
+            return (ushort?)registerProperty.GetValue(_state, null);
         }
 
         try {
@@ -283,22 +287,21 @@ Supported custom commands:
     /// <param name="returnCallType">The expected call type.</param>
     /// <returns>The return address string.</returns>
     public string PeekReturn(CallType returnCallType) {
-        return SegmentedAddress.ToString(_machine.Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
+        return SegmentedAddress.ToString(_cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
     }
 
     private string State() {
-        string state = _machine.Cpu.State.ToString();
+        string state = _state.ToString();
         return _gdbIo.GenerateMessageToDisplayResponse(state);
     }
 
     private string Vbuffer(string[] args) {
         try {
             string action = ExtractAction(args);
-            IGui? gui = _machine.Gui;
 
             // Actions for 1 parameter
             if ("refresh".Equals(action)) {
-                gui?.UpdateScreen();
+                _gui?.UpdateScreen();
                 return _gdbIo.GenerateResponse("");
             } else {
                 return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand action {action}");
