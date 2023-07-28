@@ -228,9 +228,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
             Uri? dir = (await storageProvider.OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
             if (!string.IsNullOrWhiteSpace(dir?.AbsolutePath)) {
-                new RecorderDataWriter(dir.AbsolutePath, _programExecutor.Machine,
+                new RecorderDataWriter(_programExecutor.Machine.Memory,
+                        _programExecutor.Machine.Cpu,
+                        _programExecutor.Machine.CallbackHandler,
+                        Configuration,
+                        _programExecutor.Machine.Cpu.ExecutionFlowRecorder,
+                        dir.AbsolutePath,
                         _loggerService)
-                    .DumpAll();
+                    .DumpAll(_programExecutor.Machine.Cpu.ExecutionFlowRecorder, _programExecutor.Machine.Cpu.FunctionHandlerInUse);
             }
         }
     }

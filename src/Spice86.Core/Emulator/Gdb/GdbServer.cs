@@ -1,6 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using System.Diagnostics;
@@ -13,11 +16,18 @@ public sealed class GdbServer : IDisposable {
     private EventWaitHandle? _waitFirstConnectionHandle;
     private readonly Configuration _configuration;
     private bool _disposed;
-    private readonly Machine _machine;
     private bool _isRunning = true;
     private Thread? _gdbServerThread;
     private GdbIo? _gdbIo;
     private readonly Cpu _cpu;
+    private readonly PauseHandler _pauseHandler;
+    private readonly IMemory _memory;
+    private readonly State _state;
+    private readonly CallbackHandler _callbackHandler;
+    private readonly ExecutionFlowRecorder _executionFlowRecorder;
+    private readonly FunctionHandler _functionHandler;
+    private readonly MachineBreakpoints _machineBreakpoints;
+    private readonly IGui? _gui;
 
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
@@ -25,10 +35,17 @@ public sealed class GdbServer : IDisposable {
     /// <param name="machine">The Machine instance to be debugged remotely.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
-    public GdbServer(Cpu cpu, Machine machine, ILoggerService loggerService, Configuration configuration) {
+    public GdbServer(IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, ILoggerService loggerService, Configuration configuration, IGui? gui) {
         _loggerService = loggerService;
+        _pauseHandler = pauseHandler;
+        _functionHandler = functionHandler;
         _cpu = cpu;
-        _machine = machine;
+        _state = state;
+        _memory = memory;
+        _callbackHandler = callbackHandler;
+        _executionFlowRecorder = executionFlowRecorder;
+        _machineBreakpoints = machineBreakpoints;
+        _gui = gui;
         _configuration = configuration;
     }
 
@@ -71,10 +88,13 @@ public sealed class GdbServer : IDisposable {
     /// <param name="gdbIo">The GdbIo instance used to communicate with the GDB client.</param>
     private void AcceptOneConnection(GdbIo gdbIo) {
         gdbIo.WaitForConnection();
-        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(_cpu, gdbIo,
-            _machine,
+        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(
+            _memory, _cpu, _state, _pauseHandler, _machineBreakpoints,
+            _callbackHandler, _executionFlowRecorder, _functionHandler,
+            gdbIo,
             _loggerService,
-            _configuration);
+            _configuration,
+            _gui);
         gdbCommandHandler.PauseEmulator();
         OnConnect();
         GdbCommandHandler = gdbCommandHandler;
@@ -120,8 +140,8 @@ public sealed class GdbServer : IDisposable {
             e.Demystify();
             _loggerService.Error(e, "Unhandled error in the GDB server, restarting it");
         } finally {
-            _machine.Cpu.IsRunning = false;
-            _machine.MachineBreakpoints.PauseHandler.RequestResume();
+            _cpu.IsRunning = false;
+            _pauseHandler.RequestResume();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _loggerService.Information("GDB server stopped");
             }

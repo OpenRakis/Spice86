@@ -33,7 +33,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
-
+    
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
@@ -44,7 +44,7 @@ public sealed class ProgramExecutor : IDisposable {
         _loggerService = loggerService;
         _configuration = configuration;
         Machine = CreateMachine(gui);
-        _gdbServer = CreateGdbServer(Machine.Cpu);
+        _gdbServer = CreateGdbServer(gui);
     }
 
     /// <summary>
@@ -59,9 +59,11 @@ public sealed class ProgramExecutor : IDisposable {
         _gdbServer?.StartServerAndWait();
         Machine.Run();
         if (RecordData) {
-            new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine,
-                _loggerService)
-                .DumpAll();
+            new RecorderDataWriter(Machine.Memory,
+                Machine.Cpu, Machine.CallbackHandler, _configuration,
+                Machine.Cpu.ExecutionFlowRecorder,
+                _configuration.RecordedDataDirectory, _loggerService)
+                .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandlerInUse);
         }
     }
 
@@ -158,12 +160,17 @@ public sealed class ProgramExecutor : IDisposable {
         return Machine;
     }
 
-    private GdbServer? CreateGdbServer(Cpu cpu) {
+    private GdbServer? CreateGdbServer(IGui? gui) {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
-            return new GdbServer(cpu, Machine,
+            return new GdbServer(Machine.Memory, Machine.Cpu,
+                Machine.Cpu.State, Machine.CallbackHandler, Machine.Cpu.FunctionHandlerInUse,
+                Machine.Cpu.ExecutionFlowRecorder,
+                Machine.MachineBreakpoints,
+                Machine.MachineBreakpoints.PauseHandler,
                 _loggerService,
-                _configuration);
+                _configuration,
+                gui);
         }
 
         return null;

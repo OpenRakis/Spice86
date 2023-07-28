@@ -15,18 +15,17 @@ public class GdbCommandMemoryHandler {
     private readonly ILoggerService _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
-    private readonly Machine _machine;
+    private readonly IMemory _memory;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="GdbCommandMemoryHandler"/> class.
     /// </summary>
     /// <param name="gdbIo">The GDB I/O handler.</param>
-    /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service.</param>
-    public GdbCommandMemoryHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService) {
+    public GdbCommandMemoryHandler(IMemory memory, GdbIo gdbIo, ILoggerService loggerService) {
         _loggerService = loggerService;
+        _memory = memory;
         _gdbIo = gdbIo;
-        _machine = machine;
     }
     
     /// <summary>
@@ -46,8 +45,7 @@ public class GdbCommandMemoryHandler {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Reading memory at address {Address} for a length of {Length}", address, length);
             }
-            IMemory memory = _machine.Memory;
-            uint memorySize = memory.Length;
+            uint memorySize = _memory.Length;
             StringBuilder response = new StringBuilder((int)length * 2);
             for (long i = 0; i < length; i++) {
                 long readAddress = address + i;
@@ -55,7 +53,7 @@ public class GdbCommandMemoryHandler {
                     break;
                 }
 
-                byte b = memory.UInt8[(uint)readAddress];
+                byte b = _memory.UInt8[(uint)readAddress];
                 string value = _gdbFormatter.FormatValueAsHex8(b);
                 response.Append(value);
             }
@@ -90,13 +88,12 @@ public class GdbCommandMemoryHandler {
         // variable 2 hex strings
         int patternStartIndex = 3 + "Search:memory:".Length + 2 + parameters[0].Length + parameters[1].Length;
         List<byte> patternBytesList = rawCommand.GetRange(patternStartIndex, rawCommand.Count - 1);
-        IMemory memory = _machine.Memory;
-        uint? address = memory.SearchValue(start, (int)end, patternBytesList);
+        uint? address = _memory.SearchValue(start, (int)end, patternBytesList);
         if (address == null) {
             return _gdbIo.GenerateResponse("0");
         }
 
-        return _gdbIo.GenerateResponse("1," + _gdbFormatter.FormatValueAsHex32(address.Value));
+        return _gdbIo.GenerateResponse($"1,{_gdbFormatter.FormatValueAsHex32(address.Value)}");
     }
     
     /// <summary>
@@ -114,12 +111,11 @@ public class GdbCommandMemoryHandler {
                 return _gdbIo.GenerateResponse("E01");
             }
 
-            IMemory memory = _machine.Memory;
-            if (address + length > memory.Length) {
+            if (address + length > _memory.Length) {
                 return _gdbIo.GenerateResponse("E02");
             }
 
-            memory.LoadData(address, data);
+            _memory.LoadData(address, data);
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
             nfe.Demystify();

@@ -16,8 +16,9 @@ using Serilog.Events;
 public class GdbCommandBreakpointHandler {
     private readonly ILoggerService _loggerService;
     private readonly GdbIo _gdbIo;
-    private readonly Machine _machine;
     private volatile bool _resumeEmulatorOnCommandEnd;
+    private readonly MachineBreakpoints _machineBreakpoints;
+    private readonly PauseHandler _pauseHandler;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GdbCommandBreakpointHandler"/> class.
@@ -25,10 +26,11 @@ public class GdbCommandBreakpointHandler {
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GdbCommandBreakpointHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService) {
+    public GdbCommandBreakpointHandler(MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
         _loggerService = loggerService;
+        _machineBreakpoints = machineBreakpoints;
+        _pauseHandler = pauseHandler;
         _gdbIo = gdbIo;
-        _machine = machine;
     }
 
     /// <summary>
@@ -38,7 +40,7 @@ public class GdbCommandBreakpointHandler {
     /// <returns>A response string to send back to GDB.</returns>
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
-        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
         }
@@ -51,7 +53,7 @@ public class GdbCommandBreakpointHandler {
     /// <returns>A response string to send back to GDB.</returns>
     public string ContinueCommand() {
         _resumeEmulatorOnCommandEnd = true;
-        _machine.MachineBreakpoints.PauseHandler.RequestResume();
+        _machineBreakpoints.PauseHandler.RequestResume();
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return _gdbIo.GenerateResponse("OK");
@@ -76,7 +78,7 @@ public class GdbCommandBreakpointHandler {
             }
             return;
         }
-        _machine.MachineBreakpoints.PauseHandler.RequestPause();
+        _pauseHandler.RequestPause();
         _resumeEmulatorOnCommandEnd = false;
         try {
             _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
@@ -138,7 +140,7 @@ public class GdbCommandBreakpointHandler {
         if (breakPoint == null) {
             return _gdbIo.GenerateResponse("");
         }
-        _machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, false);
+        _machineBreakpoints.ToggleBreakPoint(breakPoint, false);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint removed@!\n{@BreakPoint}", breakPoint);
         }
@@ -154,7 +156,7 @@ public class GdbCommandBreakpointHandler {
 
         // will pause the CPU at the next instruction unconditionally
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, OnBreakPointReached, true);
-        _machine.MachineBreakpoints.ToggleBreakPoint(stepBreakPoint, true);
+        _machineBreakpoints.ToggleBreakPoint(stepBreakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint added for st@ep!\n{@StepBreakPoint}", stepBreakPoint);
         }
