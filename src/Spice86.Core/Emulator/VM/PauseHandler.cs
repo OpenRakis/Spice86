@@ -12,17 +12,12 @@ using Spice86.Shared.Interfaces;
 public sealed class PauseHandler : IDisposable {
     private readonly ILoggerService _loggerService;
 
-    private readonly IGui? _gui;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="PauseHandler"/> class with the specified logger service and GUI.
     /// </summary>
     /// <param name="loggerService">The logger service to use for logging.</param>
     /// <param name="gui">The GUI to use for handling pausing.</param>
-    public PauseHandler(ILoggerService loggerService, IGui? gui) {
-        _loggerService = loggerService;
-        _gui = gui;
-    }
+    public PauseHandler(ILoggerService loggerService) => _loggerService = loggerService;
 
     private volatile bool _paused;
     private volatile bool _pauseEnded;
@@ -58,9 +53,6 @@ public sealed class PauseHandler : IDisposable {
         _pauseRequested = false;
         if(!_disposed) {
             _manualResetEvent.Set();
-            if(_gui?.IsPaused == true) {
-                _gui.Play();
-            }
         }
         LogStatus($"{nameof(RequestResume)} finished");
     }

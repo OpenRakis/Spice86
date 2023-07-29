@@ -26,13 +26,6 @@ public interface IGui {
     void HideMouseCursor();
 
     /// <summary>
-    /// Indicates whether the GUI considers the Emulator is paused. <br/>
-    /// When <c>true</c>, the Play button is displayed <br/>
-    /// When <c>false</c>, the Pause button is displayed <br/>
-    /// </summary>
-    bool IsPaused { get; }
-
-    /// <summary>
     /// Makes the UI display the Pause button, and hide the Pause button.
     /// </summary>
     void Play();

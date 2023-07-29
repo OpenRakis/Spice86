@@ -437,7 +437,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// Whether the emulation is paused.
     /// </summary>
-    public bool IsPaused { get; private set; }
+    public bool IsPaused { get; set; }
 
     private bool _exitEmulationLoop;
 
@@ -468,15 +468,13 @@ public sealed class Machine : IDisposable {
     }
 
     private void PauseIfAskedTo() {
-        if (Gui?.IsPaused is true) {
-            IsPaused = true;
+        if (IsPaused) {
             if (!_programExecutor.Step()) {
-                while (Gui?.IsPaused is true) {
+                while (IsPaused) {
                     Thread.Sleep(1);
                 }
             }
         }
-        IsPaused = false;
     }
 
     /// <summary>

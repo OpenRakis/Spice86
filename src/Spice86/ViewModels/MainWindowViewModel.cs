@@ -237,19 +237,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void Pause() {
-        if (_emulatorThread is null) {
+        if (_programExecutor is null) {
             return;
         }
-
-        IsPaused = true;
+        IsPaused = _programExecutor.Machine.IsPaused = true;
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void Play() {
-        if (_emulatorThread is null) {
+        if (_programExecutor is null) {
             return;
         }
-        IsPaused = false;
+
+        IsPaused = _programExecutor.Machine.IsPaused = false;
     }
 
     private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
