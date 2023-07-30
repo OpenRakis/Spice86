@@ -38,7 +38,6 @@ public sealed class Machine : IDisposable {
     private readonly ProgramExecutor _programExecutor;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly Thread _dmaThread;
-    private bool _exitDmaLoop;
     private bool _dmaThreadStarted;
     private readonly ManualResetEvent _dmaResetEvent = new(true);
 
@@ -179,7 +178,7 @@ public sealed class Machine : IDisposable {
     public IIOPortHandler VgaIoPortHandler { get; }
 
     /// <summary>
-    /// The class that handles converting video memory to a bitmap 
+    /// The class that handles converting video memory to a bitmap
     /// </summary>
     public readonly IVgaRenderer VgaRenderer;
     
@@ -345,9 +344,7 @@ public sealed class Machine : IDisposable {
     /// Registers an interrupt handler
     /// </summary>
     /// <param name="interruptHandler">The interrupt handler to install.</param>
-    public void RegisterInterruptHandler(IInterruptHandler interruptHandler) {
-        InterruptInstaller.InstallInterruptHandler(interruptHandler);
-    }
+    public void RegisterInterruptHandler(IInterruptHandler interruptHandler) => InterruptInstaller.InstallInterruptHandler(interruptHandler);
 
     /// <summary>
     /// Registers a I/O port handler, such as a sound card.
@@ -373,11 +370,11 @@ public sealed class Machine : IDisposable {
     /// https://techgenix.com/direct-memory-access/
     /// </summary>
     private void DmaLoop() {
-        while (Cpu.IsRunning && !_exitDmaLoop && !_exitEmulationLoop && !_disposed) {
+        while (Cpu.IsRunning) {
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                bool transfered = dmaChannel.Transfer(Memory);
-                if (!_exitDmaLoop && !transfered) {
+                bool transferred = dmaChannel.Transfer(Memory);
+                if (!transferred) {
                     _dmaResetEvent.WaitOne(Timeout.Infinite);
                 }
             }
@@ -388,9 +385,7 @@ public sealed class Machine : IDisposable {
     /// Peeks at the return address.
     /// </summary>
     /// <returns>The return address string.</returns>
-    public string PeekReturn() {
-        return SegmentedAddress.ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
-    }
+    public string PeekReturn() => SegmentedAddress.ToString(Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
 
     /// <summary>
     /// Implements the emulation loop.
@@ -439,16 +434,13 @@ public sealed class Machine : IDisposable {
     /// </summary>
     public bool IsPaused { get; set; }
 
-    private bool _exitEmulationLoop;
-
     /// <summary>
     /// Forces the emulation loop to exit.
     /// </summary>
-    public void ExitEmulationLoop() => _exitEmulationLoop = true;
+    public void ExitEmulationLoop() => Cpu.IsRunning = false;
 
     private void RunLoop() {
-        _exitEmulationLoop = false;
-        while (Cpu.IsRunning && !_exitEmulationLoop && !_disposed) {
+        while (Cpu.IsRunning) {
             PauseIfAskedTo();
             if (RecordData) {
                 MachineBreakpoints.CheckBreakPoint();
@@ -461,19 +453,19 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// Performs DMA transfers when invoked.
     /// </summary>
-    public void PerformDmaTransfers() {
-        if (!_disposed && !_exitDmaLoop) {
-            _dmaResetEvent.Set();
-        }
-    }
+    public void PerformDmaTransfers() => _dmaResetEvent.Set();
 
     private void PauseIfAskedTo() {
-        if (IsPaused) {
-            if (!_programExecutor.Step()) {
-                while (IsPaused) {
-                    Thread.Sleep(1);
-                }
-            }
+        if (!IsPaused) {
+            return;
+        }
+
+        if (_programExecutor.Step()) {
+            return;
+        }
+
+        while (IsPaused) {
+            Thread.Sleep(1);
         }
     }
 
@@ -484,8 +476,8 @@ public sealed class Machine : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                ExitEmulationLoop();
                 _dmaResetEvent.Set();
-                _exitDmaLoop = true;
                 if (_dmaThread.IsAlive && _dmaThreadStarted) {
                     _dmaThread.Join();
                 }
