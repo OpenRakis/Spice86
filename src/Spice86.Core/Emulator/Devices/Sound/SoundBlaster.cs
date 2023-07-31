@@ -115,7 +115,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
     private readonly List<byte> _commandData = new();
     private readonly int _dma16;
-    private readonly DmaChannel _dmaChannel;
+    private readonly DmaChannel _eightByteDmaChannel;
     private readonly Dsp _dsp;
     private readonly Mixer _mixer;
     private readonly Queue<byte> _outputData = new();
@@ -137,7 +137,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="machine">Virtual machine instance associated with the device.</param>
     /// <param name="configuration">The emulator config.</param>
     /// <param name="loggerService">The logging service for events such as non-fatal errors, warnings, or information</param>
-    public SoundBlaster(DmaController dmaController, IMemory memory, Cpu cpu, DualPic dualPic, IGui? gui, DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(memory, cpu, failOnUnhandledPort, loggerService) {
+    public SoundBlaster(DmaController dmaController, IMemory memory, Cpu cpu, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(memory, cpu, failOnUnhandledPort, loggerService) {
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
@@ -145,8 +145,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _gui = gui;
         _dualPic = dualPic;
         _mixer = new Mixer(this);
-        _dmaChannel = eightBitDmaChannel;
-        _dsp = new Dsp(eightBitDmaChannel, sixteenBitDmaChannel, this, DMA, _dma16);
+        _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
+        _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this, DMA, _dma16);
         _playbackThread = new Thread(AudioPlayback) {
             Name = "PCMAudio",
             Priority = ThreadPriority.AboveNormal
@@ -457,13 +457,13 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             case Commands.PauseDmaMode:
             case Commands.PauseDmaMode16:
             case Commands.ExitDmaMode16:
-                _dmaChannel.IsActive = false;
+                _eightByteDmaChannel.IsActive = false;
                 _dsp.IsEnabled = false;
                 break;
 
             case Commands.ContinueDmaMode:
             case Commands.ContinueDmaMode16:
-                _dmaChannel.IsActive = true;
+                _eightByteDmaChannel.IsActive = true;
                 _dsp.IsEnabled = true;
                 break;
 

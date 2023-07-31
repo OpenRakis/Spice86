@@ -254,7 +254,7 @@ public sealed class Machine : IDisposable {
         OPL3FM = new OPL3FM(Memory, Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
-        SoundBlaster = new SoundBlaster(DmaController, Memory, Cpu, DualPic, machineCreationOptions.Gui, DmaController.Channels[soundBlasterHardwareConfig.LowDma], DmaController.Channels[soundBlasterHardwareConfig.HighDma], Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService, soundBlasterHardwareConfig);
+        SoundBlaster = new SoundBlaster(DmaController, Memory, Cpu, DualPic, machineCreationOptions.Gui, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(Memory, Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
