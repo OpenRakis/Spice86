@@ -95,20 +95,21 @@ public class Dos {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
+    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Dos(IMemory memory, Cpu cpu, State state, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Configuration configuration, ILoggerService loggerService) {
+    public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Configuration configuration, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _cpu = cpu;
-        _state = state;
+        _state = cpu.State;
         _vgaFunctionality = vgaFunctionality;
         AddDefaultDevices();
         FileManager = new DosFileManager(_memory, configuration, _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
-        DosInt20Handler = new DosInt20Handler(_memory, _cpu, state, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, _cpu, state, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
-        DosInt2FHandler = new DosInt2fHandler(_memory, _cpu, state, _loggerService);
+        DosInt20Handler = new DosInt20Handler(_memory, _cpu, _loggerService);
+        DosInt21Handler = new DosInt21Handler(_memory, _cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(_memory, _cpu, _loggerService);
     }
 
     internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, Configuration configuration) {
@@ -120,7 +121,7 @@ public class Dos {
         SetEnvironmentVariables(blasterEnvVarProvider);
 
         if (configuration.Ems) {
-            Ems = new(_memory, _cpu, state, this, _loggerService);
+            Ems = new(_memory, _cpu, this, _loggerService);
         }
     }
 

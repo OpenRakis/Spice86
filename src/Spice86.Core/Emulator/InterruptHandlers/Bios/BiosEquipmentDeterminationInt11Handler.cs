@@ -10,7 +10,7 @@ using Spice86.Shared.Interfaces;
 /// Very basic implementation of int 11 that basically does nothing.
 /// </summary>
 public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
-    public BiosEquipmentDeterminationInt11Handler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
+    public BiosEquipmentDeterminationInt11Handler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(memory, cpu, loggerService) {
     }
 
     /// <inheritdoc />

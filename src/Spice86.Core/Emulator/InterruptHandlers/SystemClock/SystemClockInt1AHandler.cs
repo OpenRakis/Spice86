@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 public class SystemClockInt1AHandler : InterruptHandler {
     private readonly TimerInt8Handler _timerHandler;
 
-    public SystemClockInt1AHandler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(memory, cpu, state, loggerService) {
+    public SystemClockInt1AHandler(IMemory memory, Cpu cpu, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(memory, cpu, loggerService) {
         _timerHandler = timerHandler;
         AddAction(0x00, SetSystemClockCounter);
         AddAction(0x01, GetSystemClockCounter);

@@ -41,10 +41,10 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    protected InterruptHandler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService) : base(state, loggerService) {
+    protected InterruptHandler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(cpu.State, loggerService) {
         _memory = memory;
         _cpu = cpu;
-        _state = state;
+        _state = cpu.State;
     }
 
     /// <inheritdoc />

@@ -45,7 +45,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="memory">The emulator memory.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dos">The DOS kernel.</param>
-    public DosInt21Handler(IMemory memory, Cpu cpu, State state, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Dos dos, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
+    public DosInt21Handler(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dos = dos;

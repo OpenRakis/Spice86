@@ -18,10 +18,9 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public IOPortDispatcher(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, Configuration configuration) : base(memory, cpu, state, configuration, loggerService) {
+    public IOPortDispatcher(IMemory memory, Cpu cpu, ILoggerService loggerService, Configuration configuration) : base(memory, cpu, configuration, loggerService) {
         _failOnUnhandledPort = configuration.FailOnUnhandledPort;
     }
 

@@ -32,8 +32,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="videoState">Represents the state of the video card.</param>
-    public VgaIoPortHandler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, Configuration configuration, IVideoState videoState) :
-        base(memory, cpu, state, configuration, loggerService) {
+    public VgaIoPortHandler(IMemory memory, Cpu cpu, ILoggerService loggerService, Configuration configuration, IVideoState videoState) : base(memory, cpu, configuration, loggerService) {
         _logger = loggerService;
 
         // Initialize registers.

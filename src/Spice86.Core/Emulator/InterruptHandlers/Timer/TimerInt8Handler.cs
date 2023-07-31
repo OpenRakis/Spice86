@@ -21,7 +21,7 @@ public class TimerInt8Handler : InterruptHandler {
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public TimerInt8Handler(IMemory memory, Cpu cpu, State state, DualPic dualPic, Timer timer, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
+    public TimerInt8Handler(IMemory memory, Cpu cpu, DualPic dualPic, Timer timer, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         _timer = timer;
         _memory = memory;
         _dualPic = dualPic;

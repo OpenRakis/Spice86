@@ -48,16 +48,15 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// Constructor for DefaultIOPortHandler
     /// </summary>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="state">The CPU State.</param>
     /// <param name="configuration">Configuration used by the handler.</param>
     /// <param name="loggerService">Logger service implementation.</param>
     /// <param name="memory">The memory bus.</param>
-    protected DefaultIOPortHandler(IMemory memory, Cpu cpu, State state, Configuration configuration, ILoggerService loggerService) {
+    protected DefaultIOPortHandler(IMemory memory, Cpu cpu, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
         _loggerService = loggerService;
         _memory = memory;
-        _state = state;
         _cpu = cpu;
+        _state = cpu.State;
         _failOnUnhandledPort = Configuration.FailOnUnhandledPort;
     }
 

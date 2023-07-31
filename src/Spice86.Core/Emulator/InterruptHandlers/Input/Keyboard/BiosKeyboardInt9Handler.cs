@@ -16,7 +16,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
     private readonly DualPic _dualPic;
 
-    public BiosKeyboardInt9Handler(IMemory memory, Cpu cpu, State state, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
+    public BiosKeyboardInt9Handler(IMemory memory, Cpu cpu, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         _keyboard = keyboard;
         _dualPic = dualPic;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);

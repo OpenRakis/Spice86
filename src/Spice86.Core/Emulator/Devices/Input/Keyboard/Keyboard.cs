@@ -37,12 +37,11 @@ public class Keyboard : DefaultIOPortHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="a20Gate">The A20 Gate.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="state">The CPU state.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public Keyboard(IMemory memory, A20Gate a20Gate, Cpu cpu, State state, DualPic dualPic, ILoggerService loggerService, IGui? gui, Configuration configuration) : base(memory, cpu, state, configuration, loggerService) {
+    public Keyboard(IMemory memory, A20Gate a20Gate, Cpu cpu, DualPic dualPic, ILoggerService loggerService, IGui? gui, Configuration configuration) : base(memory, cpu, configuration, loggerService) {
         _gui = gui;
         _a20Gate = a20Gate;
         _dualPic = dualPic;

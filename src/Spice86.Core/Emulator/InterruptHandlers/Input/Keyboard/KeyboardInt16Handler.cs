@@ -10,7 +10,7 @@ using Spice86.Shared.Interfaces;
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
-    public KeyboardInt16Handler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(memory, cpu, state, loggerService) {
+    public KeyboardInt16Handler(IMemory memory, Cpu cpu, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(memory, cpu, loggerService) {
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, () => GetKeystroke());
         AddAction(0x01, () => GetKeystrokeStatus(true));

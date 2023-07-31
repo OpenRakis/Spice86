@@ -23,7 +23,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public PcSpeaker(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, Configuration configuration) : base(memory, cpu, state, configuration, loggerService) {
+    public PcSpeaker(IMemory memory, Cpu cpu, ILoggerService loggerService, Configuration configuration) : base(memory, cpu, configuration, loggerService) {
         _pcSpeaker = new(configuration);
     }
 

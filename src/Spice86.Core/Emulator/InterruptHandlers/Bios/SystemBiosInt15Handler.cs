@@ -19,10 +19,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="state">The CPU state.</param>
     /// <param name="a20Gate">The A20 line gate.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public SystemBiosInt15Handler(IMemory memory, Cpu cpu, State state, A20Gate a20Gate, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
+    public SystemBiosInt15Handler(IMemory memory, Cpu cpu, A20Gate a20Gate, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         _a20Gate = a20Gate;
         FillDispatchTable();
     }

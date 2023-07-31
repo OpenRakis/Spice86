@@ -35,16 +35,16 @@ public class Timer : DefaultIOPortHandler {
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
 
-    public Timer(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(memory, cpu, state, configuration, loggerService) {
+    public Timer(IMemory memory, Cpu cpu, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(memory, cpu, configuration, loggerService) {
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         for (int i = 0; i < _counters.Length; i++) {
-            _counters[i] = new Counter(state,
+            _counters[i] = new Counter(cpu.State,
                 _loggerService,
-                i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
+                i, counterConfigurator.InstanciateCounterActivator(cpu.State));
         }
         // screen refresh is 60hz regardless of the configuration
-        _vgaScreenRefreshCounter = new Counter(state, _loggerService, 4, new TimeCounterActivator(1));
+        _vgaScreenRefreshCounter = new Counter(cpu.State, _loggerService, 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
     }
 

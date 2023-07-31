@@ -20,10 +20,9 @@ public class MouseInt33Handler : InterruptHandler {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger</param>
     /// <param name="mouseDriver">The mouse driver to handle the actual functionality.</param>
-    public MouseInt33Handler(IMemory memory, Cpu cpu, State state, ILoggerService loggerService, IMouseDriver mouseDriver) : base(memory, cpu, state, loggerService) {
+    public MouseInt33Handler(IMemory memory, Cpu cpu, ILoggerService loggerService, IMouseDriver mouseDriver) : base(memory, cpu, loggerService) {
         _mouseDriver = mouseDriver;
         FillDispatchTable();
     }

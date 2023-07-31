@@ -28,7 +28,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">A logger</param>
-    public VgaBios(IMemory memory, Cpu cpu, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, state, loggerService) {
+    public VgaBios(IMemory memory, Cpu cpu, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
