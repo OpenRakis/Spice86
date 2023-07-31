@@ -44,7 +44,7 @@ public sealed class MachineBreakpoints : IDisposable {
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public MachineBreakpoints(IMemory memory, State state, IGui? gui, ILoggerService loggerService) {
+    public MachineBreakpoints(IMemory memory, State state, ILoggerService loggerService) {
         _state = state;
         _memory = memory;
         PauseHandler = new(loggerService);

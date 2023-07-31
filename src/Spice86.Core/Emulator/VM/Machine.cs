@@ -220,7 +220,7 @@ public sealed class Machine : IDisposable {
         Cpu = new Cpu(Memory, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
 
         // Breakpoints
-        MachineBreakpoints = new MachineBreakpoints(Memory, Cpu.State, machineCreationOptions.Gui, machineCreationOptions.LoggerService);
+        MachineBreakpoints = new MachineBreakpoints(Memory, Cpu.State, machineCreationOptions.LoggerService);
         Cpu.SetMachineBreakPoints(MachineBreakpoints);
         
         // IO devices
