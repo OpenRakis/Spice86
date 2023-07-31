@@ -35,7 +35,9 @@ public class Cpu {
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
     private readonly IMemory _memory;
-    private DualPic? _dualPic;
+    
+    internal DualPic DualPic { get; }
+    
     private readonly ModRM _modRM;
     
     internal MachineBreakpoints MachineBreakpoints { get; }
@@ -87,9 +89,9 @@ public class Cpu {
         AddressSize = 16;
         MachineBreakpoints = new(_memory, State, _loggerService);
         IoPortDispatcher = new IOPortDispatcher(_memory, this, _loggerService, failOnUnhandledPort);
+        DualPic = new DualPic(_memory, this, failOnUnhandledPort, _loggerService);
     }
 
-    internal void SetDualPic(DualPic dualPic) => _dualPic = dualPic;
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
 
@@ -1200,7 +1202,7 @@ public class Cpu {
         }
 
         // Check the PIC in case this was not directly set by rewritten code
-        ExternalInterruptVectorNumber ??= _dualPic?.ComputeVectorNumber();
+        ExternalInterruptVectorNumber ??= DualPic.ComputeVectorNumber();
 
         if (ExternalInterruptVectorNumber == null) {
             return;

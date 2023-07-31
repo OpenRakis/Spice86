@@ -228,9 +228,8 @@ public sealed class Machine : IDisposable {
         DmaController = new DmaController(Memory, this.Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(DmaController);
 
-        DualPic = new DualPic(Memory, Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
+        DualPic = Cpu.DualPic;
         RegisterIoPortHandler(DualPic);
-        Cpu.SetDualPic(DualPic);
         
         VgaRegisters = new VideoState();
         VgaIoPortHandler = new VgaIoPortHandler(Memory, Cpu, machineCreationOptions.LoggerService, VgaRegisters, machineCreationOptions.Configuration.FailOnUnhandledPort);
