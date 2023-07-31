@@ -37,7 +37,9 @@ public class Cpu {
     private readonly IMemory _memory;
     private DualPic? _dualPic;
     private readonly ModRM _modRM;
-    private MachineBreakpoints? _machineBreakpoints;
+    
+    internal MachineBreakpoints MachineBreakpoints { get; }
+    
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
     private readonly Instructions32 _instructions32;
@@ -83,13 +85,10 @@ public class Cpu {
         _instructions32 = new Instructions32(Alu, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
+        MachineBreakpoints = new(_memory, State, _loggerService);
     }
 
     internal void SetDualPic(DualPic dualPic) => _dualPic = dualPic;
-
-    internal void SetMachineBreakPoints(MachineBreakpoints machineBreakpoints) =>
-        _machineBreakpoints = machineBreakpoints;
-
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
 
@@ -169,31 +168,25 @@ public class Cpu {
 
     public uint NextUint32() {
         uint res = _memory.UInt32[InternalIpPhysicalAddress];
-        if (_machineBreakpoints is not null) {
-            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, _internalIp);
-            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, (ushort) (_internalIp+1));
-            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, (ushort) (_internalIp+2));
-            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, (ushort) (_internalIp+3));
-        }
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+2));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+3));
         _internalIp += 4;
         return res;
     }
 
     public ushort NextUint16() {
         ushort res = _memory.UInt16[InternalIpPhysicalAddress];
-        if (_machineBreakpoints is not null) {
-            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, _internalIp);
-            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, (ushort) (_internalIp+1));
-        }
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+1));
         _internalIp += 2;
         return res;
     }
 
     public byte NextUint8() {
         byte res = _memory.UInt8[InternalIpPhysicalAddress];
-        if (_machineBreakpoints is not null) {
-            ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, _machineBreakpoints, State.CS, _internalIp);
-        }
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
         _internalIp++;
         return res;
     }
