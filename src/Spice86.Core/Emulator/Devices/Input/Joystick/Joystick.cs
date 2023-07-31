@@ -21,7 +21,7 @@ public class Joystick : DefaultIOPortHandler {
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Joystick(IMemory memory, Cpu cpu, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, configuration, loggerService) {
+    public Joystick(IMemory memory, Cpu cpu, bool failOnUnhandledPort, ILoggerService loggerService) : base(memory, cpu, failOnUnhandledPort, loggerService) {
     }
 
     /// <inheritdoc />

@@ -41,7 +41,7 @@ public class Keyboard : DefaultIOPortHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public Keyboard(IMemory memory, A20Gate a20Gate, Cpu cpu, DualPic dualPic, ILoggerService loggerService, IGui? gui, Configuration configuration) : base(memory, cpu, configuration, loggerService) {
+    public Keyboard(IMemory memory, A20Gate a20Gate, Cpu cpu, DualPic dualPic, ILoggerService loggerService, IGui? gui, bool failOnUnhandledPort) : base(memory, cpu, failOnUnhandledPort, loggerService) {
         _gui = gui;
         _a20Gate = a20Gate;
         _dualPic = dualPic;

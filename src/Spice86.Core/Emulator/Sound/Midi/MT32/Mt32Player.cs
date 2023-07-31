@@ -24,7 +24,7 @@ internal sealed class Mt32Player : IDisposable {
 
     private readonly ILoggerService _loggerService;
 
-    public Mt32Player(string romsPath, ILoggerService loggerService, Configuration configuration) {
+    public Mt32Player(string romsPath, ILoggerService loggerService) {
         _loggerService = loggerService;
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));

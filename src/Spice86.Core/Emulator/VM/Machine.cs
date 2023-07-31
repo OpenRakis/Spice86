@@ -217,28 +217,23 @@ public sealed class Machine : IDisposable {
         Memory = new Memory(ram, machineCreationOptions.Configuration);
         BiosDataArea = new BiosDataArea(Memory);
         
-        Cpu = new Cpu(Memory, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData);
+        Cpu = new Cpu(Memory, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData, machineCreationOptions.Configuration.FailOnUnhandledPort);
 
         // Breakpoints
         MachineBreakpoints = Cpu.MachineBreakpoints;
         
         // IO devices
-        IoPortDispatcher = new IOPortDispatcher(
-            Memory,
-            Cpu,
-            machineCreationOptions.LoggerService,
-            machineCreationOptions.Configuration);
-        Cpu.IoPortDispatcher = IoPortDispatcher;
+        IoPortDispatcher = Cpu.IoPortDispatcher ?? new IOPortDispatcher(Memory, Cpu, machineCreationOptions.LoggerService, Configuration.FailOnUnhandledPort);
 
-        DmaController = new DmaController(Memory, this.Cpu, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        DmaController = new DmaController(Memory, this.Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(DmaController);
 
-        DualPic = new DualPic(Memory, Cpu, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        DualPic = new DualPic(Memory, Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(DualPic);
         Cpu.SetDualPic(DualPic);
         
         VgaRegisters = new VideoState();
-        VgaIoPortHandler = new VgaIoPortHandler(Memory, Cpu, machineCreationOptions.LoggerService, machineCreationOptions.Configuration, VgaRegisters);
+        VgaIoPortHandler = new VgaIoPortHandler(Memory, Cpu, machineCreationOptions.LoggerService, VgaRegisters, machineCreationOptions.Configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(VgaIoPortHandler);
 
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
@@ -247,24 +242,24 @@ public sealed class Machine : IDisposable {
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(machineCreationOptions.Gui, VgaRenderer, machineCreationOptions.LoggerService);
 
-        Timer = new Timer(Memory, Cpu, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, machineCreationOptions.Configuration);
+        Timer = new Timer(Memory, Cpu, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, Configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Timer);
-        Keyboard = new Keyboard(Memory, Memory.A20Gate, Cpu, DualPic, machineCreationOptions.LoggerService, machineCreationOptions.Gui, machineCreationOptions.Configuration);
+        Keyboard = new Keyboard(Memory, Memory.A20Gate, Cpu, DualPic, machineCreationOptions.LoggerService, machineCreationOptions.Gui, Configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
         MouseDevice = new Mouse(Memory, Cpu, DualPic, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MouseDevice);
-        Joystick = new Joystick(Memory, Cpu, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        Joystick = new Joystick(Memory, Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(Joystick);
-        PcSpeaker = new PcSpeaker(Memory, Cpu, machineCreationOptions.LoggerService, machineCreationOptions.Configuration);
+        PcSpeaker = new PcSpeaker(Memory, Cpu, machineCreationOptions.LoggerService, Configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(Memory, Cpu, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        OPL3FM = new OPL3FM(Memory, Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
-        SoundBlaster = new SoundBlaster(DmaController, Memory, Cpu, DualPic, machineCreationOptions.Gui, DmaController.Channels[soundBlasterHardwareConfig.LowDma], DmaController.Channels[soundBlasterHardwareConfig.HighDma], machineCreationOptions.Configuration, machineCreationOptions.LoggerService, soundBlasterHardwareConfig);
+        SoundBlaster = new SoundBlaster(DmaController, Memory, Cpu, DualPic, machineCreationOptions.Gui, DmaController.Channels[soundBlasterHardwareConfig.LowDma], DmaController.Channels[soundBlasterHardwareConfig.HighDma], Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
-        GravisUltraSound = new GravisUltraSound(Memory, Cpu, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        GravisUltraSound = new GravisUltraSound(Memory, Cpu, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(Memory, Cpu, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        MidiDevice = new Midi(Memory, Cpu, Configuration.Mt32RomsPath, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
         RegisterIoPortHandler(MidiDevice);
 
         // Services

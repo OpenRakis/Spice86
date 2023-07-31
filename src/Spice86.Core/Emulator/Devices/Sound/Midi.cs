@@ -28,10 +28,10 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(IMemory memory, Cpu cpu, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, configuration, loggerService) {
-        _generalMidi = new GeneralMidi(configuration, loggerService);
+    public Midi(IMemory memory, Cpu cpu, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(memory, cpu, failOnUnhandledPort, loggerService) {
+        _generalMidi = new GeneralMidi(mt32RomsPath, loggerService);
     }
     
     /// <inheritdoc />

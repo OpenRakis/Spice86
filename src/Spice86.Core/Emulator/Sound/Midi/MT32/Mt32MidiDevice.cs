@@ -21,18 +21,13 @@ internal sealed class Mt32MidiDevice : MidiDevice {
     /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
     /// </summary>
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
-    /// <param name="configuration">The configuration settings for the device.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(string romsPath, Configuration configuration, ILoggerService loggerService) {
+    public Mt32MidiDevice(string romsPath, ILoggerService loggerService) {
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
-
-        _player = new Mt32Player(
-            romsPath,
-            loggerService,
-            configuration);
+        _player = new Mt32Player(romsPath, loggerService);
     }
     
     /// <inheritdoc/>

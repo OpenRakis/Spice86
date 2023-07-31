@@ -38,7 +38,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">to get the mouse type from</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Mouse(IMemory memory, Cpu cpu, DualPic dualPic, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, configuration, loggerService) {
+    public Mouse(IMemory memory, Cpu cpu, DualPic dualPic, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, configuration.FailOnUnhandledPort, loggerService) {
         _gui = gui;
         _dualPic = dualPic;
         MouseType = configuration.Mouse;

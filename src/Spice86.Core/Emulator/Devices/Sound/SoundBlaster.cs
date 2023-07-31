@@ -137,7 +137,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="machine">Virtual machine instance associated with the device.</param>
     /// <param name="configuration">The emulator config.</param>
     /// <param name="loggerService">The logging service for events such as non-fatal errors, warnings, or information</param>
-    public SoundBlaster(DmaController dmaController, IMemory memory, Cpu cpu, DualPic dualPic, IGui? gui, DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, Configuration configuration, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(memory, cpu, configuration, loggerService) {
+    public SoundBlaster(DmaController dmaController, IMemory memory, Cpu cpu, DualPic dualPic, IGui? gui, DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(memory, cpu, failOnUnhandledPort, loggerService) {
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;

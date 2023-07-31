@@ -68,7 +68,7 @@ public class Cpu {
 
     public InterruptVectorTable InterruptVectorTable { get; }
 
-    public Cpu(IMemory memory, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+    public Cpu(IMemory memory, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData, bool failOnUnhandledPort) {
         _loggerService = loggerService;
         _memory = memory;
         InterruptVectorTable = new((Indexable)_memory);
@@ -86,6 +86,7 @@ public class Cpu {
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
         MachineBreakpoints = new(_memory, State, _loggerService);
+        IoPortDispatcher = new IOPortDispatcher(_memory, this, _loggerService, failOnUnhandledPort);
     }
 
     internal void SetDualPic(DualPic dualPic) => _dualPic = dualPic;

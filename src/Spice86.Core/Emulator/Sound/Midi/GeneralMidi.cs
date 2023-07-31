@@ -41,15 +41,15 @@ public sealed class GeneralMidi : IDisposable {
 
     private readonly ILoggerService _loggerService;
 
-    private Configuration Configuration { get; init; }
 
     /// <summary>
     /// Initializes a new instance of the GeneralMidi class.
     /// </summary>
-    public GeneralMidi(Configuration configuration, ILoggerService loggerService) {
+    /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    public GeneralMidi(string? mt32RomsPath, ILoggerService loggerService) {
         _loggerService = loggerService;
-        Mt32RomsPath = configuration.Mt32RomsPath;
-        Configuration = configuration;
+        Mt32RomsPath = mt32RomsPath;
     }
 
     /// <summary>
@@ -133,7 +133,7 @@ public sealed class GeneralMidi : IDisposable {
             case DataPort:
                 if (_midiMapper is null) {
                     if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
-                        _midiMapper = new Mt32MidiDevice(Mt32RomsPath, Configuration, _loggerService);
+                        _midiMapper = new Mt32MidiDevice(Mt32RomsPath, _loggerService);
                     } else {
                         _midiMapper = new GeneralMidiDevice();
                     }

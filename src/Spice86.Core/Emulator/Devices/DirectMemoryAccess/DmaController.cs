@@ -46,7 +46,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DmaController(IMemory memory, Cpu cpu, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, configuration, loggerService) {
+    public DmaController(IMemory memory, Cpu cpu, bool failOnUnhandledPort, ILoggerService loggerService) : base(memory, cpu, failOnUnhandledPort, loggerService) {
         for (int i = 0; i < 8; i++) {
             DmaChannel channel = new DmaChannel();
             _channels.Add(channel);

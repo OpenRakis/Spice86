@@ -35,7 +35,7 @@ public class Timer : DefaultIOPortHandler {
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
 
-    public Timer(IMemory memory, Cpu cpu, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(memory, cpu, configuration, loggerService) {
+    public Timer(IMemory memory, Cpu cpu, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(memory, cpu, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         for (int i = 0; i < _counters.Length; i++) {
