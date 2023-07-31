@@ -262,8 +262,7 @@ public sealed class Machine : IDisposable {
         RegisterIoPortHandler(MidiDevice);
 
         // Services
-        CallbackHandler = new CallbackHandler(Cpu.State, machineCreationOptions.LoggerService);
-        Cpu.CallbackHandler = CallbackHandler;
+        CallbackHandler = Cpu.CallbackHandler;
         // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
         MemoryAsmWriter memoryAsmWriter = new(Memory, new SegmentedAddress(MemoryMap.InterruptHandlersSegment, 0), CallbackHandler);
         InterruptInstaller = new InterruptInstaller(new InterruptVectorTable(Memory), memoryAsmWriter, Cpu.FunctionHandler);

@@ -52,7 +52,7 @@ public class Cpu {
     /// </summary>
     public int AddressSize { get; private set; }
 
-    public CallbackHandler? CallbackHandler { get; set; }
+    public CallbackHandler CallbackHandler { get; }
 
     // When true will crash if an interrupt targets code at 0000:0000
     public bool ErrorOnUninitializedInterruptHandler { get; set; }
@@ -89,7 +89,8 @@ public class Cpu {
         AddressSize = 16;
         MachineBreakpoints = new(_memory, State, _loggerService);
         IoPortDispatcher = new IOPortDispatcher(_memory, this, _loggerService, failOnUnhandledPort);
-        DualPic = new DualPic(_memory, this, failOnUnhandledPort, _loggerService);
+        DualPic = new(_memory, this, failOnUnhandledPort, _loggerService);
+        CallbackHandler = new(State, _loggerService);
     }
 
     public void ExecuteNextInstruction() {
@@ -227,9 +228,7 @@ public class Cpu {
             or 0xAE // SCASB
             or 0xAF;
 
-    public void Callback(ushort callbackIndex) {
-        CallbackHandler?.Run(callbackIndex);
-    }
+    public void Callback(ushort callbackIndex) => CallbackHandler.Run(callbackIndex);
 
     private void ExecSubOpcode(byte subcode) {
         switch (subcode) {
