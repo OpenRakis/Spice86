@@ -47,7 +47,7 @@ public class GdbCommandHandler {
         _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(_state, gdbIo, _loggerService);
         _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(_memory, gdbIo, _loggerService);
         _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(machineBreakpoints, pauseHandler, gdbIo, _loggerService);
-        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(configuration, _memory, _cpu, _state, callbackHandler, executionFlowRecorder, machineBreakpoints, gdbIo, gui,
+        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(configuration, _memory, _cpu, callbackHandler, executionFlowRecorder, machineBreakpoints, gdbIo, gui,
             _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }

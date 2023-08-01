@@ -60,7 +60,7 @@ public sealed class ProgramExecutor : IDisposable {
         Machine.Run();
         if (RecordData) {
             new RecorderDataWriter(Machine.Memory,
-                Machine.Cpu, Machine.CallbackHandler, _configuration,
+                Machine.Cpu.State, Machine.CallbackHandler, _configuration,
                 Machine.Cpu.ExecutionFlowRecorder,
                 _configuration.RecordedDataDirectory, _loggerService)
                 .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandlerInUse);

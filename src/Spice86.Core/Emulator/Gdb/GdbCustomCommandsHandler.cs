@@ -37,7 +37,7 @@ public class GdbCustomCommandsHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="machineBreakpoints"></param>
+    /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="loggerService">The logger service implementation.</param>
@@ -46,23 +46,21 @@ public class GdbCustomCommandsHandler {
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="state">The CPU state.</param>
     /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
-    public GdbCustomCommandsHandler(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, GdbIo gdbIo, IGui? gui, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
+    public GdbCustomCommandsHandler(Configuration configuration, IMemory memory, Cpu cpu, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, GdbIo gdbIo, IGui? gui, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
-        _state = state;
+        _state = cpu.State;
         _memory = memory;
         _machineBreakpoints = machineBreakpoints;
         _gui = gui;
         _cpu = cpu;
         _gdbIo = gdbIo;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecorderDataWriter(_memory, cpu, callbackHandler, configuration, executionFlowRecorder, recordedDataDirectory, _loggerService);
+        _recordedDataWriter = new RecorderDataWriter(_memory, _cpu.State, callbackHandler, configuration, executionFlowRecorder, recordedDataDirectory, _loggerService);
     }
-
-
+    
     /// <summary>
     /// Handles a custom command passed from GDB.
     /// </summary>

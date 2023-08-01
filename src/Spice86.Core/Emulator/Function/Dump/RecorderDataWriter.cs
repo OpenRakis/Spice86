@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class RecorderDataWriter : RecordedDataIoHandler {
     private readonly ILoggerService _loggerService;
-    private readonly Cpu _cpu;
+    private readonly State _state;
     private readonly IMemory _memory;
     private readonly CallbackHandler _callbackHandler;
     private readonly Configuration _configuration;
@@ -22,18 +22,18 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="executionFlowRecorder"></param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="dumpDirectory">Where to dump the data.</param>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="callbackHandler">The class that stores callback instructions.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public RecorderDataWriter(IMemory memory, Cpu cpu, CallbackHandler callbackHandler, Configuration configuration, ExecutionFlowRecorder executionFlowRecorder, string dumpDirectory, ILoggerService loggerService) : base(dumpDirectory) {
+    public RecorderDataWriter(IMemory memory, State state, CallbackHandler callbackHandler, Configuration configuration, ExecutionFlowRecorder executionFlowRecorder, string dumpDirectory, ILoggerService loggerService) : base(dumpDirectory) {
         _loggerService = loggerService;
         _configuration = configuration;
         _executionFlowRecorder = executionFlowRecorder;
-        _cpu = cpu;
+        _state = state;
         _memory = memory;
         _callbackHandler = callbackHandler;
     }
@@ -62,7 +62,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <param name="suffix">The suffix to add to the file name.</param>
     public void DumpCpuRegisters(string suffix) {
         string path = GenerateDumpFileName($"CpuRegisters{suffix}.json");
-        File.WriteAllText(path, JsonSerializer.Serialize(_cpu.State));
+        File.WriteAllText(path, JsonSerializer.Serialize(_state));
     }
 
     /// <summary>
@@ -83,7 +83,5 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <summary>
     /// Dumps the execution flow data to the file system.
     /// </summary>
-    private void DumpExecutionFlow() {
-        new ExecutionFlowDumper(_loggerService).Dump(_executionFlowRecorder, ExecutionFlowFile);
-    }
+    private void DumpExecutionFlow() => new ExecutionFlowDumper(_loggerService).Dump(_executionFlowRecorder, ExecutionFlowFile);
 }
