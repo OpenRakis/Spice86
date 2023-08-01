@@ -22,7 +22,12 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="executionFlowRecorder"></param>
     /// <param name="dumpDirectory">Where to dump the data.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="callbackHandler">The class that stores callback instructions.</param>
+    /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public RecorderDataWriter(IMemory memory, Cpu cpu, CallbackHandler callbackHandler, Configuration configuration, ExecutionFlowRecorder executionFlowRecorder, string dumpDirectory, ILoggerService loggerService) : base(dumpDirectory) {
         _loggerService = loggerService;

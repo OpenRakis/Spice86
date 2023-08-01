@@ -26,11 +26,11 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located. Can be null if MT-32 isn't used.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(IMemory memory, Cpu cpu, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(memory, cpu, failOnUnhandledPort, loggerService) {
+    public Midi(State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _generalMidi = new GeneralMidi(mt32RomsPath, loggerService);
     }
     

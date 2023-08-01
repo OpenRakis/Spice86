@@ -31,14 +31,12 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// <summary>
     ///     Initializes a new instance of the <see cref="Mouse" /> class.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="dualPic">The two Programmable Interrupt Controllers.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">to get the mouse type from</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Mouse(IMemory memory, Cpu cpu, DualPic dualPic, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(memory, cpu, configuration.FailOnUnhandledPort, loggerService) {
+    public Mouse(State state, DualPic dualPic, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _gui = gui;
         _dualPic = dualPic;
         MouseType = configuration.Mouse;

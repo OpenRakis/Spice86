@@ -37,11 +37,18 @@ public class GdbCustomCommandsHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="machineBreakpoints"></param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
     /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
+    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     public GdbCustomCommandsHandler(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, GdbIo gdbIo, IGui? gui, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
@@ -55,10 +62,12 @@ public class GdbCustomCommandsHandler {
         _recordedDataWriter = new RecorderDataWriter(_memory, cpu, callbackHandler, configuration, executionFlowRecorder, recordedDataDirectory, _loggerService);
     }
 
-    
+
     /// <summary>
     /// Handles a custom command passed from GDB.
     /// </summary>
+    /// <param name="executionFlowRecorder">The class that records code execution flow.</param>
+    /// <param name="functionHandler">The class that handles function calls.</param>
     /// <param name="command">The command string passed from GDB.</param>
     /// <returns>A response string to be sent back to GDB.</returns>
     public string HandleCustomCommands(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, string command) {

@@ -9,7 +9,7 @@ using Spice86.Shared.Interfaces;
 using System.Diagnostics;
 
 /// <summary>
-/// Represents a GDB server that allows for remote debugging of a Machine instance.
+/// A GDB server that allows for remote debugging of the emulator.
 /// </summary>
 public sealed class GdbServer : IDisposable {
     private readonly ILoggerService _loggerService;
@@ -32,9 +32,16 @@ public sealed class GdbServer : IDisposable {
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
     /// </summary>
-    /// <param name="machine">The Machine instance to be debugged remotely.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
+    /// <param name="gui">The graphical user interface. Is <c>null</c> in headless mode.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
+    /// <param name="functionHandler">The class that handles functions calls.</param>
+    /// <param name="machineBreakpoints">The class that handles breakpoints.</param>
     public GdbServer(IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, ILoggerService loggerService, Configuration configuration, IGui? gui) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;

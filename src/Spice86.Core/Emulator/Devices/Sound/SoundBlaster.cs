@@ -134,10 +134,14 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
-    /// <param name="machine">Virtual machine instance associated with the device.</param>
-    /// <param name="configuration">The emulator config.</param>
-    /// <param name="loggerService">The logging service for events such as non-fatal errors, warnings, or information</param>
-    public SoundBlaster(DmaController dmaController, IMemory memory, Cpu cpu, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(memory, cpu, failOnUnhandledPort, loggerService) {
+    /// <param name="loggerService">The logging service used for logging events.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
+    /// <param name="dualPic">The two programmable interrupt controllers.</param>
+    /// <param name="gui">The GUI. Is <c>null</c> in headless mode.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
+    /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
+    public SoundBlaster(State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;

@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -14,11 +13,6 @@ using Spice86.Shared.Interfaces;
 /// Base class for interrupt handlers.
 /// </summary>
 public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInterruptHandler {
-    /// <summary>
-    /// The CPU state.
-    /// </summary>
-    protected readonly State _state;
-
     /// <summary>
     /// The emulator CPU.
     /// </summary>
@@ -35,16 +29,14 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     private bool _interruptStackPresent = true;
 
     /// <summary>
-    /// Constructs a new instance of the InterruptHandler class.
+    /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     protected InterruptHandler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(cpu.State, loggerService) {
         _memory = memory;
         _cpu = cpu;
-        _state = cpu.State;
     }
 
     /// <inheritdoc />

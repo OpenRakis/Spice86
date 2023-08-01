@@ -13,6 +13,13 @@ using Spice86.Shared.Interfaces;
 public class SystemClockInt1AHandler : InterruptHandler {
     private readonly TimerInt8Handler _timerHandler;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="timerHandler">The timer interrupt handler.</param>
     public SystemClockInt1AHandler(IMemory memory, Cpu cpu, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(memory, cpu, loggerService) {
         _timerHandler = timerHandler;
         AddAction(0x00, SetSystemClockCounter);

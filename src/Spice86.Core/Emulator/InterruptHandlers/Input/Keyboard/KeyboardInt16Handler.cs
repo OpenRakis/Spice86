@@ -10,6 +10,13 @@ using Spice86.Shared.Interfaces;
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
     public KeyboardInt16Handler(IMemory memory, Cpu cpu, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(memory, cpu, loggerService) {
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, () => GetKeystroke());

@@ -26,7 +26,8 @@ public class GhidraSymbolsDumper {
     /// <summary>
     /// Dumps function information and labels to a file.
     /// </summary>
-    /// <param name="machine">The machine instance to extract the function information and labels from.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="functionHandler">The class that handles functions calls.</param>
     /// <param name="destinationFilePath">The path of the file to write the dumped information to.</param>
     public void Dump(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, string destinationFilePath) {
         ICollection<FunctionInformation> functionInformationsValues = functionHandler.FunctionInformations.Values;

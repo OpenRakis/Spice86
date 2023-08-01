@@ -17,11 +17,10 @@ public class Joystick : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="Joystick"/>
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Joystick(IMemory memory, Cpu cpu, bool failOnUnhandledPort, ILoggerService loggerService) : base(memory, cpu, failOnUnhandledPort, loggerService) {
+    public Joystick(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
     }
 
     /// <inheritdoc />

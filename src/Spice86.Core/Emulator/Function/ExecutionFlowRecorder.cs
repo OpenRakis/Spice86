@@ -15,7 +15,7 @@ using IMemory = Spice86.Core.Emulator.Memory.IMemory;
 /// </summary>
 public class ExecutionFlowRecorder {
     /// <summary>
-    /// A set of pre-allocated breakpoints from physical address 0x0 to <see cref="Memory.EndOfHighMemoryArea"/>
+    /// A set of pre-allocated breakpoints from physical address 0x0 up to the end of the HMA.
     /// </summary>
     private Dictionary<uint, AddressBreakPoint> _addressBreakPoints = new();
 
@@ -85,7 +85,8 @@ public class ExecutionFlowRecorder {
     /// Avoids allocation and deallocation of closures before the emulation starts.
     /// Speeds up the emulator quite a bit.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="machine">The memory bus.</param>
+    /// <param name="state">The CPU state.</param>
     internal void PreAllocatePossibleExecutionFlowBreakPoints(IMemory memory, State state) {
         //Avoid re-entry.
         if (_addressBreakPoints.Count != 0) {
@@ -183,13 +184,16 @@ public class ExecutionFlowRecorder {
         uint address = MemoryUtils.ToPhysicalAddress(cs, ip);
         RegisterExecutableByteModificationBreakPoint(memory, state, machineBreakpoints, address);
     }
+
     /// <summary>
     /// Creates a memory write breakpoint on the given executable address.
-    /// When triggered will fill <see cref="ExecutableAddressWrittenBy"/> appropriately:
-    ///  - key of the map is the address being modified
+    /// When triggered will fill <see cref="ExecutableAddressWrittenBy"/> appropriately:<br/>
+    ///  - key of the map is the address being modified <br/>
     ///  - value is a dictionary of instruction addresses that modified it, with for each instruction a list of the before and after values.
     /// </summary>
-    /// <param name="machineBreakpoints">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="physicalAddress">The address to set the breakpoint at.</param>
     public void RegisterExecutableByteModificationBreakPoint(IMemory memory, State state, MachineBreakpoints machineBreakpoints, uint physicalAddress) {
         if (!_executableCodeAreasEncountered.Add(physicalAddress)) {

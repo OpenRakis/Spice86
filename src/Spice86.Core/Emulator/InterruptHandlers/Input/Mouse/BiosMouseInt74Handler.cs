@@ -14,6 +14,11 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     private readonly DualPic _hardwareInterruptHandler;
     private readonly InMemoryAddressSwitcher _driverAddressSwitcher;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="hardwareInterruptHandler">The too programmable interrupt controllers.</param>
+    /// <param name="memory">The memory bus.</param>
     public BiosMouseInt74Handler(DualPic hardwareInterruptHandler, IIndexable memory) {
         _hardwareInterruptHandler = hardwareInterruptHandler;
         _driverAddressSwitcher = new(memory);
@@ -22,9 +27,7 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <inheritdoc />
     public byte VectorNumber => 0x74;
 
-    public void SetMouseDriverAddress(SegmentedAddress driverAddress) {
-        _driverAddressSwitcher.SetAddress(driverAddress.Segment, driverAddress.Offset);
-    }
+    public void SetMouseDriverAddress(SegmentedAddress driverAddress) => _driverAddressSwitcher.SetAddress(driverAddress.Segment, driverAddress.Offset);
 
     /// <inheritdoc />
     public SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
@@ -54,7 +57,5 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <summary>
     /// Prepares execution before the Mouse handler is called.
     /// </summary>
-    public void AfterMouseDriverExecution() {
-        _hardwareInterruptHandler.AcknowledgeInterrupt(12);
-    }
+    public void AfterMouseDriverExecution() => _hardwareInterruptHandler.AcknowledgeInterrupt(12);
 }

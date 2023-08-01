@@ -1,15 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
-using Spice86.Core.Emulator;
+using System.Collections.ObjectModel;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
-
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
@@ -23,6 +19,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     private const int ClearBytePointerFlipFlop = 0xC;
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly List<DmaChannel> _channels = new(8);
+    private readonly IMemory _memory;
 
     private bool _disposed;
     private bool _exitDmaLoop;
@@ -43,10 +40,11 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     /// Initializes a new instance of the <see cref="DmaController"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DmaController(IMemory memory, Cpu cpu, bool failOnUnhandledPort, ILoggerService loggerService) : base(memory, cpu, failOnUnhandledPort, loggerService) {
+    public DmaController(IMemory memory, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        _memory = memory;
         for (int i = 0; i < 8; i++) {
             DmaChannel channel = new DmaChannel();
             _channels.Add(channel);

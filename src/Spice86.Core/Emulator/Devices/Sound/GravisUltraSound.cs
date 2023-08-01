@@ -20,11 +20,10 @@ public class GravisUltraSound : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the Gravis Ultrasound sound card.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GravisUltraSound(IMemory memory, Cpu cpu, bool failOnUnhandledPort, ILoggerService loggerService) : base(memory, cpu, failOnUnhandledPort, loggerService) {
+    public GravisUltraSound(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
     }
 
     /// <inhheritdoc/>

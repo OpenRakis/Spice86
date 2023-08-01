@@ -16,10 +16,11 @@ public class GdbCommandMemoryHandler {
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly IMemory _memory;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="GdbCommandMemoryHandler"/> class.
     /// </summary>
+    /// <param name="memory">The memory bus.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service.</param>
     public GdbCommandMemoryHandler(IMemory memory, GdbIo gdbIo, ILoggerService loggerService) {

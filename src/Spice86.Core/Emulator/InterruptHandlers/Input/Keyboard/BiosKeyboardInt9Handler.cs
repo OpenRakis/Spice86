@@ -16,6 +16,15 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
     private readonly DualPic _dualPic;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="dualPic">The two programmable interrupt controllers.</param>
+    /// <param name="keyboard">The keyboard controller.</param>
+    /// <param name="biosDataArea">The memory mapped BIOS values.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public BiosKeyboardInt9Handler(IMemory memory, Cpu cpu, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         _keyboard = keyboard;
         _dualPic = dualPic;

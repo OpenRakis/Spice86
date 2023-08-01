@@ -6,7 +6,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -28,11 +27,13 @@ public class FunctionHandler {
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
 
     private uint StackPhysicalAddress => _state.StackPhysicalAddress;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="FunctionHandler"/> class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="recordData">Whether we record execution data. If not, <see cref="Call"/> and <see cref="Ret"/> won't record execution flow.</param>
     public FunctionHandler(IMemory memory, State state, ExecutionFlowRecorder executionFlowRecorder, ILoggerService loggerService, bool recordData) {

@@ -88,8 +88,8 @@ public class Cpu {
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
         MachineBreakpoints = new(_memory, State, _loggerService);
-        IoPortDispatcher = new IOPortDispatcher(_memory, this, _loggerService, failOnUnhandledPort);
-        DualPic = new(_memory, this, failOnUnhandledPort, _loggerService);
+        IoPortDispatcher = new IOPortDispatcher(State, _loggerService, failOnUnhandledPort);
+        DualPic = new(State, failOnUnhandledPort, _loggerService);
         CallbackHandler = new(State, _loggerService);
     }
 

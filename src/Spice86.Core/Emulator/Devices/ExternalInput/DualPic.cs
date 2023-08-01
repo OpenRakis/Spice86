@@ -34,12 +34,10 @@ public class DualPic : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="DualPic"/> class.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DualPic(IMemory memory, Cpu cpu, bool failOnUnhandledPort, ILoggerService loggerService) : base(memory, cpu, failOnUnhandledPort, loggerService) {
+    public DualPic(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _pic1 = new Pic(loggerService);
         _pic2 = new Pic(loggerService);
         Initialize();

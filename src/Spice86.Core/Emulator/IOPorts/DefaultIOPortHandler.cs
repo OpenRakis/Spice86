@@ -20,11 +20,6 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     protected readonly ILoggerService _loggerService;
 
     /// <summary>
-    /// The CPU interpreter.
-    /// </summary>
-    protected Cpu _cpu;
-
-    /// <summary>
     /// Whether we raise an exception when a port wasn't handled.
     /// </summary>
     protected bool _failOnUnhandledPort;
@@ -35,22 +30,14 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     protected readonly State _state;
 
     /// <summary>
-    /// The memory bus.
-    /// </summary>
-    protected readonly IMemory _memory;
-
-    /// <summary>
     /// Constructor for DefaultIOPortHandler
     /// </summary>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="cpu">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">Logger service implementation.</param>
-    /// <param name="memory">The memory bus.</param>
-    protected DefaultIOPortHandler(IMemory memory, Cpu cpu, bool failOnUnhandledPort, ILoggerService loggerService) {
+    protected DefaultIOPortHandler(State state, bool failOnUnhandledPort, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _memory = memory;
-        _cpu = cpu;
-        _state = cpu.State;
+        _state = state;
         _failOnUnhandledPort = failOnUnhandledPort;
     }
 
