@@ -21,7 +21,6 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
-using Spice86.Core.Emulator.OperatingSystem;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -29,9 +28,11 @@ using Spice86.Core.Emulator.OperatingSystem;
 /// </summary>
 public sealed class ProgramExecutor : IDisposable {
     private readonly ILoggerService _loggerService;
-    private bool _disposedValue;
+    private bool _disposed;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
+    private readonly EmulationLoop _emulationLoop;
+    
     private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
     
     /// <summary>
@@ -45,6 +46,7 @@ public sealed class ProgramExecutor : IDisposable {
         _configuration = configuration;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer(gui);
+        _emulationLoop = new(Machine.Cpu, Machine.Timer, RecordData, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
     }
 
     /// <summary>
@@ -57,7 +59,6 @@ public sealed class ProgramExecutor : IDisposable {
     /// </summary>
     public void Run() {
         _gdbServer?.StartServerAndWait();
-        Machine.Run();
         if (RecordData) {
             new RecorderDataWriter(Machine.Memory,
                 Machine.Cpu.State, Machine.CallbackHandler, _configuration,
@@ -65,7 +66,10 @@ public sealed class ProgramExecutor : IDisposable {
                 _configuration.RecordedDataDirectory, _loggerService)
                 .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
         }
+        _emulationLoop.Run();
     }
+    
+    public bool IsPaused { get => _emulationLoop.IsPaused; set => _emulationLoop.IsPaused = value; }
 
     /// <inheritdoc />
     public void Dispose() {
@@ -75,13 +79,13 @@ public sealed class ProgramExecutor : IDisposable {
     }
 
     private void Dispose(bool disposing) {
-        if (!_disposedValue) {
+        if (!_disposed) {
             if (disposing) {
                 _gdbServer?.Dispose();
+                _emulationLoop.Exit();
                 Machine.Dispose();
             }
-
-            _disposedValue = true;
+            _disposed = true;
         }
     }
 
@@ -100,6 +104,8 @@ public sealed class ProgramExecutor : IDisposable {
             throw new UnrecoverableException(error);
         }
     }
+
+    public IVideoCard VideoCard => Machine.VgaCard;
 
     private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
         string? executableFileName = configuration.Exe;
@@ -134,7 +140,7 @@ public sealed class ProgramExecutor : IDisposable {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
-        Machine = new Machine(new MachineCreationOptions(this, gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, RecordData));
+        Machine = new Machine(gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
         InitializeCpu();
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
@@ -234,15 +240,6 @@ public sealed class ProgramExecutor : IDisposable {
             e.Demystify();
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
-    }
-
-    internal bool Step() {
-        if (_gdbServer?.GdbCommandHandler is null) {
-            return false;
-        }
-
-        _gdbServer.GdbCommandHandler.Step();
-        return true;
     }
 
     private static void SetupFunctionHandler(FunctionHandler functionHandler,

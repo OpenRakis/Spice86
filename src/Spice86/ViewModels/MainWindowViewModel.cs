@@ -245,7 +245,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (_programExecutor is null) {
             return;
         }
-        IsPaused = _programExecutor.Machine.IsPaused = true;
+        IsPaused = _programExecutor.IsPaused = true;
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
@@ -254,7 +254,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             return;
         }
 
-        IsPaused = _programExecutor.Machine.IsPaused = false;
+        IsPaused = _programExecutor.IsPaused = false;
     }
 
     private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
@@ -326,7 +326,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         Configuration.UseCodeOverride = false;
         Play();
         await Dispatcher.UIThread.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
-        _programExecutor?.Machine.ExitEmulationLoop();
         while (_emulatorThread?.IsAlive == true) {
             Dispatcher.UIThread.RunJobs();
         }
@@ -615,7 +614,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private void StartProgramExecutor() {
         _programExecutor = new ProgramExecutor(_loggerService, this, Configuration);
         TimeMultiplier = Configuration.TimeMultiplier;
-        _videoCard = _programExecutor.Machine.VgaCard;
+        _videoCard = _programExecutor.VideoCard;
         Dispatcher.UIThread.Post(() => IsMachineRunning = true);
         Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
         _programExecutor.Run();

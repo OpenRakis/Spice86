@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.CLI;
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -11,7 +10,6 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
@@ -29,20 +27,11 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-using System.Diagnostics;
-
 /// <summary>
-/// Emulates an IBM PC
+/// Centralizes classes instances that should live while the CPU is running.
 /// </summary>
 public sealed class Machine : IDisposable {
-    private readonly ProgramExecutor _programExecutor;
-
     private bool _disposed;
-
-    /// <summary>
-    /// Gets or set if we record execution data, for reverse engineering purposes.
-    /// </summary>
-    public bool RecordData { get; }
     
     /// <summary>
     /// Memory mapped BIOS values.
@@ -82,11 +71,6 @@ public sealed class Machine : IDisposable {
     /// The Gravis Ultrasound sound card.
     /// </summary>
     public GravisUltraSound GravisUltraSound { get; }
-
-    /// <summary>
-    /// The GUI. Can be null in headless mode.
-    /// </summary>
-    public IGui? Gui { get; }
 
     /// <summary>
     /// Gives the port read or write to the registered handler.
@@ -199,66 +183,56 @@ public sealed class Machine : IDisposable {
     public OPL3FM OPL3FM { get; }
 
     /// <summary>
-    /// The emulator configuration.
-    /// </summary>
-    public Configuration Configuration { get; }
-
-    /// <summary>
     /// Initializes a new instance
     /// <param name="machineCreationOptions">Describes how the machine will run, and what it will run.</param>
     /// </summary>
-    public Machine(MachineCreationOptions machineCreationOptions) {
-        _programExecutor = machineCreationOptions.ProgramExecutor;
-        Configuration = machineCreationOptions.Configuration;
-        Gui = machineCreationOptions.Gui;
-        RecordData = machineCreationOptions.RecordData;
-
+    public Machine(IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        Memory = new Memory(ram, machineCreationOptions.Configuration);
+        Memory = new Memory(ram, configuration);
         BiosDataArea = new BiosDataArea(Memory);
         
-        Cpu = new Cpu(Memory, machineCreationOptions.LoggerService, machineCreationOptions.ExecutionFlowRecorder, machineCreationOptions.RecordData, machineCreationOptions.Configuration.FailOnUnhandledPort);
+        Cpu = new Cpu(Memory, loggerService, executionFlowRecorder, recordData, configuration.FailOnUnhandledPort);
 
         // Breakpoints
         MachineBreakpoints = Cpu.MachineBreakpoints;
         
         // IO devices
-        IoPortDispatcher = Cpu.IoPortDispatcher ?? new IOPortDispatcher(Cpu.State, machineCreationOptions.LoggerService, Configuration.FailOnUnhandledPort);
+        IoPortDispatcher = Cpu.IoPortDispatcher ?? new IOPortDispatcher(Cpu.State, loggerService, configuration.FailOnUnhandledPort);
 
-        DmaController = new DmaController(Memory, Cpu.State, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
+        DmaController = new DmaController(Memory, Cpu.State, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(DmaController);
 
         DualPic = Cpu.DualPic;
         RegisterIoPortHandler(DualPic);
         
         VgaRegisters = new VideoState();
-        VgaIoPortHandler = new VgaIoPortHandler(Cpu.State, machineCreationOptions.LoggerService, VgaRegisters, machineCreationOptions.Configuration.FailOnUnhandledPort);
+        VgaIoPortHandler = new VgaIoPortHandler(Cpu.State, loggerService, VgaRegisters, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(VgaIoPortHandler);
 
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
-        VgaCard = new VgaCard(machineCreationOptions.Gui, VgaRenderer, machineCreationOptions.LoggerService);
+        VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
 
-        Timer = new Timer(Cpu.State, machineCreationOptions.LoggerService, DualPic, VgaCard, machineCreationOptions.CounterConfigurator, Configuration.FailOnUnhandledPort);
+        Timer = new Timer(Cpu.State, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Timer);
-        Keyboard = new Keyboard(Cpu.State, Memory.A20Gate, DualPic, machineCreationOptions.LoggerService, machineCreationOptions.Gui, Configuration.FailOnUnhandledPort);
+        Keyboard = new Keyboard(Cpu.State, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
-        MouseDevice = new Mouse(Cpu.State, DualPic, machineCreationOptions.Gui, machineCreationOptions.Configuration, machineCreationOptions.LoggerService);
+        MouseDevice = new Mouse(Cpu.State, DualPic, gui, configuration, loggerService);
         RegisterIoPortHandler(MouseDevice);
-        Joystick = new Joystick(Cpu.State, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
+        Joystick = new Joystick(Cpu.State, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(Joystick);
-        PcSpeaker = new PcSpeaker(Cpu.State, machineCreationOptions.LoggerService, Configuration.FailOnUnhandledPort);
+        PcSpeaker = new PcSpeaker(Cpu.State, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(Cpu.State, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
+        OPL3FM = new OPL3FM(Cpu.State, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
-        SoundBlaster = new SoundBlaster(Cpu.State, DmaController, DualPic, machineCreationOptions.Gui, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService, soundBlasterHardwareConfig);
+        SoundBlaster = new SoundBlaster(Cpu.State, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
-        GravisUltraSound = new GravisUltraSound(Cpu.State, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
+        GravisUltraSound = new GravisUltraSound(Cpu.State, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(Cpu.State, Configuration.Mt32RomsPath, Configuration.FailOnUnhandledPort, machineCreationOptions.LoggerService);
+        MidiDevice = new Midi(Cpu.State, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(MidiDevice);
 
         // Services
@@ -271,21 +245,21 @@ public sealed class Machine : IDisposable {
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
-        VideoInt10Handler = new VgaBios(Memory, Cpu, VgaFunctions, BiosDataArea, machineCreationOptions.LoggerService);
+        VideoInt10Handler = new VgaBios(Memory, Cpu, VgaFunctions, BiosDataArea, loggerService);
         
-        TimerInt8Handler = new TimerInt8Handler(Memory, Cpu, DualPic, Timer, BiosDataArea, machineCreationOptions.LoggerService);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(Memory, Cpu, DualPic, Keyboard, BiosDataArea, machineCreationOptions.LoggerService);
+        TimerInt8Handler = new TimerInt8Handler(Memory, Cpu, DualPic, Timer, BiosDataArea, loggerService);
+        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(Memory, Cpu, DualPic, Keyboard, BiosDataArea, loggerService);
         
-        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(Memory, Cpu, machineCreationOptions.LoggerService);
-        SystemBiosInt15Handler = new SystemBiosInt15Handler(Memory, Cpu, Memory.A20Gate, machineCreationOptions.LoggerService);
-        KeyboardInt16Handler = new KeyboardInt16Handler(Memory, Cpu, machineCreationOptions.LoggerService, BiosKeyboardInt9Handler.BiosKeyboardBuffer);
+        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(Memory, Cpu, loggerService);
+        SystemBiosInt15Handler = new SystemBiosInt15Handler(Memory, Cpu, Memory.A20Gate, loggerService);
+        KeyboardInt16Handler = new KeyboardInt16Handler(Memory, Cpu, loggerService, BiosKeyboardInt9Handler.BiosKeyboardBuffer);
 
-        SystemClockInt1AHandler = new SystemClockInt1AHandler(Memory, Cpu, machineCreationOptions.LoggerService, TimerInt8Handler);
+        SystemClockInt1AHandler = new SystemClockInt1AHandler(Memory, Cpu, loggerService, TimerInt8Handler);
 
-        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, machineCreationOptions.Gui, VgaFunctions, machineCreationOptions.LoggerService);
-        Dos = new Dos(Memory, Cpu, KeyboardInt16Handler, VgaFunctions, Configuration, machineCreationOptions.LoggerService);
+        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, gui, VgaFunctions, loggerService);
+        Dos = new Dos(Memory, Cpu, KeyboardInt16Handler, VgaFunctions, configuration, loggerService);
 
-        if (Configuration.InitializeDOS is not false) {
+        if (configuration.InitializeDOS is not false) {
             // Register the interrupt handlers
             RegisterInterruptHandler(VideoInt10Handler);
             RegisterInterruptHandler(TimerInt8Handler);
@@ -299,12 +273,12 @@ public sealed class Machine : IDisposable {
             RegisterInterruptHandler(Dos.DosInt2FHandler);
 
             // Initialize DOS.
-            Dos.Initialize(SoundBlaster, Cpu.State, machineCreationOptions.Configuration);
-            if (machineCreationOptions.Configuration.Ems && Dos.Ems is not null) {
+            Dos.Initialize(SoundBlaster, Cpu.State, configuration);
+            if (configuration.Ems && Dos.Ems is not null) {
                 RegisterInterruptHandler(Dos.Ems);
             }
 
-            var mouseInt33Handler = new MouseInt33Handler(Memory, Cpu, machineCreationOptions.LoggerService, MouseDriver);
+            var mouseInt33Handler = new MouseInt33Handler(Memory, Cpu, loggerService, MouseDriver);
             RegisterInterruptHandler(mouseInt33Handler);
 
             var mouseIrq12Handler = new BiosMouseInt74Handler(DualPic, Memory);
@@ -344,97 +318,12 @@ public sealed class Machine : IDisposable {
     public void RegisterIoPortHandler(IIOPortHandler ioPortHandler) => ioPortHandler.InitPortHandlers(IoPortDispatcher);
 
     /// <summary>
-    /// Implements the emulation loop.
-    /// </summary>
-    /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>
-    public void Run() {
-        State state = Cpu.State;
-        FunctionHandler functionHandler = Cpu.FunctionHandler;
-        if (Debugger.IsAttached) {
-            try {
-                StartRunLoop(functionHandler, state);
-            } catch (HaltRequestedException) {
-                // Actually a signal generated code requested Exit
-                Dispose(disposing: true);
-            }
-        } else {
-            try {
-                StartRunLoop(functionHandler, state);
-            } catch (InvalidVMOperationException e) {
-                e.Demystify();
-                throw;
-            } catch (HaltRequestedException) {
-                // Actually a signal generated code requested Exit
-                Dispose(disposing: true);
-            } catch (Exception e) {
-                e.Demystify();
-                throw new InvalidVMOperationException(this.Cpu.State, e);
-            }
-        }
-        MachineBreakpoints.OnMachineStop();
-        functionHandler.Ret(CallType.MACHINE);
-    }
-
-    private void StartRunLoop(FunctionHandler functionHandler, State state) {
-        // Entry could be overridden and could throw exceptions
-        functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
-        DmaController.StartDmaThread();
-        if (RecordData) {
-            RunLoopWhileRecordingExecutionData();
-        } else {
-            RunLoop();
-        }
-    }
-
-    /// <summary>
-    /// Whether the emulation is paused.
-    /// </summary>
-    public bool IsPaused { get; set; }
-
-    /// <summary>
-    /// Forces the emulation loop to exit.
-    /// </summary>
-    public void ExitEmulationLoop() => Cpu.IsRunning = false;
-
-    private void RunLoopWhileRecordingExecutionData() {
-        while (Cpu.IsRunning) {
-            PauseIfAskedTo();
-            MachineBreakpoints.CheckBreakPoint();
-            Cpu.ExecuteNextInstruction();
-            Timer.Tick();
-        }
-    }
-    
-    private void RunLoop() {
-        while (Cpu.IsRunning) {
-            PauseIfAskedTo();
-            Cpu.ExecuteNextInstruction();
-            Timer.Tick();
-        }
-    }
-
-    private void PauseIfAskedTo() {
-        if (!IsPaused) {
-            return;
-        }
-
-        if (_programExecutor.Step()) {
-            return;
-        }
-
-        while (IsPaused) {
-            Thread.Sleep(1);
-        }
-    }
-
-    /// <summary>
     /// Releases all resources.
     /// </summary>
     /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                ExitEmulationLoop();
                 MidiDevice.Dispose();
                 SoundBlaster.Dispose();
                 DmaController.Dispose();
