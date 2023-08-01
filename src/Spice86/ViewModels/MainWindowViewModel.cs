@@ -228,14 +228,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
             Uri? dir = (await storageProvider.OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
             if (!string.IsNullOrWhiteSpace(dir?.AbsolutePath)) {
-                new RecorderDataWriter(_programExecutor.Machine.Memory,
-                        _programExecutor.Machine.Cpu.State,
-                        _programExecutor.Machine.CallbackHandler,
-                        Configuration,
-                        _programExecutor.Machine.Cpu.ExecutionFlowRecorder,
-                        dir.AbsolutePath,
-                        _loggerService)
-                    .DumpAll(_programExecutor.Machine.Cpu.ExecutionFlowRecorder, _programExecutor.Machine.Cpu.FunctionHandler);
+                _programExecutor.DumpEmulatorStateToDirectory(dir.AbsolutePath);
             }
         }
     }
@@ -351,7 +344,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             _performanceWindow.Activate();
         } else if (_programExecutor is not null) {
             _performanceWindow = new PerformanceWindow() {
-                DataContext = new PerformanceViewModel(_programExecutor.Machine.Cpu.State, new PerformanceMeasurer())
+                DataContext = new PerformanceViewModel(_programExecutor.CpuState, new PerformanceMeasurer())
             };
             _performanceWindow.Closed += (_, _) => _performanceWindow = null;
             _performanceWindow.Show();
@@ -363,7 +356,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (_debugWindow != null) {
             _debugWindow.Activate();
         } else if(_programExecutor is not null) {
-            _debugWindow = new DebugWindow(_programExecutor.Machine.VgaRegisters, _programExecutor.Machine.VgaRenderer);
+            _debugWindow = new DebugWindow(_programExecutor.VideoState, _programExecutor.VgaRenderer);
             _debugWindow.Closed += (_, _) => _debugWindow = null;
             _debugWindow.Show();
         }
@@ -374,7 +367,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
         } else if(_programExecutor is not null) {
-            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.Machine.VgaRegisters.DacRegisters.ArgbPalette));
+            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.ArgbPalette));
             _paletteWindow.Closed += (_, _) => _paletteWindow = null;
             _paletteWindow.Show();
         }

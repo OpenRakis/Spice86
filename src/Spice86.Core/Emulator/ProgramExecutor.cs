@@ -17,6 +17,7 @@ using System.Security.Cryptography;
 using System.Diagnostics;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -60,15 +61,27 @@ public sealed class ProgramExecutor : IDisposable {
     public void Run() {
         _gdbServer?.StartServerAndWait();
         if (RecordData) {
-            new RecorderDataWriter(Machine.Memory,
-                Machine.Cpu.State, Machine.CallbackHandler, _configuration,
-                Machine.Cpu.ExecutionFlowRecorder,
-                _configuration.RecordedDataDirectory, _loggerService)
-                .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
+            DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
         _emulationLoop.Run();
     }
-    
+
+    public State CpuState => Machine.Cpu.State;
+
+    public VideoState VideoState => Machine.VgaRegisters;
+
+    public ArgbPalette ArgbPalette => Machine.VgaRegisters.DacRegisters.ArgbPalette;
+
+    public IVgaRenderer VgaRenderer => Machine.VgaRenderer;
+
+    public void DumpEmulatorStateToDirectory(string path) {
+        new RecorderDataWriter(Machine.Memory,
+                Machine.Cpu.State, Machine.CallbackHandler, _configuration,
+                Machine.Cpu.ExecutionFlowRecorder,
+                path, _loggerService)
+            .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
+    }
+
     public bool IsPaused { get => _emulationLoop.IsPaused; set => _emulationLoop.IsPaused = value; }
 
     /// <inheritdoc />
