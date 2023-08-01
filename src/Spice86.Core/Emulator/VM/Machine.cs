@@ -47,7 +47,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// Memory mapped BIOS values.
     /// </summary>
-    public BiosDataArea BiosDataArea { get; set; }
+    public BiosDataArea BiosDataArea { get; }
 
     /// <summary>
     /// INT11H handler.
