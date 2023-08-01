@@ -325,6 +325,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
+        _performanceWindow?.Close();
+        _performanceWindow = null;
+        _paletteWindow?.Close();
+        _paletteWindow = null;
+        _debugWindow?.Close();
+        _debugWindow = null;
         RunEmulator();
     }
 
