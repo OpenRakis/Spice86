@@ -63,7 +63,7 @@ public sealed class ProgramExecutor : IDisposable {
                 Machine.Cpu.State, Machine.CallbackHandler, _configuration,
                 Machine.Cpu.ExecutionFlowRecorder,
                 _configuration.RecordedDataDirectory, _loggerService)
-                .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandlerInUse);
+                .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
         }
     }
 
@@ -164,7 +164,7 @@ public sealed class ProgramExecutor : IDisposable {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
             return new GdbServer(Machine.Memory, Machine.Cpu,
-                Machine.Cpu.State, Machine.CallbackHandler, Machine.Cpu.FunctionHandlerInUse,
+                Machine.Cpu.State, Machine.CallbackHandler, Machine.Cpu.FunctionHandler,
                 Machine.Cpu.ExecutionFlowRecorder,
                 Machine.MachineBreakpoints,
                 Machine.MachineBreakpoints.PauseHandler,

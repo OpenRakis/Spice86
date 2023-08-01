@@ -38,7 +38,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
         _callbackHandler = callbackHandler;
     }
 
-    /// <summary>
+    /// <summary> 
     /// Dumps all recorded data to their respective files.
     /// </summary>
     public void DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {

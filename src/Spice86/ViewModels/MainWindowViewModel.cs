@@ -235,7 +235,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
                         _programExecutor.Machine.Cpu.ExecutionFlowRecorder,
                         dir.AbsolutePath,
                         _loggerService)
-                    .DumpAll(_programExecutor.Machine.Cpu.ExecutionFlowRecorder, _programExecutor.Machine.Cpu.FunctionHandlerInUse);
+                    .DumpAll(_programExecutor.Machine.Cpu.ExecutionFlowRecorder, _programExecutor.Machine.Cpu.FunctionHandler);
             }
         }
     }
