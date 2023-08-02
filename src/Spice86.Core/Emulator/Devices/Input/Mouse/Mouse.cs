@@ -26,7 +26,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private double _previousMouseYRelative;
     private int _sampleRate = 100;
     private long _sampleRateTicks;
-    private DualPic _dualPic;
+    private readonly DualPic _dualPic;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="Mouse" /> class.
