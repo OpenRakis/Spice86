@@ -16,14 +16,6 @@ public class UnhandledInterruptException : UnhandledOperationException {
     public UnhandledInterruptException(State state, int callbackNumber, int operation) : base(state, FormatMessage(callbackNumber, operation)) {
     }
 
-    /// <inheritdoc />
-    public UnhandledInterruptException(State state, string message) : base(state, message) {
-    }
-
-    /// <inheritdoc />
-    public UnhandledInterruptException(State state, Exception e) : base(state, e) {
-    }
-
     private static string FormatMessage(int callbackNumber, int operation) {
         return $"callbackNumber=0x{callbackNumber:X}, operation=0x{operation:X}";
     }

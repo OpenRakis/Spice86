@@ -20,14 +20,6 @@ public class InvalidOpCodeException : InvalidVMOperationException {
     public InvalidOpCodeException(State state, ushort opcode, bool prefixNotAllowed) : base(state, GenerateMessage(opcode, prefixNotAllowed)) {
     }
 
-    /// <inheritdoc />
-    public InvalidOpCodeException(State state, string message) : base(state, message) {
-    }
-
-    /// <inheritdoc />
-    public InvalidOpCodeException(State state, Exception e) : base(state, e) {
-    }
-
     private static string GenerateMessage(ushort opcode, bool prefixNotAllowed) {
         return $"opcode={ConvertUtils.ToHex(opcode)}{(prefixNotAllowed ? " prefix is not allowed here" : "")}";
     }

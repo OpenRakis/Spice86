@@ -17,12 +17,4 @@ public class InvalidCounterIndexException : InvalidVMOperationException {
     /// <param name="counterIndex">The incorrect counter index that triggered the exception.</param>
     public InvalidCounterIndexException(State state, int counterIndex) : base(state, $"Invalid counter index {counterIndex}") {
     }
-
-    /// <inheritdoc />
-    public InvalidCounterIndexException(State state, string message) : base(state, message) {
-    }
-
-    /// <inheritdoc />
-    public InvalidCounterIndexException(State state, Exception e) : base(state, e) {
-    }
 }

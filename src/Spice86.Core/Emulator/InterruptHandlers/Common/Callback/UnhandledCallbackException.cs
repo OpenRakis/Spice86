@@ -3,8 +3,6 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 
-using System;
-
 /// <summary>
 /// Exception signaling that the callback number that was meant to be executed was not mapped to any
 /// csharp code. <br /> Could happen for unhandled exceptions.
@@ -17,14 +15,6 @@ public class UnhandledCallbackException : UnhandledOperationException {
     /// <param name="state">The CPU state.</param>
     /// <param name="callbackNumber">Indicates which callback we attempted to call.</param>
     public UnhandledCallbackException(State state, int callbackNumber) : base(state, FormatMessage(callbackNumber)) {
-    }
-
-    /// <inheritdoc />
-    public UnhandledCallbackException(State state, string message) : base(state, message) {
-    }
-
-    /// <inheritdoc />
-    public UnhandledCallbackException(State state, Exception e) : base(state, e) {
     }
 
     /// <summary>

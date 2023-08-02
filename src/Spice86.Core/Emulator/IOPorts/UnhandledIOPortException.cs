@@ -20,12 +20,4 @@ public class UnhandledIOPortException : UnhandledOperationException {
     /// <param name="ioPort">The number of the unhandled IO Port.</param>
     public UnhandledIOPortException(State state, int ioPort) : base(state, $"Unhandled port {ConvertUtils.ToHex((uint)ioPort)}. This usually means that the hardware behind the port is not emulated or that the port is not routed correctly.") {
     }
-
-    /// <inheritdoc />
-    public UnhandledIOPortException(State state, string message) : base(state, message) {
-    }
-
-    /// <inheritdoc />
-    public UnhandledIOPortException(State state, Exception e) : base(state, e) {
-    }
 }
