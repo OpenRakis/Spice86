@@ -1,6 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -18,10 +20,10 @@ public class GravisUltraSound : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the Gravis Ultrasound sound card.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
-    /// <param name="configuration">The emulator configuration.</param>
-    /// <param name="loggerService">The logger service impelementation.</param>
-    public GravisUltraSound(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    /// <param name="state">The CPU state.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    public GravisUltraSound(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
     }
 
     /// <inhheritdoc/>

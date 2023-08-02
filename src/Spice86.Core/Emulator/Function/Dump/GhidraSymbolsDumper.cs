@@ -21,22 +21,21 @@ public class GhidraSymbolsDumper {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GhidraSymbolsDumper(ILoggerService loggerService) {
-        _loggerService = loggerService;
-    }
+    public GhidraSymbolsDumper(ILoggerService loggerService) => _loggerService = loggerService;
 
     /// <summary>
     /// Dumps function information and labels to a file.
     /// </summary>
-    /// <param name="machine">The machine instance to extract the function information and labels from.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="functionHandler">The class that handles functions calls.</param>
     /// <param name="destinationFilePath">The path of the file to write the dumped information to.</param>
-    public void Dump(Machine machine, string destinationFilePath) {
-        ICollection<FunctionInformation> functionInformations = machine.Cpu.FunctionHandler.FunctionInformations.Values;
+    public void Dump(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, string destinationFilePath) {
+        ICollection<FunctionInformation> functionInformationsValues = functionHandler.FunctionInformations.Values;
         List<string> lines = new();
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
         ISet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
-        DumpFunctionInformations(lines, dumpedAddresses, functionInformations);
-        DumpLabels(lines, dumpedAddresses, machine.Cpu.ExecutionFlowRecorder);
+        DumpFunctionInformations(lines, dumpedAddresses, functionInformationsValues);
+        DumpLabels(lines, dumpedAddresses, executionFlowRecorder);
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);
         lines.ForEach(line => printWriter.WriteLine(line));
     }

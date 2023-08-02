@@ -28,12 +28,10 @@ public sealed class InternalSpeaker : IDisposable {
 
     private bool _disposed;
 
-    private Configuration Configuration { get; init; }
     /// <summary>
     /// Initializes a new instance of the InternalSpeaker class.
     /// </summary>
-    public InternalSpeaker(Configuration configuration) {
-        Configuration = configuration;
+    public InternalSpeaker() {
         _frequencyRegister.ValueChanged += FrequencyChanged;
         _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
     }

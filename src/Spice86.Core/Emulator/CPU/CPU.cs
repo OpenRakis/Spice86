@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.InstructionsImpl;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -11,6 +12,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -32,9 +34,14 @@ public class Cpu {
     private static readonly HashSet<int> _stringOpCodes = new()
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
 
-    private readonly Machine _machine;
     private readonly IMemory _memory;
+    
+    internal DualPic DualPic { get; }
+    
     private readonly ModRM _modRM;
+    
+    internal MachineBreakpoints MachineBreakpoints { get; }
+    
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
     private readonly Instructions32 _instructions32;
@@ -45,7 +52,7 @@ public class Cpu {
     /// </summary>
     public int AddressSize { get; private set; }
 
-    public CallbackHandler? CallbackHandler { get; set; }
+    public CallbackHandler CallbackHandler { get; }
 
     // When true will crash if an interrupt targets code at 0000:0000
     public bool ErrorOnUninitializedInterruptHandler { get; set; }
@@ -63,24 +70,27 @@ public class Cpu {
 
     public InterruptVectorTable InterruptVectorTable { get; }
 
-    public Cpu(Machine machine, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+    public Cpu(IMemory memory, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData, bool failOnUnhandledPort) {
         _loggerService = loggerService;
-        _machine = machine;
-        _memory = machine.Memory;
+        _memory = memory;
         InterruptVectorTable = new((Indexable)_memory);
         State = new State();
         Alu = new Alu(State);
         Stack = new Stack(_memory, State);
         ExecutionFlowRecorder = executionFlowRecorder;
-        FunctionHandler = new FunctionHandler(machine, _loggerService, recordData);
-        FunctionHandlerInExternalInterrupt = new FunctionHandler(machine, _loggerService, recordData);
+        FunctionHandler = new FunctionHandler(_memory, State, ExecutionFlowRecorder, _loggerService, recordData);
+        FunctionHandlerInExternalInterrupt = new FunctionHandler(_memory, State, ExecutionFlowRecorder, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
-        _modRM = new ModRM(machine, this);
-        _instructions8 = new Instructions8(machine, Alu, this, _memory, _modRM);
-        _instructions16 = new Instructions16(machine, Alu, this, _memory, _modRM);
-        _instructions32 = new Instructions32(machine, Alu, this, _memory, _modRM);
+        _modRM = new ModRM(_memory, this, State);
+        _instructions8 = new Instructions8(Alu, this, _memory, _modRM);
+        _instructions16 = new Instructions16(Alu, this, _memory, _modRM);
+        _instructions32 = new Instructions32(Alu, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
+        MachineBreakpoints = new(_memory, State, _loggerService);
+        IoPortDispatcher = new IOPortDispatcher(State, _loggerService, failOnUnhandledPort);
+        DualPic = new(State, failOnUnhandledPort, _loggerService);
+        CallbackHandler = new(State, _loggerService);
     }
 
     public void ExecuteNextInstruction() {
@@ -162,25 +172,25 @@ public class Cpu {
 
     public uint NextUint32() {
         uint res = _memory.UInt32[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+2));
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+3));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+2));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+3));
         _internalIp += 4;
         return res;
     }
 
     public ushort NextUint16() {
         ushort res = _memory.UInt16[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, (ushort) (_internalIp+1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+1));
         _internalIp += 2;
         return res;
     }
 
     public byte NextUint8() {
         byte res = _memory.UInt8[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_machine, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
         _internalIp++;
         return res;
     }
@@ -218,9 +228,7 @@ public class Cpu {
             or 0xAE // SCASB
             or 0xAF;
 
-    public void Callback(ushort callbackIndex) {
-        CallbackHandler?.Run(callbackIndex);
-    }
+    public void Callback(ushort callbackIndex) => CallbackHandler.Run(callbackIndex);
 
     private void ExecSubOpcode(byte subcode) {
         switch (subcode) {
@@ -877,7 +885,7 @@ public class Cpu {
 
                         break;
                     }
-                    default: throw new InvalidGroupIndexException(_machine, groupIndex);
+                    default: throw new InvalidGroupIndexException(State, groupIndex);
                 }
                 break;
             }
@@ -909,7 +917,7 @@ public class Cpu {
                         _modRM.SetRm16(0xFF);
                         break;
                     default:
-                        throw new InvalidGroupIndexException(_machine, groupIndex);
+                        throw new InvalidGroupIndexException(State, groupIndex);
                 }
                 break;
             }
@@ -1193,7 +1201,7 @@ public class Cpu {
         }
 
         // Check the PIC in case this was not directly set by rewritten code
-        ExternalInterruptVectorNumber ??= _machine.DualPic.ComputeVectorNumber();
+        ExternalInterruptVectorNumber ??= DualPic.ComputeVectorNumber();
 
         if (ExternalInterruptVectorNumber == null) {
             return;
@@ -1204,10 +1212,10 @@ public class Cpu {
     }
 
     private void HandleInvalidOpcode(ushort opcode) =>
-        throw new InvalidOpCodeException(_machine, opcode, false);
+        throw new InvalidOpCodeException(State, opcode, false);
 
     private void HandleInvalidOpcodeBecausePrefix(byte opcode) =>
-        throw new InvalidOpCodeException(_machine, opcode, true);
+        throw new InvalidOpCodeException(State, opcode, true);
 
     private void HandleJump(ushort cs, ushort ip) {
         ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, cs, ip);
@@ -1222,7 +1230,7 @@ public class Cpu {
 
         (ushort targetCS, ushort targetIP) = InterruptVectorTable[vectorNumber.Value];
         if (ErrorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0) {
-            throw new UnhandledOperationException(_machine,
+            throw new UnhandledOperationException(State,
                 $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber.Value)}");
         }
 
@@ -1295,7 +1303,7 @@ public class Cpu {
             0xE => State.ZeroFlag || State.SignFlag != State.OverflowFlag,
             // JG
             0xF => !State.ZeroFlag && State.SignFlag == State.OverflowFlag,
-            _ => throw new InvalidOpCodeException(_machine, opcode, false)
+            _ => throw new InvalidOpCodeException(State, opcode, false)
         };
     }
 
@@ -1435,4 +1443,10 @@ public class Cpu {
         }
         State.CX = cx;
     }
+
+    /// <summary>
+    /// Peeks at the return address.
+    /// </summary>
+    /// <returns>The return address string.</returns>
+    public string PeekReturn() => SegmentedAddress.ToString(FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
 }

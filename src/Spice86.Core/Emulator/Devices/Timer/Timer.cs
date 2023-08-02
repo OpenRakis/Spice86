@@ -1,10 +1,13 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Timer;
 
+using Spice86.Core.Emulator.CPU;
+
 using System.Diagnostics;
 
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>
@@ -32,17 +35,16 @@ public class Timer : DefaultIOPortHandler {
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
 
-    public Timer(Machine machine, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, Configuration configuration) : base(machine, configuration, loggerService) {
+    public Timer(State state, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _vgaCard = vgaCard;
-        _cpu = machine.Cpu;
         for (int i = 0; i < _counters.Length; i++) {
-            _counters[i] = new Counter(machine,
+            _counters[i] = new Counter(state,
                 _loggerService,
-                i, counterConfigurator.InstanciateCounterActivator(_cpu.State));
+                i, counterConfigurator.InstanciateCounterActivator(state));
         }
         // screen refresh is 60hz regardless of the configuration
-        _vgaScreenRefreshCounter = new Counter(machine, _loggerService, 4, new TimeCounterActivator(1));
+        _vgaScreenRefreshCounter = new Counter(state, _loggerService, 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
     }
 
@@ -57,7 +59,7 @@ public class Timer : DefaultIOPortHandler {
 
     public Counter GetCounter(int counterIndex) {
         if (counterIndex > _counters.Length || counterIndex < 0) {
-            throw new InvalidCounterIndexException(_machine, counterIndex);
+            throw new InvalidCounterIndexException(_state, counterIndex);
         }
         return _counters[counterIndex];
     }
@@ -94,7 +96,7 @@ public class Timer : DefaultIOPortHandler {
                 _loggerService.Verbose("SETTING COUNTER {Index} to partial value {Value}. {Counter}", counter.Index, value, counter);
             }
             return;
-        } 
+        }
         if (port == ModeCommandeRegister) {
             int counterIndex = value >> 6;
             Counter counter = GetCounter(counterIndex);
@@ -108,7 +110,7 @@ public class Timer : DefaultIOPortHandler {
     }
 
     public void Tick() {
-        long cycles = _cpu.State.Cycles;
+        long cycles = _state.Cycles;
         if (_counters[0].ProcessActivation(cycles)) {
             _dualPic.ProcessInterruptRequest(0);
         }

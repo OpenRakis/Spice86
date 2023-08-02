@@ -15,18 +15,17 @@ public class GdbCommandRegisterHandler {
     private readonly ILoggerService _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
-    private readonly Machine _machine;
+    private readonly State _state;
 
     /// <summary>
     /// Initializes a new instance of the GdbCommandRegisterHandler class
     /// </summary>
     /// <param name="gdbIo">The GdbIo object to use for communication with GDB.</param>
-    /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The ILoggerService implementation.</param>
-    public GdbCommandRegisterHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService) {
+    public GdbCommandRegisterHandler(State state, GdbIo gdbIo, ILoggerService loggerService) {
         _loggerService = loggerService;
+        _state = state;
         _gdbIo = gdbIo;
-        _machine = machine;
     }
 
     /// <summary>
@@ -104,23 +103,22 @@ public class GdbCommandRegisterHandler {
     }
 
     private uint GetRegisterValue(int regIndex) {
-        State state = _machine.Cpu.State;
         if (regIndex < 8) {
-            return state.Registers.GetRegister16(regIndex);
+            return _state.Registers.GetRegister16(regIndex);
         }
 
         if (regIndex == 8) {
-            uint value = state.IpPhysicalAddress;
+            uint value = _state.IpPhysicalAddress;
             Debug.WriteLine($"{value:X}");
             return value;
         }
 
         if (regIndex == 9) {
-            return state.Flags.FlagRegister;
+            return _state.Flags.FlagRegister;
         }
 
         if (regIndex < 16) {
-            return state.SegmentRegisters.GetRegister16(GetSegmentRegisterIndex(regIndex));
+            return _state.SegmentRegisters.GetRegister16(GetSegmentRegisterIndex(regIndex));
         }
 
         return 0;
@@ -140,15 +138,14 @@ public class GdbCommandRegisterHandler {
     }
 
     private void SetRegisterValue(int regIndex, ushort value) {
-        State state = _machine.Cpu.State;
         if (regIndex < 8) {
-            state.Registers.SetRegister16(regIndex, value);
+            _state.Registers.SetRegister16(regIndex, value);
         } else if (regIndex == 8) {
-            state.IP = value;
+            _state.IP = value;
         } else if (regIndex == 9) {
-            state.Flags.FlagRegister = value;
+            _state.Flags.FlagRegister = value;
         } else if (regIndex < 16) {
-            state.SegmentRegisters.SetRegister16(GetSegmentRegisterIndex(regIndex), value);
+            _state.SegmentRegisters.SetRegister16(GetSegmentRegisterIndex(regIndex), value);
         }
     }
 }

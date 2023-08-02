@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.Devices.Timer;
 
 using Serilog;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
@@ -13,15 +14,15 @@ public class Counter {
     public const long HardwareFrequency = 1193182;
     private readonly ILoggerService _loggerService;
     public CounterActivator Activator { get; protected set; }
-    private readonly Machine _machine;
+    private readonly State _state;
 
     private bool _firstByteRead;
 
     private bool _firstByteWritten;
 
-    public Counter(Machine machine, ILoggerService loggerService, int index, CounterActivator activator) {
+    public Counter(State state, ILoggerService loggerService, int index, CounterActivator activator) {
         _loggerService = loggerService;
-        _machine = machine;
+        _state = state;
         Index = index;
         Activator = activator;
 
@@ -50,11 +51,11 @@ public class Counter {
         get {
             ushort value = Latch ?? Ticks;
             byte ret = ReadWritePolicy switch {
-                0 => throw new UnhandledOperationException(_machine, "Latch read is not implemented yet"),
+                0 => throw new UnhandledOperationException(_state, "Latch read is not implemented yet"),
                 1 => Lsb(value),
                 2 => Msb(value),
                 3 => Policy3(value),
-                _ => throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {ReadWritePolicy}")
+                _ => throw new UnhandledOperationException(_state, $"Invalid readWritePolicy {ReadWritePolicy}")
             };
             return ret;
         }
@@ -101,7 +102,7 @@ public class Counter {
             case 3:
                 WritePolicy3(partialValue);
                 break;
-            default: throw new UnhandledOperationException(_machine, $"Invalid readWritePolicy {ReadWritePolicy}");
+            default: throw new UnhandledOperationException(_state, $"Invalid readWritePolicy {ReadWritePolicy}");
         }
         OnValueWrite();
     }

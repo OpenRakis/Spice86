@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
@@ -32,10 +34,10 @@ public class DualPic : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="DualPic"/> class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
-    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DualPic(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    public DualPic(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _pic1 = new Pic(loggerService);
         _pic2 = new Pic(loggerService);
         Initialize();
@@ -82,7 +84,7 @@ public class DualPic : DefaultIOPortHandler {
         } else if (irq < 15) {
             _pic2.InterruptRequest((byte)(irq - 8));
         } else {
-            throw new UnhandledOperationException(_machine, $"IRQ {irq} not supported at the moment");
+            throw new UnhandledOperationException(_state, $"IRQ {irq} not supported at the moment");
         }
     }
     
@@ -99,9 +101,9 @@ public class DualPic : DefaultIOPortHandler {
     /// <summary>
     /// Computes the interrupt vector number from the first PIC that has a pending request,
     /// or from the second PIC if the first PIC has no pending requests.
-    /// If neither PIC has a pending request, returns null.
+    /// If neither PIC has a pending request, returns <c>null</c>.
     /// </summary>
-    /// <returns>The interrupt vector number, or null if no pending request.</returns>
+    /// <returns>The interrupt vector number, or <c>null</c> if no pending request.</returns>
     public byte? ComputeVectorNumber() {
         if (_pic1.HasPendingRequest()) {
             return _pic1.ComputeVectorNumber();
@@ -125,7 +127,7 @@ public class DualPic : DefaultIOPortHandler {
             _pic2.AcknowledgeInterrupt();
             _pic1.AcknowledgeInterrupt();
         } else {
-            throw new UnhandledOperationException(_machine, $"IRQ {irq} not supported at the moment");
+            throw new UnhandledOperationException(_state, $"IRQ {irq} not supported at the moment");
         }
     }
 

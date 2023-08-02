@@ -1,5 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using System;
@@ -16,23 +20,34 @@ public class GdbCommandHandler {
     private readonly GdbCommandRegisterHandler _gdbCommandRegisterHandler;
     private readonly GdbCustomCommandsHandler _gdbCustomCommandsHandler;
     private readonly GdbIo _gdbIo;
-    private readonly Machine _machine;
-
+    private readonly Cpu _cpu;
+    private readonly IMemory _memory;
+    private readonly PauseHandler _pauseHandler;
+    private readonly State _state;
+    private readonly FunctionHandler _functionHandler;
+    private readonly ExecutionFlowRecorder _executionFlowRecorder;
+    
     /// <summary>
     /// Constructs a new instance of <see cref="GdbCommandHandler"/>
     /// </summary>
     /// <param name="gdbIo">The GDB I/O handler.</param>
-    /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration object containing GDB settings.</param>
-    public GdbCommandHandler(GdbIo gdbIo, Machine machine, ILoggerService loggerService, Configuration configuration) {
+    public GdbCommandHandler(IMemory memory, Cpu cpu, State state, PauseHandler pauseHandler,
+        MachineBreakpoints machineBreakpoints, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder,
+        FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration, IGui? gui) {
         _loggerService = loggerService;
+        _cpu = cpu;
+        _state = state;
+        _memory = memory;
         _gdbIo = gdbIo;
-        _machine = machine;
-        _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(gdbIo, machine, _loggerService);
-        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(gdbIo, machine, _loggerService);
-        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(gdbIo, machine, _loggerService);
-        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(gdbIo, machine,
+        _functionHandler = functionHandler;
+        _executionFlowRecorder = executionFlowRecorder;
+        _pauseHandler = pauseHandler;
+        _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(_state, gdbIo, _loggerService);
+        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(_memory, gdbIo, _loggerService);
+        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(machineBreakpoints, pauseHandler, gdbIo, _loggerService);
+        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(configuration, _memory, _cpu, callbackHandler, executionFlowRecorder, machineBreakpoints, gdbIo, gui,
             _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }
@@ -44,7 +59,7 @@ public class GdbCommandHandler {
 
     internal void PauseEmulator() {
         _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = false;
-        _machine.MachineBreakpoints.PauseHandler.RequestPause();
+        _pauseHandler.RequestPause();
     }
 
     /// <summary>
@@ -62,8 +77,7 @@ public class GdbCommandHandler {
         }
         char first = command[0];
         string commandContent = command[1..];
-        PauseHandler pauseHandler = _machine.MachineBreakpoints.PauseHandler;
-        pauseHandler.RequestPauseAndWait();
+        _pauseHandler.RequestPauseAndWait();
         try {
             string? response = first switch {
                 (char)0x03 => _gdbCommandBreakpointHandler.Step(),
@@ -94,7 +108,7 @@ public class GdbCommandHandler {
             }
         } finally {
             if (_gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd) {
-                pauseHandler.RequestResume();
+                _pauseHandler.RequestResume();
             }
         }
     }
@@ -110,7 +124,7 @@ public class GdbCommandHandler {
     }
 
     private string Kill() {
-        _machine.Cpu.IsRunning = false;
+        _cpu.IsRunning = false;
         return Detach();
     }
 
@@ -166,7 +180,7 @@ public class GdbCommandHandler {
         }
 
         if (command.StartsWith("Rcmd")) {
-            return _gdbCustomCommandsHandler.HandleCustomCommands(command);
+            return _gdbCustomCommandsHandler.HandleCustomCommands(_executionFlowRecorder, _functionHandler, command);
         }
 
         if (command.StartsWith("Search")) {

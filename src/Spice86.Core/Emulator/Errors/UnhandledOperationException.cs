@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Errors;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 
 using System;
@@ -10,10 +11,10 @@ using System;
 [Serializable]
 public class UnhandledOperationException : InvalidVMOperationException {
     /// <summary>
-    /// Initializes a new instance of the <see cref="UnhandledOperationException"/> class with the specified error message and machine.
+    /// Initializes a new instance of the <see cref="UnhandledOperationException"/> class.
     /// </summary>
-    /// <param name="machine">The machine where the exception occurred.</param>
+    /// <param name="state">The CPU state when the exception occured.</param>
     /// <param name="message">The error message that explains the reason for the exception.</param>
-    public UnhandledOperationException(Machine machine, string message) : base(machine, message) {
+    public UnhandledOperationException(State state, string message) : base(state, message) {
     }
 }

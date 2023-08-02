@@ -8,16 +8,14 @@ using Spice86.Shared.Utils;
 
 public class ModRM {
     private readonly Cpu _cpu;
-    private readonly Machine _machine;
     private readonly Memory.IMemory _memory;
     private readonly State _state;
     private int _registerMemoryIndex;
 
-    public ModRM(Machine machine, Cpu cpu) {
-        _machine = machine;
+    public ModRM(IMemory memory, Cpu cpu, State state) {
         _cpu = cpu;
-        _memory = machine.Memory;
-        _state = cpu.State;
+        _memory = memory;
+        _state = state;
     }
 
     public uint GetAddress(int defaultSegmentRegisterIndex, ushort offset) {
@@ -142,7 +140,7 @@ public class ModRM {
             5 => SegmentRegisters.DsIndex,
             6 => mode == 0 ? SegmentRegisters.DsIndex : SegmentRegisters.SsIndex,
             7 => SegmentRegisters.DsIndex,
-            _ => throw new InvalidModeException(_machine, _registerMemoryIndex)
+            _ => throw new InvalidModeException(_state, _registerMemoryIndex)
         };
     }
 
@@ -156,7 +154,7 @@ public class ModRM {
             5 => _state.DI,
             6 => mode == 0 ? _cpu.NextUint16() : _state.BP,
             7 => _state.BX,
-            _ => throw new InvalidModeException(_machine, _registerMemoryIndex)
+            _ => throw new InvalidModeException(_state, _registerMemoryIndex)
         };
     }
 

@@ -2,7 +2,9 @@
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -10,13 +12,17 @@ using Spice86.Shared.Interfaces;
 /// BIOS services
 /// </summary>
 public class SystemBiosInt15Handler : InterruptHandler {
+    private readonly A20Gate _a20Gate;
     
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="a20Gate">The A20 line gate.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public SystemBiosInt15Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
+    public SystemBiosInt15Handler(IMemory memory, Cpu cpu, A20Gate a20Gate, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+        _a20Gate = a20Gate;
         FillDispatchTable();
     }
 
@@ -51,20 +57,20 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public void ToggleA20GateOrGetStatus(bool calledFromVm) {
         switch (_state.AL) {
             case 0:
-                _machine.Memory.A20Gate.IsEnabled = false;
+                _a20Gate.IsEnabled = false;
                 SetCarryFlag(false, calledFromVm);
                 break;
             case 1:
-                _machine.Memory.A20Gate.IsEnabled = true;
+                _a20Gate.IsEnabled = true;
                 SetCarryFlag(false, calledFromVm);
                 break;
             case 2:
-                _state.AL = (byte) (_machine.Memory.A20Gate.IsEnabled ? 0x1 : 0x0);
+                _state.AL = (byte) (_a20Gate.IsEnabled ? 0x1 : 0x0);
                 _state.AH = 0; // success
                 SetCarryFlag(false, calledFromVm);
                 break;
             case 3:
-                _machine.Memory.A20Gate.IsEnabled = false;
+                _a20Gate.IsEnabled = false;
                 _state.BX = 0x3; //Bitmask, keyboard and 0x92;
                 _state.AH = 0; // success
                 SetCarryFlag(false, calledFromVm);

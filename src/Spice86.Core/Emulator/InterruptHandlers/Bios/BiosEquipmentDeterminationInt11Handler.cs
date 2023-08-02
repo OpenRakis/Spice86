@@ -1,6 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -8,7 +10,7 @@ using Spice86.Shared.Interfaces;
 /// Very basic implementation of int 11 that basically does nothing.
 /// </summary>
 public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
-    public BiosEquipmentDeterminationInt11Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
+    public BiosEquipmentDeterminationInt11Handler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(memory, cpu, loggerService) {
     }
 
     /// <inheritdoc />

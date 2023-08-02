@@ -2,8 +2,11 @@ namespace Spice86.Core.Emulator.Devices.Input.Mouse;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
@@ -23,16 +26,19 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private double _previousMouseYRelative;
     private int _sampleRate = 100;
     private long _sampleRateTicks;
+    private readonly DualPic _dualPic;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="Mouse" /> class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="dualPic">The two Programmable Interrupt Controllers.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="configuration">to get the mouse type from</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Mouse(Machine machine, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    public Mouse(State state, DualPic dualPic, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _gui = gui;
+        _dualPic = dualPic;
         MouseType = configuration.Mouse;
         _logger = loggerService;
         _sampleRateTicks = TimeSpan.TicksPerSecond / _sampleRate;
@@ -130,10 +136,6 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void UpdateMouse() {
-        if (_machine.IsPaused) {
-            return;
-        }
-
         long timestamp = DateTime.Now.Ticks;
         // Check sample rate to see if we need to send an update yet.
         long ticksElapsed = timestamp - _lastUpdateTimestamp;
@@ -171,6 +173,6 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void TriggerInterruptRequest() {
-        _machine.DualPic.ProcessInterruptRequest(IrqNumber);
+        _dualPic.ProcessInterruptRequest(IrqNumber);
     }
 }

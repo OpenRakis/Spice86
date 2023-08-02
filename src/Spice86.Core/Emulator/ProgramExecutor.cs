@@ -17,11 +17,11 @@ using System.Security.Cryptography;
 using System.Diagnostics;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
-using Spice86.Core.Emulator.OperatingSystem;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -29,11 +29,13 @@ using Spice86.Core.Emulator.OperatingSystem;
 /// </summary>
 public sealed class ProgramExecutor : IDisposable {
     private readonly ILoggerService _loggerService;
-    private bool _disposedValue;
+    private bool _disposed;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
+    private readonly EmulationLoop _emulationLoop;
+    
     private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
-
+    
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
@@ -44,7 +46,8 @@ public sealed class ProgramExecutor : IDisposable {
         _loggerService = loggerService;
         _configuration = configuration;
         Machine = CreateMachine(gui);
-        _gdbServer = CreateGdbServer();
+        _gdbServer = CreateGdbServer(gui);
+        _emulationLoop = new(Machine.Cpu, Machine.Timer, RecordData, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
     }
 
     /// <summary>
@@ -57,13 +60,29 @@ public sealed class ProgramExecutor : IDisposable {
     /// </summary>
     public void Run() {
         _gdbServer?.StartServerAndWait();
-        Machine.Run();
         if (RecordData) {
-            new RecorderDataWriter(_configuration.RecordedDataDirectory, Machine,
-                _loggerService)
-                .DumpAll();
+            DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
+        _emulationLoop.Run();
     }
+
+    public State CpuState => Machine.Cpu.State;
+
+    public VideoState VideoState => Machine.VgaRegisters;
+
+    public ArgbPalette ArgbPalette => Machine.VgaRegisters.DacRegisters.ArgbPalette;
+
+    public IVgaRenderer VgaRenderer => Machine.VgaRenderer;
+
+    public void DumpEmulatorStateToDirectory(string path) {
+        new RecorderDataWriter(Machine.Memory,
+                Machine.Cpu.State, Machine.CallbackHandler, _configuration,
+                Machine.Cpu.ExecutionFlowRecorder,
+                path, _loggerService)
+            .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
+    }
+
+    public bool IsPaused { get => _emulationLoop.IsPaused; set => _emulationLoop.IsPaused = value; }
 
     /// <inheritdoc />
     public void Dispose() {
@@ -73,13 +92,13 @@ public sealed class ProgramExecutor : IDisposable {
     }
 
     private void Dispose(bool disposing) {
-        if (!_disposedValue) {
+        if (!_disposed) {
             if (disposing) {
                 _gdbServer?.Dispose();
+                _emulationLoop.Exit();
                 Machine.Dispose();
             }
-
-            _disposedValue = true;
+            _disposed = true;
         }
     }
 
@@ -99,6 +118,8 @@ public sealed class ProgramExecutor : IDisposable {
         }
     }
 
+    public IVideoCard VideoCard => Machine.VgaCard;
+
     private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
@@ -106,10 +127,9 @@ public sealed class ProgramExecutor : IDisposable {
         string lowerCaseFileName = executableFileName.ToLowerInvariant();
         ushort entryPointSegment = (ushort)configuration.ProgramEntryPointSegment;
         if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(
-                Machine,
-                _loggerService,
+            return new ExeLoader(Machine.Memory,
                 Machine.Cpu.State,
+                _loggerService,
                 Machine.Dos.EnvironmentVariables,
                 Machine.Dos.FileManager,
                 Machine.Dos.MemoryManager,
@@ -117,23 +137,23 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(Machine,
-                _loggerService,
+            return new ComLoader(Machine.Memory,
                 Machine.Cpu.State,
+                _loggerService,
                 Machine.Dos.EnvironmentVariables,
                 Machine.Dos.FileManager,
                 Machine.Dos.MemoryManager,
                 entryPointSegment);
         }
 
-        return new BiosLoader(Machine, _loggerService);
+        return new BiosLoader(Machine.Memory, Machine.Cpu.State, _loggerService);
     }
 
     private Machine CreateMachine(IGui? gui) {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
-        Machine = new Machine(new MachineCreationOptions(this, gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, RecordData));
+        Machine = new Machine(gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
         InitializeCpu();
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
@@ -155,16 +175,21 @@ public sealed class ProgramExecutor : IDisposable {
 
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
         LoadFileToRun(_configuration, loader);
-        executionFlowRecorder.PreAllocatePossibleExecutionFlowBreakPoints(Machine);
+        executionFlowRecorder.PreAllocatePossibleExecutionFlowBreakPoints(Machine.Memory, Machine.Cpu.State);
         return Machine;
     }
 
-    private GdbServer? CreateGdbServer() {
+    private GdbServer? CreateGdbServer(IGui? gui) {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
-            return new GdbServer(Machine,
+            return new GdbServer(Machine.Memory, Machine.Cpu,
+                Machine.Cpu.State, Machine.CallbackHandler, Machine.Cpu.FunctionHandler,
+                Machine.Cpu.ExecutionFlowRecorder,
+                Machine.MachineBreakpoints,
+                Machine.MachineBreakpoints.PauseHandler,
                 _loggerService,
-                _configuration);
+                _configuration,
+                gui);
         }
 
         return null;
@@ -228,15 +253,6 @@ public sealed class ProgramExecutor : IDisposable {
             e.Demystify();
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
-    }
-
-    internal bool Step() {
-        if (_gdbServer?.GdbCommandHandler is null) {
-            return false;
-        }
-
-        _gdbServer.GdbCommandHandler.Step();
-        return true;
     }
 
     private static void SetupFunctionHandler(FunctionHandler functionHandler,

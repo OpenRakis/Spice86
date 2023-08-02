@@ -624,7 +624,7 @@ public class CSharpOverrideHelper {
     /// <param name="endAddress">The end address of the executable area.</param>
     public void DefineExecutableArea(uint startAddress, uint endAddress) {
         for (uint address = startAddress; address <= endAddress; address++) {
-            Cpu.ExecutionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Machine, address);
+            Cpu.ExecutionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Memory, State, Machine.MachineBreakpoints, address);
         }
     }
 

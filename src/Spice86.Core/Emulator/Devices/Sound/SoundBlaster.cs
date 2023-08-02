@@ -5,6 +5,9 @@ using System.Threading;
 using Serilog.Events;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Sound;
@@ -112,7 +115,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
     private readonly List<byte> _commandData = new();
     private readonly int _dma16;
-    private readonly DmaChannel _dmaChannel;
+    private readonly DmaChannel _eightByteDmaChannel;
     private readonly Dsp _dsp;
     private readonly Mixer _mixer;
     private readonly Queue<byte> _outputData = new();
@@ -122,26 +125,37 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private byte _currentCommand;
     private volatile bool _endPlayback;
     private int _pauseDuration;
-    private BlasterState _state;
+    private BlasterState _blasterState;
     private bool _playbackStarted;
+    private readonly DualPic _dualPic;
+    private readonly IGui? _gui;
+    private readonly DmaController _dmaController;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
-    /// <param name="machine">Virtual machine instance associated with the device.</param>
-    /// <param name="configuration">The emulator config.</param>
-    /// <param name="loggerService">The logging service for events such as non-fatal errors, warnings, or information</param>
-    public SoundBlaster(Machine machine, Configuration configuration, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(machine, configuration, loggerService) {
+    /// <param name="loggerService">The logging service used for logging events.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
+    /// <param name="dualPic">The two programmable interrupt controllers.</param>
+    /// <param name="gui">The GUI. Is <c>null</c> in headless mode.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
+    /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
+    public SoundBlaster(State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
+        _dmaController = dmaController;
+        _gui = gui;
+        _dualPic = dualPic;
         _mixer = new Mixer(this);
-        _dmaChannel = machine.DmaController.Channels[DMA];
-        _dsp = new Dsp(machine, this, DMA, _dma16);
+        _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
+        _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this, DMA, _dma16);
         _playbackThread = new Thread(AudioPlayback) {
             Name = "PCMAudio",
             Priority = ThreadPriority.AboveNormal
         };
+        _dmaController.SetupDmaDeviceChannel(this);
     }
 
     /// <summary>
@@ -188,17 +202,17 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             case DspPorts.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
                 if (value == 1) {
-                    _state = BlasterState.ResetRequest;
-                } else if (value == 0 && _state == BlasterState.ResetRequest) {
-                    _state = BlasterState.Resetting;
+                    _blasterState = BlasterState.ResetRequest;
+                } else if (value == 0 && _blasterState == BlasterState.ResetRequest) {
+                    _blasterState = BlasterState.Resetting;
                     Reset();
                 }
                 break;
 
             case DspPorts.DspWrite:
-                if (_state == BlasterState.WaitingForCommand) {
+                if (_blasterState == BlasterState.WaitingForCommand) {
                     _currentCommand = value;
-                    _state = BlasterState.ReadingCommand;
+                    _blasterState = BlasterState.ReadingCommand;
                     _commandData.Clear();
                     CommandLengths.TryGetValue(value, out _commandDataLength);
                     if (_commandDataLength == 0) {
@@ -206,7 +220,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                             base.WriteByte(port, value);
                         }
                     }
-                } else if (_state == BlasterState.ReadingCommand) {
+                } else if (_blasterState == BlasterState.ReadingCommand) {
                     _commandData.Add(value);
                     if (_commandData.Count >= _commandDataLength) {
                         if (!ProcessCommand()) {
@@ -327,15 +341,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
             Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
 
-            if (_machine.IsPaused) {
-                while (_machine.IsPaused) {
-                    Thread.Sleep(1);
-                    if (_endPlayback) {
-                        return;
-                    }
-                }
-            }
-
             if (_pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = (_pauseDuration / (1024 / 2)) + 1;
@@ -382,37 +387,37 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             case Commands.SingleCycleDmaOutput8_Alt:
             case Commands.SingleCycleDmaOutput8Fifo_Alt:
                 _dsp.Begin(false, false, false);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, true);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, false);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, true);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, false);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, true);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, false);
-                _machine.PerformDmaTransfers();
+                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.AutoInitDmaOutput8:
@@ -456,13 +461,13 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             case Commands.PauseDmaMode:
             case Commands.PauseDmaMode16:
             case Commands.ExitDmaMode16:
-                _dmaChannel.IsActive = false;
+                _eightByteDmaChannel.IsActive = false;
                 _dsp.IsEnabled = false;
                 break;
 
             case Commands.ContinueDmaMode:
             case Commands.ContinueDmaMode16:
-                _dmaChannel.IsActive = true;
+                _eightByteDmaChannel.IsActive = true;
                 _dsp.IsEnabled = true;
                 break;
 
@@ -485,14 +490,14 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
                 return false;
         }
-        _state = BlasterState.WaitingForCommand;
+        _blasterState = BlasterState.WaitingForCommand;
         return true;
     }
 
     /// <inheritdoc/>
     public void RaiseInterruptRequest() {
         _mixer.InterruptStatusRegister = InterruptStatus.Dma8;
-        _machine.DualPic.ProcessInterruptRequest(IRQ);
+        _dualPic.ProcessInterruptRequest(IRQ);
     }
 
     /// <summary>
@@ -501,7 +506,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private void Reset() {
         _outputData.Clear();
         _outputData.Enqueue(0xAA);
-        _state = BlasterState.WaitingForCommand;
+        _blasterState = BlasterState.WaitingForCommand;
         _blockTransferSizeSet = false;
         _dsp.Reset();
     }

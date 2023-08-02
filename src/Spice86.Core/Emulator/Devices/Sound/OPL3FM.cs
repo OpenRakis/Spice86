@@ -2,9 +2,11 @@
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -33,10 +35,10 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of the OPL3 FM synth chip.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
-    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public OPL3FM(Machine machine, Configuration configuration, ILoggerService loggerService) : base(machine, configuration, loggerService) {
+    public OPL3FM(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _audioPlayer = Audio.CreatePlayer(48000, 2048);
         if (_audioPlayer is not null) {
             _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);

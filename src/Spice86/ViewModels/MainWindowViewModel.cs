@@ -228,9 +228,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
             Uri? dir = (await storageProvider.OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
             if (!string.IsNullOrWhiteSpace(dir?.AbsolutePath)) {
-                new RecorderDataWriter(dir.AbsolutePath, _programExecutor.Machine,
-                        _loggerService)
-                    .DumpAll();
+                _programExecutor.DumpEmulatorStateToDirectory(dir.AbsolutePath);
             }
         }
     }
@@ -240,7 +238,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (_programExecutor is null) {
             return;
         }
-        IsPaused = _programExecutor.Machine.IsPaused = true;
+        IsPaused = _programExecutor.IsPaused = true;
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
@@ -249,7 +247,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             return;
         }
 
-        IsPaused = _programExecutor.Machine.IsPaused = false;
+        IsPaused = _programExecutor.IsPaused = false;
     }
 
     private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
@@ -321,13 +319,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         Configuration.UseCodeOverride = false;
         Play();
         await Dispatcher.UIThread.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
-        _programExecutor?.Machine.ExitEmulationLoop();
         while (_emulatorThread?.IsAlive == true) {
             Dispatcher.UIThread.RunJobs();
         }
 
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
+        _performanceWindow?.Close();
+        _performanceWindow = null;
+        _paletteWindow?.Close();
+        _paletteWindow = null;
+        _debugWindow?.Close();
+        _debugWindow = null;
         RunEmulator();
     }
 
@@ -347,7 +350,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
             _performanceWindow.Activate();
         } else if (_programExecutor is not null) {
             _performanceWindow = new PerformanceWindow() {
-                DataContext = new PerformanceViewModel(_programExecutor.Machine.Cpu.State, new PerformanceMeasurer())
+                DataContext = new PerformanceViewModel(_programExecutor.CpuState, new PerformanceMeasurer())
             };
             _performanceWindow.Closed += (_, _) => _performanceWindow = null;
             _performanceWindow.Show();
@@ -359,7 +362,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (_debugWindow != null) {
             _debugWindow.Activate();
         } else if(_programExecutor is not null) {
-            _debugWindow = new DebugWindow(_programExecutor.Machine.VgaRegisters, _programExecutor.Machine.VgaRenderer);
+            _debugWindow = new DebugWindow(_programExecutor.VideoState, _programExecutor.VgaRenderer);
             _debugWindow.Closed += (_, _) => _debugWindow = null;
             _debugWindow.Show();
         }
@@ -370,7 +373,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
         } else if(_programExecutor is not null) {
-            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.Machine.VgaRegisters.DacRegisters.ArgbPalette));
+            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.ArgbPalette));
             _paletteWindow.Closed += (_, _) => _paletteWindow = null;
             _paletteWindow.Show();
         }
@@ -610,7 +613,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     private void StartProgramExecutor() {
         _programExecutor = new ProgramExecutor(_loggerService, this, Configuration);
         TimeMultiplier = Configuration.TimeMultiplier;
-        _videoCard = _programExecutor.Machine.VgaCard;
+        _videoCard = _programExecutor.VideoCard;
         Dispatcher.UIThread.Post(() => IsMachineRunning = true);
         Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
         _programExecutor.Run();

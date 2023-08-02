@@ -1,8 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Timer;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -12,16 +14,23 @@ using Spice86.Shared.Interfaces;
 public class TimerInt8Handler : InterruptHandler {
     private readonly DualPic _dualPic;
     private readonly Timer _timer;
+    private readonly BiosDataArea _biosDataArea;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
+    /// <param name="biosDataArea">The memory mapped BIOS values.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public TimerInt8Handler(Machine machine, ILoggerService loggerService) : base(machine, loggerService) {
-        _timer = machine.Timer;
-        _memory = machine.Memory;
-        _dualPic = machine.DualPic;
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="dualPic">The two programmable interrupt controllers.</param>
+    /// <param name="timer">The programmable Interval Timer chip.</param>
+    public TimerInt8Handler(IMemory memory, Cpu cpu, DualPic dualPic, Timer timer, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+        _timer = timer;
+        _memory = memory;
+        _dualPic = dualPic;
+        _biosDataArea = biosDataArea;
     }
 
     /// <inheritdoc />
@@ -38,7 +47,7 @@ public class TimerInt8Handler : InterruptHandler {
     /// Gets or set the value of the real time clock, in ticks.
     /// </summary>
     public uint TickCounterValue {
-        get => _machine.BiosDataArea.TimerCounter; 
-        set => _machine.BiosDataArea.TimerCounter = value;
+        get => _biosDataArea.TimerCounter;
+        set => _biosDataArea.TimerCounter = value;
     }
 }
