@@ -57,29 +57,17 @@ public class EmulationLoop {
     public void Run() {
         State state = _cpu.State;
         FunctionHandler functionHandler = _cpu.FunctionHandler;
-        switch (Debugger.IsAttached) {
-            case true:
-                try {
-                    StartRunLoop(functionHandler, state);
-                } catch (HaltRequestedException) {
-                    // Actually a signal generated code requested Exit
-                    return;
-                }
-                break;
-            default:
-                try {
-                    StartRunLoop(functionHandler, state);
-                } catch (HaltRequestedException) {
-                    // Actually a signal generated code requested Exit
-                    return;
-                } catch (InvalidVMOperationException e) {
-                    e.Demystify();
-                    throw;
-                } catch (Exception e) {
-                    e.Demystify();
-                    throw new InvalidVMOperationException(_cpu.State, e);
-                }
-                break;
+        try {
+            StartRunLoop(functionHandler, state);
+        } catch (HaltRequestedException) {
+            // Actually a signal generated code requested Exit
+            return;
+        } catch (InvalidVMOperationException e) {
+            e.Demystify();
+            throw;
+        } catch (Exception e) {
+            e.Demystify();
+            throw new InvalidVMOperationException(_cpu.State, e);
         }
         _machineBreakpoints.OnMachineStop();
         functionHandler.Ret(CallType.MACHINE);
