@@ -57,26 +57,29 @@ public class EmulationLoop {
     public void Run() {
         State state = _cpu.State;
         FunctionHandler functionHandler = _cpu.FunctionHandler;
-        if (Debugger.IsAttached) {
-            try {
-                StartRunLoop(functionHandler, state);
-            } catch (HaltRequestedException) {
-                // Actually a signal generated code requested Exit
-                return;
-            }
-        } else {
-            try {
-                StartRunLoop(functionHandler, state);
-            } catch (InvalidVMOperationException e) {
-                e.Demystify();
-                throw;
-            } catch (HaltRequestedException) {
-                // Actually a signal generated code requested Exit
-                return;
-            } catch (Exception e) {
-                e.Demystify();
-                throw new InvalidVMOperationException(_cpu.State, e);
-            }
+        switch (Debugger.IsAttached) {
+            case true:
+                try {
+                    StartRunLoop(functionHandler, state);
+                } catch (HaltRequestedException) {
+                    // Actually a signal generated code requested Exit
+                    return;
+                }
+                break;
+            default:
+                try {
+                    StartRunLoop(functionHandler, state);
+                } catch (HaltRequestedException) {
+                    // Actually a signal generated code requested Exit
+                    return;
+                } catch (InvalidVMOperationException e) {
+                    e.Demystify();
+                    throw;
+                } catch (Exception e) {
+                    e.Demystify();
+                    throw new InvalidVMOperationException(_cpu.State, e);
+                }
+                break;
         }
         _machineBreakpoints.OnMachineStop();
         functionHandler.Ret(CallType.MACHINE);
@@ -91,14 +94,10 @@ public class EmulationLoop {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
         _dmaController.StartDmaThread();
-        if (RecordData) {
-            RunLoopWhileRecordingExecutionData();
-        } else {
-            RunLoop();
-        }
+        RunLoop();
     }
     
-    private void RunLoopWhileRecordingExecutionData() {
+    private void RunLoop() {
         while (_cpu.IsRunning) {
             PauseIfAskedTo();
             _machineBreakpoints.CheckBreakPoint();
@@ -107,7 +106,7 @@ public class EmulationLoop {
         }
     }
     
-    private bool GdbStep() {
+    private bool GenerateUnconditionalGdbBreakpoint() {
         if (_gdbCommandHandler is null) {
             return false;
         }
@@ -121,20 +120,10 @@ public class EmulationLoop {
             return;
         }
 
-        if (!GdbStep()) {
-            return;
-        }
-
-        while (IsPaused) {
-            Thread.Sleep(1);
-        }
-    }
-    
-    private void RunLoop() {
-        while (_cpu.IsRunning) {
-            PauseIfAskedTo();
-            _cpu.ExecuteNextInstruction();
-            _timer.Tick();
+        if (!GenerateUnconditionalGdbBreakpoint()) {
+            while (IsPaused) {
+                Thread.Sleep(1);
+            }
         }
     }
 }
