@@ -34,12 +34,13 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// <param name="state">The CPU state.</param>
     /// <param name="dualPic">The two Programmable Interrupt Controllers.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
-    /// <param name="configuration">to get the mouse type from</param>
+    /// <param name="mouseType">The type of mouse to emulate.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Mouse(State state, DualPic dualPic, IGui? gui, Configuration configuration, ILoggerService loggerService) : base(state, configuration.FailOnUnhandledPort, loggerService) {
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O wasn't handled.</param>
+    public Mouse(State state, DualPic dualPic, IGui? gui, MouseType mouseType, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
         _dualPic = dualPic;
-        MouseType = configuration.Mouse;
+        MouseType = mouseType;
         _logger = loggerService;
         _sampleRateTicks = TimeSpan.TicksPerSecond / _sampleRate;
         Initialize();

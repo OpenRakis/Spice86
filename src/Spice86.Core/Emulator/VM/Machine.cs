@@ -219,7 +219,7 @@ public sealed class Machine : IDisposable {
         RegisterIoPortHandler(Timer);
         Keyboard = new Keyboard(Cpu.State, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
-        MouseDevice = new Mouse(Cpu.State, DualPic, gui, configuration, loggerService);
+        MouseDevice = new Mouse(Cpu.State, DualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(MouseDevice);
         Joystick = new Joystick(Cpu.State, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(Joystick);
