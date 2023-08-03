@@ -184,7 +184,6 @@ public sealed class Machine : IDisposable {
 
     /// <summary>
     /// Initializes a new instance
-    /// <param name="machineCreationOptions">Describes how the machine will run, and what it will run.</param>
     /// </summary>
     public Machine(IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
@@ -257,7 +256,7 @@ public sealed class Machine : IDisposable {
         SystemClockInt1AHandler = new SystemClockInt1AHandler(Memory, Cpu, loggerService, TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, gui, VgaFunctions, loggerService);
-        Dos = new Dos(Memory, Cpu, KeyboardInt16Handler, VgaFunctions, configuration, loggerService);
+        Dos = new Dos(Memory, Cpu, KeyboardInt16Handler, VgaFunctions, configuration.CDrive, configuration.Exe, loggerService);
 
         if (configuration.InitializeDOS is not false) {
             // Register the interrupt handlers

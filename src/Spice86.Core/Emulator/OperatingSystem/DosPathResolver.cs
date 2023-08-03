@@ -20,10 +20,11 @@ internal class DosPathResolver {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
+    /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="currentDrive">The drive in use on emulator startup. Defaults to C.</param>
-    public DosPathResolver(Configuration configuration, char currentDrive = 'C') {
-        _driveMap = InitializeDriveMap(configuration);
+    public DosPathResolver(string? cDriveFolderPath, string? executablePath, char currentDrive = 'C') {
+        _driveMap = InitializeDriveMap(cDriveFolderPath, executablePath);
         _currentDrive = currentDrive;
         SetCurrentDirValue(_currentDrive, _driveMap[_currentDrive].MountedHostDirectory, $@"{currentDrive}:\");
     }
@@ -63,14 +64,13 @@ internal class DosPathResolver {
         return string.IsNullOrWhiteSpace(parent) ? fallbackValue : ConvertUtils.ToSlashFolderPath(parent);
     }
 
-    private static Dictionary<char, MountedFolder> InitializeDriveMap(Configuration configuration) {
+    private static Dictionary<char, MountedFolder> InitializeDriveMap(string? cDriveFolderPath, string? executablePath) {
         Dictionary<char, MountedFolder> driveMap = new();
-        string? cDrive = configuration.CDrive;
-        if (string.IsNullOrWhiteSpace(cDrive)) {
-            cDrive = GetExeParentFolder(configuration.Exe);
+        if (string.IsNullOrWhiteSpace(cDriveFolderPath)) {
+            cDriveFolderPath = GetExeParentFolder(executablePath);
         }
-        cDrive = ConvertUtils.ToSlashFolderPath(cDrive);
-        driveMap.Add('C', new MountedFolder('C', cDrive));
+        cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
+        driveMap.Add('C', new MountedFolder('C', cDriveFolderPath));
         return driveMap;
     }
 

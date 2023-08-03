@@ -96,16 +96,19 @@ public class Dos {
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
+    /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
+    /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Configuration configuration, ILoggerService loggerService) {
+    /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
+    public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _cpu = cpu;
         _state = cpu.State;
         _vgaFunctionality = vgaFunctionality;
         AddDefaultDevices();
-        FileManager = new DosFileManager(_memory, configuration, _loggerService, this.Devices);
+        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath, _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, _cpu, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, _cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
