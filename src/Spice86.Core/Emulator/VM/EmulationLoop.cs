@@ -25,26 +25,26 @@ public class EmulationLoop {
     /// Whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
-    
+
     /// <summary>
-    /// Gets if we record execution data, for reverse engineering purposes.
+    /// Gets if we check for breakpoints in the emulation loop.
     /// </summary>
-    public bool RecordData { get; }
+    private bool _listensToBreakpoints;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
-    /// <param name="recordData">Whether we record machine code execution data.</param>
+    /// <param name="listensToBreakpoints">Whether we react to breakpoints in the emulation loop.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
     /// <param name="gdbCommandHandler">The GDB Command Handler, used to trigger a GDB breakpoint on pause.</param>
-    public EmulationLoop(Cpu cpu, Devices.Timer.Timer timer, bool recordData, MachineBreakpoints machineBreakpoints,
+    public EmulationLoop(Cpu cpu, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
         DmaController dmaController, GdbCommandHandler? gdbCommandHandler) {
         _cpu = cpu;
         _timer = timer;
-        RecordData = recordData;
+        _listensToBreakpoints = listensToBreakpoints;
         _machineBreakpoints = machineBreakpoints;
         _dmaController = dmaController;
         _gdbCommandHandler = gdbCommandHandler;
@@ -88,7 +88,9 @@ public class EmulationLoop {
     private void RunLoop() {
         while (_cpu.IsRunning) {
             PauseIfAskedTo();
-            _machineBreakpoints.CheckBreakPoint();
+            if (_listensToBreakpoints) {
+                _machineBreakpoints.CheckBreakPoint();
+            }
             _cpu.ExecuteNextInstruction();
             _timer.Tick();
         }

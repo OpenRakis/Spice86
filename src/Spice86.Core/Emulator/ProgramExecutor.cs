@@ -34,7 +34,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
     
-    private bool RecordData => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
+    private bool ListensToBreakpoints => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
     
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -47,7 +47,7 @@ public sealed class ProgramExecutor : IDisposable {
         _configuration = configuration;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer(gui);
-        _emulationLoop = new(Machine.Cpu, Machine.Timer, RecordData, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
+        _emulationLoop = new(Machine.Cpu, Machine.Timer, ListensToBreakpoints, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// </summary>
     public void Run() {
         _gdbServer?.StartServerAndWait();
-        if (RecordData) {
+        if (ListensToBreakpoints) {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
         _emulationLoop.Run();
@@ -152,8 +152,8 @@ public sealed class ProgramExecutor : IDisposable {
     private Machine CreateMachine(IGui? gui) {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
-        ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(RecordData);
-        Machine = new Machine(gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, RecordData);
+        ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(ListensToBreakpoints);
+        Machine = new Machine(gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, ListensToBreakpoints);
         InitializeCpu();
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
