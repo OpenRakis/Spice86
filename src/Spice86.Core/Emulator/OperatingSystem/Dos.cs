@@ -112,7 +112,7 @@ public class Dos {
         DosInt2FHandler = new DosInt2fHandler(_memory, _cpu, _loggerService);
     }
 
-    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, Configuration configuration) {
+    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, bool enableEms) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }
@@ -120,7 +120,7 @@ public class Dos {
         OpenDefaultFileHandles();
         SetEnvironmentVariables(blasterEnvVarProvider);
 
-        if (configuration.Ems) {
+        if (enableEms) {
             Ems = new(_memory, _cpu, this, _loggerService);
         }
     }

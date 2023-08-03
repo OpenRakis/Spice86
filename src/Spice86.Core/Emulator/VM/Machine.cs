@@ -273,8 +273,8 @@ public sealed class Machine : IDisposable {
             RegisterInterruptHandler(Dos.DosInt2FHandler);
 
             // Initialize DOS.
-            Dos.Initialize(SoundBlaster, Cpu.State, configuration);
-            if (configuration.Ems && Dos.Ems is not null) {
+            Dos.Initialize(SoundBlaster, Cpu.State, configuration.Ems);
+            if (Dos.Ems is not null) {
                 RegisterInterruptHandler(Dos.Ems);
             }
 
