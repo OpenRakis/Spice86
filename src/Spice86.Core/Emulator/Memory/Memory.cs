@@ -23,14 +23,14 @@ public class Memory : Indexable.Indexable, IMemory {
     /// Instantiate a new memory bus.
     /// </summary>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
-    /// <param name="configuration">The emulator configuration</param>
-    public Memory(IMemoryDevice baseMemory, Configuration configuration) {
+    /// <param name="is20ThAddressLineSilenced">whether the A20 gate is silenced.</param>
+    public Memory(IMemoryDevice baseMemory, bool is20ThAddressLineSilenced) {
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
         _ram = new Ram(memorySize);
         RegisterMapping(0, memorySize, _ram);
         (UInt8, UInt16, UInt32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
-        A20Gate = new(configuration.A20Gate);
+        A20Gate = new(is20ThAddressLineSilenced);
     }
 
     /// <summary>

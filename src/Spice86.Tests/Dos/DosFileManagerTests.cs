@@ -83,6 +83,6 @@ public class DosFileManagerTests {
         Mock<ILoggerService> loggerServiceMock = new Mock<ILoggerService>();
         Mock<IVirtualDevice> chracterDeviceMock = new Mock<IVirtualDevice>();
         List<IVirtualDevice> dosDevicesMock = new List<IVirtualDevice>() { chracterDeviceMock.Object };
-        return new DosFileManager(new Memory(ram, configuration), configuration.CDrive, configuration.Exe, loggerServiceMock.Object, dosDevicesMock);
+        return new DosFileManager(new Memory(ram, configuration.A20Gate), configuration.CDrive, configuration.Exe, loggerServiceMock.Object, dosDevicesMock);
     }
 }

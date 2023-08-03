@@ -187,7 +187,7 @@ public sealed class Machine : IDisposable {
     /// </summary>
     public Machine(IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        Memory = new Memory(ram, configuration);
+        Memory = new Memory(ram, configuration.A20Gate);
         BiosDataArea = new BiosDataArea(Memory);
         
         Cpu = new Cpu(Memory, loggerService, executionFlowRecorder, recordData, configuration.FailOnUnhandledPort);
