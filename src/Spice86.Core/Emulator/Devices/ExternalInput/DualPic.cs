@@ -66,7 +66,6 @@ public class DualPic : DefaultIOPortHandler {
     /// Masks all interrupts globally by setting the interrupt mask bit in the processor's status register. <br/>
     /// This prevents any interrupts from being serviced while the processor is executing critical sections of code
     /// that must not be interrupted.
-    /// or events.
     /// </summary>
     public void MaskAllInterrupts() {
         _pic1.ProcessDataWrite(0xFF);
@@ -120,6 +119,7 @@ public class DualPic : DefaultIOPortHandler {
     /// Acknowledges the interrupt request from the first PIC. <br/>
     /// This signals that the PIC has processed the interrupt request and is ready to receive new requests.
     /// </summary>
+    /// <exception cref="UnhandledOperationException">If the irq is not between <c>0</c> and <c>15</c></exception>
     public void AcknowledgeInterrupt(byte irq) {
         if (irq < 8) {
             _pic1.AcknowledgeInterrupt();
