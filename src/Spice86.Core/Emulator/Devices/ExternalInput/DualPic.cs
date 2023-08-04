@@ -77,7 +77,6 @@ public class DualPic : DefaultIOPortHandler {
     /// Services an IRQ request
     /// </summary>
     /// <param name="irq">The IRQ Number, which will be internally translated to a vector number</param>
-    /// <exception cref="UnrecoverableException">If not defined in the ISA bus IRQ table</exception>
     public void ProcessInterruptRequest(byte irq) {
         if (irq < 8) {
             _pic1.InterruptRequest(irq);
