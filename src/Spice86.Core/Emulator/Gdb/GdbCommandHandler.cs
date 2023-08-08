@@ -124,7 +124,7 @@ public class GdbCommandHandler {
     }
 
     private string Kill() {
-        _cpu.IsRunning = false;
+        _state.IsRunning = false;
         return Detach();
     }
 

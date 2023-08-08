@@ -663,7 +663,7 @@ public class CSharpOverrideHelper {
     /// <param name="expectedReturnCs">The excepted value of the CS register after the interruption is done.</param>
     /// <param name="expectedReturnIp">The excepted value of the IP register after the interruption is done</param>
     public void CheckExternalEvents(ushort expectedReturnCs, ushort expectedReturnIp) {
-        if (!Cpu.IsRunning) {
+        if (!State.IsRunning) {
             Exit();
         }
         State.IncCycles();

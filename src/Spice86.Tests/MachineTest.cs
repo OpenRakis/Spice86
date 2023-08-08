@@ -43,7 +43,7 @@ public class MachineTest {
         }, true), true);
         machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.MACHINE_STOP, 0, breakpoint => {
             Assert.Equal(0xF01A9, (int)state.IpPhysicalAddress);
-            Assert.False(machine.Cpu.IsRunning);
+            Assert.False(machine.Cpu.State.IsRunning);
             triggers++;
         }, true), true);
         programExecutor.Run();

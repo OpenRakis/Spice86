@@ -137,8 +137,6 @@ public class Cpu {
         State.IP = _internalIp;
     }
 
-    public bool IsRunning { get; set; } = true;
-
     public Alu Alu { get; }
 
     public FunctionHandler FunctionHandler { get; }
@@ -1029,7 +1027,7 @@ public class Cpu {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("HLT instruction encountered, halting!");
                 }
-                IsRunning = false;
+                State.IsRunning = false;
                 break;
             case 0xF5:
                 // CMC

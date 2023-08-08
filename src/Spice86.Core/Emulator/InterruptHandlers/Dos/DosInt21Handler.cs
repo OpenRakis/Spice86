@@ -466,7 +466,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
         }
-        _cpu.IsRunning = false;
+        _state.IsRunning = false;
     }
 
     public void ReadFile(bool calledFromVm) {
