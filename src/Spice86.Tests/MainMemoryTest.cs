@@ -44,6 +44,18 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x12, actual);
     }
+    
+    [Fact]
+    public void TestGetInt8() {
+        // Arrange
+        _memory.UInt8[0x1234] = 0xFF;
+
+        // Act
+        sbyte actual = _memory.Int8[0x1234];
+
+        // Assert
+        Assert.Equal(-1, actual);
+    }
 
     [Fact]
     public void TestGetUint16() {
@@ -56,6 +68,19 @@ public class MainMemoryTest {
 
         // Assert
         Assert.Equal(0x1234, actual);
+    }
+    
+    [Fact]
+    public void TestGetUnt16() {
+        // Arrange
+        _memory.UInt8[0x1234] = 0xFF;
+        _memory.UInt8[0x1235] = 0xFF;
+
+        // Act
+        short actual = _memory.Int16[0x1234];
+
+        // Assert
+        Assert.Equal(-1, actual);
     }
 
     [Fact]
@@ -72,6 +97,21 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x56781234u, actual);
     }
+    
+    [Fact]
+    public void TestGetInt32() {
+        // Arrange
+        _memory.UInt8[0x1234] = 0xFF;
+        _memory.UInt8[0x1235] = 0xFF;
+        _memory.UInt8[0x1236] = 0xFF;
+        _memory.UInt8[0x1237] = 0xFF;
+
+        // Act
+        int actual = _memory.Int32[0x1234];
+
+        // Assert
+        Assert.Equal(-1, actual);
+    }
 
     [Fact]
     public void TestSetUint8() {
@@ -83,6 +123,18 @@ public class MainMemoryTest {
 
         // Assert
         Assert.Equal(0x12, _memory.UInt8[0x1234]);
+    }
+    
+    [Fact]
+    public void TestSetInt8() {
+        // Arrange
+        _memory.UInt8[0x1234] = 0x00;
+        
+        // Act
+        _memory.Int8[0x1234] = -1;
+
+        // Assert
+        Assert.Equal(0xFF, _memory.UInt8[0x1234]);
     }
 
     [Fact]
@@ -97,6 +149,20 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x34, _memory.UInt8[0x1234]);
         Assert.Equal(0x12, _memory.UInt8[0x1235]);
+    }
+    
+    [Fact]
+    public void TestSetInt16() {
+        // Arrange
+        _memory.UInt8[0x1234] = 0x00;
+        _memory.UInt8[0x1235] = 0x00;
+        
+        // Act
+        _memory.Int16[0x1234] = -1;
+
+        // Assert
+        Assert.Equal(0xFF, _memory.UInt8[0x1234]);
+        Assert.Equal(0xFF, _memory.UInt8[0x1235]);
     }
 
     [Fact]
@@ -115,6 +181,24 @@ public class MainMemoryTest {
         Assert.Equal(0x12, _memory.UInt8[0x1235]);
         Assert.Equal(0x78, _memory.UInt8[0x1236]);
         Assert.Equal(0x56, _memory.UInt8[0x1237]);
+    }
+    
+    [Fact]
+    public void TestSetInt32() {
+        // Arrange
+        _memory.UInt8[0x1234] = 0x00;
+        _memory.UInt8[0x1235] = 0x00;
+        _memory.UInt8[0x1236] = 0x00;
+        _memory.UInt8[0x1237] = 0x00;
+        
+        // Act
+        _memory.Int32[0x1234] = -1;
+
+        // Assert
+        Assert.Equal(0xFF, _memory.UInt8[0x1234]);
+        Assert.Equal(0xFF, _memory.UInt8[0x1235]);
+        Assert.Equal(0xFF, _memory.UInt8[0x1236]);
+        Assert.Equal(0xFF, _memory.UInt8[0x1237]);
     }
 
     [Fact]

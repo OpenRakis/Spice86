@@ -16,10 +16,11 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     protected AbstractMemoryBasedDataStructure(IByteReaderWriter byteReaderWriter) {
         ByteReaderWriter = byteReaderWriter;
         ByteReaderWriterShiftedToBaseAddress = new ByteReaderWriterWithBaseAddress(byteReaderWriter, this);
-        (UInt8, UInt16, UInt32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(ByteReaderWriterShiftedToBaseAddress);
+        (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddressValue, SegmentedAddress) =
+            InstantiateIndexersFromByteReaderWriter(ByteReaderWriterShiftedToBaseAddress);
     }
-    
-    
+
+
     /// <inheritdoc/>
     public override UInt8Indexer UInt8 {
         get;
@@ -34,12 +35,27 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     public override UInt32Indexer UInt32 {
         get;
     }
-    
+
+    /// <inheritdoc/>
+    public override Int8Indexer Int8 {
+        get;
+    }
+
+    /// <inheritdoc/>
+    public override Int16Indexer Int16 {
+        get;
+    }
+
+    /// <inheritdoc/>
+    public override Int32Indexer Int32 {
+        get;
+    }
+
     /// <inheritdoc/>
     public override SegmentedAddressValueIndexer SegmentedAddressValue {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override SegmentedAddressIndexer SegmentedAddress {
         get;
@@ -54,7 +70,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// Where data are from, shifted to base address.
     /// </summary>
     private ByteReaderWriterWithBaseAddress ByteReaderWriterShiftedToBaseAddress { get; }
-    
+
     /// <summary>
     /// The base address of the data structure.
     /// </summary>
@@ -83,7 +99,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     public UInt16Array GetUInt16Array(uint start, int length) {
         return new UInt16Array(ByteReaderWriter, ComputeAddressFromOffset(start), length);
     }
-    
+
     /// <summary>
     /// Gets an 32-bit unsigned integer array from the data structure starting at the specified offset and with the specified length.
     /// </summary>

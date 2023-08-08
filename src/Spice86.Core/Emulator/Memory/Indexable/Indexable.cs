@@ -30,6 +30,27 @@ public abstract class Indexable : IIndexable {
     }
 
     /// <summary>
+    ///     Allows indexed signed byte access to the memory.
+    /// </summary>
+    public abstract Int8Indexer Int8 {
+        get;
+    }
+
+    /// <summary>
+    ///     Allows indexed signed word access to the memory.
+    /// </summary>
+    public abstract Int16Indexer Int16 {
+        get;
+    }
+
+    /// <summary>
+    ///     Allows indexed signed double word access to the memory.
+    /// </summary>
+    public abstract Int32Indexer Int32 {
+        get;
+    }
+
+    /// <summary>
     ///     Allows indexed 16 bit Offset / Segment access to the memory.
     /// </summary>
     public abstract SegmentedAddressValueIndexer SegmentedAddressValue {
@@ -43,13 +64,18 @@ public abstract class Indexable : IIndexable {
         get;
     }
 
-    public static (UInt8Indexer, UInt16Indexer, UInt32Indexer, SegmentedAddressValueIndexer, SegmentedAddressIndexer) InstantiateIndexersFromByteReaderWriter(IByteReaderWriter byteReaderWriter) {
+    public static (UInt8Indexer, UInt16Indexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer,
+        SegmentedAddressValueIndexer, SegmentedAddressIndexer) InstantiateIndexersFromByteReaderWriter(
+            IByteReaderWriter byteReaderWriter) {
         UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter);
         UInt16Indexer uInt16 = new UInt16Indexer(byteReaderWriter);
         UInt32Indexer uInt32 = new UInt32Indexer(byteReaderWriter);
+        Int8Indexer int8 = new Int8Indexer(uInt8);
+        Int16Indexer int16 = new Int16Indexer(uInt16);
+        Int32Indexer int32 = new Int32Indexer(uInt32);
         SegmentedAddressValueIndexer segmentedAddressValue = new SegmentedAddressValueIndexer(uInt16);
         SegmentedAddressIndexer segmentedAddress = new SegmentedAddressIndexer(segmentedAddressValue);
-        return (uInt8, uInt16, uInt32, segmentedAddressValue, segmentedAddress);
+        return (uInt8, uInt16, uInt32, int8, int16, int32, segmentedAddressValue, segmentedAddress);
     }
 
     /// <summary>
@@ -95,7 +121,7 @@ public abstract class Indexable : IIndexable {
 
         UInt8[(uint)(address + i)] = 0;
     }
-    
+
     /// <summary>
     ///     Load data from a byte array into memory.
     /// </summary>
@@ -173,8 +199,8 @@ public abstract class Indexable : IIndexable {
             UInt16[(uint)(address + i)] = value;
         }
     }
-    
-    
+
+
     /// <summary>
     /// Returns an array of bytes read from RAM.
     /// </summary>
