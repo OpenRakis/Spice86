@@ -35,6 +35,27 @@ public interface IIndexable {
     }
     
     /// <summary>
+    ///     Allows indexed signed byte access to the memory.
+    /// </summary>
+    Int8Indexer Int8 {
+        get;
+    }
+
+    /// <summary>
+    ///     Allows indexed signed word access to the memory.
+    /// </summary>
+    Int16Indexer Int16 {
+        get;
+    }
+
+    /// <summary>
+    ///     Allows indexed signed double word access to the memory.
+    /// </summary>
+    Int32Indexer Int32 {
+        get;
+    }
+    
+    /// <summary>
     ///     Allows indexed 16 bit Offset / Segment access to the memory.
     /// </summary>
     SegmentedAddressValueIndexer SegmentedAddressValue {

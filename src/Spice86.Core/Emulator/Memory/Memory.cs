@@ -29,7 +29,7 @@ public class Memory : Indexable.Indexable, IMemory {
         _memoryDevices = new IMemoryDevice[memorySize];
         _ram = new Ram(memorySize);
         RegisterMapping(0, memorySize, _ram);
-        (UInt8, UInt16, UInt32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
+        (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
         A20Gate = new(is20ThAddressLineSilenced);
     }
 
@@ -151,7 +151,22 @@ public class Memory : Indexable.Indexable, IMemory {
     public override UInt32Indexer UInt32 {
         get;
     }
-    
+
+    /// <inheritdoc/>
+    public override Int8Indexer Int8 {
+        get;
+    }
+
+    /// <inheritdoc/>
+    public override Int16Indexer Int16 {
+        get;
+    }
+
+    /// <inheritdoc/>
+    public override Int32Indexer Int32 {
+        get;
+    }
+
     /// <inheritdoc/>
     public override SegmentedAddressValueIndexer SegmentedAddressValue {
         get;
