@@ -2,6 +2,7 @@
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -66,6 +67,11 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The emulated CPU.
     /// </summary>
     public Cpu Cpu { get; }
+
+    /// <summary>
+    /// The emulated CPU.
+    /// </summary>
+    public CfgCpu CfgCpu { get; }
 
     /// <summary>
     /// The emulated CPU state.
@@ -224,6 +230,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         CallbackHandler = new(CpuState, loggerService);
 
         Cpu = new Cpu(Memory, CpuState, DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints, loggerService, executionFlowRecorder, recordData);
+        CfgCpu = new CfgCpu(Memory, CpuState, IoPortDispatcher, CallbackHandler, DualPic, MachineBreakpoints);
 
         // IO devices
         DmaController = new DmaController(Memory, CpuState, configuration.FailOnUnhandledPort, loggerService);

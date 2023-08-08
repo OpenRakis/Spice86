@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Text;
 
@@ -308,7 +309,10 @@ public class State : IDebuggableComponent {
     /// The physical address of the instruction pointer in memory
     /// </summary>
     public uint IpPhysicalAddress => MemoryUtils.ToPhysicalAddress(CS, IP);
-
+    /// <summary>
+    /// The segmented address representation of the instruction pointer in memory
+    /// </summary>
+    public SegmentedAddress IpSegmentedAddress => new SegmentedAddress(CS, IP);
     /// <summary>
     /// The physical address of the stack in memory
     /// </summary>
