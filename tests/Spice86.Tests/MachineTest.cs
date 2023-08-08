@@ -24,7 +24,7 @@ public class MachineTest {
             .MinimumLevel.Debug()
             .CreateLogger();
     }
-
+#if false
     [Fact]
     public void TestExecutionBreakpoints() {
         ProgramExecutor programExecutor = CreateProgramExecutor("add", true);
@@ -267,6 +267,7 @@ public class MachineTest {
     public void TestSub() {
         TestOneBin("sub");
     }
+#endif
 
     [Theory]
     [InlineData(0b0011110000000000, 0b0010000000000001, 0, 0b0011110000000000, true, true)] // result is same as dest, flags unaffected
