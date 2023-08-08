@@ -76,7 +76,7 @@ public class EmulationLoop {
     /// <summary>
     /// Forces the emulation loop to exit.
     /// </summary>
-    internal void Exit() => _cpu.IsRunning = false;
+    internal void Exit() => _cpu.State.IsRunning = false;
 
     private void StartRunLoop(FunctionHandler functionHandler, State state) {
         // Entry could be overridden and could throw exceptions
@@ -86,7 +86,7 @@ public class EmulationLoop {
     }
     
     private void RunLoop() {
-        while (_cpu.IsRunning) {
+        while (_cpu.State.IsRunning) {
             PauseIfAskedTo();
             if (_listensToBreakpoints) {
                 _machineBreakpoints.CheckBreakPoint();

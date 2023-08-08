@@ -110,6 +110,8 @@ public class State {
     public Registers Registers { get; } = new();
     public SegmentRegisters SegmentRegisters { get; } = new();
     
+    public bool IsRunning { get; set; } = true;
+
     /// <summary>
     /// Sets <see cref="ContinueZeroFlagValue"/> and <see cref="SegmentOverrideIndex"/> to <c>null</c>.
     /// </summary>
