@@ -90,7 +90,7 @@ public static class BufdioLib {
         return true;
     }
 
-    private static string GetPortAudioLibName() {
+    public static string GetPortAudioLibName() {
         if (PlatformInfo.IsWindows) {
             return "libportaudio-2.dll";
         } else if (PlatformInfo.IsLinux) {

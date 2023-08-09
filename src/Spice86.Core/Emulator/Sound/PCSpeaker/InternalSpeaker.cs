@@ -14,6 +14,7 @@ public sealed class InternalSpeaker : IDisposable {
     /// Value into which the input frequency is divided to get the frequency in Hz.
     /// </summary>
     private const double FrequencyFactor = 1193180;
+    private readonly AudioPlayerFactory _audioPlayerFactory;
 
     private readonly int _outputSampleRate = 48000;
     private readonly int _ticksPerSample;
@@ -31,7 +32,9 @@ public sealed class InternalSpeaker : IDisposable {
     /// <summary>
     /// Initializes a new instance of the InternalSpeaker class.
     /// </summary>
-    public InternalSpeaker() {
+    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
+    public InternalSpeaker(AudioPlayerFactory audioPlayerFactory) {
+        _audioPlayerFactory = audioPlayerFactory;
         _frequencyRegister.ValueChanged += FrequencyChanged;
         _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
     }
@@ -164,10 +167,7 @@ public sealed class InternalSpeaker : IDisposable {
     /// Generates the PC speaker waveform.
     /// </summary>
     private async Task GenerateWaveformAsync() {
-        using AudioPlayer? player = Audio.CreatePlayer();
-        if (player is null) {
-            return;
-        }
+        using AudioPlayer player = _audioPlayerFactory.CreatePlayer();
         FillWithSilence(player);
 
         byte[] buffer = new byte[4096];
@@ -191,7 +191,7 @@ public sealed class InternalSpeaker : IDisposable {
                 }
 
                 while (periods > 0) {
-                    Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, samples));
+                    player.WriteFullBuffer(writeBuffer.AsSpan(0, samples));
                     periods--;
                 }
 

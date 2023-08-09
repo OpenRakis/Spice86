@@ -12,7 +12,6 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.Blaster;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -130,10 +129,12 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private readonly DualPic _dualPic;
     private readonly IGui? _gui;
     private readonly DmaController _dmaController;
+    private readonly AudioPlayerFactory _audioPlayerFactory;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
+    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
     /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
@@ -141,7 +142,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="gui">The GUI. Is <c>null</c> in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
-    public SoundBlaster(State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
+    public SoundBlaster(AudioPlayerFactory audioPlayerFactory, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
+        _audioPlayerFactory = audioPlayerFactory;
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
@@ -316,42 +318,55 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => _dsp.DmaWrite(source);
 
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
-    
+
     private void AudioPlayback() {
-        using AudioPlayer? player = Audio.CreatePlayer(48000, 2048);
-        if (player is null) {
-            return;
-        }
+        using AudioPlayer player = _audioPlayerFactory.CreatePlayer(48000, 2048);
+
         Span<byte> buffer = stackalloc byte[512];
         short[] writeBuffer = new short[65536 * 2];
         int sampleRate = player.Format.SampleRate;
 
         while (!_endPlayback) {
             _dsp.Read(buffer);
-            int length;
-            if (_dsp.Is16Bit && _dsp.IsStereo) {
-                length = LinearUpsampler.Resample16Stereo(_dsp.SampleRate, sampleRate, buffer.Cast<byte, short>(), writeBuffer);
-            } else if (_dsp.Is16Bit) {
-                length = LinearUpsampler.Resample16Mono(_dsp.SampleRate, sampleRate, buffer.Cast<byte, short>(), writeBuffer);
-            } else if (_dsp.IsStereo) {
-                length = LinearUpsampler.Resample8Stereo(_dsp.SampleRate, sampleRate, buffer, writeBuffer);
-            } else {
-                length = LinearUpsampler.Resample8Mono(_dsp.SampleRate, sampleRate, buffer, writeBuffer);
-            }
-
-            Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
+            int length = Resample(buffer, sampleRate, writeBuffer);
+            player.WriteFullBuffer(writeBuffer.AsSpan(0, length));
 
             if (_pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = (_pauseDuration / (1024 / 2)) + 1;
                 for (int i = 0; i < count; i++) {
-                    Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, 1024));
+                    player.WriteFullBuffer(writeBuffer.AsSpan(0, 1024));
                 }
 
                 _pauseDuration = 0;
                 RaiseInterruptRequest();
             }
         }
+    }
+
+    /// <summary>
+    /// Resamples the data in sourceBuffer to destinationBuffer with the given sampleRate. Returns the destinationBuffer lenght.
+    /// </summary>
+    /// <param name="sourceBuffer"></param>
+    /// <param name="sampleRate"></param>
+    /// <param name="destinationBuffer"></param>
+    /// <returns>Lenght of the data written in destinationBuffer</returns>
+    private int Resample(Span<byte> sourceBuffer, int sampleRate, short[] destinationBuffer) {
+        if (_dsp.Is16Bit && _dsp.IsStereo) {
+            return LinearUpsampler.Resample16Stereo(_dsp.SampleRate, sampleRate, sourceBuffer.Cast<byte, short>(),
+                destinationBuffer);
+        }
+
+        if (_dsp.Is16Bit) {
+            return LinearUpsampler.Resample16Mono(_dsp.SampleRate, sampleRate, sourceBuffer.Cast<byte, short>(),
+                destinationBuffer);
+        }
+
+        if (_dsp.IsStereo) {
+            return LinearUpsampler.Resample8Stereo(_dsp.SampleRate, sampleRate, sourceBuffer, destinationBuffer);
+        }
+
+        return LinearUpsampler.Resample8Mono(_dsp.SampleRate, sampleRate, sourceBuffer, destinationBuffer);
     }
 
     /// <summary>

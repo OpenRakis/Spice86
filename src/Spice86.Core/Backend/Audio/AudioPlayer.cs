@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 /// <summary>
 /// The base class for the <see cref="PortAudio.PortAudioPlayer" />
 /// </summary>
-internal abstract class AudioPlayer : IDisposable
+public abstract class AudioPlayer : IDisposable
 {
     private readonly InternalBufferWriter _writer;
     
@@ -47,6 +47,74 @@ internal abstract class AudioPlayer : IDisposable
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
     public int WriteData(Span<short> data) => _writer.WriteData(data);
+
+    
+    
+    /// <summary>
+    /// Writes the full buffer of audio data to the player/>.
+    /// </summary>
+    /// <param name="buffer">The buffer of audio data to write.</param>
+    /// <remarks>
+    /// The method will block until the entire buffer has been written to the player/>.
+    /// </remarks>
+    public void WriteFullBuffer(Span<float> buffer) {
+        Span<float> writeBuffer = buffer;
+
+        while (true) {
+            int count = WriteData(writeBuffer);
+            writeBuffer = writeBuffer[count..];
+            if (writeBuffer.IsEmpty) {
+                return;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Writes the full buffer of audio data to the player/>.
+    /// </summary>
+    /// <param name="buffer">The buffer of audio data to write.</param>
+    /// <remarks>
+    /// The buffer must contain 16-bit signed integer data. The method will block until the entire buffer has been written to the player/>.
+    /// </remarks>
+    public void WriteFullBuffer(Span<short> buffer) {
+        Span<short> writeBuffer = buffer;
+
+        while (true) {
+            int count = WriteData(writeBuffer);
+            writeBuffer = writeBuffer[count..];
+            if (writeBuffer.IsEmpty) {
+                return;
+            }
+        }
+    }
+    
+    
+    /// <summary>
+    /// Writes the full buffer of audio data to the player/>.
+    /// </summary>
+    /// <param name="buffer">The buffer of audio data to write.</param>
+    /// <remarks>
+    /// The buffer must contain 8-bit unsigned integer data, which will be converted to floats in the range [-1.0, 1.0]. The method will block until the entire buffer has been written to the player/>.
+    /// </remarks>
+    public void WriteFullBuffer(Span<byte> buffer) {
+        Span<byte> writeBuffer = buffer;
+
+        float[] floatArray = new float[writeBuffer.Length];
+
+        for (int i = 0; i < writeBuffer.Length; i++) {
+            floatArray[i] = writeBuffer[i];
+        }
+
+        Span<float> span = new Span<float>(floatArray);
+
+        while (true) {
+            int count = WriteData(span);
+            writeBuffer = writeBuffer[count..];
+            if (writeBuffer.IsEmpty) {
+                return;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public void Dispose() {

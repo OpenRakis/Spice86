@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -19,10 +20,11 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of <see cref="PcSpeaker"/>
     /// </summary>
+    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public PcSpeaker(State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) => _pcSpeaker = new();
+    public PcSpeaker(AudioPlayerFactory audioPlayerFactory, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) => _pcSpeaker = new(audioPlayerFactory);
 
     /// <inheritdoc />
     public override byte ReadByte(int port) {

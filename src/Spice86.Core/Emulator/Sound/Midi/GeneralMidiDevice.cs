@@ -14,7 +14,7 @@ using OperatingSystem = System.OperatingSystem;
 /// <remarks>Uses a soundfont, not the host OS APIs. This is not a MIDI passthrough.</remarks>
 /// </summary>
 internal sealed class GeneralMidiDevice : MidiDevice {
-    private readonly AudioPlayer? _audioPlayer;
+    private readonly AudioPlayer _audioPlayer;
     
     /// <summary>
     /// Indicates whether this object has been disposed.
@@ -34,8 +34,8 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     
     private IntPtr _midiOutHandle;
 
-    public GeneralMidiDevice() {
-        _audioPlayer = Audio.CreatePlayer(48000, 2048);
+    public GeneralMidiDevice(AudioPlayerFactory audioPlayerFactory) {
+        _audioPlayer = audioPlayerFactory.CreatePlayer(48000, 2048);
         _playbackThread = new Thread(RenderThreadMethod) {
             Name = "GeneralMIDIAudio"
         };
@@ -54,7 +54,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     }
 
     private void RenderThreadMethod() {
-        if (_audioPlayer is null || !File.Exists(SoundFont)) {
+        if (!File.Exists(SoundFont)) {
             return;
         }
         // General MIDI needs a large buffer to store preset PCM data of musical instruments.
@@ -67,7 +67,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
             FillBuffer(synthesizer, data);
-            Audio.WriteFullBuffer(_audioPlayer, data);
+            _audioPlayer.WriteFullBuffer(data);
             data.Clear();
         }
     }
@@ -141,7 +141,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
                     _playbackThread.Join();
                 }
                 _fillBufferEvent.Dispose();
-                _audioPlayer?.Dispose();
+                _audioPlayer.Dispose();
             }
             _disposed = true;
         }

@@ -8,6 +8,7 @@ using System;
 /// Virtual device which emulates General MIDI playback.
 /// </summary>
 public sealed class GeneralMidi : IDisposable {
+    private readonly AudioPlayerFactory _audioPlayerFactory;
     private MidiDevice? _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
 
@@ -45,9 +46,11 @@ public sealed class GeneralMidi : IDisposable {
     /// <summary>
     /// Initializes a new instance of the GeneralMidi class.
     /// </summary>
+    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
     /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GeneralMidi(string? mt32RomsPath, ILoggerService loggerService) {
+    public GeneralMidi(AudioPlayerFactory audioPlayerFactory, string? mt32RomsPath, ILoggerService loggerService) {
+        _audioPlayerFactory = audioPlayerFactory;
         _loggerService = loggerService;
         Mt32RomsPath = mt32RomsPath;
     }
@@ -133,9 +136,9 @@ public sealed class GeneralMidi : IDisposable {
             case DataPort:
                 if (_midiMapper is null) {
                     if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
-                        _midiMapper = new Mt32MidiDevice(Mt32RomsPath, _loggerService);
+                        _midiMapper = new Mt32MidiDevice(_audioPlayerFactory, Mt32RomsPath, _loggerService);
                     } else {
-                        _midiMapper = new GeneralMidiDevice();
+                        _midiMapper = new GeneralMidiDevice(_audioPlayerFactory);
                     }
                 }
 
