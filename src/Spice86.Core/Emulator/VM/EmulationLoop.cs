@@ -16,6 +16,7 @@ using System.Diagnostics;
 /// </summary>
 public class EmulationLoop {
     private readonly Cpu _cpu;
+    private readonly State _cpuState;
     private readonly Devices.Timer.Timer _timer;
     private readonly MachineBreakpoints _machineBreakpoints;
     private readonly DmaController _dmaController;
@@ -35,14 +36,16 @@ public class EmulationLoop {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
+    /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
     /// <param name="listensToBreakpoints">Whether we react to breakpoints in the emulation loop.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
     /// <param name="gdbCommandHandler">The GDB Command Handler, used to trigger a GDB breakpoint on pause.</param>
-    public EmulationLoop(Cpu cpu, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
+    public EmulationLoop(Cpu cpu, State cpuState, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
         DmaController dmaController, GdbCommandHandler? gdbCommandHandler) {
         _cpu = cpu;
+        _cpuState = cpuState;
         _timer = timer;
         _listensToBreakpoints = listensToBreakpoints;
         _machineBreakpoints = machineBreakpoints;
@@ -55,10 +58,9 @@ public class EmulationLoop {
     /// </summary>
     /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>
     public void Run() {
-        State state = _cpu.State;
         FunctionHandler functionHandler = _cpu.FunctionHandler;
         try {
-            StartRunLoop(functionHandler, state);
+            StartRunLoop(functionHandler);
         } catch (HaltRequestedException) {
             // Actually a signal generated code requested Exit
             return;
@@ -67,7 +69,7 @@ public class EmulationLoop {
             throw;
         } catch (Exception e) {
             e.Demystify();
-            throw new InvalidVMOperationException(_cpu.State, e);
+            throw new InvalidVMOperationException(_cpuState, e);
         }
         _machineBreakpoints.OnMachineStop();
         functionHandler.Ret(CallType.MACHINE);
@@ -76,17 +78,17 @@ public class EmulationLoop {
     /// <summary>
     /// Forces the emulation loop to exit.
     /// </summary>
-    internal void Exit() => _cpu.State.IsRunning = false;
+    internal void Exit() => _cpuState.IsRunning = false;
 
-    private void StartRunLoop(FunctionHandler functionHandler, State state) {
+    private void StartRunLoop(FunctionHandler functionHandler) {
         // Entry could be overridden and could throw exceptions
-        functionHandler.Call(CallType.MACHINE, state.CS, state.IP, null, null, "entry", false);
+        functionHandler.Call(CallType.MACHINE, _cpuState.CS, _cpuState.IP, null, null, "entry", false);
         _dmaController.StartDmaThread();
         RunLoop();
     }
     
     private void RunLoop() {
-        while (_cpu.State.IsRunning) {
+        while (_cpuState.IsRunning) {
             PauseIfAskedTo();
             if (_listensToBreakpoints) {
                 _machineBreakpoints.CheckBreakPoint();

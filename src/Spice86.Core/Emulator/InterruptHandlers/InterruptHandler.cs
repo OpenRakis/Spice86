@@ -23,6 +23,8 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// </summary>
     protected IMemory _memory;
 
+    protected Stack _stack;
+
     /// <summary>
     /// Indicates whether the interrupt stack is present.
     /// </summary>
@@ -37,6 +39,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     protected InterruptHandler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(cpu.State, loggerService) {
         _memory = memory;
         _cpu = cpu;
+        _stack = cpu.Stack;
     }
 
     /// <inheritdoc />
@@ -88,7 +91,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     protected void SetCarryFlag(bool value, bool setOnStack) {
         _state.CarryFlag = value;
         if (_interruptStackPresent && setOnStack) {
-            _cpu.SetFlagOnInterruptStack(Flags.Carry, value);
+            _stack.SetFlagOnInterruptStack(Flags.Carry, value);
         }
     }
 
@@ -100,7 +103,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     protected void SetZeroFlag(bool value, bool setOnStack) {
         _state.ZeroFlag = value;
         if (_interruptStackPresent && setOnStack) {
-            _cpu.SetFlagOnInterruptStack(Flags.Zero, value);
+            _stack.SetFlagOnInterruptStack(Flags.Zero, value);
         }
     }
     

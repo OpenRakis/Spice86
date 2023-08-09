@@ -41,7 +41,7 @@ public class Cpu {
     private readonly ModRM _modRM;
     
     internal MachineBreakpoints MachineBreakpoints { get; }
-    
+    private readonly CallbackHandler _callbackHandler;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
     private readonly Instructions32 _instructions32;
@@ -52,7 +52,6 @@ public class Cpu {
     /// </summary>
     public int AddressSize { get; private set; }
 
-    public CallbackHandler CallbackHandler { get; }
 
     // When true will crash if an interrupt targets code at 0000:0000
     public bool ErrorOnUninitializedInterruptHandler { get; set; }
@@ -76,7 +75,7 @@ public class Cpu {
         State = state;
         DualPic = dualPic;
         IoPortDispatcher = ioPortDispatcher;
-        CallbackHandler = callbackHandler;
+        _callbackHandler = callbackHandler;
         MachineBreakpoints = machineBreakpoints;
         InterruptVectorTable = new(_memory);
         Alu = new Alu(state);
@@ -193,18 +192,6 @@ public class Cpu {
         return res;
     }
 
-    public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
-        uint flagsAddress = MemoryUtils.ToPhysicalAddress(State.SS, (ushort)(State.SP + 4));
-        int value = _memory.UInt16[flagsAddress];
-        if (flagValue) {
-            value |= flagMask;
-        } else {
-            value &= ~flagMask;
-        }
-
-        _memory.UInt16[flagsAddress] = (ushort)value;
-    }
-
     private void HandleCpuException(CpuException cpuException) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
@@ -226,7 +213,7 @@ public class Cpu {
             or 0xAE // SCASB
             or 0xAF;
 
-    public void Callback(ushort callbackIndex) => CallbackHandler.Run(callbackIndex);
+    public void Callback(ushort callbackIndex) => _callbackHandler.Run(callbackIndex);
 
     private void ExecSubOpcode(byte subcode) {
         switch (subcode) {
