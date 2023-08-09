@@ -70,27 +70,27 @@ public class Cpu {
 
     public InterruptVectorTable InterruptVectorTable { get; }
 
-    public Cpu(IMemory memory, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData, bool failOnUnhandledPort) {
+    public Cpu(IMemory memory, State state, DualPic dualPic, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
         _loggerService = loggerService;
         _memory = memory;
-        InterruptVectorTable = new((Indexable)_memory);
-        State = new State();
-        Alu = new Alu(State);
-        Stack = new Stack(_memory, State);
+        State = state;
+        DualPic = dualPic;
+        IoPortDispatcher = ioPortDispatcher;
+        CallbackHandler = callbackHandler;
+        MachineBreakpoints = machineBreakpoints;
+        InterruptVectorTable = new(_memory);
+        Alu = new Alu(state);
+        Stack = new Stack(_memory, state);
         ExecutionFlowRecorder = executionFlowRecorder;
-        FunctionHandler = new FunctionHandler(_memory, State, ExecutionFlowRecorder, _loggerService, recordData);
-        FunctionHandlerInExternalInterrupt = new FunctionHandler(_memory, State, ExecutionFlowRecorder, _loggerService, recordData);
+        FunctionHandler = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
+        FunctionHandlerInExternalInterrupt = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
-        _modRM = new ModRM(_memory, this, State);
+        _modRM = new ModRM(_memory, this, state);
         _instructions8 = new Instructions8(Alu, this, _memory, _modRM);
         _instructions16 = new Instructions16(Alu, this, _memory, _modRM);
         _instructions32 = new Instructions32(Alu, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
-        MachineBreakpoints = new(_memory, State, _loggerService);
-        IoPortDispatcher = new IOPortDispatcher(State, _loggerService, failOnUnhandledPort);
-        DualPic = new(State, failOnUnhandledPort, _loggerService);
-        CallbackHandler = new(State, _loggerService);
     }
 
     public void ExecuteNextInstruction() {
