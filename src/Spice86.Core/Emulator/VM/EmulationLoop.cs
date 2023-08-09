@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Function;
 namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.Gdb;
+using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
@@ -15,13 +16,15 @@ using System.Diagnostics;
 /// On Pause, triggers a GDB breakpoint.
 /// </summary>
 public class EmulationLoop {
+    private readonly ILoggerService _loggerService;
     private readonly Cpu _cpu;
     private readonly State _cpuState;
     private readonly Devices.Timer.Timer _timer;
     private readonly MachineBreakpoints _machineBreakpoints;
     private readonly DmaController _dmaController;
     private readonly GdbCommandHandler? _gdbCommandHandler;
-    
+    private readonly Stopwatch _stopwatch;
+
     /// <summary>
     /// Whether the emulation is paused.
     /// </summary>
@@ -42,8 +45,9 @@ public class EmulationLoop {
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
     /// <param name="gdbCommandHandler">The GDB Command Handler, used to trigger a GDB breakpoint on pause.</param>
-    public EmulationLoop(Cpu cpu, State cpuState, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
+    public EmulationLoop(ILoggerService loggerService, Cpu cpu, State cpuState, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
         DmaController dmaController, GdbCommandHandler? gdbCommandHandler) {
+        _loggerService = loggerService;
         _cpu = cpu;
         _cpuState = cpuState;
         _timer = timer;
@@ -51,6 +55,7 @@ public class EmulationLoop {
         _machineBreakpoints = machineBreakpoints;
         _dmaController = dmaController;
         _gdbCommandHandler = gdbCommandHandler;
+        _stopwatch = new();
     }
     
     /// <summary>
@@ -88,6 +93,7 @@ public class EmulationLoop {
     }
     
     private void RunLoop() {
+        _stopwatch.Start();
         while (_cpuState.IsRunning) {
             PauseIfAskedTo();
             if (_listensToBreakpoints) {
@@ -95,6 +101,20 @@ public class EmulationLoop {
             }
             _cpu.ExecuteNextInstruction();
             _timer.Tick();
+        }
+        _stopwatch.Stop();
+        OutputPerfStats();
+    }
+
+    private void OutputPerfStats() {
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            long elapsedTimeMilliSeconds = _stopwatch.ElapsedMilliseconds;
+            long cycles = _cpuState.Cycles;
+            long cyclesPerSeconds = 0;
+            if (elapsedTimeMilliSeconds > 0) {
+                cyclesPerSeconds = (_cpuState.Cycles * 1000) / elapsedTimeMilliSeconds;
+            }
+            _loggerService.Warning("Executed {cycles} instructions in {elapsedTimeMilliSeconds}ms. {cyclesPerSeconds} Instructions per seconds on average over run.", cycles, elapsedTimeMilliSeconds, cyclesPerSeconds);
         }
     }
     
