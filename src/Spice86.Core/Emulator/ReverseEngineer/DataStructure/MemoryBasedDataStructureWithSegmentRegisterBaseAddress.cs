@@ -20,7 +20,7 @@ public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : AbstractMe
 
     public MemoryBasedDataStructureWithSegmentRegisterBaseAddress(Machine machine, int segmentRegisterIndex) : base(machine.Memory) {
         _segmentRegisterIndex = segmentRegisterIndex;
-        _segmentRegisters = machine.Cpu.State.SegmentRegisters;
+        _segmentRegisters = machine.CpuState.SegmentRegisters;
     }
 
     /// <inheritdoc />

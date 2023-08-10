@@ -35,7 +35,7 @@ public class MachineCreator {
         // Disabling custom IO handling
         cpu.IoPortDispatcher = null;
         cpu.ErrorOnUninitializedInterruptHandler = false;
-        State state = cpu.State;
+        State state = machine.CpuState;
         state.Flags.IsDOSBoxCompatible = false;
         return programExecutor;
     }

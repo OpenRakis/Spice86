@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 public class Stack {
     private readonly IMemory _memory;
@@ -49,5 +50,17 @@ public class Stack {
     public void Push32(uint value) {
         _state.SP = (ushort)(_state.SP - 4);
         _memory.UInt32[_state.StackPhysicalAddress] = value;
+    }
+    
+    public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
+        uint flagsAddress = MemoryUtils.ToPhysicalAddress(_state.SS, (ushort)(_state.SP + 4));
+        int value = _memory.UInt16[flagsAddress];
+        if (flagValue) {
+            value |= flagMask;
+        } else {
+            value &= ~flagMask;
+        }
+
+        _memory.UInt16[flagsAddress] = (ushort)value;
     }
 }

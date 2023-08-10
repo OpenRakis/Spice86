@@ -63,6 +63,11 @@ public sealed class Machine : IDisposable {
     public Cpu Cpu { get; }
 
     /// <summary>
+    /// The emulated CPU state.
+    /// </summary>
+    public State CpuState { get; }
+
+    /// <summary>
     /// DOS Services.
     /// </summary>
     public Dos Dos { get; }
@@ -189,25 +194,23 @@ public sealed class Machine : IDisposable {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         Memory = new Memory(ram, configuration.A20Gate);
         BiosDataArea = new BiosDataArea(Memory);
-        State cpuState = new State();
-        DualPic = DualPic = new(cpuState, configuration.FailOnUnhandledPort, loggerService);
+        CpuState = new State();
+        DualPic = DualPic = new(CpuState, configuration.FailOnUnhandledPort, loggerService);
         // Breakpoints
-        MachineBreakpoints = new(Memory, cpuState, loggerService);
-        IOPortDispatcher ioPortDispatcher =
-            new IOPortDispatcher(cpuState, loggerService, configuration.FailOnUnhandledPort);
-        CallbackHandler callbackHandler = new(cpuState, loggerService);
-        Cpu = new Cpu(Memory, cpuState, DualPic, ioPortDispatcher, callbackHandler, MachineBreakpoints, loggerService, executionFlowRecorder, recordData);
+        MachineBreakpoints = new(Memory, CpuState, loggerService);
+        IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
+        CallbackHandler = new(CpuState, loggerService);
+
+        Cpu = new Cpu(Memory, CpuState, DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints, loggerService, executionFlowRecorder, recordData);
         
         // IO devices
-        IoPortDispatcher = Cpu.IoPortDispatcher ?? new IOPortDispatcher(cpuState, loggerService, configuration.FailOnUnhandledPort);
-
-        DmaController = new DmaController(Memory, cpuState, configuration.FailOnUnhandledPort, loggerService);
+        DmaController = new DmaController(Memory, CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(DmaController);
 
         RegisterIoPortHandler(DualPic);
         
         VgaRegisters = new VideoState();
-        VgaIoPortHandler = new VgaIoPortHandler(cpuState, loggerService, VgaRegisters, configuration.FailOnUnhandledPort);
+        VgaIoPortHandler = new VgaIoPortHandler(CpuState, loggerService, VgaRegisters, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(VgaIoPortHandler);
 
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
@@ -216,28 +219,27 @@ public sealed class Machine : IDisposable {
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
 
-        Timer = new Timer(cpuState, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
+        Timer = new Timer(CpuState, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Timer);
-        Keyboard = new Keyboard(cpuState, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
+        Keyboard = new Keyboard(CpuState, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
-        MouseDevice = new Mouse(cpuState, DualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
+        MouseDevice = new Mouse(CpuState, DualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(MouseDevice);
-        Joystick = new Joystick(cpuState, configuration.FailOnUnhandledPort, loggerService);
+        Joystick = new Joystick(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(Joystick);
-        PcSpeaker = new PcSpeaker(cpuState, loggerService, configuration.FailOnUnhandledPort);
+        PcSpeaker = new PcSpeaker(CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(cpuState, configuration.FailOnUnhandledPort, loggerService);
+        OPL3FM = new OPL3FM(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
-        SoundBlaster = new SoundBlaster(cpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
+        SoundBlaster = new SoundBlaster(CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
-        GravisUltraSound = new GravisUltraSound(cpuState, configuration.FailOnUnhandledPort, loggerService);
+        GravisUltraSound = new GravisUltraSound(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(cpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
+        MidiDevice = new Midi(CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(MidiDevice);
 
         // Services
-        CallbackHandler = Cpu.CallbackHandler;
         // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
         MemoryAsmWriter memoryAsmWriter = new(Memory, new SegmentedAddress(MemoryMap.InterruptHandlersSegment, 0), CallbackHandler);
         InterruptInstaller = new InterruptInstaller(new InterruptVectorTable(Memory), memoryAsmWriter, Cpu.FunctionHandler);
@@ -274,7 +276,7 @@ public sealed class Machine : IDisposable {
             RegisterInterruptHandler(Dos.DosInt2FHandler);
 
             // Initialize DOS.
-            Dos.Initialize(SoundBlaster, cpuState, configuration.Ems);
+            Dos.Initialize(SoundBlaster, CpuState, configuration.Ems);
             if (Dos.Ems is not null) {
                 RegisterInterruptHandler(Dos.Ems);
             }

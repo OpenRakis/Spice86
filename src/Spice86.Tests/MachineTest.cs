@@ -29,7 +29,7 @@ public class MachineTest {
     public void TestExecutionBreakpoints() {
         ProgramExecutor programExecutor = CreateProgramExecutor("add", true);
         Machine machine = programExecutor.Machine;
-        State state = machine.Cpu.State;
+        State state = machine.CpuState;
         MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
         int triggers = 0;
         machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 10, breakpoint => {
@@ -43,7 +43,7 @@ public class MachineTest {
         }, true), true);
         machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.MACHINE_STOP, 0, breakpoint => {
             Assert.Equal(0xF01A9, (int)state.IpPhysicalAddress);
-            Assert.False(machine.Cpu.State.IsRunning);
+            Assert.False(machine.CpuState.IsRunning);
             triggers++;
         }, true), true);
         programExecutor.Run();
@@ -217,7 +217,7 @@ public class MachineTest {
         // 0x4001 in little endian
         byte[] expected = new byte[] { 0x01, 0x40 };
         Machine emulator = TestOneBin("jmpmov", expected);
-        State state = emulator.Cpu.State;
+        State state = emulator.CpuState;
         uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
         // Last instruction HLT is one byte long and is at 0xF400C
         Assert.Equal((uint)0xF400D, endAddress);

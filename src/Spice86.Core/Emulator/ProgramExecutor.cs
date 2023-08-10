@@ -47,7 +47,7 @@ public sealed class ProgramExecutor : IDisposable {
         _configuration = configuration;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer(gui);
-        _emulationLoop = new(Machine.Cpu, Machine.Timer, ListensToBreakpoints, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
+        _emulationLoop = new(Machine.Cpu, Machine.CpuState, Machine.Timer, ListensToBreakpoints, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
     }
 
     /// <summary>
