@@ -15,7 +15,7 @@ internal sealed class LibraryLoader : IDisposable {
             return false;
         }
 
-        Ensure.That<Exception>(_handle != IntPtr.Zero, $"Could not load native libary: {libraryName}.");
+        Ensure.That<Exception>(_handle != IntPtr.Zero, $"Could not load native library: {libraryName}.");
         return true;
     }
 

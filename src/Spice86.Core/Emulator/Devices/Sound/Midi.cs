@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.Midi;
 using Spice86.Shared.Interfaces;
 
@@ -26,12 +27,13 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>
+    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located. Can be null if MT-32 isn't used.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
-        _generalMidi = new GeneralMidi(mt32RomsPath, loggerService);
+    public Midi(AudioPlayerFactory audioPlayerFactory, State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        _generalMidi = new GeneralMidi(audioPlayerFactory, mt32RomsPath, loggerService);
     }
     
     /// <inheritdoc />

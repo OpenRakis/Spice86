@@ -12,7 +12,7 @@ using Spice86.Core.Emulator.Sound;
 
 internal sealed class Mt32Player : IDisposable {
     private readonly Mt32Context _context = new();
-    private readonly AudioPlayer? _audioPlayer;
+    private readonly AudioPlayer _audioPlayer;
     private bool _disposed;
     private bool _threadStarted;
 
@@ -24,16 +24,13 @@ internal sealed class Mt32Player : IDisposable {
 
     private readonly ILoggerService _loggerService;
 
-    public Mt32Player(string romsPath, ILoggerService loggerService) {
+    public Mt32Player(AudioPlayerFactory audioPlayerFactory, string romsPath, ILoggerService loggerService) {
         _loggerService = loggerService;
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
 
-        _audioPlayer = Audio.CreatePlayer();
-        if (_audioPlayer is null) {
-            return;
-        }
+        _audioPlayer = audioPlayerFactory.CreatePlayer();
         if(!LoadRoms(romsPath)) {
             if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created", nameof(LoadRoms), romsPath, nameof(Mt32Player));
@@ -66,7 +63,7 @@ internal sealed class Mt32Player : IDisposable {
             }
             buffer.Clear();
             _context.Render(buffer);
-            _audioPlayer?.WriteData(buffer);
+            _audioPlayer.WriteData(buffer);
         }
     }
 
@@ -109,7 +106,7 @@ internal sealed class Mt32Player : IDisposable {
                 }
                 _context.Dispose();
                 _fillBufferEvent.Dispose();
-                _audioPlayer?.Dispose();
+                _audioPlayer.Dispose();
             }
             _disposed = true;
         }
