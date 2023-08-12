@@ -6,7 +6,7 @@ using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Provides a method to initialize services and set the logging level based on command line arguments.
+/// Provides a method to set the initial logging level based on command line arguments.
 /// </summary>
 internal static class Startup {
     /// <summary>
