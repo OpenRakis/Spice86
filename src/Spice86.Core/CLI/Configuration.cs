@@ -93,8 +93,8 @@ public class Configuration {
     /// <summary>
     /// The memory segment where the program will be loaded. The DOS PSP (Program Segment Prefix) and MCB (Memory Control Block) will be created before it.
     /// </summary>
-    [Option('p', nameof(ProgramEntryPointSegment), Default = 0x1000, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
-    public int ProgramEntryPointSegment { get; init; }
+    [Option('p', nameof(ProgramEntryPointSegment), Default = (ushort)0x1000, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
+    public ushort ProgramEntryPointSegment { get; init; }
 
     /// <summary>
     /// Determines whether logs should be silenced or not.

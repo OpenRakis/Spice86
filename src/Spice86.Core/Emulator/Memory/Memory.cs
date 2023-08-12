@@ -7,13 +7,15 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// Represents the memory bus of the IBM PC.
 /// </summary>
 public class Memory : Indexable.Indexable, IMemory {
-    private readonly IMemoryDevice _ram;
+    /// <inheritdoc/>
+    public IMemoryDevice Ram { get; }
 
     /// <inheritdoc/>
     public MemoryBreakpoints MemoryBreakpoints { get; } = new();
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
 
+    
     /// <summary>
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
     /// </summary>
@@ -27,8 +29,8 @@ public class Memory : Indexable.Indexable, IMemory {
     public Memory(IMemoryDevice baseMemory, bool is20ThAddressLineSilenced) {
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
-        _ram = new Ram(memorySize);
-        RegisterMapping(0, memorySize, _ram);
+        Ram = new Ram(memorySize);
+        RegisterMapping(0, memorySize, Ram);
         (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
         A20Gate = new(is20ThAddressLineSilenced);
     }
