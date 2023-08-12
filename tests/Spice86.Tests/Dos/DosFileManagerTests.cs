@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 
 using Xunit;
 
-using Moq;
+using NSubstitute;
 using FluentAssertions;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.CLI;
@@ -80,9 +80,9 @@ public class DosFileManagerTests {
             CDrive = mountPoint
         };
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        Mock<ILoggerService> loggerServiceMock = new Mock<ILoggerService>();
-        Mock<IVirtualDevice> chracterDeviceMock = new Mock<IVirtualDevice>();
-        List<IVirtualDevice> dosDevicesMock = new List<IVirtualDevice>() { chracterDeviceMock.Object };
-        return new DosFileManager(new Memory(ram, configuration.A20Gate), configuration.CDrive, configuration.Exe, loggerServiceMock.Object, dosDevicesMock);
+        ILoggerService loggerServiceMock = Substitute.For<ILoggerService>();
+        IVirtualDevice characterDeviceMock = Substitute.For<IVirtualDevice>();
+        List<IVirtualDevice> dosDevicesMock = new List<IVirtualDevice>() { characterDeviceMock };
+        return new DosFileManager(new Memory(ram, configuration.A20Gate), configuration.CDrive, configuration.Exe, loggerServiceMock, dosDevicesMock);
     }
 }

@@ -2,7 +2,7 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
-using Moq;
+using NSubstitute;
 
 using Serilog.Events;
 
@@ -22,13 +22,8 @@ public class PicTests {
     private const byte NonSpecificEOICommand = 0b0010_0000;
 
     public PicTests() {
-        var loggerMock = new Mock<ILoggerService>();
-        loggerMock.Setup(logger => logger.IsEnabled(It.IsAny<LogEventLevel>()))
-            .Returns(false);
-        loggerMock.Setup(logger => logger.WithLogLevel(It.IsAny<LogEventLevel>()))
-            .Returns(loggerMock.Object);
-
-        _pic = new Pic(loggerMock.Object);
+        var loggerMock = Substitute.For<ILoggerService>();
+        _pic = new Pic(loggerMock);
     }
 
     [Fact]

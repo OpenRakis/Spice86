@@ -10,12 +10,12 @@ using System;
 using System.Collections.Generic;
 
 using Xunit;
-using Moq;
+using NSubstitute;
 
 using Spice86.Shared.Emulator.Memory;
 
 public class CSharpOverrideHelperTest {
-    private readonly Mock<ILoggerService> _loggerServiceMock = new();
+    private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
     
     private ProgramExecutor CreateDummyProgramExecutor() {
         ProgramExecutor res =  new MachineCreator().CreateProgramExecutorFromBinName("add");
@@ -31,7 +31,7 @@ public class CSharpOverrideHelperTest {
         using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
         RecursiveJumps recursiveJumps =
             new RecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(), programExecutor.Machine,
-                _loggerServiceMock.Object);
+                _loggerServiceMock);
         recursiveJumps.JumpTarget1(0);
         Assert.Equal(RecursiveJumps.MaxNumberOfJumps, recursiveJumps.NumberOfCallsTo1);
         Assert.Equal(RecursiveJumps.MaxNumberOfJumps, recursiveJumps.NumberOfCallsTo2);
@@ -42,7 +42,7 @@ public class CSharpOverrideHelperTest {
         using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
         
         SimpleCallsJumps callsJumps = new SimpleCallsJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
-            programExecutor.Machine, _loggerServiceMock.Object);
+            programExecutor.Machine, _loggerServiceMock);
         callsJumps.Entry_1000_0000_10000();
         Assert.Equal(1, callsJumps.NearCalled);
         Assert.Equal(1, callsJumps.FarCalled);
