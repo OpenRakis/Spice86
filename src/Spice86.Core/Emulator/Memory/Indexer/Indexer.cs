@@ -22,6 +22,15 @@ public abstract class Indexer<T> {
         get => this[(uint)address];
         set => this[(uint)address] = value;
     }
+    
+    /// <summary>
+    /// Indexer for addresses that are long. For convenience.
+    /// </summary>
+    /// <param name="address"></param>
+    public T this[long address] {
+        get => this[(uint)address];
+        set => this[(uint)address] = value;
+    }
 
     /// <summary>
     /// Gets or sets the data at the specified segment and offset in the memory.

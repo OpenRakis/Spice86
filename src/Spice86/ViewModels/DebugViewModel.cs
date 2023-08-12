@@ -34,8 +34,8 @@ public partial class DebugViewModel : ViewModelBase {
     [RelayCommand]
     public void UpdateData() => UpdateValues(this, EventArgs.Empty);
     
-    public DebugViewModel(IVideoState vgaRegisters, IVgaRenderer vgaRenderer) {
-        _videoState = vgaRegisters;
+    public DebugViewModel(IVideoState videoState, IVgaRenderer vgaRenderer) {
+        _videoState = videoState;
         _renderer = vgaRenderer;
         _timer = new(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, UpdateValues);
         _timer.Start();

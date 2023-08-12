@@ -8,6 +8,11 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// </summary>
 public interface IMemory : IIndexable, IByteReaderWriter {
     /// <summary>
+    /// Underlying RAM for the memory bus
+    /// </summary>
+    public IMemoryDevice Ram { get; }
+
+    /// <summary>
     /// Manages memory breakpoints
     /// </summary>
     MemoryBreakpoints MemoryBreakpoints { get; }

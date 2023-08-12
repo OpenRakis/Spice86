@@ -196,7 +196,7 @@ public sealed class ProgramExecutor : IDisposable {
     }
 
     private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        IOverrideSupplier? supplier, int entryPointSegment, Machine machine) {
+        IOverrideSupplier? supplier, ushort entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -204,7 +204,7 @@ public sealed class ProgramExecutor : IDisposable {
             }
 
             foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
-                    .GenerateFunctionInformations(entryPointSegment, machine)) {
+                    .GenerateFunctionInformations(_loggerService, entryPointSegment, machine)) {
                 res.Add(element.Key, element.Value);
             }
         }
