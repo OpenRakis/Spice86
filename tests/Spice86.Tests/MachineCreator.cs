@@ -8,7 +8,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 
-using Moq;
+using NSubstitute;
 
 using Spice86.Logging;
 
@@ -28,7 +28,7 @@ public class MachineCreator {
             DumpDataOnExit = recordData
         };
 
-        ILoggerService loggerService = new Mock<LoggerService>(new LoggerPropertyBag()).Object;
+        ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
         ProgramExecutor programExecutor = new ProgramExecutor(loggerService, null, configuration);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;

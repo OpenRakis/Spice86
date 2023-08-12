@@ -21,7 +21,7 @@ updates:
       day: "wednesday"
     open-pull-requests-limit: 5
   - package-ecosystem: "nuget"
-    directory: "/src/Spice86.Tests"
+    directory: "/tests/Spice86.Tests"
     schedule:
       interval: "weekly"
       day: "wednesday"
