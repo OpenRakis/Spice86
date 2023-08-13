@@ -9,7 +9,7 @@ using System.Runtime.Versioning;
 /// It contains several methods for MIDI output management, including opening and closing MIDI output devices, sending short MIDI messages, and resetting a MIDI output device.
 /// </summary>
 [SupportedOSPlatform("windows")]
-internal static class NativeMethods {
+internal static partial class NativeMethods {
     /// <summary>
     /// Opens a MIDI output device for playback.
     /// </summary>
@@ -19,16 +19,16 @@ internal static class NativeMethods {
     /// <param name="dwCallbackInstance">User instance data passed to the callback. This parameter is not used with window callbacks or threads.</param>
     /// <param name="dwFlags">Callback flag for opening the device. Set to 0.</param>
     /// <returns>Returns MMSYSERR_NOERROR if successful or an error code otherwise.</returns>
-    [DllImport("winmm.dll", CallingConvention = CallingConvention.Winapi, SetLastError = false)]
-    public static extern uint midiOutOpen(out IntPtr lphmo, uint uDeviceID, IntPtr dwCallback, IntPtr dwCallbackInstance, uint dwFlags);
+    [LibraryImport("winmm.dll", SetLastError = false)]
+    public static partial uint midiOutOpen(out IntPtr lphmo, uint uDeviceID, IntPtr dwCallback, IntPtr dwCallbackInstance, uint dwFlags);
 
     /// <summary>
     /// Closes the specified MIDI output device.
     /// </summary>
     /// <param name="hmo">Handle to the MIDI output device. If the function is successful, the handle is no longer valid after the call to this function.</param>
     /// <returns>Returns MMSYSERR_NOERROR if successful or an error code otherwise.</returns>
-    [DllImport("winmm.dll", CallingConvention = CallingConvention.Winapi, SetLastError = false)]
-    public static extern uint midiOutClose(IntPtr hmo);
+    [LibraryImport("winmm.dll", SetLastError = false)]
+    public static partial uint midiOutClose(IntPtr hmo);
 
     /// <summary>
     /// Sends a short MIDI message to the specified MIDI output device.
@@ -88,8 +88,8 @@ internal static class NativeMethods {
     ///     </list>
     /// </param>
     /// <returns>Returns MMSYSERR_NOERROR if successful or an error code otherwise.</returns>
-    [DllImport("winmm.dll", CallingConvention = CallingConvention.Winapi, SetLastError = false)]
-    public static extern uint midiOutShortMsg(IntPtr hmo, uint dwMsg);
+    [LibraryImport("winmm.dll", SetLastError = false)]
+    public static partial uint midiOutShortMsg(IntPtr hmo, uint dwMsg);
 
     /// <summary>
     /// The device identifier for the default MIDI output device.
