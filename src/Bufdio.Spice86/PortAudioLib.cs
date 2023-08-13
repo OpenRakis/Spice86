@@ -1,35 +1,43 @@
 ﻿namespace Bufdio.Spice86;
-using System;
+
 using System.Collections.Generic;
 
 using Bufdio.Spice86.Bindings.PortAudio;
+using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities;
 using Bufdio.Spice86.Utilities.Extensions;
 
+using System;
+
 /// <summary>
-/// Provides functionalities to retrieve, configure and manage current Bufdio environment
+/// Provides functionalities to retrieve, configure and manage current PortAudio environment
 /// that affects the whole library configuration.
 /// </summary>
-public static class BufdioLib {
+public sealed class PortAudioLib : IDisposable {
+    private bool _disposed;
+    
     internal static class Constants {
-        public const PaBinding.PaSampleFormat PaSampleFormat = PaBinding.PaSampleFormat.paFloat32;
+        /// <summary>
+        /// 32-bit floats
+        /// </summary>
+        public const int PaSampleFormat = 0x00000001;
     }
 
-    private static AudioDevice _defaultOutputDevice;
-    private static List<AudioDevice> _outputDevices = new();
+    private LibraryLoader _libraryLoader;
+    private AudioDevice _defaultOutputDevice;
+    private List<AudioDevice> _outputDevices = new();
 
     /// <summary>
     /// Gets whether or not the PortAudio library is already initialized.
     /// </summary>
-    /// <exception cref="BufdioException">Thrown if PortAudio is not initialized.</exception>
-    public static bool IsPortAudioInitialized { get; private set; }
+    public bool IsPortAudioInitialized { get; private set; }
 
     /// <summary>
     /// Gets default output device information that is used by the current system.
     /// </summary>
     /// <exception cref="BufdioException">Thrown if PortAudio is not initialized.</exception>
-    public static AudioDevice DefaultOutputDevice {
+    public AudioDevice DefaultOutputDevice {
         get {
             Ensure.That<BufdioException>(IsPortAudioInitialized, "PortAudio is not initialized.");
             return _defaultOutputDevice;
@@ -40,7 +48,7 @@ public static class BufdioLib {
     /// Gets list of available audio output devices in the current system.
     /// Will throws <see cref="BufdioException"/> if PortAudio is not initialized.
     /// </summary>
-    public static IReadOnlyCollection<AudioDevice> OutputDevices {
+    public IReadOnlyCollection<AudioDevice> OutputDevices {
         get {
             Ensure.That<BufdioException>(IsPortAudioInitialized, "PortAudio is not initialized.");
             return _outputDevices;
@@ -50,55 +58,55 @@ public static class BufdioLib {
     /// <summary>
     /// Initialize and register PortAudio functionalities by providing path to PortAudio native libary.
     /// Leave path parameter empty in order to use system-wide library.
-    /// Will returns immediately if already initialized.
     /// </summary>
     /// <param name="portAudioPath">
     /// Path to port audio native libary, eg: portaudio.dll, libportaudio.so, libportaudio.dylib.
     /// </param>
     /// <exception cref="BufdioException">Thrown when output device is not available.</exception>
-    public static bool InitializePortAudio(string? portAudioPath = default) {
-        if (IsPortAudioInitialized) {
-            return false;
-        }
-
+    public PortAudioLib(string? portAudioPath = default) {
         portAudioPath = string.IsNullOrEmpty(portAudioPath) ? GetPortAudioLibName() : portAudioPath;
 
-        var loader = new LibraryLoader();
-        bool loadedNativeLib = loader.Initialize(portAudioPath);
-        if (!loadedNativeLib) {
-            return false;
-        }
-        PaBinding.InitializeBindings(loader);
-        PaBinding.Pa_Initialize();
+        _libraryLoader = new LibraryLoader(portAudioPath);
 
-        int deviceCount = PaBinding.Pa_GetDeviceCount();
+        NativeMethods.PortAudioInitialize();
+
+        int deviceCount = NativeMethods.PortAudioGetDeviceCount();
+        
         Ensure.That<BufdioException>(deviceCount > 0, "No output devices are available.");
 
-        int defaultDevice = PaBinding.Pa_GetDefaultOutputDevice();
+        int defaultDevice = NativeMethods.PortAudioGetDefaultOutputDevice();
+        
         _defaultOutputDevice = defaultDevice.PaGetPaDeviceInfo().PaToAudioDevice(defaultDevice);
         _outputDevices = new List<AudioDevice>();
 
         for (int i = 0; i < deviceCount; i++) {
-            PaBinding.PaDeviceInfo deviceInfo = i.PaGetPaDeviceInfo();
+            PaDeviceInfo deviceInfo = i.PaGetPaDeviceInfo();
 
             if (deviceInfo.maxOutputChannels > 0) {
                 _outputDevices.Add(deviceInfo.PaToAudioDevice(i));
             }
         }
-
         IsPortAudioInitialized = true;
-        return true;
     }
 
-    public static string GetPortAudioLibName() {
-        if (PlatformInfo.IsWindows) {
-            return "libportaudio-2.dll";
-        } else if (PlatformInfo.IsLinux) {
-            return "libportaudio.so.2";
-        } else if (PlatformInfo.IsOSX) {
-            return "libportaudio.2.dylib";
-        } else {
-            throw new NotImplementedException();
+    /// <summary>
+    /// Returns the name of system-provided PortAudio library
+    /// </summary>
+    /// <returns>A string containing the filename of the system-provided PortAudio library</returns>
+    public static string GetPortAudioLibName() => NativeMethods.GetPortAudioLibName();
+    
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if (_disposed) {
+            if (disposing) {
+                _libraryLoader.Dispose();
+            }
+            _disposed = true;
         }
     }
 }

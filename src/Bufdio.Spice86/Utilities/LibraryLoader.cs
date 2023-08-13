@@ -1,29 +1,17 @@
 ﻿namespace Bufdio.Spice86.Utilities;
+
 using System;
 using System.Runtime.InteropServices;
 
 internal sealed class LibraryLoader : IDisposable {
-    private IntPtr _handle = IntPtr.Zero;
+    private IntPtr _handle;
     private bool _disposed;
 
-    public LibraryLoader() {
-    }
-
-    public bool Initialize(string libraryName) {
+    public LibraryLoader(string libraryName) {
         ArgumentException.ThrowIfNullOrEmpty(libraryName);
-        if (!NativeLibrary.TryLoad(libraryName, out _handle)) {
-            return false;
-        }
+        _handle = NativeLibrary.Load(libraryName);
 
         Ensure.That<Exception>(_handle != IntPtr.Zero, $"Could not load native library: {libraryName}.");
-        return true;
-    }
-
-    public TDelegate LoadFunc<TDelegate>(string name) {
-        IntPtr ptr = NativeLibrary.GetExport(_handle, name);
-        Ensure.That<Exception>(ptr != IntPtr.Zero, $"Could not load function name: {name}.");
-
-        return Marshal.GetDelegateForFunctionPointer<TDelegate>(ptr);
     }
 
     public void Dispose() {

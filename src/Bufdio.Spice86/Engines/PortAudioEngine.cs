@@ -1,8 +1,11 @@
 ﻿namespace Bufdio.Spice86.Engines;
+
 using System;
 using System.Runtime.InteropServices;
 
 using Bufdio.Spice86.Bindings.PortAudio;
+using Bufdio.Spice86.Bindings.PortAudio.Enums;
+using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities.Extensions;
 
@@ -12,7 +15,7 @@ using Bufdio.Spice86.Utilities.Extensions;
 /// <para>Implements: <see cref="IAudioEngine"/>.</para>
 /// </summary>
 public sealed class PortAudioEngine : IAudioEngine {
-    private const PaBinding.PaStreamFlags StreamFlags = PaBinding.PaStreamFlags.paNoFlag;
+    private const PaStreamFlags StreamFlags = PaStreamFlags.paNoFlag;
     private readonly AudioEngineOptions _options;
     private readonly IntPtr _stream;
     private bool _disposed;
@@ -28,37 +31,26 @@ public sealed class PortAudioEngine : IAudioEngine {
     public PortAudioEngine(int framesPerBuffer, AudioEngineOptions? options = default) {
         _options = options ?? new AudioEngineOptions();
 
-        PaBinding.PaStreamParameters parameters = new PaBinding.PaStreamParameters {
+        PaStreamParameters parameters = new PaStreamParameters {
             channelCount = _options.Channels,
-            device = _options.Device.DeviceIndex,
+            device = _options.DefaultAudioDevice.DeviceIndex,
             hostApiSpecificStreamInfo = IntPtr.Zero,
-            sampleFormat = BufdioLib.Constants.PaSampleFormat,
+            sampleFormat = (PaSampleFormat)PortAudioLib.Constants.PaSampleFormat,
             suggestedLatency = _options.Latency
         };
 
         IntPtr stream;
 
         unsafe {
-            PaBinding.PaStreamParameters tempParameters;
+            PaStreamParameters tempParameters;
             IntPtr parametersPtr = new(&tempParameters);
             Marshal.StructureToPtr(parameters, parametersPtr, false);
-
-            int code = PaBinding.Pa_OpenStream(
-                new IntPtr(&stream),
-                IntPtr.Zero,
-                parametersPtr,
-                _options.SampleRate,
-                framesPerBuffer,
-                StreamFlags,
-                null,
-                IntPtr.Zero);
-
+            int code = NativeMethods.PortAudioOpenStream(new IntPtr(&stream), IntPtr.Zero, parametersPtr, _options.SampleRate, framesPerBuffer, StreamFlags, null, IntPtr.Zero);
             code.PaGuard();
         }
-
         _stream = stream;
 
-        PaBinding.Pa_StartStream(_stream).PaGuard();
+        NativeMethods.PortAudioStartStream(_stream).PaGuard();
     }
 
     /// <inheritdoc />
@@ -66,7 +58,7 @@ public sealed class PortAudioEngine : IAudioEngine {
         unsafe {
             fixed (float* buffer = samples) {
                 int frames = samples.Length / _options.Channels;
-                PaBinding.Pa_WriteStream(_stream, (IntPtr)buffer, frames);
+                NativeMethods.PortAudioWriteStream(_stream, (IntPtr)buffer, frames);
             }
         }
     }
@@ -83,8 +75,8 @@ public sealed class PortAudioEngine : IAudioEngine {
     private void Dispose(bool disposing) {
         if(!_disposed) {
             if(disposing) {
-                PaBinding.Pa_AbortStream(_stream);
-                PaBinding.Pa_CloseStream(_stream);
+                NativeMethods.PortAudioAbortStream(_stream);
+                NativeMethods.PortAudioCloseStream(_stream);
             }
             _disposed = true;
         }

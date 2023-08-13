@@ -125,7 +125,7 @@ public abstract class AudioPlayer : IDisposable
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
     /// </summary>
-    /// <param name="disposing">Whether we are disposing of resources.</param>
+    /// <param name="disposing">Whether we are disposing of managed resources.</param>
     protected virtual void Dispose(bool disposing) {
         _disposed = true;
     }

@@ -1,6 +1,9 @@
 namespace Spice86.Core.Backend.Audio.PortAudio;
 
 using Bufdio.Spice86;
+using Bufdio.Spice86.Exceptions;
+
+using Serilog.Events;
 
 using Spice86.Shared.Interfaces;
 
@@ -10,49 +13,51 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class PortAudioPlayerFactory {
     private static readonly object _lock = new();
-    private static bool _loadedNativeLib;
     private readonly ILoggerService _loggerService;
 
-    public PortAudioPlayerFactory(ILoggerService loggerService) {
-        _loggerService = loggerService;
-    }
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="loggerService">The logger service implementation.</param>
+    public PortAudioPlayerFactory(ILoggerService loggerService) => _loggerService = loggerService;
 
-    private static void LoadNativeLibIfNeeded() {
-        lock(_lock) {
-            if(_loadedNativeLib) {
-                return;
-            }
-            if (OperatingSystem.IsWindows()) {
-                const string path = "libportaudio.dll";
-                _loadedNativeLib = BufdioLib.InitializePortAudio(path);
-            } else {
-                //rely on system-provided libportaudio.
-                _loadedNativeLib = BufdioLib.InitializePortAudio();
-            }
+    private PortAudioLib LoadPortAudioLibrary() {
+        PortAudioLib portAudioLib;
+        if (OperatingSystem.IsWindows()) {
+            const string path = "libportaudio.dll";
+            portAudioLib = new PortAudioLib(path);
+        } else if(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) {
+            //rely on system-provided libportaudio.
+            portAudioLib = new PortAudioLib();
+        } else {
+            throw new PlatformNotSupportedException();
         }
+        return portAudioLib;
     }
     
     /// <summary>
     /// Creates an instance of PortAudioPlayer eventually loading the libportaudio native library if needed.
     /// </summary>
-    /// <param name="sampleRate"></param>
-    /// <param name="framesPerBuffer"></param>
-    /// <param name="suggestedLatency"></param>
-    /// <returns></returns>
+    /// <param name="sampleRate">The backend audio samplerate</param>
+    /// <param name="framesPerBuffer">The number of audio frames per buffer</param>
+    /// <param name="suggestedLatency">The latency to suggest to PortAudio</param>
+    /// <returns>An instance of the PortAudioPlayer, or <c>null</c> if the native library failed to load or was not found.</returns>
     public PortAudioPlayer? Create(int sampleRate, int framesPerBuffer, double? suggestedLatency = null) {
-        if (!_loadedNativeLib && !BufdioLib.IsPortAudioInitialized) {
-            LoadNativeLibIfNeeded();
-        }
-        if(!_loadedNativeLib) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                string libName = BufdioLib.GetPortAudioLibName();
-                _loggerService.Error(
-                    "{libName} native library could not be loaded. If you are not not on windows ensure it is installed on your system.",
-                    libName);
+        lock(_lock) {
+            try {
+                return new PortAudioPlayer(LoadPortAudioLibrary(), framesPerBuffer,
+                    new AudioFormat(SampleRate: sampleRate, Channels: 2, SampleFormat.IeeeFloat32), suggestedLatency);
+            } catch (DllNotFoundException e) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error(e, "The native PortAudio library could not be loaded");
+                }
             }
-            return null;
+            catch (BufdioException e) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error(e, "No audio output device could be found");
+                }
+            }
         }
-        return new PortAudioPlayer(framesPerBuffer, new AudioFormat(SampleRate: sampleRate, Channels: 2,
-            SampleFormat: SampleFormat.IeeeFloat32), suggestedLatency);
+        return null;
     }
 }
