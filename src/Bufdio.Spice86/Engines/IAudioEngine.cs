@@ -1,4 +1,5 @@
 ﻿namespace Bufdio.Spice86.Engines;
+
 using System;
 
 /// <summary>

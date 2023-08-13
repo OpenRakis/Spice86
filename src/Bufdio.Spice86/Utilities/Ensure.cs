@@ -1,4 +1,5 @@
 ﻿namespace Bufdio.Spice86.Utilities;
+
 using System;
 using System.Diagnostics;
 

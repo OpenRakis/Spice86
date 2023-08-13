@@ -1,8 +1,9 @@
 ﻿namespace Bufdio.Spice86;
-using System;
+
 using System.Collections.Generic;
 
 using Bufdio.Spice86.Bindings.PortAudio;
+using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities;
 using Bufdio.Spice86.Utilities.Extensions;
@@ -13,7 +14,10 @@ using Bufdio.Spice86.Utilities.Extensions;
 /// </summary>
 public static class BufdioLib {
     internal static class Constants {
-        public const PaBinding.PaSampleFormat PaSampleFormat = PaBinding.PaSampleFormat.paFloat32;
+        /// <summary>
+        /// 32-bit floats
+        /// </summary>
+        public const int PaSampleFormat = 0x00000001;
     }
 
     private static AudioDevice _defaultOutputDevice;
@@ -69,38 +73,19 @@ public static class BufdioLib {
             return false;
         }
 
-        if (PlatformInfo.IsWindows) {
-            PaBinding.Windows.Pa_Initialize();
-        } else if (PlatformInfo.IsLinux) {
-            PaBinding.Linux.Pa_Initialize();
-        } else if (PlatformInfo.IsOSX) {
-            PaBinding.OSX.Pa_Initialize();
-        }
+        NativeMethods.PortAudioInitialize();
 
-
-        int deviceCount = 0;
-        if (PlatformInfo.IsWindows) {
-            deviceCount = PaBinding.Windows.Pa_GetDeviceCount();
-        } else if (PlatformInfo.IsLinux) {
-            deviceCount = PaBinding.Linux.Pa_GetDeviceCount();
-        } else if (PlatformInfo.IsOSX) {
-            deviceCount = PaBinding.OSX.Pa_GetDeviceCount();
-        }
+        int deviceCount = NativeMethods.PortAudioGetDeviceCount();
+        
         Ensure.That<BufdioException>(deviceCount > 0, "No output devices are available.");
 
-        int defaultDevice = 0;
-        if (PlatformInfo.IsWindows) {
-            defaultDevice = PaBinding.Windows.Pa_GetDefaultOutputDevice();
-        } else if (PlatformInfo.IsLinux) {
-            defaultDevice = PaBinding.Linux.Pa_GetDefaultOutputDevice();
-        } else if (PlatformInfo.IsOSX) {
-            defaultDevice = PaBinding.OSX.Pa_GetDefaultOutputDevice();
-        }
+        int defaultDevice = NativeMethods.PortAudioGetDefaultOutputDevice();
+        
         _defaultOutputDevice = defaultDevice.PaGetPaDeviceInfo().PaToAudioDevice(defaultDevice);
         _outputDevices = new List<AudioDevice>();
 
         for (int i = 0; i < deviceCount; i++) {
-            PaBinding.PaDeviceInfo deviceInfo = i.PaGetPaDeviceInfo();
+            PaDeviceInfo deviceInfo = i.PaGetPaDeviceInfo();
 
             if (deviceInfo.maxOutputChannels > 0) {
                 _outputDevices.Add(deviceInfo.PaToAudioDevice(i));
@@ -111,15 +96,9 @@ public static class BufdioLib {
         return true;
     }
 
-    public static string GetPortAudioLibName() {
-        if (PlatformInfo.IsWindows) {
-            return "libportaudio.dll";
-        } else if (PlatformInfo.IsLinux) {
-            return "libportaudio.so.2";
-        } else if (PlatformInfo.IsOSX) {
-            return "libportaudio.2.dylib";
-        } else {
-            throw new PlatformNotSupportedException();
-        }
-    }
+    /// <summary>
+    /// Returns the name of system-provided PortAudio library
+    /// </summary>
+    /// <returns>A string containing the filename of the system-provided PortAudio library</returns>
+    public static string GetPortAudioLibName() => NativeMethods.GetPortAudioLibName();
 }

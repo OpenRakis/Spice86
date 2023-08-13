@@ -1,7 +1,9 @@
 ﻿namespace Bufdio.Spice86.Utilities.Extensions;
+
 using System.Runtime.InteropServices;
 
 using Bufdio.Spice86.Bindings.PortAudio;
+using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
 
 internal static class PortAudioExtensions {
@@ -19,30 +21,16 @@ internal static class PortAudioExtensions {
     }
 
     public static string? PaErrorToText(this int code) {
-        nint ptr = 0;
-        if (PlatformInfo.IsWindows) {
-            ptr = PaBinding.Windows.Pa_GetErrorText(code);
-        } else if (PlatformInfo.IsLinux) {
-            ptr = PaBinding.Linux.Pa_GetErrorText(code);
-        } else if (PlatformInfo.IsOSX) {
-            ptr = PaBinding.OSX.Pa_GetErrorText(code);
-        }
+        nint ptr = NativeMethods.PortAudioGetErrorText(code);
         return Marshal.PtrToStringAnsi(ptr);
     }
 
-    public static PaBinding.PaDeviceInfo PaGetPaDeviceInfo(this int device) {
-        nint ptr = 0;
-        if (PlatformInfo.IsWindows) {
-            ptr = PaBinding.Windows.Pa_GetDeviceInfo(device);
-        } else if (PlatformInfo.IsLinux) {
-            ptr = PaBinding.Linux.Pa_GetDeviceInfo(device);
-        } else if (PlatformInfo.IsOSX) {
-            ptr = PaBinding.OSX.Pa_GetDeviceInfo(device);
-        }
-        return Marshal.PtrToStructure<PaBinding.PaDeviceInfo>(ptr);
+    public static PaDeviceInfo PaGetPaDeviceInfo(this int device) {
+        nint ptr = NativeMethods.PortAudioGetDeviceInfo(device);
+        return Marshal.PtrToStructure<PaDeviceInfo>(ptr);
     }
 
-    public static AudioDevice PaToAudioDevice(this PaBinding.PaDeviceInfo device, int deviceIndex) {
+    public static AudioDevice PaToAudioDevice(this PaDeviceInfo device, int deviceIndex) {
         return new AudioDevice(
             deviceIndex,
             device.name,

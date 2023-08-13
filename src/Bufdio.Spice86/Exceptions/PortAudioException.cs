@@ -1,4 +1,5 @@
 ﻿namespace Bufdio.Spice86.Exceptions;
+
 using System;
 
 using Bufdio.Spice86.Utilities.Extensions;
