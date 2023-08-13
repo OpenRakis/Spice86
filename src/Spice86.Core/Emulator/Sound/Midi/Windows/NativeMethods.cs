@@ -92,14 +92,6 @@ internal static class NativeMethods {
     public static extern uint midiOutShortMsg(IntPtr hmo, uint dwMsg);
 
     /// <summary>
-    /// Resets the specified MIDI output device.
-    /// </summary>
-    /// <param name="hmo">A handle to the MIDI output device.</param>
-    /// <returns>Returns MMSYSERR_NOERROR if successful or an error code otherwise.</returns>
-    [DllImport("winmm.dll", CallingConvention = CallingConvention.Winapi, SetLastError = false)]
-    public static extern uint midiOutReset(IntPtr hmo);
-
-    /// <summary>
     /// The device identifier for the default MIDI output device.
     /// </summary>
     public const uint MIDI_MAPPER = 0xFFFFFFFF;
