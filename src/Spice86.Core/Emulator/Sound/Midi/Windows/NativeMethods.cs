@@ -1,4 +1,4 @@
-namespace Bufdio.Spice86.WinMM;
+namespace Spice86.Core.Emulator.Sound.Midi.Windows;
 
 using System;
 using System.Runtime.InteropServices;
@@ -9,7 +9,7 @@ using System.Runtime.Versioning;
 /// It contains several methods for MIDI output management, including opening and closing MIDI output devices, sending short MIDI messages, and resetting a MIDI output device.
 /// </summary>
 [SupportedOSPlatform("windows")]
-public static class NativeMethods {
+internal static class NativeMethods {
     /// <summary>
     /// Opens a MIDI output device for playback.
     /// </summary>

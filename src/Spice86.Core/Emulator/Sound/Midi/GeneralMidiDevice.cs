@@ -1,24 +1,20 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi;
 
-using Bufdio.Spice86.WinMM;
-
 using MeltySynth;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Core.Emulator.Sound.Midi.Windows;
 
 using OperatingSystem = System.OperatingSystem;
 
 /// <summary>
 /// Represents an external General MIDI device. <br/>
 /// http://midi.teragonaudio.com/tech/lowmidi.htm
-/// <remarks>Uses a soundfont, not the host OS APIs. This is not a MIDI passthrough.</remarks>
+/// <remarks>On non-Windows: Uses a soundfont, not the host OS APIs. This is not a MIDI passthrough.</remarks>
 /// </summary>
 internal sealed class GeneralMidiDevice : MidiDevice {
     private readonly AudioPlayer _audioPlayer;
     
-    /// <summary>
-    /// Indicates whether this object has been disposed.
-    /// </summary>
     private bool _disposed;
     private bool _threadStarted;
 
