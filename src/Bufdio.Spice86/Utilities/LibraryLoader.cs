@@ -4,17 +4,14 @@ using System;
 using System.Runtime.InteropServices;
 
 internal sealed class LibraryLoader : IDisposable {
-    private IntPtr _handle = IntPtr.Zero;
+    private IntPtr _handle;
     private bool _disposed;
 
-    public bool Initialize(string libraryName) {
+    public LibraryLoader(string libraryName) {
         ArgumentException.ThrowIfNullOrEmpty(libraryName);
-        if (!NativeLibrary.TryLoad(libraryName, out _handle)) {
-            return false;
-        }
+        _handle = NativeLibrary.Load(libraryName);
 
         Ensure.That<Exception>(_handle != IntPtr.Zero, $"Could not load native library: {libraryName}.");
-        return true;
     }
 
     public void Dispose() {

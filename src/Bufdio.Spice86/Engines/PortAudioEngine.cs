@@ -33,9 +33,9 @@ public sealed class PortAudioEngine : IAudioEngine {
 
         PaStreamParameters parameters = new PaStreamParameters {
             channelCount = _options.Channels,
-            device = _options.Device.DeviceIndex,
+            device = _options.DefaultAudioDevice.DeviceIndex,
             hostApiSpecificStreamInfo = IntPtr.Zero,
-            sampleFormat = (PaSampleFormat)BufdioLib.Constants.PaSampleFormat,
+            sampleFormat = (PaSampleFormat)PortAudioLib.Constants.PaSampleFormat,
             suggestedLatency = _options.Latency
         };
 
@@ -45,9 +45,7 @@ public sealed class PortAudioEngine : IAudioEngine {
             PaStreamParameters tempParameters;
             IntPtr parametersPtr = new(&tempParameters);
             Marshal.StructureToPtr(parameters, parametersPtr, false);
-
             int code = NativeMethods.PortAudioOpenStream(new IntPtr(&stream), IntPtr.Zero, parametersPtr, _options.SampleRate, framesPerBuffer, StreamFlags, null, IntPtr.Zero);
-
             code.PaGuard();
         }
         _stream = stream;

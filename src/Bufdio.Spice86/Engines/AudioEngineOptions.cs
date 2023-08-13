@@ -9,28 +9,14 @@ public readonly record struct AudioEngineOptions
     /// <summary>
     /// Initializes <see cref="AudioEngineOptions"/>.
     /// </summary>
-    /// <param name="device">Desired output device, see: <see cref="BufdioLib.OutputDevices"/>.</param>
+    /// <param name="defaultAudioDevice">Desired output device, see: <see cref="PortAudioLib.OutputDevices"/>.</param>
     /// <param name="channels">Desired audio channels, or fallback to maximum channels.</param>
     /// <param name="sampleRate">Desired output sample rate.</param>
     /// <param name="latency">Desired output latency.</param>
-    public AudioEngineOptions(AudioDevice device, int channels, int sampleRate, double latency)
+    public AudioEngineOptions(AudioDevice defaultOutputDevice, int channels, int sampleRate, double latency)
     {
-        Device = device;
-        Channels = FallbackChannelCount(Device, channels);
-        SampleRate = sampleRate;
-        Latency = latency;
-    }
-
-    /// <summary>
-    /// Initializes <see cref="AudioEngineOptions"/> by using default output device.
-    /// </summary>
-    /// <param name="channels">Desired audio channels, or fallback to maximum channels.</param>
-    /// <param name="sampleRate">Desired output sample rate.</param>
-    /// <param name="latency">Desired output latency.</param>
-    public AudioEngineOptions(int channels, int sampleRate, double latency)
-    {
-        Device = BufdioLib.DefaultOutputDevice;
-        Channels = FallbackChannelCount(Device, channels);
+        DefaultAudioDevice = defaultOutputDevice;
+        Channels = FallbackChannelCount(DefaultAudioDevice, channels);
         SampleRate = sampleRate;
         Latency = latency;
     }
@@ -39,33 +25,34 @@ public readonly record struct AudioEngineOptions
     /// Initializes <see cref="AudioEngineOptions"/> by using default output device
     /// and its default high output latency.
     /// </summary>
+    /// <param name="defaultAudioDevice">Desired output device, see: <see cref="PortAudioLib.OutputDevices"/>.</param>
     /// <param name="channels">Desired audio channels, or fallback to maximum channels.</param>
     /// <param name="sampleRate">Desired output sample rate.</param>
-    public AudioEngineOptions(int channels, int sampleRate)
+    public AudioEngineOptions(AudioDevice defaultOutputDevice, int channels, int sampleRate)
     {
-        Device = BufdioLib.DefaultOutputDevice;
-        Channels = FallbackChannelCount(Device, channels);
+        DefaultAudioDevice = defaultOutputDevice;
+        Channels = FallbackChannelCount(DefaultAudioDevice, channels);
         SampleRate = sampleRate;
-        Latency = Device.DefaultLowOutputLatency;
+        Latency = DefaultAudioDevice.DefaultLowOutputLatency;
     }
 
     /// <summary>
     /// Initializes <see cref="AudioEngineOptions"/> by using default output device.
     /// Sample rate will be set to 44100, channels to 2 (or max) and latency to default high. 
     /// </summary>
-    public AudioEngineOptions()
+    public AudioEngineOptions(AudioDevice defaultOutputDevice)
     {
-        Device = BufdioLib.DefaultOutputDevice;
-        Channels = FallbackChannelCount(Device, 2);
+        DefaultAudioDevice = defaultOutputDevice;
+        Channels = FallbackChannelCount(DefaultAudioDevice, 2);
         SampleRate = 48000;
-        Latency = Device.DefaultLowOutputLatency;
+        Latency = DefaultAudioDevice.DefaultLowOutputLatency;
     }
 
     /// <summary>
     /// Gets desired output device.
-    /// See: <see cref="BufdioLib.OutputDevices"/> and <see cref="BufdioLib.DefaultOutputDevice"/>.
+    /// See: <see cref="PortAudioLib.OutputDevices"/> and <see cref="PortAudioLib.DefaultOutputDevice"/>.
     /// </summary>
-    public AudioDevice Device { get; init; }
+    public AudioDevice DefaultAudioDevice { get; init; }
 
     /// <summary>
     /// Gets desired number of audio channels. This might fallback to maximum device output channels,

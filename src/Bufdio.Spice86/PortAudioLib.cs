@@ -8,11 +8,15 @@ using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities;
 using Bufdio.Spice86.Utilities.Extensions;
 
+using System;
+
 /// <summary>
-/// Provides functionalities to retrieve, configure and manage current Bufdio environment
+/// Provides functionalities to retrieve, configure and manage current PortAudio environment
 /// that affects the whole library configuration.
 /// </summary>
-public static class BufdioLib {
+public sealed class PortAudioLib : IDisposable {
+    private bool _disposed;
+    
     internal static class Constants {
         /// <summary>
         /// 32-bit floats
@@ -20,20 +24,20 @@ public static class BufdioLib {
         public const int PaSampleFormat = 0x00000001;
     }
 
-    private static AudioDevice _defaultOutputDevice;
-    private static List<AudioDevice> _outputDevices = new();
+    private LibraryLoader _libraryLoader;
+    private AudioDevice _defaultOutputDevice;
+    private List<AudioDevice> _outputDevices = new();
 
     /// <summary>
     /// Gets whether or not the PortAudio library is already initialized.
     /// </summary>
-    /// <exception cref="BufdioException">Thrown if PortAudio is not initialized.</exception>
-    public static bool IsPortAudioInitialized { get; private set; }
+    public bool IsPortAudioInitialized { get; private set; }
 
     /// <summary>
     /// Gets default output device information that is used by the current system.
     /// </summary>
     /// <exception cref="BufdioException">Thrown if PortAudio is not initialized.</exception>
-    public static AudioDevice DefaultOutputDevice {
+    public AudioDevice DefaultOutputDevice {
         get {
             Ensure.That<BufdioException>(IsPortAudioInitialized, "PortAudio is not initialized.");
             return _defaultOutputDevice;
@@ -44,7 +48,7 @@ public static class BufdioLib {
     /// Gets list of available audio output devices in the current system.
     /// Will throws <see cref="BufdioException"/> if PortAudio is not initialized.
     /// </summary>
-    public static IReadOnlyCollection<AudioDevice> OutputDevices {
+    public IReadOnlyCollection<AudioDevice> OutputDevices {
         get {
             Ensure.That<BufdioException>(IsPortAudioInitialized, "PortAudio is not initialized.");
             return _outputDevices;
@@ -54,24 +58,15 @@ public static class BufdioLib {
     /// <summary>
     /// Initialize and register PortAudio functionalities by providing path to PortAudio native libary.
     /// Leave path parameter empty in order to use system-wide library.
-    /// Will returns immediately if already initialized.
     /// </summary>
     /// <param name="portAudioPath">
     /// Path to port audio native libary, eg: portaudio.dll, libportaudio.so, libportaudio.dylib.
     /// </param>
     /// <exception cref="BufdioException">Thrown when output device is not available.</exception>
-    public static bool InitializePortAudio(string? portAudioPath = default) {
-        if (IsPortAudioInitialized) {
-            return false;
-        }
-
+    public PortAudioLib(string? portAudioPath = default) {
         portAudioPath = string.IsNullOrEmpty(portAudioPath) ? GetPortAudioLibName() : portAudioPath;
 
-        var loader = new LibraryLoader();
-        bool loadedNativeLib = loader.Initialize(portAudioPath);
-        if (!loadedNativeLib) {
-            return false;
-        }
+        _libraryLoader = new LibraryLoader(portAudioPath);
 
         NativeMethods.PortAudioInitialize();
 
@@ -91,9 +86,7 @@ public static class BufdioLib {
                 _outputDevices.Add(deviceInfo.PaToAudioDevice(i));
             }
         }
-
         IsPortAudioInitialized = true;
-        return true;
     }
 
     /// <summary>
@@ -101,4 +94,19 @@ public static class BufdioLib {
     /// </summary>
     /// <returns>A string containing the filename of the system-provided PortAudio library</returns>
     public static string GetPortAudioLibName() => NativeMethods.GetPortAudioLibName();
+    
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if (_disposed) {
+            if (disposing) {
+                _libraryLoader.Dispose();
+            }
+            _disposed = true;
+        }
+    }
 }
