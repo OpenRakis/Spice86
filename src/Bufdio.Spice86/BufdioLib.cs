@@ -68,13 +68,34 @@ public static class BufdioLib {
         if (!loadedNativeLib) {
             return false;
         }
-        PaBinding.InitializeBindings(loader);
-        PaBinding.Pa_Initialize();
 
-        int deviceCount = PaBinding.Pa_GetDeviceCount();
+        if (PlatformInfo.IsWindows) {
+            PaBinding.Windows.Pa_Initialize();
+        } else if (PlatformInfo.IsLinux) {
+            PaBinding.Linux.Pa_Initialize();
+        } else if (PlatformInfo.IsOSX) {
+            PaBinding.OSX.Pa_Initialize();
+        }
+
+
+        int deviceCount = 0;
+        if (PlatformInfo.IsWindows) {
+            deviceCount = PaBinding.Windows.Pa_GetDeviceCount();
+        } else if (PlatformInfo.IsLinux) {
+            deviceCount = PaBinding.Linux.Pa_GetDeviceCount();
+        } else if (PlatformInfo.IsOSX) {
+            deviceCount = PaBinding.OSX.Pa_GetDeviceCount();
+        }
         Ensure.That<BufdioException>(deviceCount > 0, "No output devices are available.");
 
-        int defaultDevice = PaBinding.Pa_GetDefaultOutputDevice();
+        int defaultDevice = 0;
+        if (PlatformInfo.IsWindows) {
+            defaultDevice = PaBinding.Windows.Pa_GetDefaultOutputDevice();
+        } else if (PlatformInfo.IsLinux) {
+            defaultDevice = PaBinding.Linux.Pa_GetDefaultOutputDevice();
+        } else if (PlatformInfo.IsOSX) {
+            defaultDevice = PaBinding.OSX.Pa_GetDefaultOutputDevice();
+        }
         _defaultOutputDevice = defaultDevice.PaGetPaDeviceInfo().PaToAudioDevice(defaultDevice);
         _outputDevices = new List<AudioDevice>();
 
@@ -92,13 +113,13 @@ public static class BufdioLib {
 
     public static string GetPortAudioLibName() {
         if (PlatformInfo.IsWindows) {
-            return "libportaudio-2.dll";
+            return "libportaudio.dll";
         } else if (PlatformInfo.IsLinux) {
             return "libportaudio.so.2";
         } else if (PlatformInfo.IsOSX) {
             return "libportaudio.2.dylib";
         } else {
-            throw new NotImplementedException();
+            throw new PlatformNotSupportedException();
         }
     }
 }

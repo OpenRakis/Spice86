@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 using Bufdio.Spice86.Bindings.PortAudio;
 using Bufdio.Spice86.Exceptions;
+using Bufdio.Spice86.Utilities;
 using Bufdio.Spice86.Utilities.Extensions;
 
 /// <summary>
@@ -43,22 +44,28 @@ public sealed class PortAudioEngine : IAudioEngine {
             IntPtr parametersPtr = new(&tempParameters);
             Marshal.StructureToPtr(parameters, parametersPtr, false);
 
-            int code = PaBinding.Pa_OpenStream(
-                new IntPtr(&stream),
-                IntPtr.Zero,
-                parametersPtr,
-                _options.SampleRate,
-                framesPerBuffer,
-                StreamFlags,
-                null,
-                IntPtr.Zero);
+            int code = 0;
+            if (PlatformInfo.IsWindows) {
+                code = PaBinding.Windows.Pa_OpenStream(new IntPtr(&stream), IntPtr.Zero, parametersPtr, _options.SampleRate, framesPerBuffer, StreamFlags, null, IntPtr.Zero);
+                _stream = stream;
+            } else if (PlatformInfo.IsLinux) {
+                code = PaBinding.Linux.Pa_OpenStream(new IntPtr(&stream), IntPtr.Zero, parametersPtr, _options.SampleRate, framesPerBuffer, StreamFlags, null, IntPtr.Zero);
+                _stream = stream;
+            } else if (PlatformInfo.IsOSX) {
+                code  = PaBinding.OSX.Pa_OpenStream(new IntPtr(&stream), IntPtr.Zero, parametersPtr, _options.SampleRate, framesPerBuffer, StreamFlags, null, IntPtr.Zero);
+                _stream = stream;
+            }
 
             code.PaGuard();
         }
 
-        _stream = stream;
-
-        PaBinding.Pa_StartStream(_stream).PaGuard();
+        if (PlatformInfo.IsWindows) {
+            PaBinding.Windows.Pa_StartStream(_stream).PaGuard();
+        } else if (PlatformInfo.IsLinux) {
+            PaBinding.Linux.Pa_StartStream(_stream).PaGuard();
+        } else if (PlatformInfo.IsOSX) {
+            PaBinding.OSX.Pa_StartStream(_stream).PaGuard();
+        }
     }
 
     /// <inheritdoc />
@@ -66,7 +73,14 @@ public sealed class PortAudioEngine : IAudioEngine {
         unsafe {
             fixed (float* buffer = samples) {
                 int frames = samples.Length / _options.Channels;
-                PaBinding.Pa_WriteStream(_stream, (IntPtr)buffer, frames);
+                
+                if (PlatformInfo.IsWindows) {
+                    PaBinding.Windows.Pa_WriteStream(_stream, (IntPtr)buffer, frames);
+                } else if (PlatformInfo.IsLinux) {
+                    PaBinding.Linux.Pa_WriteStream(_stream, (IntPtr)buffer, frames);
+                } else if (PlatformInfo.IsOSX) {
+                    PaBinding.OSX.Pa_WriteStream(_stream, (IntPtr)buffer, frames);
+                }
             }
         }
     }
@@ -83,8 +97,16 @@ public sealed class PortAudioEngine : IAudioEngine {
     private void Dispose(bool disposing) {
         if(!_disposed) {
             if(disposing) {
-                PaBinding.Pa_AbortStream(_stream);
-                PaBinding.Pa_CloseStream(_stream);
+                if (PlatformInfo.IsWindows) {
+                    PaBinding.Windows.Pa_AbortStream(_stream);
+                    PaBinding.Windows.Pa_CloseStream(_stream);
+                } else if (PlatformInfo.IsLinux) {
+                    PaBinding.Linux.Pa_AbortStream(_stream);
+                    PaBinding.Linux.Pa_CloseStream(_stream);
+                } else if (PlatformInfo.IsOSX) {
+                    PaBinding.OSX.Pa_AbortStream(_stream);
+                    PaBinding.OSX.Pa_CloseStream(_stream);
+                }
             }
             _disposed = true;
         }

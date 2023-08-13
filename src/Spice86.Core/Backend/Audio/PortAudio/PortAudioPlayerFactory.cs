@@ -1,6 +1,9 @@
 namespace Spice86.Core.Backend.Audio.PortAudio;
 
 using Bufdio.Spice86;
+using Bufdio.Spice86.Exceptions;
+
+using Serilog.Events;
 
 using Spice86.Shared.Interfaces;
 
@@ -17,17 +20,23 @@ public class PortAudioPlayerFactory {
         _loggerService = loggerService;
     }
 
-    private static void LoadNativeLibIfNeeded() {
+    private void LoadNativeLibIfNeeded() {
         lock(_lock) {
             if(_loadedNativeLib) {
                 return;
             }
-            if (OperatingSystem.IsWindows()) {
-                const string path = "libportaudio.dll";
-                _loadedNativeLib = BufdioLib.InitializePortAudio(path);
-            } else {
-                //rely on system-provided libportaudio.
-                _loadedNativeLib = BufdioLib.InitializePortAudio();
+            try {
+                if (OperatingSystem.IsWindows()) {
+                    const string path = "libportaudio.dll";
+                    _loadedNativeLib = BufdioLib.InitializePortAudio(path);
+                } else {
+                    //rely on system-provided libportaudio.
+                    _loadedNativeLib = BufdioLib.InitializePortAudio();
+                }
+            } catch (BufdioException e) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error(e, "The native PortAudio library could not be loaded");
+                }
             }
         }
     }
