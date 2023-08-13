@@ -47,9 +47,14 @@ public class PortAudioPlayerFactory {
             try {
                 return new PortAudioPlayer(LoadPortAudioLibrary(), framesPerBuffer,
                     new AudioFormat(SampleRate: sampleRate, Channels: 2, SampleFormat.IeeeFloat32), suggestedLatency);
-            } catch (BufdioException e) {
+            } catch (DllNotFoundException e) {
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error(e, "The native PortAudio library could not be loaded");
+                }
+            }
+            catch (BufdioException e) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error(e, "No audio output device could be found");
                 }
             }
         }
