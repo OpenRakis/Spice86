@@ -26,6 +26,11 @@ public class CSharpOverrideHelper {
     protected readonly ILoggerService _loggerService;
 
     /// <summary>
+    /// The Spice86 configuration
+    /// </summary>
+    protected Configuration Configuration { get; }
+
+    /// <summary>
     /// The emulated CPU.
     /// </summary>
     public Cpu Cpu => Machine.Cpu;
@@ -284,9 +289,11 @@ public class CSharpOverrideHelper {
     /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="configuration">The configuration.</param>
     public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService) {
+        Machine machine, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
+        Configuration = configuration;
         _functionInformations = functionInformations;
         Machine = machine;
         JumpDispatcher = new();
