@@ -204,7 +204,7 @@ public sealed class ProgramExecutor : IDisposable {
             }
 
             foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
-                    .GenerateFunctionInformations(_loggerService, entryPointSegment, machine)) {
+                    .GenerateFunctionInformations(_loggerService, _configuration, entryPointSegment, machine)) {
                 res.Add(element.Key, element.Value);
             }
         }

@@ -18,6 +18,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     private readonly CallbackHandler _callbackHandler;
     private readonly Configuration _configuration;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
+    private readonly MemoryDataExporter _memoryDataExporter;
 
     /// <summary>
     /// Initializes a new instance.
@@ -36,6 +37,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
         _state = state;
         _memory = memory;
         _callbackHandler = callbackHandler;
+        _memoryDataExporter = new(memory, callbackHandler, configuration, dumpDirectory, loggerService);
     }
 
     /// <summary> 
@@ -70,14 +72,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// </summary>
     /// <param name="suffix">The suffix to add to the file name.</param>
     public void DumpMemory(string suffix) {
-        string path = GenerateDumpFileName($"MemoryDump{suffix}.bin");
-        File.WriteAllBytes(path, GenerateToolingCompliantRamDump());    }
-    
-    private byte[] GenerateToolingCompliantRamDump() {
-        if (_configuration.InitializeDOS is true) {
-            return _callbackHandler.ReplaceAllCallbacksInRamImage(_memory);
-        }
-        return _memory.RamCopy;
+        _memoryDataExporter.DumpMemory(suffix);
     }
 
     /// <summary>
