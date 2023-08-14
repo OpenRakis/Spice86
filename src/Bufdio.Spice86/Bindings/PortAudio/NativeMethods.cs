@@ -6,10 +6,12 @@ using System.Runtime.InteropServices;
 using Bufdio.Spice86.Bindings.PortAudio.Enums;
 using Bufdio.Spice86.Utilities;
 
+using System.Runtime.Versioning;
+
 /// <summary>
 /// Platform Invoke bindings to the PortAudio ABI
 /// </summary>
-internal static class NativeMethods {
+internal static partial class NativeMethods {
     public static int PortAudioInitialize() => _bindings.Initialize();
 
     public static int PortAudioGetDeviceCount() => _bindings.GetDeviceCount();
@@ -49,12 +51,12 @@ internal static class NativeMethods {
     private static readonly INativeBindings _bindings;
     
     static NativeMethods() {
-        if (PlatformInfo.IsWindows) {
+        if (OperatingSystem.IsWindows()) {
             _bindings = new Windows();
-        } else if (PlatformInfo.IsLinux) {
+        } else if (OperatingSystem.IsLinux()) {
             _bindings = new Linux();
-        } else if (PlatformInfo.IsOSX) {
-            _bindings = new OSX();
+        } else if (OperatingSystem.IsMacOS()) {
+            _bindings = new MacOS();
         } else {
             throw new PlatformNotSupportedException();
         }
@@ -91,30 +93,31 @@ internal static class NativeMethods {
         void* userData
     );
 
+    [SupportedOSPlatform("Windows")]
     private partial class Windows : INativeBindings {
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_Initialize();
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_Initialize();
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_Terminate();
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_Terminate();
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetVersionInfo();
+        [LibraryImport("libportaudio.dll")]
+        private static partial IntPtr Pa_GetVersionInfo();
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetErrorText(int code);
+        [LibraryImport("libportaudio.dll")]
+        private static partial IntPtr Pa_GetErrorText(int code);
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_GetDefaultOutputDevice();
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_GetDefaultOutputDevice();
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetDeviceInfo(int device);
+        [LibraryImport("libportaudio.dll")]
+        private static partial IntPtr Pa_GetDeviceInfo(int device);
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_GetDeviceCount();
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_GetDeviceCount();
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_OpenStream(
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_OpenStream(
             IntPtr stream,
             IntPtr inputParameters,
             IntPtr outputParameters,
@@ -124,17 +127,17 @@ internal static class NativeMethods {
             PaStreamCallback? streamCallback,
             IntPtr userData);
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_StartStream(IntPtr stream);
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_StartStream(IntPtr stream);
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_WriteStream(IntPtr stream, IntPtr buffer, long frames);
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_WriteStream(IntPtr stream, IntPtr buffer, long frames);
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_AbortStream(IntPtr stream);
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_AbortStream(IntPtr stream);
 
-        [DllImport("libportaudio.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_CloseStream(IntPtr stream);
+        [LibraryImport("libportaudio.dll")]
+        private static partial int Pa_CloseStream(IntPtr stream);
 
         public int Initialize() => Pa_Initialize();
 
@@ -164,30 +167,31 @@ internal static class NativeMethods {
         public int CloseStream(IntPtr stream) => Pa_CloseStream(stream);
     }
     
+    [SupportedOSPlatform("Linux")]
     private partial class Linux : INativeBindings {
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_Initialize();
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_Initialize();
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_Terminate();
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_Terminate();
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetVersionInfo();
+        [LibraryImport("libportaudio.so.2")]
+        private static partial IntPtr Pa_GetVersionInfo();
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetErrorText(int code);
+        [LibraryImport("libportaudio.so.2")]
+        private static partial IntPtr Pa_GetErrorText(int code);
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_GetDefaultOutputDevice();
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_GetDefaultOutputDevice();
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetDeviceInfo(int device);
+        [LibraryImport("libportaudio.so.2")]
+        private static partial IntPtr Pa_GetDeviceInfo(int device);
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_GetDeviceCount();
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_GetDeviceCount();
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_OpenStream(
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_OpenStream(
             IntPtr stream,
             IntPtr inputParameters,
             IntPtr outputParameters,
@@ -197,17 +201,17 @@ internal static class NativeMethods {
             PaStreamCallback? streamCallback,
             IntPtr userData);
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_StartStream(IntPtr stream);
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_StartStream(IntPtr stream);
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_WriteStream(IntPtr stream, IntPtr buffer, long frames);
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_WriteStream(IntPtr stream, IntPtr buffer, long frames);
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_AbortStream(IntPtr stream);
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_AbortStream(IntPtr stream);
 
-        [DllImport("libportaudio.so.2", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_CloseStream(IntPtr stream);
+        [LibraryImport("libportaudio.so.2")]
+        private static partial int Pa_CloseStream(IntPtr stream);
         
         public int Initialize() => Pa_Initialize();
 
@@ -237,30 +241,31 @@ internal static class NativeMethods {
         public int CloseStream(IntPtr stream) => Pa_CloseStream(stream);
     }
     
-    private partial class OSX : INativeBindings {
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_Initialize();
+    [SupportedOSPlatform("OSX")]
+    private partial class MacOS : INativeBindings {
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_Initialize();
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_Terminate();
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_Terminate();
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetVersionInfo();
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial IntPtr Pa_GetVersionInfo();
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetErrorText(int code);
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial IntPtr Pa_GetErrorText(int code);
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_GetDefaultOutputDevice();
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_GetDefaultOutputDevice();
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr Pa_GetDeviceInfo(int device);
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial IntPtr Pa_GetDeviceInfo(int device);
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_GetDeviceCount();
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_GetDeviceCount();
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_OpenStream(
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_OpenStream(
             IntPtr stream,
             IntPtr inputParameters,
             IntPtr outputParameters,
@@ -270,17 +275,17 @@ internal static class NativeMethods {
             PaStreamCallback? streamCallback,
             IntPtr userData);
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_StartStream(IntPtr stream);
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_StartStream(IntPtr stream);
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_WriteStream(IntPtr stream, IntPtr buffer, long frames);
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_WriteStream(IntPtr stream, IntPtr buffer, long frames);
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_AbortStream(IntPtr stream);
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_AbortStream(IntPtr stream);
 
-        [DllImport("libportaudio.2.dylib", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Pa_CloseStream(IntPtr stream);
+        [LibraryImport("libportaudio.2.dylib")]
+        private static partial int Pa_CloseStream(IntPtr stream);
         
         public int Initialize() => Pa_Initialize();
 
