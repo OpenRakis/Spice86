@@ -720,7 +720,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Returns the number of open EMM handles
     /// </summary>
     /// <returns>The number of open EMM handles</returns>
-    public ushort GetAllocatedHandlePagesCount() => (ushort) EmmHandles.SelectMany(static x => x.Value.LogicalPages).Count();
+    public ushort GetAllocatedHandlePagesCount() => (ushort) EmmHandles.Sum(static x => x.Value.LogicalPages.Count);
 
     /// <summary>
     /// Gets the name of a handle.
