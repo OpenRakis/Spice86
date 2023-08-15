@@ -8,7 +8,7 @@
   <!-- Properties geared towards NuGet -->
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <version>5.0.0</version>
+    <version>6.0.0</version>
     <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <Description>Reverse engineer and rewrite real mode dos programs</Description>
