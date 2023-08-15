@@ -243,7 +243,7 @@ public sealed class Machine : IDisposable {
 
         // Services
         // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
-        MemoryAsmWriter memoryAsmWriter = new(Memory, new SegmentedAddress(MemoryMap.InterruptHandlersSegment, 0), CallbackHandler);
+        MemoryAsmWriter memoryAsmWriter = new(Memory, new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), CallbackHandler);
         InterruptInstaller = new InterruptInstaller(new InterruptVectorTable(Memory), memoryAsmWriter, Cpu.FunctionHandler);
         AssemblyRoutineInstaller = new AssemblyRoutineInstaller(memoryAsmWriter, Cpu.FunctionHandler);
         

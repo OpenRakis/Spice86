@@ -200,7 +200,7 @@ public sealed class ProgramExecutor : IDisposable {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (supplier != null) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Override supplied: {OverideSupplier}", supplier);
+                _loggerService.Verbose("Override supplied: {OverrideSupplier}", supplier);
             }
 
             foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
