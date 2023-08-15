@@ -36,6 +36,12 @@ public class DosFileManager {
     private readonly IMemory _memory;
 
     private readonly DosPathResolver _dosPathResolver;
+    
+    /// <summary>
+    /// The list of possible DOS file/folder attributes
+    /// </summary>
+    /// <remarks>This does not include the CP/M legacy attribute 'Archive' as it is always present on Windows/DOS.</remarks>
+    public IEnumerable<FileAttributes> DosFileAttributes { get; private set; } = new FileAttributes[]{ FileAttributes.Directory, FileAttributes.System, FileAttributes.Hidden };
 
     /// <summary>
     /// All the files opened by DOS.
@@ -149,8 +155,9 @@ public class DosFileManager {
     /// Returns the first matching file according to the <paramref name="fileSpec"/>
     /// </summary>
     /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match. Case is insensitive</param>
+    /// <param name="attributes">The MS-DOS file attributes, such as Directory.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult FindFirstMatchingFile(string fileSpec) {
+    public DosFileOperationResult FindFirstMatchingFile(string fileSpec, ushort attributes) {
         string hostSearchSpec = _dosPathResolver.PrefixWithHostDirectory(fileSpec);
         _currentMatchingFileSearchFolder = Directory.GetParent(hostSearchSpec)?.FullName;
         if (string.IsNullOrWhiteSpace(_currentMatchingFileSearchFolder)) {
@@ -163,15 +170,13 @@ public class DosFileManager {
         
         _currentMatchingFileSearchSpec = Path.GetRelativePath(_currentMatchingFileSearchFolder, hostSearchSpec);
 
+        EnumerationOptions enumerationOptions = GetEnumerationOptions(attributes);
+
         try {
-            List<string> matchingPaths = Directory.GetFiles(
+            IEnumerable<string> matchingPaths = Directory.GetFiles(
                 _currentMatchingFileSearchFolder,
                 _currentMatchingFileSearchSpec,
-                new EnumerationOptions {
-                    AttributesToSkip = FileAttributes.Directory,
-                    IgnoreInaccessible = true,
-                    RecurseSubdirectories = false
-                }).ToList();
+                enumerationOptions);
             _matchingFilesIterator = matchingPaths.GetEnumerator();
             return FindNextMatchingFile();
         } catch (IOException e) {
@@ -181,6 +186,40 @@ public class DosFileManager {
             }
         }
         return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+    }
+
+    private EnumerationOptions GetEnumerationOptions(ushort attributes)
+    {
+        FileAttributes attributesToInclude = (FileAttributes)attributes;
+        FileAttributes? attributesToSkip = null;
+
+        foreach (FileAttributes dosAttribute in DosFileAttributes)
+        {
+            if (!attributesToInclude.HasFlag(dosAttribute))
+            {
+                if (attributesToSkip is null)
+                {
+                    attributesToSkip = dosAttribute;
+                }
+                else
+                {
+                    attributesToSkip |= dosAttribute;
+                }
+            }
+        }
+
+        EnumerationOptions enumerationOptions = new EnumerationOptions
+        {
+            IgnoreInaccessible = true,
+            RecurseSubdirectories = false
+        };
+
+        if (attributesToSkip is not null)
+        {
+            enumerationOptions.AttributesToSkip = attributesToSkip.Value;
+        }
+
+        return enumerationOptions;
     }
 
     /// <summary>
