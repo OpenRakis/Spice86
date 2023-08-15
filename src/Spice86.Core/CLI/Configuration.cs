@@ -97,6 +97,12 @@ public class Configuration {
     public ushort ProgramEntryPointSegment { get; init; }
 
     /// <summary>
+    /// The memory address where the ASM handlers for interrupts and so on are to be written. Default is F000 which is the bios segment. Not all games will be happy with this changed to something else.
+    /// </summary>
+    [Option(nameof(ProvidedAsmHandlersSegment), Default = (ushort)0xF000, Required = false, HelpText = "Memory address where the ASM handlers for interrupts and so on are to be written. Default is F000 which is the bios segment. Not all games will be happy with this changed to something else.")]
+    public ushort ProvidedAsmHandlersSegment { get; init; }
+
+    /// <summary>
     /// Determines whether logs should be silenced or not.
     /// </summary>
     [Option('s', nameof(SilencedLogs), Default = false, Required = false, HelpText = "Disable all logs")]

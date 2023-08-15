@@ -75,14 +75,6 @@ public static class MemoryMap {
     public const ushort VideoBiosSegment = 0xC000;
 
     /// <summary>
-    /// Segment where our interrupt handler routines are stored.
-    /// These are filled with special opcode FE 38 XX CF which will make the CPU pass control to the registered
-    /// callback with index 0xXX.
-    /// The interrupt vector table at 0x0000:0x0000 will contain pointers to these routines.
-    /// </summary>
-    public const ushort InterruptHandlersSegment = 0xF000;
-
-    /// <summary>
     /// Segment where DOS device driver headers are stored.
     /// <see cref="VirtualDeviceBase"/>
     /// </summary>
