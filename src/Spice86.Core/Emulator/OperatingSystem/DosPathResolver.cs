@@ -14,7 +14,7 @@ using System.Text;
 internal class DosPathResolver {
     internal const char VolumeSeparatorChar = ':';
     internal const char DirectorySeparatorChar = '\\';
-    private const char AltDirectorySeparatorChar = '/';
+    internal const char AltDirectorySeparatorChar = '/';
     private const int MaxPathLength = 255;
 
     /// <summary>
