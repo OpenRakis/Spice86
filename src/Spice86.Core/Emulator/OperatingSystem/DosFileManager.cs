@@ -272,7 +272,7 @@ public class DosFileManager {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _loggerService.Warning("No search was done");
             }
-            return FileNotFoundError(null);
+            return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
 
         var matchingFiles = Directory.GetFileSystemEntries(entry.SearchFolder, entry.FileSpec,
@@ -293,7 +293,7 @@ public class DosFileManager {
         bool matching = matchingFilesIterator.MoveNext();
         if (matching) {
             if (!TryUpdateDosTransferAreaWithFileMatch(((string)matchingFilesIterator.Current)!, out DosFileOperationResult fileNotFoundError)) {
-                return fileNotFoundError;
+                return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
             }
         }
 
