@@ -14,12 +14,13 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Text;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// The class that implements DOS file operations, such as finding files, allocating file handles, and updating the Dos Transfer Area.
 /// </summary>
 public class DosFileManager {
+    private static readonly char[] _directoryChars = { DosPathResolver.DirectorySeparatorChar, DosPathResolver.AltDirectorySeparatorChar };
     private const int MaxOpenFiles = 20;
     private static readonly Dictionary<byte, string> FileOpenMode = new();
     private readonly ILoggerService _loggerService;
@@ -34,8 +35,6 @@ public class DosFileManager {
 
     private readonly Dictionary<uint, (string? SearchFolder, string HostFileName, string FileSpec, int FileIndexInFolder, ushort SearchAttributes)> _activeFileSearches = new();
 
-    private uint _activeFileSearch = 0;
-    
     /// <summary>
     /// All the files opened by DOS.
     /// </summary>
@@ -148,12 +147,6 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(dosIndex);
     }
 
-    private string ConvertToShortFileName(string filePath) {
-        string ext = Path.GetExtension(filePath);
-        string filename = Path.GetFileNameWithoutExtension(filePath);
-        return $"{filename[0..7]}{ext[0..2]}";
-    }
-
     /// <summary>
     /// Returns the first matching file in the DTA, according to the <paramref name="fileSpec"/>
     /// </summary>
@@ -165,10 +158,10 @@ public class DosFileManager {
             return PathNotFoundError(fileSpec);
         }
         
-        fileSpec = ConvertToShortFileName(fileSpec);
-
-        if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is CharacterDevice characterDevice) {
-            UpdateDosTransferAreaWithFileMatch(characterDevice.Name);
+        if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is { } characterDevice) {
+            if(!TryUpdateDosTransferAreaWithFileMatch(characterDevice.Name, out DosFileOperationResult status)) {
+                return status;
+            }
             AddOrUpdateActiveSearch(characterDevice.Name, fileSpec, null, 0, searchAttributes);
             return DosFileOperationResult.NoValue();
         }
@@ -177,7 +170,7 @@ public class DosFileManager {
             return DosFileOperationResult.Error(ErrorCode.NoMoreFiles);
         }
         
-        if (!GetHostSearchFolder(fileSpec, out string hostSearchSpec, out string searchFolder)) {
+        if (!GetSearchFolder(ref fileSpec, out string? searchFolder)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
 
@@ -186,14 +179,16 @@ public class DosFileManager {
         try {
             string[] matchingPaths = Directory.GetFileSystemEntries(
                 searchFolder,
-                hostSearchSpec,
+                fileSpec,
                 enumerationOptions);
             
             if (matchingPaths.Length == 0) {
                 return DosFileOperationResult.Error(ErrorCode.PathNotFound);
             }
 
-            UpdateDosTransferAreaWithFileMatch(matchingPaths[0]);
+            if (!TryUpdateDosTransferAreaWithFileMatch(matchingPaths[0], out DosFileOperationResult status)) {
+                return status;
+            }
             AddOrUpdateActiveSearch(matchingPaths[0], fileSpec, searchFolder, 0, searchAttributes);
             return FindNextMatchingFile();
 
@@ -205,10 +200,18 @@ public class DosFileManager {
         }
         return DosFileOperationResult.Error(ErrorCode.PathNotFound);
     }
+    
+    private bool GetSearchFolder(ref string fileSpec, [NotNullWhen(true)] out string? searchFolder) {
+        int index = fileSpec.LastIndexOfAny(_directoryChars);
+        if (index != -1) {
+            string folderName = fileSpec[0..index];
+            int indexIncludingDirChar = index + 1;
+            fileSpec = fileSpec[indexIncludingDirChar..];
+            searchFolder = _dosPathResolver.GetFullHostPathFromDosOrDefault(folderName);
+        } else {
+            searchFolder = _dosPathResolver.GetFullHostPathFromDosOrDefault(".");
+        }
 
-    private bool GetHostSearchFolder(string fileSpec, out string hostSearchSpec, out string searchFolder) {
-        hostSearchSpec = _dosPathResolver.PrefixWithHostDirectory(fileSpec);
-        searchFolder = Directory.GetParent(hostSearchSpec)?.FullName ?? "";
         return !string.IsNullOrWhiteSpace(searchFolder);
     }
 
@@ -223,7 +226,6 @@ public class DosFileManager {
         } else {
             _activeFileSearches.Add(key, (searchFolder, hostFileName, fileSpec, index, searchAttributes));
         }
-        _activeFileSearch = key;
     }
 
     private static bool IsOnlyADosDriveRoot(string filePath) => filePath.Length == 3 && (filePath[2] == DosPathResolver.DirectorySeparatorChar || filePath[2] == DosPathResolver.AltDirectorySeparatorChar);
@@ -233,12 +235,11 @@ public class DosFileManager {
             IgnoreInaccessible = true,
             RecurseSubdirectories = false,
             MatchCasing = MatchCasing.CaseInsensitive,
-            MatchType = MatchType.Simple
+            MatchType = MatchType.Win32
         };
         
         if (attributes == 0) {
-            enumerationOptions.AttributesToSkip =
-                FileAttributes.System | FileAttributes.Directory | FileAttributes.Hidden;
+            enumerationOptions.AttributesToSkip = FileAttributes.System | FileAttributes.Hidden;
             return enumerationOptions;
         }
         
@@ -266,7 +267,8 @@ public class DosFileManager {
     /// </summary>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindNextMatchingFile() {
-        if (!_activeFileSearches.TryGetValue(_activeFileSearch, out (string? SearchFolder, string HostFileName, string FileSpec, int FileIndexInFolder, ushort SearchAttributes) entry) || string.IsNullOrWhiteSpace(entry.SearchFolder)) {
+        uint activeFileSearch = GetDiskTransferAreaPhysicalAddress();
+        if (!_activeFileSearches.TryGetValue(activeFileSearch, out (string? SearchFolder, string HostFileName, string FileSpec, int FileIndexInFolder, ushort SearchAttributes) entry) || string.IsNullOrWhiteSpace(entry.SearchFolder)) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _loggerService.Warning("No search was done");
             }
@@ -290,18 +292,28 @@ public class DosFileManager {
 
         bool matching = matchingFilesIterator.MoveNext();
         if (matching) {
-            try {
-                UpdateDosTransferAreaWithFileMatch(((string)matchingFilesIterator.Current)!);
-            } catch (IOException e) {
-                e.Demystify();
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                    _loggerService.Warning(e, "Error while getting attributes");
-                }
-                return FileNotFoundError(null);
+            if (!TryUpdateDosTransferAreaWithFileMatch(((string)matchingFilesIterator.Current)!, out DosFileOperationResult fileNotFoundError)) {
+                return fileNotFoundError;
             }
         }
 
         return DosFileOperationResult.NoValue();
+    }
+
+    private bool TryUpdateDosTransferAreaWithFileMatch(string filename, out DosFileOperationResult status){
+        try {
+            UpdateDosTransferAreaWithFileMatch(filename);
+        }
+        catch (IOException e) {
+            e.Demystify();
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)){
+                _loggerService.Warning(e, "Error while getting attributes");
+            }
+            status = FileNotFoundError(null);
+            return false;
+        }
+        status = DosFileOperationResult.NoValue();
+        return true;
     }
 
     /// <summary>
@@ -636,24 +648,26 @@ public class DosFileManager {
 
     private void SetOpenFile(ushort fileHandle, OpenFile? openFile) => OpenFiles[fileHandle] = openFile;
     
-    private void UpdateDosTransferAreaWithFileMatch(string matchingFile) {
+    private void UpdateDosTransferAreaWithFileMatch(string matchingFileSystemEntry) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Found matching file {MatchingFile}", matchingFile);
+            _loggerService.Verbose("Found matching file {MachingFileSystemEntry}", matchingFileSystemEntry);
         }
 
         uint diskTransferAreaPhysicalAddress = GetDiskTransferAreaPhysicalAddress();
         DosDiskTransferArea dosDiskTransferArea = new(_memory, diskTransferAreaPhysicalAddress);
-        FileMatch fileMatch = new(_memory, diskTransferAreaPhysicalAddress);
-        dosDiskTransferArea.CurrentStructure = fileMatch;
-        FileInfo fileInfo = new(matchingFile);
+        FileInfo fileInfo = new(matchingFileSystemEntry);
         DateTime creationZonedDateTime = fileInfo.CreationTimeUtc;
         DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
         DateTime creationLocalTime = creationZonedDateTime.ToLocalTime();
-        fileMatch.FileAttributes = (byte)fileInfo.Attributes;
-        fileMatch.FileDate = ToDosDate(creationLocalDate);
-        fileMatch.FileTime = ToDosTime(creationLocalTime);
-        fileMatch.FileSize = (ushort)fileInfo.Length;
-        fileMatch.FileName = Path.GetFileName(matchingFile);
+        dosDiskTransferArea.FileAttributes = (byte)fileInfo.Attributes;
+        dosDiskTransferArea.FileDate = ToDosDate(creationLocalDate);
+        dosDiskTransferArea.FileTime = ToDosTime(creationLocalTime);
+        if (File.Exists(matchingFileSystemEntry)) {
+            dosDiskTransferArea.FileSize = (ushort)fileInfo.Length;
+        } else {
+            dosDiskTransferArea.FileSize = 0;
+        }
+        dosDiskTransferArea.FileName = Path.GetFileName(matchingFileSystemEntry);
     }
 
     /// <summary>
