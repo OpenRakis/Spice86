@@ -292,17 +292,11 @@ public class DosFileManager {
         var matchingFiles = Directory.GetFileSystemEntries(entry.SearchFolder, entry.FileSpec,
             GetEnumerationOptions(entry.SearchAttributes));
 
-        IEnumerator matchingFilesIterator = matchingFiles.GetEnumerator();
+        IEnumerator matchingFilesIterator = matchingFiles[..entry.FolderCursor].GetEnumerator();
 
         // Move the iterator to the first entry.
         if (!matchingFilesIterator.MoveNext()) {
             return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
-        }
-
-        for (int i = 0; i < entry.FolderCursor; i++) {
-            if (!matchingFilesIterator.MoveNext()) {
-                return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
-            }
         }
 
         bool matching = MoveNext(matchingFilesIterator, ref entry.FolderCursor);
