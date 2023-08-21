@@ -267,6 +267,13 @@ public class DosFileManager {
     /// </summary>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindNextMatchingFile() {
+        if (DefaultDrive >= 26 || DefaultDrive > _dosPathResolver.NumberOfPotentiallyValidDriveLetters) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _loggerService.Warning("Search on an invalid  drive");
+            }
+            return FileOperationErrorWithLog("Search on an invalid drive", ErrorCode.NoMoreMatchingFiles);
+        }
+        
         uint activeFileSearch = GetDiskTransferAreaPhysicalAddress();
         if (!_activeFileSearches.TryGetValue(activeFileSearch, out (string? SearchFolder, string HostFileName, string FileSpec, int FileIndexInFolder, ushort SearchAttributes) entry) || string.IsNullOrWhiteSpace(entry.SearchFolder)) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
