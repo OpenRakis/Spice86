@@ -277,7 +277,14 @@ internal class DosPathResolver {
         }
     }
 
-    public byte NumberOfPotentiallyValidDriveLetters => (byte)_driveMap.Count;
+    public byte NumberOfPotentiallyValidDriveLetters {
+        get {
+            // At least A: and B:
+            byte driveLetters = 2;
+            driveLetters += (byte)_driveMap.TakeWhile(x => x.Key != 'A' && x.Key != 'B').Count();
+            return driveLetters;
+        }
+    }
 
     private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>
         dosPath.Length >= 2 &&

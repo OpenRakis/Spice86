@@ -51,10 +51,16 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     private const int ReservedOffset = 0x0;
     
     /// <summary>
-    /// Data used by the DOS kernel for private book keeping.
+    /// Data used by the DOS kernel for private book keeping. 1st byte out of 21 reserved bytes.
     /// <remarks>No one should touch this, apart from DOS.</remarks>
     /// </summary>
-    public ushort Reserved { get => UInt16[ReservedOffset]; set => UInt16[ReservedOffset] = value; }
+    public byte Reserved { get => UInt8[ReservedOffset]; set => UInt8[ReservedOffset] = value; }
+    
+    /// <summary>
+    /// Data used by the DOS kernel for private book keeping. 2nd byte out of 21 reserved bytes.
+    /// <remarks>No one should touch this, apart from DOS.</remarks>
+    /// </summary>
+    public byte Reserved2 { get => UInt8[ReservedOffset + 1]; set => UInt8[ReservedOffset + 1] = value; }
 
     /// <summary>
     /// Gets or sets the file attributes field of the FileMatch structure.

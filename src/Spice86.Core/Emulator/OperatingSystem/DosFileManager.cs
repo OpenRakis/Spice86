@@ -14,6 +14,7 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
@@ -33,7 +34,7 @@ public class DosFileManager {
 
     private readonly DosPathResolver _dosPathResolver;
 
-    private readonly Dictionary<uint, (string? SearchFolder, string HostFileName, string FileSpec, int FileIndexInFolder, ushort SearchAttributes)> _activeFileSearches = new();
+    private readonly Dictionary<byte, (string? SearchFolder, string HostFileSystemEntry, string FileSpec, int FolderCursor, ushort SearchAttributes)> _activeFileSearches = new();
 
     /// <summary>
     /// All the files opened by DOS.
@@ -75,7 +76,7 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Closed {ClosedFileName}, file was loaded in ram in those addresses: {ClosedFileAddresses}", file.Name, file.LoadedMemoryRanges);
         }
 
@@ -101,7 +102,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
-        string? prefixedPath = _dosPathResolver.PrefixWithHostDirectory(fileName);
+        string prefixedPath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
         try {
@@ -157,12 +158,16 @@ public class DosFileManager {
         if (string.IsNullOrWhiteSpace(fileSpec)) {
             return PathNotFoundError(fileSpec);
         }
+
+        DosDiskTransferArea dta = GetDosDiskTransferArea();
+        dta.Reserved = GenerateNewKey();
+        dta.Reserved2 = DefaultDrive;
         
         if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is { } characterDevice) {
-            if(!TryUpdateDosTransferAreaWithFileMatch(characterDevice.Name, out DosFileOperationResult status)) {
+            if(!TryUpdateDosTransferAreaWithFileMatch(dta, characterDevice.Name, out DosFileOperationResult status)) {
                 return status;
             }
-            AddOrUpdateActiveSearch(characterDevice.Name, fileSpec, null, 0, searchAttributes);
+            AddActiveSearch(dta.Reserved, characterDevice.Name, fileSpec, null, 0, searchAttributes);
             return DosFileOperationResult.NoValue();
         }
         
@@ -186,21 +191,28 @@ public class DosFileManager {
                 return DosFileOperationResult.Error(ErrorCode.PathNotFound);
             }
 
-            if (!TryUpdateDosTransferAreaWithFileMatch(matchingPaths[0], out DosFileOperationResult status)) {
+            if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchingPaths[0], out DosFileOperationResult status)) {
                 return status;
             }
-            AddOrUpdateActiveSearch(matchingPaths[0], fileSpec, searchFolder, 0, searchAttributes);
+            AddActiveSearch(dta.Reserved, matchingPaths[0], fileSpec, searchFolder, 0, searchAttributes);
             return FindNextMatchingFile();
 
         } catch (IOException e) {
             e.Demystify();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "Error while walking path {CurrentMatchingFileSearchFolder} or getting attributes", searchFolder);
             }
         }
         return DosFileOperationResult.Error(ErrorCode.PathNotFound);
     }
-    
+
+    private byte GenerateNewKey() {
+        if (_activeFileSearches.Count == 0) {
+            return 0;
+        }
+        return (byte)(_activeFileSearches.Keys.Max(x => x) + 1);
+    }
+
     private bool GetSearchFolder(ref string fileSpec, [NotNullWhen(true)] out string? searchFolder) {
         int index = fileSpec.LastIndexOfAny(_directoryChars);
         if (index != -1) {
@@ -215,16 +227,14 @@ public class DosFileManager {
         return !string.IsNullOrWhiteSpace(searchFolder);
     }
 
-    private void AddOrUpdateActiveSearch(string hostFileName, string fileSpec, string? searchFolder, int index, ushort searchAttributes) {
-        uint key = GetDiskTransferAreaPhysicalAddress();
-        if (_activeFileSearches.TryGetValue(key, out (string? SearchFolder, string HostFileName, string FileSpec, int FileIndexInFolder, ushort SearchAttributes) value)) {
-            value.SearchFolder = searchFolder;
-            value.HostFileName = hostFileName;
-            value.FileSpec = fileSpec;
-            value.FileIndexInFolder = index;
+    private void AddActiveSearch(byte key, string matchingFileSystemEntryName, string fileSpec, string? searchFolder, int folderCursor, ushort searchAttributes) {
+        _activeFileSearches.TryAdd(key, (searchFolder, matchingFileSystemEntryName, fileSpec, folderCursor, searchAttributes));
+    }
+
+    private void UpdateActiveSearch(byte key, string matchingFileSystemEntryName) {
+        if (_activeFileSearches.TryGetValue(key, out (string? SearchFolder, string HostFileSystemEntry, string FileSpec, int FolderCursor, ushort SearchAttributes) value)) {
+            value.HostFileSystemEntry = matchingFileSystemEntryName;
             _activeFileSearches[key] = value;
-        } else {
-            _activeFileSearches.Add(key, (searchFolder, hostFileName, fileSpec, index, searchAttributes));
         }
     }
 
@@ -267,16 +277,18 @@ public class DosFileManager {
     /// </summary>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult FindNextMatchingFile() {
-        if (DefaultDrive >= 26 || DefaultDrive > _dosPathResolver.NumberOfPotentiallyValidDriveLetters) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        DosDiskTransferArea dta = GetDosDiskTransferArea();
+        ushort searchDrive = dta.Reserved2;
+        if (searchDrive >= 26 || searchDrive > _dosPathResolver.NumberOfPotentiallyValidDriveLetters) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Search on an invalid  drive");
             }
             return FileOperationErrorWithLog("Search on an invalid drive", ErrorCode.NoMoreMatchingFiles);
         }
-        
-        uint activeFileSearch = GetDiskTransferAreaPhysicalAddress();
-        if (!_activeFileSearches.TryGetValue(activeFileSearch, out (string? SearchFolder, string HostFileName, string FileSpec, int FileIndexInFolder, ushort SearchAttributes) entry) || string.IsNullOrWhiteSpace(entry.SearchFolder)) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+
+        byte key = dta.Reserved;
+        if (!_activeFileSearches.TryGetValue(key, out (string? SearchFolder, string HostFileSystemEntry, string FileSpec, int FolderCursor, ushort SearchAttributes) entry) || string.IsNullOrWhiteSpace(entry.SearchFolder)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("No search was done");
             }
             return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
@@ -285,35 +297,38 @@ public class DosFileManager {
         var matchingFiles = Directory.GetFileSystemEntries(entry.SearchFolder, entry.FileSpec,
             GetEnumerationOptions(entry.SearchAttributes));
 
-        var matchingFilesIterator = matchingFiles.GetEnumerator();
+        IEnumerator matchingFilesIterator = matchingFiles.GetEnumerator();
 
-        for (int i = 0; i < entry.FileIndexInFolder; i++) {
+        for (int i = 0; i < entry.FolderCursor; i++) {
             if (!matchingFilesIterator.MoveNext()) {
                 return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
             }
         }
 
-        if (!matchingFilesIterator.MoveNext()) {
+        bool matching = matchingFilesIterator.MoveNext();
+        if (!matching) {
             return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
 
-        bool matching = matchingFilesIterator.MoveNext();
-        if (matching) {
-            if (!TryUpdateDosTransferAreaWithFileMatch(((string)matchingFilesIterator.Current)!, out DosFileOperationResult fileNotFoundError)) {
-                return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
-            }
+        string? matchFileSystemEntryName = (string?)matchingFilesIterator.Current;
+        if (string.IsNullOrWhiteSpace(matchFileSystemEntryName)){
+            return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
 
+        if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchFileSystemEntryName, out _)) {
+            return FileOperationErrorWithLog("Error when getting file attributes of FindNext match.", ErrorCode.NoMoreMatchingFiles);
+        }
+        UpdateActiveSearch(key, matchFileSystemEntryName);
         return DosFileOperationResult.NoValue();
     }
 
-    private bool TryUpdateDosTransferAreaWithFileMatch(string filename, out DosFileOperationResult status){
+    private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string filename, out DosFileOperationResult status){
         try {
-            UpdateDosTransferAreaWithFileMatch(filename);
+            UpdateDosTransferAreaWithFileMatch(dta, filename);
         }
         catch (IOException e) {
             e.Demystify();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)){
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)){
                 _loggerService.Warning(e, "Error while getting attributes");
             }
             status = FileNotFoundError(null);
@@ -350,7 +365,7 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Moving in file {FileMove}", file.Name);
         }
         Stream randomAccessFile = file.RandomAccessFile;
@@ -359,7 +374,7 @@ public class DosFileManager {
             return DosFileOperationResult.Value32(newOffset);
         } catch (IOException e) {
             e.Demystify();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred while seeking file {Error}", e);
             }
             return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
@@ -377,7 +392,7 @@ public class DosFileManager {
 
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
         if (device is not null) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
             }
             return OpenDeviceInternal(device, openMode);
@@ -388,7 +403,7 @@ public class DosFileManager {
             return FileNotFoundError(fileName);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}", hostFileName, openMode);
         }
 
@@ -433,7 +448,7 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Reading from file {FileName}", file.Name);
         }
 
@@ -485,7 +500,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> object representing the result of the operation.</returns>
     public DosFileOperationResult WriteFileUsingHandle(ushort fileHandle, ushort writeLength, uint bufferAddress) {
         if (!IsValidFileHandle(fileHandle)) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing", fileHandle);
             }
 
@@ -525,11 +540,11 @@ public class DosFileManager {
     }
     
     private DosFileOperationResult RemoveCurrentDirError(string? path) {
-        return FileOperationErrorWithLog($"Attempted to remove current dir!", ErrorCode.AttemptedToRemoveCurrentDirectory);
+        return FileOperationErrorWithLog($"Attempted to remove current dir {path}", ErrorCode.AttemptedToRemoveCurrentDirectory);
     }
 
     private DosFileOperationResult FileOperationErrorWithLog(string message, ErrorCode errorCode) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("{FileNotFoundErrorWithLog}: {Message}", nameof(FileOperationErrorWithLog), message);
         }
 
@@ -537,7 +552,7 @@ public class DosFileManager {
     }
 
     private DosFileOperationResult FileNotOpenedError(int fileHandle) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("File not opened: {FileHandle}", fileHandle);
         }
         return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
@@ -565,7 +580,7 @@ public class DosFileManager {
     private static bool IsValidFileHandle(ushort fileHandle) => fileHandle <= MaxOpenFiles;
 
     private DosFileOperationResult NoFreeHandleError() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("Could not find a free handle {MethodName}", nameof(NoFreeHandleError));
         }
         return DosFileOperationResult.Error(ErrorCode.TooManyOpenFiles);
@@ -655,13 +670,11 @@ public class DosFileManager {
 
     private void SetOpenFile(ushort fileHandle, OpenFile? openFile) => OpenFiles[fileHandle] = openFile;
     
-    private void UpdateDosTransferAreaWithFileMatch(string matchingFileSystemEntry) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+    private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dosDiskTransferArea, string matchingFileSystemEntry) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Found matching file {MachingFileSystemEntry}", matchingFileSystemEntry);
         }
 
-        uint diskTransferAreaPhysicalAddress = GetDiskTransferAreaPhysicalAddress();
-        DosDiskTransferArea dosDiskTransferArea = new(_memory, diskTransferAreaPhysicalAddress);
         FileInfo fileInfo = new(matchingFileSystemEntry);
         DateTime creationZonedDateTime = fileInfo.CreationTimeUtc;
         DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
@@ -675,6 +688,12 @@ public class DosFileManager {
             dosDiskTransferArea.FileSize = 0;
         }
         dosDiskTransferArea.FileName = Path.GetFileName(matchingFileSystemEntry);
+    }
+
+    private DosDiskTransferArea GetDosDiskTransferArea() {
+        uint diskTransferAreaPhysicalAddress = GetDiskTransferAreaPhysicalAddress();
+        DosDiskTransferArea dosDiskTransferArea = new(_memory, diskTransferAreaPhysicalAddress);
+        return dosDiskTransferArea;
     }
 
     /// <summary>
@@ -701,7 +720,7 @@ public class DosFileManager {
             }
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning(e, "Error while creating directory {CaseInsensitivePath}: {Exception}",
                     prefixedDosDirectory, e);
             }
@@ -735,7 +754,7 @@ public class DosFileManager {
 
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning(e, "Error while creating directory {CaseInsensitivePath}: {Exception}",
                     fullHostPath, e);
             }
