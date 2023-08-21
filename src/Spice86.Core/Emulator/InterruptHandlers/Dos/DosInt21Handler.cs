@@ -265,9 +265,16 @@ public class DosInt21Handler : InterruptHandler {
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.FindFirstMatchingFile(fileSpec, attributes);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
-        if (!dosFileOperationResult.IsError) {
-            // Undocumented behavior expected by Qbix and Willy Beamish
-            // from DOSBox Staging source code
+        SetAxToZeroOnSuccess(dosFileOperationResult);
+    }
+
+    /// <summary>
+    /// Undocumented behavior expected by Qbix and Willy Beamish, when FindFirst or FindNext is called.
+    /// Comes from DOSBox Staging source code
+    /// </summary>
+    /// <param name="dosFileOperationResult">The DOS File operation result to check for error status</param>
+    private void SetAxToZeroOnSuccess(DosFileOperationResult dosFileOperationResult) {
+        if (!dosFileOperationResult.IsError){
             _state.AX = 0;
         }
     }
@@ -280,11 +287,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.FindNextMatchingFile();
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
-        if (!dosFileOperationResult.IsError) {
-            // Undocumented behavior expected by Qbix and Willy Beamish
-            // from DOSBox Staging source code
-            _state.AX = 0;
-        }
+        SetAxToZeroOnSuccess(dosFileOperationResult);
     }
 
     public void FreeMemoryBlock(bool calledFromVm) {
