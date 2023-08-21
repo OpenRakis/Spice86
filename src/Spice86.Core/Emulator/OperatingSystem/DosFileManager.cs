@@ -300,7 +300,7 @@ public class DosFileManager {
         }
 
         for (int i = 0; i < entry.FolderCursor; i++) {
-            if (!MoveNext(matchingFilesIterator, ref entry.FolderCursor)) {
+            if (!matchingFilesIterator.MoveNext()) {
                 return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
             }
         }
