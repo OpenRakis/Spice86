@@ -299,6 +299,10 @@ public class DosFileManager {
 
         IEnumerator matchingFilesIterator = matchingFiles.GetEnumerator();
 
+        if (!matchingFilesIterator.MoveNext()) {
+            return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
+        }
+
         for (int i = 0; i < entry.FolderCursor; i++) {
             if (!matchingFilesIterator.MoveNext()) {
                 return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
