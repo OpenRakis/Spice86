@@ -289,10 +289,18 @@ public class DosFileManager {
             return FileOperationErrorWithLog($"Call FindFirst first to perform a search.", ErrorCode.NoMoreMatchingFiles);
         }
 
-        var matchingFiles = Directory.GetFileSystemEntries(entry.SearchFolder, entry.FileSpec,
-            GetEnumerationOptions(entry.SearchAttributes));
+        if (!Directory.Exists(entry.SearchFolder)) {
+            return FileOperationErrorWithLog($"No folder in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
+        }
 
-        IEnumerator matchingFilesIterator = matchingFiles[..entry.FolderCursor].GetEnumerator();
+        string[] matchingFiles = Directory.GetFileSystemEntries(entry.SearchFolder, entry.FileSpec, GetEnumerationOptions(entry.SearchAttributes));
+
+        if (matchingFiles.Length == 0 || entry.FolderCursor >= matchingFiles.Length ||
+            (!File.Exists(entry.HostFileSystemEntry) && !Directory.Exists(entry.HostFileSystemEntry))) {
+            return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
+        }
+        
+        IEnumerator matchingFilesIterator = matchingFiles[entry.FolderCursor..].GetEnumerator();
 
         // Move the iterator to the first entry.
         if (!matchingFilesIterator.MoveNext()) {
@@ -310,18 +318,19 @@ public class DosFileManager {
         }
 
         if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchFileSystemEntryName, out _)) {
-            return FileOperationErrorWithLog("Error when getting file attributes of FindNext match.", ErrorCode.NoMoreMatchingFiles);
+            return FileOperationErrorWithLog("Error when getting file system entry attributes of FindNext match.", ErrorCode.NoMoreMatchingFiles);
         }
         UpdateActiveSearch(key, matchFileSystemEntryName, entry.FolderCursor);
+
         return DosFileOperationResult.NoValue();
     }
 
     private static bool MoveNext(IEnumerator matchingFilesIterator, ref int folderCursor) {
-        bool value = matchingFilesIterator.MoveNext();
-        if (value) {
+        bool advanced = matchingFilesIterator.MoveNext();
+        if (advanced) {
             folderCursor++;
         }
-        return value;
+        return advanced;
     }
 
     private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string filename, out DosFileOperationResult status){
@@ -674,20 +683,21 @@ public class DosFileManager {
     
     private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dosDiskTransferArea, string matchingFileSystemEntry) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Found matching file {MachingFileSystemEntry}", matchingFileSystemEntry);
+            _loggerService.Verbose("Found matching file {MatchingFileSystemEntry}", matchingFileSystemEntry);
         }
 
-        FileInfo fileInfo = new(matchingFileSystemEntry);
-        DateTime creationZonedDateTime = fileInfo.CreationTimeUtc;
+        FileSystemInfo entryInfo = Directory.Exists(matchingFileSystemEntry) ? new DirectoryInfo(matchingFileSystemEntry) : new FileInfo(matchingFileSystemEntry);
+        DateTime creationZonedDateTime = entryInfo.CreationTimeUtc;
         DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
         DateTime creationLocalTime = creationZonedDateTime.ToLocalTime();
-        dosDiskTransferArea.FileAttributes = (byte)fileInfo.Attributes;
+        dosDiskTransferArea.FileAttributes = (byte)entryInfo.Attributes;
         dosDiskTransferArea.FileDate = ToDosDate(creationLocalDate);
         dosDiskTransferArea.FileTime = ToDosTime(creationLocalTime);
-        if (File.Exists(matchingFileSystemEntry)) {
+        if (entryInfo is FileInfo fileInfo) {
             dosDiskTransferArea.FileSize = (ushort)fileInfo.Length;
         } else {
-            dosDiskTransferArea.FileSize = 0;
+            // The FAT node entry size for a directory
+            dosDiskTransferArea.FileSize = 4096;
         }
         dosDiskTransferArea.FileName = Path.GetFileName(matchingFileSystemEntry);
     }
