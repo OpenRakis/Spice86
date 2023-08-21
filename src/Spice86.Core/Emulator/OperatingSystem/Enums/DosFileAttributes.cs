@@ -24,7 +24,7 @@ public enum DosFileAttributes {
     /// </summary>
     System = 0x4,
     /// <summary>
-    /// Is it a DOS volume letter
+    /// FAT Volume Identifier.
     /// </summary>
     VolumeId = 0x8,
     /// <summary>
