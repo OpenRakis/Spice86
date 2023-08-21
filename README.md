@@ -8,7 +8,7 @@
 ![Licence](https://img.shields.io/badge/License-Apache_2.0-44cc11.svg)
 [![downloads](https://img.shields.io/nuget/dt/Spice86)](https://www.nuget.org/packages/Spice86)
 
-Spice86 is a tool to execute, reverse engineer and rewrite real mode dos programs for which source code is not available.
+Spice86 is a tool to execute, reverse engineer and rewrite real mode DOS programs for which source code is not available.
 
 Release are available [on Nuget](https://www.nuget.org/packages/Spice86/).
 
