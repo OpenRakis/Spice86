@@ -39,7 +39,7 @@ This is a .NET program, you run it with the regular command line or dotnet run. 
 ```
 Spice86 -e file.exe
 ```
-com files and bios files are also supported.
+COM files and BIOS files are also supported.
 
 ## Dumping data
 It is recommended to set SPICE86_DUMPS_FOLDER environment variable pointing to where the emulator should dump the runtime data.
