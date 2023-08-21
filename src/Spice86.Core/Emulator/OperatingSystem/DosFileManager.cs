@@ -231,9 +231,10 @@ public class DosFileManager {
         _activeFileSearches.TryAdd(key, (searchFolder, matchingFileSystemEntryName, fileSpec, folderCursor, searchAttributes));
     }
 
-    private void UpdateActiveSearch(byte key, string matchingFileSystemEntryName) {
+    private void UpdateActiveSearch(byte key, string matchingFileSystemEntryName, int folderCursor) {
         if (_activeFileSearches.TryGetValue(key, out (string? SearchFolder, string HostFileSystemEntry, string FileSpec, int FolderCursor, ushort SearchAttributes) value)) {
             value.HostFileSystemEntry = matchingFileSystemEntryName;
+            value.FolderCursor = folderCursor;
             _activeFileSearches[key] = value;
         }
     }
@@ -280,18 +281,12 @@ public class DosFileManager {
         DosDiskTransferArea dta = GetDosDiskTransferArea();
         ushort searchDrive = dta.Reserved2;
         if (searchDrive >= 26 || searchDrive > _dosPathResolver.NumberOfPotentiallyValidDriveLetters) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("Search on an invalid  drive");
-            }
             return FileOperationErrorWithLog("Search on an invalid drive", ErrorCode.NoMoreMatchingFiles);
         }
 
         byte key = dta.Reserved;
         if (!_activeFileSearches.TryGetValue(key, out (string? SearchFolder, string HostFileSystemEntry, string FileSpec, int FolderCursor, ushort SearchAttributes) entry) || string.IsNullOrWhiteSpace(entry.SearchFolder)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("No search was done");
-            }
-            return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
+            return FileOperationErrorWithLog($"Call FindFirst first to perform a search.", ErrorCode.NoMoreMatchingFiles);
         }
 
         var matchingFiles = Directory.GetFileSystemEntries(entry.SearchFolder, entry.FileSpec,
@@ -299,31 +294,40 @@ public class DosFileManager {
 
         IEnumerator matchingFilesIterator = matchingFiles.GetEnumerator();
 
+        // Move the iterator to the first entry.
         if (!matchingFilesIterator.MoveNext()) {
             return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
 
         for (int i = 0; i < entry.FolderCursor; i++) {
-            if (!matchingFilesIterator.MoveNext()) {
+            if (!MoveNext(matchingFilesIterator, ref entry.FolderCursor)) {
                 return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
             }
         }
 
-        bool matching = matchingFilesIterator.MoveNext();
+        bool matching = MoveNext(matchingFilesIterator, ref entry.FolderCursor);
         if (!matching) {
             return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
 
         string? matchFileSystemEntryName = (string?)matchingFilesIterator.Current;
         if (string.IsNullOrWhiteSpace(matchFileSystemEntryName)){
-            return FileOperationErrorWithLog($"No more files matching for {entry.FileSpec} in path {entry.SearchFolder}", ErrorCode.NoMoreMatchingFiles);
+            return FileOperationErrorWithLog($"Error when getting the name of the next file system entry in FindNext!", ErrorCode.NoMoreMatchingFiles);
         }
 
         if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchFileSystemEntryName, out _)) {
             return FileOperationErrorWithLog("Error when getting file attributes of FindNext match.", ErrorCode.NoMoreMatchingFiles);
         }
-        UpdateActiveSearch(key, matchFileSystemEntryName);
+        UpdateActiveSearch(key, matchFileSystemEntryName, entry.FolderCursor);
         return DosFileOperationResult.NoValue();
+    }
+
+    private static bool MoveNext(IEnumerator matchingFilesIterator, ref int folderCursor) {
+        bool value = matchingFilesIterator.MoveNext();
+        if (value) {
+            folderCursor++;
+        }
+        return value;
     }
 
     private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string filename, out DosFileOperationResult status){
