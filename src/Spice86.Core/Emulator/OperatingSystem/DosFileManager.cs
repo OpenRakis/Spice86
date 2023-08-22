@@ -196,7 +196,7 @@ public class DosFileManager {
             }
 
             AddActiveSearch(dta.SearchId, matchingPaths[0]);
-            return FindNextMatchingFile();
+            return DosFileOperationResult.NoValue();
 
         } catch (IOException e) {
             e.Demystify();
