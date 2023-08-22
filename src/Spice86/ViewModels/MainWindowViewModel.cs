@@ -35,10 +35,11 @@ using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
     private AvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     [ObservableProperty]
@@ -185,6 +186,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
     [ObservableProperty]
     private string _asmOverrideStatus = "ASM Overrides: not used.";
 
+    [NotifyCanExecuteChangedFor(nameof(ShowDebugWindowCommand))]
     [ObservableProperty]
     private bool _isPaused;
 
@@ -202,7 +204,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
-    [NotifyCanExecuteChangedFor(nameof(ShowDebugWindowCommand))]
     [NotifyCanExecuteChangedFor(nameof(ShowColorPaletteCommand))]
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
     [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
@@ -357,12 +358,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IGui, IDisposab
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
+    [RelayCommand(CanExecute = nameof(IsPaused))]
     public void ShowDebugWindow() {
         if (_debugWindow != null) {
             _debugWindow.Activate();
         } else if(_programExecutor is not null) {
-            _debugWindow = new DebugWindow(_programExecutor.VideoState, _programExecutor.VgaRenderer);
+            _debugWindow = new DebugWindow(this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
             _debugWindow.Closed += (_, _) => _debugWindow = null;
             _debugWindow.Show();
         }

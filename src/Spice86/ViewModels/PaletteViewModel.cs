@@ -41,16 +41,21 @@ public partial class PaletteViewModel : ViewModelBase {
     /// <param name="sender">Source of the event.</param>
     /// <param name="e">Unused EventArgs instance.</param>
     private void UpdateColors(object? sender, EventArgs e) {
-        if(_argbPalette is null) {
-            return;
-        }
-        for(int i = 0; i < Palette.Count; i++) {
-            Rectangle rectangle = Palette[i];
-            uint source = _argbPalette[i];
-            Rgb rgb = Rgb.FromUint(source);
-            if (rectangle.Fill is SolidColorBrush fill) {
-                fill.Color = Color.FromRgb(rgb.R, rgb.G, rgb.B);
+        try {
+            if(_argbPalette is null) {
+                return;
             }
+            for(int i = 0; i < Palette.Count; i++) {
+                Rectangle rectangle = Palette[i];
+                uint source = _argbPalette[i];
+                Rgb rgb = Rgb.FromUint(source);
+                if (rectangle.Fill is SolidColorBrush fill) {
+                    fill.Color = Color.FromRgb(rgb.R, rgb.G, rgb.B);
+                }
+            }
+        } catch {
+            //A read during emulation provoked an OutOfRangeException (for example, in the DAC).
+            // Ignore it.
         }
     }
 }

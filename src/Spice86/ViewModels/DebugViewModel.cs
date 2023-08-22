@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 
 public partial class DebugViewModel : ViewModelBase {
@@ -21,6 +22,7 @@ public partial class DebugViewModel : ViewModelBase {
 
     IVideoState? _videoState;
     IVgaRenderer? _renderer;
+    private IPauseStatus? _pauseStatus;
 
     private readonly DispatcherTimer _timer;
     
@@ -33,18 +35,26 @@ public partial class DebugViewModel : ViewModelBase {
 
     [RelayCommand]
     public void UpdateData() => UpdateValues(this, EventArgs.Empty);
+
+    [ObservableProperty]
+    private bool _isPaused;
     
-    public DebugViewModel(IVideoState videoState, IVgaRenderer vgaRenderer) {
+    public DebugViewModel(IPauseStatus pauseStatus, IVideoState videoState, IVgaRenderer vgaRenderer) {
         _videoState = videoState;
         _renderer = vgaRenderer;
+        _pauseStatus = pauseStatus;
+        IsPaused = _pauseStatus.IsPaused;
         _timer = new(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, UpdateValues);
         _timer.Start();
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        if(_renderer is null || _videoState is null) {
+        if(_pauseStatus?.IsPaused is false or null || _renderer is null || _videoState is null) {
+            IsPaused = false;
             return;
         }
+
+        IsPaused = true;
 
         VideoCard.GeneralMiscellaneousOutputRegister = _videoState.GeneralRegisters.MiscellaneousOutput.Value;
         VideoCard.GeneralClockSelect = _videoState.GeneralRegisters.MiscellaneousOutput.ClockSelect;
