@@ -20,7 +20,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     private const int DriveOffset = 0x0;
 
     /// <summary>
-    /// The offset in bytes where the reserved data is located within the FileMatch structure.
+    /// The offset in bytes where the SearchId is located.
     /// </summary>
     private const int SearchIdOffset = 0x13;
 
@@ -30,7 +30,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     private const int AttributeOffset = 0x15;
 
     /// <summary>
-    /// The offset in bytes where the file time field is located within the FileMatch structure.
+    /// The offset in bytes where the file time field is located.
     /// </summary>
     private const int FileTimeOffset = 0x16;
 
@@ -40,7 +40,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     private const int FileDateOffset = 0x18;
 
     /// <summary>
-    /// The offset in bytes where the file size field is located within the FileMatch structure.
+    /// The offset in bytes where the file size field is located.
     /// </summary>
     private const int FileSizeOffset = 0x1A;
 
@@ -50,12 +50,12 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     private const int FileNameOffset = 0x1E;
     
     /// <summary>
-    /// The size in bytes of the file name field within the FileMatch structure.
+    /// The size in bytes of the zero-terminated ASCII file name string field.
     /// </summary>
     private const int FileNameSize = 13;
 
     /// <summary>
-    /// Data used by the DOS kernel for private book keeping.
+    /// Gets or sets the drive on which the search is performed.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
     public byte Drive { get => UInt8[DriveOffset]; set => UInt8[DriveOffset] = value; }
@@ -73,7 +73,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     public byte SearchId { get => UInt8[SearchIdOffset]; set => UInt8[SearchIdOffset] = value; }
     
     /// <summary>
-    /// Gets or sets where we are in the enumeration of the search directory.
+    /// Gets or sets where we are in the enumeration of the search results.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
     public ushort EntryCountWithinSearchResults { get => UInt16[0xD]; set => UInt16[0xD] = value; }

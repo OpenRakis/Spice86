@@ -22,7 +22,7 @@ using System.Text;
 using Spice86.Core.Emulator.Memory.Indexable;
 
 /// <summary>
-/// Impements the DOS interrupt dispatcher
+/// Implements the DOS interrupt dispatcher
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
     private readonly Encoding _cp850CharSet;
