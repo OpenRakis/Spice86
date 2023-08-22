@@ -313,22 +313,8 @@ public class DosFileManager {
             return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
         
-        IEnumerator matchingFilesIterator = matchingFiles[dta.EntryCountWithinSearchResults..].GetEnumerator();
-
-        // Move the iterator to the first entry.
-        if (!matchingFilesIterator.MoveNext()) {
-            return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
-        }
-
-        bool matching = MoveNext(matchingFilesIterator, dta);
-        if (!matching) {
-            return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
-        }
-
-        string? matchFileSystemEntryName = (string?)matchingFilesIterator.Current;
-        if (string.IsNullOrWhiteSpace(matchFileSystemEntryName)){
-            return FileOperationErrorWithLog($"Error when getting the name of the next file system entry in FindNext!", ErrorCode.NoMoreMatchingFiles);
-        }
+        string matchFileSystemEntryName = matchingFiles[dta.EntryCountWithinSearchResults..][0];
+        dta.EntryCountWithinSearchResults++;
 
         if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchFileSystemEntryName, out _)) {
             return FileOperationErrorWithLog("Error when getting file system entry attributes of FindNext match.", ErrorCode.NoMoreMatchingFiles);
@@ -336,14 +322,6 @@ public class DosFileManager {
         UpdateActiveSearch(key, matchFileSystemEntryName, search.FileSpec);
 
         return DosFileOperationResult.NoValue();
-    }
-
-    private static bool MoveNext(IEnumerator matchingFilesIterator, DosDiskTransferArea dta) {
-        bool advanced = matchingFilesIterator.MoveNext();
-        if (advanced) {
-            dta.EntryCountWithinSearchResults++;
-        }
-        return advanced;
     }
 
     private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string filename, out DosFileOperationResult status, ushort? searchAttributes = null){
