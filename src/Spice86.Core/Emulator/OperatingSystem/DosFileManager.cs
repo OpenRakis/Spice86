@@ -34,7 +34,7 @@ public class DosFileManager {
 
     private readonly DosPathResolver _dosPathResolver;
 
-    private readonly Dictionary<byte, string> _activeFileSearches = new();
+    private readonly Dictionary<byte, (string FileSystemEntry, string FileSpec)> _activeFileSearches = new();
 
     /// <summary>
     /// All the files opened by DOS.
@@ -165,10 +165,10 @@ public class DosFileManager {
         dta.EntryCountWithinSearchResults = 0;
         
         if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is { } characterDevice) {
-            if(!TryUpdateDosTransferAreaWithFileMatch(dta, characterDevice.Name, out DosFileOperationResult status, searchAttributes, fileSpec)) {
+            if(!TryUpdateDosTransferAreaWithFileMatch(dta, characterDevice.Name, out DosFileOperationResult status, searchAttributes)) {
                 return status;
             }
-            AddActiveSearch(dta.SearchId, characterDevice.Name);
+            AddActiveSearch(dta.SearchId, characterDevice.Name, fileSpec);
             return DosFileOperationResult.NoValue();
         }
         
@@ -192,11 +192,11 @@ public class DosFileManager {
                 return DosFileOperationResult.Error(ErrorCode.PathNotFound);
             }
 
-            if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchingPaths[0], out DosFileOperationResult status, searchAttributes, fileSpec)) {
+            if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchingPaths[0], out DosFileOperationResult status, searchAttributes)) {
                 return status;
             }
 
-            AddActiveSearch(dta.SearchId, matchingPaths[0]);
+            AddActiveSearch(dta.SearchId, matchingPaths[0], fileSpec);
             return DosFileOperationResult.NoValue();
 
         } catch (IOException e) {
@@ -240,13 +240,16 @@ public class DosFileManager {
         return null;
     }
 
-    private void AddActiveSearch(byte key, string matchingFileSystemEntryName) {
-        _activeFileSearches.TryAdd(key, matchingFileSystemEntryName);
+    private void AddActiveSearch(byte key, string matchingFileSystemEntryName, string fileSpec) {
+        _activeFileSearches.TryAdd(key, (matchingFileSystemEntryName, fileSpec));
     }
 
-    private void UpdateActiveSearch(byte key, string matchingFileSystemEntryName) {
+    private void UpdateActiveSearch(byte key, string matchingFileSystemEntryName, string fileSpec) {
         if (_activeFileSearches.ContainsKey(key)) {
-            _activeFileSearches[key] = matchingFileSystemEntryName;
+            (string FileSystemEntry, string FileSpec) search = _activeFileSearches[key];
+            search.FileSystemEntry = matchingFileSystemEntryName;
+            search.FileSpec = fileSpec;
+            _activeFileSearches[key] = search;
         }
     }
 
@@ -294,33 +297,33 @@ public class DosFileManager {
         if (searchDrive >= 26 || searchDrive > _dosPathResolver.NumberOfPotentiallyValidDriveLetters) {
             return FileOperationErrorWithLog("Search on an invalid drive", ErrorCode.NoMoreMatchingFiles);
         }
-
-        if (!GetSearchFolder(dta.FileSpec, out string? searchFolder)) {
-            return FileOperationErrorWithLog("Search in an invalid folder", ErrorCode.NoMoreMatchingFiles);
-        }
-
+        
         byte key = dta.SearchId;
-        if (!_activeFileSearches.TryGetValue(key, out string? entry) || string.IsNullOrWhiteSpace(searchFolder)) {
+        if (!_activeFileSearches.TryGetValue(key, out (string FileSystemEntry, string FileSpec) search)) {
             return FileOperationErrorWithLog($"Call FindFirst first to initiate a search.", ErrorCode.NoMoreMatchingFiles);
         }
         
-        string[] matchingFiles = Directory.GetFileSystemEntries(searchFolder, GetFileSpecWithoutSubFolderInIt(dta.FileSpec) ?? dta.FileSpec, GetEnumerationOptions(dta.SearchAttributes));
+        if (!GetSearchFolder(search.FileSpec, out string? searchFolder)) {
+            return FileOperationErrorWithLog("Search in an invalid folder", ErrorCode.NoMoreMatchingFiles);
+        }
+
+        string[] matchingFiles = Directory.GetFileSystemEntries(searchFolder, GetFileSpecWithoutSubFolderInIt(search.FileSpec) ?? search.FileSpec, GetEnumerationOptions(dta.SearchAttributes));
 
         if (matchingFiles.Length == 0 || dta.EntryCountWithinSearchResults >= matchingFiles.Length ||
-            (!File.Exists(entry) && !Directory.Exists(entry))) {
-            return FileOperationErrorWithLog($"No more files matching for {dta.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
+            (!File.Exists(search.FileSystemEntry) && !Directory.Exists(search.FileSystemEntry))) {
+            return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
         
         IEnumerator matchingFilesIterator = matchingFiles[dta.EntryCountWithinSearchResults..].GetEnumerator();
 
         // Move the iterator to the first entry.
         if (!matchingFilesIterator.MoveNext()) {
-            return FileOperationErrorWithLog($"No more files matching for {dta.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
+            return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
 
         bool matching = MoveNext(matchingFilesIterator, dta);
         if (!matching) {
-            return FileOperationErrorWithLog($"No more files matching for {dta.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
+            return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
 
         string? matchFileSystemEntryName = (string?)matchingFilesIterator.Current;
@@ -331,7 +334,7 @@ public class DosFileManager {
         if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchFileSystemEntryName, out _)) {
             return FileOperationErrorWithLog("Error when getting file system entry attributes of FindNext match.", ErrorCode.NoMoreMatchingFiles);
         }
-        UpdateActiveSearch(key, matchFileSystemEntryName);
+        UpdateActiveSearch(key, matchFileSystemEntryName, search.FileSpec);
 
         return DosFileOperationResult.NoValue();
     }
@@ -344,9 +347,9 @@ public class DosFileManager {
         return advanced;
     }
 
-    private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string filename, out DosFileOperationResult status, ushort? searchAttributes = null, string? fileSpec = null){
+    private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string filename, out DosFileOperationResult status, ushort? searchAttributes = null){
         try {
-            UpdateDosTransferAreaWithFileMatch(dta, filename, searchAttributes, fileSpec);
+            UpdateDosTransferAreaWithFileMatch(dta, filename, searchAttributes);
         }
         catch (IOException e) {
             e.Demystify();
@@ -692,7 +695,7 @@ public class DosFileManager {
 
     private void SetOpenFile(ushort fileHandle, OpenFile? openFile) => OpenFiles[fileHandle] = openFile;
     
-    private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string matchingFileSystemEntry, ushort? searchAttributes = null, string? fileSpec = null) {
+    private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string matchingFileSystemEntry, ushort? searchAttributes = null) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Found matching file {MatchingFileSystemEntry}", matchingFileSystemEntry);
         }
@@ -703,7 +706,6 @@ public class DosFileManager {
         DateTime creationLocalTime = creationZonedDateTime.ToLocalTime();
         dta.Drive = DefaultDrive;
         dta.SearchAttributes = searchAttributes ?? dta.SearchAttributes;
-        dta.FileSpec = string.IsNullOrWhiteSpace(fileSpec) ? dta.FileSpec : Path.GetFileNameWithoutExtension(fileSpec);
         dta.FileAttributes = (byte)entryInfo.Attributes;
         dta.FileDate = ToDosDate(creationLocalDate);
         dta.FileTime = ToDosTime(creationLocalTime);

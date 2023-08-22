@@ -61,15 +61,6 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     public byte Drive { get => UInt8[DriveOffset]; set => UInt8[DriveOffset] = value; }
     
     /// <summary>
-    /// Gets or sets the file spec field. This is the search pattern for the filename or directory.
-    /// <remarks>No one should touch this, except DOS.</remarks>
-    /// </summary>
-    public string FileSpec {
-        get => GetZeroTerminatedString(0x1, FileNameSize);
-        set => SetZeroTerminatedString(0x1, value, FileNameSize);
-    }
-    
-    /// <summary>
     /// The file attributes used by the file search.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
