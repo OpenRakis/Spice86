@@ -215,10 +215,19 @@ public class DosFileManager {
     }
 
     private bool GetSearchFolder(string fileSpec, [NotNullWhen(true)] out string? searchFolder) {
-        string subFolderName = GetFileSpecWithoutSubFolderInIt(fileSpec) ?? ".";
+        string subFolderName = GetSubFoldersInFileSpec(fileSpec) ?? ".";
         searchFolder = _dosPathResolver.GetFullHostPathFromDosOrDefault(subFolderName);
         return !string.IsNullOrWhiteSpace(searchFolder);
     }
+    
+    private static string? GetSubFoldersInFileSpec(string fileSpec) {
+        int index = fileSpec.LastIndexOfAny(_directoryChars);
+        if (index != -1) {
+            return fileSpec[..index];
+        }
+        return null;
+    }
+
 
     private static string? GetFileSpecWithoutSubFolderInIt(string fileSpec) {
         int index = fileSpec.LastIndexOfAny(_directoryChars);
