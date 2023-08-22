@@ -761,11 +761,40 @@ public class DosFileManager {
 
         return PathNotFoundError(dosDirectory);
     }
+    
+    /// <summary>
+    /// Removes a file on disk.
+    /// </summary>
+    /// <param name="dosFile">The file name to delete</param>
+    /// <returns></returns>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult RemoveFile(string dosFile) {
+        string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile);
+        if (string.IsNullOrWhiteSpace(fullHostPath)) {
+            return PathNotFoundError(dosFile);
+        }
+
+        try {
+            File.Delete(fullHostPath);
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Deleted dir: {DeletedDirPath}", fullHostPath);
+            }
+
+            return DosFileOperationResult.NoValue();
+        } catch (IOException e) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(e, "Error while deleting file {CaseInsensitivePath}: {Exception}",
+                    fullHostPath, e);
+            }
+        }
+
+        return PathNotFoundError(dosFile);
+    }
 
     /// <summary>
     /// Removes a directory on disk.
     /// </summary>
-    /// <param name="dosDirectory">The directory name to create</param>
+    /// <param name="dosDirectory">The directory name to delete</param>
     /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
@@ -788,7 +817,7 @@ public class DosFileManager {
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning(e, "Error while creating directory {CaseInsensitivePath}: {Exception}",
+                _loggerService.Warning(e, "Error while deleting directory {CaseInsensitivePath}: {Exception}",
                     fullHostPath, e);
             }
         }

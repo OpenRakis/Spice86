@@ -87,6 +87,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3E, () => CloseFile(true));
         AddAction(0x3F, () => ReadFile(true));
         AddAction(0x40, () => WriteFileUsingHandle(true));
+        AddAction(0x41, () => RemoveFile(true));
         AddAction(0x43, () => GetSetFileAttributes(true));
         AddAction(0x44, () => IoControl(true));
         AddAction(0x42, () => MoveFilePointerUsingHandle(true));
@@ -108,6 +109,15 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     private void CreateDirectory(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetStringAtDsDx());
+        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+    }
+
+    /// <summary>
+    /// Removes a file.
+    /// </summary>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
+    private void RemoveFile(bool calledFromVm) {
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveFile(GetStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
