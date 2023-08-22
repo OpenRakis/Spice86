@@ -106,11 +106,13 @@
 				<Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
 					<Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
 					<WrapPanel Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
-						<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*">
-							<Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">Method Name</Label>
-							<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Exception.TargetSite.Name}" />
-							<Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">Exception Type</Label>
-							<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Exception, Converter={StaticResource ClassToTypeStringConverter}}" />
+						<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+							<Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">Message</Label>
+							<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Exception.Message}" />
+							<Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">Target Site</Label>
+							<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Exception.TargetSite.Name}" />
+							<Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">Exception Type</Label>
+							<TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Exception, Converter={StaticResource ClassToTypeStringConverter}}" />
 						</Grid>
 						<Expander Header="Stack Trace" IsExpanded="False">
 							<StackPanel Orientation="Vertical">
