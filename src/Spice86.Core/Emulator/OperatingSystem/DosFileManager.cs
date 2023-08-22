@@ -718,7 +718,7 @@ public class DosFileManager {
     private string GetShortFileName(string longFileName) {
         string filePart = Path.GetFileNameWithoutExtension(longFileName);
         string extPart = Path.GetExtension(longFileName);
-        return $"{(filePart.Length > 8 ? filePart[0..7] : filePart)}.{(extPart.Length > 3 ? extPart[0..2] : extPart)}";
+        return $"{(filePart.Length > 8 ? filePart[0..7] : filePart)}{(extPart.Length > 4 ? extPart[0..3] : extPart)}";
     }
 
     private DosDiskTransferArea GetDosDiskTransferArea() {
