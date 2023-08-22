@@ -245,8 +245,7 @@ public class DosFileManager {
     }
 
     private void UpdateActiveSearch(byte key, string matchingFileSystemEntryName, string fileSpec) {
-        if (_activeFileSearches.ContainsKey(key)) {
-            (string FileSystemEntry, string FileSpec) search = _activeFileSearches[key];
+        if (_activeFileSearches.TryGetValue(key, out (string FileSystemEntry, string FileSpec) search)) {
             search.FileSystemEntry = matchingFileSystemEntryName;
             search.FileSpec = fileSpec;
             _activeFileSearches[key] = search;
