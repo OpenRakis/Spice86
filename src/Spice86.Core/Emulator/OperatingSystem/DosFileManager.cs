@@ -702,7 +702,13 @@ public class DosFileManager {
             // The FAT node entry size for a directory
             dta.FileSize = 4096;
         }
-        dta.FileName = Path.GetFileName(matchingFileSystemEntry);
+        dta.FileName = GetShortFileName(Path.GetFileName(matchingFileSystemEntry));
+    }
+
+    private string GetShortFileName(string longFileName) {
+        string filePart = Path.GetFileNameWithoutExtension(longFileName);
+        string extPart = Path.GetExtension(longFileName);
+        return $"{(filePart.Length > 8 ? filePart[0..7] : filePart)}.{(extPart.Length > 3 ? extPart[0..2] : extPart)}";
     }
 
     private DosDiskTransferArea GetDosDiskTransferArea() {
