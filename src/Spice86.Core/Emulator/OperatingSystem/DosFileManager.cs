@@ -18,7 +18,7 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-/// The class that implements DOS file operations, such as finding files, allocating file handles, and updating the Dos Transfer Area.
+/// The class that implements DOS file operations, such as finding files, allocating file handles, and updating the Disk Transfer Area.
 /// </summary>
 public class DosFileManager {
     private static readonly char[] _directoryChars = { DosPathResolver.DirectorySeparatorChar, DosPathResolver.AltDirectorySeparatorChar };
