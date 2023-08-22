@@ -85,7 +85,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// Gets or sets where we are in the enumeration of the search directory.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
-    public ushort EntryCountWithinDirectory { get => UInt16[0xD]; set => UInt16[0xD] = value; }
+    public ushort EntryCountWithinSearchResults { get => UInt16[0xD]; set => UInt16[0xD] = value; }
     
     /// <summary>
     /// Gets or sets the file attributes field.

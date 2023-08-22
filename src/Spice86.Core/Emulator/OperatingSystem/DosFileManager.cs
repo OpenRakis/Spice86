@@ -162,6 +162,7 @@ public class DosFileManager {
         DosDiskTransferArea dta = GetDosDiskTransferArea();
         dta.SearchId = GenerateNewKey();
         dta.Drive = DefaultDrive;
+        dta.EntryCountWithinSearchResults = 0;
         
         if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is { } characterDevice) {
             if(!TryUpdateDosTransferAreaWithFileMatch(dta, characterDevice.Name, out DosFileOperationResult status, searchAttributes, fileSpec)) {
@@ -300,17 +301,17 @@ public class DosFileManager {
 
         byte key = dta.SearchId;
         if (!_activeFileSearches.TryGetValue(key, out string? entry) || string.IsNullOrWhiteSpace(searchFolder)) {
-            return FileOperationErrorWithLog($"Call FindFirst first to perform a search.", ErrorCode.NoMoreMatchingFiles);
+            return FileOperationErrorWithLog($"Call FindFirst first to initiate a search.", ErrorCode.NoMoreMatchingFiles);
         }
         
         string[] matchingFiles = Directory.GetFileSystemEntries(searchFolder, GetFileSpecWithoutSubFolderInIt(dta.FileSpec) ?? dta.FileSpec, GetEnumerationOptions(dta.SearchAttributes));
 
-        if (matchingFiles.Length == 0 || dta.EntryCountWithinDirectory >= matchingFiles.Length ||
+        if (matchingFiles.Length == 0 || dta.EntryCountWithinSearchResults >= matchingFiles.Length ||
             (!File.Exists(entry) && !Directory.Exists(entry))) {
             return FileOperationErrorWithLog($"No more files matching for {dta.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
         
-        IEnumerator matchingFilesIterator = matchingFiles[dta.EntryCountWithinDirectory..].GetEnumerator();
+        IEnumerator matchingFilesIterator = matchingFiles[dta.EntryCountWithinSearchResults..].GetEnumerator();
 
         // Move the iterator to the first entry.
         if (!matchingFilesIterator.MoveNext()) {
@@ -338,7 +339,7 @@ public class DosFileManager {
     private static bool MoveNext(IEnumerator matchingFilesIterator, DosDiskTransferArea dta) {
         bool advanced = matchingFilesIterator.MoveNext();
         if (advanced) {
-            dta.EntryCountWithinDirectory++;
+            dta.EntryCountWithinSearchResults++;
         }
         return advanced;
     }
