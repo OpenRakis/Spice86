@@ -211,7 +211,8 @@ public class DosFileManager {
         if (_activeFileSearches.Count == 0) {
             return 0;
         }
-        return (byte)(_activeFileSearches.Keys.Max(x => x) + 1);
+
+        return (byte)_activeFileSearches.Keys.Count;
     }
 
     private bool GetSearchFolder(string fileSpec, [NotNullWhen(true)] out string? searchFolder) {
