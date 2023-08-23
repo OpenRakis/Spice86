@@ -781,11 +781,6 @@ public class DosFileManager {
             return PathNotFoundError(dosDirectory);
         }
 
-        if (GetCurrentDir(0, out string currentDir) is { IsError: false } &&
-            dosDirectory.Contains(currentDir, StringComparison.OrdinalIgnoreCase)) {
-            return RemoveCurrentDirError(dosDirectory);
-        }
-
         try {
             Directory.Delete(fullHostPath);
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
