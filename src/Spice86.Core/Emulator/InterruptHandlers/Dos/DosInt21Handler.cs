@@ -22,7 +22,7 @@ using System.Text;
 using Spice86.Core.Emulator.Memory.Indexable;
 
 /// <summary>
-/// Reimplementation of INT21
+/// Implements the DOS interrupt dispatcher
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
     private readonly Encoding _cp850CharSet;
@@ -87,6 +87,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3E, () => CloseFile(true));
         AddAction(0x3F, () => ReadFile(true));
         AddAction(0x40, () => WriteFileUsingHandle(true));
+        AddAction(0x41, () => RemoveFile(true));
         AddAction(0x43, () => GetSetFileAttributes(true));
         AddAction(0x44, () => IoControl(true));
         AddAction(0x42, () => MoveFilePointerUsingHandle(true));
@@ -108,6 +109,15 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     private void CreateDirectory(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetStringAtDsDx());
+        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+    }
+
+    /// <summary>
+    /// Removes a file.
+    /// </summary>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
+    private void RemoveFile(bool calledFromVm) {
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveFile(GetStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -263,8 +273,20 @@ public class DosInt21Handler : InterruptHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("FIND FIRST MATCHING FILE {Attributes}, {FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.FindFirstMatchingFile(fileSpec);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.FindFirstMatchingFile(fileSpec, attributes);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+        SetAxToZeroOnSuccess(dosFileOperationResult);
+    }
+
+    /// <summary>
+    /// Undocumented behavior expected by Qbix and Willy Beamish, when FindFirst or FindNext is called.
+    /// Comes from DOSBox Staging source code
+    /// </summary>
+    /// <param name="dosFileOperationResult">The DOS File operation result to check for error status</param>
+    private void SetAxToZeroOnSuccess(DosFileOperationResult dosFileOperationResult) {
+        if (!dosFileOperationResult.IsError){
+            _state.AX = 0;
+        }
     }
 
     public void FindNextMatchingFile(bool calledFromVm) {
@@ -275,6 +297,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.FindNextMatchingFile();
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+        SetAxToZeroOnSuccess(dosFileOperationResult);
     }
 
     public void FreeMemoryBlock(bool calledFromVm) {
@@ -309,6 +332,9 @@ public class DosInt21Handler : InterruptHandler {
         _state.DL = (byte)now.Day;
     }
 
+    /// <summary>
+    /// Gets the address of the DTA.
+    /// </summary>
     public void GetDiskTransferAddress() {
         _state.ES = _dosFileManager.DiskTransferAreaAddressSegment;
         _state.BX = _dosFileManager.DiskTransferAreaAddressOffset;
@@ -318,6 +344,9 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Returns the major, minor, and OEM version of MS-DOS.
+    /// </summary>
     public void GetDosVersion() {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("GET DOS VERSION");
@@ -332,6 +361,12 @@ public class DosInt21Handler : InterruptHandler {
         _state.CX = 0x00;
     }
 
+    /// <summary>
+    /// Returns the amount of free disk space, in clusters, sectors per byte, and number of available clusters.
+    /// <remarks>
+    /// Always returns 127 sectors per cluster, 512 bytes per sector, 4031 clusters available (~250MB), and 16383 total clusters (~1000MB)
+    /// </remarks>
+    /// </summary>
     public void GetFreeDiskSpace() {
         byte driveNumber = _state.DL;
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -372,6 +407,9 @@ public class DosInt21Handler : InterruptHandler {
         _state.BX = offset;
     }
 
+    /// <summary>
+    /// Gets the address of the current Program Segment Prefix.
+    /// </summary>
     public void GetPspAddress() {
         ushort pspSegment = _dosMemoryManager.PspSegment;
         _state.BX = pspSegment;
@@ -396,6 +434,9 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Returns the current MS-DOS time.
+    /// </summary>
     public void GetTime() {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("GET TIME");
@@ -481,6 +522,7 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
+    /// <inheritdoc />
     public override void Run() {
         byte operation = _state.AH;
         Run(operation);
@@ -494,6 +536,9 @@ public class DosInt21Handler : InterruptHandler {
         _state.AL = _dosFileManager.NumberOfPotentiallyValidDriveLetters;
     }
 
+    /// <summary>
+    /// Sets the address of the DTA.
+    /// </summary>
     public void SetDiskTransferAddress() {
         ushort segment = _state.DS;
         ushort offset = _state.DX;
