@@ -168,7 +168,7 @@ public class DosFileManager {
             if(!TryUpdateDosTransferAreaWithFileMatch(dta, characterDevice.Name, out DosFileOperationResult status, searchAttributes)) {
                 return status;
             }
-            AddActiveSearch(dta.SearchId, characterDevice.Name, fileSpec);
+            _activeFileSearches.Add(dta.SearchId, (characterDevice.Name, fileSpec));
             return DosFileOperationResult.NoValue();
         }
         
@@ -196,13 +196,13 @@ public class DosFileManager {
                 return status;
             }
 
-            AddActiveSearch(dta.SearchId, matchingPaths[0], fileSpec);
+            _activeFileSearches.Add(dta.SearchId, (matchingPaths[0], fileSpec));
             return DosFileOperationResult.NoValue();
 
         } catch (IOException e) {
             e.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(e, "Error while walking path {CurrentMatchingFileSearchFolder} or getting attributes", searchFolder);
+                _loggerService.Error(e, "Error while walking path {SearchFolder} or getting attributes", searchFolder);
             }
         }
         return DosFileOperationResult.Error(ErrorCode.PathNotFound);
@@ -238,10 +238,6 @@ public class DosFileManager {
             return fileSpec[indexIncludingDirChar..];
         }
         return null;
-    }
-
-    private void AddActiveSearch(byte key, string matchingFileSystemEntryName, string fileSpec) {
-        _activeFileSearches.TryAdd(key, (matchingFileSystemEntryName, fileSpec));
     }
 
     private void UpdateActiveSearch(byte key, string matchingFileSystemEntryName, string fileSpec) {

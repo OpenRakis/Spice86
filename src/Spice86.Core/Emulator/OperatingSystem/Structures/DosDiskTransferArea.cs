@@ -58,25 +58,25 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// Gets or sets the drive on which the search is performed.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
-    public byte Drive { get => UInt8[DriveOffset]; set => UInt8[DriveOffset] = value; }
+    internal byte Drive { get => UInt8[DriveOffset]; set => UInt8[DriveOffset] = value; }
     
     /// <summary>
     /// The file attributes used by the file search.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
-    public ushort SearchAttributes { get => UInt16[0x14]; set => UInt16[0x14] = value; }
+    internal ushort SearchAttributes { get => UInt16[0x14]; set => UInt16[0x14] = value; }
 
     /// <summary>
     /// The SearchId, for multiple searches at the same time.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
-    public byte SearchId { get => UInt8[SearchIdOffset]; set => UInt8[SearchIdOffset] = value; }
+    internal byte SearchId { get => UInt8[SearchIdOffset]; set => UInt8[SearchIdOffset] = value; }
     
     /// <summary>
     /// Gets or sets where we are in the enumeration of the search results.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
-    public ushort EntryCountWithinSearchResults { get => UInt16[0xD]; set => UInt16[0xD] = value; }
+    internal ushort EntryCountWithinSearchResults { get => UInt16[0xD]; set => UInt16[0xD] = value; }
     
     /// <summary>
     /// Gets or sets the file attributes field.
