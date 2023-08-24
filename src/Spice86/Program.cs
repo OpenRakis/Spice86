@@ -61,7 +61,7 @@ public class Program {
 
     private static void StartMainWindow(Configuration configuration, ILoggerService loggerService, string[] args) {
         AppBuilder appBuilder = BuildAvaloniaApp();
-        ClassicDesktopStyleApplicationLifetime desktop = SetuptWithClassicDesktopLifetime(appBuilder, args);
+        ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
         App? app = (App?)appBuilder.Instance;
         app?.SetupMainWindow(desktop, configuration, loggerService);
         desktop.Start(args);
@@ -73,9 +73,10 @@ public class Program {
     /// <returns>The built <see cref="AppBuilder"/> instance.</returns>
     private static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .LogToTrace();
+            .LogToTrace()
+            .WithInterFont();
 
-    private static ClassicDesktopStyleApplicationLifetime SetuptWithClassicDesktopLifetime(
+    private static ClassicDesktopStyleApplicationLifetime SetupWithClassicDesktopLifetime(
         AppBuilder builder, string[] args) {
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
             Args = args,
