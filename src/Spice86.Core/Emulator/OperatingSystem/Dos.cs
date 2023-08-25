@@ -30,7 +30,7 @@ public class Dos {
     private readonly Cpu _cpu;
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly IKeyboardStreamedInput _keyboardStreamedInput;
+    private readonly KeyboardStreamedInput _keyboardStreamedInput;
     private readonly ILoggerService _loggerService;
     
     /// <summary>

@@ -1,18 +1,17 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 /// <summary>
-///     Represents a stream for reading the keyboard input.
+/// Represents a stream for reading the keyboard input.
 /// </summary>
 public class KeyboardStream : Stream {
-    private readonly IKeyboardStreamedInput _keyboardStreamedInput;
+    private readonly KeyboardStreamedInput _keyboardStreamedInput;
     
     /// <summary>
     /// Creates a new instance of the <see cref="KeyboardStream" /> class.
     /// </summary>
-    public KeyboardStream(IKeyboardStreamedInput keyboardStreamedInput) {
+    public KeyboardStream(KeyboardStreamedInput keyboardStreamedInput) {
         _keyboardStreamedInput = keyboardStreamedInput;
     }
 
