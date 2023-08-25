@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
@@ -29,6 +30,7 @@ public class Dos {
     private readonly Cpu _cpu;
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
+    private readonly IKeyboardStreamedInput _keyboardStreamedInput;
     private readonly ILoggerService _loggerService;
     
     /// <summary>
@@ -107,6 +109,7 @@ public class Dos {
         _cpu = cpu;
         _state = cpu.State;
         _vgaFunctionality = vgaFunctionality;
+        _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
         AddDefaultDevices();
         FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath, _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
@@ -147,7 +150,7 @@ public class Dos {
     }
 
     private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
+        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, _keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _loggerService));

@@ -20,6 +20,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
 /// Implements the DOS interrupt dispatcher
@@ -61,14 +62,22 @@ public class DosInt21Handler : InterruptHandler {
     }
     
     private void FillDispatchTable() {
+        AddAction(0x00, QuitWithExitCode);
         AddAction(0x02, DisplayOutput);
+        AddAction(0x03, ReadCharacterFromStdAux);
+        AddAction(0x04, WriteCharacterToStdAux);
+        AddAction(0x05, PrinterOutput);
         AddAction(0x06, () => DirectConsoleIo(true));
+        AddAction(0x07, DirectStandardInputWithoutEcho);
+        AddAction(0x08, DirectStandardInputWithoutEcho);
         AddAction(0x09, PrintString);
+        AddAction(0x0B, CheckStandardInputStatus);
         AddAction(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction);
         AddAction(0x0D, DiskReset);
         AddAction(0x0E, SelectDefaultDrive);
         AddAction(0x1A, SetDiskTransferAddress);
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
+        AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x19, GetCurrentDefaultDrive);
         AddAction(0x25, SetInterruptVector);
         AddAction(0x2A, GetDate);
@@ -103,11 +112,88 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x62, GetPspAddress);
     }
 
+    public void ReadCharacterFromStdAux() {
+        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
+        if (aux is not CharacterDevice stdAux) {
+            return;
+        }
+
+        using Stream stream = stdAux.OpenStream("r");
+        if (stream.CanRead) {
+            _state.AL = (byte)stream.ReadByte();
+        } else {
+            _state.AL = 0x0;
+        }
+    }
+
+    public void WriteCharacterToStdAux() {
+        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
+        if (aux is not CharacterDevice stdAux) {
+            return;
+        }
+
+        using Stream stream = stdAux.OpenStream("w");
+        if (stream.CanWrite) {
+            stream.WriteByte(_state.AL);
+        }
+    }
+    
+    public void PrinterOutput() {
+        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
+        if (aux is not CharacterDevice stdAux) {
+            return;
+        }
+
+        using Stream stream = stdAux.OpenStream("w");
+        if (stream.CanWrite) {
+            stream.WriteByte(_state.AL);
+        }
+    }
+
+    /// <summary>
+    /// Returns 0xFF in AL if input character is available in the standard input, 0 otherwise.
+    /// </summary>
+    public void CheckStandardInputStatus() {
+        CharacterDevice device = _dos.CurrentConsoleDevice;
+        if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
+            _state.AL = 0x0;
+            return;
+        }
+
+        using Stream stream = device.OpenStream("r");
+        if (stream.CanRead) {
+            _state.AL = 0xFF;
+        } else {
+            _state.AL = 0x0;
+        }
+    }
+
+    /// <summary>
+    /// Copies a character from the standard input to _state.AL, without echo on the standard output.
+    /// </summary>
+    public void DirectStandardInputWithoutEcho() {
+        CharacterDevice device = _dos.CurrentConsoleDevice;
+        if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
+            _state.AL = 0x0;
+            return;
+        }
+
+        using Stream stream = device.OpenStream("r");
+        if (stream.CanRead) {
+            int input = stream.ReadByte();
+            if (input == -1) {
+                _state.AL = 0;
+            } else {
+                _state.AL = (byte)input;
+            }
+        }
+    }
+
     /// <summary>
     /// Creates a directory.
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
-    private void CreateDirectory(bool calledFromVm) {
+    public void CreateDirectory(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
@@ -116,7 +202,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Removes a file.
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
-    private void RemoveFile(bool calledFromVm) {
+    public void RemoveFile(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveFile(GetStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
@@ -125,9 +211,13 @@ public class DosInt21Handler : InterruptHandler {
     /// Removes a directory.
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
-    private void RemoveDirectory(bool calledFromVm) {
+    public void RemoveDirectory(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(GetStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+    }
+    
+    public void GetAllocationInfoForAnyDrive() {
+        GetAllocationInfoForDefaultDrive();
     }
 
     public void GetAllocationInfoForDefaultDrive() {
