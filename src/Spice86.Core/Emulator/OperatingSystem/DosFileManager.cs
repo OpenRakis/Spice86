@@ -107,13 +107,14 @@ public class DosFileManager {
         FileStream? testFileStream = null;
         try {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("Creating file using handle: {PrefixedPath} with (ignored) {Attributes}", prefixedPath, fileAttribute);
+                _loggerService.Warning("Creating file using handle: {PrefixedPath} with {Attributes}", prefixedPath, fileAttribute);
             }
             if (File.Exists(prefixedPath)) {
                 File.Delete(prefixedPath);
             }
 
             testFileStream = File.Create(prefixedPath);
+            File.SetAttributes(prefixedPath, (FileAttributes)fileAttribute);
         } catch (IOException e) {
             e.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
