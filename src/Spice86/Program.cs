@@ -62,7 +62,7 @@ public class Program {
     private static void StartMainWindow(Configuration configuration, ILoggerService loggerService, string[] args) {
         AppBuilder appBuilder = BuildAvaloniaApp();
         ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
-        App? app = (App?)appBuilder.Instance;
+        using App? app = (App?)appBuilder.Instance;
         app?.SetupMainWindow(desktop, configuration, loggerService);
         desktop.Start(args);
     }

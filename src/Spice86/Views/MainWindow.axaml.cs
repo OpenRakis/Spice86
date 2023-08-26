@@ -11,7 +11,7 @@ using Spice86.ViewModels;
 
 using System.ComponentModel;
 
-internal partial class MainWindow : Window {
+internal partial class MainWindow : Window, IDisposable {
     public MainWindow() {
         InitializeComponent();
     }
@@ -19,6 +19,7 @@ internal partial class MainWindow : Window {
     private readonly Configuration? _configuration;
     private readonly ILoggerService? _loggerService;
     private readonly IClassicDesktopStyleApplicationLifetime? _desktop;
+    private bool _disposed;
 
     public MainWindow(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
         InitializeComponent();
@@ -44,12 +45,6 @@ internal partial class MainWindow : Window {
         Startup.SetLoggingLevel(_loggerService, _configuration);
         DataContext = mainVm;
     }
-    
-    protected override void OnClosed(EventArgs e) {
-        (DataContext as MainWindowViewModel)?.Dispose();
-        base.OnClosed(e);
-    }
-
     private void FocusOnVideoBuffer() {
         Image.IsEnabled = false;
         Image.Focus();
@@ -69,5 +64,20 @@ internal partial class MainWindow : Window {
     protected override void OnClosing(WindowClosingEventArgs e) {
         (DataContext as MainWindowViewModel)?.OnMainWindowClosing();
         base.OnClosing(e);
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (!_disposed) {
+            if (disposing && DataContext is IDisposable closedDataContext) {
+                closedDataContext.Dispose();
+            }
+            _disposed = true;
+        }
+    }
+    
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

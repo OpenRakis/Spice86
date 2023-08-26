@@ -24,7 +24,6 @@ using Spice86.Keyboard;
 using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
