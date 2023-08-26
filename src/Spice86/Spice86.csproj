@@ -27,7 +27,6 @@
 		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-	    <PackageReadmeFile>readme.md</PackageReadmeFile>
 	</PropertyGroup>
 	<ItemGroup>
 		<Content Include="libportaudio.dll">
