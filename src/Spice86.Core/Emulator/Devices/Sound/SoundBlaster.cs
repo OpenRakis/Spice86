@@ -155,7 +155,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this, DMA, _dma16);
         _playbackThread = new Thread(AudioPlayback) {
             Name = "PCMAudio",
-            Priority = ThreadPriority.AboveNormal
         };
         _dmaController.SetupDmaDeviceChannel(this);
     }

@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
+		<OutputType>Exe</OutputType>
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
@@ -18,16 +18,24 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.1.2</version>
-		<PackageReleaseNotes>Fixed PortAudio on Windows not being present.</PackageReleaseNotes>
+		<version>6.1.3</version>
+		<PackageReleaseNotes>Fixed PortAudio and PCM slow start on Windows.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<Description>Reverse engineer and rewrite real mode dos programs</Description>
-		<PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
+		<Description>Reverse engineer and rewrite real mode DOS programs</Description>
+		<PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
 		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
+	    <PackageReadmeFile>readme.md</PackageReadmeFile>
 	</PropertyGroup>
+	<ItemGroup>
+		<Content Include="libportaudio.dll">
+			<PackagePath>lib\net7.0\libportaudio.dll</PackagePath>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<Pack>True</Pack>
+		</Content>
+	</ItemGroup>
 
 	<!-- Source Link configuration -->
 	<PropertyGroup>
@@ -73,16 +81,5 @@
 		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="libs\PortAudio\win-x64\libportaudio.dll">
-			<Link>libportaudio.dll</Link>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Condition="'$(Platform)' == 'x86'" Update="libs\PortAudio\win-x86\libportaudio.dll">
-			<Link>libportaudio.dll</Link>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
 	</ItemGroup>
 </Project>

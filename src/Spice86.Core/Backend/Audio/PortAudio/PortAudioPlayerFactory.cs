@@ -22,17 +22,15 @@ public class PortAudioPlayerFactory {
     public PortAudioPlayerFactory(ILoggerService loggerService) => _loggerService = loggerService;
 
     private PortAudioLib LoadPortAudioLibrary() {
-        PortAudioLib portAudioLib;
-        if (OperatingSystem.IsWindows()) {
+        if (OperatingSystem.IsWindows() && Environment.Is64BitOperatingSystem) {
             const string path = "libportaudio.dll";
-            portAudioLib = new PortAudioLib(path);
-        } else if(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) {
+            return new PortAudioLib(path);
+        } else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows()) {
             //rely on system-provided libportaudio.
-            portAudioLib = new PortAudioLib();
+            return new PortAudioLib();
         } else {
             throw new PlatformNotSupportedException();
         }
-        return portAudioLib;
     }
     
     /// <summary>
