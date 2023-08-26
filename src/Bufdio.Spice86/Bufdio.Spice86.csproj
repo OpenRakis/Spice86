@@ -12,7 +12,7 @@
   <!-- Properties geared towards NuGet -->
 	<PropertyGroup>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.1.1</version>
+		<version>6.1.2</version>
 		<Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
@@ -49,16 +49,5 @@
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="libs\PortAudio\win-x64\libportaudio.dll">
-			<Link>libportaudio.dll</Link>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Condition="'$(Platform)' == 'x86'" Update="libs\PortAudio\win-x86\libportaudio.dll">
-			<Link>libportaudio.dll</Link>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
 	</ItemGroup>
 </Project>

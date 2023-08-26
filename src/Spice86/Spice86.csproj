@@ -18,8 +18,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.1.1</version>
-		<PackageReleaseNotes>FindFirst, FindNext, Delete File fixed or added to int21h.</PackageReleaseNotes>
+		<version>6.1.2</version>
+		<PackageReleaseNotes>Fixed PortAudio on Windows not being present.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
@@ -73,5 +73,16 @@
 		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="libs\PortAudio\win-x64\libportaudio.dll">
+			<Link>libportaudio.dll</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Condition="'$(Platform)' == 'x86'" Update="libs\PortAudio\win-x86\libportaudio.dll">
+			<Link>libportaudio.dll</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 </Project>
