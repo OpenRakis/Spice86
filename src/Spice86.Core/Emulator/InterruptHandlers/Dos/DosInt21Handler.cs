@@ -139,12 +139,12 @@ public class DosInt21Handler : InterruptHandler {
     }
     
     public void PrinterOutput() {
-        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
-        if (aux is not CharacterDevice stdAux) {
+        IVirtualDevice? prn = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
+        if (prn is not CharacterDevice printer) {
             return;
         }
 
-        using Stream stream = stdAux.OpenStream("w");
+        using Stream stream = printer.OpenStream("w");
         if (stream.CanWrite) {
             stream.WriteByte(_state.AL);
         }
