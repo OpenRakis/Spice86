@@ -18,8 +18,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.1.3</version>
-		<PackageReleaseNotes>Fixed PortAudio and PCM slow start on Windows.</PackageReleaseNotes>
+		<version>6.1.4</version>
+		<PackageReleaseNotes>Fixed keyboard Tab handling in the UI, and possible crash in the Time Multiplier UI.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode DOS programs</Description>
