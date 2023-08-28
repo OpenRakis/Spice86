@@ -336,11 +336,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private double _timeMultiplier = 1;
 
-    public double TimeMultiplier {
+    public double? TimeMultiplier {
         get => _timeMultiplier;
         set {
-            SetProperty(ref _timeMultiplier, value);
-            _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
+            if (value is not null) {
+                SetProperty(ref _timeMultiplier, value.Value);
+                _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
+            }
         }
     }
 

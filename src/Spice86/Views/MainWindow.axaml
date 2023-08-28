@@ -1,8 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="using:Spice86.ViewModels"
-		xmlns:local="using:Spice86.Views"
-		xmlns:uc="using:Spice86.UserControls"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
@@ -18,6 +16,7 @@
 	<Window.Resources>
 		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
 		<converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
+		<converters:NullToDoubleConverter x:Key="NullToDoubleConverter" />
 	</Window.Resources>
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
@@ -73,7 +72,7 @@
 				<Button Grid.Column="0" Content="Pause︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
 				<Button Grid.Column="0" Content="Continue" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
 				<Label VerticalAlignment="Center" Grid.Column="1" Content="Time Modifier" />
-				<NumericUpDown Grid.Column="2" Margin="5,0,0,0" Text="{Binding TimeMultiplier}" Minimum="1" />
+				<NumericUpDown Grid.Column="2" Margin="5,0,0,0" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" Minimum="1" />
 				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 			</Grid>
 		</Grid>

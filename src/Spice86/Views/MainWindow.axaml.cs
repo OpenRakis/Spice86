@@ -53,12 +53,20 @@ internal partial class MainWindow : Window, IDisposable {
 
     protected override void OnKeyUp(KeyEventArgs e) {
         (DataContext as MainWindowViewModel)?.OnKeyUp(e);
-        FocusOnVideoBuffer();
+        if (this.Image.IsFocused) {
+            e.Handled = true;
+        } else {
+            FocusOnVideoBuffer();
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
         (DataContext as MainWindowViewModel)?.OnKeyDown(e);
-        FocusOnVideoBuffer();
+        if (this.Image.IsFocused) {
+            e.Handled = true;
+        } else {
+            FocusOnVideoBuffer();
+        }
     }
 
     protected override void OnClosing(WindowClosingEventArgs e) {
