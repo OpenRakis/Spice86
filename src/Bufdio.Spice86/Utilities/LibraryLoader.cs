@@ -4,7 +4,7 @@ using System;
 using System.Runtime.InteropServices;
 
 internal sealed class LibraryLoader : IDisposable {
-    private IntPtr _handle;
+    private readonly IntPtr _handle;
     private bool _disposed;
 
     public LibraryLoader(string libraryName) {

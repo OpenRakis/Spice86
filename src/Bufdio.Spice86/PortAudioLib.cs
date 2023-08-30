@@ -24,9 +24,9 @@ public sealed class PortAudioLib : IDisposable {
         public const int PaSampleFormat = 0x00000001;
     }
 
-    private LibraryLoader _libraryLoader;
-    private AudioDevice _defaultOutputDevice;
-    private List<AudioDevice> _outputDevices = new();
+    private readonly LibraryLoader _libraryLoader;
+    private readonly AudioDevice _defaultOutputDevice;
+    private readonly List<AudioDevice> _outputDevices = new();
 
     /// <summary>
     /// Gets whether or not the PortAudio library is already initialized.

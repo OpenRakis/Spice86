@@ -33,7 +33,7 @@ public class EmulationLoop {
     /// <summary>
     /// Gets if we check for breakpoints in the emulation loop.
     /// </summary>
-    private bool _listensToBreakpoints;
+    private readonly bool _listensToBreakpoints;
 
     /// <summary>
     /// Initializes a new instance.

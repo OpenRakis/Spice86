@@ -13,7 +13,7 @@ using Spice86.Shared.Emulator.Video;
 
 public partial class PaletteViewModel : ViewModelBase {
     private readonly ArgbPalette? _argbPalette;
-    private DispatcherTimer _timer;
+    private readonly DispatcherTimer _timer;
 
     public PaletteViewModel() {
         if (!Design.IsDesignMode) {

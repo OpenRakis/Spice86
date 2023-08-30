@@ -20,9 +20,9 @@ public partial class DebugViewModel : ViewModelBase {
     [ObservableProperty]
     private DateTime? _lastUpdate = null;
 
-    IVideoState? _videoState;
-    IVgaRenderer? _renderer;
-    private IPauseStatus? _pauseStatus;
+    readonly IVideoState? _videoState;
+    readonly IVgaRenderer? _renderer;
+    private readonly IPauseStatus? _pauseStatus;
 
     private readonly DispatcherTimer _timer;
     

@@ -14,7 +14,7 @@ using Spice86.Core.Emulator.VM;
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
 public sealed class Dsp {
-    private IRequestInterrupt _soundCard;
+    private readonly IRequestInterrupt _soundCard;
     
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
