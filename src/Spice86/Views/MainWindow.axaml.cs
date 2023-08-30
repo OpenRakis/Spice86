@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Threading;
 
 using Spice86.Core.CLI;
+using Spice86.Infrastructure;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 
@@ -19,10 +20,12 @@ internal partial class MainWindow : Window, IDisposable {
     private readonly Configuration? _configuration;
     private readonly ILoggerService? _loggerService;
     private readonly IClassicDesktopStyleApplicationLifetime? _desktop;
+    private readonly IUIDispatcherTimer? _uiDispatcherTimer;
     private bool _disposed;
 
-    public MainWindow(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
+    public MainWindow(IUIDispatcherTimer uiDispatcherTimer, IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
         InitializeComponent();
+        _uiDispatcherTimer = uiDispatcherTimer;
         _desktop = desktop;
         _configuration = configuration;
         _loggerService = loggerService;
@@ -34,10 +37,10 @@ internal partial class MainWindow : Window, IDisposable {
     }
 
     private void InitializeDataContext() {
-        if (_desktop is null || _configuration is null || _loggerService is null) {
+        if (_uiDispatcherTimer is null || _desktop is null || _configuration is null || _loggerService is null) {
             return;
         }
-        var mainVm = new MainWindowViewModel(_desktop, _configuration, _loggerService);
+        var mainVm = new MainWindowViewModel(_uiDispatcherTimer, _desktop, _configuration, _loggerService);
         mainVm.OnMainWindowInitialized(Image.InvalidateVisual);
         Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, Image);
         Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, Image);

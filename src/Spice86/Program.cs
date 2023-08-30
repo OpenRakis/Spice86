@@ -9,6 +9,7 @@ using Spice86.Core.Emulator;
 using Spice86.DependencyInjection;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
+using Spice86.Infrastructure;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -63,7 +64,7 @@ public class Program {
         AppBuilder appBuilder = BuildAvaloniaApp();
         ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
         using App? app = (App?)appBuilder.Instance;
-        app?.SetupMainWindow(desktop, configuration, loggerService);
+        app?.SetupMainWindow(new UIDispatcherTimer(), desktop, configuration, loggerService);
         desktop.Start(args);
     }
 

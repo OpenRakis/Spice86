@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 
@@ -24,13 +25,11 @@ public partial class DebugViewModel : ViewModelBase {
     readonly IVgaRenderer? _renderer;
     private readonly IPauseStatus? _pauseStatus;
 
-    private readonly DispatcherTimer _timer;
     
     public DebugViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
-        _timer = new DispatcherTimer();
     }
 
     [RelayCommand]
@@ -39,13 +38,12 @@ public partial class DebugViewModel : ViewModelBase {
     [ObservableProperty]
     private bool _isPaused;
     
-    public DebugViewModel(IPauseStatus pauseStatus, IVideoState videoState, IVgaRenderer vgaRenderer) {
+    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus, IVideoState videoState, IVgaRenderer vgaRenderer) {
         _videoState = videoState;
         _renderer = vgaRenderer;
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
-        _timer = new(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, UpdateValues);
-        _timer.Start();
+        uiDispatcherTimer.StartNew(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {

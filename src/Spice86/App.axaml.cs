@@ -7,6 +7,7 @@ using Avalonia.Markup.Xaml;
 using Spice86.Shared.Interfaces;
 using Spice86.Views;
 using Spice86.Core.CLI;
+using Spice86.Infrastructure;
 
 /// <summary>
 /// The main entry point for the Spice86 UI.
@@ -21,8 +22,8 @@ internal partial class App : Application, IDisposable {
     /// </summary>
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
-    public void SetupMainWindow(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
-        var mainWindow = new MainWindow(desktop, configuration, loggerService);
+    public void SetupMainWindow(IUIDispatcherTimer uiDispatcherTimer, IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
+        var mainWindow = new MainWindow(uiDispatcherTimer, desktop, configuration, loggerService);
         _mainWindow = mainWindow;
         desktop.MainWindow = mainWindow;
     }

@@ -36,10 +36,12 @@ using Avalonia.Platform;
 
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
+using Spice86.Infrastructure;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
+    private readonly IUIDispatcherTimer _uiDispatcherTimer;
     private AvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     [ObservableProperty]
     private Configuration _configuration;
@@ -68,10 +70,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private readonly IClassicDesktopStyleApplicationLifetime _desktop;
 
-    public MainWindowViewModel(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IUIDispatcherTimer uiDispatcherTimer, IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
         _loggerService = loggerService;
         _desktop = desktop;
+        _uiDispatcherTimer = uiDispatcherTimer;
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
@@ -364,7 +367,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (_debugWindow != null) {
             _debugWindow.Activate();
         } else if(_programExecutor is not null) {
-            _debugWindow = new DebugWindow(this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
+            _debugWindow = new DebugWindow(_uiDispatcherTimer, this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
             _debugWindow.Closed += (_, _) => _debugWindow = null;
             _debugWindow.Show();
         }
@@ -375,7 +378,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (_paletteWindow != null) {
             _paletteWindow.Activate();
         } else if(_programExecutor is not null) {
-            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.ArgbPalette));
+            _paletteWindow = new PaletteWindow(new PaletteViewModel(_uiDispatcherTimer, _programExecutor.ArgbPalette));
             _paletteWindow.Closed += (_, _) => _paletteWindow = null;
             _paletteWindow.Show();
         }

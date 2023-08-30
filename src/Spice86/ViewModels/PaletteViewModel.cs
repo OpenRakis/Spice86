@@ -9,27 +9,25 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
 
 public partial class PaletteViewModel : ViewModelBase {
     private readonly ArgbPalette? _argbPalette;
-    private readonly DispatcherTimer _timer;
 
     public PaletteViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
-        _timer = new DispatcherTimer();
     }
 
     
-    public PaletteViewModel(ArgbPalette argbPalette) {
+    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, ArgbPalette argbPalette) {
         _argbPalette = argbPalette;
-        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
         }
-        _timer.Start();
+        uiDispatcherTimer.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
     }
 
     [ObservableProperty]
