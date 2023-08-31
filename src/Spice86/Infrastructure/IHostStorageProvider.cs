@@ -7,14 +7,35 @@ using Avalonia.Platform.Storage;
 /// </summary>
 public interface IHostStorageProvider {
     /// <summary>
-    /// Can the folder picker be opened on the current platform.
+    /// Can the folder picker be used on the current platform.
     /// </summary>
     bool CanPickFolder { get; }
 
     /// <summary>
-    /// Can the file picker be opened on the current platform.
+    /// Can the open file picker be used on the current platform.
     /// </summary>
     bool CanOpen { get; }
+
+    /// <summary>
+    /// Returns true if it's possible to open save file picker on the current platform.
+    /// </summary>
+    bool CanSave { get; }
+
+    /// <summary>
+    /// Attempts to read folder from the file-system by its path.
+    /// </summary>
+    /// <returns>
+    /// Folder or null if it doesn't exist.
+    /// </returns>
+    Task<IStorageFolder?> TryGetFolderFromPathAsync(string folderPath);
+
+    /// <summary>
+    /// Opens save file picker dialog.
+    /// </summary>
+    /// <returns>
+    /// Saved Avalonia.Platform.Storage.IStorageFile or null if user canceled the dialog.
+    /// </returns>
+    Task<IStorageFile?> SaveFilePickerAsync(FilePickerSaveOptions options);
 
     /// <summary>
     /// Gets the path to a well known folder.

@@ -14,6 +14,19 @@ public class HostStorageProvider : IHostStorageProvider {
     /// <inheritdoc />
     public bool CanOpen => _storageProvider.CanOpen;
 
+    /// <inheritdoc/>
+    public bool CanSave => _storageProvider.CanSave;
+
+    /// <inheritdoc/>
+    public async Task<IStorageFolder?> TryGetFolderFromPathAsync(string folderPath) {
+        return await _storageProvider.TryGetFolderFromPathAsync(folderPath);
+    }
+
+    /// <inheritdoc />
+    public async Task<IStorageFile?> SaveFilePickerAsync(FilePickerSaveOptions options) {
+        return await _storageProvider.SaveFilePickerAsync(options);
+    }
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options) {
         return await _storageProvider.OpenFilePickerAsync(options);

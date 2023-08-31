@@ -6,12 +6,12 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Infrastructure;
 using Spice86.Shared.Interfaces;
 
 using System;
 
 public partial class PerformanceViewModel : ViewModelBase {
-    private readonly DispatcherTimer? _timer;
     private readonly State? _state;
     private readonly IPerformanceMeasurer? _performanceMeasurer;
     
@@ -24,11 +24,10 @@ public partial class PerformanceViewModel : ViewModelBase {
         }
     }
 
-    public PerformanceViewModel(State state, IPerformanceMeasurer performanceMeasurer) {
+    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, State state, IPerformanceMeasurer performanceMeasurer) {
         _state = state;
         _performanceMeasurer = performanceMeasurer;
-        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
-        _timer.Start();
+        uiDispatcherTimer.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {

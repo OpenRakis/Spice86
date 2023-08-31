@@ -1,7 +1,6 @@
 namespace Spice86.Views;
 
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Threading;
 
@@ -10,37 +9,49 @@ using Spice86.Infrastructure;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 
-using System.ComponentModel;
 
 internal partial class MainWindow : Window, IDisposable {
+    /// <summary>
+    /// IDE Designer constructor
+    /// </summary>
     public MainWindow() {
         InitializeComponent();
+        _uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
+        _uiDispatcherTimer = new UIDispatcherTimer();
+        _hostStorageProvider = new HostStorageProvider(StorageProvider);
+        _textClipboard = new TextClipboard(Clipboard);
     }
 
     private readonly Configuration? _configuration;
     private readonly ILoggerService? _loggerService;
-    private readonly IClassicDesktopStyleApplicationLifetime? _desktop;
-    private readonly IUIDispatcherTimer? _uiDispatcherTimer;
+    private readonly IUIDispatcherTimer _uiDispatcherTimer;
+    private readonly IUIDispatcher _uiDispatcher;
+    private readonly ITextClipboard _textClipboard;
+    private readonly IHostStorageProvider _hostStorageProvider;
+
     private bool _disposed;
 
-    public MainWindow(IUIDispatcherTimer uiDispatcherTimer, IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
+    public MainWindow(IUIDispatcher uiDispatcher, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
         InitializeComponent();
         _uiDispatcherTimer = uiDispatcherTimer;
-        _desktop = desktop;
+        _hostStorageProvider = new HostStorageProvider(StorageProvider);
+        _textClipboard = new TextClipboard(Clipboard);
+        _uiDispatcher = uiDispatcher;
         _configuration = configuration;
         _loggerService = loggerService;
     }
 
     protected override void OnOpened(EventArgs e) {
         base.OnOpened(e);
-        Dispatcher.UIThread.Post(InitializeDataContext, DispatcherPriority.Background);
+        _uiDispatcher.Post(InitializeDataContext, DispatcherPriority.Background);
     }
 
     private void InitializeDataContext() {
-        if (_uiDispatcherTimer is null || _desktop is null || _configuration is null || _loggerService is null) {
+        if (_loggerService is null || _configuration is null) {
             return;
         }
-        var mainVm = new MainWindowViewModel(_uiDispatcherTimer, _desktop, _configuration, _loggerService);
+        var mainVm = new MainWindowViewModel(_uiDispatcher, _hostStorageProvider, _textClipboard, _uiDispatcherTimer, _configuration, _loggerService);
+        mainVm.CloseMainWindow += (_, _) => Close();
         mainVm.OnMainWindowInitialized(Image.InvalidateVisual);
         Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, Image);
         Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, Image);

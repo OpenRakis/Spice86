@@ -1,7 +1,6 @@
 namespace Spice86;
 
 using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
 using Spice86.Shared.Interfaces;
@@ -22,10 +21,10 @@ internal partial class App : Application, IDisposable {
     /// </summary>
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
-    public void SetupMainWindow(IUIDispatcherTimer uiDispatcherTimer, IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
-        var mainWindow = new MainWindow(uiDispatcherTimer, desktop, configuration, loggerService);
+    public MainWindow CreateMainWindow(IUIDispatcher uiDispatcher, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+        var mainWindow = new MainWindow(uiDispatcher, uiDispatcherTimer, configuration, loggerService);
         _mainWindow = mainWindow;
-        desktop.MainWindow = mainWindow;
+        return mainWindow;
     }
 
     protected virtual void Dispose(bool disposing) {
