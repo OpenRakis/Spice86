@@ -10,6 +10,7 @@ using Spice86.DependencyInjection;
 using Spice86.Shared.Interfaces;
 using Spice86.Infrastructure;
 using Avalonia.Threading;
+using Spice86.Views;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -63,9 +64,10 @@ public class Program {
     private static void StartMainWindow(Configuration configuration, ILoggerService loggerService, string[] args) {
         AppBuilder appBuilder = BuildAvaloniaApp();
         ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
-        using App? app = (App?)appBuilder.Instance;
+        App? app = (App?)appBuilder.Instance;
         if(app is not null) {
-            desktop.MainWindow = app.CreateMainWindow(new UIDispatcher(Dispatcher.UIThread), new UIDispatcherTimer(), configuration, loggerService);
+            using var mainWindow = new MainWindow(new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new UIDispatcherTimer(), configuration, loggerService);
+            desktop.MainWindow = mainWindow;
             desktop.Start(args);
         }
     }

@@ -12,7 +12,6 @@ using Serilog.Events;
 
 using Avalonia.Collections;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -21,7 +20,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Keyboard;
-using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Shared.Emulator.Keyboard;
@@ -30,7 +28,6 @@ using Spice86.Shared.Interfaces;
 
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
-using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
@@ -45,15 +42,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly ITextClipboard _textClipboard;
     private readonly IUIDispatcher _uiDispatcher;
+    private readonly IWindowActivator _windowActivator;
+
     private AvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
-    private DebugWindow? _debugWindow;
-    private PaletteWindow? _paletteWindow;
-    private PerformanceWindow? _performanceWindow;
     private string _lastExecutableDirectory = string.Empty;
     private bool _closeAppOnEmulatorExit;
 
@@ -71,7 +67,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private bool _isAppClosing;
 
-    public MainWindowViewModel(IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
         _loggerService = loggerService;
         _uiDispatcherTimer = uiDispatcherTimer;
@@ -79,6 +75,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _textClipboard = textClipboard;
         _uiDispatcherTimer = uiDispatcherTimer;
         _uiDispatcher = uiDispatcher;
+        _windowActivator = windowActivator;
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
@@ -325,12 +322,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
-        _performanceWindow?.Close();
-        _performanceWindow = null;
-        _paletteWindow?.Close();
-        _paletteWindow = null;
-        _debugWindow?.Close();
-        _debugWindow = null;
+        _windowActivator.Clear();
         RunEmulator();
     }
 
@@ -348,34 +340,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowPerformance() {
-        if (_performanceWindow != null) {
-            _performanceWindow.Activate();
-        } else if (_programExecutor is not null) {
-            _performanceWindow = new PerformanceWindow(_uiDispatcherTimer, _programExecutor.CpuState, new PerformanceMeasurer());
-            _performanceWindow.Closed += (_, _) => _performanceWindow = null;
-            _performanceWindow.Show();
+        if(_programExecutor is not null) {
+            _windowActivator.Activate<PerformanceViewModel>(_uiDispatcherTimer, _programExecutor.CpuState, new PerformanceMeasurer());
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void ShowDebugWindow() {
-        if (_debugWindow != null) {
-            _debugWindow.Activate();
-        } else if(_programExecutor is not null) {
-            _debugWindow = new DebugWindow(_uiDispatcherTimer, this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
-            _debugWindow.Closed += (_, _) => _debugWindow = null;
-            _debugWindow.Show();
+        if(_programExecutor is not null) {
+            _windowActivator.Activate<DebugViewModel>(_uiDispatcherTimer, this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
-        if (_paletteWindow != null) {
-            _paletteWindow.Activate();
-        } else if(_programExecutor is not null) {
-            _paletteWindow = new PaletteWindow(new PaletteViewModel(_uiDispatcherTimer, _programExecutor.ArgbPalette));
-            _paletteWindow.Closed += (_, _) => _paletteWindow = null;
-            _paletteWindow.Show();
+        if(_programExecutor is not null) {
+            _windowActivator.Activate<PaletteViewModel>(_uiDispatcherTimer, _programExecutor.ArgbPalette);
         }
     }
 
@@ -495,8 +475,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
-                _performanceWindow?.Close();
-                _paletteWindow?.Close();
+                _windowActivator.Clear();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }

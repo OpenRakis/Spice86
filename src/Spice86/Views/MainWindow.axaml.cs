@@ -20,6 +20,7 @@ internal partial class MainWindow : Window, IDisposable {
         _uiDispatcherTimer = new UIDispatcherTimer();
         _hostStorageProvider = new HostStorageProvider(StorageProvider);
         _textClipboard = new TextClipboard(Clipboard);
+        _windowActivator = new WindowActivator();
     }
 
     private readonly Configuration? _configuration;
@@ -28,10 +29,11 @@ internal partial class MainWindow : Window, IDisposable {
     private readonly IUIDispatcher _uiDispatcher;
     private readonly ITextClipboard _textClipboard;
     private readonly IHostStorageProvider _hostStorageProvider;
+    private readonly IWindowActivator _windowActivator;
 
     private bool _disposed;
 
-    public MainWindow(IUIDispatcher uiDispatcher, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+    public MainWindow(IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
         InitializeComponent();
         _uiDispatcherTimer = uiDispatcherTimer;
         _hostStorageProvider = new HostStorageProvider(StorageProvider);
@@ -39,6 +41,7 @@ internal partial class MainWindow : Window, IDisposable {
         _uiDispatcher = uiDispatcher;
         _configuration = configuration;
         _loggerService = loggerService;
+        _windowActivator = windowActivator;
     }
 
     protected override void OnOpened(EventArgs e) {
@@ -50,7 +53,7 @@ internal partial class MainWindow : Window, IDisposable {
         if (_loggerService is null || _configuration is null) {
             return;
         }
-        var mainVm = new MainWindowViewModel(_uiDispatcher, _hostStorageProvider, _textClipboard, _uiDispatcherTimer, _configuration, _loggerService);
+        var mainVm = new MainWindowViewModel(_windowActivator, _uiDispatcher, _hostStorageProvider, _textClipboard, _uiDispatcherTimer, _configuration, _loggerService);
         mainVm.CloseMainWindow += (_, _) => Close();
         mainVm.OnMainWindowInitialized(Image.InvalidateVisual);
         Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, Image);
