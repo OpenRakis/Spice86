@@ -333,7 +333,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         set {
             if (value is not null) {
                 SetProperty(ref _timeMultiplier, value.Value);
-                _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
+                _programExecutor?.SetTimeMultiplier(_timeMultiplier);
             }
         }
     }

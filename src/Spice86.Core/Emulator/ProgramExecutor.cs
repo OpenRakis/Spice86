@@ -260,4 +260,8 @@ public sealed class ProgramExecutor : IDisposable {
         functionHandler.FunctionInformations = functionInformations;
         functionHandler.UseCodeOverride = useCodeOverride;
     }
+
+    public void SetTimeMultiplier(double timeMultiplier) {
+        Machine.Timer.SetTimeMultiplier(timeMultiplier);
+    }
 }
