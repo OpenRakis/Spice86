@@ -12,7 +12,7 @@ internal class WindowActivator : IWindowActivator {
     private readonly Dictionary<Type, Window> _createdWindows = new();
 
     /// <inheritdoc />
-    public void Activate<T>(params object[]? parameters) where T : ViewModelBase {
+    public void ActivateAdditionalWindow<T>(params object[]? parameters) where T : ViewModelBase {
         if(_createdWindows.TryGetValue(typeof(T), out Window? window)) {
             window.Activate();
         }
@@ -31,7 +31,7 @@ internal class WindowActivator : IWindowActivator {
         }
     }
 
-    public void Clear() {
+    public void CloseAllAdditionalWindows() {
         for(int i = 0; i < _createdWindows.Count; i++) {
             _createdWindows[_createdWindows.Keys.ElementAt(i)].Close();
         }

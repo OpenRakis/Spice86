@@ -11,6 +11,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Infrastructure;
 using Avalonia.Threading;
 using Spice86.Views;
+using Spice86.ViewModels;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -47,11 +48,11 @@ public class Program {
     }
 
     private void StartApp(Configuration configuration, string[] args) {
+        Startup.SetLoggingLevel(_loggerService, configuration);
         if (!configuration.HeadlessMode) {
             StartMainWindow(configuration, _loggerService, args);
         }
         else {
-            Startup.SetLoggingLevel(_loggerService, configuration);
             StartConsole(configuration, _loggerService);
         }
     }
@@ -66,9 +67,15 @@ public class Program {
         ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
         App? app = (App?)appBuilder.Instance;
         if(app is not null) {
-            using var mainWindow = new MainWindow(new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new UIDispatcherTimer(), configuration, loggerService);
+            MainWindow mainWindow = new();
+            var mainWindowViewModel = new MainWindowViewModel(new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimer(), configuration, loggerService);
+            mainWindow.DataContext = mainWindowViewModel;
             desktop.MainWindow = mainWindow;
-            desktop.Start(args);
+            try {
+                desktop.Start(args);
+            } finally {
+                mainWindowViewModel.Dispose();
+            }
         }
     }
 

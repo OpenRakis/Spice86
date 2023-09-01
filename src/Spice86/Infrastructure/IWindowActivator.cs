@@ -12,10 +12,10 @@ public interface IWindowActivator {
     /// Activates the Window corresponding to the ViewModel
     /// </summary>
     /// <param name="parameters">The parameters to pass to the ViewModel constructor</param>
-    void Activate<T>(params object[] parameters) where T : ViewModelBase;
+    void ActivateAdditionalWindow<T>(params object[] parameters) where T : ViewModelBase;
 
     /// <summary>
     /// Closes all additionnal windows
     /// </summary>
-    void Clear();
+    void CloseAllAdditionalWindows();
 }

@@ -322,7 +322,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
-        _windowActivator.Clear();
+        _windowActivator.CloseAllAdditionalWindows();
         RunEmulator();
     }
 
@@ -341,21 +341,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowPerformance() {
         if(_programExecutor is not null) {
-            _windowActivator.Activate<PerformanceViewModel>(_uiDispatcherTimer, _programExecutor.CpuState, new PerformanceMeasurer());
+            _windowActivator.ActivateAdditionalWindow<PerformanceViewModel>(_uiDispatcherTimer, _programExecutor.CpuState, new PerformanceMeasurer());
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void ShowDebugWindow() {
         if(_programExecutor is not null) {
-            _windowActivator.Activate<DebugViewModel>(_uiDispatcherTimer, this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
+            _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_uiDispatcherTimer, this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
         if(_programExecutor is not null) {
-            _windowActivator.Activate<PaletteViewModel>(_uiDispatcherTimer, _programExecutor.ArgbPalette);
+            _windowActivator.ActivateAdditionalWindow<PaletteViewModel>(_uiDispatcherTimer, _programExecutor.ArgbPalette);
         }
     }
 
@@ -475,7 +475,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
-                _windowActivator.Clear();
+                _windowActivator.CloseAllAdditionalWindows();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
