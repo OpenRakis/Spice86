@@ -4,6 +4,8 @@ using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 using Pure.DI;
 
+using Spice86.Core.Emulator.CPU;
+
 /// <summary>
 /// The DI composition root for both the UI and headless mode.
 /// </summary>

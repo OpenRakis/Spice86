@@ -154,7 +154,6 @@ public sealed class ProgramExecutor : IDisposable {
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(ListensToBreakpoints);
         Machine = new Machine(gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, ListensToBreakpoints);
-        InitializeCpu();
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
@@ -210,13 +209,6 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         return res;
-    }
-
-    private void InitializeCpu() {
-        Cpu cpu = Machine.Cpu;
-        cpu.ErrorOnUninitializedInterruptHandler = true;
-        State state = cpu.State;
-        state.Flags.IsDOSBoxCompatible = true;
     }
 
     private void InitializeFunctionHandlers(Configuration configuration,

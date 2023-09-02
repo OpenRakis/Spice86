@@ -61,6 +61,7 @@ public class Flags {
     /// </summary>
     public Flags() {
         FlagRegister = 0;
+        IsDOSBoxCompatible = true;
     }
 
     /// <summary>
@@ -86,10 +87,10 @@ public class Flags {
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the flags are DOSBox compatible. <br/>
-    /// Useful to compare with values emulated by DOSBox.
+    /// Gets or sets a value indicating whether the _additionalFlagMask is set to <c>0b111000000000000</c> or <c>0</c>. <br/>
+    /// Useful when comparing with values emulated by DOSBox.
     /// <remarks>
-    /// Set to <c>true</c> on startup by the emulator Machine.
+    /// Set to <c>true</c> by default.
     /// </remarks>
     /// </summary>
     public bool IsDOSBoxCompatible {
