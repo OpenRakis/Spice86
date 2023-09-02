@@ -57,6 +57,7 @@ internal partial class MainWindow : Window, IDisposable {
             e.Handled = true;
         } else {
             FocusOnVideoBuffer();
+            e.Handled = true;
         }
     }
 
@@ -66,6 +67,7 @@ internal partial class MainWindow : Window, IDisposable {
             e.Handled = true;
         } else {
             FocusOnVideoBuffer();
+            e.Handled = true;
         }
     }
 
