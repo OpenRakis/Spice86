@@ -27,12 +27,16 @@ public class VgaFunctionality : IVgaFunctionality {
     /// <param name="ioPortDispatcher"></param>
     /// <param name="biosDataArea"></param>
     /// <param name="vgaRom"></param>
-    public VgaFunctionality(IIndexable memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom) {
+    /// <param name="bootUpInTextMode"></param>
+    public VgaFunctionality(IIndexable memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, bool bootUpInTextMode) {
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;
         _biosDataArea = biosDataArea;
         _vgaRom = vgaRom;
         _interruptVectorTable = new (memory);
+        if(bootUpInTextMode) {
+            VgaSetMode(0x03, ModeFlags.Legacy);
+        }
     }
 
     /// <inheritdoc />

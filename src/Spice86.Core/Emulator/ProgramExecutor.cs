@@ -161,17 +161,6 @@ public sealed class ProgramExecutor : IDisposable {
                 _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", _configuration.InitializeDOS);
             }
         }
-
-        if (_configuration.InitializeDOS is true) {
-            // Initialize VGA text mode.
-            Machine.VgaFunctions.VgaSetMode(0x03, ModeFlags.Legacy);
-            // Put HLT at the reset address
-            Machine.Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
-        } else {
-            // Bios will take care of enabling interrupts (or not)
-            Machine.DualPic.MaskAllInterrupts();
-        }
-
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
         LoadFileToRun(_configuration, loader);
         executionFlowRecorder.PreAllocatePossibleExecutionFlowBreakPoints(Machine.Memory, Machine.Cpu.State);
