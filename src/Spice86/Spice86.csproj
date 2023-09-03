@@ -18,8 +18,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.1.4</version>
-		<PackageReleaseNotes>Fixed keyboard Tab handling in the UI, and possible crash in the Time Multiplier UI.</PackageReleaseNotes>
+		<version>6.1.5</version>
+		<PackageReleaseNotes>fix: dump emulator state AFTER emulation exited.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode DOS programs</Description>
