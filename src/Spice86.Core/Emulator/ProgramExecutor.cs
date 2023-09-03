@@ -60,10 +60,10 @@ public sealed class ProgramExecutor : IDisposable {
     /// </summary>
     public void Run() {
         _gdbServer?.StartServerAndWait();
+        _emulationLoop.Run();
         if (ListensToBreakpoints) {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
-        _emulationLoop.Run();
     }
 
     public State CpuState => Machine.Cpu.State;
