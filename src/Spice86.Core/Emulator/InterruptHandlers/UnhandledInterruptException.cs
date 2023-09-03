@@ -13,7 +13,7 @@ public class UnhandledInterruptException : UnhandledOperationException {
     /// <param name="state">The CPU state when the exception occured.</param>
     /// <param name="callbackNumber">The callback that was called..</param>
     /// <param name="operation">The operation we tried to call on the callback.</param>
-    public UnhandledInterruptException(State state, int callbackNumber, int operation) : base(state, FormatMessage(callbackNumber, operation)) {
+    public UnhandledInterruptException(ICpuState state, int callbackNumber, int operation) : base(state, FormatMessage(callbackNumber, operation)) {
     }
 
     private static string FormatMessage(int callbackNumber, int operation) {

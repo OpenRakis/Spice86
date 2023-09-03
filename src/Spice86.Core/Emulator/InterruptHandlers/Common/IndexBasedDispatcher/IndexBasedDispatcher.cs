@@ -25,14 +25,14 @@ public abstract class IndexBasedDispatcher<T> where T: IRunnable {
     /// <summary>
     /// The CPU state.
     /// </summary>
-    protected readonly State _state;
+    protected readonly ICpuState _state;
 
     /// <summary>
     /// Initializes a new instance of an <see cref="IndexBasedDispatcher"/>
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logging service to be used (eg. for recording warnings or errors).</param>
-    public IndexBasedDispatcher(State state, ILoggerService loggerService) {
+    public IndexBasedDispatcher(ICpuState state, ILoggerService loggerService) {
         _state = state;
         _loggerService = loggerService;
     }

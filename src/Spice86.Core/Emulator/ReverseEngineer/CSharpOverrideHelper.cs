@@ -68,7 +68,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Gets the state of the CPU.
     /// </summary>
-    public State State => Cpu.State;
+    public ICpuState State => Cpu.State;
 
     /// <summary>
     /// Gets the arithmetic-logic unit

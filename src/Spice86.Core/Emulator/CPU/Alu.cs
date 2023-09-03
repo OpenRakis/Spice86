@@ -43,13 +43,13 @@ public class Alu {
 
     private const int ShiftCountMask = 0x1F;
 
-    private readonly State _state;
+    private readonly ICpuState _state;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="state">The state of the CPU.</param>
-    public Alu(State state) {
+    public Alu(ICpuState state) {
         _state = state;
     }
 

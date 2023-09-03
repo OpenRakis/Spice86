@@ -14,7 +14,7 @@ public class UnhandledCallbackException : UnhandledOperationException {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="callbackNumber">Indicates which callback we attempted to call.</param>
-    public UnhandledCallbackException(State state, int callbackNumber) : base(state, FormatMessage(callbackNumber)) {
+    public UnhandledCallbackException(ICpuState state, int callbackNumber) : base(state, FormatMessage(callbackNumber)) {
     }
 
     /// <summary>

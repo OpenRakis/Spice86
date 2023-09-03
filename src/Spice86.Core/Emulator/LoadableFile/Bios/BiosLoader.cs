@@ -33,7 +33,7 @@ public class BiosLoader : ExecutableFileLoader {
     /// </summary>
     /// <param name="machine">The machine instance to load the BIOS on.</param>
     /// <param name="loggerService">The logger service to log messages to.</param>
-    public BiosLoader(IMemory memory, State state, ILoggerService loggerService) : base(memory, state, loggerService) {
+    public BiosLoader(IMemory memory, ICpuState state, ILoggerService loggerService) : base(memory, state, loggerService) {
     }
 
     /// <summary>

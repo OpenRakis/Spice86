@@ -43,7 +43,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     /// <param name="state">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DmaController(IMemory memory, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    public DmaController(IMemory memory, ICpuState state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _memory = memory;
         for (int i = 0; i < 8; i++) {
             DmaChannel channel = new DmaChannel();

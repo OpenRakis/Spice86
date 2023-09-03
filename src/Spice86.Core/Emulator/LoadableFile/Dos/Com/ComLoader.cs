@@ -28,7 +28,7 @@ public class ComLoader : DosFileLoader {
     /// <param name="dosFileManager">The DOS file manager.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>
     /// <param name="startSegment">The starting segment of the program.</param>
-    public ComLoader(IMemory memory, State state, ILoggerService loggerService, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(memory, state, loggerService) {
+    public ComLoader(IMemory memory, ICpuState state, ILoggerService loggerService, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(memory, state, loggerService) {
         _startSegment = startSegment;
         _environmentVariables = environmentVariables;
         _dosFileManager = dosFileManager;

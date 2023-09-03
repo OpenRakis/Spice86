@@ -142,7 +142,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="gui">The GUI. Is <c>null</c> in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
-    public SoundBlaster(AudioPlayerFactory audioPlayerFactory, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
+    public SoundBlaster(AudioPlayerFactory audioPlayerFactory, ICpuState state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
         _audioPlayerFactory = audioPlayerFactory;
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;

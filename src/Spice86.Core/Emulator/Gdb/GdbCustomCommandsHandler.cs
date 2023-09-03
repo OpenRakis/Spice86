@@ -28,7 +28,7 @@ public class GdbCustomCommandsHandler {
     private readonly RecorderDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
     private readonly Cpu _cpu;
-    private readonly State _state;
+    private readonly ICpuState _state;
     private readonly IGui? _gui;
     private readonly IMemory _memory;
     private readonly MachineBreakpoints _machineBreakpoints;
@@ -169,7 +169,7 @@ public class GdbCustomCommandsHandler {
 
         return command switch {
             "help" => Help(""),
-            "state" => State(),
+            "state" => CpuState(),
             "breakstop" => BreakStop(),
             "callstack" => CallStack(),
             "peekret" => PeekRet(args),
@@ -297,7 +297,7 @@ Supported custom commands:
         return SegmentedAddress.ToString(_cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
     }
 
-    private string State() {
+    private string CpuState() {
         string state = _state.ToString();
         return _gdbIo.GenerateMessageToDisplayResponse(state);
     }

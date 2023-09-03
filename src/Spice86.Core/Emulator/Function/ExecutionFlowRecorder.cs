@@ -87,7 +87,7 @@ public class ExecutionFlowRecorder {
     /// </summary>
     /// <param name="machine">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
-    internal void PreAllocatePossibleExecutionFlowBreakPoints(IMemory memory, State state) {
+    internal void PreAllocatePossibleExecutionFlowBreakPoints(IMemory memory, ICpuState state) {
         //Avoid re-entry.
         if (_addressBreakPoints.Count != 0) {
             return;
@@ -177,7 +177,7 @@ public class ExecutionFlowRecorder {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="cs">The value of the CS register, for the segment.</param>
     /// <param name="ip">The value of the IP register, for the offset.</param>
-    public void RegisterExecutableByte(IMemory memory, State state, MachineBreakpoints machineBreakpoints, ushort cs, ushort ip) {
+    public void RegisterExecutableByte(IMemory memory, ICpuState state, MachineBreakpoints machineBreakpoints, ushort cs, ushort ip) {
         // Note: this is not enough, instructions modified before they are discovered are not counted as rewritten.
         // If we saved the coverage to reload it each time, we would get a different picture of the rewritten code but that would come with other issues.
         // Code modified before being ever executed is arguably not self modifying code. 
@@ -195,7 +195,7 @@ public class ExecutionFlowRecorder {
     /// <param name="state">The CPU state.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="physicalAddress">The address to set the breakpoint at.</param>
-    public void RegisterExecutableByteModificationBreakPoint(IMemory memory, State state, MachineBreakpoints machineBreakpoints, uint physicalAddress) {
+    public void RegisterExecutableByteModificationBreakPoint(IMemory memory, ICpuState state, MachineBreakpoints machineBreakpoints, uint physicalAddress) {
         if (!_executableCodeAreasEncountered.Add(physicalAddress)) {
             return;
         }
@@ -208,7 +208,7 @@ public class ExecutionFlowRecorder {
         machineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
-    private AddressBreakPoint GenerateBreakPoint(IMemory memory, State state, uint physicalAddress) {
+    private AddressBreakPoint GenerateBreakPoint(IMemory memory, ICpuState state, uint physicalAddress) {
         AddressBreakPoint breakPoint = new(BreakPointType.WRITE, physicalAddress, _ => {
             if (!IsRegisterExecutableCodeModificationEnabled) {
                 return;

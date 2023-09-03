@@ -7,11 +7,11 @@ using Spice86.Core.Emulator.CPU;
 /// </summary>
 public class CyclesCounterActivator : CounterActivator {
     private readonly long _instructionsPerSecond;
-    private readonly State _state;
+    private readonly ICpuState _state;
     private long _cyclesBetweenActivations;
     private long _lastActivationCycle;
 
-    public CyclesCounterActivator(State state, long instructionsPerSecond, double multiplier) : base(multiplier) {
+    public CyclesCounterActivator(ICpuState state, long instructionsPerSecond, double multiplier) : base(multiplier) {
         _state = state;
         _instructionsPerSecond = instructionsPerSecond;
     }

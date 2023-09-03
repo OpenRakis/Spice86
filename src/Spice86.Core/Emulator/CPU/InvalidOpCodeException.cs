@@ -14,10 +14,10 @@ public class InvalidOpCodeException : InvalidVMOperationException {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="state">The CPU State</param>
+    /// <param name="state">The CPU ICpuState</param>
     /// <param name="opcode">The OpCode that triggered the exception.</param>
     /// <param name="prefixNotAllowed">Whether an instruction prefix was allowed.</param>
-    public InvalidOpCodeException(State state, ushort opcode, bool prefixNotAllowed) : base(state, GenerateMessage(opcode, prefixNotAllowed)) {
+    public InvalidOpCodeException(ICpuState state, ushort opcode, bool prefixNotAllowed) : base(state, GenerateMessage(opcode, prefixNotAllowed)) {
     }
 
     private static string GenerateMessage(ushort opcode, bool prefixNotAllowed) {

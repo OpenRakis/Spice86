@@ -66,7 +66,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The emulated CPU state.
     /// </summary>
-    public State CpuState { get; }
+    public ICpuState CpuState { get; }
 
     /// <summary>
     /// DOS Services.
@@ -156,7 +156,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The Vga Registers
     /// </summary>
-    public VideoState VgaRegisters { get; set; }
+    public IVideoState VgaRegisters { get; set; }
     
     /// <summary>
     /// The VGA port handler
@@ -194,7 +194,7 @@ public sealed class Machine : IDisposable {
     public Machine(IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea), configuration.A20Gate, configuration.InitializeDOS is true);
         BiosDataArea = new BiosDataArea(Memory);
-        CpuState = new State();
+        CpuState = new CpuState();
         DualPic = DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
         MachineBreakpoints = new(Memory, CpuState, loggerService);

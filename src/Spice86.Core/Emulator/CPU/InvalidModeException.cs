@@ -8,6 +8,6 @@ using System;
 
 [Serializable]
 public class InvalidModeException : InvalidVMOperationException {
-    public InvalidModeException(State state, int mode) : base(state, $"Invalid mode {ConvertUtils.ToHex((uint)mode)}") {
+    public InvalidModeException(ICpuState state, int mode) : base(state, $"Invalid mode {ConvertUtils.ToHex((uint)mode)}") {
     }
 }

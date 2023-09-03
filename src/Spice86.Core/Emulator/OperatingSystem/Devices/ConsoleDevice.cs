@@ -11,14 +11,14 @@ using Spice86.Shared.Interfaces;
 /// Represents the console device.
 /// </summary>
 public class ConsoleDevice : CharacterDevice {
-    private readonly State _state;
+    private readonly ICpuState _state;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly KeyboardStreamedInput _keyboardStreamedInput;
     
     /// <summary>
     /// Create a new console device.
     /// </summary>
-    public ConsoleDevice(State state, IVgaFunctionality vgaFunctionality, KeyboardStreamedInput keyboardStreamedInput, DeviceAttributes attributes, string name, ILoggerService loggerService) : base(attributes, name, loggerService) {
+    public ConsoleDevice(ICpuState state, IVgaFunctionality vgaFunctionality, KeyboardStreamedInput keyboardStreamedInput, DeviceAttributes attributes, string name, ILoggerService loggerService) : base(attributes, name, loggerService) {
         _state = state;
         _vgaFunctionality = vgaFunctionality;
         _keyboardStreamedInput = keyboardStreamedInput;

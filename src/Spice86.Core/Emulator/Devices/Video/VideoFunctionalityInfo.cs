@@ -1,8 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Video;
 
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
-using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 using System.ComponentModel.DataAnnotations;

@@ -6,10 +6,10 @@ using Spice86.Shared.Utils;
 public class Stack {
     private readonly IMemory _memory;
 
-    private readonly State _state;
+    private readonly ICpuState _state;
     public uint PhysicalAddress => _state.StackPhysicalAddress;
 
-    public Stack(IMemory memory, State state) {
+    public Stack(IMemory memory, ICpuState state) {
         this._memory = memory;
         this._state = state;
     }

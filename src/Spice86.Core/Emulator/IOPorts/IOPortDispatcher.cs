@@ -19,7 +19,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <param name="cpu">The CPU state.</param>
     /// <param name="loggerService">The logger service.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public IOPortDispatcher(State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) => _failOnUnhandledPort = failOnUnhandledPort;
+    public IOPortDispatcher(ICpuState state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) => _failOnUnhandledPort = failOnUnhandledPort;
 
     /// <summary>
     /// Adds an I/O port handler to the dispatcher.

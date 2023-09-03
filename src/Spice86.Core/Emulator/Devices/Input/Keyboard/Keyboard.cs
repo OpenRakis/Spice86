@@ -40,7 +40,7 @@ public class Keyboard : DefaultIOPortHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public Keyboard(State state, A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService, IGui? gui, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Keyboard(ICpuState state, A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService, IGui? gui, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
         _a20Gate = a20Gate;
         _dualPic = dualPic;

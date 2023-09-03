@@ -18,7 +18,7 @@ public class InvalidVMOperationException : Exception {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="message">The error message that explains the reason for the exception.</param>
-    public InvalidVMOperationException(State state, string message) : base(GenerateStatusMessage(state, message)) {
+    public InvalidVMOperationException(ICpuState state, string message) : base(GenerateStatusMessage(state, message)) {
     }
 
     /// <summary>
@@ -27,7 +27,7 @@ public class InvalidVMOperationException : Exception {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="e">The inner exception that caused this exception to be thrown.</param>
-    public InvalidVMOperationException(State state, Exception e) : base(GenerateStatusMessage(state, e.Message), e) {
+    public InvalidVMOperationException(ICpuState state, Exception e) : base(GenerateStatusMessage(state, e.Message), e) {
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public class InvalidVMOperationException : Exception {
     /// <param name="state">The CPU state.</param>
     /// <param name="message">An optional error message to include in the status message.</param>
     /// <returns>The generated status message.</returns>
-    protected static string GenerateStatusMessage(State state, string? message) {
+    protected static string GenerateStatusMessage(ICpuState state, string? message) {
         string error = $"An error occurred while machine was in this state: {state}";
         if (message != null) {
             error += $".{Environment.NewLine}Error is: {message}";

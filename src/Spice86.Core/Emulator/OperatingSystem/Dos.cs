@@ -28,7 +28,7 @@ public class Dos {
     private const int DeviceDriverHeaderLength = 18;
     private readonly IMemory _memory;
     private readonly Cpu _cpu;
-    private readonly State _state;
+    private readonly ICpuState _state;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly KeyboardStreamedInput _keyboardStreamedInput;
     private readonly ILoggerService _loggerService;
@@ -118,7 +118,7 @@ public class Dos {
         DosInt2FHandler = new DosInt2fHandler(_memory, _cpu, _loggerService);
     }
 
-    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, bool enableEms) {
+    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, ICpuState state, bool enableEms) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }

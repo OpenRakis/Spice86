@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class RecorderDataWriter : RecordedDataIoHandler {
     private readonly ILoggerService _loggerService;
-    private readonly State _state;
+    private readonly ICpuState _state;
     private readonly IMemory _memory;
     private readonly CallbackHandler _callbackHandler;
     private readonly Configuration _configuration;
@@ -30,7 +30,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <param name="callbackHandler">The class that stores callback instructions.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public RecorderDataWriter(IMemory memory, State state, CallbackHandler callbackHandler, Configuration configuration, ExecutionFlowRecorder executionFlowRecorder, string dumpDirectory, ILoggerService loggerService) : base(dumpDirectory) {
+    public RecorderDataWriter(IMemory memory, ICpuState state, CallbackHandler callbackHandler, Configuration configuration, ExecutionFlowRecorder executionFlowRecorder, string dumpDirectory, ILoggerService loggerService) : base(dumpDirectory) {
         _loggerService = loggerService;
         _configuration = configuration;
         _executionFlowRecorder = executionFlowRecorder;

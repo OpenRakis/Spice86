@@ -20,7 +20,7 @@ public class FunctionHandler {
 
     private readonly bool _recordData;
 
-    private readonly State _state;
+    private readonly ICpuState _state;
 
     private readonly IMemory _memory;
 
@@ -36,7 +36,7 @@ public class FunctionHandler {
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="recordData">Whether we record execution data. If not, <see cref="Call"/> and <see cref="Ret"/> won't record execution flow.</param>
-    public FunctionHandler(IMemory memory, State state, ExecutionFlowRecorder executionFlowRecorder, ILoggerService loggerService, bool recordData) {
+    public FunctionHandler(IMemory memory, ICpuState state, ExecutionFlowRecorder executionFlowRecorder, ILoggerService loggerService, bool recordData) {
         _memory = memory;
         _state = state;
         _executionFlowRecorder = executionFlowRecorder;
