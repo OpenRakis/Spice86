@@ -15,6 +15,7 @@ internal class WindowActivator : IWindowActivator {
     public void ActivateAdditionalWindow<T>(params object[]? parameters) where T : ViewModelBase {
         if(_createdWindows.TryGetValue(typeof(T), out Window? window)) {
             window.Activate();
+            return;
         }
         object? viewModel = Activator.CreateInstance(typeof(T), parameters);
         var name = typeof(T).FullName!.Replace("ViewModels", "Views").Replace("ViewModel", "Window");
