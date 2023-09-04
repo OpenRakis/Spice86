@@ -37,6 +37,8 @@ public class KeyboardInt16Handler : InterruptHandler {
         _state.AX = keyCode.Value;
     }
 
+    public bool HasKeyCodePending() => _biosKeyboardBuffer.PeekKeyCode() is not null;
+
     public void GetKeystrokeStatus(bool calledFromVm) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("KEY STROKE STATUS");
