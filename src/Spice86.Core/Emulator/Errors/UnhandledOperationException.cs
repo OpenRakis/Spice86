@@ -15,6 +15,6 @@ public class UnhandledOperationException : InvalidVMOperationException {
     /// </summary>
     /// <param name="state">The CPU state when the exception occured.</param>
     /// <param name="message">The error message that explains the reason for the exception.</param>
-    public UnhandledOperationException(ICpuState state, string message) : base(state, message) {
+    public UnhandledOperationException(State state, string message) : base(state, message) {
     }
 }

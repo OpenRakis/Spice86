@@ -19,7 +19,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public CallbackHandler(ICpuState state, ILoggerService loggerService) : base(state, loggerService) {
+    public CallbackHandler(State state, ILoggerService loggerService) : base(state, loggerService) {
     }
 
     /// <inheritdoc/>

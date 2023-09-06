@@ -18,7 +18,7 @@ public class CounterConfigurator {
         _configuration = configuration;
     }
 
-    public CounterActivator InstanciateCounterActivator(ICpuState state) {
+    public CounterActivator InstanciateCounterActivator(State state) {
         long? instructionsPerSecond = _configuration.InstructionsPerSecond;
         if (instructionsPerSecond == null && _configuration.GdbPort != null) {
             // With GDB, force to instructions per seconds as time based timers could perturbate steps

@@ -12,7 +12,7 @@ using Spice86.Shared.Interfaces;
 using System;
 
 public partial class PerformanceViewModel : ViewModelBase {
-    private readonly ICpuState? _state;
+    private readonly State? _state;
     private readonly IPerformanceMeasurer? _performanceMeasurer;
     
     [ObservableProperty]
@@ -24,7 +24,7 @@ public partial class PerformanceViewModel : ViewModelBase {
         }
     }
 
-    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, ICpuState state, IPerformanceMeasurer performanceMeasurer) {
+    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, State state, IPerformanceMeasurer performanceMeasurer) {
         _state = state;
         _performanceMeasurer = performanceMeasurer;
         uiDispatcherTimer.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.MaxValue, UpdatePerformanceInfo);

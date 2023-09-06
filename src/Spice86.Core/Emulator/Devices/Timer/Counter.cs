@@ -14,13 +14,13 @@ public class Counter {
     public const long HardwareFrequency = 1193182;
     private readonly ILoggerService _loggerService;
     public CounterActivator Activator { get; protected set; }
-    private readonly ICpuState _state;
+    private readonly State _state;
 
     private bool _firstByteRead;
 
     private bool _firstByteWritten;
 
-    public Counter(ICpuState state, ILoggerService loggerService, int index, CounterActivator activator) {
+    public Counter(State state, ILoggerService loggerService, int index, CounterActivator activator) {
         _loggerService = loggerService;
         _state = state;
         Index = index;

@@ -18,7 +18,7 @@ using System.Diagnostics;
 public class EmulationLoop {
     private readonly ILoggerService _loggerService;
     private readonly Cpu _cpu;
-    private readonly ICpuState _cpuState;
+    private readonly State _cpuState;
     private readonly Devices.Timer.Timer _timer;
     private readonly MachineBreakpoints _machineBreakpoints;
     private readonly DmaController _dmaController;
@@ -39,13 +39,13 @@ public class EmulationLoop {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
-    /// <param name="cpuState">The emulated CPU state, so that we know when to stop.</param>
+    /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
     /// <param name="listensToBreakpoints">Whether we react to breakpoints in the emulation loop.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
     /// <param name="gdbCommandHandler">The GDB Command Handler, used to trigger a GDB breakpoint on pause.</param>
-    public EmulationLoop(ILoggerService loggerService, Cpu cpu, ICpuState cpuState, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
+    public EmulationLoop(ILoggerService loggerService, Cpu cpu, State cpuState, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
         DmaController dmaController, GdbCommandHandler? gdbCommandHandler) {
         _loggerService = loggerService;
         _cpu = cpu;

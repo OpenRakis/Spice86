@@ -69,7 +69,7 @@ public class Cpu {
 
     public InterruptVectorTable InterruptVectorTable { get; }
 
-    public Cpu(IMemory memory, ICpuState state, DualPic dualPic, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+    public Cpu(IMemory memory, State state, DualPic dualPic, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
         _loggerService = loggerService;
         _memory = memory;
         State = state;
@@ -146,7 +146,7 @@ public class Cpu {
 
     public Stack Stack { get; }
 
-    public ICpuState State { get; }
+    public State State { get; }
     
     public void InterruptRet() {
         FunctionHandlerInUse.Ret(CallType.INTERRUPT);

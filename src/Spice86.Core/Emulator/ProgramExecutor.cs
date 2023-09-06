@@ -18,6 +18,7 @@ using System.Diagnostics;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -65,9 +66,9 @@ public sealed class ProgramExecutor : IDisposable {
         }
     }
 
-    public ICpuState CpuState => Machine.Cpu.State;
+    public State CpuState => Machine.Cpu.State;
 
-    public IVideoState VideoState => Machine.VgaRegisters;
+    public VideoState VideoState => Machine.VgaRegisters;
 
     public ArgbPalette ArgbPalette => Machine.VgaRegisters.DacRegisters.ArgbPalette;
 

@@ -4,8 +4,10 @@ using System.Text;
 
 using Spice86.Shared.Utils;
 
-/// <inheritdoc cref="ICpuState" />
-public class CpuState : ICpuState {
+/// <summary>
+/// Represents the state of the CPU
+/// </summary>
+public class State {
     // Accumulator
     public byte AH { get => Registers.GetRegister8H(Registers.AxIndex); set => Registers.SetRegister8H(Registers.AxIndex, value); }
     public byte AL { get => Registers.GetRegister8L(Registers.AxIndex); set => Registers.SetRegister8L(Registers.AxIndex, value); }

@@ -27,7 +27,7 @@ public sealed class MachineBreakpoints : IDisposable {
     /// <summary>
     /// The state associated with the machine.
     /// </summary>
-    private readonly ICpuState _state;
+    private readonly State _state;
 
     /// <summary>
     /// The machine stop breakpoint.
@@ -44,7 +44,7 @@ public sealed class MachineBreakpoints : IDisposable {
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public MachineBreakpoints(IMemory memory, ICpuState state, ILoggerService loggerService) {
+    public MachineBreakpoints(IMemory memory, State state, ILoggerService loggerService) {
         _state = state;
         _memory = memory;
         PauseHandler = new(loggerService);

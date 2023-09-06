@@ -9,7 +9,7 @@ using Spice86.Shared.Utils;
 public abstract class Instructions {
     protected readonly Alu Alu;
     protected readonly Cpu Cpu;
-    protected readonly ICpuState State;
+    protected readonly State State;
     protected readonly Stack Stack;
     protected readonly Memory.IMemory Memory;
     protected readonly ModRM ModRM;

@@ -10,13 +10,13 @@ using System.Linq;
 ///     Represents a stream for writing to the screen.
 /// </summary>
 public class ScreenStream : Stream {
-    private readonly ICpuState _state;
+    private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
     
     /// <summary>
     ///     Creates a new instance of the <see cref="ScreenStream" /> class.
     /// </summary>
-    public ScreenStream(ICpuState state, IVgaFunctionality vgaFunctionality) {
+    public ScreenStream(State state, IVgaFunctionality vgaFunctionality) {
         _state = state;
         _vgaFunctionality = vgaFunctionality;
     }

@@ -13,7 +13,7 @@ public abstract class DosFileLoader : ExecutableFileLoader {
     /// Initializes a new instance of the <see cref="DosFileLoader"/> class with the specified <paramref name="machine"/> and <paramref name="loggerService"/>.
     /// </summary>
     /// <param name="loggerService">The <see cref="ILoggerService"/> instance.</param>
-    protected DosFileLoader(IMemory memory, ICpuState state, ILoggerService loggerService) : base(memory, state, loggerService) {
+    protected DosFileLoader(IMemory memory, State state, ILoggerService loggerService) : base(memory, state, loggerService) {
     }
 
     /// <summary>

@@ -24,7 +24,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public PcSpeaker(AudioPlayerFactory audioPlayerFactory, ICpuState state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) => _pcSpeaker = new(audioPlayerFactory);
+    public PcSpeaker(AudioPlayerFactory audioPlayerFactory, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) => _pcSpeaker = new(audioPlayerFactory);
 
     /// <inheritdoc />
     public override byte ReadByte(int port) {

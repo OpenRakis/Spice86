@@ -33,7 +33,7 @@ public class ExeLoader : DosFileLoader {
     /// <param name="dosFileManager">The DOS file manager.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>
     /// <param name="startSegment">The starting segment for the executable.</param>
-    public ExeLoader(IMemory memory, ICpuState state, ILoggerService loggerService, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(memory, state, loggerService) {
+    public ExeLoader(IMemory memory, State state, ILoggerService loggerService, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(memory, state, loggerService) {
         _loggerService = loggerService;
         _startSegment = startSegment;
         _state = state;
@@ -69,7 +69,7 @@ public class ExeLoader : DosFileLoader {
         SetupCpuForExe(exeFile, _startSegment, pspSegment);
         new PspGenerator(_memory, _environmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(pspSegment, arguments);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Initial CPU State: {State}", _state);
+            _loggerService.Debug("Initial CPU State: {CpuState}", _state);
         }
         return exe;
     }

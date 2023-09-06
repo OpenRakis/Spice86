@@ -29,7 +29,7 @@ public class MachineTest {
     public void TestExecutionBreakpoints() {
         ProgramExecutor programExecutor = CreateProgramExecutor("add", true);
         Machine machine = programExecutor.Machine;
-        ICpuState state = machine.CpuState;
+        State state = machine.CpuState;
         MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
         int triggers = 0;
         machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 10, breakpoint => {
@@ -217,7 +217,7 @@ public class MachineTest {
         // 0x4001 in little endian
         byte[] expected = new byte[] { 0x01, 0x40 };
         Machine emulator = TestOneBin("jmpmov", expected);
-        ICpuState state = emulator.CpuState;
+        State state = emulator.CpuState;
         uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
         // Last instruction HLT is one byte long and is at 0xF400C
         Assert.Equal((uint)0xF400D, endAddress);
@@ -281,7 +281,7 @@ public class MachineTest {
     [InlineData(0b0011110000000000, 0b0010000000000001, 17, 0b0100000000000010, true, true)] // count > size is undefined
     public void TestShld16(ushort destination, ushort source, byte count, ushort expected, bool cf, bool of) {
         // Arrange
-        var state = new CpuState {
+        var state = new State {
             CarryFlag = true,
             OverflowFlag = true
         };
@@ -308,7 +308,7 @@ public class MachineTest {
     [InlineData(0b00110000000000000000110000000000, 0b00100000000000000000000000000001, 32, 0b00110000000000000000110000000000, true, true)] // only lowest 5 bits of count are used (so it's 0)
     public void TestShld32(uint destination, uint source, byte count, uint expected, bool cf, bool of) {
         // Arrange
-        var state = new CpuState {
+        var state = new State {
             CarryFlag = true,
             OverflowFlag = true
         };

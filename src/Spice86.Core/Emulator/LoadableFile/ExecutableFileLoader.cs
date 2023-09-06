@@ -14,7 +14,7 @@ public abstract class ExecutableFileLoader {
     /// <summary>
     /// The emulator CPU.
     /// </summary>
-    protected ICpuState _state;
+    protected State _state;
     
     /// <summary>
     /// The memory bus.
@@ -28,7 +28,7 @@ public abstract class ExecutableFileLoader {
     /// </summary>
     /// <param name="machine">The <see cref="Machine"/> instance.</param>
     /// <param name="loggerService">The <see cref="ILoggerService"/> instance.</param>
-    protected ExecutableFileLoader(IMemory memory, ICpuState state, ILoggerService loggerService) {
+    protected ExecutableFileLoader(IMemory memory, State state, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _state = state;

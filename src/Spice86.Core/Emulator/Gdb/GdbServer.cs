@@ -22,7 +22,7 @@ public sealed class GdbServer : IDisposable {
     private readonly Cpu _cpu;
     private readonly PauseHandler _pauseHandler;
     private readonly IMemory _memory;
-    private readonly ICpuState _state;
+    private readonly State _state;
     private readonly CallbackHandler _callbackHandler;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
     private readonly FunctionHandler _functionHandler;
@@ -42,7 +42,7 @@ public sealed class GdbServer : IDisposable {
     /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
     /// <param name="functionHandler">The class that handles functions calls.</param>
     /// <param name="machineBreakpoints">The class that handles breakpoints.</param>
-    public GdbServer(IMemory memory, Cpu cpu, ICpuState state, CallbackHandler callbackHandler, FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, ILoggerService loggerService, Configuration configuration, IGui? gui) {
+    public GdbServer(IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, ILoggerService loggerService, Configuration configuration, IGui? gui) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
         _functionHandler = functionHandler;

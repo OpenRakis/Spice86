@@ -37,7 +37,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// <param name="mouseType">The type of mouse to emulate.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O wasn't handled.</param>
-    public Mouse(ICpuState state, DualPic dualPic, IGui? gui, MouseType mouseType, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Mouse(State state, DualPic dualPic, IGui? gui, MouseType mouseType, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
         _dualPic = dualPic;
         MouseType = mouseType;

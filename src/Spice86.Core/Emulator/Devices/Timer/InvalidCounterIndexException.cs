@@ -15,6 +15,6 @@ public class InvalidCounterIndexException : InvalidVMOperationException {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="counterIndex">The incorrect counter index that triggered the exception.</param>
-    public InvalidCounterIndexException(ICpuState state, int counterIndex) : base(state, $"Invalid counter index {counterIndex}") {
+    public InvalidCounterIndexException(State state, int counterIndex) : base(state, $"Invalid counter index {counterIndex}") {
     }
 }

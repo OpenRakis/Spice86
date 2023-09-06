@@ -22,7 +22,7 @@ public class MouseDriver : IMouseDriver {
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
     private readonly IMouseDevice _mouseDevice;
-    private readonly ICpuState _state;
+    private readonly State _state;
 
     private readonly IVgaFunctionality _vgaFunctions;
     private readonly InMemoryAddressSwitcher _userHandlerAddressSwitcher;

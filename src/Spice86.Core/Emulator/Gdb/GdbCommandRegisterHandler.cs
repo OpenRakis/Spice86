@@ -15,14 +15,14 @@ public class GdbCommandRegisterHandler {
     private readonly ILoggerService _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
-    private readonly ICpuState _state;
+    private readonly State _state;
 
     /// <summary>
     /// Initializes a new instance of the GdbCommandRegisterHandler class
     /// </summary>
     /// <param name="gdbIo">The GdbIo object to use for communication with GDB.</param>
     /// <param name="loggerService">The ILoggerService implementation.</param>
-    public GdbCommandRegisterHandler(ICpuState state, GdbIo gdbIo, ILoggerService loggerService) {
+    public GdbCommandRegisterHandler(State state, GdbIo gdbIo, ILoggerService loggerService) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;

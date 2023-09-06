@@ -9,10 +9,10 @@ using Spice86.Shared.Utils;
 public class ModRM {
     private readonly Cpu _cpu;
     private readonly Memory.IMemory _memory;
-    private readonly ICpuState _state;
+    private readonly State _state;
     private int _registerMemoryIndex;
 
-    public ModRM(IMemory memory, Cpu cpu, ICpuState state) {
+    public ModRM(IMemory memory, Cpu cpu, State state) {
         _cpu = cpu;
         _memory = memory;
         _state = state;
