@@ -349,7 +349,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void ShowDebugWindow() {
         if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_uiDispatcherTimer, this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
+            _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_programExecutor, _uiDispatcherTimer, this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
         }
     }
 

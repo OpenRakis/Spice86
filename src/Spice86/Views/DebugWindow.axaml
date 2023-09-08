@@ -28,6 +28,24 @@
                            Text="{Binding LastUpdate, StringFormat='Last update: {0}'}">
                 </TextBlock>
                 <TabControl Grid.Row="2">
+                    <TabItem Header="CPU">
+                        <WrapPanel>
+                            <Grid RowDefinitions="Auto,*" Margin="5">
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">State</Label>
+                                <WrapPanel Grid.Row="1" Orientation="Vertical">
+                                    <TextBlock TextAlignment="Right"
+                                               Text="{Binding State.AH, StringFormat='AH: {0:X2}'}">
+                                    </TextBlock>
+                                    <TextBlock TextAlignment="Right"
+                                               Text="{Binding State.AL, StringFormat='AL: {0:X2}'}">
+                                    </TextBlock>
+                                    <TextBlock TextAlignment="Right"
+                                               Text="{Binding State.AX, StringFormat='AX: {0:X2}'}">
+                                    </TextBlock>
+                                </WrapPanel>
+                            </Grid>
+                        </WrapPanel>
+                    </TabItem>
                     <TabItem Header="Video Card">
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">

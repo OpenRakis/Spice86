@@ -17,8 +17,8 @@ using System.Security.Cryptography;
 using System.Diagnostics;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -27,7 +27,7 @@ using Spice86.Shared.Utils;
 /// Loads and executes a program following the given configuration in the emulator.<br/>
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
-public sealed class ProgramExecutor : IProgramExecutor {
+public sealed class ProgramExecutor : IProgramExecutor, IVisitableComponent {
     private readonly ILoggerService _loggerService;
     private bool _disposed;
     private readonly Configuration _configuration;
@@ -244,5 +244,13 @@ public sealed class ProgramExecutor : IProgramExecutor {
 
     public void SetTimeMultiplier(double timeMultiplier) {
         Machine.Timer.SetTimeMultiplier(timeMultiplier);
+    }
+
+    public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
+        foreach (IVisitableComponent element in new IVisitableComponent[] {
+                     Machine.Cpu
+                 }) {
+            element.Accept(emulatorVisitor);
+        }
     }
 }

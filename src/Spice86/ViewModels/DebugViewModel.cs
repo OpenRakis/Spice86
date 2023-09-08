@@ -6,12 +6,14 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 
-public partial class DebugViewModel : ViewModelBase {
+public partial class DebugViewModel : ViewModelBase, IEmulatorVisitor<DebugViewModel> {
     [ObservableProperty]
     private MachineInfo _machine = new();
     
@@ -37,9 +39,12 @@ public partial class DebugViewModel : ViewModelBase {
 
     [ObservableProperty]
     private bool _isPaused;
+
+    private readonly IVisitableComponent? _programExecutor;
     
-    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus, IVideoState videoState, IVgaRenderer vgaRenderer) {
+    public DebugViewModel(IVisitableComponent programExecutor, IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus, IVideoState videoState, IVgaRenderer vgaRenderer) {
         _videoState = videoState;
+        _programExecutor = programExecutor;
         _renderer = vgaRenderer;
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
@@ -189,6 +194,18 @@ public partial class DebugViewModel : ViewModelBase {
         VideoCard.RendererBufferSize = _renderer.BufferSize;
         VideoCard.LastFrameRenderTime = _renderer.LastFrameRenderTime;
 
+        _programExecutor?.Accept(this);
+
         LastUpdate = DateTime.Now;
+    }
+
+    [ObservableProperty]
+    private State? _state;
+
+    public void Visit<T>(T visitable) where T : IVisitableComponent {
+        if (visitable is Cpu cpu) {
+            State = cpu.State;
+            OnPropertyChanged(nameof(State));
+        }
     }
 }
