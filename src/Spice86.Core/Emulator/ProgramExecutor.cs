@@ -27,7 +27,7 @@ using Spice86.Shared.Utils;
 /// Loads and executes a program following the given configuration in the emulator.<br/>
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
-public sealed class ProgramExecutor : IDisposable {
+public sealed class ProgramExecutor : IProgramExecutor {
     private readonly ILoggerService _loggerService;
     private bool _disposed;
     private readonly Configuration _configuration;
@@ -39,12 +39,12 @@ public sealed class ProgramExecutor : IDisposable {
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
+    /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
     /// <param name="gui">The GUI to use for user actions. Can be null for headless mode or unit tests.</param>
-    /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
-    public ProgramExecutor(ILoggerService loggerService, IGui? gui, Configuration configuration) {
-        _loggerService = loggerService;
+    public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui) {
         _configuration = configuration;
+        _loggerService = loggerService;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer(gui);
         _emulationLoop = new(loggerService, Machine.Cpu, Machine.CpuState, Machine.Timer, ListensToBreakpoints, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
@@ -68,7 +68,7 @@ public sealed class ProgramExecutor : IDisposable {
 
     public State CpuState => Machine.Cpu.State;
 
-    public VideoState VideoState => Machine.VgaRegisters;
+    public IVideoState VideoState => Machine.VgaRegisters;
 
     public ArgbPalette ArgbPalette => Machine.VgaRegisters.DacRegisters.ArgbPalette;
 

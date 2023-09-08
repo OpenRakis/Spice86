@@ -58,7 +58,7 @@ public class Program {
     }
 
     private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
-        ProgramExecutor programExecutor = new(loggerService, null, configuration);
+        ProgramExecutor programExecutor = new(configuration, loggerService, null);
         programExecutor.Run();
     }
 
@@ -66,16 +66,17 @@ public class Program {
         AppBuilder appBuilder = BuildAvaloniaApp();
         ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
         App? app = (App?)appBuilder.Instance;
-        if(app is not null) {
-            MainWindow mainWindow = new();
-            var mainWindowViewModel = new MainWindowViewModel(new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimer(), configuration, loggerService);
-            mainWindow.DataContext = mainWindowViewModel;
-            desktop.MainWindow = mainWindow;
-            try {
-                desktop.Start(args);
-            } finally {
-                mainWindowViewModel.Dispose();
-            }
+        if (app is null) {
+            return;
+        }
+        MainWindow mainWindow = new();
+        var mainWindowViewModel = new MainWindowViewModel(new ProgramExecutorFactory(configuration, loggerService), new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimer(), configuration, loggerService);
+        mainWindow.DataContext = mainWindowViewModel;
+        desktop.MainWindow = mainWindow;
+        try {
+            desktop.Start(args);
+        } finally {
+            mainWindowViewModel.Dispose();
         }
     }
 

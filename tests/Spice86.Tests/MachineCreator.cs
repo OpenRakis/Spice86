@@ -29,7 +29,7 @@ public class MachineCreator {
         };
 
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
-        ProgramExecutor programExecutor = new ProgramExecutor(loggerService, null, configuration);
+        ProgramExecutor programExecutor = new ProgramExecutor(configuration, loggerService, null);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
         // Disabling custom IO handling

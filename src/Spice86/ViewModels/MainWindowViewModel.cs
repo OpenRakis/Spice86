@@ -43,6 +43,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private readonly ITextClipboard _textClipboard;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IWindowActivator _windowActivator;
+    private readonly IProgramExecutorFactory _programExecutorFactory;
+    private IProgramExecutor? _programExecutor;
 
     private AvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     [ObservableProperty]
@@ -67,8 +69,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private bool _isAppClosing;
 
-    public MainWindowViewModel(IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
+        _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
         _uiDispatcherTimer = uiDispatcherTimer;
         _hostStorageProvider = hostStorageProvider;
@@ -89,9 +92,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 _avaloniaKeyScanCodeConverter.GetAsciiCode(
                     _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
     }
-
-    private ProgramExecutor? _programExecutor;
-
+    
     [RelayCommand]
     public async Task SaveBitmap() {
         if (_hostStorageProvider is { CanSave: true, CanPickFolder: true }) {
@@ -503,8 +504,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand]
     public async Task CopyToClipboard() {
-        if(Exception is not null &&
-            _textClipboard is not null) {
+        if(Exception is not null) {
             await _textClipboard.SetTextAsync($"{Exception.Message}{Environment.NewLine}{Exception.StackTrace}");
         }
     }
@@ -590,7 +590,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     }
 
     private void StartProgramExecutor() {
-        _programExecutor = new ProgramExecutor(_loggerService, this, Configuration);
+        _programExecutor = _programExecutorFactory.Create(this);
         TimeMultiplier = Configuration.TimeMultiplier;
         _videoCard = _programExecutor.VideoCard;
         _uiDispatcher.Post(() => IsMachineRunning = true);
