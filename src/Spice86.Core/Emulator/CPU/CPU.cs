@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -1438,5 +1437,6 @@ public class Cpu : IVisitableComponent {
 
     public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
         emulatorVisitor.Visit(this);
+        State.Accept(emulatorVisitor);
     }
 }
