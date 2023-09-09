@@ -45,7 +45,7 @@ public class RegistersHolder {
     /// </summary>
     /// <returns>The combined hash of the instance, and the <see cref="_registers"/> array.</returns>
     public override int GetHashCode() {
-        return HashCode.Combine(this, _registers);
+        return _registers.GetHashCode();
     }
 
     /// <summary>
