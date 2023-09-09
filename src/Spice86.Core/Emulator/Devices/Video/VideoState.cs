@@ -35,7 +35,7 @@ public class VideoState : IVideoState, IVisitableComponent {
     /// <inheritdoc />
     public AttributeControllerRegisters AttributeControllerRegisters { get; }
 
-    public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
+    public void Accept(IEmulatorVisitor emulatorVisitor) {
         emulatorVisitor.Visit(this);
         DacRegisters.Accept(emulatorVisitor);
     }

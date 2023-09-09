@@ -12,7 +12,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 
-public partial class PerformanceViewModel : ViewModelBase, IEmulatorVisitor<PaletteViewModel> {
+public partial class PerformanceViewModel : ViewModelBase, IEmulatorVisitor {
     private State? _state;
     private readonly IPerformanceMeasurer? _performanceMeasurer;
     

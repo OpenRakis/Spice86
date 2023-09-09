@@ -87,7 +87,7 @@ public class DacRegisters : IVisitableComponent {
     /// </summary>
     public ArgbPalette ArgbPalette { get; }
 
-    public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
+    public void Accept(IEmulatorVisitor emulatorVisitor) {
         emulatorVisitor.Visit(this);
         ArgbPalette.Accept(emulatorVisitor);
     }

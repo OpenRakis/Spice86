@@ -8,5 +8,5 @@ public interface IVisitableComponent {
     /// Lets the visitor enter and visit the class
     /// </summary>
     /// <param name="emulatorVisitor">The class that will accumulate data about the visited class</param>
-    void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf>;
+    void Accept(IEmulatorVisitor emulatorVisitor);
 }

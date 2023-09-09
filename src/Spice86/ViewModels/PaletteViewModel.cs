@@ -13,7 +13,7 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
 
-public partial class PaletteViewModel : ViewModelBase, IEmulatorVisitor<PaletteViewModel> {
+public partial class PaletteViewModel : ViewModelBase, IEmulatorVisitor {
     private ArgbPalette? _argbPalette;
 
     public PaletteViewModel() {

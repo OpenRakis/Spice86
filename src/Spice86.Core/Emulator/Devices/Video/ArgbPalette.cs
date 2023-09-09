@@ -46,7 +46,7 @@ public class ArgbPalette : IVisitableComponent {
         }
     }
 
-    public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
+    public void Accept(IEmulatorVisitor emulatorVisitor) {
         emulatorVisitor.Visit(this);
     }
 }

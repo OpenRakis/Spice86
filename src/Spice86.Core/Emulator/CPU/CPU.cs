@@ -1435,7 +1435,7 @@ public class Cpu : IVisitableComponent {
     /// <returns>The return address string.</returns>
     public string PeekReturn() => SegmentedAddress.ToString(FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
 
-    public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
+    public void Accept(IEmulatorVisitor emulatorVisitor) {
         emulatorVisitor.Visit(this);
         State.Accept(emulatorVisitor);
     }

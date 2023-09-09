@@ -13,7 +13,7 @@ using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 
-public partial class DebugViewModel : ViewModelBase, IEmulatorVisitor<DebugViewModel> {
+public partial class DebugViewModel : ViewModelBase, IEmulatorVisitor {
     [ObservableProperty]
     private MachineInfo _machine = new();
     

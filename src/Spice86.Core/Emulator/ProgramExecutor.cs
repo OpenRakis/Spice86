@@ -246,7 +246,7 @@ public sealed class ProgramExecutor : IProgramExecutor, IVisitableComponent {
         Machine.Timer.SetTimeMultiplier(timeMultiplier);
     }
 
-    public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
+    public void Accept(IEmulatorVisitor emulatorVisitor) {
         Machine.Accept(emulatorVisitor);
     }
 }
