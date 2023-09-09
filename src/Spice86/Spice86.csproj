@@ -51,6 +51,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.1.6" />
 		<PackageReference Include="Pure.DI" Version="2.0.15" />
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />

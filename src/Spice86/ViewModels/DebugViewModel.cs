@@ -23,8 +23,8 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorVisitor {
     [ObservableProperty]
     private DateTime? _lastUpdate = null;
 
-    readonly IVideoState? _videoState;
-    readonly IVgaRenderer? _renderer;
+    private readonly IVideoState? _videoState;
+    private readonly IVgaRenderer? _renderer;
     private readonly IPauseStatus? _pauseStatus;
 
     
@@ -200,12 +200,58 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorVisitor {
     }
 
     [ObservableProperty]
-    private State? _state;
+    private StateInfo _state = new();
 
     public void Visit<T>(T visitable) where T : IVisitableComponent {
-        if (visitable is Cpu cpu) {
-            State = cpu.State;
-            OnPropertyChanged(nameof(State));
+        if (visitable is State state) {
+            State.AH = $"{state.AH:X2}";
+            State.AL = $"{state.AL:X2}";
+            State.AX = $"{state.AX:X2}";
+            State.EAX = $"{state.EAX:X2}";
+            State.BH = $"{state.BH:X2}";
+            State.BL = $"{state.BL:X2}";
+            State.BX = $"{state.BX:X2}";
+            State.EBX = $"{state.EBX:X2}";
+            State.CH =$"{state.CH:X2}";
+            State.CL = $"{state.CL:X2}";
+            State.CX = $"{state.CX:X2}";
+            State.ECX = $"{state.ECX:X2}";
+            State.DH = $"{state.DH:X2}";
+            State.DL = $"{state.DL:X2}";
+            State.DX = $"{state.DX:X2}";
+            State.EDX = $"{state.EDX:X2}";
+            State.DI = $"{state.DI:X2}";
+            State.EDI = $"{state.EDI:X2}";
+            State.SI = $"{state.SI:X2}";
+            State.ES = $"{state.ES:X2}";
+            State.BP = $"{state.BP:X2}";
+            State.EBP = $"{state.EBP:X2}";
+            State.SP = $"{state.SP:X2}";
+            State.ESP = $"{state.ESP:X2}";
+            State.CS = $"{state.CS:X2}";
+            State.DS = $"{state.DS:X2}";
+            State.ES = $"{state.ES:X2}";
+            State.FS = $"{state.FS:X2}";
+            State.GS = $"{state.GS:X2}";
+            State.SS = $"{state.SS:X2}";
+            State.IP = $"{state.IP:X2}";
+            State.Cycles = state.Cycles;
+            State.Direction8 = $"{state.Direction8:X2}";
+            State.Direction16 = $"{state.Direction16:X2}";
+            State.Direction32 = $"{state.Direction32:X2}";
+            State.Flags = state.Flags.ToString();
+            State.AuxiliaryFlag = state.AuxiliaryFlag;
+            State.CarryFlag = state.CarryFlag;
+            State.DirectionFlag = state.DirectionFlag;
+            State.InterruptFlag = state.InterruptFlag;
+            State.OverflowFlag = state.OverflowFlag;
+            State.ParityFlag = state.ParityFlag;
+            State.ZeroFlag = state.ZeroFlag;
+            State.ContinueZeroFlagValue = state.ContinueZeroFlagValue;
+            State.StackPhysicalAddress = $"{state.StackPhysicalAddress:X2}";
+            State.SegmentOverrideIndex = $"{state.SegmentOverrideIndex:X2}";
+            State.IpPhysicalAddress = $"{state.IpPhysicalAddress:X2}";
+            State.IsRunning = state.IsRunning;
         }
     }
 }
