@@ -1,8 +1,10 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers;
 
+using Spice86.Core.Emulator.Debugger;
+
 using System.Diagnostics;
 
-public class DacRegisters {
+public class DacRegisters : IVisitableComponent {
     public readonly byte[,] Palette = new byte[256, 3];
     private int _indexRegister;
     private byte _internalIndex;
@@ -84,4 +86,9 @@ public class DacRegisters {
     ///     Converts the internal palette to an array of ARGB values.
     /// </summary>
     public ArgbPalette ArgbPalette { get; }
+
+    public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
+        emulatorVisitor.Visit(this);
+        ArgbPalette.Accept(emulatorVisitor);
+    }
 }

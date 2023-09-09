@@ -356,7 +356,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
         if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<PaletteViewModel>(_uiDispatcherTimer, _programExecutor.ArgbPalette);
+            _windowActivator.ActivateAdditionalWindow<PaletteViewModel>(_uiDispatcherTimer, _programExecutor);
         }
     }
 

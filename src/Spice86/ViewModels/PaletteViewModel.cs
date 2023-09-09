@@ -8,22 +8,22 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
 
-public partial class PaletteViewModel : ViewModelBase {
-    private readonly ArgbPalette? _argbPalette;
+public partial class PaletteViewModel : ViewModelBase, IEmulatorVisitor<PaletteViewModel> {
+    private ArgbPalette? _argbPalette;
 
     public PaletteViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
     }
-
     
-    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, ArgbPalette argbPalette) {
-        _argbPalette = argbPalette;
+    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IVisitableComponent programExecutor) {
+        programExecutor.Accept(this);
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
         }
@@ -54,6 +54,12 @@ public partial class PaletteViewModel : ViewModelBase {
         } catch {
             //A read during emulation provoked an OutOfRangeException (for example, in the DAC).
             // Ignore it.
+        }
+    }
+
+    public void Visit<T>(T visitable) where T : IVisitableComponent {
+        if (visitable is ArgbPalette argbPalette) {
+            _argbPalette = argbPalette;
         }
     }
 }

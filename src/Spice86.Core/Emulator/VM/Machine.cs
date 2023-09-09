@@ -2,6 +2,7 @@
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -31,7 +32,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Centralizes classes instances that should live while the CPU is running.
 /// </summary>
-public sealed class Machine : IDisposable {
+public sealed class Machine : IDisposable, IVisitableComponent {
     private bool _disposed;
     
     /// <summary>
@@ -154,9 +155,9 @@ public sealed class Machine : IDisposable {
     public IVideoCard VgaCard { get; }
     
     /// <summary>
-    /// The Vga Registers
+    /// The VGA Registers
     /// </summary>
-    public VideoState VgaRegisters { get; set; }
+    public IVideoState VgaRegisters { get; set; }
     
     /// <summary>
     /// The VGA port handler
@@ -344,5 +345,11 @@ public sealed class Machine : IDisposable {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
+        emulatorVisitor.Visit(this);
+        Cpu.Accept(emulatorVisitor);
+        ((IVisitableComponent)VgaRegisters).Accept(emulatorVisitor);
     }
 }

@@ -247,10 +247,6 @@ public sealed class ProgramExecutor : IProgramExecutor, IVisitableComponent {
     }
 
     public void Accept<TSelf>(IEmulatorVisitor<TSelf> emulatorVisitor) where TSelf : IEmulatorVisitor<TSelf> {
-        foreach (IVisitableComponent element in new IVisitableComponent[] {
-                     Machine.Cpu
-                 }) {
-            element.Accept(emulatorVisitor);
-        }
+        Machine.Accept(emulatorVisitor);
     }
 }
