@@ -2,7 +2,60 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:usercontrols="clr-namespace:Spice86.UserControls"
+             xmlns:hexView="clr-namespace:Spice86._3rdParty.Controls.HexView"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="Spice86.UserControls.HexSingleView">
-    Welcome to Avalonia!
+             x:Class="Spice86.UserControls.HexSingleView"
+             x:CompileBindings="True" x:DataType="usercontrols:HexSingleView">
+    <Grid RowDefinitions="Auto,*">
+        <Grid Grid.Row="0">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="4">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="base"
+                               VerticalAlignment="Center"
+                               Margin="4" />
+                    <ComboBox Name="ToBaseComboBox"
+                              SelectedIndex="3"
+                              Margin="4">
+                        <ComboBox.Items>
+                            <x:Int32>2</x:Int32>
+                            <x:Int32>8</x:Int32>
+                            <x:Int32>10</x:Int32>
+                            <x:Int32>16</x:Int32>
+                        </ComboBox.Items>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="bytes"
+                               VerticalAlignment="Center"
+                               Margin="4" />
+                    <ComboBox Name="BytesWidthComboBox"
+                                  SelectedIndex="1"
+                                  Margin="4">
+                        <ComboBox.Items>
+                            <x:Int32>8</x:Int32>
+                            <x:Int32>16</x:Int32>
+                            <x:Int32>24</x:Int32>
+                            <x:Int32>32</x:Int32>
+                        </ComboBox.Items>
+                    </ComboBox>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+        <ScrollViewer Grid.Row="1">
+            <hexView:HexViewControl Name="HexViewControl"
+                                    ToBase="{Binding #ToBaseComboBox.SelectedItem}"
+                                    BytesWidth="{Binding #BytesWidthComboBox.SelectedItem}"
+                                    TextElement.FontSize="13"
+                                    TextElement.Foreground="{DynamicResource TextControlForeground}"
+                                    Margin="4,0,4,4">
+                <TextElement.FontFamily>
+                    <OnPlatform Default="{StaticResource RobotoMonoFont}">
+                        <On Options="Windows" Content="{StaticResource ConsolasFont}" />
+                    </OnPlatform>
+                </TextElement.FontFamily>
+            </hexView:HexViewControl>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

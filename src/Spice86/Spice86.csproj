@@ -75,7 +75,7 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-		<AvaloniaResource Include="Icon\Spice86.ico" />
+		<AvaloniaResource Include="Assets\**" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />

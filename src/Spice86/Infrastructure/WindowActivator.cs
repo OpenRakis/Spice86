@@ -18,7 +18,7 @@ internal class WindowActivator : IWindowActivator {
             return;
         }
         object? viewModel = Activator.CreateInstance(typeof(T), parameters);
-        var name = typeof(T).FullName!.Replace("ViewModels", "Views").Replace("ViewModel", "Window");
+        string? name = typeof(T).FullName!.Replace("ViewModels", "Views").Replace("ViewModel", "Window");
         var typeOfWindow = Type.GetType(name);
 
         if (typeOfWindow != null) {

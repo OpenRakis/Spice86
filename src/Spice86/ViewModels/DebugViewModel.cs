@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
@@ -26,7 +27,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorVisitor {
     private readonly IVideoState? _videoState;
     private readonly IVgaRenderer? _renderer;
     private readonly IPauseStatus? _pauseStatus;
-
+    
+    [ObservableProperty]
+    private IMemory? _memory;
     
     public DebugViewModel() {
         if (!Design.IsDesignMode) {
@@ -252,6 +255,10 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorVisitor {
             State.SegmentOverrideIndex = $"{state.SegmentOverrideIndex:X2}";
             State.IpPhysicalAddress = $"{state.IpPhysicalAddress:X2}";
             State.IsRunning = state.IsRunning;
+        }
+
+        if (visitable is IMemory memory && Memory is null) {
+            Memory = memory;
         }
     }
 }

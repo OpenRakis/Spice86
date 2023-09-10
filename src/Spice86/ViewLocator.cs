@@ -10,7 +10,7 @@ public class ViewLocator : IDataTemplate {
         if (data is null) {
             return new TextBlock { Text = "Not Found: " + data };
         }
-        var name = data.GetType().FullName!.Replace("ViewModel", "View");
+        string? name = data.GetType().FullName!.Replace("ViewModel", "View");
         var type = Type.GetType(name);
 
         if (type != null) {

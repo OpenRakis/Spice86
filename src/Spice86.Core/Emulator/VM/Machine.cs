@@ -351,5 +351,6 @@ public sealed class Machine : IDisposable, IVisitableComponent {
         emulatorVisitor.Visit(this);
         Cpu.Accept(emulatorVisitor);
         ((IVisitableComponent)VgaRegisters).Accept(emulatorVisitor);
+        ((IVisitableComponent)Memory).Accept(emulatorVisitor);
     }
 }

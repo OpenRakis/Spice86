@@ -6,7 +6,7 @@
 		xmlns:converters="clr-namespace:Spice86.Converters"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
-		Icon="/Icon/Spice86.ico"
+		Icon="/Assets/Spice86.ico"
 		Title="{Binding MainTitle}"
 		x:CompileBindings="True" x:DataType="vm:MainWindowViewModel"
 		Width="1024"
