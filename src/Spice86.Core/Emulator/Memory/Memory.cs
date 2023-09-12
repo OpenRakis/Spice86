@@ -2,7 +2,6 @@
 
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Memory.Indexer;
-using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Represents the memory bus of the IBM PC.

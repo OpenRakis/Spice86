@@ -350,6 +350,7 @@ public sealed class Machine : IDisposable, IVisitableComponent {
     public void Accept(IEmulatorVisitor emulatorVisitor) {
         emulatorVisitor.Visit(this);
         Cpu.Accept(emulatorVisitor);
+        ((IVisitableComponent)VgaRenderer).Accept(emulatorVisitor);
         ((IVisitableComponent)VgaRegisters).Accept(emulatorVisitor);
         ((IVisitableComponent)Memory).Accept(emulatorVisitor);
     }
