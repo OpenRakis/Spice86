@@ -2,6 +2,9 @@
 
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
+using Spice86.Shared.Emulator.Video;
+
+using System.ComponentModel;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -9,11 +12,16 @@ using Spice86.Shared.Emulator.Mouse;
 /// Communicates keyboard and mouse events to the emulator <br/>
 /// This is the MainWindowViewModel.
 /// </summary>
-public interface IGui {
+public interface IGui : INotifyPropertyChanged {
     /// <summary>
     /// Whether the mouse cursor is shown.
     /// </summary>
     bool ShowCursor { get; set; }
+    
+    /// <summary>
+    /// The PIT will make the emulated program act more quickly if this is above 1.
+    /// </summary>
+    double? TimeMultiplier { get; }
 
     /// <summary>
     /// Shows the UI mouse cursor
@@ -81,6 +89,11 @@ public interface IGui {
     /// <param name="videoWidth">The width in pixels</param>
     /// <param name="videoHeight">The height in pixels</param>
     void SetResolution(int videoWidth, int videoHeight);
+
+    /// <summary>
+    /// Invoked when the GUI asks the VideoCard to render the screen contents in the WriteableBitmap's buffer pointer.
+    /// </summary>
+    event EventHandler<UIRenderEventArgs>? RenderScreen;
 
     /// <summary>
     /// Indicate that the mouse has moved.

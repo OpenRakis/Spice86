@@ -31,9 +31,11 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
 using Spice86.Infrastructure;
+using Spice86.Shared.Emulator.Video;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
@@ -140,7 +142,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     }
 
     private void Draw() {
-        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || _videoCard is null) {
+        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
             return;
         }
         if (!_isDrawThreadInitialized) {
@@ -157,8 +159,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 _drawingSemaphoreSlim?.Wait();
                 try {
                     using ILockedFramebuffer pixels = Bitmap.Lock();
-                    var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                    _videoCard.Render(buffer);
+                    var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                    RenderScreen.Invoke(this, uiRenderEventArgs);
                 } finally {
                     _drawingSemaphoreSlim?.Release();
                 }
@@ -334,7 +336,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         set {
             if (value is not null) {
                 SetProperty(ref _timeMultiplier, value.Value);
-                _programExecutor?.SetTimeMultiplier(_timeMultiplier);
             }
         }
     }
@@ -342,14 +343,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowPerformance() {
         if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<PerformanceViewModel>(_uiDispatcherTimer, _programExecutor.CpuState, new PerformanceMeasurer());
+            _windowActivator.ActivateAdditionalWindow<PerformanceViewModel>(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer());
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void ShowDebugWindow() {
         if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_programExecutor, _uiDispatcherTimer, this);
+            _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_uiDispatcherTimer, _programExecutor, this);
         }
     }
 
@@ -458,6 +459,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _isSettingResolution = false;
     }, DispatcherPriority.MaxValue);
 
+    public event EventHandler<UIRenderEventArgs>? RenderScreen;
+
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
@@ -565,8 +568,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         ShowEmulationErrorMessage(e);
     });
 
-    private IVideoCard? _videoCard;
-
     private void MachineThread() {
         try {
             if (Debugger.IsAttached) {
@@ -592,10 +593,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
         TimeMultiplier = Configuration.TimeMultiplier;
-        _videoCard = _programExecutor.VideoCard;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
-        _programExecutor.Run();
+        _programExecutor?.Run();
         if (_closeAppOnEmulatorExit) {
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         }

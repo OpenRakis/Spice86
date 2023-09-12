@@ -220,7 +220,7 @@ public sealed class Machine : IDisposable, IVisitableComponent {
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
 
-        Timer = new Timer(CpuState, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
+        Timer = new Timer(gui, CpuState, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Timer);
         Keyboard = new Keyboard(CpuState, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
@@ -350,6 +350,7 @@ public sealed class Machine : IDisposable, IVisitableComponent {
     public void Accept(IEmulatorVisitor emulatorVisitor) {
         emulatorVisitor.Visit(this);
         Cpu.Accept(emulatorVisitor);
+        ((IVisitableComponent)VgaCard).Accept(emulatorVisitor);
         ((IVisitableComponent)VgaRenderer).Accept(emulatorVisitor);
         ((IVisitableComponent)VgaRegisters).Accept(emulatorVisitor);
         ((IVisitableComponent)Memory).Accept(emulatorVisitor);

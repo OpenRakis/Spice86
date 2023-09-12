@@ -18,7 +18,6 @@ using System.Diagnostics;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Debugger;
-using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -65,15 +64,7 @@ public sealed class ProgramExecutor : IProgramExecutor, IVisitableComponent {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
     }
-
-    public State CpuState => Machine.Cpu.State;
-
-    public IVideoState VideoState => Machine.VgaRegisters;
-
-    public ArgbPalette ArgbPalette => Machine.VgaRegisters.DacRegisters.ArgbPalette;
-
-    public IVgaRenderer VgaRenderer => Machine.VgaRenderer;
-
+    
     public void DumpEmulatorStateToDirectory(string path) {
         new RecorderDataWriter(Machine.Memory,
                 Machine.Cpu.State, Machine.CallbackHandler, _configuration,
@@ -117,8 +108,6 @@ public sealed class ProgramExecutor : IProgramExecutor, IVisitableComponent {
             throw new UnrecoverableException(error);
         }
     }
-
-    public IVideoCard VideoCard => Machine.VgaCard;
 
     private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
         string? executableFileName = configuration.Exe;
@@ -240,10 +229,6 @@ public sealed class ProgramExecutor : IProgramExecutor, IVisitableComponent {
         IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.FunctionInformations = functionInformations;
         functionHandler.UseCodeOverride = useCodeOverride;
-    }
-
-    public void SetTimeMultiplier(double timeMultiplier) {
-        Machine.Timer.SetTimeMultiplier(timeMultiplier);
     }
 
     public void Accept(IEmulatorVisitor emulatorVisitor) {

@@ -43,7 +43,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorVisitor {
 
     private readonly IVisitableComponent? _programExecutor;
     
-    public DebugViewModel(IVisitableComponent programExecutor, IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
+    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IVisitableComponent programExecutor, IPauseStatus pauseStatus) {
         _programExecutor = programExecutor;
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;

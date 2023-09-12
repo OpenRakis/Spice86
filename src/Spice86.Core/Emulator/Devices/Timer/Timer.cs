@@ -10,6 +10,8 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
+using System.ComponentModel;
+
 /// <summary>
 /// Emulates a PIT8254 Programmable Interval Timer.<br/>
 /// As a shortcut also triggers screen refreshes 60 times per second.<br/>
@@ -35,7 +37,9 @@ public class Timer : DefaultIOPortHandler {
     // screen refresh
     private readonly Counter _vgaScreenRefreshCounter;
 
-    public Timer(State state, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    private readonly IGui? _gui;
+
+    public Timer(IGui? gui, State state, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         for (int i = 0; i < _counters.Length; i++) {
@@ -46,9 +50,19 @@ public class Timer : DefaultIOPortHandler {
         // screen refresh is 60hz regardless of the configuration
         _vgaScreenRefreshCounter = new Counter(state, _loggerService, 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
+        _gui = gui;
+        if (_gui is not null) {
+            _gui.PropertyChanged += OnTimerPropertyChanged;
+        }
     }
 
-    public void SetTimeMultiplier(double multiplier) {
+    private void OnTimerPropertyChanged(object? sender, PropertyChangedEventArgs e) {
+        if (e.PropertyName == nameof(_gui.TimeMultiplier) && _gui is not null && _gui.TimeMultiplier is not null) {
+            SetTimeMultiplier(_gui.TimeMultiplier.Value);
+        }
+    }
+
+    private void SetTimeMultiplier(double multiplier) {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));
         }
