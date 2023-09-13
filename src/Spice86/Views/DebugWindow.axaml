@@ -472,14 +472,16 @@
                 </TabItem>
             </TabControl>
         </ScrollViewer>
-        <WrapPanel Orientation="Horizontal" Grid.Row="1" IsVisible="{Binding IsPaused}">
-            <TextBlock HorizontalAlignment="Center"
-                       Text="{Binding LastUpdate, StringFormat='Last update: {0}'}">
-            </TextBlock>
-            <Button Margin="5,0,0,0" HorizontalAlignment="Center" Content="Force Update"
-                    Command="{Binding UpdateDataCommand}">
-            </Button>
-        </WrapPanel>
+        <Border Grid.Row="1" Background="{StaticResource SystemControlBackgroundAccentBrush}">
+            <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal" IsVisible="{Binding IsPaused}">
+                <TextBlock VerticalAlignment="Bottom" Margin="0,0,5,0"
+                           Text="{Binding LastUpdate, StringFormat='Last update: {0}'}">
+                </TextBlock>
+                <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Force Update"
+                        Command="{Binding UpdateDataCommand}">
+                </Button>
+            </WrapPanel>
+        </Border>
         <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="To show anything, pause the emulator first." IsVisible="{Binding !IsPaused}" />
     </Grid>
 </Window>
