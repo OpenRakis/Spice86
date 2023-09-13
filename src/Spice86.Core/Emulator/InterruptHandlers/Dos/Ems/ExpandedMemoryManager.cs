@@ -211,7 +211,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     /// <returns>The number of pages available.</returns>
     public ushort GetFreePageCount() {
-        return (ushort) Math.Max(0, EmmMemory.TotalPages - EmmHandles.SelectMany(static x => x.Value.LogicalPages).Count());
+        return (ushort) Math.Max(0, EmmMemory.TotalPages - EmmHandles.Sum(static x => x.Value.LogicalPages.Count));
     }
 
     /// <summary>
