@@ -31,7 +31,7 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
     public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer) {
         programExecutor.Accept(this);
         _performanceMeasurer = performanceMeasurer;
-        uiDispatcherTimer.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
+        uiDispatcherTimer.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {

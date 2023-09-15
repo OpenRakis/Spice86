@@ -57,7 +57,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
 
     [RelayCommand]
     public void StartObserverTimer() {
-        _uiDispatcherTimer?.StartNew(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, UpdateValues);
+        _uiDispatcherTimer?.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
