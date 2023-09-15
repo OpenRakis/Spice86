@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.Debugger;
 
 using System.Diagnostics;
 
-public class DacRegisters : IVisitableComponent {
+public class DacRegisters : IDebuggableComponent {
     public readonly byte[,] Palette = new byte[256, 3];
     private int _indexRegister;
     private byte _internalIndex;
@@ -87,8 +87,8 @@ public class DacRegisters : IVisitableComponent {
     /// </summary>
     public ArgbPalette ArgbPalette { get; }
 
-    public void Accept(IEmulatorVisitor emulatorVisitor) {
-        emulatorVisitor.Visit(this);
-        ArgbPalette.Accept(emulatorVisitor);
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitDacRegisters(this);
+        ArgbPalette.Accept(emulatorDebugger);
     }
 }

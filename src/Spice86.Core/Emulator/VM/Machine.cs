@@ -32,7 +32,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Centralizes classes instances that should live while the CPU is running.
 /// </summary>
-public sealed class Machine : IDisposable, IVisitableComponent {
+public sealed class Machine : IDisposable, IDebuggableComponent {
     private bool _disposed;
     
     /// <summary>
@@ -347,12 +347,11 @@ public sealed class Machine : IDisposable, IVisitableComponent {
         GC.SuppressFinalize(this);
     }
 
-    public void Accept(IEmulatorVisitor emulatorVisitor) {
-        emulatorVisitor.Visit(this);
-        Cpu.Accept(emulatorVisitor);
-        ((IVisitableComponent)VgaCard).Accept(emulatorVisitor);
-        ((IVisitableComponent)VgaRenderer).Accept(emulatorVisitor);
-        ((IVisitableComponent)VgaRegisters).Accept(emulatorVisitor);
-        ((IVisitableComponent)Memory).Accept(emulatorVisitor);
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        Cpu.Accept(emulatorDebugger);
+        ((IDebuggableComponent)VgaCard).Accept(emulatorDebugger);
+        ((IDebuggableComponent)VgaRenderer).Accept(emulatorDebugger);
+        ((IDebuggableComponent)VgaRegisters).Accept(emulatorDebugger);
+        ((IDebuggableComponent)Memory).Accept(emulatorDebugger);
     }
 }

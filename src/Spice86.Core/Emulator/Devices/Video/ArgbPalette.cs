@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Debugger;
 /// <summary>
 ///   A 32 bit representation of an 18-bit color palette.
 /// </summary>
-public class ArgbPalette : IVisitableComponent {
+public class ArgbPalette : IDebuggableComponent {
     private readonly byte[,] _sixBitPalette;
     private readonly uint[,,] _32BitPalette;
 
@@ -46,7 +46,7 @@ public class ArgbPalette : IVisitableComponent {
         }
     }
 
-    public void Accept(IEmulatorVisitor emulatorVisitor) {
-        emulatorVisitor.Visit(this);
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitDacPalette(this);
     }
 }

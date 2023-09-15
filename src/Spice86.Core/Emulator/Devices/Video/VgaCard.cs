@@ -9,7 +9,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     Thin interface between renderer and gui.
 /// </summary>
-public class VgaCard : IVideoCard, IVisitableComponent {
+public class VgaCard : IVideoCard, IDebuggableComponent {
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
     private readonly IVgaRenderer _renderer;
@@ -53,7 +53,7 @@ public class VgaCard : IVideoCard, IVisitableComponent {
         _renderer.Render(buffer);
     }
 
-    public void Accept(IEmulatorVisitor emulatorVisitor) {
-        emulatorVisitor.Visit(this);
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitVgaCard(this);
     }
 }

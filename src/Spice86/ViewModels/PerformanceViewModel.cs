@@ -7,12 +7,15 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Shared.Interfaces;
 
 using System;
 
-public partial class PerformanceViewModel : ViewModelBase, IEmulatorVisitor {
+public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
     private State? _state;
     private readonly IPerformanceMeasurer? _performanceMeasurer;
     
@@ -25,7 +28,7 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorVisitor {
         }
     }
 
-    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IVisitableComponent programExecutor, IPerformanceMeasurer performanceMeasurer) {
+    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer) {
         programExecutor.Accept(this);
         _performanceMeasurer = performanceMeasurer;
         uiDispatcherTimer.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
@@ -48,9 +51,26 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorVisitor {
     [ObservableProperty]
     private double _instructionsPerSecond = -1;
 
-    public void Visit<T>(T visitable) where T : IVisitableComponent {
-        if (visitable is State state) {
-            _state = state;
-        }
+    public void VisitMainMemory(IMemory memory) {
+    }
+    
+    public void VisitCpuState(State state) => _state = state;
+    
+    public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
+    }
+
+    public void VisitVideoState(IVideoState videoState) {
+    }
+
+    public void VisitDacPalette(ArgbPalette argbPalette) {
+    }
+
+    public void VisitDacRegisters(DacRegisters dacRegisters) {
+    }
+
+    public void VisitVgaCard(VgaCard vgaCard) {
+    }
+
+    public void VisitCpu(Cpu cpu) {
     }
 }

@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.Memory.Indexer;
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public class Memory : Indexable.Indexable, IMemory, IVisitableComponent {
+public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 
@@ -204,7 +204,7 @@ public class Memory : Indexable.Indexable, IMemory, IVisitableComponent {
 
     private record DeviceRegistration(uint StartAddress, uint EndAddress, IMemoryDevice Device);
 
-    public void Accept(IEmulatorVisitor emulatorVisitor) {
-        emulatorVisitor.Visit(this);
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitMainMemory(this);
     }
 }

@@ -25,7 +25,7 @@ using Spice86.Shared.Utils;
 /// https://www.felixcloutier.com/x86/ </li><li> Pure 8086 instructions:
 /// https://jbwyatt.com/253/emu/8086_instruction_set.html </li></ul>
 /// </summary>
-public class Cpu : IVisitableComponent {
+public class Cpu : IDebuggableComponent {
     // Extract regIndex from opcode
     private const int RegIndexMask = 0b111;
 
@@ -1435,8 +1435,8 @@ public class Cpu : IVisitableComponent {
     /// <returns>The return address string.</returns>
     public string PeekReturn() => SegmentedAddress.ToString(FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
 
-    public void Accept(IEmulatorVisitor emulatorVisitor) {
-        emulatorVisitor.Visit(this);
-        State.Accept(emulatorVisitor);
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitCpu(this);
+        State.Accept(emulatorDebugger);
     }
 }

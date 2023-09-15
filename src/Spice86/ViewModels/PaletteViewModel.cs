@@ -8,12 +8,15 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
 
-public partial class PaletteViewModel : ViewModelBase, IEmulatorVisitor {
+public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
     private ArgbPalette? _argbPalette;
 
     public PaletteViewModel() {
@@ -22,7 +25,7 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorVisitor {
         }
     }
     
-    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IVisitableComponent programExecutor) {
+    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor) {
         programExecutor.Accept(this);
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
@@ -57,9 +60,26 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorVisitor {
         }
     }
 
-    public void Visit<T>(T visitable) where T : IVisitableComponent {
-        if (visitable is ArgbPalette argbPalette) {
-            _argbPalette = argbPalette;
-        }
+    public void VisitMainMemory(IMemory memory) {
+    }
+
+    public void VisitCpuState(State state) {
+    }
+
+    public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
+    }
+
+    public void VisitVideoState(IVideoState videoState) {
+    }
+
+    public void VisitDacPalette(ArgbPalette argbPalette) => _argbPalette = argbPalette;
+    
+    public void VisitDacRegisters(DacRegisters dacRegisters) {
+    }
+
+    public void VisitVgaCard(VgaCard vgaCard) {
+    }
+
+    public void VisitCpu(Cpu cpu) {
     }
 }

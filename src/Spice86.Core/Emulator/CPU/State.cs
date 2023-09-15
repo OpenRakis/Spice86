@@ -9,7 +9,7 @@ using Spice86.Shared.Utils;
 /// <summary>
 /// Represents the state of the CPU
 /// </summary>
-public class State : IVisitableComponent {
+public class State : IDebuggableComponent {
     // Accumulator
     public byte AH { get => Registers.GetRegister8H(Registers.AxIndex); set => Registers.SetRegister8H(Registers.AxIndex, value); }
     public byte AL { get => Registers.GetRegister8L(Registers.AxIndex); set => Registers.SetRegister8L(Registers.AxIndex, value); }
@@ -168,7 +168,7 @@ public class State : IVisitableComponent {
         return DumpedRegFlags;
     }
 
-    public void Accept(IEmulatorVisitor emulatorVisitor) {
-        emulatorVisitor.Visit(this);
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitCpuState(this);
     }
 }
