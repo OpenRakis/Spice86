@@ -2,6 +2,8 @@ namespace Spice86.Views;
 
 using Avalonia.Controls;
 
+using Spice86.ViewModels;
+
 public sealed partial class DebugWindow : Window, IDisposable {
     private bool _disposed;
     public DebugWindow() {
@@ -14,6 +16,11 @@ public sealed partial class DebugWindow : Window, IDisposable {
             HexSingleView.Dispose();
             _disposed = true;
         }
+    }
+
+    protected override void OnDataContextChanged(EventArgs e) {
+        base.OnDataContextChanged(e);
+        ((DebugViewModel?)DataContext)?.StartObserverTimer();
     }
 
     public void Dispose() {

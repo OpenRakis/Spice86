@@ -26,6 +26,8 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     private DateTime? _lastUpdate = null;
 
     private readonly IPauseStatus? _pauseStatus;
+
+    [ObservableProperty] private bool _isLoading = true;
     
     [ObservableProperty]
     private IMemory? _memory;
@@ -43,12 +45,19 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     private bool _isPaused;
 
     private readonly IDebuggableComponent? _programExecutor;
+
+    private readonly IUIDispatcherTimer? _uiDispatcherTimer;
     
     public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPauseStatus pauseStatus) {
         _programExecutor = programExecutor;
         _pauseStatus = pauseStatus;
+        _uiDispatcherTimer = uiDispatcherTimer;
         IsPaused = _pauseStatus.IsPaused;
-        uiDispatcherTimer.StartNew(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, UpdateValues);
+    }
+
+    [RelayCommand]
+    public void StartObserverTimer() {
+        _uiDispatcherTimer?.StartNew(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
@@ -59,6 +68,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
         IsPaused = true;
         _programExecutor?.Accept(this);
         LastUpdate = DateTime.Now;
+        IsLoading = false;
     }
 
     [ObservableProperty]

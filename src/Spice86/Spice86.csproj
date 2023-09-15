@@ -48,10 +48,10 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Semi.Avalonia" Version="11.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Semi.Avalonia" Version="11.0.1" />
 		<PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.1.6" />
 		<PackageReference Include="Pure.DI" Version="2.0.15" />
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
