@@ -92,19 +92,19 @@
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
-		<Border Grid.Row="2" Background="{StaticResource SystemControlBackgroundAccentBrush}">
+		<Border Grid.Row="2" Background="{StaticResource SystemChromeBlackHighColor}">
 			<WrapPanel Orientation="Horizontal">
 				<TextBlock Text="{Binding StatusMessage}" />
 				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
 				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 			</WrapPanel>
 		</Border>
-		<Border IsVisible="{Binding IsDialogVisible}" Grid.RowSpan="3"
-		        Background="{StaticResource SystemControlBackgroundAccentBrush}" Opacity="0.5">
+		<Border Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible}"
+		        Background="{StaticResource SystemChromeBlackHighColor}" Opacity="0.5">
 			<WrapPanel Opacity="1" Background="{Binding $parent[Window].Background}" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
 				<Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
 					<Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
-					<WrapPanel Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
+					<WrapPanel Grid.Column="0" Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
 						<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
 							<Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">Message</Label>
 							<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Exception.Message}" />

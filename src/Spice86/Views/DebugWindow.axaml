@@ -472,7 +472,7 @@
                 </TabItem>
             </TabControl>
         </ScrollViewer>
-        <Border Grid.Row="1" Background="{StaticResource SystemControlBackgroundAccentBrush}">
+        <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
             <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal" IsVisible="{Binding IsPaused}">
                 <TextBlock VerticalAlignment="Bottom" Margin="0,0,5,0"
                            Text="{Binding LastUpdate, StringFormat='Last update: {0}'}">

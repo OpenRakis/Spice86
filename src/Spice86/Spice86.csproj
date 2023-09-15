@@ -48,6 +48,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="Semi.Avalonia" Version="11.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
