@@ -61,10 +61,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        if(_pauseStatus?.IsPaused is false or null) {
-            IsPaused = false;
-            return;
-        }
         IsPaused = true;
         _programExecutor?.Accept(this);
         LastUpdate = DateTime.Now;

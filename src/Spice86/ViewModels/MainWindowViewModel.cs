@@ -191,7 +191,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     private string _asmOverrideStatus = "ASM Overrides: not used.";
 
-    [NotifyCanExecuteChangedFor(nameof(ShowDebugWindowCommand))]
     [ObservableProperty]
     private bool _isPaused;
 
@@ -347,7 +346,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsPaused))]
+    [RelayCommand]
     public void ShowDebugWindow() {
         if(_programExecutor is not null) {
             _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_uiDispatcherTimer, _programExecutor, this);

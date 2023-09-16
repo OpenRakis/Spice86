@@ -4,7 +4,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 
 /// <summary>
 /// A class that visits several classes that live inside the Emulator
