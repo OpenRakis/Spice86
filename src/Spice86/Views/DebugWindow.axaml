@@ -23,7 +23,7 @@
     <Grid>
         <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
             <ScrollViewer Grid.Row="0" DockPanel.Dock="Top">
-                <TabControl IsVisible="{Binding IsPaused}">
+                <TabControl>
                     <TabItem Header="CPU">
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
@@ -474,7 +474,7 @@
                 </TabControl>
             </ScrollViewer>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
-                <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal" IsVisible="{Binding IsPaused}">
+                <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal">
                     <TextBlock VerticalAlignment="Bottom" Margin="0,0,5,0"
                                Text="{Binding LastUpdate, StringFormat='Last update: {0}'}">
                     </TextBlock>
@@ -483,7 +483,6 @@
                     </Button>
                 </WrapPanel>
             </Border>
-            <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="To show anything, pause the emulator first." IsVisible="{Binding !IsPaused}" />
         </Grid>
         <TextBlock Text="Loading..." IsVisible="{Binding IsLoading}"/>
     </Grid>

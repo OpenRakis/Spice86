@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
+using Spice86.Core.Emulator.Debugger;
+
 using System.Text;
 
 /// <summary> Handles the CPU flag register. </summary>
