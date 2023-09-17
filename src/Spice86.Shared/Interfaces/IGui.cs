@@ -14,11 +14,6 @@ using System.ComponentModel;
 /// </summary>
 public interface IGui : INotifyPropertyChanged {
     /// <summary>
-    /// Whether the mouse cursor is shown.
-    /// </summary>
-    bool ShowCursor { get; set; }
-    
-    /// <summary>
     /// The PIT will make the emulated program act more quickly if this is above 1.
     /// </summary>
     double? TimeMultiplier { get; }
@@ -32,11 +27,6 @@ public interface IGui : INotifyPropertyChanged {
     /// Hides the UI mouse cursor
     /// </summary>
     void HideMouseCursor();
-
-    /// <summary>
-    /// Makes the UI display the Pause button, and hide the Pause button.
-    /// </summary>
-    void Play();
 
     /// <summary>
     /// Indicates whether a keyboard key is up.
@@ -57,26 +47,6 @@ public interface IGui : INotifyPropertyChanged {
     /// Y coordinates of the mouse cursor, in pixels.
     /// </summary>
     double MouseY { get; set; }
-
-    /// <summary>
-    /// Indicates whether the LMB is down.
-    /// </summary>
-    bool IsLeftButtonClicked { get; }
-
-    /// <summary>
-    /// Indicates whether the RMB is down.
-    /// </summary>
-    bool IsRightButtonClicked { get; }
-
-    /// <summary>
-    /// Width of the video display from the emulator's point of view, in pixels.
-    /// </summary>
-    int Width { get; }
-
-    /// <summary>
-    /// Height of the video display from the emulator's point of view, in pixels.
-    /// </summary>
-    int Height { get; }
 
     /// <summary>
     /// Refresh the display with the content of the video ram.
