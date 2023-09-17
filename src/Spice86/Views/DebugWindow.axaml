@@ -28,7 +28,7 @@
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">State</Label>
-                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" SelectedObject="{CompiledBinding State}" />
+                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding State}" />
                             </Grid>
                         </WrapPanel>
                     </TabItem>
@@ -39,7 +39,7 @@
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">State</Label>
-                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" SelectedObject="{CompiledBinding VideoCard}" />
+                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding VideoCard}" />
                             </Grid>
                         </WrapPanel>
                     </TabItem>
