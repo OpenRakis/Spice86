@@ -68,6 +68,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+    
+    public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
 
     private bool _isAppClosing;
 
@@ -335,6 +337,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         set {
             if (value is not null) {
                 SetProperty(ref _timeMultiplier, value.Value);
+                ProgrammableIntervalTimer?.SetTimeMultiplier(value.Value);
             }
         }
     }

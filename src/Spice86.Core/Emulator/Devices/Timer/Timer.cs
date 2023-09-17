@@ -18,7 +18,7 @@ using System.ComponentModel;
 /// Triggers interrupt 8 on the CPU via the PIC.<br/>
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
-public class Timer : DefaultIOPortHandler {
+public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
@@ -39,7 +39,7 @@ public class Timer : DefaultIOPortHandler {
 
     private readonly IGui? _gui;
 
-    public Timer(IGui? gui, State state, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Timer(State state, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _vgaCard = vgaCard;
         for (int i = 0; i < _counters.Length; i++) {
@@ -50,19 +50,10 @@ public class Timer : DefaultIOPortHandler {
         // screen refresh is 60hz regardless of the configuration
         _vgaScreenRefreshCounter = new Counter(state, _loggerService, 4, new TimeCounterActivator(1));
         _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
-        _gui = gui;
-        if (_gui is not null) {
-            _gui.PropertyChanged += OnTimerPropertyChanged;
-        }
     }
 
-    private void OnTimerPropertyChanged(object? sender, PropertyChangedEventArgs e) {
-        if (e.PropertyName == nameof(_gui.TimeMultiplier) && _gui is not null && _gui.TimeMultiplier is not null) {
-            SetTimeMultiplier(_gui.TimeMultiplier.Value);
-        }
-    }
-
-    private void SetTimeMultiplier(double multiplier) {
+    /// <inheritdoc cref="ITimeMultiplier" /> 
+    public void SetTimeMultiplier(double multiplier) {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));
         }

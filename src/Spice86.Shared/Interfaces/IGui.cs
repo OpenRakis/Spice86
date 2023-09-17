@@ -12,12 +12,7 @@ using System.ComponentModel;
 /// Communicates keyboard and mouse events to the emulator <br/>
 /// This is the MainWindowViewModel.
 /// </summary>
-public interface IGui : INotifyPropertyChanged {
-    /// <summary>
-    /// The PIT will make the emulated program act more quickly if this is above 1.
-    /// </summary>
-    double? TimeMultiplier { get; }
-
+public interface IGui {
     /// <summary>
     /// Shows the UI mouse cursor
     /// </summary>
@@ -79,4 +74,9 @@ public interface IGui : INotifyPropertyChanged {
     /// Indicate that a mouse button has been released.
     /// </summary>
     event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+    
+    /// <summary>
+    /// Used by the UI to set or reset the time multiplier.
+    /// </summary>
+    ITimeMultiplier? ProgrammableIntervalTimer { set; }
 }

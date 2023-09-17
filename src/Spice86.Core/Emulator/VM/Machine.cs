@@ -220,7 +220,10 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
 
-        Timer = new Timer(gui, CpuState, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
+        Timer = new Timer(CpuState, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
+        if (gui is not null) {
+            gui.ProgrammableIntervalTimer = Timer;
+        }
         RegisterIoPortHandler(Timer);
         Keyboard = new Keyboard(CpuState, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
