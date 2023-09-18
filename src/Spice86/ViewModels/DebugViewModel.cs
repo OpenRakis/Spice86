@@ -15,6 +15,9 @@ using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 
+using System.ComponentModel;
+using System.Reflection;
+
 public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     [ObservableProperty]
     private MachineInfo _machine = new();
@@ -23,7 +26,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     private VideoCardInfo _videoCard = new();
 
     [ObservableProperty]
-    private DateTime? _lastUpdate = null;
+    private DateTime? _lastUpdate;
 
     private readonly IPauseStatus? _pauseStatus;
 
@@ -61,7 +64,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        IsPaused = true;
+        IsPaused = _pauseStatus?.IsPaused is true;
         _programExecutor?.Accept(this);
         LastUpdate = DateTime.Now;
         IsLoading = false;
@@ -75,54 +78,71 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     public void VisitCpuState(State state) {
-        State.AH = state.AH;
-        State.AL = state.AL;
-        State.AX = state.AX;
-        State.EAX = state.EAX;
-        State.BH = state.BH;
-        State.BL = state.BL;
-        State.BX = state.BX;
-        State.EBX = state.EBX;
-        State.CH =state.CH;
-        State.CL = state.CL;
-        State.CX = state.CX;
-        State.ECX = state.ECX;
-        State.DH = state.DH;
-        State.DL = state.DL;
-        State.DX = state.DX;
-        State.EDX = state.EDX;
-        State.DI = state.DI;
-        State.EDI = state.EDI;
-        State.SI = state.SI;
-        State.ES = state.ES;
-        State.BP = state.BP;
-        State.EBP = state.EBP;
-        State.SP = state.SP;
-        State.ESP = state.ESP;
-        State.CS = state.CS;
-        State.DS = state.DS;
-        State.ES = state.ES;
-        State.FS = state.FS;
-        State.GS = state.GS;
-        State.SS = state.SS;
-        State.IP = state.IP;
-        State.Cycles = state.Cycles;
-        State.Direction8 = state.Direction8;
-        State.Direction16 = state.Direction16;
-        State.Direction32 = state.Direction32;
-        State.AuxiliaryFlag = state.AuxiliaryFlag;
-        State.CarryFlag = state.CarryFlag;
-        State.DirectionFlag = state.DirectionFlag;
-        State.InterruptFlag = state.InterruptFlag;
-        State.OverflowFlag = state.OverflowFlag;
-        State.ParityFlag = state.ParityFlag;
-        State.ZeroFlag = state.ZeroFlag;
-        State.ContinueZeroFlag = state.ContinueZeroFlagValue;
-        State.StackPhysicalAddress = state.StackPhysicalAddress;
-        State.SegmentOverrideIndex = state.SegmentOverrideIndex;
-        State.IpPhysicalAddress = state.IpPhysicalAddress;
-        State.IsRunning = state.IsRunning;
+        if (IsLoading || !IsPaused) {
+            State.AH = state.AH;
+            State.AL = state.AL;
+            State.AX = state.AX;
+            State.EAX = state.EAX;
+            State.BH = state.BH;
+            State.BL = state.BL;
+            State.BX = state.BX;
+            State.EBX = state.EBX;
+            State.CH = state.CH;
+            State.CL = state.CL;
+            State.CX = state.CX;
+            State.ECX = state.ECX;
+            State.DH = state.DH;
+            State.DL = state.DL;
+            State.DX = state.DX;
+            State.EDX = state.EDX;
+            State.DI = state.DI;
+            State.EDI = state.EDI;
+            State.SI = state.SI;
+            State.ES = state.ES;
+            State.BP = state.BP;
+            State.EBP = state.EBP;
+            State.SP = state.SP;
+            State.ESP = state.ESP;
+            State.CS = state.CS;
+            State.DS = state.DS;
+            State.ES = state.ES;
+            State.FS = state.FS;
+            State.GS = state.GS;
+            State.SS = state.SS;
+            State.IP = state.IP;
+            State.AuxiliaryFlag = state.AuxiliaryFlag;
+            State.CarryFlag = state.CarryFlag;
+            State.DirectionFlag = state.DirectionFlag;
+            State.InterruptFlag = state.InterruptFlag;
+            State.OverflowFlag = state.OverflowFlag;
+            State.ParityFlag = state.ParityFlag;
+            State.ZeroFlag = state.ZeroFlag;
+            State.ContinueZeroFlag = state.ContinueZeroFlagValue;
+            State.SegmentOverrideIndex = state.SegmentOverrideIndex;
+            State.IsRunning = state.IsRunning;
+        }
+
+        if (IsPaused) {
+            State.PropertyChanged -= OnStatePropertyChanged;
+            State.PropertyChanged += OnStatePropertyChanged;
+        } else {
+            State.PropertyChanged -= OnStatePropertyChanged;
+        }
+        
+        return;
+        
+        void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
+            if (e.PropertyName == null) {
+                return;
+            }
+            PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
+            PropertyInfo? propertyInfo = State.GetType().GetProperty(e.PropertyName);
+            if (propertyInfo is not null && originalPropertyInfo is not null) {
+                originalPropertyInfo.SetValue(state, propertyInfo.GetValue(State));
+            }
+        }
     }
+
 
     public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
         VideoCard.RendererWidth = vgaRenderer.Width;
