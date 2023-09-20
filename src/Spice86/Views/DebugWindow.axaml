@@ -6,7 +6,6 @@
         x:Class="Spice86.Views.DebugWindow"
         Title="Debug"
         xmlns:vm="using:Spice86.ViewModels"
-        xmlns:converters="clr-namespace:Spice86.Converters"
         xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
         xmlns:userControls="clr-namespace:Spice86.UserControls"
         x:CompileBindings="True" x:DataType="vm:DebugViewModel"
@@ -17,9 +16,6 @@
     <Design.DataContext>
         <vm:DebugViewModel />
     </Design.DataContext>
-    <Window.Resources>
-        <converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
-    </Window.Resources>
     <Grid>
         <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
             <ScrollViewer Grid.Row="0" DockPanel.Dock="Top">
