@@ -1,7 +1,6 @@
 namespace Spice86._3rdParty.Controls.HexView.Services;
 
 using Spice86._3rdParty.Controls.HexView.Models;
-using Spice86.Shared.Utils;
 
 using System;
 using System.Text;
@@ -37,7 +36,7 @@ public class HexFormatter : IHexFormatter {
         int width = _width;
         long offset = lineNumber * width;
 
-        sb.Append(MemoryUtils.ToSegment((uint)offset).ToString($"X{_offsetPadding}")).Append(": ");
+        sb.Append($"{offset.ToString($"X{_offsetPadding}")}: ");
 
         int toBasePadding = toBase switch {
             2 => 8,
