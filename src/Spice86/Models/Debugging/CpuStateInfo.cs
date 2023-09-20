@@ -61,7 +61,7 @@ public partial class StateInfo : ObservableObject {
 
     [ObservableProperty] private uint _ipPhysicalAddress;
 
-    [ObservableProperty] private bool _isRunning;
+    [ObservableProperty, ReadOnly(true)] private bool _isRunning;
 
     [ObservableProperty] private bool _overflowFlag;
     [ObservableProperty] private bool _parityFlag;
