@@ -44,8 +44,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     [RelayCommand]
     public void UpdateData() => UpdateValues(this, EventArgs.Empty);
 
-    [ObservableProperty]
-    private bool _isPaused;
+    private bool IsPaused => _pauseStatus?.IsPaused is true;
 
     private readonly IDebuggableComponent? _programExecutor;
 
@@ -55,7 +54,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
         _programExecutor = programExecutor;
         _pauseStatus = pauseStatus;
         _uiDispatcherTimer = uiDispatcherTimer;
-        IsPaused = _pauseStatus.IsPaused;
     }
 
     [RelayCommand]
@@ -64,7 +62,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        IsPaused = _pauseStatus?.IsPaused is true;
         _programExecutor?.Accept(this);
         LastUpdate = DateTime.Now;
         IsLoading = false;
@@ -132,7 +129,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
         return;
         
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (e.PropertyName == null) {
+            if (e.PropertyName == null || !IsPaused) {
                 return;
             }
             PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
