@@ -477,6 +477,10 @@
                     <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Force Update"
                             Command="{Binding UpdateDataCommand}">
                     </Button>
+                    <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Refresh Memory View"
+                            Command="{Binding RefreshMemoryViewCommand}">
+                    </Button>
+
                 </WrapPanel>
             </Border>
         </Grid>

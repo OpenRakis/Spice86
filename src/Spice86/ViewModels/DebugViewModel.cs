@@ -74,6 +74,15 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
         Memory = memory;
     }
 
+    [RelayCommand]
+    public void RefreshMemoryView() {
+        IMemory? memory = Memory;
+        Memory = null;
+        if (memory is not null) {
+            VisitMainMemory(memory);
+        }
+    }
+
     public void VisitCpuState(State state) {
         if (IsLoading || !IsPaused) {
             State.AH = state.AH;
