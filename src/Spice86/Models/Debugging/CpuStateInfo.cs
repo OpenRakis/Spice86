@@ -25,7 +25,7 @@ public partial class StateInfo : ObservableObject {
     [ObservableProperty] private ushort _CS;
     [ObservableProperty] private ushort _CX;
 
-    [ObservableProperty] private long _cycles;
+    [ObservableProperty, ReadOnly(true)] private long _cycles;
 
     [ObservableProperty] private byte _DH;
 
