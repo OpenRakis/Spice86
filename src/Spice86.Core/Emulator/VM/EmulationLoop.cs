@@ -83,7 +83,10 @@ public class EmulationLoop {
     /// <summary>
     /// Forces the emulation loop to exit.
     /// </summary>
-    internal void Exit() => _cpuState.IsRunning = false;
+    internal void Exit() {
+        _cpuState.IsRunning = false;
+        IsPaused = false;
+    }
 
     private void StartRunLoop(FunctionHandler functionHandler) {
         // Entry could be overridden and could throw exceptions
