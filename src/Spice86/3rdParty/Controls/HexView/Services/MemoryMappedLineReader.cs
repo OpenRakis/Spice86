@@ -10,10 +10,10 @@ public class MemoryMappedLineReader : ILineReader {
         _memory = memory;
     }
 
-    public byte[] GetLine(long lineNumber, int width) {
+    public ReadOnlySpan<byte> GetLine(uint address, int width) {
         byte[] bytes = new byte[width];
-        long offset = lineNumber * width;
-        
+        long offset = address * width;
+
         for (int i = 0; i < width; i++) {
             long position = offset + i;
             if (position > _memory.Length) {
@@ -21,7 +21,6 @@ public class MemoryMappedLineReader : ILineReader {
             }
             bytes[i] = _memory.UInt8[position];
         }
-
         return bytes;
     }
 }

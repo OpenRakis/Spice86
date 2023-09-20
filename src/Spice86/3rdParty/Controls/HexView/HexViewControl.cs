@@ -197,13 +197,13 @@ public class HexViewControl : Control, ILogicalScrollable {
             HexFormatter.Width = bytesWidth;
         }
 
-        long startLine = (long)Math.Ceiling(_offset.Y / _lineHeight);
+        uint startAddress = (uint)Math.Ceiling(_offset.Y / _lineHeight);
         double lines = _viewport.Height / _lineHeight;
-        long endLine = (long)Math.Min(Math.Floor(startLine + lines), HexFormatter.Lines - 1);
+        uint endAddress = (uint)Math.Min(Math.Floor(startAddress + lines), HexFormatter.Lines - 1);
 
         var sb = new StringBuilder();
-        for (long i = startLine; i <= endLine; i++) {
-            byte[] bytes = LineReader.GetLine(i, HexFormatter.Width);
+        for (uint i = startAddress; i <= endAddress; i++) {
+            ReadOnlySpan<byte> bytes = LineReader.GetLine(i, HexFormatter.Width);
             HexFormatter.AddLine(bytes, i, sb, toBase);
             sb.AppendLine();
         }

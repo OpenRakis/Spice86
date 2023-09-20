@@ -1,6 +1,7 @@
 namespace Spice86._3rdParty.Controls.HexView.Services;
 
 using Spice86._3rdParty.Controls.HexView.Models;
+using Spice86.Shared.Utils;
 
 using System;
 using System.Text;
@@ -28,15 +29,15 @@ public class HexFormatter : IHexFormatter {
         }
     }
 
-    public void AddLine(byte[] bytes, long lineNumber, StringBuilder sb, int toBase) {
+    public void AddLine(ReadOnlySpan<byte> bytes, uint startAddress, StringBuilder sb, int toBase) {
         if (toBase != 2 && toBase != 8 && toBase != 10 && toBase != 16) {
             throw new ArgumentException("Invalid base");
         }
 
         int width = _width;
-        long offset = lineNumber * width;
+        long offset = startAddress * width;
 
-        sb.Append($"{offset.ToString($"X{_offsetPadding}")}: ");
+        sb.Append("0x").Append(offset.ToString($"X{_offsetPadding}")).Append(": ");
 
         int toBasePadding = toBase switch {
             2 => 8,
@@ -85,5 +86,7 @@ public class HexFormatter : IHexFormatter {
 
             sb.Append(char.IsControl(c) ? ' ' : c);
         }
+        sb.Append(" | ");
+        sb.Append(ConvertUtils.ToSegmentedAddressRepresentation(MemoryUtils.ToSegment((uint)offset), 0));
     }
 }
