@@ -2,6 +2,7 @@
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -31,7 +32,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Centralizes classes instances that should live while the CPU is running.
 /// </summary>
-public sealed class Machine : IDisposable {
+public sealed class Machine : IDisposable, IDebuggableComponent {
     private bool _disposed;
     
     /// <summary>
@@ -154,9 +155,9 @@ public sealed class Machine : IDisposable {
     public IVideoCard VgaCard { get; }
     
     /// <summary>
-    /// The Vga Registers
+    /// The VGA Registers
     /// </summary>
-    public VideoState VgaRegisters { get; set; }
+    public IVideoState VgaRegisters { get; set; }
     
     /// <summary>
     /// The VGA port handler
@@ -192,11 +193,10 @@ public sealed class Machine : IDisposable {
     /// Initializes a new instance
     /// </summary>
     public Machine(IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
-        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        Memory = new Memory(ram, configuration.A20Gate);
+        Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea), configuration.A20Gate, configuration.InitializeDOS is true);
         BiosDataArea = new BiosDataArea(Memory);
         CpuState = new State();
-        DualPic = DualPic = new(CpuState, configuration.FailOnUnhandledPort, loggerService);
+        DualPic = DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
         MachineBreakpoints = new(Memory, CpuState, loggerService);
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
@@ -221,6 +221,9 @@ public sealed class Machine : IDisposable {
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
 
         Timer = new Timer(CpuState, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
+        if (gui is not null) {
+            gui.ProgrammableIntervalTimer = Timer;
+        }
         RegisterIoPortHandler(Timer);
         Keyboard = new Keyboard(CpuState, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
@@ -249,7 +252,7 @@ public sealed class Machine : IDisposable {
         
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom);
+        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom,  configuration.InitializeDOS is true);
         VideoInt10Handler = new VgaBios(Memory, Cpu, VgaFunctions, BiosDataArea, loggerService);
         
         TimerInt8Handler = new TimerInt8Handler(Memory, Cpu, DualPic, Timer, BiosDataArea, loggerService);
@@ -345,5 +348,13 @@ public sealed class Machine : IDisposable {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        Cpu.Accept(emulatorDebugger);
+        VgaCard.Accept(emulatorDebugger);
+        VgaRenderer.Accept(emulatorDebugger);
+        VgaRegisters.Accept(emulatorDebugger);
+        Memory.Accept(emulatorDebugger);
     }
 }

@@ -6,28 +6,31 @@
         x:Class="Spice86.Views.DebugWindow"
         Title="Debug"
         xmlns:vm="using:Spice86.ViewModels"
-        xmlns:converters="clr-namespace:Spice86.Converters"
-		x:CompileBindings="True" x:DataType="vm:DebugViewModel"
-        Icon="/Icon/Spice86.ico"
+        xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
+        xmlns:userControls="clr-namespace:Spice86.UserControls"
+        x:CompileBindings="True" x:DataType="vm:DebugViewModel"
+        Icon="/Assets/Spice86.ico"
         CanResize="True"
         WindowStartupLocation="CenterOwner"
         MinWidth="640" MinHeight="400" Width="800" Height="600" FontFamily="Inconsolata,Consolas,Monospace,Courier">
     <Design.DataContext>
         <vm:DebugViewModel />
     </Design.DataContext>
-    <Window.Resources>
-        <converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
-    </Window.Resources>
-    <ScrollViewer>
-        <Grid>
-            <Grid RowDefinitions="Auto,Auto, *" IsVisible="{Binding IsPaused}">
-                <Button Grid.Row="0" HorizontalAlignment="Center" Content="Force Update"
-                        Command="{Binding UpdateDataCommand}">
-                </Button>
-                <TextBlock HorizontalAlignment="Center" Grid.Row="1"
-                           Text="{Binding LastUpdate, StringFormat='Last update: {0}'}">
-                </TextBlock>
-                <TabControl Grid.Row="2">
+    <Grid>
+        <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
+            <ScrollViewer Grid.Row="0" DockPanel.Dock="Top">
+                <TabControl>
+                    <TabItem Header="CPU">
+                        <WrapPanel>
+                            <Grid RowDefinitions="Auto,*" Margin="5">
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">State</Label>
+                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding State}" />
+                            </Grid>
+                        </WrapPanel>
+                    </TabItem>
+                    <TabItem Header="Memory">
+                        <userControls:HexSingleView Name="HexSingleView" MemorySource="{CompiledBinding Memory}" />
+                    </TabItem>
                     <TabItem Header="Video Card">
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
@@ -465,8 +468,22 @@
                         </WrapPanel>
                     </TabItem>
                 </TabControl>
-            </Grid>
-            <TextBlock Text="To show anything, pause the emulator first." IsVisible="{Binding !IsPaused}" />
+            </ScrollViewer>
+            <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
+                <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal">
+                    <TextBlock VerticalAlignment="Bottom" Margin="0,0,5,0"
+                               Text="{Binding LastUpdate, StringFormat='Last update: {0}'}">
+                    </TextBlock>
+                    <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Force Update"
+                            Command="{Binding UpdateDataCommand}">
+                    </Button>
+                    <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Refresh Memory View"
+                            Command="{Binding RefreshMemoryViewCommand}">
+                    </Button>
+
+                </WrapPanel>
+            </Border>
         </Grid>
-    </ScrollViewer>
+        <TextBlock Text="Loading..." IsVisible="{Binding IsLoading}"/>
+    </Grid>
 </Window>

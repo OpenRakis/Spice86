@@ -7,8 +7,11 @@ using Avalonia.Controls;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.DependencyInjection;
-using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
+using Spice86.Infrastructure;
+using Avalonia.Threading;
+using Spice86.Views;
+using Spice86.ViewModels;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -45,26 +48,36 @@ public class Program {
     }
 
     private void StartApp(Configuration configuration, string[] args) {
+        Startup.SetLoggingLevel(_loggerService, configuration);
         if (!configuration.HeadlessMode) {
             StartMainWindow(configuration, _loggerService, args);
         }
         else {
-            Startup.SetLoggingLevel(_loggerService, configuration);
             StartConsole(configuration, _loggerService);
         }
     }
 
     private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
-        ProgramExecutor programExecutor = new(loggerService, null, configuration);
+        ProgramExecutor programExecutor = new(configuration, loggerService, null);
         programExecutor.Run();
     }
 
     private static void StartMainWindow(Configuration configuration, ILoggerService loggerService, string[] args) {
         AppBuilder appBuilder = BuildAvaloniaApp();
         ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
-        using App? app = (App?)appBuilder.Instance;
-        app?.SetupMainWindow(desktop, configuration, loggerService);
-        desktop.Start(args);
+        App? app = (App?)appBuilder.Instance;
+        if (app is null) {
+            return;
+        }
+        MainWindow mainWindow = new();
+        var mainWindowViewModel = new MainWindowViewModel(new ProgramExecutorFactory(configuration, loggerService), new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimer(), configuration, loggerService);
+        mainWindow.DataContext = mainWindowViewModel;
+        desktop.MainWindow = mainWindow;
+        try {
+            desktop.Start(args);
+        } finally {
+            mainWindowViewModel.Dispose();
+        }
     }
 
     /// <summary>

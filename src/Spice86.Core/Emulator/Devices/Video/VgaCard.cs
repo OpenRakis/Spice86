@@ -2,12 +2,14 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.Debugger;
+using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 ///     Thin interface between renderer and gui.
 /// </summary>
-public class VgaCard : IVideoCard {
+public class VgaCard : IVideoCard, IDebuggableComponent {
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
     private readonly IVgaRenderer _renderer;
@@ -25,9 +27,11 @@ public class VgaCard : IVideoCard {
         _renderWidth = renderer.Width;
         _renderHeight = renderer.Height;
         _requiredBufferSize = _renderWidth * _renderHeight;
+        if (gui is not null) {
+            gui.RenderScreen += (_, e) => Render(e);
+        }
     }
 
-    /// <inheritdoc />
     public void UpdateScreen() {
         if (_renderer.Width != _renderWidth || _renderer.Height != _renderHeight) {
             _gui?.SetResolution(_renderer.Width, _renderer.Height);
@@ -39,12 +43,17 @@ public class VgaCard : IVideoCard {
     }
 
     /// <inheritdoc />
-    public void Render(Span<uint> buffer) {
+    private unsafe void Render(UIRenderEventArgs uiRenderEventArgs) {
+        var buffer = new Span<uint>((void*)uiRenderEventArgs.Address, uiRenderEventArgs.Length);
         if (buffer.Length < _requiredBufferSize && _logger.IsEnabled(LogEventLevel.Warning)) {
             _logger.Warning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
                 buffer.Length, _requiredBufferSize, _renderWidth, _renderHeight);
             return;
         }
         _renderer.Render(buffer);
+    }
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitVgaCard(this);
     }
 }

@@ -1,23 +1,30 @@
 namespace Spice86.Views;
 
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 
-using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Interfaces;
 using Spice86.ViewModels;
 
-public partial class DebugWindow : Window {
-    public DebugWindow() => InitializeComponent();
-
-    public DebugWindow(IPauseStatus pauseStatus, IVideoState videoState, IVgaRenderer renderer) {
+public sealed partial class DebugWindow : Window, IDisposable {
+    private bool _disposed;
+    public DebugWindow() {
         InitializeComponent();
-        if (!Design.IsDesignMode &&
-            Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            Owner = desktop.MainWindow;
-        }
+        Closed += (_, _) => Dispose();
+    }
 
-        DataContext = new DebugViewModel(pauseStatus, videoState, renderer);
+    private void Dispose(bool disposing) {
+        if (disposing && !_disposed) {
+            HexSingleView.Dispose();
+            _disposed = true;
+        }
+    }
+
+    protected override void OnDataContextChanged(EventArgs e) {
+        base.OnDataContextChanged(e);
+        ((DebugViewModel?)DataContext)?.StartObserverTimer();
+    }
+
+    public void Dispose() {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

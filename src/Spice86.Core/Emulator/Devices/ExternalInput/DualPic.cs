@@ -37,10 +37,15 @@ public class DualPic : DefaultIOPortHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DualPic(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    /// <param name="preventAnyInterrupts">Whether we mask all interrupts on startup. Done if we start a BIOS instead of DOS.</param>
+    public DualPic(State state, bool failOnUnhandledPort, bool preventAnyInterrupts, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _pic1 = new Pic(loggerService);
         _pic2 = new Pic(loggerService);
         Initialize();
+        // Bios will take care of enabling interrupts (or not)
+        if(preventAnyInterrupts) {
+            MaskAllInterrupts();
+        }
     }
     
     /// <summary>

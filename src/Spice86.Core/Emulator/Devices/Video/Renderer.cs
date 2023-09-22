@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
@@ -7,7 +8,7 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using System.Diagnostics;
 
 /// <inheritdoc />
-public class Renderer : IVgaRenderer {
+public class Renderer : IVgaRenderer, IDebuggableComponent {
     private static readonly object RenderLock = new();
     private readonly IVideoMemory _memory;
     private readonly IVideoState _state;
@@ -317,6 +318,10 @@ public class Renderer : IVgaRenderer {
                 return _state.DacRegisters.ArgbPalette[paletteIndex];
             }
         }
+    }
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitVgaRenderer(this);
     }
 }
 

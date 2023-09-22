@@ -17,8 +17,7 @@ using System.Security.Cryptography;
 using System.Diagnostics;
 
 using Spice86.Core.CLI;
-using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -27,7 +26,7 @@ using Spice86.Shared.Utils;
 /// Loads and executes a program following the given configuration in the emulator.<br/>
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
-public sealed class ProgramExecutor : IDisposable {
+public sealed class ProgramExecutor : IProgramExecutor, IDebuggableComponent {
     private readonly ILoggerService _loggerService;
     private bool _disposed;
     private readonly Configuration _configuration;
@@ -39,12 +38,12 @@ public sealed class ProgramExecutor : IDisposable {
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
+    /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
     /// <param name="gui">The GUI to use for user actions. Can be null for headless mode or unit tests.</param>
-    /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
-    public ProgramExecutor(ILoggerService loggerService, IGui? gui, Configuration configuration) {
-        _loggerService = loggerService;
+    public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui) {
         _configuration = configuration;
+        _loggerService = loggerService;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer(gui);
         _emulationLoop = new(loggerService, Machine.Cpu, Machine.CpuState, Machine.Timer, ListensToBreakpoints, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
@@ -65,15 +64,7 @@ public sealed class ProgramExecutor : IDisposable {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
     }
-
-    public State CpuState => Machine.Cpu.State;
-
-    public VideoState VideoState => Machine.VgaRegisters;
-
-    public ArgbPalette ArgbPalette => Machine.VgaRegisters.DacRegisters.ArgbPalette;
-
-    public IVgaRenderer VgaRenderer => Machine.VgaRenderer;
-
+    
     public void DumpEmulatorStateToDirectory(string path) {
         new RecorderDataWriter(Machine.Memory,
                 Machine.Cpu.State, Machine.CallbackHandler, _configuration,
@@ -118,8 +109,6 @@ public sealed class ProgramExecutor : IDisposable {
         }
     }
 
-    public IVideoCard VideoCard => Machine.VgaCard;
-
     private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
@@ -154,7 +143,6 @@ public sealed class ProgramExecutor : IDisposable {
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(ListensToBreakpoints);
         Machine = new Machine(gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, ListensToBreakpoints);
-        InitializeCpu();
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
@@ -162,17 +150,6 @@ public sealed class ProgramExecutor : IDisposable {
                 _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", _configuration.InitializeDOS);
             }
         }
-
-        if (_configuration.InitializeDOS is true) {
-            // Initialize VGA text mode.
-            Machine.VgaFunctions.VgaSetMode(0x03, ModeFlags.Legacy);
-            // Put HLT at the reset address
-            Machine.Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
-        } else {
-            // Bios will take care of enabling interrupts (or not)
-            Machine.DualPic.MaskAllInterrupts();
-        }
-
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
         LoadFileToRun(_configuration, loader);
         executionFlowRecorder.PreAllocatePossibleExecutionFlowBreakPoints(Machine.Memory, Machine.Cpu.State);
@@ -210,13 +187,6 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         return res;
-    }
-
-    private void InitializeCpu() {
-        Cpu cpu = Machine.Cpu;
-        cpu.ErrorOnUninitializedInterruptHandler = true;
-        State state = cpu.State;
-        state.Flags.IsDOSBoxCompatible = true;
     }
 
     private void InitializeFunctionHandlers(Configuration configuration,
@@ -259,5 +229,9 @@ public sealed class ProgramExecutor : IDisposable {
         IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.FunctionInformations = functionInformations;
         functionHandler.UseCodeOverride = useCodeOverride;
+    }
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        Machine.Accept(emulatorDebugger);
     }
 }

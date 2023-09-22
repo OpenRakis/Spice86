@@ -6,13 +6,17 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Infrastructure;
 using Spice86.Shared.Interfaces;
 
 using System;
 
-public partial class PerformanceViewModel : ViewModelBase {
-    private readonly DispatcherTimer? _timer;
-    private readonly State? _state;
+public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
+    private State? _state;
     private readonly IPerformanceMeasurer? _performanceMeasurer;
     
     [ObservableProperty]
@@ -24,11 +28,10 @@ public partial class PerformanceViewModel : ViewModelBase {
         }
     }
 
-    public PerformanceViewModel(State state, IPerformanceMeasurer performanceMeasurer) {
-        _state = state;
+    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer) {
+        programExecutor.Accept(this);
         _performanceMeasurer = performanceMeasurer;
-        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
-        _timer.Start();
+        uiDispatcherTimer.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
@@ -47,4 +50,30 @@ public partial class PerformanceViewModel : ViewModelBase {
 
     [ObservableProperty]
     private double _instructionsPerSecond = -1;
+
+    public void VisitMainMemory(IMemory memory) {
+    }
+    
+    public void VisitCpuState(State state) => _state = state;
+    
+    public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
+    }
+
+    public void VisitVideoState(IVideoState videoState) {
+    }
+
+    public void VisitDacPalette(ArgbPalette argbPalette) {
+    }
+
+    public void VisitDacRegisters(DacRegisters dacRegisters) {
+    }
+
+    public void VisitVgaCard(VgaCard vgaCard) {
+    }
+
+    public void VisitCpu(Cpu cpu) {
+    }
+
+    public void VisitCpuFlags(Flags flags) {
+    }
 }

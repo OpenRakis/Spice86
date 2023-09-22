@@ -8,28 +8,29 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
 
-public partial class PaletteViewModel : ViewModelBase {
-    private readonly ArgbPalette? _argbPalette;
-    private readonly DispatcherTimer _timer;
+public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
+    private ArgbPalette? _argbPalette;
 
     public PaletteViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
-        _timer = new DispatcherTimer();
     }
-
     
-    public PaletteViewModel(ArgbPalette argbPalette) {
-        _argbPalette = argbPalette;
-        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
+    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor) {
+        programExecutor.Accept(this);
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
         }
-        _timer.Start();
+        uiDispatcherTimer.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
     }
 
     [ObservableProperty]
@@ -57,5 +58,31 @@ public partial class PaletteViewModel : ViewModelBase {
             //A read during emulation provoked an OutOfRangeException (for example, in the DAC).
             // Ignore it.
         }
+    }
+
+    public void VisitMainMemory(IMemory memory) {
+    }
+
+    public void VisitCpuState(State state) {
+    }
+
+    public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
+    }
+
+    public void VisitVideoState(IVideoState videoState) {
+    }
+
+    public void VisitDacPalette(ArgbPalette argbPalette) => _argbPalette = argbPalette;
+    
+    public void VisitDacRegisters(DacRegisters dacRegisters) {
+    }
+
+    public void VisitVgaCard(VgaCard vgaCard) {
+    }
+
+    public void VisitCpu(Cpu cpu) {
+    }
+
+    public void VisitCpuFlags(Flags flags) {
     }
 }

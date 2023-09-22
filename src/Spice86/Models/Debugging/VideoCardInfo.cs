@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
+using Spice86.ViewModels;
 
 public partial class VideoCardInfo : ObservableObject {
     [ObservableProperty]

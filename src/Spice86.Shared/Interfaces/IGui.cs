@@ -2,6 +2,9 @@
 
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
+using Spice86.Shared.Emulator.Video;
+
+using System.ComponentModel;
 
 /// <summary>
 /// GUI of the emulator.<br/>
@@ -11,11 +14,6 @@ using Spice86.Shared.Emulator.Mouse;
 /// </summary>
 public interface IGui {
     /// <summary>
-    /// Whether the mouse cursor is shown.
-    /// </summary>
-    bool ShowCursor { get; set; }
-
-    /// <summary>
     /// Shows the UI mouse cursor
     /// </summary>
     void ShowMouseCursor();
@@ -24,11 +22,6 @@ public interface IGui {
     /// Hides the UI mouse cursor
     /// </summary>
     void HideMouseCursor();
-
-    /// <summary>
-    /// Makes the UI display the Pause button, and hide the Pause button.
-    /// </summary>
-    void Play();
 
     /// <summary>
     /// Indicates whether a keyboard key is up.
@@ -51,26 +44,6 @@ public interface IGui {
     double MouseY { get; set; }
 
     /// <summary>
-    /// Indicates whether the LMB is down.
-    /// </summary>
-    bool IsLeftButtonClicked { get; }
-
-    /// <summary>
-    /// Indicates whether the RMB is down.
-    /// </summary>
-    bool IsRightButtonClicked { get; }
-
-    /// <summary>
-    /// Width of the video display from the emulator's point of view, in pixels.
-    /// </summary>
-    int Width { get; }
-
-    /// <summary>
-    /// Height of the video display from the emulator's point of view, in pixels.
-    /// </summary>
-    int Height { get; }
-
-    /// <summary>
     /// Refresh the display with the content of the video ram.
     /// </summary>
     void UpdateScreen();
@@ -81,6 +54,11 @@ public interface IGui {
     /// <param name="videoWidth">The width in pixels</param>
     /// <param name="videoHeight">The height in pixels</param>
     void SetResolution(int videoWidth, int videoHeight);
+
+    /// <summary>
+    /// Invoked when the GUI asks the VideoCard to render the screen contents in the WriteableBitmap's buffer pointer.
+    /// </summary>
+    event EventHandler<UIRenderEventArgs>? RenderScreen;
 
     /// <summary>
     /// Indicate that the mouse has moved.
@@ -96,4 +74,9 @@ public interface IGui {
     /// Indicate that a mouse button has been released.
     /// </summary>
     event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+    
+    /// <summary>
+    /// Used by the UI to set or reset the time multiplier.
+    /// </summary>
+    ITimeMultiplier? ProgrammableIntervalTimer { set; }
 }

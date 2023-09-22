@@ -1,12 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Memory.Indexer;
-using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public class Memory : Indexable.Indexable, IMemory {
+public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 
@@ -14,7 +14,6 @@ public class Memory : Indexable.Indexable, IMemory {
     public MemoryBreakpoints MemoryBreakpoints { get; } = new();
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
-
     
     /// <summary>
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
@@ -26,13 +25,18 @@ public class Memory : Indexable.Indexable, IMemory {
     /// </summary>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
     /// <param name="is20ThAddressLineSilenced">whether the A20 gate is silenced.</param>
-    public Memory(IMemoryDevice baseMemory, bool is20ThAddressLineSilenced) {
+    /// <param name="initializeResetVector">Whether we put <c>0xF4</c> (HLT) at the segmented address <c>0xF000:0xFFF0</c></param>
+    public Memory(IMemoryDevice baseMemory, bool is20ThAddressLineSilenced, bool initializeResetVector) {
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
         Ram = new Ram(memorySize);
         RegisterMapping(0, memorySize, Ram);
         (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
         A20Gate = new(is20ThAddressLineSilenced);
+        if(initializeResetVector) {
+            // Put HLT at the reset address
+            UInt16[0xF000, 0xFFF0] = 0xF4;
+        }
     }
 
     /// <summary>
@@ -199,4 +203,8 @@ public class Memory : Indexable.Indexable, IMemory {
     }
 
     private record DeviceRegistration(uint StartAddress, uint EndAddress, IMemoryDevice Device);
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitMainMemory(this);
+    }
 }

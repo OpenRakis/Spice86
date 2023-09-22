@@ -1,9 +1,11 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Spice86.Core.Emulator.Debugger;
+
 /// <summary>
 ///   A 32 bit representation of an 18-bit color palette.
 /// </summary>
-public class ArgbPalette {
+public class ArgbPalette : IDebuggableComponent {
     private readonly byte[,] _sixBitPalette;
     private readonly uint[,,] _32BitPalette;
 
@@ -42,5 +44,9 @@ public class ArgbPalette {
             _sixBitPalette[index, 1] = (byte)(value >> 8 & 0x3F);
             _sixBitPalette[index, 2] = (byte)(value & 0x3F);
         }
+    }
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitDacPalette(this);
     }
 }

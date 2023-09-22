@@ -12,7 +12,6 @@ using Serilog.Events;
 
 using Avalonia.Collections;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -21,7 +20,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Keyboard;
-using Spice86.Views;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Shared.Emulator.Keyboard;
@@ -30,25 +28,32 @@ using Spice86.Shared.Interfaces;
 
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
-using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
+using Spice86.Infrastructure;
+using Spice86.Shared.Emulator.Video;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
     private readonly ILoggerService _loggerService;
+    private readonly IUIDispatcherTimer _uiDispatcherTimer;
+    private readonly IHostStorageProvider _hostStorageProvider;
+    private readonly ITextClipboard _textClipboard;
+    private readonly IUIDispatcher _uiDispatcher;
+    private readonly IWindowActivator _windowActivator;
+    private readonly IProgramExecutorFactory _programExecutorFactory;
+    private IProgramExecutor? _programExecutor;
+
     private AvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
-    private DebugWindow? _debugWindow;
-    private PaletteWindow? _paletteWindow;
-    private PerformanceWindow? _performanceWindow;
     private string _lastExecutableDirectory = string.Empty;
     private bool _closeAppOnEmulatorExit;
 
@@ -63,15 +68,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+    
+    public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
 
     private bool _isAppClosing;
 
-    private readonly IClassicDesktopStyleApplicationLifetime _desktop;
-
-    public MainWindowViewModel(IClassicDesktopStyleApplicationLifetime desktop, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
         Configuration = configuration;
+        _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
-        _desktop = desktop;
+        _uiDispatcherTimer = uiDispatcherTimer;
+        _hostStorageProvider = hostStorageProvider;
+        _textClipboard = textClipboard;
+        _uiDispatcherTimer = uiDispatcherTimer;
+        _uiDispatcher = uiDispatcher;
+        _windowActivator = windowActivator;
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
@@ -85,19 +96,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 _avaloniaKeyScanCodeConverter.GetAsciiCode(
                     _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
     }
-
-    private ProgramExecutor? _programExecutor;
-
+    
     [RelayCommand]
     public async Task SaveBitmap() {
-        if (_desktop.MainWindow?.StorageProvider is { CanSave: true, CanPickFolder: true }) {
-            IStorageProvider storageProvider = _desktop.MainWindow.StorageProvider;
+        if (_hostStorageProvider is { CanSave: true, CanPickFolder: true }) {
             FilePickerSaveOptions options = new() {
                 Title = "Save bitmap image...",
                 DefaultExtension = "bmp",
-                SuggestedStartLocation = await storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
+                SuggestedStartLocation = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
             };
-            string? file = (await storageProvider.SaveFilePickerAsync(options))?.TryGetLocalPath();
+            string? file = (await _hostStorageProvider.SaveFilePickerAsync(options))?.TryGetLocalPath();
             if (!string.IsNullOrWhiteSpace(file)) {
                 Bitmap?.Save(file);
             }
@@ -136,7 +144,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     }
 
     private void Draw() {
-        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || _videoCard is null) {
+        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
             return;
         }
         if (!_isDrawThreadInitialized) {
@@ -153,12 +161,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 _drawingSemaphoreSlim?.Wait();
                 try {
                     using ILockedFramebuffer pixels = Bitmap.Lock();
-                    var buffer = new Span<uint>((void*)pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                    _videoCard.Render(buffer);
+                    var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                    RenderScreen.Invoke(this, uiRenderEventArgs);
                 } finally {
                     _drawingSemaphoreSlim?.Release();
                 }
-                Dispatcher.UIThread.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
+                _uiDispatcher.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
             }
         };
     }
@@ -185,7 +193,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     private string _asmOverrideStatus = "ASM Overrides: not used.";
 
-    [NotifyCanExecuteChangedFor(nameof(ShowDebugWindowCommand))]
     [ObservableProperty]
     private bool _isPaused;
 
@@ -197,9 +204,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     public int Height { get; private set; }
     
-    public void HideMouseCursor() => Dispatcher.UIThread.Post(() => ShowCursor = false);
+    public void HideMouseCursor() => _uiDispatcher.Post(() => ShowCursor = false);
 
-    public void ShowMouseCursor() => Dispatcher.UIThread.Post(() => ShowCursor = true);
+    public void ShowMouseCursor() => _uiDispatcher.Post(() => ShowCursor = true);
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
@@ -215,18 +222,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             return;
         }
 
-        if (_desktop.MainWindow?.StorageProvider is { CanSave: true, CanPickFolder: true }) {
-            IStorageProvider storageProvider = _desktop.MainWindow.StorageProvider;
+        if (_hostStorageProvider is { CanSave: true, CanPickFolder: true }) {
             FolderPickerOpenOptions options = new() {
                 Title = "Dump emulator state to directory...",
                 AllowMultiple = false,
-                SuggestedStartLocation = await storageProvider.TryGetFolderFromPathAsync(Configuration.RecordedDataDirectory)
+                SuggestedStartLocation = await _hostStorageProvider.TryGetFolderFromPathAsync(Configuration.RecordedDataDirectory)
             };
             if (!Directory.Exists(Configuration.RecordedDataDirectory)) {
-                options.SuggestedStartLocation = await storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+                options.SuggestedStartLocation = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
             }
 
-            Uri? dir = (await storageProvider.OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
+            Uri? dir = (await _hostStorageProvider.OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
             if (!string.IsNullOrWhiteSpace(dir?.AbsolutePath)) {
                 _programExecutor.DumpEmulatorStateToDirectory(dir.AbsolutePath);
             }
@@ -257,7 +263,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand(CanExecute = nameof(CanStartMostRecentlyUsed))]
     public async Task StartMostRecentlyUsed(object? parameter) {
-        int index = System.Convert.ToInt32(parameter);
+        int index = Convert.ToInt32(parameter);
         if (MostRecentlyUsed.Count > index) {
             await StartNewExecutable(MostRecentlyUsed[index].FullName);
         }
@@ -283,8 +289,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             File.Exists(filePath)) {
             await RestartEmulatorWithNewProgram(filePath);
         }
-        else if (_desktop.MainWindow?.StorageProvider.CanOpen == true) {
-            IStorageProvider storageProvider = _desktop.MainWindow.StorageProvider;
+        else if (_hostStorageProvider.CanOpen == true) {
             FilePickerOpenOptions options = new() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
@@ -297,13 +302,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                     }
                 }
             };
-            IStorageFolder? folder = await storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+            IStorageFolder? folder = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
             options.SuggestedStartLocation = folder;
             if (Directory.Exists(_lastExecutableDirectory)) {
-                options.SuggestedStartLocation = await storageProvider.TryGetFolderFromPathAsync(_lastExecutableDirectory);
+                options.SuggestedStartLocation = await _hostStorageProvider.TryGetFolderFromPathAsync(_lastExecutableDirectory);
             }
 
-            IReadOnlyList<IStorageFile> files = await storageProvider.OpenFilePickerAsync(options);
+            IReadOnlyList<IStorageFile> files = await _hostStorageProvider.OpenFilePickerAsync(options);
 
             if (files.Any()) {
                 filePath = files[0].Path.LocalPath;
@@ -318,19 +323,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         Configuration.CDrive = Path.GetDirectoryName(Configuration.Exe);
         Configuration.UseCodeOverride = false;
         Play();
-        await Dispatcher.UIThread.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
-        while (_emulatorThread?.IsAlive == true) {
-            Dispatcher.UIThread.RunJobs();
-        }
-
+        await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
-        _performanceWindow?.Close();
-        _performanceWindow = null;
-        _paletteWindow?.Close();
-        _paletteWindow = null;
-        _debugWindow?.Close();
-        _debugWindow = null;
+        _windowActivator.CloseAllAdditionalWindows();
         RunEmulator();
     }
 
@@ -341,43 +337,29 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         set {
             if (value is not null) {
                 SetProperty(ref _timeMultiplier, value.Value);
-                _programExecutor?.Machine.Timer.SetTimeMultiplier(_timeMultiplier);
+                ProgrammableIntervalTimer?.SetTimeMultiplier(value.Value);
             }
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowPerformance() {
-        if (_performanceWindow != null) {
-            _performanceWindow.Activate();
-        } else if (_programExecutor is not null) {
-            _performanceWindow = new PerformanceWindow() {
-                DataContext = new PerformanceViewModel(_programExecutor.CpuState, new PerformanceMeasurer())
-            };
-            _performanceWindow.Closed += (_, _) => _performanceWindow = null;
-            _performanceWindow.Show();
+        if(_programExecutor is not null) {
+            _windowActivator.ActivateAdditionalWindow<PerformanceViewModel>(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer());
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsPaused))]
+    [RelayCommand]
     public void ShowDebugWindow() {
-        if (_debugWindow != null) {
-            _debugWindow.Activate();
-        } else if(_programExecutor is not null) {
-            _debugWindow = new DebugWindow(this, _programExecutor.VideoState, _programExecutor.VgaRenderer);
-            _debugWindow.Closed += (_, _) => _debugWindow = null;
-            _debugWindow.Show();
+        if(_programExecutor is not null) {
+            _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_uiDispatcherTimer, _programExecutor, this);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
-        if (_paletteWindow != null) {
-            _paletteWindow.Activate();
-        } else if(_programExecutor is not null) {
-            _paletteWindow = new PaletteWindow(new PaletteViewModel(_programExecutor.ArgbPalette));
-            _paletteWindow.Closed += (_, _) => _paletteWindow = null;
-            _paletteWindow.Show();
+        if(_programExecutor is not null) {
+            _windowActivator.ActivateAdditionalWindow<PaletteViewModel>(_uiDispatcherTimer, _programExecutor);
         }
     }
 
@@ -431,11 +413,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _lastExecutableDirectory = Configuration.CDrive;
         StatusMessage = "Emulator starting...";
         if (Configuration is {UseCodeOverrideOption: true, OverrideSupplier: not null}) {
-            AsmOverrideStatus = $"ASM code overrides: enabled.";
+            AsmOverrideStatus = "ASM code overrides: enabled.";
         } else if(Configuration is {UseCodeOverride: false, OverrideSupplier: not null}) {
-            AsmOverrideStatus = $"ASM code overrides: only functions names will be referenced.";
+            AsmOverrideStatus = "ASM code overrides: only functions names will be referenced.";
         } else {
-            AsmOverrideStatus = $"ASM code overrides: none.";
+            AsmOverrideStatus = "ASM code overrides: none.";
         }
         SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
         SetMainTitle();
@@ -462,7 +444,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
     }
 
-    public void SetResolution(int width, int height) => Dispatcher.UIThread.Post(() => {
+    public void SetResolution(int width, int height) => _uiDispatcher.Post(() => {
         _isSettingResolution = true;
         Scale = 1;
         if (Width != width || Height != height) {
@@ -479,6 +461,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _isSettingResolution = false;
     }, DispatcherPriority.MaxValue);
 
+    public event EventHandler<UIRenderEventArgs>? RenderScreen;
+
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
@@ -489,7 +473,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (!_disposed) {
             if (disposing) {
                 DisposeDrawThread();
-                Dispatcher.UIThread.Post(() => {
+                _uiDispatcher.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
                 }, DispatcherPriority.MaxValue);
@@ -497,8 +481,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
-                _performanceWindow?.Close();
-                _paletteWindow?.Close();
+                _windowActivator.CloseAllAdditionalWindows();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
@@ -526,9 +509,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand]
     public async Task CopyToClipboard() {
-        if(Exception is not null &&
-            _desktop.MainWindow?.Clipboard is IClipboard clipboard) {
-            await clipboard.SetTextAsync(Exception.StackTrace);
+        if(Exception is not null) {
+            await _textClipboard.SetTextAsync($"{Exception.Message}{Environment.NewLine}{Exception.StackTrace}");
         }
     }
 
@@ -540,7 +522,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         IsDialogVisible = true;
     }
 
-    private bool _isInitLogLevelSet = false;
+    private bool _isInitLogLevelSet;
 
     private string _currentLogLevel = "";
 
@@ -583,12 +565,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _emulatorThread.Start();
     }
 
-    private void OnEmulatorErrorOccured(Exception e) => Dispatcher.UIThread.Post(() => {
+    private void OnEmulatorErrorOccured(Exception e) => _uiDispatcher.Post(() => {
         StatusMessage = "Emulator crashed.";
         ShowEmulationErrorMessage(e);
     });
-
-    private IVideoCard? _videoCard;
 
     private void MachineThread() {
         try {
@@ -606,22 +586,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 }
             }
         }  finally {
-            Dispatcher.UIThread.Post(() => IsMachineRunning = false);
-            Dispatcher.UIThread.Post(() => StatusMessage = "Emulator: stopped.");
-            Dispatcher.UIThread.Post(() => AsmOverrideStatus = "");
+            _uiDispatcher.Post(() => IsMachineRunning = false);
+            _uiDispatcher.Post(() => StatusMessage = "Emulator: stopped.");
+            _uiDispatcher.Post(() => AsmOverrideStatus = "");
         }
     }
 
     private void StartProgramExecutor() {
-        _programExecutor = new ProgramExecutor(_loggerService, this, Configuration);
+        _programExecutor = _programExecutorFactory.Create(this);
         TimeMultiplier = Configuration.TimeMultiplier;
-        _videoCard = _programExecutor.VideoCard;
-        Dispatcher.UIThread.Post(() => IsMachineRunning = true);
-        Dispatcher.UIThread.Post(() => StatusMessage = "Emulator started.");
-        _programExecutor.Run();
-        if (_closeAppOnEmulatorExit &&
-            _desktop.MainWindow is not null) {
-            Dispatcher.UIThread.Post(() => _desktop.MainWindow.Close());
+        _uiDispatcher.Post(() => IsMachineRunning = true);
+        _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
+        _programExecutor?.Run();
+        if (_closeAppOnEmulatorExit) {
+            _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         }
     }
+
+    public event EventHandler? CloseMainWindow;
 }
