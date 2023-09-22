@@ -12,11 +12,10 @@
   <!-- Properties geared towards NuGet -->
 	<PropertyGroup>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.1.5</version>
+		<version>6.1.6</version>
 		<Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
-		<PackageTags>Reverse;Engineering;AvaloniaUI;GDB;Emulator;Cross;Platform</PackageTags>
 		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
