@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Debugger;
 /// <summary>
 ///     Represents a VGA renderer.
 /// </summary>
-public interface IVgaRenderer {
+public interface IVgaRenderer : IDebuggableComponent {
     /// <summary>
     ///     Calculate the current width required to render.
     /// </summary>

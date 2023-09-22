@@ -352,9 +352,9 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
 
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         Cpu.Accept(emulatorDebugger);
-        ((IDebuggableComponent)VgaCard).Accept(emulatorDebugger);
-        ((IDebuggableComponent)VgaRenderer).Accept(emulatorDebugger);
-        ((IDebuggableComponent)VgaRegisters).Accept(emulatorDebugger);
-        ((IDebuggableComponent)Memory).Accept(emulatorDebugger);
+        VgaCard.Accept(emulatorDebugger);
+        VgaRenderer.Accept(emulatorDebugger);
+        VgaRegisters.Accept(emulatorDebugger);
+        Memory.Accept(emulatorDebugger);
     }
 }

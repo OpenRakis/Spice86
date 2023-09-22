@@ -6,6 +6,7 @@ using System.Diagnostics;
 
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;

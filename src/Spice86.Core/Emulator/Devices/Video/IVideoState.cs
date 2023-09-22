@@ -1,11 +1,12 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 
 /// <summary>
 ///     Represents the state of the video card.
 /// </summary>
-public interface IVideoState {
+public interface IVideoState : IDebuggableComponent {
     /// <summary>
     ///     Contains the DAC registers.
     /// </summary>

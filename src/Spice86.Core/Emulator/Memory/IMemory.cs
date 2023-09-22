@@ -1,12 +1,13 @@
 namespace Spice86.Core.Emulator.Memory;
 
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public interface IMemory : IIndexable, IByteReaderWriter {
+public interface IMemory : IIndexable, IByteReaderWriter, IDebuggableComponent {
     /// <summary>
     /// Underlying RAM for the memory bus
     /// </summary>
