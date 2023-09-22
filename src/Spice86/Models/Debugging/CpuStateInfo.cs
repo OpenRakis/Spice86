@@ -30,12 +30,6 @@ public partial class StateInfo : ObservableObject {
     [ObservableProperty] private byte _DH;
 
     [ObservableProperty] private ushort _DI;
-
-    [ObservableProperty] private short _direction16;
-
-    [ObservableProperty] private short _direction32;
-
-    [ObservableProperty] private short _direction8;
     [ObservableProperty, Category("Flags")] private bool _directionFlag;
     [ObservableProperty] private byte _DL;
 
