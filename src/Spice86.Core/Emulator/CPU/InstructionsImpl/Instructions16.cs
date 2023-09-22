@@ -1,157 +1,160 @@
 using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.VM;
 
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public class Instructions16 : Instructions16Or32 {
-    public Instructions16(Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm)
-        : base(alu, cpu, memory, modRm) {
+    private readonly Alu16 _alu16;
+
+    public Instructions16(Cpu cpu, Memory.IMemory memory, ModRM modRm)
+        : base(cpu, memory, modRm) {
+        _alu16 = new Alu16(cpu.State);
+
     }
 
     public override void AddRmReg() {
         // ADD rmw rw
         ModRM.Read();
-        ModRM.SetRm16(Alu.Add16(ModRM.GetRm16(), ModRM.R16));
+        ModRM.SetRm16(_alu16.Add(ModRM.GetRm16(), ModRM.R16));
     }
 
     public override void AddRegRm() {
         // ADD rw rmw
         ModRM.Read();
-        ModRM.R16 = Alu.Add16(ModRM.R16, ModRM.GetRm16());
+        ModRM.R16 = _alu16.Add(ModRM.R16, ModRM.GetRm16());
     }
 
     public override void AddAccImm() {
         // ADD AX iw
-        State.AX = Alu.Add16(State.AX, Cpu.NextUint16());
+        State.AX = _alu16.Add(State.AX, Cpu.NextUint16());
     }
 
     public override void OrRmReg() {
         // OR rmw rw
         ModRM.Read();
-        ModRM.SetRm16(Alu.Or16(ModRM.GetRm16(), ModRM.R16));
+        ModRM.SetRm16(_alu16.Or(ModRM.GetRm16(), ModRM.R16));
     }
 
     public override void OrRegRm() {
         // OR rw rmw
         ModRM.Read();
-        ModRM.R16 = Alu.Or16(ModRM.R16, ModRM.GetRm16());
+        ModRM.R16 = _alu16.Or(ModRM.R16, ModRM.GetRm16());
     }
 
     public override void OrAccImm() {
         // OR AX iw
-        State.AX = Alu.Or16(State.AX, Cpu.NextUint16());
+        State.AX = _alu16.Or(State.AX, Cpu.NextUint16());
     }
 
     public override void AdcRmReg() {
         // ADC rmw rw
         ModRM.Read();
-        ModRM.SetRm16(Alu.Adc16(ModRM.GetRm16(), ModRM.R16));
+        ModRM.SetRm16(_alu16.Adc(ModRM.GetRm16(), ModRM.R16));
     }
 
     public override void AdcRegRm() {
         // ADC rw rmw
         ModRM.Read();
-        ModRM.R16 = Alu.Adc16(ModRM.R16, ModRM.GetRm16());
+        ModRM.R16 = _alu16.Adc(ModRM.R16, ModRM.GetRm16());
     }
 
     public override void AdcAccImm() {
         // ADC AX iw
-        State.AX = Alu.Adc16(State.AX, Cpu.NextUint16());
+        State.AX = _alu16.Adc(State.AX, Cpu.NextUint16());
     }
 
     public override void SbbRmReg() {
         // SBB rmw rw
         ModRM.Read();
-        ModRM.SetRm16(Alu.Sbb16(ModRM.GetRm16(), ModRM.R16));
+        ModRM.SetRm16(_alu16.Sbb(ModRM.GetRm16(), ModRM.R16));
     }
 
     public override void SbbRegRm() {
         // SBB rw rmw
         ModRM.Read();
-        ModRM.R16 = Alu.Sbb16(ModRM.R16, ModRM.GetRm16());
+        ModRM.R16 = _alu16.Sbb(ModRM.R16, ModRM.GetRm16());
     }
 
     public override void SbbAccImm() {
         // SBB AX iw
-        State.AX = Alu.Sbb16(State.AX, Cpu.NextUint16());
+        State.AX = _alu16.Sbb(State.AX, Cpu.NextUint16());
     }
 
     public override void AndRmReg() {
         // AND rmw rw
         ModRM.Read();
-        ModRM.SetRm16(Alu.And16(ModRM.GetRm16(), ModRM.R16));
+        ModRM.SetRm16(_alu16.And(ModRM.GetRm16(), ModRM.R16));
     }
 
     public override void AndRegRm() {
         // AND rw rmw
         ModRM.Read();
-        ModRM.R16 = Alu.And16(ModRM.R16, ModRM.GetRm16());
+        ModRM.R16 = _alu16.And(ModRM.R16, ModRM.GetRm16());
     }
 
     public override void AndAccImm() {
         // AND AX ib
-        State.AX = Alu.And16(State.AX, Cpu.NextUint16());
+        State.AX = _alu16.And(State.AX, Cpu.NextUint16());
     }
 
     public override void SubRmReg() {
         // SUB rmw rw
         ModRM.Read();
-        ModRM.SetRm16(Alu.Sub16(ModRM.GetRm16(), ModRM.R16));
+        ModRM.SetRm16(_alu16.Sub(ModRM.GetRm16(), ModRM.R16));
     }
 
     public override void SubRegRm() {
         // SUB rw rmw
         ModRM.Read();
-        ModRM.R16 = Alu.Sub16(ModRM.R16, ModRM.GetRm16());
+        ModRM.R16 = _alu16.Sub(ModRM.R16, ModRM.GetRm16());
     }
 
     public override void SubAccImm() {
         // SUB AX iw
-        State.AX = Alu.Sub16(State.AX, Cpu.NextUint16());
+        State.AX = _alu16.Sub(State.AX, Cpu.NextUint16());
     }
 
     public override void XorRmReg() {
         // XOR rmw rw
         ModRM.Read();
-        ModRM.SetRm16(Alu.Xor16(ModRM.GetRm16(), ModRM.R16));
+        ModRM.SetRm16(_alu16.Xor(ModRM.GetRm16(), ModRM.R16));
     }
 
     public override void XorRegRm() {
         // XOR rw rmw
         ModRM.Read();
-        ModRM.R16 = Alu.Xor16(ModRM.R16, ModRM.GetRm16());
+        ModRM.R16 = _alu16.Xor(ModRM.R16, ModRM.GetRm16());
     }
 
     public override void XorAccImm() {
         // XOR AX iw
-        State.AX = Alu.Xor16(State.AX, Cpu.NextUint16());
+        State.AX = _alu16.Xor(State.AX, Cpu.NextUint16());
     }
 
     public override void CmpRmReg() {
         // CMP rmw rw
         ModRM.Read();
-        Alu.Sub16(ModRM.GetRm16(), ModRM.R16);
+        _alu16.Sub(ModRM.GetRm16(), ModRM.R16);
     }
 
     public override void CmpRegRm() {
         // CMP rw rmw
         ModRM.Read();
-        Alu.Sub16(ModRM.R16, ModRM.GetRm16());
+        _alu16.Sub(ModRM.R16, ModRM.GetRm16());
     }
 
     public override void CmpAccImm() {
         // CMP AX iw
-        Alu.Sub16(State.AX, Cpu.NextUint16());
+        _alu16.Sub(State.AX, Cpu.NextUint16());
     }
 
     public override void IncReg(int regIndex) {
         // INC regIndex
-        State.Registers.SetRegister16(regIndex, Alu.Inc16(State.Registers.GetRegister16(regIndex)));
+        State.Registers.SetRegister16(regIndex, _alu16.Inc(State.Registers.GetRegister16(regIndex)));
     }
 
     public override void DecReg(int regIndex) {
         // DEC regIndex
-        State.Registers.SetRegister16(regIndex, Alu.Dec16(State.Registers.GetRegister16(regIndex)));
+        State.Registers.SetRegister16(regIndex, _alu16.Dec(State.Registers.GetRegister16(regIndex)));
     }
 
     public override void PushReg(int regIndex) {
@@ -216,7 +219,7 @@ public class Instructions16 : Instructions16Or32 {
     }
 
     private void ImulRmVal(short value) {
-        int result = Alu.Imul16(value, (short)ModRM.GetRm16());
+        int result = _alu16.Imul(value, (short)ModRM.GetRm16());
         ModRM.R16 = (ushort)result;
     }
     
@@ -242,19 +245,19 @@ public class Instructions16 : Instructions16Or32 {
 
     public override void Cmps() {
         ushort value = Memory.UInt16[MemoryAddressOverridableDsSi];
-        Alu.Sub16(value, Memory.UInt16[MemoryAddressEsDi]);
+        _alu16.Sub(value, Memory.UInt16[MemoryAddressEsDi]);
         AdvanceSIDI();
     }
 
     public override void TestRmReg() {
         // TEST rmw rw
         ModRM.Read();
-        Alu.And16(ModRM.GetRm16(), ModRM.R16);
+        _alu16.And(ModRM.GetRm16(), ModRM.R16);
     }
 
     public override void TestAccImm() {
         // TEST AX iw
-        Alu.And16(State.AX, Cpu.NextUint16());
+        _alu16.And(State.AX, Cpu.NextUint16());
     }
 
     public override void Stos() {
@@ -268,7 +271,7 @@ public class Instructions16 : Instructions16Or32 {
     }
 
     public override void Scas() {
-        Alu.Sub16(State.AX, Memory.UInt16[MemoryAddressEsDi]);
+        _alu16.Sub(State.AX, Memory.UInt16[MemoryAddressEsDi]);
         AdvanceDI();
     }
 
@@ -298,14 +301,14 @@ public class Instructions16 : Instructions16Or32 {
         }
 
         ushort res = groupIndex switch {
-            0 => Alu.Add16(op1, op2),
-            1 => Alu.Or16(op1, op2),
-            2 => Alu.Adc16(op1, op2),
-            3 => Alu.Sbb16(op1, op2),
-            4 => Alu.And16(op1, op2),
-            5 => Alu.Sub16(op1, op2),
-            6 => Alu.Xor16(op1, op2),
-            7 => Alu.Sub16(op1, op2),
+            0 => _alu16.Add(op1, op2),
+            1 => _alu16.Or(op1, op2),
+            2 => _alu16.Adc(op1, op2),
+            3 => _alu16.Sbb(op1, op2),
+            4 => _alu16.And(op1, op2),
+            5 => _alu16.Sub(op1, op2),
+            6 => _alu16.Xor(op1, op2),
+            7 => _alu16.Sub(op1, op2),
             _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
         // 7 is CMP so no memory to set
@@ -321,20 +324,20 @@ public class Instructions16 : Instructions16Or32 {
         byte count = ComputeGrp2Count(countSource);
 
         ushort res = groupIndex switch {
-            0 => Alu.Rol16(value, count),
-            1 => Alu.Ror16(value, count),
-            2 => Alu.Rcl16(value, count),
-            3 => Alu.Rcr16(value, count),
-            4 => Alu.Shl16(value, count),
-            5 => Alu.Shr16(value, count),
-            7 => Alu.Sar16(value, count),
+            0 => _alu16.Rol(value, count),
+            1 => _alu16.Ror(value, count),
+            2 => _alu16.Rcl(value, count),
+            3 => _alu16.Rcr(value, count),
+            4 => _alu16.Shl(value, count),
+            5 => _alu16.Shr(value, count),
+            7 => _alu16.Sar(value, count),
             _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
         ModRM.SetRm16(res);
     }
 
     protected override void Grp3TestRm() {
-        Alu.And16(ModRM.GetRm16(), Cpu.NextUint16());
+        _alu16.And(ModRM.GetRm16(), Cpu.NextUint16());
     }
 
     protected override void Grp3NotRm() {
@@ -343,20 +346,20 @@ public class Instructions16 : Instructions16Or32 {
     
     protected override void Grp3NegRm() {
         ushort value = ModRM.GetRm16();
-        value = Alu.Sub16(0, value);
+        value = _alu16.Sub(0, value);
         ModRM.SetRm16(value);
         State.CarryFlag = value != 0;
     }
     
     protected override void Grp3MulRmAcc() {
-        uint result = Alu.Mul16(State.AX, ModRM.GetRm16());
+        uint result = _alu16.Mul(State.AX, ModRM.GetRm16());
         // Upper part of the result goes in DX
         State.DX = (ushort)(result >> 16);
         State.AX = (ushort)result;
     }
 
     protected override void Grp3IMulRmAcc() {
-        int result = Alu.Imul16((short)State.AX, (short)ModRM.GetRm16());
+        int result = _alu16.Imul((short)State.AX, (short)ModRM.GetRm16());
         // Upper part of the result goes in DX
         State.DX = (ushort)(result >> 16);
         State.AX = (ushort)result;
@@ -365,7 +368,7 @@ public class Instructions16 : Instructions16Or32 {
     protected override void Grp3DivRmAcc() {
         uint v1 = (uint)(State.DX << 16 | State.AX);
         ushort v2 = ModRM.GetRm16();
-        ushort result = Alu.Div16(v1, v2);
+        ushort result = _alu16.Div(v1, v2);
         State.AX = result;
         State.DX = (ushort)(v1 % v2);
     }
@@ -374,19 +377,19 @@ public class Instructions16 : Instructions16Or32 {
         // no sign extension for v1 as it is already a 32bit value
         int v1 = State.DX << 16 | State.AX;
         short v2 = (short) ModRM.GetRm16();
-        short result = Alu.Idiv16(v1, v2);
+        short result = _alu16.Idiv(v1, v2);
         State.AX = (ushort)result;
         State.DX = (ushort)(v1 % v2);
     }
 
     protected override void Grp45RmInc() {
         // INC
-        ModRM.SetRm16(Alu.Inc16(ModRM.GetRm16()));
+        ModRM.SetRm16(_alu16.Inc(ModRM.GetRm16()));
     }
 
     protected override void Grp45RmDec() {
         // DEC
-        ModRM.SetRm16(Alu.Dec16(ModRM.GetRm16()));
+        ModRM.SetRm16(_alu16.Dec(ModRM.GetRm16()));
     }
 
     protected override void Grp5RmPush() {
@@ -549,7 +552,7 @@ public class Instructions16 : Instructions16Or32 {
 
         ushort source = ModRM.R16;
         ushort destination = ModRM.GetRm16();
-        ushort value = Alu.Shld16(destination, source, count);
+        ushort value = _alu16.Shld(destination, source, count);
         ModRM.SetRm16(value);
     }
 

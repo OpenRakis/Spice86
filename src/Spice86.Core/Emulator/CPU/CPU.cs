@@ -10,7 +10,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -39,6 +38,8 @@ public class Cpu {
     internal DualPic DualPic { get; }
     
     private readonly ModRM _modRM;
+
+    private readonly Alu8 _alu8;
     
     internal MachineBreakpoints MachineBreakpoints { get; }
     private readonly CallbackHandler _callbackHandler;
@@ -78,16 +79,16 @@ public class Cpu {
         _callbackHandler = callbackHandler;
         MachineBreakpoints = machineBreakpoints;
         InterruptVectorTable = new(_memory);
-        Alu = new Alu(state);
+        _alu8 = new Alu8(state);
         Stack = new Stack(_memory, state);
         ExecutionFlowRecorder = executionFlowRecorder;
         FunctionHandler = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
         FunctionHandlerInExternalInterrupt = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
         _modRM = new ModRM(_memory, this, state);
-        _instructions8 = new Instructions8(Alu, this, _memory, _modRM);
-        _instructions16 = new Instructions16(Alu, this, _memory, _modRM);
-        _instructions32 = new Instructions32(Alu, this, _memory, _modRM);
+        _instructions8 = new Instructions8( this, _memory, _modRM);
+        _instructions16 = new Instructions16(this, _memory, _modRM);
+        _instructions32 = new Instructions32(this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
     }
@@ -135,8 +136,6 @@ public class Cpu {
         // Set it here for overriden code calling this
         State.IP = _internalIp;
     }
-
-    public Alu Alu { get; }
 
     public FunctionHandler FunctionHandler { get; }
 
@@ -1069,7 +1068,7 @@ public class Cpu {
         byte result = (byte)(v1 % v2);
         State.AH = (byte)(v1 / v2);
         State.AL = result;
-        Alu.UpdateFlags8(result);
+        _alu8.UpdateFlags(result);
     }
 
     public void Aad(byte v2) {
@@ -1077,7 +1076,7 @@ public class Cpu {
         State.AL = result;
         State.AH = 0;
         State.Flags.FlagRegister = 0;
-        Alu.UpdateFlags8(result);
+        _alu8.UpdateFlags(result);
     }
 
     public void Aas() {
@@ -1092,7 +1091,7 @@ public class Cpu {
 
         State.AL = (byte)(State.AL & 0x0F);
         // Undocumented behaviour
-        Alu.UpdateFlags8(State.AL);
+        _alu8.UpdateFlags(State.AL);
         State.AuxiliaryFlag = finalAuxillaryFlag;
         State.CarryFlag = finalCarryFlag;
     }
@@ -1115,7 +1114,7 @@ public class Cpu {
         }
 
         // Undocumented behaviour
-        Alu.UpdateFlags8(State.AL);
+        _alu8.UpdateFlags(State.AL);
         State.AuxiliaryFlag = finalAuxillaryFlag;
         State.CarryFlag = finalCarryFlag;
     }
@@ -1138,7 +1137,7 @@ public class Cpu {
         }
 
         // Undocumented behaviour
-        Alu.UpdateFlags8(State.AL);
+        _alu8.UpdateFlags(State.AL);
         State.AuxiliaryFlag = finalAuxillaryFlag;
         State.CarryFlag = finalCarryFlag;
     }
@@ -1154,7 +1153,7 @@ public class Cpu {
 
         State.AL = (byte)(State.AL & 0x0F);
         // Undocumented behaviour
-        Alu.UpdateFlags8(State.AL);
+        _alu8.UpdateFlags(State.AL);
         State.AuxiliaryFlag = finalAuxillaryFlag;
         State.CarryFlag = finalCarryFlag;
     }

@@ -4,8 +4,8 @@ using Spice86.Core.Emulator.VM;
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public abstract class Instructions16Or32 : Instructions {
-    protected Instructions16Or32(Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) 
-        : base(alu, cpu, memory, modRm) {
+    protected Instructions16Or32(Cpu cpu, Memory.IMemory memory, ModRM modRm) 
+        : base(cpu, memory, modRm) {
     }
 
     // Inc Reg

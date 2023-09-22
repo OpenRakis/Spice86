@@ -1,13 +1,10 @@
 using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 using Spice86.Shared.Utils;
 
 public abstract class Instructions {
-    protected readonly Alu Alu;
     protected readonly Cpu Cpu;
     protected readonly State State;
     protected readonly Stack Stack;
@@ -20,8 +17,7 @@ public abstract class Instructions {
 
     protected uint DsNextUint16Address => ModRM.GetAddress(SegmentRegisters.DsIndex, Cpu.NextUint16());
 
-    public Instructions(Alu alu, Cpu cpu, Memory.IMemory memory, ModRM modRm) {
-        Alu = alu;
+    public Instructions(Cpu cpu, Memory.IMemory memory, ModRM modRm) {
         Cpu = cpu;
         State = cpu.State;
         Stack = cpu.Stack;

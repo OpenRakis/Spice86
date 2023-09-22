@@ -285,10 +285,10 @@ public class MachineTest {
             CarryFlag = true,
             OverflowFlag = true
         };
-        var alu = new Alu(state);
+        var alu = new Alu16(state);
 
         // Act
-        ushort result = alu.Shld16(destination, source, count);
+        ushort result = alu.Shld(destination, source, count);
 
         // Assert
         Assert.Equal(expected, result);
@@ -312,10 +312,10 @@ public class MachineTest {
             CarryFlag = true,
             OverflowFlag = true
         };
-        var alu = new Alu(state);
+        var alu = new Alu32(state);
 
         // Act
-        uint result = alu.Shld32(destination, source, count);
+        uint result = alu.Shld(destination, source, count);
 
         // Assert
         Assert.Equal(expected, result);
