@@ -3,7 +3,7 @@
 /// <summary>
 /// Provides indexed signed short access over memory.
 /// </summary>
-public class Int16Indexer : Indexer<short> {
+public class Int16Indexer : MemoryIndexer<short> {
     private readonly UInt16Indexer _uInt16Indexer;
 
     /// <summary>

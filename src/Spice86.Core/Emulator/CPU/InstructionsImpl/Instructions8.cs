@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
+using Spice86.Core.Emulator.CPU.Registers;
+
 public class Instructions8 : Instructions {
     private readonly Alu8 _alu8;
     public Instructions8(Cpu cpu, Memory.IMemory memory, ModRM modRm) :
@@ -206,7 +208,7 @@ public class Instructions8 : Instructions {
 
     public void Grp1() {
         ModRM.Read();
-        int groupIndex = ModRM.RegisterIndex;
+        uint groupIndex = ModRM.RegisterIndex;
         byte op1 = ModRM.GetRm8();
         byte op2 = Cpu.NextUint8();
         byte res = groupIndex switch {
@@ -228,7 +230,7 @@ public class Instructions8 : Instructions {
 
     public override void Grp2(Grp2CountSource countSource) {
         ModRM.Read();
-        int groupIndex = ModRM.RegisterIndex;
+        uint groupIndex = ModRM.RegisterIndex;
         byte value = ModRM.GetRm8();
         byte count = ComputeGrp2Count(countSource);
 
@@ -293,7 +295,7 @@ public class Instructions8 : Instructions {
 
     public void Grp4() {
         ModRM.Read();
-        int groupIndex = ModRM.RegisterIndex;
+        uint groupIndex = ModRM.RegisterIndex;
         switch (groupIndex) {
             case 0:
                 Grp45RmInc();
@@ -344,7 +346,7 @@ public class Instructions8 : Instructions {
 
     public override void MovRegImm(int regIndex) {
         // MOV reg8(regIndex) ib
-        State.Registers.SetRegisterFromHighLowIndex8(regIndex, Cpu.NextUint8());
+        State.GeneralRegisters.UInt8HighLow[regIndex] = Cpu.NextUint8();
     }
 
     public override void MovAccMoffs() {

@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.CPU.Registers;
 
 using System.Text;
 
@@ -11,58 +12,58 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class State : IDebuggableComponent {
     // Accumulator
-    public byte AH { get => Registers.GetRegister8H(Registers.AxIndex); set => Registers.SetRegister8H(Registers.AxIndex, value); }
-    public byte AL { get => Registers.GetRegister8L(Registers.AxIndex); set => Registers.SetRegister8L(Registers.AxIndex, value); }
-    public ushort AX { get => Registers.GetRegister16(Registers.AxIndex); set => Registers.SetRegister16(Registers.AxIndex, value); }
-    public uint EAX { get => Registers.GetRegister32(Registers.AxIndex); set => Registers.SetRegister32(Registers.AxIndex, value); }
+    public byte AH { get => GeneralRegisters.UInt8High[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.AxIndex] = value; }
+    public byte AL { get => GeneralRegisters.UInt8Low[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.AxIndex] = value; }
+    public ushort AX { get => GeneralRegisters.UInt16[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.AxIndex] = value; }
+    public uint EAX { get => GeneralRegisters.UInt32[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.AxIndex] = value; }
 
     // Base
-    public byte BH { get => Registers.GetRegister8H(Registers.BxIndex); set => Registers.SetRegister8H(Registers.BxIndex, value); }
-    public byte BL { get => Registers.GetRegister8L(Registers.BxIndex); set => Registers.SetRegister8L(Registers.BxIndex, value); }
-    public ushort BX { get => Registers.GetRegister16(Registers.BxIndex); set => Registers.SetRegister16(Registers.BxIndex, value); }
-    public uint EBX { get => Registers.GetRegister32(Registers.BxIndex); set => Registers.SetRegister32(Registers.BxIndex, value); }
+    public byte BH { get => GeneralRegisters.UInt8High[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.BxIndex] = value; }
+    public byte BL { get => GeneralRegisters.UInt8Low[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.BxIndex] = value; }
+    public ushort BX { get => GeneralRegisters.UInt16[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.BxIndex] = value; }
+    public uint EBX { get => GeneralRegisters.UInt32[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.BxIndex] = value; }
 
     // Counter
-    public byte CH { get => Registers.GetRegister8H(Registers.CxIndex); set => Registers.SetRegister8H(Registers.CxIndex, value); }
-    public byte CL { get => Registers.GetRegister8L(Registers.CxIndex); set => Registers.SetRegister8L(Registers.CxIndex, value); }
-    public ushort CX { get => Registers.GetRegister16(Registers.CxIndex); set => Registers.SetRegister16(Registers.CxIndex, value); }
-    public uint ECX { get => Registers.GetRegister32(Registers.CxIndex); set => Registers.SetRegister32(Registers.CxIndex, value); }
+    public byte CH { get => GeneralRegisters.UInt8High[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.CxIndex] = value; }
+    public byte CL { get => GeneralRegisters.UInt8Low[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.CxIndex] = value; }
+    public ushort CX { get => GeneralRegisters.UInt16[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.CxIndex] = value; }
+    public uint ECX { get => GeneralRegisters.UInt32[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.CxIndex] = value; }
 
     // Data
-    public byte DH { get => Registers.GetRegister8H(Registers.DxIndex); set => Registers.SetRegister8H(Registers.DxIndex, value); }
-    public byte DL { get => Registers.GetRegister8L(Registers.DxIndex); set => Registers.SetRegister8L(Registers.DxIndex, value); }
-    public ushort DX { get => Registers.GetRegister16(Registers.DxIndex); set => Registers.SetRegister16(Registers.DxIndex, value); }
-    public uint EDX { get => Registers.GetRegister32(Registers.DxIndex); set => Registers.SetRegister32(Registers.DxIndex, value); }
+    public byte DH { get => GeneralRegisters.UInt8High[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.DxIndex] = value; }
+    public byte DL { get => GeneralRegisters.UInt8Low[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.DxIndex] = value; }
+    public ushort DX { get => GeneralRegisters.UInt16[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.DxIndex] = value; }
+    public uint EDX { get => GeneralRegisters.UInt32[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.DxIndex] = value; }
 
     // Destination Index
-    public ushort DI { get => Registers.GetRegister16(Registers.DiIndex); set => Registers.SetRegister16(Registers.DiIndex, value); }
-    public uint EDI { get => Registers.GetRegister32(Registers.DiIndex); set => Registers.SetRegister32(Registers.DiIndex, value); }
+    public ushort DI { get => GeneralRegisters.UInt16[GeneralRegisters.DiIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.DiIndex] = value; }
+    public uint EDI { get => GeneralRegisters.UInt32[GeneralRegisters.DiIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.DiIndex] = value; }
 
     // Source Index
-    public ushort SI { get => Registers.GetRegister16(Registers.SiIndex); set => Registers.SetRegister16(Registers.SiIndex, value); }
-    public uint ESI { get => Registers.GetRegister32(Registers.SiIndex); set => Registers.SetRegister32(Registers.SiIndex, value); }
+    public ushort SI { get => GeneralRegisters.UInt16[GeneralRegisters.SiIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.SiIndex] = value; }
+    public uint ESI { get => GeneralRegisters.UInt32[GeneralRegisters.SiIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.SiIndex] = value; }
 
     // Base Pointer
-    public ushort BP { get => Registers.GetRegister16(Registers.BpIndex); set => Registers.SetRegister16(Registers.BpIndex, value); }
-    public uint EBP { get => Registers.GetRegister32(Registers.BpIndex); set => Registers.SetRegister32(Registers.BpIndex, value); }
+    public ushort BP { get => GeneralRegisters.UInt16[GeneralRegisters.BpIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.BpIndex] = value; }
+    public uint EBP { get => GeneralRegisters.UInt32[GeneralRegisters.BpIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.BpIndex] = value; }
 
     // Stack Pointer
-    public ushort SP { get => Registers.GetRegister16(Registers.SpIndex); set => Registers.SetRegister16(Registers.SpIndex, value); }
-    public uint ESP { get => Registers.GetRegister32(Registers.SpIndex); set => Registers.SetRegister32(Registers.SpIndex, value); }
+    public ushort SP { get => GeneralRegisters.UInt16[GeneralRegisters.SpIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.SpIndex] = value; }
+    public uint ESP { get => GeneralRegisters.UInt32[GeneralRegisters.SpIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.SpIndex] = value; }
 
     // Code Segment
-    public ushort CS { get => SegmentRegisters.GetRegister16(SegmentRegisters.CsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.CsIndex, value); }
+    public ushort CS { get => SegmentRegisters.UInt16[SegmentRegisters.CsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.CsIndex] = value; }
 
     // Data Segment
-    public ushort DS { get => SegmentRegisters.GetRegister16(SegmentRegisters.DsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.DsIndex, value); }
+    public ushort DS { get => SegmentRegisters.UInt16[SegmentRegisters.DsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.DsIndex] = value; }
 
     // Extra segments
-    public ushort ES { get => SegmentRegisters.GetRegister16(SegmentRegisters.EsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.EsIndex, value); }
-    public ushort FS { get => SegmentRegisters.GetRegister16(SegmentRegisters.FsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.FsIndex, value); }
-    public ushort GS { get => SegmentRegisters.GetRegister16(SegmentRegisters.GsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.GsIndex, value); }
+    public ushort ES { get => SegmentRegisters.UInt16[SegmentRegisters.EsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.EsIndex] = value; }
+    public ushort FS { get => SegmentRegisters.UInt16[SegmentRegisters.FsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.FsIndex] = value; }
+    public ushort GS { get => SegmentRegisters.UInt16[SegmentRegisters.GsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.GsIndex] = value; }
 
     // Stack Segment
-    public ushort SS { get => SegmentRegisters.GetRegister16(SegmentRegisters.SsIndex); set => SegmentRegisters.SetRegister16(SegmentRegisters.SsIndex, value); }
+    public ushort SS { get => SegmentRegisters.UInt16[SegmentRegisters.SsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.SsIndex] = value; }
 
     /// <summary> Instruction pointer </summary>
     public ushort IP { get; set; }
@@ -100,7 +101,7 @@ public class State : IDebuggableComponent {
     public short Direction32 => (short)(DirectionFlag ? -4 : 4);
 
     public bool? ContinueZeroFlagValue { get; set; }
-    public int? SegmentOverrideIndex { get; set; }
+    public uint? SegmentOverrideIndex { get; set; }
 
     /// <summary>
     /// The number of CPU cycles, incremented on each new instruction.
@@ -109,7 +110,7 @@ public class State : IDebuggableComponent {
     public uint IpPhysicalAddress => MemoryUtils.ToPhysicalAddress(CS, IP);
     public uint StackPhysicalAddress => MemoryUtils.ToPhysicalAddress(SS, SP);
 
-    public Registers Registers { get; } = new();
+    public GeneralRegisters GeneralRegisters { get; } = new();
     public SegmentRegisters SegmentRegisters { get; } = new();
     
     public bool IsRunning { get; set; } = true;

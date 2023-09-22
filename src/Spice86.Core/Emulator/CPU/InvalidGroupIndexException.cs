@@ -8,6 +8,6 @@ using System;
 
 [Serializable]
 public class InvalidGroupIndexException : InvalidVMOperationException {
-    public InvalidGroupIndexException(State state, int groupIndex) : base(state, $"Invalid group index {ConvertUtils.ToHex((uint)groupIndex)}") {
+    public InvalidGroupIndexException(State state, uint groupIndex) : base(state, $"Invalid group index {ConvertUtils.ToHex((uint)groupIndex)}") {
     }
 }

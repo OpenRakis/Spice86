@@ -104,7 +104,7 @@ public class GdbCommandRegisterHandler {
 
     private uint GetRegisterValue(int regIndex) {
         if (regIndex < 8) {
-            return _state.Registers.GetRegister16(regIndex);
+            return _state.GeneralRegisters.UInt16[regIndex];
         }
 
         if (regIndex == 8) {
@@ -118,7 +118,7 @@ public class GdbCommandRegisterHandler {
         }
 
         if (regIndex < 16) {
-            return _state.SegmentRegisters.GetRegister16(GetSegmentRegisterIndex(regIndex));
+            return _state.SegmentRegisters.UInt16[GetSegmentRegisterIndex(regIndex)];
         }
 
         return 0;
@@ -139,13 +139,13 @@ public class GdbCommandRegisterHandler {
 
     private void SetRegisterValue(int regIndex, ushort value) {
         if (regIndex < 8) {
-            _state.Registers.SetRegister16(regIndex, value);
+            _state.GeneralRegisters.UInt16[regIndex] = value;
         } else if (regIndex == 8) {
             _state.IP = value;
         } else if (regIndex == 9) {
             _state.Flags.FlagRegister = value;
         } else if (regIndex < 16) {
-            _state.SegmentRegisters.SetRegister16(GetSegmentRegisterIndex(regIndex), value);
+            _state.SegmentRegisters.UInt16[GetSegmentRegisterIndex(regIndex)] = value;
         }
     }
 }

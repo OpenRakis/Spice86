@@ -1,56 +1,56 @@
-﻿namespace Spice86.Core.Emulator.CPU;
+﻿namespace Spice86.Core.Emulator.CPU.Registers;
 
 /// <summary>
 /// Represents the x86 registers.
 /// </summary>
-public class Registers : RegistersHolder {
+public class GeneralRegisters : RegistersHolder {
     /// <summary>
     /// The index of the AX register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
-    public const int AxIndex = 0;
+    public const uint AxIndex = 0;
 
     /// <summary>
     /// The index of the BP register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
-    public const int BpIndex = 5;
+    public const uint BpIndex = 5;
     
     /// <summary>
     /// The index of the BX register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
-    public const int BxIndex = 3;
+    public const uint BxIndex = 3;
     
     /// <summary>
     /// The index of the CX register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
-    public const int CxIndex = 1;
+    public const uint CxIndex = 1;
 
     /// <summary>
     /// The index of the DI register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
-    public const int DiIndex = 7;
+    public const uint DiIndex = 7;
 
     /// <summary>
     /// The index of the DX register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
-    public const int DxIndex = 2;
+    public const uint DxIndex = 2;
     
     /// <summary>
     /// The index of the SI register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
-    public const int SiIndex = 6;
+    public const uint SiIndex = 6;
     
     /// <summary>
     /// The index of the SP register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
-    public const int SpIndex = 4;
+    public const uint SpIndex = 4;
     
     /// <summary>
-    /// Initializes a new instance of the <see cref="Registers"/> class.
+    /// Initializes a new instance of the <see cref="GeneralRegisters"/> class.
     /// </summary>
-    public Registers() : base(GetRegistersNames()) {
+    public GeneralRegisters() : base(GetRegistersNames()) {
     }
 
-    private static Dictionary<int, string> GetRegistersNames() {
+    private static Dictionary<uint, string> GetRegistersNames() {
         return new() {
             { AxIndex, "AX" },
             { CxIndex, "CX" },

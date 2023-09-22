@@ -3,7 +3,7 @@
 /// <summary>
 /// Provides indexed signed byte access over memory.
 /// </summary>
-public class Int8Indexer : Indexer<sbyte> {
+public class Int8Indexer : MemoryIndexer<sbyte> {
     private readonly UInt8Indexer _uInt8Indexer;
 
     /// <summary>

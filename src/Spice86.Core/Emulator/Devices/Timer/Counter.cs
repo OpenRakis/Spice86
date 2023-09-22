@@ -150,7 +150,7 @@ public class Counter {
     }
 
     private void WriteMsb(byte partialValue) {
-        Value = ConvertUtils.WriteMsb(Value, partialValue);
+        Value = ConvertUtils.WriteMsb16(Value, partialValue);
     }
 
     private void WritePolicy3(byte partialValue) {
