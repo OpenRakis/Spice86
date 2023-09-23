@@ -9,7 +9,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     Thin interface between renderer and gui.
 /// </summary>
-public class VgaCard : IVideoCard, IDebuggableComponent {
+public class VgaCard : IVideoCard {
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
     private readonly IVgaRenderer _renderer;

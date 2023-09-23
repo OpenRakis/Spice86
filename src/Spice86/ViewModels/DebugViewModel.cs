@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video;
@@ -46,11 +47,11 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
 
     private bool IsPaused => _pauseStatus?.IsPaused is true;
 
-    private readonly IDebuggableComponent? _programExecutor;
+    private readonly IProgramExecutor? _programExecutor;
 
     private readonly IUIDispatcherTimer? _uiDispatcherTimer;
     
-    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPauseStatus pauseStatus) {
+    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor, IPauseStatus pauseStatus) {
         _programExecutor = programExecutor;
         _pauseStatus = pauseStatus;
         _uiDispatcherTimer = uiDispatcherTimer;

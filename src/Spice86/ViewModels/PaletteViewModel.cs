@@ -8,6 +8,7 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video;
@@ -25,7 +26,7 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
         }
     }
     
-    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor) {
+    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor) {
         programExecutor.Accept(this);
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
