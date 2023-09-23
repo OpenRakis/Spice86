@@ -91,6 +91,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     [ObservableProperty]
     private StateInfo _state = new();
 
+    [ObservableProperty]
+    private CpuFlagsInfo _flags = new();
+
     public void VisitMainMemory(IMemory memory) {
         Memory = memory;
     }
@@ -137,40 +140,42 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
             State.GS = state.GS;
             State.SS = state.SS;
             State.IP = state.IP;
-            State.AuxiliaryFlag = state.AuxiliaryFlag;
-            State.CarryFlag = state.CarryFlag;
-            State.DirectionFlag = state.DirectionFlag;
-            State.InterruptFlag = state.InterruptFlag;
-            State.OverflowFlag = state.OverflowFlag;
-            State.ParityFlag = state.ParityFlag;
-            State.ZeroFlag = state.ZeroFlag;
-            State.ContinueZeroFlag = state.ContinueZeroFlagValue;
             State.SegmentOverrideIndex = state.SegmentOverrideIndex;
-            State.IsRunning = state.IsRunning;
+            Flags.AuxiliaryFlag = state.AuxiliaryFlag;
+            Flags.CarryFlag = state.CarryFlag;
+            Flags.DirectionFlag = state.DirectionFlag;
+            Flags.InterruptFlag = state.InterruptFlag;
+            Flags.OverflowFlag = state.OverflowFlag;
+            Flags.ParityFlag = state.ParityFlag;
+            Flags.ZeroFlag = state.ZeroFlag;
+            Flags.ContinueZeroFlag = state.ContinueZeroFlagValue;
+
         }
 
         if (IsPaused) {
             State.PropertyChanged -= OnStatePropertyChanged;
             State.PropertyChanged += OnStatePropertyChanged;
+            Flags.PropertyChanged -= OnStatePropertyChanged;
+            Flags.PropertyChanged += OnStatePropertyChanged;
         } else {
             State.PropertyChanged -= OnStatePropertyChanged;
+            Flags.PropertyChanged -= OnStatePropertyChanged;
         }
         
         return;
         
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (e.PropertyName == null || !IsPaused) {
+            if (sender is null || e.PropertyName == null || !IsPaused) {
                 return;
             }
             PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
-            PropertyInfo? propertyInfo = State.GetType().GetProperty(e.PropertyName);
+            PropertyInfo? propertyInfo = sender.GetType().GetProperty(e.PropertyName);
             if (propertyInfo is not null && originalPropertyInfo is not null) {
-                originalPropertyInfo.SetValue(state, propertyInfo.GetValue(State));
+                originalPropertyInfo.SetValue(state, propertyInfo.GetValue(sender));
             }
         }
     }
-
-
+    
     public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
         VideoCard.RendererWidth = vgaRenderer.Width;
         VideoCard.RendererHeight = vgaRenderer.Height;

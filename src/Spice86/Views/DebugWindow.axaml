@@ -25,8 +25,12 @@
                     <TabItem Header="CPU">
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
-                                <Label HorizontalAlignment="Center" FontWeight="Bold">State</Label>
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">Registers and misc</Label>
                                 <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding State}" />
+                            </Grid>
+                            <Grid RowDefinitions="Auto,*" Margin="5">
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">Flag Registers</Label>
+                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding Flags}" />
                             </Grid>
                         </WrapPanel>
                     </TabItem>
