@@ -19,7 +19,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Keyboard;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Shared.Emulator.Keyboard;
@@ -46,9 +45,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IWindowActivator _windowActivator;
     private readonly IProgramExecutorFactory _programExecutorFactory;
+    private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
-
-    private AvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
+    
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
@@ -56,6 +55,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private bool _isSettingResolution;
     private string _lastExecutableDirectory = string.Empty;
     private bool _closeAppOnEmulatorExit;
+    private bool _isAppClosing;
 
     private Action? _uiUpdateMethod;
     private bool _exitDrawThread;
@@ -70,10 +70,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     
     public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
-
-    private bool _isAppClosing;
-
-    public MainWindowViewModel(IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+    
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+        _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
@@ -88,7 +87,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
     internal void OnKeyUp(KeyEventArgs e) {
-        _avaloniaKeyScanCodeConverter ??= new();
+        if (_avaloniaKeyScanCodeConverter is null) {
+            return;
+        }
         KeyUp?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 false,
@@ -178,7 +179,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private WriteableBitmap? _bitmap;
 
     internal void OnKeyDown(KeyEventArgs e) {
-        _avaloniaKeyScanCodeConverter ??= new();
+        if (_avaloniaKeyScanCodeConverter is null) {
+            return;
+        }
         KeyDown?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 true,

@@ -10,6 +10,7 @@ using Spice86.DependencyInjection;
 using Spice86.Shared.Interfaces;
 using Spice86.Infrastructure;
 using Avalonia.Threading;
+
 using Spice86.Views;
 using Spice86.ViewModels;
 
@@ -70,7 +71,7 @@ public class Program {
             return;
         }
         MainWindow mainWindow = new();
-        var mainWindowViewModel = new MainWindowViewModel(new ProgramExecutorFactory(configuration, loggerService), new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimer(), configuration, loggerService);
+        var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(), new ProgramExecutorFactory(configuration, loggerService), new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimer(), configuration, loggerService);
         mainWindow.DataContext = mainWindowViewModel;
         desktop.MainWindow = mainWindow;
         try {
