@@ -83,7 +83,4 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
 
     public void VisitCpu(Cpu cpu) {
     }
-
-    public void VisitCpuFlags(Flags flags) {
-    }
 }
