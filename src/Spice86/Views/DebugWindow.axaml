@@ -256,6 +256,7 @@
                                 </WrapPanel>
                             </Grid>
                             <Grid RowDefinitions="Auto,*" Margin="5">
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
                                     <TextBlock TextAlignment="Right"
                                                Text="{Binding VideoCard.CrtControllerCharacterCellHeightRegister, StringFormat='CharacterCellHeight: {0:X2}'}">
@@ -447,7 +448,6 @@
                                                Text="{Binding VideoCard.CrtControllerVerticalTotal, StringFormat='VerticalTotal: {0}'}">
                                     </TextBlock>
                                 </WrapPanel>
-                                <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
                             </Grid>
                             <Grid RowDefinitions="Auto,*" Margin="5">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Renderer</Label>
