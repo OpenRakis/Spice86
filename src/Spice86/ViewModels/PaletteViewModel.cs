@@ -27,7 +27,7 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
     }
     
     public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor) {
-        programExecutor.Accept(this);
+        programExecutor?.Accept(this);
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
         }

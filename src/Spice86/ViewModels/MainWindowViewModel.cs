@@ -144,34 +144,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         }
     }
 
-    private void Draw() {
-        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
-            return;
-        }
-        if (!_isDrawThreadInitialized) {
-            _drawThread = new Thread(DrawThreadMethod) {
-                Name = "UIRenderThread"
-            };
-            _drawingSemaphoreSlim = new(1, 1);
-            _drawThread.Start();
-            _isDrawThreadInitialized = true;
-        }
-
-        _drawAction ??= () => {
-            unsafe {
-                _drawingSemaphoreSlim?.Wait();
-                try {
-                    using ILockedFramebuffer pixels = Bitmap.Lock();
-                    var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                    RenderScreen.Invoke(this, uiRenderEventArgs);
-                } finally {
-                    _drawingSemaphoreSlim?.Release();
-                }
-                _uiDispatcher.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
-            }
-        };
-    }
-
     [ObservableProperty]
     private Cursor? _cursor = Cursor.Default;
 
@@ -202,6 +174,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
     private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
+
+    public IDebugViewModel? DebugViewModel { get; set; }
 
     public int Width { get; private set; }
 
@@ -329,7 +303,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
-        _windowActivator.CloseAllAdditionalWindows();
+        _windowActivator.CloseDebugWindow();
         RunEmulator();
     }
 
@@ -347,29 +321,53 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowPerformance() {
-        if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<PerformanceViewModel>(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer());
-        }
+        ShowDebugWindow();
+        DebugViewModel?.ShowPerformance();
     }
 
     [RelayCommand]
     public void ShowDebugWindow() {
         if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_uiDispatcherTimer, _programExecutor, this);
+            _windowActivator.ActivateDebugWindow(_uiDispatcherTimer, _programExecutor, this);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
-        if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<PaletteViewModel>(_uiDispatcherTimer, _programExecutor);
-        }
+        ShowDebugWindow();
+        DebugViewModel?.ShowColorPalette();
     }
 
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
-    public void UpdateScreen() => Draw();
+    public void UpdateScreen() {
+        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
+            return;
+        }
+        if (!_isDrawThreadInitialized) {
+            _drawThread = new Thread(DrawThreadMethod) {
+                Name = "UIRenderThread"
+            };
+            _drawingSemaphoreSlim = new(1, 1);
+            _drawThread.Start();
+            _isDrawThreadInitialized = true;
+        }
+
+        _drawAction ??= () => {
+            unsafe {
+                _drawingSemaphoreSlim?.Wait();
+                try {
+                    using ILockedFramebuffer pixels = Bitmap.Lock();
+                    var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                    RenderScreen.Invoke(this, uiRenderEventArgs);
+                } finally {
+                    _drawingSemaphoreSlim?.Release();
+                }
+                _uiDispatcher.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
+            }
+        };
+    }
 
     public double MouseX { get; set; }
     public double MouseY { get; set; }
@@ -484,7 +482,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
-                _windowActivator.CloseAllAdditionalWindows();
+                _windowActivator.CloseDebugWindow();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }

@@ -15,11 +15,12 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Diagnostics;
 
 using System.ComponentModel;
 using System.Reflection;
 
-public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
+public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugViewModel {
     [ObservableProperty]
     private MachineInfo _machine = new();
     
@@ -47,12 +48,31 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
 
     private bool IsPaused => _pauseStatus?.IsPaused is true;
 
-    private readonly IProgramExecutor? _programExecutor;
+    private IProgramExecutor? _programExecutor;
+
+    public IProgramExecutor? ProgramExecutor {
+        get => _programExecutor;
+        set {
+            if (value is not null && _uiDispatcherTimer is not null) {
+                _programExecutor = value;
+                PaletteViewModel = new(_uiDispatcherTimer, value);
+                PerformanceViewModel = new(_uiDispatcherTimer, value, new PerformanceMeasurer());
+            }
+        }
+    }
+
+    [ObservableProperty]
+    private int _selectedTab = 0;
 
     private readonly IUIDispatcherTimer? _uiDispatcherTimer;
+
+    [ObservableProperty]
+    private PaletteViewModel? _paletteViewModel;
+
+    [ObservableProperty]
+    private PerformanceViewModel? _performanceViewModel;
     
-    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor, IPauseStatus pauseStatus) {
-        _programExecutor = programExecutor;
+    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
         _uiDispatcherTimer = uiDispatcherTimer;
     }
@@ -63,7 +83,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        _programExecutor?.Accept(this);
+        ProgramExecutor?.Accept(this);
         LastUpdate = DateTime.Now;
         IsLoading = false;
     }
@@ -300,5 +320,13 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     public void VisitCpu(Cpu cpu) {
+    }
+
+    public void ShowColorPalette() {
+        SelectedTab = 3;
+    }
+
+    public void ShowPerformance() {
+        SelectedTab = 4;
     }
 }

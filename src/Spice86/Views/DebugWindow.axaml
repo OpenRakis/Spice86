@@ -6,8 +6,10 @@
         x:Class="Spice86.Views.DebugWindow"
         Title="Debug"
         xmlns:vm="using:Spice86.ViewModels"
+        xmlns:converters="clr-namespace:Spice86.Converters"
         xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
         xmlns:userControls="clr-namespace:Spice86.UserControls"
+        xmlns:views="clr-namespace:Spice86.Views"
         x:CompileBindings="True" x:DataType="vm:DebugViewModel"
         Icon="/Assets/Spice86.ico"
         CanResize="True"
@@ -19,7 +21,7 @@
     <Grid>
         <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
             <ScrollViewer Grid.Row="0" DockPanel.Dock="Top">
-                <TabControl>
+                <TabControl SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
                     <TabItem Header="CPU">
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
@@ -444,7 +446,6 @@
                                     <TextBlock TextAlignment="Right"
                                                Text="{Binding VideoCard.CrtControllerVerticalTotal, StringFormat='VerticalTotal: {0}'}">
                                     </TextBlock>
-
                                 </WrapPanel>
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
                             </Grid>
@@ -467,6 +468,12 @@
                             </Grid>
                         </WrapPanel>
                     </TabItem>
+                    <TabItem Header="Color Palette">
+                        <views:PaletteView DataContext="{Binding PaletteViewModel}" />
+                    </TabItem>
+                    <TabItem Header="Performance">
+                        <views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
+                    </TabItem>
                 </TabControl>
             </ScrollViewer>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
@@ -480,7 +487,6 @@
                     <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Refresh Memory View"
                             Command="{Binding RefreshMemoryViewCommand}">
                     </Button>
-
                 </WrapPanel>
             </Border>
         </Grid>

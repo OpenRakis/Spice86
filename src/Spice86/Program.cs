@@ -71,7 +71,12 @@ public class Program {
             return;
         }
         MainWindow mainWindow = new();
-        var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(), new ProgramExecutorFactory(configuration, loggerService), new WindowActivator(), new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimer(), configuration, loggerService);
+        IUIDispatcherTimer uiDispatcherTimer = new UIDispatcherTimer();
+        var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
+            new ProgramExecutorFactory(configuration, loggerService), new WindowActivator(),
+            new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
+            new TextClipboard(mainWindow.Clipboard), uiDispatcherTimer, configuration, loggerService);
+        mainWindowViewModel.DebugViewModel = new DebugViewModel(uiDispatcherTimer, mainWindowViewModel);
         mainWindow.DataContext = mainWindowViewModel;
         desktop.MainWindow = mainWindow;
         try {

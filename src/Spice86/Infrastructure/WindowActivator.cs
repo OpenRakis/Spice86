@@ -2,40 +2,35 @@
 
 using Avalonia.Controls;
 
+using Spice86.Core.Emulator;
+using Spice86.Interfaces;
 using Spice86.ViewModels;
+using Spice86.Views;
 
 using System;
 using System.Collections.Generic;
 
 /// <inheritdoc cref="IWindowActivator" />
 internal class WindowActivator : IWindowActivator {
-    private readonly Dictionary<Type, Window> _createdWindows = new();
+    private DebugWindow? _debugWindow;
 
     /// <inheritdoc />
-    public void ActivateAdditionalWindow<T>(params object[]? parameters) where T : ViewModelBase {
-        if(_createdWindows.TryGetValue(typeof(T), out Window? window)) {
-            window.Activate();
+    public void ActivateDebugWindow(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor, IPauseStatus pauseStatus) {
+        if (_debugWindow is not null) {
+            _debugWindow.Activate();
             return;
         }
-        object? viewModel = Activator.CreateInstance(typeof(T), parameters);
-        string? name = typeof(T).FullName!.Replace("ViewModels", "Views").Replace("ViewModel", "Window");
-        var typeOfWindow = Type.GetType(name);
-
-        if (typeOfWindow != null) {
-            Window? windowCreated = (Window?)Activator.CreateInstance(typeOfWindow);
-            if(windowCreated is not null) {
-                windowCreated.Show();
-                windowCreated.DataContext = viewModel;
-                windowCreated.Closed += (_, _) => _createdWindows.Remove(typeof(T));
-                _createdWindows.Add(typeof(T), windowCreated);
-            }
-        }
+        var viewModel = new DebugViewModel(uiDispatcherTimer, pauseStatus) {
+            ProgramExecutor = programExecutor
+        };
+        _debugWindow = new DebugWindow {
+            DataContext = viewModel
+        };
+        _debugWindow.Show();
+        _debugWindow.Closed += (_, _) => _debugWindow = null;
     }
 
-    public void CloseAllAdditionalWindows() {
-        for(int i = 0; i < _createdWindows.Count; i++) {
-            _createdWindows[_createdWindows.Keys.ElementAt(i)].Close();
-        }
-        _createdWindows.Clear();
+    public void CloseDebugWindow() {
+        _debugWindow?.Close();
     }
 }
