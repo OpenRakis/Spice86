@@ -10,6 +10,7 @@
         xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
         xmlns:userControls="clr-namespace:Spice86.UserControls"
         xmlns:views="clr-namespace:Spice86.Views"
+        xmlns:intel="clr-namespace:Iced.Intel;assembly=Iced"
         x:CompileBindings="True" x:DataType="vm:DebugViewModel"
         Icon="/Assets/Spice86.ico"
         CanResize="True"
@@ -18,9 +19,12 @@
     <Design.DataContext>
         <vm:DebugViewModel />
     </Design.DataContext>
+    <Window.Resources>
+        <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
+    </Window.Resources>
     <Grid>
         <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
-            <ScrollViewer Grid.Row="0" DockPanel.Dock="Top">
+            <ScrollViewer Grid.Row="0">
                 <TabControl SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
                     <TabItem Header="CPU">
                         <WrapPanel>
@@ -33,6 +37,15 @@
                                 <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding Flags}" />
                             </Grid>
                         </WrapPanel>
+                    </TabItem>
+                    <TabItem Header="Disassembly">
+                        <ListBox ItemsSource="{Binding Disassembly}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="{x:Type intel:Instruction}">
+                                    <TextBlock Text="{Binding Converter={StaticResource InstructionToStringConverter}}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </TabItem>
                     <TabItem Header="Memory">
                         <userControls:HexSingleView Name="HexSingleView" MemorySource="{CompiledBinding Memory}" />

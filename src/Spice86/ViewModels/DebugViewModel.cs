@@ -1,10 +1,13 @@
 namespace Spice86.ViewModels;
 
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+
+using Iced.Intel;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
@@ -62,6 +65,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     [ObservableProperty]
+    private AvaloniaList<Instruction> _disassembly = new();
+
+    [ObservableProperty]
     private int _selectedTab = 0;
 
     private readonly IUIDispatcherTimer? _uiDispatcherTimer;
@@ -81,6 +87,8 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     public void StartObserverTimer() {
         _uiDispatcherTimer?.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
     }
+
+    private Decoder? _decoder;
 
     private void UpdateValues(object? sender, EventArgs e) {
         ProgramExecutor?.Accept(this);
@@ -109,47 +117,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     public void VisitCpuState(State state) {
         if (IsLoading || !IsPaused) {
-            State.AH = state.AH;
-            State.AL = state.AL;
-            State.AX = state.AX;
-            State.EAX = state.EAX;
-            State.BH = state.BH;
-            State.BL = state.BL;
-            State.BX = state.BX;
-            State.EBX = state.EBX;
-            State.CH = state.CH;
-            State.CL = state.CL;
-            State.CX = state.CX;
-            State.ECX = state.ECX;
-            State.DH = state.DH;
-            State.DL = state.DL;
-            State.DX = state.DX;
-            State.EDX = state.EDX;
-            State.DI = state.DI;
-            State.EDI = state.EDI;
-            State.SI = state.SI;
-            State.ES = state.ES;
-            State.BP = state.BP;
-            State.EBP = state.EBP;
-            State.SP = state.SP;
-            State.ESP = state.ESP;
-            State.CS = state.CS;
-            State.DS = state.DS;
-            State.ES = state.ES;
-            State.FS = state.FS;
-            State.GS = state.GS;
-            State.SS = state.SS;
-            State.IP = state.IP;
-            State.SegmentOverrideIndex = state.SegmentOverrideIndex;
-            Flags.AuxiliaryFlag = state.AuxiliaryFlag;
-            Flags.CarryFlag = state.CarryFlag;
-            Flags.DirectionFlag = state.DirectionFlag;
-            Flags.InterruptFlag = state.InterruptFlag;
-            Flags.OverflowFlag = state.OverflowFlag;
-            Flags.ParityFlag = state.ParityFlag;
-            Flags.ZeroFlag = state.ZeroFlag;
-            Flags.ContinueZeroFlag = state.ContinueZeroFlagValue;
-
+            UpdateCpuState(state);
         }
 
         if (IsPaused) {
@@ -175,7 +143,51 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
             }
         }
     }
-    
+
+    private void UpdateCpuState(State state)
+    {
+        State.AH = state.AH;
+        State.AL = state.AL;
+        State.AX = state.AX;
+        State.EAX = state.EAX;
+        State.BH = state.BH;
+        State.BL = state.BL;
+        State.BX = state.BX;
+        State.EBX = state.EBX;
+        State.CH = state.CH;
+        State.CL = state.CL;
+        State.CX = state.CX;
+        State.ECX = state.ECX;
+        State.DH = state.DH;
+        State.DL = state.DL;
+        State.DX = state.DX;
+        State.EDX = state.EDX;
+        State.DI = state.DI;
+        State.EDI = state.EDI;
+        State.SI = state.SI;
+        State.ES = state.ES;
+        State.BP = state.BP;
+        State.EBP = state.EBP;
+        State.SP = state.SP;
+        State.ESP = state.ESP;
+        State.CS = state.CS;
+        State.DS = state.DS;
+        State.ES = state.ES;
+        State.FS = state.FS;
+        State.GS = state.GS;
+        State.SS = state.SS;
+        State.IP = state.IP;
+        State.SegmentOverrideIndex = state.SegmentOverrideIndex;
+        Flags.AuxiliaryFlag = state.AuxiliaryFlag;
+        Flags.CarryFlag = state.CarryFlag;
+        Flags.DirectionFlag = state.DirectionFlag;
+        Flags.InterruptFlag = state.InterruptFlag;
+        Flags.OverflowFlag = state.OverflowFlag;
+        Flags.ParityFlag = state.ParityFlag;
+        Flags.ZeroFlag = state.ZeroFlag;
+        Flags.ContinueZeroFlag = state.ContinueZeroFlagValue;
+    }
+
     public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
         VideoCard.RendererWidth = vgaRenderer.Width;
         VideoCard.RendererHeight = vgaRenderer.Height;
@@ -324,14 +336,44 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     public void VisitVgaCard(VgaCard vgaCard) {
     }
 
+    [ObservableProperty]
+    private int _currentAddressSize;
+    
     public void VisitCpu(Cpu cpu) {
+        UpdateDisassembly(cpu);
+    }
+
+    private void UpdateDisassembly(Cpu cpu) {
+        if (IsPaused) {
+            return;
+        }
+
+        if (Disassembly.Count > 50) {
+            Disassembly.Clear();
+            OnPropertyChanged(nameof(Disassembly));
+        }
+
+        CurrentAddressSize = cpu.AddressSize;
+        uint endRip = 100;
+        CodeReader codeReader = new ByteArrayCodeReader(cpu.Memory.GetData(cpu.State.IpPhysicalAddress, endRip));
+        _decoder = Decoder.Create(cpu.AddressSize, codeReader, 0, DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
+
+        if (_decoder is not null) {
+            while (_decoder.IP < (ulong)endRip) {
+                Instruction instr = _decoder.Decode();
+                Disassembly.Add(instr);
+            }
+
+            Disassembly.Reverse();
+            OnPropertyChanged(nameof(Disassembly));
+        }
     }
 
     public void ShowColorPalette() {
-        SelectedTab = 3;
+        SelectedTab = 4;
     }
 
     public void ShowPerformance() {
-        SelectedTab = 4;
+        SelectedTab = 5;
     }
 }

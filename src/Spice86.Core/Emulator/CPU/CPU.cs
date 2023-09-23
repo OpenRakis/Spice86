@@ -65,6 +65,8 @@ public class Cpu : IDebuggableComponent {
     // CPU uses this internally and adjusts IP after instruction execution is done.
     private ushort _internalIp;
 
+    public IMemory Memory => _memory;
+
     public IOPortDispatcher? IoPortDispatcher { get; set; }
 
     public ExecutionFlowRecorder ExecutionFlowRecorder { get; }
