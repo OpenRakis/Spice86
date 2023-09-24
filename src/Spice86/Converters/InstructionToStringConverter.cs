@@ -19,8 +19,6 @@ public class InstructionToStringConverter : IValueConverter {
             var output = new StringOutput();
             // Don't use instr.ToString(), it allocates more, uses masm syntax and default options
             _formatter.Format(instr, output);
-            _outputString.Append(instr.IP.ToString("X16"));
-            _outputString.Append($" ({instr.Length} bytes instruction) ");
             _outputString.AppendLine(output.ToStringAndReset());
             return _outputString.ToString();
         }

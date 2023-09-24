@@ -21,6 +21,7 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Diagnostics;
 
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
 
 public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugViewModel {
@@ -49,7 +50,8 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     [RelayCommand]
     public void UpdateData() => UpdateValues(this, EventArgs.Empty);
 
-    private bool IsPaused => _pauseStatus?.IsPaused is true;
+    [ObservableProperty]
+    private bool _isPaused;
 
     private IProgramExecutor? _programExecutor;
 
@@ -65,7 +67,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     [ObservableProperty]
-    private AvaloniaList<Instruction> _disassembly = new();
+    private AvaloniaList<Instruction> _instructions = new();
 
     [ObservableProperty]
     private int _selectedTab = 0;
@@ -80,7 +82,25 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     
     public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
+        IsPaused = _pauseStatus.IsPaused;
+        _pauseStatus.PropertyChanged += OnPauseStatusChanged;
+        PropertyChanged += PropertyChangedEventHandler;
         _uiDispatcherTimer = uiDispatcherTimer;
+    }
+
+    private void PropertyChangedEventHandler(object? sender, PropertyChangedEventArgs e) {
+        if (e.PropertyName != nameof(NumberOfInstructionsShown) &&
+            e.PropertyName != nameof(NumberOfBytesDecodedBeforeCsIp)) {
+            return;
+        }
+
+        if (_cpu is not null) {
+            UpdateDisassembly(_cpu);
+        }
+    }
+
+    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
+        IsPaused = _pauseStatus?.IsPaused is true;
     }
 
     [RelayCommand]
@@ -339,41 +359,44 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     [ObservableProperty]
     private int _currentAddressSize;
+
+    private bool _needToUpdateDisassembly;
     
     public void VisitCpu(Cpu cpu) {
-        if (IsLoading || !IsPaused) {
+        if (!IsPaused) {
+            _needToUpdateDisassembly = true;
+        }
+        if (IsLoading || _needToUpdateDisassembly) {
             UpdateDisassembly(cpu);
+            _needToUpdateDisassembly = false;
         }
     }
 
+    [ObservableProperty]
+    private int? _numberOfInstructionsShown = 50;
+
+    [ObservableProperty]
+    private int? _numberOfBytesDecodedBeforeCsIp = 3;
+
+    private Cpu? _cpu;
+
     private void UpdateDisassembly(Cpu cpu) {
-        if (Memory is null) {
+        if (Memory is null || NumberOfInstructionsShown is null || NumberOfBytesDecodedBeforeCsIp is null) {
             return;
         }
+        _cpu = cpu;
+        uint currentIp = cpu.State.IpPhysicalAddress;
         CurrentAddressSize = cpu.AddressSize;
         byte[] ramCopy = Memory.RamCopy;
-        CodeReader codeReader = new ByteArrayCodeReader(ramCopy[(int)cpu.State.IpPhysicalAddress..]);
-        _decoder = Decoder.Create(cpu.AddressSize, codeReader, 0, DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
+        var memStream = new MemoryStream(ramCopy);
+        CodeReader codeReader = new StreamCodeReader(memStream);
+        memStream.Position = (long)(currentIp - NumberOfBytesDecodedBeforeCsIp);
+        _decoder = Decoder.Create(CurrentAddressSize, codeReader, currentIp, DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
+        Instructions.Clear();
 
-        if (_decoder is null) {
-            return;
-        }
-
-        if (Disassembly.Count > 50) {
-            Disassembly.RemoveAt(Disassembly.Count - 1);
-        }
-
-        while (Disassembly.Count <= 50) {
-            Instruction instr = _decoder.Decode();
-            if (Disassembly.Count > 0) {
-                var copy = new Instruction[Disassembly.Count];
-                Disassembly.CopyTo(copy, 0);
-                Disassembly.Clear();
-                Disassembly.Add(instr);
-                Disassembly.AddRange(copy);
-            } else {
-                Disassembly.Add(instr);
-            }
+        while (Instructions.Count <= NumberOfInstructionsShown) {
+            _decoder.Decode(out Instruction instruction);
+            Instructions.Add(instruction);
         }
     }
 

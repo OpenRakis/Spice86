@@ -24,9 +24,9 @@
     </Window.Resources>
     <Grid>
         <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
-            <ScrollViewer Grid.Row="0">
-                <TabControl SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
-                    <TabItem Header="CPU">
+            <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
+                <TabItem Header="CPU">
+                    <ScrollViewer>
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Registers and misc</Label>
@@ -37,20 +37,43 @@
                                 <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding Flags}" />
                             </Grid>
                         </WrapPanel>
-                    </TabItem>
-                    <TabItem Header="Disassembly">
-                        <ListBox ItemsSource="{Binding Disassembly}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="{x:Type intel:Instruction}">
-                                    <TextBlock Text="{Binding Converter={StaticResource InstructionToStringConverter}}" />
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </TabItem>
-                    <TabItem Header="Memory">
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Disassembly">
+                    <Grid RowDefinitions="Auto,*">
+                        <TextBlock IsVisible="{Binding !IsPaused}" Grid.Row="0" Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive." />
+                        <StackPanel IsVisible="{Binding IsPaused}" Grid.Row="0" Orientation="Horizontal">
+                            <TextBlock Text="{Binding CurrentAddressSize, StringFormat='Current CPU Instruction Bitness: {0}'}" />
+                            <TextBlock Text="Number of byes decoded before CS:IP:" Margin="10, 0, 0, 0"></TextBlock>
+                            <NumericUpDown Value="{Binding NumberOfBytesDecodedBeforeCsIp}"></NumericUpDown>
+                            <TextBlock Text="Number of instructions shown:" Margin="10, 0, 0, 0"></TextBlock>
+                            <NumericUpDown Value="{Binding NumberOfInstructionsShown}"></NumericUpDown>
+                        </StackPanel>
+                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="1" CanUserReorderColumns="False" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="16-bit IP"  Binding="{Binding IP16}"/>
+                                <DataGridTextColumn Header="32-bit IP" Binding="{Binding IP32}" />
+                                <DataGridTextColumn Header="Segment Prefix" Binding="{Binding SegmentPrefix}" />
+                                <DataGridTextColumn Header="Memory Segment" Binding="{Binding MemorySegment}" />
+                                <DataGridCheckBoxColumn Header="Stack Instruction?" Binding="{Binding IsStackInstruction}" />
+                                <DataGridTextColumn Header="Flow Control" Binding="{Binding FlowControl}" />
+                                <DataGridTextColumn Header="Disassembly (MASM)" Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" />
+                            </DataGrid.Columns>
+                            <TextElement.FontFamily>
+                                <OnPlatform Default="{StaticResource RobotoMonoFont}">
+                                    <On Options="Windows" Content="{StaticResource ConsolasFont}" />
+                                </OnPlatform>
+                            </TextElement.FontFamily>
+                        </DataGrid>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Memory">
+                    <ScrollViewer>
                         <userControls:HexSingleView Name="HexSingleView" MemorySource="{CompiledBinding Memory}" />
-                    </TabItem>
-                    <TabItem Header="Video Card">
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Video Card">
+                    <ScrollViewer>
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">General registers</Label>
@@ -484,15 +507,15 @@
                                 </WrapPanel>
                             </Grid>
                         </WrapPanel>
-                    </TabItem>
-                    <TabItem Header="Color Palette">
-                        <views:PaletteView DataContext="{Binding PaletteViewModel}" />
-                    </TabItem>
-                    <TabItem Header="Performance">
-                        <views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
-                    </TabItem>
-                </TabControl>
-            </ScrollViewer>
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Color Palette">
+                    <views:PaletteView DataContext="{Binding PaletteViewModel}" />
+                </TabItem>
+                <TabItem Header="Performance">
+                    <views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
+                </TabItem>
+            </TabControl>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
                 <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal">
                     <TextBlock VerticalAlignment="Bottom" Margin="0,0,5,0"
