@@ -71,9 +71,19 @@ public class CSharpOverrideHelper {
     public State State => Cpu.State;
 
     /// <summary>
-    /// Gets the arithmetic-logic unit
+    /// Arithmetic-logic unit for 8 bit operations
     /// </summary>
-    public Alu Alu => Cpu.Alu;
+    public Alu8 Alu8 { get; }
+
+    /// <summary>
+    /// Arithmetic-logic unit for 16 bit operations
+    /// </summary>
+    public Alu16 Alu16 { get; }
+    
+    /// <summary>
+    /// Arithmetic-logic unit for 32 bit operations
+    /// </summary>
+    public Alu32 Alu32 { get; }
 
     /// <summary>
     /// Gets or sets the value of AX register.
@@ -297,6 +307,9 @@ public class CSharpOverrideHelper {
         _functionInformations = functionInformations;
         Machine = machine;
         JumpDispatcher = new();
+        Alu8 = new(machine.Cpu.State);
+        Alu16 = new(machine.Cpu.State);
+        Alu32 = new(machine.Cpu.State);
     }
 
     /// <summary>
