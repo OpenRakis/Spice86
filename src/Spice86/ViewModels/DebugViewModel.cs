@@ -341,32 +341,36 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     private int _currentAddressSize;
     
     public void VisitCpu(Cpu cpu) {
-        UpdateDisassembly(cpu);
+        if (IsLoading || !IsPaused) {
+            UpdateDisassembly(cpu);
+        }
     }
 
     private void UpdateDisassembly(Cpu cpu) {
-        if (IsPaused) {
+        CurrentAddressSize = cpu.AddressSize;
+        byte[] ramCopy = cpu.Memory.RamCopy;
+        CodeReader codeReader = new ByteArrayCodeReader(ramCopy[(int)cpu.State.IpPhysicalAddress..]);
+        _decoder = Decoder.Create(cpu.AddressSize, codeReader, 0, DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
+
+        if (_decoder is null) {
             return;
         }
 
         if (Disassembly.Count > 50) {
-            Disassembly.Clear();
-            OnPropertyChanged(nameof(Disassembly));
+            Disassembly.RemoveAt(Disassembly.Count - 1);
         }
 
-        CurrentAddressSize = cpu.AddressSize;
-        uint endRip = 100;
-        CodeReader codeReader = new ByteArrayCodeReader(cpu.Memory.GetData(cpu.State.IpPhysicalAddress, endRip));
-        _decoder = Decoder.Create(cpu.AddressSize, codeReader, 0, DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
-
-        if (_decoder is not null) {
-            while (_decoder.IP < (ulong)endRip) {
-                Instruction instr = _decoder.Decode();
+        while (Disassembly.Count <= 50) {
+            Instruction instr = _decoder.Decode();
+            if (Disassembly.Count > 0) {
+                var copy = new Instruction[Disassembly.Count];
+                Disassembly.CopyTo(copy, 0);
+                Disassembly.Clear();
+                Disassembly.Add(instr);
+                Disassembly.AddRange(copy);
+            } else {
                 Disassembly.Add(instr);
             }
-
-            Disassembly.Reverse();
-            OnPropertyChanged(nameof(Disassembly));
         }
     }
 
