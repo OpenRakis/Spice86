@@ -1,0 +1,61 @@
+namespace Spice86.Wrappers;
+
+using Spice86.Core.Emulator.Memory;
+
+public class EmulatedMemoryStream : Stream {
+    private readonly IMemory _memory;
+    private long _length;
+    public EmulatedMemoryStream(IMemory memory) {
+        _memory = memory;
+        _length = memory.Length;
+        CanWrite = false;
+        CanSeek = true;
+        CanRead = true;
+    }
+    
+    public override void Flush() {
+        throw new NotSupportedException();
+    }
+
+    public override int Read(byte[] buffer, int offset, int count) {
+        int bytesRead = 0;
+        for (int i = 0; i < buffer.Length; i++) {
+            if (i + offset > buffer.Length || Position > _memory.Length) {
+                break;
+            }
+            buffer[i + offset] = _memory[(uint)Position];
+            bytesRead++;
+            Position++;
+        }
+        return bytesRead;
+    }
+
+    public override long Seek(long offset, SeekOrigin origin) {
+        switch (origin) {
+            case SeekOrigin.Begin:
+                Position = offset;
+                break;
+            case SeekOrigin.Current:
+                Position += offset;
+                break;
+            case SeekOrigin.End:
+                Position = Length - offset;
+                break;
+        }
+        return Position;
+    }
+
+    public override void SetLength(long value) {
+        _length = value;
+    }
+
+    public override void Write(byte[] buffer, int offset, int count) {
+        throw new NotSupportedException();
+    }
+
+    public override bool CanRead { get; }
+    public override bool CanSeek { get; }
+    public override bool CanWrite { get; }
+    public override long Length => _length;
+    public override long Position { get; set; }
+}

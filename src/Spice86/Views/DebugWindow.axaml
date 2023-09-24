@@ -44,8 +44,6 @@
                         <TextBlock IsVisible="{Binding !IsPaused}" Grid.Row="0" Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive." />
                         <StackPanel IsVisible="{Binding IsPaused}" Grid.Row="0" Orientation="Horizontal">
                             <TextBlock Text="{Binding CurrentAddressSize, StringFormat='Current CPU Instruction Bitness: {0}'}" />
-                            <TextBlock Text="Number of byes decoded before CS:IP:" Margin="10, 0, 0, 0"></TextBlock>
-                            <NumericUpDown Value="{Binding NumberOfBytesDecodedBeforeCsIp}"></NumericUpDown>
                             <TextBlock Text="Number of instructions shown:" Margin="10, 0, 0, 0"></TextBlock>
                             <NumericUpDown Value="{Binding NumberOfInstructionsShown}"></NumericUpDown>
                         </StackPanel>

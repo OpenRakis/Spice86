@@ -19,6 +19,7 @@ using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Diagnostics;
+using Spice86.Wrappers;
 
 using System.ComponentModel;
 using System.Diagnostics;
@@ -89,14 +90,10 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     private void PropertyChangedEventHandler(object? sender, PropertyChangedEventArgs e) {
-        if (e.PropertyName != nameof(NumberOfInstructionsShown) &&
-            e.PropertyName != nameof(NumberOfBytesDecodedBeforeCsIp)) {
+        if (e.PropertyName != nameof(NumberOfInstructionsShown) || _cpu is null) {
             return;
         }
-
-        if (_cpu is not null) {
-            UpdateDisassembly(_cpu);
-        }
+        UpdateDisassembly(_cpu);
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
@@ -375,29 +372,33 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     [ObservableProperty]
     private int? _numberOfInstructionsShown = 50;
 
-    [ObservableProperty]
-    private int? _numberOfBytesDecodedBeforeCsIp = 3;
-
     private Cpu? _cpu;
 
     private void UpdateDisassembly(Cpu cpu) {
-        if (Memory is null || NumberOfInstructionsShown is null || NumberOfBytesDecodedBeforeCsIp is null) {
+        if (Memory is null || NumberOfInstructionsShown is null) {
             return;
         }
         _cpu = cpu;
         uint currentIp = cpu.State.IpPhysicalAddress;
-        CurrentAddressSize = cpu.AddressSize;
-        byte[] ramCopy = Memory.RamCopy;
-        var memStream = new MemoryStream(ramCopy);
-        CodeReader codeReader = new StreamCodeReader(memStream);
-        memStream.Position = (long)(currentIp - NumberOfBytesDecodedBeforeCsIp);
-        _decoder = Decoder.Create(CurrentAddressSize, codeReader, currentIp, DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
+        CodeReader codeReader = CreateCodeReader(cpu, currentIp, Memory);
+
+        // The CPU instruction bitness might have changed (jump between 16 bit and 32 bit code), so we recreate the decoder each time.
+        _decoder = Decoder.Create(CurrentAddressSize, codeReader, currentIp,
+            DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
         Instructions.Clear();
 
-        while (Instructions.Count <= NumberOfInstructionsShown) {
+        while (Instructions.Count < NumberOfInstructionsShown) {
             _decoder.Decode(out Instruction instruction);
             Instructions.Add(instruction);
         }
+    }
+
+    private CodeReader CreateCodeReader(Cpu cpu, uint currentIp, IMemory memory) {
+        CurrentAddressSize = cpu.AddressSize;
+        using var memStream = new EmulatedMemoryStream(memory);
+        CodeReader codeReader = new StreamCodeReader(memStream);
+        memStream.Position = currentIp;
+        return codeReader;
     }
 
     public void ShowColorPalette() {
