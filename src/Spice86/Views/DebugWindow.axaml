@@ -54,6 +54,8 @@
                                 <DataGridTextColumn Header="Segment Prefix" Binding="{Binding SegmentPrefix}" />
                                 <DataGridTextColumn Header="Memory Segment" Binding="{Binding MemorySegment}" />
                                 <DataGridCheckBoxColumn Header="Stack Instruction?" Binding="{Binding IsStackInstruction}" />
+                                <DataGridCheckBoxColumn Header="Memory Instruction?" Binding="{Binding IsIPRelativeMemoryOperand}" />
+                                <DataGridTextColumn Header="IP relative memory address" Binding="{Binding IPRelativeMemoryAddress}" />
                                 <DataGridTextColumn Header="Flow Control" Binding="{Binding FlowControl}" />
                                 <DataGridTextColumn Header="Disassembly (MASM)" Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" />
                             </DataGrid.Columns>

@@ -22,7 +22,6 @@ using Spice86.Shared.Diagnostics;
 using Spice86.Wrappers;
 
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Reflection;
 
 public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugViewModel {
