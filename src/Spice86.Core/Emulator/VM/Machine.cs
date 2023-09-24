@@ -201,7 +201,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         }
         BiosDataArea = new BiosDataArea(Memory);
         CpuState = new State();
-        DualPic = DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
+        DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
         MachineBreakpoints = new(Memory, CpuState, loggerService);
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
