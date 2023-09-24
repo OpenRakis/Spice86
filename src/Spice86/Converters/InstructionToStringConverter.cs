@@ -5,6 +5,8 @@ using Avalonia.Data.Converters;
 
 using Iced.Intel;
 
+using Spice86.Models.Debugging;
+
 using System.Globalization;
 using System.Text;
 
@@ -12,7 +14,8 @@ public class InstructionToStringConverter : IValueConverter {
     private StringBuilder _outputString = new();
     private Formatter _formatter = new MasmFormatter();
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        if (value is Instruction instr) {
+        if (value is CpuInstructionInfo cpuInstructionInfo) {
+            Instruction instr = cpuInstructionInfo.Instruction;
             _outputString.Clear();
             _formatter.Options.DigitSeparator = "`";
             _formatter.Options.FirstOperandCharIndex = 10;

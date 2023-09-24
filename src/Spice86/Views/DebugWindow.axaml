@@ -10,7 +10,6 @@
         xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
         xmlns:userControls="clr-namespace:Spice86.UserControls"
         xmlns:views="clr-namespace:Spice86.Views"
-        xmlns:intel="clr-namespace:Iced.Intel;assembly=Iced"
         x:CompileBindings="True" x:DataType="vm:DebugViewModel"
         Icon="/Assets/Spice86.ico"
         CanResize="True"
@@ -21,6 +20,7 @@
     </Design.DataContext>
     <Window.Resources>
         <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
+        <converters:ByteArrayToHexStringConverter x:Key="ByteArrayToHexStringConverter" />
     </Window.Resources>
     <Grid>
         <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
@@ -47,17 +47,20 @@
                             <TextBlock Text="Number of instructions shown:" Margin="10, 0, 0, 0"></TextBlock>
                             <NumericUpDown Value="{Binding NumberOfInstructionsShown}"></NumericUpDown>
                         </StackPanel>
-                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="1" CanUserReorderColumns="False" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
+                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="1" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
                             <DataGrid.Columns>
+                                <DataGridTextColumn Header="Memory Location (linear)" Binding="{Binding MemoryLocation}" />
+                                <DataGridTextColumn Header="Disassembly (MASM)" Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" />
                                 <DataGridTextColumn Header="16-bit IP"  Binding="{Binding IP16}"/>
                                 <DataGridTextColumn Header="32-bit IP" Binding="{Binding IP32}" />
                                 <DataGridTextColumn Header="Segment Prefix" Binding="{Binding SegmentPrefix}" />
                                 <DataGridTextColumn Header="Memory Segment" Binding="{Binding MemorySegment}" />
                                 <DataGridCheckBoxColumn Header="Stack Instruction?" Binding="{Binding IsStackInstruction}" />
-                                <DataGridCheckBoxColumn Header="Memory Instruction?" Binding="{Binding IsIPRelativeMemoryOperand}" />
+                                <DataGridCheckBoxColumn Header="Is IP relative ?" Binding="{Binding IsIPRelativeMemoryOperand}" />
                                 <DataGridTextColumn Header="IP relative memory address" Binding="{Binding IPRelativeMemoryAddress}" />
-                                <DataGridTextColumn Header="Flow Control" Binding="{Binding FlowControl}" />
-                                <DataGridTextColumn Header="Disassembly (MASM)" Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" />
+                                <DataGridTextColumn Header="Bytes" Binding="{Binding Bytes, Converter={StaticResource ByteArrayToHexStringConverter}}" />
+                                <DataGridTextColumn Header="Length" Binding="{Binding Length}" />
+                                <DataGridTextColumn Header="FlowControl" Binding="{Binding FlowControl}" />
                             </DataGrid.Columns>
                             <TextElement.FontFamily>
                                 <OnPlatform Default="{StaticResource RobotoMonoFont}">

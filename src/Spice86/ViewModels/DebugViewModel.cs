@@ -67,7 +67,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     [ObservableProperty]
-    private AvaloniaList<Instruction> _instructions = new();
+    private AvaloniaList<CpuInstructionInfo> _instructions = new();
 
     [ObservableProperty]
     private int _selectedTab = 0;
@@ -369,7 +369,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     [ObservableProperty]
-    private int? _numberOfInstructionsShown = 50;
+    private uint? _numberOfInstructionsShown = 50;
 
     private Cpu? _cpu;
 
@@ -379,7 +379,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         }
         _cpu = cpu;
         uint currentIp = cpu.State.IpPhysicalAddress;
-        CodeReader codeReader = CreateCodeReader(cpu, currentIp, Memory);
+        CodeReader codeReader = CreateCodeReader(cpu, currentIp, Memory, out EmulatedMemoryStream emulatedMemoryStream);
 
         // The CPU instruction bitness might have changed (jump between 16 bit and 32 bit code), so we recreate the decoder each time.
         _decoder = Decoder.Create(CurrentAddressSize, codeReader, currentIp,
@@ -387,16 +387,31 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         Instructions.Clear();
 
         while (Instructions.Count < NumberOfInstructionsShown) {
+            var instructionAddress = emulatedMemoryStream.Position;
             _decoder.Decode(out Instruction instruction);
-            Instructions.Add(instruction);
+            Instructions.Add(new CpuInstructionInfo {
+                Instruction = instruction,
+                Length = instruction.Length,
+                IP16 = instruction.IP16,
+                IP32 = instruction.IP32,
+                MemorySegment = instruction.MemorySegment,
+                SegmentPrefix = instruction.SegmentPrefix,
+                IsStackInstruction = instruction.IsStackInstruction,
+                IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
+                IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
+                MemoryLocation = (int)instructionAddress,
+                FlowControl = instruction.FlowControl,
+                Bytes = Memory.GetData((uint)instructionAddress, (uint)instruction.Length)
+            });
         }
+        emulatedMemoryStream.Dispose();
     }
 
-    private CodeReader CreateCodeReader(Cpu cpu, uint currentIp, IMemory memory) {
+    private CodeReader CreateCodeReader(Cpu cpu, uint currentIp, IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
         CurrentAddressSize = cpu.AddressSize;
-        using var memStream = new EmulatedMemoryStream(memory);
-        CodeReader codeReader = new StreamCodeReader(memStream);
-        memStream.Position = currentIp;
+        emulatedMemoryStream = new EmulatedMemoryStream(memory);
+        CodeReader codeReader = new StreamCodeReader(emulatedMemoryStream);
+        emulatedMemoryStream.Position = currentIp;
         return codeReader;
     }
 
