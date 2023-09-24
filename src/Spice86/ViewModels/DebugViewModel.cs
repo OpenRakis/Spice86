@@ -144,8 +144,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         }
     }
 
-    private void UpdateCpuState(State state)
-    {
+    private void UpdateCpuState(State state) {
         State.AH = state.AH;
         State.AL = state.AL;
         State.AX = state.AX;
@@ -177,6 +176,8 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         State.GS = state.GS;
         State.SS = state.SS;
         State.IP = state.IP;
+        State.IpPhysicalAddress = state.IpPhysicalAddress;
+        State.StackPhysicalAddress = state.StackPhysicalAddress;
         State.SegmentOverrideIndex = state.SegmentOverrideIndex;
         Flags.AuxiliaryFlag = state.AuxiliaryFlag;
         Flags.CarryFlag = state.CarryFlag;

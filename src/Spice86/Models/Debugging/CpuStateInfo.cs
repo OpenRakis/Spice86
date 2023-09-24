@@ -48,7 +48,7 @@ public partial class StateInfo : ObservableObject {
     /// <summary> Instruction pointer </summary>
     [ObservableProperty] private ushort _IP;
 
-    [ObservableProperty] private uint _ipPhysicalAddress;
+    [ObservableProperty, ReadOnly(true)] private uint _ipPhysicalAddress;
 
     [ObservableProperty] private int? _segmentOverrideIndex;
 
@@ -61,5 +61,5 @@ public partial class StateInfo : ObservableObject {
     // Stack Segment
     [ObservableProperty] private ushort _SS;
 
-    [ObservableProperty] private uint _stackPhysicalAddress;
+    [ObservableProperty, ReadOnly(true)] private uint _stackPhysicalAddress;
 }
