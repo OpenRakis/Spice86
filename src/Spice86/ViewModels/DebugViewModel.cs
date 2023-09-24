@@ -347,8 +347,11 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     private void UpdateDisassembly(Cpu cpu) {
+        if (Memory is null) {
+            return;
+        }
         CurrentAddressSize = cpu.AddressSize;
-        byte[] ramCopy = cpu.Memory.RamCopy;
+        byte[] ramCopy = Memory.RamCopy;
         CodeReader codeReader = new ByteArrayCodeReader(ramCopy[(int)cpu.State.IpPhysicalAddress..]);
         _decoder = Decoder.Create(cpu.AddressSize, codeReader, 0, DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
 

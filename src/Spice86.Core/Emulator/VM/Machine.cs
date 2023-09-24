@@ -356,10 +356,10 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     }
 
     public void Accept(IEmulatorDebugger emulatorDebugger) {
+        Memory.Accept(emulatorDebugger);
         Cpu.Accept(emulatorDebugger);
         VgaCard.Accept(emulatorDebugger);
         VgaRenderer.Accept(emulatorDebugger);
         VgaRegisters.Accept(emulatorDebugger);
-        Memory.Accept(emulatorDebugger);
     }
 }
