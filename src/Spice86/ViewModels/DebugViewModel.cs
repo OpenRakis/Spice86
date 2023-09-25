@@ -101,7 +101,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
         IsPaused = _pauseStatus?.IsPaused is true;
         if (IsPaused) {
-            _largeDataRefreshOnNextPause = true;
+            _mustRefreshMainMemory = true;
         }
     }
 
@@ -184,26 +184,26 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    private bool _largeDataRefreshOnNextPause = true;
+    /// <summary>
+    /// Refreshing the Memory UI is taxing, and resets the Scroll Viewer.
+    /// So it's done only on each Pause.
+    /// </summary>
+    private bool _mustRefreshMainMemory = true;
 
     public void VisitMainMemory(IMemory memory) {
-        if (_largeDataRefreshOnNextPause) {
+        if (_mustRefreshMainMemory) {
             Memory = memory;
-            _largeDataRefreshOnNextPause = false;
-            LastMemoryUpdate = DateTime.Now;
+            RefreshMemoryView();
+            _mustRefreshMainMemory = false;
         }
     }
-    
-    [ObservableProperty]
-    private DateTime _lastMemoryUpdate;
 
-    [RelayCommand]
-    public void RefreshMemoryView() {
+    private void RefreshMemoryView() {
         IMemory? memory = Memory;
         Memory = null;
         if (memory is not null) {
             Memory = memory;
-            LastMemoryUpdate = DateTime.Now;
+            LastUpdate = DateTime.Now;
         }
     }
 
