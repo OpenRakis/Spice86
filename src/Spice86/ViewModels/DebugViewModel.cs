@@ -462,6 +462,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
             DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
         Instructions.Clear();
 
+        int offset = 0;
         while (Instructions.Count < NumberOfInstructionsShown) {
             var instructionAddress = emulatedMemoryStream.Position;
             _decoder.Decode(out Instruction instruction);
@@ -475,10 +476,11 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
                 IsStackInstruction = instruction.IsStackInstruction,
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
-                MemoryLocation = (int)instructionAddress,
+                MemoryLocation = ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + offset)),
                 FlowControl = instruction.FlowControl,
                 Bytes = $"{Convert.ToHexString(Memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
             });
+            offset += instruction.Length;
         }
 
         if (Instructions.Count > 0) {
