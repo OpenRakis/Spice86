@@ -372,10 +372,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public double MouseX { get; set; }
     public double MouseY { get; set; }
 
-    public bool IsLeftButtonClicked { get; private set; }
-
-    public bool IsRightButtonClicked { get; private set; }
-
     public void OnMainWindowInitialized(Action uiUpdateMethod) {
         _uiUpdateMethod = uiUpdateMethod;
         if(RunEmulator()) {
@@ -502,12 +498,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void DisposeEmulator() => _programExecutor?.Dispose();
 
-    [ObservableProperty]
-    private bool _isDialogVisible;
-
-    [ObservableProperty]
-    private Exception? _exception;
-
     [RelayCommand]
     public async Task CopyToClipboard() {
         if(Exception is not null) {
@@ -515,14 +505,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 Newtonsoft.Json.JsonConvert.SerializeObject(
                     new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));
         }
-    }
-
-    [RelayCommand]
-    public void ClearDialog() => IsDialogVisible = false;
-
-    private void ShowEmulationErrorMessage(Exception e) {
-        Exception = e.GetBaseException();
-        IsDialogVisible = true;
     }
 
     private bool _isInitLogLevelSet;
@@ -570,7 +552,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void OnEmulatorErrorOccured(Exception e) => _uiDispatcher.Post(() => {
         StatusMessage = "Emulator crashed.";
-        ShowEmulationErrorMessage(e);
+        ShowError(e);
     });
 
     private void MachineThread() {

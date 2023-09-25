@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Spice86.Views.DebugWindow"
         Title="Debug"
@@ -21,8 +22,14 @@
     <Window.Resources>
         <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
     </Window.Resources>
-    <Grid>
-        <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
+    <Grid RowDefinitions="Auto,*">
+        <Menu Grid.Row="0">
+            <MenuItem Header="Edit">
+                <MenuItem Header="Edit memory.." Command="{Binding EditMemoryCommand}" />
+                <MenuItem Header="Select memory range..." />
+            </MenuItem>
+        </Menu>
+        <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
             <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
                 <TabItem Header="CPU">
                     <ScrollViewer>
@@ -74,7 +81,7 @@
                 </TabItem>
                 <TabItem Header="Memory">
                     <ScrollViewer>
-                        <userControls:HexSingleView Name="HexSingleView" MemorySource="{CompiledBinding Memory}" />
+                        <userControls:HexSingleView Grid.Row="1" Name="HexSingleView" MemorySource="{CompiledBinding Memory}" />
                     </ScrollViewer>
                 </TabItem>
                 <TabItem Header="Video Card">
@@ -532,9 +539,38 @@
                     <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Refresh Memory View"
                             Command="{Binding RefreshMemoryViewCommand}">
                     </Button>
+                    <TextBlock VerticalAlignment="Bottom" Margin="0,0,5,0"
+                               Text="{Binding LastMemoryUpdate, StringFormat='Last memory update: {0}'}">
+                    </TextBlock>
                 </WrapPanel>
             </Border>
         </Grid>
-        <TextBlock Text="Loading..." IsVisible="{Binding IsLoading}"/>
+        <dialogHost:DialogHost Grid.Row="0" Grid.RowSpan="2" IsOpen="{Binding IsEditingMemory}" CloseOnClickAway="False">
+            <dialogHost:DialogHost.DialogContent>
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <Label Grid.Row="0" Content="Edit memory..." FontWeight="Bold" HorizontalAlignment="Center" />
+                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" Grid.Row="1">
+                        <Label Grid.Row="0" Grid.Column="0" Content="Memory Address:"></Label>
+                        <TextBox Grid.Row="0" Grid.Column="1" Watermark="linear or segmented address" Text="{Binding MemoryEditAddress}" />
+                        <Label Grid.Row="1" Grid.Column="0" Content="Bytes:"></Label>
+                        <TextBox Grid.Row="1" Grid.Column="1" Watermark="hexadecimal format" Text="{Binding MemoryEditValue}" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Grid.Row="2">
+                        <Button Content="OK" IsDefault="True" Command="{Binding ApplyMemoryEditCommand}" />
+                        <Button Content="Cancel" IsCancel="True" Command="{Binding CancelMemoryEditCommand}" />
+                    </StackPanel>
+                </Grid>
+            </dialogHost:DialogHost.DialogContent>
+        </dialogHost:DialogHost>
+        <dialogHost:DialogHost Grid.Row="0" Grid.RowSpan="2" IsOpen="{Binding IsDialogVisible}" CloseOnClickAway="False">
+            <dialogHost:DialogHost.DialogContent>
+                <Grid RowDefinitions="Auto,Auto,Auto">
+                    <Label Grid.Row="0" Content="Validation Error" FontWeight="Bold" HorizontalAlignment="Center" />
+                    <TextBlock Grid.Row="1" Text="{Binding Exception.Message}" />
+                    <Button Grid.Row="2" Content="OK" IsDefault="True" Command="{Binding ClearDialogCommand}" />
+                </Grid>
+            </dialogHost:DialogHost.DialogContent>
+        </dialogHost:DialogHost>
+        <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="Loading..." IsVisible="{Binding IsLoading}"/>
     </Grid>
 </Window>

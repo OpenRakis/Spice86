@@ -19,9 +19,12 @@ using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Utils;
 using Spice86.Wrappers;
 
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
 
 public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugViewModel {
@@ -70,7 +73,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     private AvaloniaList<CpuInstructionInfo> _instructions = new();
 
     [ObservableProperty]
-    private int _selectedTab = 0;
+    private int _selectedTab;
 
     private readonly IUIDispatcherTimer? _uiDispatcherTimer;
 
@@ -97,11 +100,74 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
         IsPaused = _pauseStatus?.IsPaused is true;
+        if (IsPaused) {
+            _largeDataRefreshOnNextPause = true;
+        }
     }
 
     [RelayCommand]
     public void StartObserverTimer() {
         _uiDispatcherTimer?.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
+    }
+
+    [ObservableProperty] private bool _isEditingMemory;
+
+    [ObservableProperty]
+    private string? _memoryEditAddress;
+
+    [ObservableProperty]
+    private string? _memoryEditValue = "";
+
+    [RelayCommand]
+    public void EditMemory() {
+        if (Memory is null) {
+            return;
+        }
+        IsEditingMemory = true;
+        if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
+            MemoryEditValue = Convert.ToHexString(Memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue is null ? sizeof(ushort) : MemoryEditValue.Length)));
+        }
+    }
+
+    private bool TryParseMemoryAddress(string? memoryAddress,  [NotNullWhen(true)] out uint? address) {
+        if (string.IsNullOrWhiteSpace(memoryAddress)) {
+            address = null;
+            return false;
+        }
+
+        try {
+            if (memoryAddress.Contains(":")) {
+                string[] split = memoryAddress.Split(":");
+                if (split.Length > 1 &&
+                    ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&
+                    ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
+                    address = MemoryUtils.ToPhysicalAddress(segment, offset);
+                    return true;
+                }
+            } else if(uint.TryParse(memoryAddress, CultureInfo.InvariantCulture, out uint value)) {
+                address = value;
+                return true;
+            }
+        } catch(Exception e) {
+            ShowError(e);
+        }
+        address = null;
+        return false;
+    }
+
+    [RelayCommand]
+    public void CancelMemoryEdit() {
+        IsEditingMemory = false;
+    }
+
+    [RelayCommand]
+    public void ApplyMemoryEdit() {
+        if (Memory is null || !TryParseMemoryAddress(MemoryEditAddress, out uint? address) || MemoryEditValue is null || !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture,  out long value)) {
+            return;
+        }
+        Memory.LoadData(address.Value, BitConverter.GetBytes(value));
+        RefreshMemoryView();
+        IsEditingMemory = false;
     }
 
     private Decoder? _decoder;
@@ -118,16 +184,26 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
+    private bool _largeDataRefreshOnNextPause = true;
+
     public void VisitMainMemory(IMemory memory) {
-        Memory = memory;
+        if (_largeDataRefreshOnNextPause) {
+            Memory = memory;
+            _largeDataRefreshOnNextPause = false;
+            LastMemoryUpdate = DateTime.Now;
+        }
     }
+    
+    [ObservableProperty]
+    private DateTime _lastMemoryUpdate;
 
     [RelayCommand]
     public void RefreshMemoryView() {
         IMemory? memory = Memory;
         Memory = null;
         if (memory is not null) {
-            VisitMainMemory(memory);
+            Memory = memory;
+            LastMemoryUpdate = DateTime.Now;
         }
     }
 
