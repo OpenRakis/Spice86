@@ -11,8 +11,8 @@ using System.Globalization;
 using System.Text;
 
 public class InstructionToStringConverter : IValueConverter {
-    private StringBuilder _outputString = new();
-    private Formatter _formatter = new MasmFormatter();
+    private readonly StringBuilder _outputString = new();
+    private readonly Formatter _formatter = new MasmFormatter();
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
         if (value is CpuInstructionInfo cpuInstructionInfo) {
             Instruction instr = cpuInstructionInfo.Instruction;

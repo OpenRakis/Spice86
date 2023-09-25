@@ -72,18 +72,14 @@ public class Program {
         }
         MainWindow mainWindow = new();
         IUIDispatcherTimer uiDispatcherTimer = new UIDispatcherTimer();
-        var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
+        using var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
             new ProgramExecutorFactory(configuration, loggerService), new WindowActivator(),
             new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
             new TextClipboard(mainWindow.Clipboard), uiDispatcherTimer, configuration, loggerService);
         mainWindowViewModel.DebugViewModel = new DebugViewModel(uiDispatcherTimer, mainWindowViewModel);
         mainWindow.DataContext = mainWindowViewModel;
         desktop.MainWindow = mainWindow;
-        try {
-            desktop.Start(args);
-        } finally {
-            mainWindowViewModel.Dispose();
-        }
+        desktop.Start(args);
     }
 
     /// <summary>

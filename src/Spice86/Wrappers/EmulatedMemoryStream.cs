@@ -5,12 +5,15 @@ using Spice86.Core.Emulator.Memory;
 public class EmulatedMemoryStream : Stream {
     private readonly IMemory _memory;
     private long _length;
+    private readonly bool _canRead;
+    private readonly bool _canWrite;
+    private readonly bool _canSeek;
     public EmulatedMemoryStream(IMemory memory) {
         _memory = memory;
         _length = memory.Length;
-        CanWrite = false;
-        CanSeek = true;
-        CanRead = true;
+        _canWrite = false;
+        _canSeek = true;
+        _canRead = true;
     }
     
     public override void Flush() {
@@ -53,9 +56,9 @@ public class EmulatedMemoryStream : Stream {
         throw new NotSupportedException();
     }
 
-    public override bool CanRead { get; }
-    public override bool CanSeek { get; }
-    public override bool CanWrite { get; }
+    public override bool CanRead => _canRead;
+    public override bool CanSeek => _canSeek;
+    public override bool CanWrite => _canWrite;
     public override long Length => _length;
     public override long Position { get; set; }
 }
