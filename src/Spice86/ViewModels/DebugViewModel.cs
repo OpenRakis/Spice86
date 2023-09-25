@@ -41,7 +41,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     [ObservableProperty] private bool _isLoading = true;
     
-    [ObservableProperty]
     private IMemory? _memory;
     
     public DebugViewModel() {
@@ -120,12 +119,12 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     [RelayCommand]
     public void EditMemory() {
-        if (Memory is null) {
+        if (_memory is null) {
             return;
         }
         IsEditingMemory = true;
         if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
-            MemoryEditValue = Convert.ToHexString(Memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue is null ? sizeof(ushort) : MemoryEditValue.Length)));
+            MemoryEditValue = Convert.ToHexString(_memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue is null ? sizeof(ushort) : MemoryEditValue.Length)));
         }
     }
 
@@ -162,11 +161,11 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     [RelayCommand]
     public void ApplyMemoryEdit() {
-        if (Memory is null || !TryParseMemoryAddress(MemoryEditAddress, out uint? address) || MemoryEditValue is null || !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture,  out long value)) {
+        if (_memory is null || !TryParseMemoryAddress(MemoryEditAddress, out uint? address) || MemoryEditValue is null || !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture,  out long value)) {
             return;
         }
-        Memory.LoadData(address.Value, BitConverter.GetBytes(value));
-        RefreshMemoryView();
+        _memory.LoadData(address.Value, BitConverter.GetBytes(value));
+        RefreshMemoryStream();
         IsEditingMemory = false;
     }
 
@@ -192,18 +191,21 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     public void VisitMainMemory(IMemory memory) {
         if (_mustRefreshMainMemory) {
-            Memory = memory;
-            RefreshMemoryView();
+            _memory = memory;
+            RefreshMemoryStream();
             _mustRefreshMainMemory = false;
         }
     }
+    
+    [ObservableProperty]
+    private EmulatedMemoryStream? _memoryStream;
 
-    private void RefreshMemoryView() {
-        IMemory? memory = Memory;
-        Memory = null;
-        if (memory is not null) {
-            Memory = memory;
-            LastUpdate = DateTime.Now;
+    private void RefreshMemoryStream() {
+        if(_memory is not null) {
+            EmulatedMemoryStream memoryStream = new EmulatedMemoryStream(_memory);
+            MemoryStream?.Dispose();
+            MemoryStream = null;
+            MemoryStream = memoryStream;
         }
     }
 
@@ -450,12 +452,12 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     private Cpu? _cpu;
 
     private void UpdateDisassembly(Cpu cpu) {
-        if (Memory is null || NumberOfInstructionsShown is null) {
+        if (_memory is null || NumberOfInstructionsShown is null) {
             return;
         }
         _cpu = cpu;
         uint currentIp = cpu.State.IpPhysicalAddress;
-        CodeReader codeReader = CreateCodeReader(cpu, currentIp, Memory, out EmulatedMemoryStream emulatedMemoryStream);
+        CodeReader codeReader = CreateCodeReader(cpu, currentIp, _memory, out EmulatedMemoryStream emulatedMemoryStream);
 
         // The CPU instruction bitness might have changed (jump between 16 bit and 32 bit code), so we recreate the decoder each time.
         _decoder = Decoder.Create(CurrentAddressSize, codeReader, currentIp,
@@ -478,7 +480,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
                 MemoryLocation = ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + offset)),
                 FlowControl = instruction.FlowControl,
-                Bytes = $"{Convert.ToHexString(Memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
+                Bytes = $"{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
             });
             offset += instruction.Length;
         }

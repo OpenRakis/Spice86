@@ -26,7 +26,6 @@
         <Menu Grid.Row="0">
             <MenuItem Header="Edit">
                 <MenuItem Header="Edit memory.." Command="{Binding EditMemoryCommand}" />
-                <MenuItem Header="Select memory range..." />
             </MenuItem>
         </Menu>
         <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
@@ -81,7 +80,7 @@
                 </TabItem>
                 <TabItem Header="Memory">
                     <ScrollViewer>
-                        <userControls:HexSingleView Grid.Row="1" Name="HexSingleView" MemorySource="{CompiledBinding Memory}" />
+                        <userControls:HexSingleView Name="HexSingleView" MemorySource="{CompiledBinding MemoryStream}" />
                     </ScrollViewer>
                 </TabItem>
                 <TabItem Header="Video Card">
