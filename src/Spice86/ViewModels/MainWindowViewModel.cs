@@ -31,10 +31,10 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
-using Spice86.Core.Emulator.Debugger;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
 using Spice86.Infrastructure;
+using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Video;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
@@ -510,7 +510,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand]
     public async Task CopyToClipboard() {
         if(Exception is not null) {
-            await _textClipboard.SetTextAsync($"{Exception.Message}{Environment.NewLine}{Exception.StackTrace}");
+            await _textClipboard.SetTextAsync(
+                Newtonsoft.Json.JsonConvert.SerializeObject(
+                    new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));
         }
     }
 
