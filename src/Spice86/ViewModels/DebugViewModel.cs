@@ -401,8 +401,12 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
                 MemoryLocation = (int)instructionAddress,
                 FlowControl = instruction.FlowControl,
-                Bytes = Memory.GetData((uint)instructionAddress, (uint)instruction.Length)
+                Bytes = $"{Convert.ToHexString(Memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
             });
+        }
+
+        if (Instructions.Count > 0) {
+            Instructions[0].IsCsIp = true;
         }
         emulatedMemoryStream.Dispose();
     }

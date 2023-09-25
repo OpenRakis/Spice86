@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Iced.Intel;
 
 public partial class CpuInstructionInfo : ObservableObject {
+    [ObservableProperty] private bool _isCsIp;
     [ObservableProperty] private int _memoryLocation;
     [ObservableProperty] private ushort _IP16;
     [ObservableProperty] private uint _IP32;
@@ -16,5 +17,5 @@ public partial class CpuInstructionInfo : ObservableObject {
     [ObservableProperty] private ulong _IPRelativeMemoryAddress;
     [ObservableProperty] private FlowControl _flowControl;
     [ObservableProperty] private Instruction _instruction;
-    [ObservableProperty] private byte[] _bytes = Array.Empty<byte>();
+    [ObservableProperty] private string? _bytes;
 }
