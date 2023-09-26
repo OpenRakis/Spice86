@@ -432,7 +432,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     [ObservableProperty]
-    private int _currentAddressSize;
+    private int _currentInstructionBitness;
 
     private bool _needToUpdateDisassembly;
     
@@ -457,10 +457,11 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         }
         _cpu = cpu;
         uint currentIp = cpu.State.IpPhysicalAddress;
-        CodeReader codeReader = CreateCodeReader(cpu, currentIp, _memory, out EmulatedMemoryStream emulatedMemoryStream);
+        CurrentInstructionBitness = cpu.CurrentInstructionBitness;
+        CodeReader codeReader = CreateCodeReader(currentIp, _memory, out EmulatedMemoryStream emulatedMemoryStream);
 
         // The CPU instruction bitness might have changed (jump between 16 bit and 32 bit code), so we recreate the decoder each time.
-        _decoder = Decoder.Create(CurrentAddressSize, codeReader, currentIp,
+        _decoder = Decoder.Create(CurrentInstructionBitness, codeReader, currentIp,
             DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
         Instructions.Clear();
 
@@ -491,8 +492,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         emulatedMemoryStream.Dispose();
     }
 
-    private CodeReader CreateCodeReader(Cpu cpu, uint currentIp, IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
-        CurrentAddressSize = cpu.AddressSize;
+    private CodeReader CreateCodeReader(uint currentIp, IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
         emulatedMemoryStream = new EmulatedMemoryStream(memory);
         CodeReader codeReader = new StreamCodeReader(emulatedMemoryStream);
         emulatedMemoryStream.Position = currentIp;
