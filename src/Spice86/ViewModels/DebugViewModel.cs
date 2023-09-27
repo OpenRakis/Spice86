@@ -480,6 +480,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
             _decoder.Decode(out Instruction instruction);
             CpuInstructionInfo cpuInstrunction = new CpuInstructionInfo {
                 Instruction = instruction,
+                Address = (uint)instructionAddress,
                 Length = instruction.Length,
                 IP16 = instruction.IP16,
                 IP32 = instruction.IP32,
@@ -488,7 +489,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
                 IsStackInstruction = instruction.IsStackInstruction,
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
-                MemoryLocation =
+                SegmentedAddress =
                     ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + byteOffset - 10)),
                 FlowControl = instruction.FlowControl,
                 Bytes = $"{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"

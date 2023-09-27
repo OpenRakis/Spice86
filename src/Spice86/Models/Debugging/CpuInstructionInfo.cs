@@ -6,7 +6,8 @@ using Iced.Intel;
 
 public partial class CpuInstructionInfo : ObservableObject {
     [ObservableProperty] private bool _isCsIp;
-    [ObservableProperty] private string? _memoryLocation;
+    [ObservableProperty] private uint _address;
+    [ObservableProperty] private string? _segmentedAddress;
     [ObservableProperty] private ushort _IP16;
     [ObservableProperty] private uint _IP32;
     [ObservableProperty] private int _length;

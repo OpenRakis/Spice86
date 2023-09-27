@@ -55,7 +55,8 @@
                         </Grid>
                         <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="2" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Address" Binding="{Binding MemoryLocation}" />
+                                <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
+                                <DataGridTextColumn Header="Based on CS:IP" Binding="{Binding SegmentedAddress}" />
                                 <DataGridCheckBoxColumn Header="Is at CS:IP?" Binding="{Binding IsCsIp}" />
                                 <DataGridTextColumn Header="Disassembly (MASM)" Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" />
                                 <DataGridTextColumn Header="16-bit IP"  Binding="{Binding IP16}"/>
