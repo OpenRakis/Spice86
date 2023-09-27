@@ -110,7 +110,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     public IMemory Memory { get; }
 
     /// <summary>
-    /// The General MIDI (MPU-401) or MT-32 device.
+    /// The General MIDI or MT-32 device.
     /// </summary>
     public Midi MidiDevice { get; }
 
@@ -361,5 +361,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         VgaCard.Accept(emulatorDebugger);
         VgaRenderer.Accept(emulatorDebugger);
         VgaRegisters.Accept(emulatorDebugger);
+        MidiDevice.Accept(emulatorDebugger);
     }
 }

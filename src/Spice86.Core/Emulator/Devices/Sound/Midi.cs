@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Sound;
@@ -10,7 +11,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// MPU401 MIDI interface implementation.
 /// </summary>
-public sealed class Midi : DefaultIOPortHandler, IDisposable {
+public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableComponent {
     /// <summary>
     /// The port number used for MIDI commands.
     /// </summary>
@@ -36,8 +37,14 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         _generalMidi = new GeneralMidi(audioPlayerFactory, mt32RomsPath, loggerService);
     }
     
+    /// <summary>
+    /// Contains the argument of the last <see cref="ReadByte"/> operation.
+    /// </summary>
+    public int LastPortRead { get; private set; }
+    
     /// <inheritdoc />
     public override byte ReadByte(int port) {
+        LastPortRead = port;
         return _generalMidi.ReadByte(port);
     }
 
@@ -46,9 +53,21 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         ioPortDispatcher.AddIOPortHandler(Data, this);
         ioPortDispatcher.AddIOPortHandler(Command, this);
     }
+    
+    /// <summary>
+    /// Contains the first argument of the last <see cref="WriteByte"/> operation.
+    /// </summary>
+    public int LastPortWritten { get; private set; }
+    
+    /// <summary>
+    /// Contains the second argument of the last <see cref="WriteByte"/> operation.
+    /// </summary>
+    public int LastPortWrittenValue { get; private set; }
 
     /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
+        LastPortWritten = port;
+        LastPortWrittenValue = value;
         _generalMidi.WriteByte(port, value);
     }
 
@@ -66,5 +85,9 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitExternalMidiDevice(this);
     }
 }

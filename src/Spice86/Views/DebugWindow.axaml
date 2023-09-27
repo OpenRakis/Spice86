@@ -523,6 +523,16 @@
                 <TabItem Header="Color Palette">
                     <views:PaletteView DataContext="{Binding PaletteViewModel}" />
                 </TabItem>
+                <TabItem Header="General MIDI / MT-32">
+                    <ScrollViewer>
+                        <WrapPanel>
+                            <Grid RowDefinitions="Auto,*" Margin="5">
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">Ports</Label>
+                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding Midi}" />
+                            </Grid>
+                        </WrapPanel>
+                    </ScrollViewer>
+                </TabItem>
             </TabControl>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
                 <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal">
@@ -545,7 +555,7 @@
                         <Label Grid.Row="1" Grid.Column="0" Content="Bytes:"></Label>
                         <TextBox Grid.Row="1" Grid.Column="1" Watermark="hexadecimal format" Text="{Binding MemoryEditValue}" />
                     </Grid>
-                    <StackPanel Orientation="Horizontal" Grid.Row="2">
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Grid.Row="2">
                         <Button Content="OK" IsDefault="True" Command="{Binding ApplyMemoryEditCommand}" />
                         <Button Content="Cancel" IsCancel="True" Command="{Binding CancelMemoryEditCommand}" />
                     </StackPanel>

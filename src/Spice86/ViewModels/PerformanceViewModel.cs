@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Memory;
@@ -68,5 +69,8 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     public void VisitCpu(Cpu cpu) {
+    }
+
+    public void VisitExternalMidiDevice(Midi midi) {
     }
 }
