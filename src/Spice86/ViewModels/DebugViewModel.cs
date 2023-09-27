@@ -25,6 +25,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 
 public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugViewModel {
     [ObservableProperty]
@@ -92,15 +93,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
-        PropertyChanged += PropertyChangedEventHandler;
         _uiDispatcherTimer = uiDispatcherTimer;
-    }
-
-    private void PropertyChangedEventHandler(object? sender, PropertyChangedEventArgs e) {
-        if (e.PropertyName != nameof(NumberOfInstructionsShown) || _cpu is null) {
-            return;
-        }
-        UpdateDisassembly(_cpu);
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
@@ -451,14 +444,27 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
             _needToUpdateDisassembly = false;
         }
     }
+    
+    [RelayCommand]
+    public void Pause() {
+        if (_programExecutor is null || _pauseStatus is null) {
+            return;
+        }
+        _pauseStatus.IsPaused = _programExecutor.IsPaused = true;
+    }
 
-    [ObservableProperty]
-    private uint? _numberOfInstructionsShown = 50;
+    [RelayCommand]
+    public void Continue() {
+        if (_programExecutor is null || _pauseStatus is null) {
+            return;
+        }
+        _pauseStatus.IsPaused = _programExecutor.IsPaused = false;
+    }
 
     private Cpu? _cpu;
 
     private void UpdateDisassembly(Cpu cpu) {
-        if (_memory is null || NumberOfInstructionsShown is null) {
+        if (_memory is null) {
             return;
         }
         _cpu = cpu;
@@ -473,7 +479,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
         int byteOffset = 0;
         emulatedMemoryStream.Position = currentIp - 10;
-        while (Instructions.Count < NumberOfInstructionsShown) {
+        while (Instructions.Count < 50) {
             var instructionAddress = emulatedMemoryStream.Position;
             _decoder.Decode(out Instruction instruction);
             CpuInstructionInfo cpuInstrunction = new CpuInstructionInfo {

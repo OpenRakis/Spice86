@@ -47,16 +47,12 @@
                 <TabItem Header="Disassembly">
                     <Grid RowDefinitions="Auto,Auto,*">
                         <TextBlock IsVisible="{Binding !IsPaused}" Grid.Row="0" TextWrapping="Wrap" Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive." />
-                        <Grid Grid.ColumnDefinitions="Auto,Auto" IsVisible="{Binding IsPaused}" Grid.Row="0">
-                            <TextBlock Grid.Column="0" Text="{Binding CurrentInstructionBitness, StringFormat='Current CPU Instruction Bitness: {0}'}" />
-                            <Grid Grid.Column="1" Grid.ColumnDefinitions="Auto,Auto">
-                                <TextBlock Grid.Column="0" Text="Number of instructions shown:" Margin="10, 0, 0, 0" />
-                                <NumericUpDown Grid.Column="1" Value="{Binding NumberOfInstructionsShown}" />
-                            </Grid>
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto"  HorizontalAlignment="Center" VerticalAlignment="Top">
+                            <TextBlock Grid.Column="0" IsVisible="{Binding IsPaused}" Text="{Binding CurrentInstructionBitness, StringFormat='Current CPU Instruction Bitness: {0}'}" />
+                            <Button Grid.Column="1" IsVisible="{Binding IsPaused}" Content="Step" Command="{Binding StepCommand}" />
+                            <Button Grid.Column="2" Content="Pause" Command="{Binding PauseCommand}" IsVisible="{Binding !IsPaused}" />
+                            <Button Grid.Column="2" Content="Continue" Command="{Binding ContinueCommand}" IsVisible="{Binding IsPaused}" />
                         </Grid>
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top">
-                            <Button Content="Step" Command="{Binding StepCommand}" />
-                        </StackPanel>
                         <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="2" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Address" Binding="{Binding MemoryLocation}" />
