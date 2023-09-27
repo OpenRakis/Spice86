@@ -464,14 +464,15 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         _cpu = cpu;
         uint currentIp = cpu.State.IpPhysicalAddress;
         CurrentInstructionBitness = cpu.CurrentInstructionBitness;
-        CodeReader codeReader = CreateCodeReader(currentIp, _memory, out EmulatedMemoryStream emulatedMemoryStream);
-
+        CodeReader codeReader = CreateCodeReader(_memory, out EmulatedMemoryStream emulatedMemoryStream);
+        
         // The CPU instruction bitness might have changed (jump between 16 bit and 32 bit code), so we recreate the decoder each time.
         _decoder = Decoder.Create(CurrentInstructionBitness, codeReader, currentIp,
             DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
         Instructions.Clear();
 
-        int offset = 0;
+        int byteOffset = 0;
+        emulatedMemoryStream.Position = currentIp - 10;
         while (Instructions.Count < NumberOfInstructionsShown) {
             var instructionAddress = emulatedMemoryStream.Position;
             _decoder.Decode(out Instruction instruction);
@@ -486,7 +487,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
                 MemoryLocation =
-                    ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + offset)),
+                    ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + byteOffset - 10)),
                 FlowControl = instruction.FlowControl,
                 Bytes = $"{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
             };
@@ -494,15 +495,14 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
                 cpuInstrunction.IsCsIp = true;
             }
             Instructions.Add(cpuInstrunction);
-            offset += instruction.Length;
+            byteOffset += instruction.Length;
         }
         emulatedMemoryStream.Dispose();
     }
 
-    private CodeReader CreateCodeReader(uint currentIp, IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
+    private CodeReader CreateCodeReader(IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
         emulatedMemoryStream = new EmulatedMemoryStream(memory);
         CodeReader codeReader = new StreamCodeReader(emulatedMemoryStream);
-        emulatedMemoryStream.Position = currentIp - 20;
         return codeReader;
     }
 

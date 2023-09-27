@@ -23,7 +23,8 @@ public class InstructionToStringConverter : IValueConverter {
             // Don't use instr.ToString(), it allocates more, uses masm syntax and default options
             _formatter.Format(instr, output);
             _outputString.AppendLine(output.ToStringAndReset());
-            return _outputString.ToString();
+            string disasm = _outputString.ToString();
+            return instr.IsInvalid ? "(bad or emulator instruction 0xFE38)" : disasm;
         }
         return null;
     }
