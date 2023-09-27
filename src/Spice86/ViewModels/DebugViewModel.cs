@@ -52,16 +52,12 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     [RelayCommand]
     public void Step() {
         _programExecutor?.Step();
-        UpdateData(isForced: true);
+        IsLoading = true;
+        UpdateData();
     }
 
     [RelayCommand]
-    public void UpdateData(bool isForced) {
-        if (isForced) {
-            IsLoading = true;
-        }
-        UpdateValues(this, EventArgs.Empty);
-    }
+    public void UpdateData() => UpdateValues(this, EventArgs.Empty);
 
     [ObservableProperty]
     private bool _isPaused;
