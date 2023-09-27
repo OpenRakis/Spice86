@@ -24,7 +24,7 @@
     </Window.Resources>
     <Grid RowDefinitions="Auto,*">
         <Menu Grid.Row="0">
-            <MenuItem Header="Edit">
+            <MenuItem Header="Edit" IsEnabled="{Binding IsPaused}">
                 <MenuItem Header="Edit memory.." Command="{Binding EditMemoryCommand}" />
             </MenuItem>
         </Menu>
