@@ -18,7 +18,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
-using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Utils;
 using Spice86.Wrappers;
 
@@ -50,7 +49,18 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     [RelayCommand]
-    public void UpdateData() => UpdateValues(this, EventArgs.Empty);
+    public void Step() {
+        _programExecutor?.Step();
+        UpdateData(isForced: true);
+    }
+
+    [RelayCommand]
+    public void UpdateData(bool isForced) {
+        if (isForced) {
+            IsLoading = true;
+        }
+        UpdateValues(this, EventArgs.Empty);
+    }
 
     [ObservableProperty]
     private bool _isPaused;
@@ -223,7 +233,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         return;
         
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (sender is null || e.PropertyName == null || !IsPaused) {
+            if (sender is null || e.PropertyName == null || !IsPaused || IsLoading) {
                 return;
             }
             PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
@@ -465,7 +475,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         while (Instructions.Count < NumberOfInstructionsShown) {
             var instructionAddress = emulatedMemoryStream.Position;
             _decoder.Decode(out Instruction instruction);
-            Instructions.Add(new CpuInstructionInfo {
+            CpuInstructionInfo cpuInstrunction = new CpuInstructionInfo {
                 Instruction = instruction,
                 Length = instruction.Length,
                 IP16 = instruction.IP16,
@@ -475,15 +485,16 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
                 IsStackInstruction = instruction.IsStackInstruction,
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
-                MemoryLocation = ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + offset)),
+                MemoryLocation =
+                    ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + offset)),
                 FlowControl = instruction.FlowControl,
                 Bytes = $"{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
-            });
+            };
+            if (instructionAddress == currentIp) {
+                cpuInstrunction.IsCsIp = true;
+            }
+            Instructions.Add(cpuInstrunction);
             offset += instruction.Length;
-        }
-
-        if (Instructions.Count > 0) {
-            Instructions[0].IsCsIp = true;
         }
         emulatedMemoryStream.Dispose();
     }
@@ -491,7 +502,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     private CodeReader CreateCodeReader(uint currentIp, IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
         emulatedMemoryStream = new EmulatedMemoryStream(memory);
         CodeReader codeReader = new StreamCodeReader(emulatedMemoryStream);
-        emulatedMemoryStream.Position = currentIp;
+        emulatedMemoryStream.Position = currentIp - 20;
         return codeReader;
     }
 

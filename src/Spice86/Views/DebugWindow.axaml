@@ -45,7 +45,7 @@
                     </ScrollViewer>
                 </TabItem>
                 <TabItem Header="Disassembly">
-                    <Grid RowDefinitions="Auto,*">
+                    <Grid RowDefinitions="Auto,Auto,*">
                         <TextBlock IsVisible="{Binding !IsPaused}" Grid.Row="0" TextWrapping="Wrap" Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive." />
                         <Grid Grid.ColumnDefinitions="Auto,Auto" IsVisible="{Binding IsPaused}" Grid.Row="0">
                             <TextBlock Grid.Column="0" Text="{Binding CurrentInstructionBitness, StringFormat='Current CPU Instruction Bitness: {0}'}" />
@@ -54,7 +54,10 @@
                                 <NumericUpDown Grid.Column="1" Value="{Binding NumberOfInstructionsShown}" />
                             </Grid>
                         </Grid>
-                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="1" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top">
+                            <Button Content="Step" Command="{Binding StepCommand}" />
+                        </StackPanel>
+                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="2" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Address" Binding="{Binding MemoryLocation}" />
                                 <DataGridCheckBoxColumn Header="Is at CS:IP?" Binding="{Binding IsCsIp}" />

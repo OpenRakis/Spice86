@@ -99,14 +99,18 @@ public class EmulationLoop {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
             PauseIfAskedTo();
-            if (_listensToBreakpoints) {
-                _machineBreakpoints.CheckBreakPoint();
-            }
-            _cpu.ExecuteNextInstruction();
-            _timer.Tick();
+            Step();
         }
         _stopwatch.Stop();
         OutputPerfStats();
+    }
+
+    internal void Step() {
+        if (_listensToBreakpoints) {
+            _machineBreakpoints.CheckBreakPoint();
+        }
+        _cpu.ExecuteNextInstruction();
+        _timer.Tick();
     }
 
     private void OutputPerfStats() {

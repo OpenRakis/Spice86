@@ -64,7 +64,12 @@ public sealed class ProgramExecutor : IProgramExecutor, IDebuggableComponent {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
     }
-    
+
+    /// <summary>
+    /// Checks for machine breakpoints, runs tne next CPU instruction, and ticks the Timer
+    /// </summary>
+    public void Step() => _emulationLoop.Step();
+
     public void DumpEmulatorStateToDirectory(string path) {
         new RecorderDataWriter(Machine.Memory,
                 Machine.Cpu.State, Machine.CallbackHandler, _configuration,

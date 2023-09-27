@@ -9,4 +9,5 @@ public interface IProgramExecutor : IDisposable, IDebuggableComponent {
     void Run();
     void DumpEmulatorStateToDirectory(string path);
     bool IsPaused { get; set; }
+    void Step();
 }
