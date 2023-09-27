@@ -320,10 +320,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
-    public void ShowPerformance() {
-        ShowDebugWindow();
-        DebugViewModel?.ShowPerformance();
-    }
+    public void ShowPerformance() => IsPerformanceVisible = !IsPerformanceVisible;
 
     [RelayCommand]
     public void ShowDebugWindow() {
@@ -576,9 +573,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             _uiDispatcher.Post(() => AsmOverrideStatus = "");
         }
     }
+    
+    [ObservableProperty]
+    private PerformanceViewModel? _performanceViewModel;
+    
+    [ObservableProperty]
+    private bool _isPerformanceVisible;
 
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
+        PerformanceViewModel = new(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer());
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

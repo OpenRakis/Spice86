@@ -523,9 +523,6 @@
                 <TabItem Header="Color Palette">
                     <views:PaletteView DataContext="{Binding PaletteViewModel}" />
                 </TabItem>
-                <TabItem Header="Performance">
-                    <views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
-                </TabItem>
             </TabControl>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
                 <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal">

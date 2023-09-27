@@ -63,7 +63,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
             if (value is not null && _uiDispatcherTimer is not null) {
                 _programExecutor = value;
                 PaletteViewModel = new(_uiDispatcherTimer, value);
-                PerformanceViewModel = new(_uiDispatcherTimer, value, new PerformanceMeasurer());
             }
         }
     }
@@ -78,9 +77,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     [ObservableProperty]
     private PaletteViewModel? _paletteViewModel;
-
-    [ObservableProperty]
-    private PerformanceViewModel? _performanceViewModel;
     
     public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
@@ -501,9 +497,5 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     public void ShowColorPalette() {
         SelectedTab = 4;
-    }
-
-    public void ShowPerformance() {
-        SelectedTab = 5;
     }
 }

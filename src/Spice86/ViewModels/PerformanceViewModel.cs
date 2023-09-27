@@ -41,15 +41,11 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
 
         InstructionsExecuted = _state.Cycles;
         _performanceMeasurer.UpdateValue(_state.Cycles);
-        InstructionsPerSecond = _performanceMeasurer.ValuePerSecond;
         AverageInstructionsPerSecond = _performanceMeasurer.AverageValuePerSecond;
     }
 
     [ObservableProperty]
     private double _instructionsExecuted;
-
-    [ObservableProperty]
-    private double _instructionsPerSecond = -1;
 
     public void VisitMainMemory(IMemory memory) {
     }

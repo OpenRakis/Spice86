@@ -14,17 +14,17 @@
 	<UserControl.Resources>
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
-		<WrapPanel Orientation="Vertical">
-			<Label Content="Instructions executed" />
-			<TextBlock Text="{Binding InstructionsExecuted,
+		<WrapPanel Orientation="Horizontal">
+			<WrapPanel Orientation="Vertical">
+				<Label Content="Instructions executed" />
+				<TextBlock Text="{Binding InstructionsExecuted,
 				StringFormat={}{0:N0}}"/>
-			<Label Content="Instructions per second" />
-			<TextBlock Text="{Binding InstructionsPerSecond,
-				Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-				StringFormat={}{0:N0}}"/>
-			<Label Content="Instructions per second (avg)" />
-			<TextBlock Text="{Binding AverageInstructionsPerSecond,
-				Converter={StaticResource InvalidNumberToQuestionMarkConverter},
-				StringFormat={}{0:N0}}"/>
+			</WrapPanel>
+			<WrapPanel Orientation="Vertical" Margin="10,0,0,0">
+				<Label Content="Instructions per second (avg)" />
+				<TextBlock Text="{Binding AverageInstructionsPerSecond,
+					Converter={StaticResource InvalidNumberToQuestionMarkConverter},
+					StringFormat={}{0:N0}}"/>
+			</WrapPanel>
 		</WrapPanel>
 </UserControl>

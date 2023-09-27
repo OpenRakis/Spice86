@@ -4,6 +4,7 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
+		xmlns:views="clr-namespace:Spice86.Views"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Assets/Spice86.ico"
@@ -21,61 +22,62 @@
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<Grid RowDefinitions="Auto,*,Auto" >
-		<Grid IsVisible="{Binding !IsDialogVisible}" Grid.Row="0" ColumnDefinitions="Auto, *">
-			<Menu Grid.Column="0" Name="Menu" Focusable="False">
-				<MenuItem Header="Program">
-					<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
-					<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
-					<Separator IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
-					<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding FirstProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" CommandParameter="0" />
-					<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding SecondProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=1}" CommandParameter="1" />
-					<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding ThirdProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" CommandParameter="2" />
+	<Grid RowDefinitions="Auto,*,Auto">
+		<Menu Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
+			<MenuItem Header="Program">
+				<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
+				<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
+				<Separator IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
+				<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding FirstProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" CommandParameter="0" />
+				<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding SecondProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=1}" CommandParameter="1" />
+				<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding ThirdProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" CommandParameter="2" />
+			</MenuItem>
+			<MenuItem Header="Debug">
+				<MenuItem Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowDebugWindowCommand}" />
+				<MenuItem Header="Color Palette" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowColorPaletteCommand}" />
+				<MenuItem Header="Performance" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowPerformanceCommand}" />
+				<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
+					<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
+					<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
+					<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
+					<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
+					<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
+					<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
+					<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
 				</MenuItem>
-				<MenuItem Header="Debug">
-					<MenuItem Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowDebugWindowCommand}" />
-					<MenuItem Header="Color Palette" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowColorPaletteCommand}" />
-					<MenuItem Header="Performance" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowPerformanceCommand}" />
-					<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
-						<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
-						<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
-						<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
-						<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
-						<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
-						<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
-						<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
-					</MenuItem>
-					<MenuItem Header="Dump emulator state to directory..." IsEnabled="{Binding IsMachineRunning}" Command="{Binding DumpEmulatorStateToFileCommand}" />
+				<MenuItem Header="Dump emulator state to directory..." IsEnabled="{Binding IsMachineRunning}" Command="{Binding DumpEmulatorStateToFileCommand}" />
+			</MenuItem>
+			<MenuItem Header="Video" IsEnabled="{Binding IsMachineRunning}">
+				<MenuItem>
+					<MenuItem.Header>
+						<Grid ColumnDefinitions="Auto,Auto">
+							<Label Grid.Column="0" Content="Scale" HorizontalContentAlignment="Center" />
+							<NumericUpDown Grid.Column="1" Text="{Binding Scale}" Margin="5,0,0,0" />
+						</Grid>
+					</MenuItem.Header>
 				</MenuItem>
-				<MenuItem Header="Video" IsEnabled="{Binding IsMachineRunning}">
-					<MenuItem>
-						<MenuItem.Header>
-							<Grid ColumnDefinitions="Auto,Auto">
-								<Label Grid.Column="0" Content="Scale" HorizontalContentAlignment="Center" />
-								<NumericUpDown Grid.Column="1" Text="{Binding Scale}" Margin="5,0,0,0" />
-							</Grid>
-						</MenuItem.Header>
-					</MenuItem>
-					<MenuItem>
-						<MenuItem.Header>
-							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
-						</MenuItem.Header>
-					</MenuItem>
-					<MenuItem Command="{Binding SaveBitmapCommand}">
-						<MenuItem.Header>
-							<Label Content="Save Bitmap" />
-						</MenuItem.Header>
-					</MenuItem>
+				<MenuItem>
+					<MenuItem.Header>
+						<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
+					</MenuItem.Header>
 				</MenuItem>
-			</Menu>
-			<Grid Focusable="False" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center" ColumnDefinitions="Auto,Auto,120,Auto">
-				<Button Focusable="False" Grid.Column="0" Content="Pause︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
-				<Button Focusable="False" Grid.Column="0" Content="Continue" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
-				<Label Focusable="False" VerticalAlignment="Center" Grid.Column="1" Content="Time Modifier" />
-				<NumericUpDown Focusable="False" Grid.Column="2" Margin="5,0,0,0" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" Minimum="1" />
-				<Button Focusable="False" Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
-			</Grid>
-		</Grid>
+				<MenuItem Command="{Binding SaveBitmapCommand}">
+					<MenuItem.Header>
+						<Label Content="Save Bitmap" />
+					</MenuItem.Header>
+				</MenuItem>
+			</MenuItem>
+		</Menu>
+		<WrapPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+			<Button Focusable="False" Content="Pause︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
+			<Button Focusable="False" Content="Continue" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
+			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier" />
+			<NumericUpDown Focusable="False" Margin="5,0,0,0" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" Minimum="1" />
+			<Button Focusable="False" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
+		</WrapPanel>
+		<WrapPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal" IsVisible="{Binding IsPerformanceVisible}">
+			<views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
+		</WrapPanel>
 		<Viewbox Grid.Row="1">
 			<LayoutTransformControl>
 				<LayoutTransformControl.RenderTransform>
@@ -92,7 +94,7 @@
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
-		<Border Focusable="False" Grid.Row="2" Background="{StaticResource SystemChromeBlackHighColor}">
+		<Border Grid.Row="2" Background="{StaticResource SystemChromeBlackHighColor}">
 			<WrapPanel Orientation="Horizontal">
 				<TextBlock Text="{Binding StatusMessage}" />
 				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
