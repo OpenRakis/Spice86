@@ -474,8 +474,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         uint currentIp = cpu.State.IpPhysicalAddress;
         CodeReader codeReader = CreateCodeReader(_memory, out EmulatedMemoryStream emulatedMemoryStream);
         
-        // The CPU instruction bitness might have changed (jump between 16 bit and 32 bit code), so we recreate the decoder each time.
-        _decoder = Decoder.Create(16, codeReader, currentIp,
+        _decoder ??= Decoder.Create(16, codeReader, currentIp,
             DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
         Instructions.Clear();
 
