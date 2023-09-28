@@ -427,9 +427,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     public void VisitVgaCard(VgaCard vgaCard) {
     }
 
-    [ObservableProperty]
-    private int _currentInstructionBitness;
-
     private bool _needToUpdateDisassembly;
     
     public void VisitCpu(Cpu cpu) {
@@ -475,11 +472,10 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         }
         _cpu = cpu;
         uint currentIp = cpu.State.IpPhysicalAddress;
-        CurrentInstructionBitness = cpu.CurrentInstructionBitness;
         CodeReader codeReader = CreateCodeReader(_memory, out EmulatedMemoryStream emulatedMemoryStream);
         
         // The CPU instruction bitness might have changed (jump between 16 bit and 32 bit code), so we recreate the decoder each time.
-        _decoder = Decoder.Create(CurrentInstructionBitness, codeReader, currentIp,
+        _decoder = Decoder.Create(16, codeReader, currentIp,
             DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
         Instructions.Clear();
 

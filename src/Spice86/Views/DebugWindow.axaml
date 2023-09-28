@@ -45,15 +45,14 @@
                     </ScrollViewer>
                 </TabItem>
                 <TabItem Header="Disassembly">
-                    <Grid RowDefinitions="Auto,Auto,*">
+                    <Grid RowDefinitions="Auto,*">
                         <TextBlock IsVisible="{Binding !IsPaused}" Grid.Row="0" TextWrapping="Wrap" Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive." />
-                        <TextBlock Grid.Row="0" IsVisible="{Binding IsPaused}" Text="{Binding CurrentInstructionBitness, StringFormat='Current CPU Instruction Bitness: {0}'}" />
-                        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto"  HorizontalAlignment="Center" VerticalAlignment="Top">
+                        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto"  HorizontalAlignment="Center" VerticalAlignment="Top">
                             <Button Grid.Column="1" Margin="5" IsVisible="{Binding IsPaused}" Content="Step" Command="{Binding StepCommand}" />
                             <Button Grid.Column="2" Margin="5" Content="Pause" Command="{Binding PauseCommand}" IsVisible="{Binding !IsPaused}" />
                             <Button Grid.Column="2" Margin="5" Content="Continue" Command="{Binding ContinueCommand}" IsVisible="{Binding IsPaused}" />
                         </Grid>
-                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="2" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
+                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="1" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
                                 <DataGridTextColumn Header="Based on CS:IP" Binding="{Binding SegmentedAddress}" />

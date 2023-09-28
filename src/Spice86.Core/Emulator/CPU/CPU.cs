@@ -91,7 +91,6 @@ public class Cpu : IDebuggableComponent {
         _instructions16 = new Instructions16(this, _memory, _modRM);
         _instructions32 = new Instructions32(this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
-        CurrentInstructionBitness = 16;
         AddressSize = 16;
     }
 
@@ -117,7 +116,6 @@ public class Cpu : IDebuggableComponent {
 
         // Reset to 16 bit operand and address size
         _instructions16Or32 = _instructions16;
-        CurrentInstructionBitness = 16;
         AddressSize = 16;
         State.ClearPrefixes();
         State.IncCycles();
@@ -200,7 +198,6 @@ public class Cpu : IDebuggableComponent {
         }
         if (cpuException.Type is CpuExceptionType.Fault) {
             _instructions16Or32 = _instructions16;
-            CurrentInstructionBitness = 16;
             State.ClearPrefixes();
             _internalIp = State.IP;
         }
@@ -1174,8 +1171,6 @@ public class Cpu : IDebuggableComponent {
 
     private uint InternalIpPhysicalAddress => MemoryUtils.ToPhysicalAddress(State.CS, _internalIp);
 
-    public int CurrentInstructionBitness { get; private set; } = 16;
-
     private void HandleCall(CallType callType, ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
         ExecutionFlowRecorder.RegisterCall(State.CS, State.IP, targetCS, targetIP);
         State.CS = targetCS;
@@ -1384,7 +1379,6 @@ public class Cpu : IDebuggableComponent {
                 break;
             case 0x66:
                 _instructions16Or32 = _instructions32;
-                CurrentInstructionBitness = 32;
                 break;
             case 0x67:
                 AddressSize = 32;
