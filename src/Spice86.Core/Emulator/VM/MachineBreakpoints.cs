@@ -20,12 +20,12 @@ public sealed class MachineBreakpoints : IDisposable {
     private readonly BreakPointHolder _executionBreakPoints = new();
 
     /// <summary>
-    /// The memory associated with the machine.
+    /// The memory bus.
     /// </summary>
     private readonly IMemory _memory;
 
     /// <summary>
-    /// The state associated with the machine.
+    /// The CPU State.
     /// </summary>
     private readonly State _state;
 
@@ -42,7 +42,8 @@ public sealed class MachineBreakpoints : IDisposable {
     /// <summary>
     /// Initializes a new instance of the <see cref="MachineBreakpoints"/> class.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus</param>
+    /// <param name="state">The CPU state</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public MachineBreakpoints(IMemory memory, State state, ILoggerService loggerService) {
         _state = state;

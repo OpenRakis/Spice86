@@ -13,10 +13,9 @@ public sealed class PauseHandler : IDisposable {
     private readonly ILoggerService _loggerService;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PauseHandler"/> class with the specified logger service and GUI.
+    /// Initializes a new instance of the <see cref="PauseHandler"/> class with the specified logger service.
     /// </summary>
     /// <param name="loggerService">The logger service to use for logging.</param>
-    /// <param name="gui">The GUI to use for handling pausing.</param>
     public PauseHandler(ILoggerService loggerService) => _loggerService = loggerService;
 
     private volatile bool _paused;
