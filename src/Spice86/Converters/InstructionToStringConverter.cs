@@ -16,15 +16,15 @@ public class InstructionToStringConverter : IValueConverter {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
         if (value is CpuInstructionInfo cpuInstructionInfo) {
             Instruction instr = cpuInstructionInfo.Instruction;
+            if(instr.IsInvalid) {
+                return "(bad or emulator instruction 0xFE38)";
+            }
             _outputString.Clear();
-            _formatter.Options.DigitSeparator = "`";
-            _formatter.Options.FirstOperandCharIndex = 10;
             var output = new StringOutput();
             // Don't use instr.ToString(), it allocates more, uses masm syntax and default options
             _formatter.Format(instr, output);
             _outputString.AppendLine(output.ToStringAndReset());
-            string disasm = _outputString.ToString();
-            return instr.IsInvalid ? "(bad or emulator instruction 0xFE38)" : disasm;
+            return _outputString.ToString();
         }
         return null;
     }
