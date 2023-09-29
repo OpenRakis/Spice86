@@ -65,10 +65,16 @@ public sealed class ProgramExecutor : IProgramExecutor, IDebuggableComponent {
         }
     }
 
+    public bool IsGdbCommandHandlerAvailable => _gdbServer?.IsGdbCommandHandlerAvailable is true;
+
     /// <summary>
-    /// Checks for machine breakpoints, runs tne next CPU instruction, and ticks the Timer
+    /// Steps into code for the internal UI debugger
     /// </summary>
-    public void Step() => _emulationLoop.Step();
+    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler<</remarks>
+    public void StepInto() {
+        _gdbServer?.StepInto();
+        IsPaused = false;
+    }
 
     public void DumpEmulatorStateToDirectory(string path) {
         new RecorderDataWriter(Machine.Memory,

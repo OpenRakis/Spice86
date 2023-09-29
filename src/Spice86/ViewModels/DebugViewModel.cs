@@ -43,6 +43,8 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     [ObservableProperty] private bool _isLoading = true;
     
     private IMemory? _memory;
+
+    public bool IsGdbServerAvailable => _programExecutor?.IsGdbCommandHandlerAvailable is true;
     
     public DebugViewModel() {
         if (!Design.IsDesignMode) {
@@ -50,9 +52,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         }
     }
 
-    [RelayCommand]
-    public void Step() {
-        _programExecutor?.Step();
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void StepInto() {
+        _programExecutor?.StepInto();
         IsLoading = true;
         UpdateData();
     }
@@ -61,6 +63,8 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     public void UpdateData() => UpdateValues(this, EventArgs.Empty);
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
     private bool _isPaused;
 
     private IProgramExecutor? _programExecutor;
@@ -113,7 +117,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     [ObservableProperty]
     private string? _memoryEditValue = "";
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsPaused))]
     public void EditMemory() {
         if (_memory is null) {
             return;
@@ -131,7 +135,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         }
 
         try {
-            if (memoryAddress.Contains(":")) {
+            if (memoryAddress.Contains(':')) {
                 string[] split = memoryAddress.Split(":");
                 if (split.Length > 1 &&
                     ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&

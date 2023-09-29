@@ -24,7 +24,7 @@
     </Window.Resources>
     <Grid RowDefinitions="Auto,*">
         <Menu Grid.Row="0">
-            <MenuItem Header="Edit" IsEnabled="{Binding IsPaused}">
+            <MenuItem Header="Edit">
                 <MenuItem Header="Edit memory.." Command="{Binding EditMemoryCommand}" />
             </MenuItem>
         </Menu>
@@ -48,7 +48,7 @@
                     <Grid RowDefinitions="Auto,Auto,*">
                         <TextBlock IsVisible="{Binding !IsPaused}" Grid.Row="0" TextWrapping="Wrap" Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive." />
                         <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto"  HorizontalAlignment="Center" VerticalAlignment="Top">
-                            <Button Grid.Column="1" Margin="5" IsVisible="{Binding IsPaused}" Content="Step" Command="{Binding StepCommand}" />
+                            <Button Grid.Column="1" Margin="5" IsVisible="{Binding IsGdbServerAvailable}" Content="Step into" Command="{Binding StepIntoCommand}" />
                             <Button Grid.Column="2" Margin="5" Content="Pause" Command="{Binding PauseCommand}" IsVisible="{Binding !IsPaused}" />
                             <Button Grid.Column="2" Margin="5" Content="Continue" Command="{Binding ContinueCommand}" IsVisible="{Binding IsPaused}" />
                         </Grid>

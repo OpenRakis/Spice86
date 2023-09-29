@@ -89,6 +89,8 @@ public sealed class GdbServer : IDisposable {
     /// </summary>
     public GdbCommandHandler? GdbCommandHandler { get; private set; }
 
+    public bool IsGdbCommandHandlerAvailable => GdbCommandHandler is not null;
+
     /// <summary>
     /// Accepts a single connection to the GDB server and creates a new GdbCommandHandler instance to handle the connection.
     /// </summary>
@@ -185,5 +187,9 @@ public sealed class GdbServer : IDisposable {
     /// </summary>
     private void OnConnect() {
         _waitFirstConnectionHandle?.Set();
+    }
+
+    public void StepInto() {
+        GdbCommandHandler?.Step();
     }
 }
