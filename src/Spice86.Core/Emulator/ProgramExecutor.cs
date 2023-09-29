@@ -70,7 +70,7 @@ public sealed class ProgramExecutor : IProgramExecutor, IDebuggableComponent {
     /// <summary>
     /// Steps into code for the internal UI debugger
     /// </summary>
-    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler<</remarks>
+    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
     public void StepInto() {
         _gdbServer?.StepInto();
         IsPaused = false;
