@@ -37,10 +37,6 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
         _generalMidi = new GeneralMidi(audioPlayerFactory, mt32RomsPath, loggerService);
     }
     
-    /// <summary>
-    /// Contains the argument of the last <see cref="ReadByte"/> operation.
-    /// </summary>
-    public int LastPortRead { get; private set; }
     
     /// <inheritdoc />
     public override byte ReadByte(int port) {
@@ -54,16 +50,6 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
         ioPortDispatcher.AddIOPortHandler(Command, this);
     }
     
-    /// <summary>
-    /// Contains the first argument of the last <see cref="WriteByte"/> operation.
-    /// </summary>
-    public int LastPortWritten { get; private set; }
-    
-    /// <summary>
-    /// Contains the second argument of the last <see cref="WriteByte"/> operation.
-    /// </summary>
-    public int LastPortWrittenValue { get; private set; }
-
     /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         LastPortWritten = port;

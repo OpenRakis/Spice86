@@ -15,6 +15,21 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <summary>
+    /// Contains the argument of the last <see cref="ReadByte"/> operation.
+    /// </summary>
+    public int LastPortRead { get; protected set; }
+    
+    /// <summary>
+    /// Contains the first argument of the last <see cref="WriteByte"/> operation.
+    /// </summary>
+    public int LastPortWritten { get; protected set; }
+    
+    /// <summary>
+    /// Contains the second argument of the last <see cref="WriteByte"/> operation.
+    /// </summary>
+    public int LastPortWrittenValue { get; protected set; }
+
+    /// <summary>
     /// The logger service implementation.
     /// </summary>
     protected readonly ILoggerService _loggerService;
