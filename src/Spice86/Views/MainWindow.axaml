@@ -24,7 +24,7 @@
 	</Design.DataContext>
 	<Grid RowDefinitions="Auto,*,Auto">
 		<Menu Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
-			<MenuItem Header="Program">
+			<MenuItem Name="Menu" Header="Program">
 				<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
 				<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
 				<Separator IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
