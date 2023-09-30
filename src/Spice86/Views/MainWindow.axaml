@@ -23,7 +23,7 @@
 	</Design.DataContext>
 	<Grid RowDefinitions="Auto,*,Auto" >
 		<Grid IsVisible="{Binding !IsDialogVisible}" Grid.Row="0" ColumnDefinitions="Auto, *">
-			<Menu Grid.Column="0">
+			<Menu Grid.Column="0" Name="Menu" Focusable="False">
 				<MenuItem Header="Program">
 					<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
 					<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
@@ -68,12 +68,12 @@
 					</MenuItem>
 				</MenuItem>
 			</Menu>
-			<Grid Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center" ColumnDefinitions="Auto,Auto,120,Auto">
-				<Button Grid.Column="0" Content="Pause︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
-				<Button Grid.Column="0" Content="Continue" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
-				<Label VerticalAlignment="Center" Grid.Column="1" Content="Time Modifier" />
-				<NumericUpDown Grid.Column="2" Margin="5,0,0,0" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" Minimum="1" />
-				<Button Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
+			<Grid Focusable="False" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center" ColumnDefinitions="Auto,Auto,120,Auto">
+				<Button Focusable="False" Grid.Column="0" Content="Pause︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
+				<Button Focusable="False" Grid.Column="0" Content="Continue" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
+				<Label Focusable="False" VerticalAlignment="Center" Grid.Column="1" Content="Time Modifier" />
+				<NumericUpDown Focusable="False" Grid.Column="2" Margin="5,0,0,0" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" Minimum="1" />
+				<Button Focusable="False" Grid.Column="3" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 			</Grid>
 		</Grid>
 		<Viewbox Grid.Row="1">
@@ -92,7 +92,7 @@
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
-		<Border Grid.Row="2" Background="{StaticResource SystemChromeBlackHighColor}">
+		<Border Focusable="False" Grid.Row="2" Background="{StaticResource SystemChromeBlackHighColor}">
 			<WrapPanel Orientation="Horizontal">
 				<TextBlock Text="{Binding StatusMessage}" />
 				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />

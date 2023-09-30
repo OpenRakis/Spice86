@@ -2,6 +2,7 @@ namespace Spice86.Views;
 
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 
 using Spice86.ViewModels;
 
@@ -13,12 +14,28 @@ internal partial class MainWindow : Window {
     /// </summary>
     public MainWindow() {
         InitializeComponent();
+        this.Menu.KeyDown += OnMenuKeyDown;
+        this.Menu.KeyDown += OnMenuKeyUp;
+        this.Menu.GotFocus += OnMenuGotFocus;
+    }
+
+    private void OnMenuGotFocus(object? sender, GotFocusEventArgs e) {
+        FocusOnVideoBuffer();
+        e.Handled = true;
+    }
+
+    private void OnMenuKeyUp(object? sender, KeyEventArgs e) {
+          (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+          e.Handled = true;
+    }
+
+    private void OnMenuKeyDown(object? sender, KeyEventArgs e) {
+        (DataContext as MainWindowViewModel)?.OnKeyDown(e);
+        e.Handled = true;
     }
 
     private void FocusOnVideoBuffer() {
-        Image.IsEnabled = false;
         Image.Focus();
-        Image.IsEnabled = true;
     }
 
     protected override void OnOpened(EventArgs e) {
@@ -31,26 +48,19 @@ internal partial class MainWindow : Window {
         Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, Image);
         Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, Image);
         Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, Image);
+        FocusOnVideoBuffer();
     }
 
     protected override void OnKeyUp(KeyEventArgs e) {
+        FocusOnVideoBuffer();
         (DataContext as MainWindowViewModel)?.OnKeyUp(e);
-        if (this.Image.IsFocused) {
-            e.Handled = true;
-        } else {
-            FocusOnVideoBuffer();
-            e.Handled = true;
-        }
+        e.Handled = true;
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
+        FocusOnVideoBuffer();
         (DataContext as MainWindowViewModel)?.OnKeyDown(e);
-        if (this.Image.IsFocused) {
-            e.Handled = true;
-        } else {
-            FocusOnVideoBuffer();
-            e.Handled = true;
-        }
+        e.Handled = true;
     }
 
     protected override void OnClosing(WindowClosingEventArgs e) {
