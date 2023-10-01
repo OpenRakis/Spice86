@@ -31,6 +31,12 @@ public enum DeviceAttributes {
     Special = 0x10,
     
     /// <summary>
+    /// The device is not an IBM device.
+    /// </summary>
+    /// <remarks>This is from the HIMEM.SYS source code for MS-DOS 2.0 ans XMS 2.0</remarks>
+    NonIBM = 0b1010000000000000,
+    
+    /// <summary>
     /// The device is a FAT device.
     /// </summary>
     FatDevice = 0x2000,

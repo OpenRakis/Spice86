@@ -29,7 +29,7 @@ public class EmmRegister : IMemoryDevice {
     }
 
     /// <inheritdoc />
-    public uint Size => ExpandedMemoryManager.EmmPageSize;
+    public uint Size => Emm.EmmPageSize;
 
     /// <inheritdoc />
     public byte Read(uint address) {

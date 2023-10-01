@@ -6,8 +6,10 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -89,9 +91,14 @@ public class Dos {
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
     
     /// <summary>
-    /// The EMS device driver.
+    /// The Expanded Memory driver.
     /// </summary>
-    public ExpandedMemoryManager? Ems { get; private set; }
+    public Emm? Ems { get; private set; }
+    
+    /// <summary>
+    /// The Extended Memory driver.
+    /// </summary>
+    public Xmm? Xms { get; private set; }
 
     /// <summary>
     /// Initializes a new instance.
@@ -118,7 +125,8 @@ public class Dos {
         DosInt2FHandler = new DosInt2fHandler(_memory, _cpu, _loggerService);
     }
 
-    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, bool enableEms) {
+    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, bool enableEms,
+        bool enableXms, AssemblyRoutineInstaller assemblyRoutineInstaller) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }
@@ -128,6 +136,11 @@ public class Dos {
 
         if (enableEms) {
             Ems = new(_memory, _cpu, this, _loggerService);
+        }
+
+        if (enableXms) {
+            Xms = new(_state, _loggerService);
+            AddDevice(Xms);
         }
     }
 

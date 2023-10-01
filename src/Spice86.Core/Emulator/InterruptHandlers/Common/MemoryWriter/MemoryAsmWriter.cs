@@ -95,4 +95,9 @@ public class MemoryAsmWriter : MemoryWriter {
     public void WriteFarRet() {
         WriteUInt8(0xCB);
     }
+
+    public void WriteJmpNear(byte offset) {
+        WriteUInt8(0xEB);
+        WriteUInt8(offset);
+    }
 }

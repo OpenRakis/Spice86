@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.Memory.Indexer;
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
+public class Memory : Indexable.Indexable, IMemory {
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 
@@ -19,7 +19,7 @@ public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
     /// </summary>
     public A20Gate A20Gate { get; }
-
+    
     /// <summary>
     /// Instantiate a new memory bus.
     /// </summary>

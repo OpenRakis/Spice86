@@ -16,7 +16,7 @@ using Spice86.Shared.Utils;
 using System.Linq;
 
 /// <summary>
-/// Provides DOS applications with EMS memory. <br/>
+/// An Expanded Memory Manager. Provides DOS applications with EMS memory. <br/>
 /// Expanded memory is memory beyond DOS's 640K-byte limit.  This LIM <br/>
 /// implementation supports 8 MB of expanded memory. <br/>
 /// Because the 8086, 8088, and 80286 (in real mode) microprocessors can <br/>
@@ -25,7 +25,7 @@ using System.Linq;
 /// <remarks>This is a LIM standard implementation. Which means there's no
 /// difference between EMM pages and raw pages. They're both 16 KB.</remarks>
 /// </summary>
-public sealed class ExpandedMemoryManager : InterruptHandler {
+public sealed class Emm : InterruptHandler {
     /// <summary>
     /// The string identifier in main memory for the EMS Handler. <br/>
     /// DOS programs can detect the presence of an EMS handler by looking for it <br/>
@@ -101,7 +101,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public ExpandedMemoryManager(IMemory memory, Cpu cpu, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public Emm(IMemory memory, Cpu cpu, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier, loggerService);
         dos.AddDevice(device, DosDeviceSegment, 0x0000);
         FillDispatchTable();

@@ -22,7 +22,7 @@ public interface IMemory : IIndexable, IByteReaderWriter, IDebuggableComponent {
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
     /// </summary>
     A20Gate A20Gate { get; }
-
+    
     /// <summary>
     /// Gets a copy of the current memory state.
     /// </summary>

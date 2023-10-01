@@ -17,6 +17,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -193,7 +194,8 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// Initializes a new instance
     /// </summary>
     public Machine(IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
-        Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea), configuration.A20Gate);
+        const uint mainMemorySize = A20Gate.EndOfHighMemoryArea;
+        Memory = new Memory(new Ram(mainMemorySize), configuration.A20Gate);
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
@@ -286,7 +288,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             RegisterInterruptHandler(Dos.DosInt2FHandler);
 
             // Initialize DOS.
-            Dos.Initialize(SoundBlaster, CpuState, configuration.Ems);
+            Dos.Initialize(SoundBlaster, configuration.Ems, configuration.Xms, AssemblyRoutineInstaller);
             if (Dos.Ems is not null) {
                 RegisterInterruptHandler(Dos.Ems);
             }

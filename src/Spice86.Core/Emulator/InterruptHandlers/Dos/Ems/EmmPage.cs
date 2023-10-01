@@ -22,5 +22,5 @@ public class EmmPage {
     /// <summary>
     /// The logical page number, for book keeping inside our dictionaries.
     /// </summary>
-    public ushort PageNumber { get; set; } = ExpandedMemoryManager.EmmNullPage;
+    public ushort PageNumber { get; set; } = Emm.EmmNullPage;
 }

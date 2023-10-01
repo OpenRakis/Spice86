@@ -7,7 +7,7 @@ public class EmmHandle {
     /// <summary>
     /// The EMM handle number.
     /// </summary>
-    public ushort HandleNumber { get; init; } = ExpandedMemoryManager.EmmNullHandle;
+    public ushort HandleNumber { get; init; } = Emm.EmmNullHandle;
     
     private const string NullHandleName = "";
     
