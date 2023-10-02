@@ -19,7 +19,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Keyboard;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Shared.Emulator.Keyboard;
@@ -46,9 +45,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IWindowActivator _windowActivator;
     private readonly IProgramExecutorFactory _programExecutorFactory;
+    private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
-
-    private AvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
+    
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
@@ -56,6 +55,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private bool _isSettingResolution;
     private string _lastExecutableDirectory = string.Empty;
     private bool _closeAppOnEmulatorExit;
+    private bool _isAppClosing;
 
     private Action? _uiUpdateMethod;
     private bool _exitDrawThread;
@@ -70,10 +70,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     
     public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
-
-    private bool _isAppClosing;
-
-    public MainWindowViewModel(IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+    
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+        _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
@@ -88,7 +87,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
     internal void OnKeyUp(KeyEventArgs e) {
-        _avaloniaKeyScanCodeConverter ??= new();
+        if (_avaloniaKeyScanCodeConverter is null) {
+            return;
+        }
         KeyUp?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 false,
@@ -143,34 +144,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         }
     }
 
-    private void Draw() {
-        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
-            return;
-        }
-        if (!_isDrawThreadInitialized) {
-            _drawThread = new Thread(DrawThreadMethod) {
-                Name = "UIRenderThread"
-            };
-            _drawingSemaphoreSlim = new(1, 1);
-            _drawThread.Start();
-            _isDrawThreadInitialized = true;
-        }
-
-        _drawAction ??= () => {
-            unsafe {
-                _drawingSemaphoreSlim?.Wait();
-                try {
-                    using ILockedFramebuffer pixels = Bitmap.Lock();
-                    var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                    RenderScreen.Invoke(this, uiRenderEventArgs);
-                } finally {
-                    _drawingSemaphoreSlim?.Release();
-                }
-                _uiDispatcher.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
-            }
-        };
-    }
-
     [ObservableProperty]
     private Cursor? _cursor = Cursor.Default;
 
@@ -178,7 +151,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private WriteableBitmap? _bitmap;
 
     internal void OnKeyDown(KeyEventArgs e) {
-        _avaloniaKeyScanCodeConverter ??= new();
+        if (_avaloniaKeyScanCodeConverter is null) {
+            return;
+        }
         KeyDown?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 true,
@@ -199,6 +174,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
     private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
+
+    public IDebugViewModel? DebugViewModel { get; set; }
 
     public int Width { get; private set; }
 
@@ -326,7 +303,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
-        _windowActivator.CloseAllAdditionalWindows();
+        _windowActivator.CloseDebugWindow();
         RunEmulator();
     }
 
@@ -343,37 +320,54 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
-    public void ShowPerformance() {
-        if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<PerformanceViewModel>(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer());
-        }
-    }
+    public void ShowPerformance() => IsPerformanceVisible = !IsPerformanceVisible;
 
     [RelayCommand]
     public void ShowDebugWindow() {
         if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<DebugViewModel>(_uiDispatcherTimer, _programExecutor, this);
+            _windowActivator.ActivateDebugWindow(_uiDispatcherTimer, _programExecutor, this);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
-        if(_programExecutor is not null) {
-            _windowActivator.ActivateAdditionalWindow<PaletteViewModel>(_uiDispatcherTimer, _programExecutor);
-        }
+        ShowDebugWindow();
+        DebugViewModel?.ShowColorPalette();
     }
 
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
-    public void UpdateScreen() => Draw();
+    public void UpdateScreen() {
+        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
+            return;
+        }
+        if (!_isDrawThreadInitialized) {
+            _drawThread = new Thread(DrawThreadMethod) {
+                Name = "UIRenderThread"
+            };
+            _drawingSemaphoreSlim = new(1, 1);
+            _drawThread.Start();
+            _isDrawThreadInitialized = true;
+        }
+
+        _drawAction ??= () => {
+            unsafe {
+                _drawingSemaphoreSlim?.Wait();
+                try {
+                    using ILockedFramebuffer pixels = Bitmap.Lock();
+                    var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                    RenderScreen.Invoke(this, uiRenderEventArgs);
+                } finally {
+                    _drawingSemaphoreSlim?.Release();
+                }
+                _uiDispatcher.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
+            }
+        };
+    }
 
     public double MouseX { get; set; }
     public double MouseY { get; set; }
-
-    public bool IsLeftButtonClicked { get; private set; }
-
-    public bool IsRightButtonClicked { get; private set; }
 
     public void OnMainWindowInitialized(Action uiUpdateMethod) {
         _uiUpdateMethod = uiUpdateMethod;
@@ -481,7 +475,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
-                _windowActivator.CloseAllAdditionalWindows();
+                _windowActivator.CloseDebugWindow();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
@@ -501,12 +495,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void DisposeEmulator() => _programExecutor?.Dispose();
 
-    [ObservableProperty]
-    private bool _isDialogVisible;
-
-    [ObservableProperty]
-    private Exception? _exception;
-
     [RelayCommand]
     public async Task CopyToClipboard() {
         if(Exception is not null) {
@@ -514,14 +502,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 Newtonsoft.Json.JsonConvert.SerializeObject(
                     new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));
         }
-    }
-
-    [RelayCommand]
-    public void ClearDialog() => IsDialogVisible = false;
-
-    private void ShowEmulationErrorMessage(Exception e) {
-        Exception = e.GetBaseException();
-        IsDialogVisible = true;
     }
 
     private bool _isInitLogLevelSet;
@@ -569,7 +549,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void OnEmulatorErrorOccured(Exception e) => _uiDispatcher.Post(() => {
         StatusMessage = "Emulator crashed.";
-        ShowEmulationErrorMessage(e);
+        ShowError(e);
     });
 
     private void MachineThread() {
@@ -593,9 +573,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             _uiDispatcher.Post(() => AsmOverrideStatus = "");
         }
     }
+    
+    [ObservableProperty]
+    private PerformanceViewModel? _performanceViewModel;
+    
+    [ObservableProperty]
+    private bool _isPerformanceVisible;
 
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
+        PerformanceViewModel = new(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer());
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

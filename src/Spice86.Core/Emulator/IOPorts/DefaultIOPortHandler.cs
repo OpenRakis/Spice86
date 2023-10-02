@@ -15,6 +15,21 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <summary>
+    /// Contains the argument of the last <see cref="ReadByte"/> operation.
+    /// </summary>
+    public int LastPortRead { get; protected set; }
+    
+    /// <summary>
+    /// Contains the first argument of the last <see cref="WriteByte"/> operation.
+    /// </summary>
+    public int LastPortWritten { get; protected set; }
+    
+    /// <summary>
+    /// Contains the second argument of the last <see cref="WriteByte"/> operation.
+    /// </summary>
+    public int LastPortWrittenValue { get; protected set; }
+
+    /// <summary>
     /// The logger service implementation.
     /// </summary>
     protected readonly ILoggerService _loggerService;
@@ -46,6 +61,24 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// </summary>
     /// <param name="ioPortDispatcher">The I/O port dispatcher.</param>
     public virtual void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    }
+
+    /// <summary>
+    /// Updates the <see cref="LastPortRead"/> for the internal UI debugger.
+    /// </summary>
+    /// <param name="port">The port number</param>
+    protected void UpdateLastPortRead(int port) {
+        LastPortRead = port;
+    }
+
+    /// <summary>
+    /// Updates the <see cref="LastPortWritten"/> and value for the internal UI debugger.
+    /// </summary>
+    /// <param name="port">The port number</param>
+    /// <param name="value">The value written to the port.</param>
+    protected void UpdateLastPortWrite(int port, int value) {
+        LastPortWritten = port;
+        LastPortWrittenValue = value;
     }
 
     /// <summary>

@@ -4,7 +4,6 @@ using Avalonia;
 using Avalonia.Controls;
 
 using Spice86._3rdParty.Controls.HexView.Services;
-using Spice86.Core.Emulator.Memory;
 
 public sealed partial class HexSingleView : UserControl, IDisposable {
     private bool _disposed;
@@ -26,15 +25,15 @@ public sealed partial class HexSingleView : UserControl, IDisposable {
     /// <summary>
     /// Defines a <see cref="StyledProperty{TValue}"/> for the <see cref="MemorySource"/> property.
     /// </summary>
-    public static readonly StyledProperty<IMemory?> MemorySourceProperty =
-        AvaloniaProperty.Register<HexSingleView, IMemory?>(nameof(MemorySource));
+    public static readonly StyledProperty<Stream?> MemorySourceProperty =
+        AvaloniaProperty.Register<HexSingleView, Stream?>(nameof(MemorySource));
 
     private readonly IDisposable _subscription;
 
     /// <summary>
     /// Gets or sets the source for the hexadecimal values.
     /// </summary>
-    public IMemory? MemorySource {
+    public Stream? MemorySource {
         get { return GetValue(MemorySourceProperty); }
         set { SetValue(MemorySourceProperty, value); }
     }

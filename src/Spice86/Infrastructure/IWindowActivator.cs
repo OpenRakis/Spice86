@@ -2,6 +2,8 @@
 
 using Avalonia.Controls;
 
+using Spice86.Core.Emulator;
+using Spice86.Interfaces;
 using Spice86.ViewModels;
 
 /// <summary>
@@ -9,13 +11,13 @@ using Spice86.ViewModels;
 /// </summary>
 public interface IWindowActivator {
     /// <summary>
-    /// Activates the Window corresponding to the ViewModel
+    /// Activates the Window corresponding to the <see cref="DebugViewModel"/>
     /// </summary>
-    /// <param name="parameters">The parameters to pass to the ViewModel constructor</param>
-    void ActivateAdditionalWindow<T>(params object[] parameters) where T : ViewModelBase;
+    /// <param name="parameters">The parameters to pass to the <see cref="DebugViewModel"/> constructor</param>
+    void ActivateDebugWindow(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor, IPauseStatus pauseStatus);
 
     /// <summary>
-    /// Closes all additionnal windows
+    /// Closes the debug window
     /// </summary>
-    void CloseAllAdditionalWindows();
+    void CloseDebugWindow();
 }

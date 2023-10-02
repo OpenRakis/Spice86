@@ -1,13 +1,11 @@
-﻿namespace Spice86.Keyboard;
+﻿namespace Spice86.Infrastructure;
 
 using Spice86.Shared.Emulator.Keyboard;
 
 using System.Collections.Generic;
 
-/// <summary>
-/// A utility class that provides mapping from AvaloniaUI <see cref="Key"/> values to keyboard scan codes.
-/// </summary>
-public class AvaloniaKeyScanCodeConverter {
+/// <inheritdoc cref="IAvaloniaKeyScanCodeConverter" />
+public class AvaloniaKeyScanCodeConverter : IAvaloniaKeyScanCodeConverter {
     /// <summary>
     /// A dictionary that maps <see cref="Key"/> values to their corresponding keyboard scan codes.
     /// </summary>
@@ -172,11 +170,7 @@ public class AvaloniaKeyScanCodeConverter {
         };
     }
 
-    /// <summary>
-    /// Gets the ASCII code from the input scancode.
-    /// </summary>
-    /// <param name="keyPressedScanCode">The scancode of the pressed keyboard key</param>
-    /// <returns>The corresponding ASCII code, or <c>null</c> if not found.</returns>
+    /// <inheritdoc />
     public byte? GetAsciiCode(byte? keyPressedScanCode) {
         if (keyPressedScanCode > 0x7F) {
             keyPressedScanCode = (byte?) (keyPressedScanCode - 0x80);
@@ -188,11 +182,7 @@ public class AvaloniaKeyScanCodeConverter {
         return null;
     }
 
-    /// <summary>
-    /// Retrieves the scancode of a pressed key, if it exists in the _keyPressedScanCode dictionary.
-    /// </summary>
-    /// <param name="key">The key for which to retrieve the scancode.</param>
-    /// <returns>The scancode of the pressed key, or null if the key is not present in the dictionary.</returns>
+    /// <inheritdoc />
     public byte? GetKeyPressedScancode(Key key) {
         if (_keyPressedScanCode.TryGetValue(key, out byte value)) {
             return value;
@@ -200,11 +190,7 @@ public class AvaloniaKeyScanCodeConverter {
         return null;
     }
 
-    /// <summary>
-    /// Retrieves the scancode of a released key, if it exists in the _keyPressedScanCode dictionary.
-    /// </summary>
-    /// <param name="key">The key for which to retrieve the scancode.</param>
-    /// <returns>The scancode of the released key, or null if the key is not present in the dictionary.</returns>
+    /// <inheritdoc />
     public byte? GetKeyReleasedScancode(Key key) {
         byte? pressed = GetKeyPressedScancode(key);
         if (pressed != null) {

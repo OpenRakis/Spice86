@@ -35,7 +35,7 @@ public class GdbCommandBreakpointHandler {
     }
 
     /// <summary>
-    /// Adds a breakpoint to the machine.
+    /// Adds a breakpoint to the _machineBreakpoints.
     /// </summary>
     /// <param name="commandContent">The breakpoint command string.</param>
     /// <returns>A response string to send back to GDB.</returns>

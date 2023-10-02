@@ -1,24 +1,34 @@
 namespace Spice86.ViewModels;
 
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Iced.Intel;
+
+using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Utils;
+using Spice86.Wrappers;
 
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 
-public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
+public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugViewModel {
     [ObservableProperty]
     private MachineInfo _machine = new();
     
@@ -32,8 +42,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
 
     [ObservableProperty] private bool _isLoading = true;
     
-    [ObservableProperty]
     private IMemory? _memory;
+
+    public bool IsGdbServerAvailable => _programExecutor?.IsGdbCommandHandlerAvailable is true;
     
     public DebugViewModel() {
         if (!Design.IsDesignMode) {
@@ -41,19 +52,56 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
         }
     }
 
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void StepInstruction() {
+        _programExecutor?.StepInstruction();
+        IsLoading = true;
+        UpdateData();
+    }
+
     [RelayCommand]
     public void UpdateData() => UpdateValues(this, EventArgs.Empty);
 
-    private bool IsPaused => _pauseStatus?.IsPaused is true;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
+    private bool _isPaused;
 
-    private readonly IDebuggableComponent? _programExecutor;
+    private IProgramExecutor? _programExecutor;
+
+    public IProgramExecutor? ProgramExecutor {
+        get => _programExecutor;
+        set {
+            if (value is not null && _uiDispatcherTimer is not null) {
+                _programExecutor = value;
+                PaletteViewModel = new(_uiDispatcherTimer, value);
+            }
+        }
+    }
+
+    [ObservableProperty]
+    private AvaloniaList<CpuInstructionInfo> _instructions = new();
+
+    [ObservableProperty]
+    private int _selectedTab;
 
     private readonly IUIDispatcherTimer? _uiDispatcherTimer;
+
+    [ObservableProperty]
+    private PaletteViewModel? _paletteViewModel;
     
-    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPauseStatus pauseStatus) {
-        _programExecutor = programExecutor;
+    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
+        IsPaused = _pauseStatus.IsPaused;
+        _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         _uiDispatcherTimer = uiDispatcherTimer;
+    }
+
+    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
+        IsPaused = _pauseStatus?.IsPaused is true;
+        if (IsPaused) {
+            _mustRefreshMainMemory = true;
+        }
     }
 
     [RelayCommand]
@@ -61,8 +109,70 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
         _uiDispatcherTimer?.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
     }
 
+    [ObservableProperty] private bool _isEditingMemory;
+
+    [ObservableProperty]
+    private string? _memoryEditAddress;
+
+    [ObservableProperty]
+    private string? _memoryEditValue = "";
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void EditMemory() {
+        if (_memory is null) {
+            return;
+        }
+        IsEditingMemory = true;
+        if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
+            MemoryEditValue = Convert.ToHexString(_memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue is null ? sizeof(ushort) : MemoryEditValue.Length)));
+        }
+    }
+
+    private bool TryParseMemoryAddress(string? memoryAddress,  [NotNullWhen(true)] out uint? address) {
+        if (string.IsNullOrWhiteSpace(memoryAddress)) {
+            address = null;
+            return false;
+        }
+
+        try {
+            if (memoryAddress.Contains(':')) {
+                string[] split = memoryAddress.Split(":");
+                if (split.Length > 1 &&
+                    ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&
+                    ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
+                    address = MemoryUtils.ToPhysicalAddress(segment, offset);
+                    return true;
+                }
+            } else if(uint.TryParse(memoryAddress, CultureInfo.InvariantCulture, out uint value)) {
+                address = value;
+                return true;
+            }
+        } catch(Exception e) {
+            ShowError(e);
+        }
+        address = null;
+        return false;
+    }
+
+    [RelayCommand]
+    public void CancelMemoryEdit() {
+        IsEditingMemory = false;
+    }
+
+    [RelayCommand]
+    public void ApplyMemoryEdit() {
+        if (_memory is null || !TryParseMemoryAddress(MemoryEditAddress, out uint? address) || MemoryEditValue is null || !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture,  out long value)) {
+            return;
+        }
+        _memory.LoadData(address.Value, BitConverter.GetBytes(value));
+        RefreshMemoryStream();
+        IsEditingMemory = false;
+    }
+
+    private Decoder? _decoder;
+
     private void UpdateValues(object? sender, EventArgs e) {
-        _programExecutor?.Accept(this);
+        ProgramExecutor?.Accept(this);
         LastUpdate = DateTime.Now;
         IsLoading = false;
     }
@@ -70,85 +180,108 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     [ObservableProperty]
     private StateInfo _state = new();
 
-    public void VisitMainMemory(IMemory memory) {
-        Memory = memory;
-    }
+    [ObservableProperty]
+    private CpuFlagsInfo _flags = new();
 
-    [RelayCommand]
-    public void RefreshMemoryView() {
-        IMemory? memory = Memory;
-        Memory = null;
-        if (memory is not null) {
-            VisitMainMemory(memory);
+    /// <summary>
+    /// Refreshing the Memory UI is taxing, and resets the Scroll Viewer.
+    /// So it's done only on each Pause.
+    /// </summary>
+    private bool _mustRefreshMainMemory = true;
+
+    public void VisitMainMemory(IMemory memory) {
+        if (_mustRefreshMainMemory) {
+            _memory = memory;
+            RefreshMemoryStream();
+            _mustRefreshMainMemory = false;
+        }
+    }
+    
+    [ObservableProperty]
+    private EmulatedMemoryStream? _memoryStream;
+
+    private void RefreshMemoryStream() {
+        if(_memory is not null) {
+            EmulatedMemoryStream memoryStream = new EmulatedMemoryStream(_memory);
+            MemoryStream?.Dispose();
+            MemoryStream = null;
+            MemoryStream = memoryStream;
         }
     }
 
     public void VisitCpuState(State state) {
         if (IsLoading || !IsPaused) {
-            State.AH = state.AH;
-            State.AL = state.AL;
-            State.AX = state.AX;
-            State.EAX = state.EAX;
-            State.BH = state.BH;
-            State.BL = state.BL;
-            State.BX = state.BX;
-            State.EBX = state.EBX;
-            State.CH = state.CH;
-            State.CL = state.CL;
-            State.CX = state.CX;
-            State.ECX = state.ECX;
-            State.DH = state.DH;
-            State.DL = state.DL;
-            State.DX = state.DX;
-            State.EDX = state.EDX;
-            State.DI = state.DI;
-            State.EDI = state.EDI;
-            State.SI = state.SI;
-            State.ES = state.ES;
-            State.BP = state.BP;
-            State.EBP = state.EBP;
-            State.SP = state.SP;
-            State.ESP = state.ESP;
-            State.CS = state.CS;
-            State.DS = state.DS;
-            State.ES = state.ES;
-            State.FS = state.FS;
-            State.GS = state.GS;
-            State.SS = state.SS;
-            State.IP = state.IP;
-            State.AuxiliaryFlag = state.AuxiliaryFlag;
-            State.CarryFlag = state.CarryFlag;
-            State.DirectionFlag = state.DirectionFlag;
-            State.InterruptFlag = state.InterruptFlag;
-            State.OverflowFlag = state.OverflowFlag;
-            State.ParityFlag = state.ParityFlag;
-            State.ZeroFlag = state.ZeroFlag;
-            State.ContinueZeroFlag = state.ContinueZeroFlagValue;
-            State.SegmentOverrideIndex = state.SegmentOverrideIndex;
-            State.IsRunning = state.IsRunning;
+            UpdateCpuState(state);
         }
 
         if (IsPaused) {
             State.PropertyChanged -= OnStatePropertyChanged;
             State.PropertyChanged += OnStatePropertyChanged;
+            Flags.PropertyChanged -= OnStatePropertyChanged;
+            Flags.PropertyChanged += OnStatePropertyChanged;
         } else {
             State.PropertyChanged -= OnStatePropertyChanged;
+            Flags.PropertyChanged -= OnStatePropertyChanged;
         }
         
         return;
         
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (e.PropertyName == null || !IsPaused) {
+            if (sender is null || e.PropertyName == null || !IsPaused || IsLoading) {
                 return;
             }
             PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
-            PropertyInfo? propertyInfo = State.GetType().GetProperty(e.PropertyName);
+            PropertyInfo? propertyInfo = sender.GetType().GetProperty(e.PropertyName);
             if (propertyInfo is not null && originalPropertyInfo is not null) {
-                originalPropertyInfo.SetValue(state, propertyInfo.GetValue(State));
+                originalPropertyInfo.SetValue(state, propertyInfo.GetValue(sender));
             }
         }
     }
 
+    private void UpdateCpuState(State state) {
+        State.AH = state.AH;
+        State.AL = state.AL;
+        State.AX = state.AX;
+        State.EAX = state.EAX;
+        State.BH = state.BH;
+        State.BL = state.BL;
+        State.BX = state.BX;
+        State.EBX = state.EBX;
+        State.CH = state.CH;
+        State.CL = state.CL;
+        State.CX = state.CX;
+        State.ECX = state.ECX;
+        State.DH = state.DH;
+        State.DL = state.DL;
+        State.DX = state.DX;
+        State.EDX = state.EDX;
+        State.DI = state.DI;
+        State.EDI = state.EDI;
+        State.SI = state.SI;
+        State.ES = state.ES;
+        State.BP = state.BP;
+        State.EBP = state.EBP;
+        State.SP = state.SP;
+        State.ESP = state.ESP;
+        State.CS = state.CS;
+        State.DS = state.DS;
+        State.ES = state.ES;
+        State.FS = state.FS;
+        State.GS = state.GS;
+        State.SS = state.SS;
+        State.IP = state.IP;
+        State.IpPhysicalAddress = state.IpPhysicalAddress;
+        State.StackPhysicalAddress = state.StackPhysicalAddress;
+        State.SegmentOverrideIndex = state.SegmentOverrideIndex;
+        Flags.AuxiliaryFlag = state.AuxiliaryFlag;
+        Flags.CarryFlag = state.CarryFlag;
+        Flags.DirectionFlag = state.DirectionFlag;
+        Flags.InterruptFlag = state.InterruptFlag;
+        Flags.OverflowFlag = state.OverflowFlag;
+        Flags.ParityFlag = state.ParityFlag;
+        Flags.ZeroFlag = state.ZeroFlag;
+        Flags.ContinueZeroFlag = state.ContinueZeroFlagValue;
+    }
 
     public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
         VideoCard.RendererWidth = vgaRenderer.Width;
@@ -298,6 +431,94 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger {
     public void VisitVgaCard(VgaCard vgaCard) {
     }
 
+    private bool _needToUpdateDisassembly;
+    
     public void VisitCpu(Cpu cpu) {
+        if (!IsPaused) {
+            _needToUpdateDisassembly = true;
+        }
+        if (IsLoading || _needToUpdateDisassembly) {
+            UpdateDisassembly(cpu);
+            _needToUpdateDisassembly = false;
+        }
+    }
+
+    [ObservableProperty]
+    private MidiInfo _midi = new();
+
+    public void VisitExternalMidiDevice(Midi midi) {
+        Midi.LastPortRead = midi.LastPortRead;
+        Midi.LastPortWritten = midi.LastPortWritten;
+        Midi.LastPortWrittenValue = midi.LastPortWrittenValue;
+    }
+
+    [RelayCommand]
+    public void Pause() {
+        if (_programExecutor is null || _pauseStatus is null) {
+            return;
+        }
+        _pauseStatus.IsPaused = _programExecutor.IsPaused = true;
+    }
+
+    [RelayCommand]
+    public void Continue() {
+        if (_programExecutor is null || _pauseStatus is null) {
+            return;
+        }
+        _pauseStatus.IsPaused = _programExecutor.IsPaused = false;
+    }
+
+    private Cpu? _cpu;
+
+    private void UpdateDisassembly(Cpu cpu) {
+        if (_memory is null) {
+            return;
+        }
+        _cpu = cpu;
+        uint currentIp = cpu.State.IpPhysicalAddress;
+        CodeReader codeReader = CreateCodeReader(_memory, out EmulatedMemoryStream emulatedMemoryStream);
+        
+        _decoder ??= Decoder.Create(16, codeReader, currentIp,
+            DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
+        Instructions.Clear();
+
+        int byteOffset = 0;
+        emulatedMemoryStream.Position = currentIp - 10;
+        while (Instructions.Count < 50) {
+            var instructionAddress = emulatedMemoryStream.Position;
+            _decoder.Decode(out Instruction instruction);
+            CpuInstructionInfo cpuInstrunction = new CpuInstructionInfo {
+                Instruction = instruction,
+                Address = (uint)instructionAddress,
+                Length = instruction.Length,
+                IP16 = instruction.IP16,
+                IP32 = instruction.IP32,
+                MemorySegment = instruction.MemorySegment,
+                SegmentPrefix = instruction.SegmentPrefix,
+                IsStackInstruction = instruction.IsStackInstruction,
+                IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
+                IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
+                SegmentedAddress =
+                    ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + byteOffset - 10)),
+                FlowControl = instruction.FlowControl,
+                Bytes = $"{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
+            };
+            if (instructionAddress == currentIp) {
+                cpuInstrunction.IsCsIp = true;
+            }
+            Instructions.Add(cpuInstrunction);
+            byteOffset += instruction.Length;
+        }
+        emulatedMemoryStream.Dispose();
+    }
+
+    private CodeReader CreateCodeReader(IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
+        emulatedMemoryStream = new EmulatedMemoryStream(memory);
+        CodeReader codeReader = new StreamCodeReader(emulatedMemoryStream);
+        return codeReader;
+    }
+
+    public void ShowColorPalette() {
+        SelectedTab = 4;
     }
 }

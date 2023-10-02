@@ -2,12 +2,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Spice86.Views.DebugWindow"
         Title="Debug"
         xmlns:vm="using:Spice86.ViewModels"
+        xmlns:converters="clr-namespace:Spice86.Converters"
         xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
         xmlns:userControls="clr-namespace:Spice86.UserControls"
+        xmlns:views="clr-namespace:Spice86.Views"
         x:CompileBindings="True" x:DataType="vm:DebugViewModel"
         Icon="/Assets/Spice86.ico"
         CanResize="True"
@@ -16,22 +19,71 @@
     <Design.DataContext>
         <vm:DebugViewModel />
     </Design.DataContext>
-    <Grid>
-        <Grid RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
-            <ScrollViewer Grid.Row="0" DockPanel.Dock="Top">
-                <TabControl>
-                    <TabItem Header="CPU">
+    <Window.Resources>
+        <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
+    </Window.Resources>
+    <Grid RowDefinitions="Auto,*">
+        <Menu Grid.Row="0">
+            <MenuItem Header="Edit">
+                <MenuItem Header="Edit memory.." Command="{Binding EditMemoryCommand}" />
+            </MenuItem>
+        </Menu>
+        <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
+            <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
+                <TabItem Header="CPU">
+                    <ScrollViewer>
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
-                                <Label HorizontalAlignment="Center" FontWeight="Bold">State</Label>
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">Registers and misc</Label>
                                 <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding State}" />
                             </Grid>
+                            <Grid RowDefinitions="Auto,*" Margin="5">
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">Flag Registers</Label>
+                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding Flags}" />
+                            </Grid>
                         </WrapPanel>
-                    </TabItem>
-                    <TabItem Header="Memory">
-                        <userControls:HexSingleView Name="HexSingleView" MemorySource="{CompiledBinding Memory}" />
-                    </TabItem>
-                    <TabItem Header="Video Card">
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Disassembly">
+                    <Grid RowDefinitions="Auto,Auto,*">
+                        <TextBlock IsVisible="{Binding !IsPaused}" Grid.Row="0" TextWrapping="Wrap" Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive." />
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto"  HorizontalAlignment="Center" VerticalAlignment="Top">
+                            <Button Grid.Column="1" Margin="5" IsVisible="{Binding IsGdbServerAvailable}" Content="Step instruction" Command="{Binding StepInstructionCommand}" />
+                            <Button Grid.Column="2" Margin="5" Content="Pause" Command="{Binding PauseCommand}" IsVisible="{Binding !IsPaused}" />
+                            <Button Grid.Column="2" Margin="5" Content="Continue" Command="{Binding ContinueCommand}" IsVisible="{Binding IsPaused}" />
+                        </Grid>
+                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="2" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
+                                <DataGridTextColumn Header="Based on CS:IP" Binding="{Binding SegmentedAddress}" />
+                                <DataGridCheckBoxColumn Header="Is at CS:IP?" Binding="{Binding IsCsIp}" />
+                                <DataGridTextColumn Header="Disassembly (MASM)" Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" />
+                                <DataGridTextColumn Header="16-bit IP"  Binding="{Binding IP16}"/>
+                                <DataGridTextColumn Header="32-bit IP" Binding="{Binding IP32}" />
+                                <DataGridTextColumn Header="Segment Prefix" Binding="{Binding SegmentPrefix}" />
+                                <DataGridTextColumn Header="Memory Segment" Binding="{Binding MemorySegment}" />
+                                <DataGridCheckBoxColumn Header="Stack Instruction?" Binding="{Binding IsStackInstruction}" />
+                                <DataGridCheckBoxColumn Header="Is IP relative?" Binding="{Binding IsIPRelativeMemoryOperand}" />
+                                <DataGridTextColumn Header="IP relative memory address" Binding="{Binding IPRelativeMemoryAddress}" />
+                                <DataGridTextColumn Header="Bytes" Binding="{Binding Bytes}" />
+                                <DataGridTextColumn Header="Length" Binding="{Binding Length}" />
+                                <DataGridTextColumn Header="FlowControl" Binding="{Binding FlowControl}" />
+                            </DataGrid.Columns>
+                            <TextElement.FontFamily>
+                                <OnPlatform Default="{StaticResource RobotoMonoFont}">
+                                    <On Options="Windows" Content="{StaticResource ConsolasFont}" />
+                                </OnPlatform>
+                            </TextElement.FontFamily>
+                        </DataGrid>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Memory">
+                    <ScrollViewer>
+                        <userControls:HexSingleView Name="HexSingleView" MemorySource="{CompiledBinding MemoryStream}" />
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Video Card">
+                    <ScrollViewer>
                         <WrapPanel>
                             <Grid RowDefinitions="Auto,*" Margin="5">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">General registers</Label>
@@ -254,6 +306,7 @@
                                 </WrapPanel>
                             </Grid>
                             <Grid RowDefinitions="Auto,*" Margin="5">
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
                                     <TextBlock TextAlignment="Right"
                                                Text="{Binding VideoCard.CrtControllerCharacterCellHeightRegister, StringFormat='CharacterCellHeight: {0:X2}'}">
@@ -444,9 +497,7 @@
                                     <TextBlock TextAlignment="Right"
                                                Text="{Binding VideoCard.CrtControllerVerticalTotal, StringFormat='VerticalTotal: {0}'}">
                                     </TextBlock>
-
                                 </WrapPanel>
-                                <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
                             </Grid>
                             <Grid RowDefinitions="Auto,*" Margin="5">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Renderer</Label>
@@ -466,9 +517,22 @@
                                 </WrapPanel>
                             </Grid>
                         </WrapPanel>
-                    </TabItem>
-                </TabControl>
-            </ScrollViewer>
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Color Palette">
+                    <views:PaletteView DataContext="{Binding PaletteViewModel}" />
+                </TabItem>
+                <TabItem Header="General MIDI / MT-32">
+                    <ScrollViewer>
+                        <WrapPanel>
+                            <Grid RowDefinitions="Auto,*" Margin="5">
+                                <Label HorizontalAlignment="Center" FontWeight="Bold">Ports</Label>
+                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding Midi}" />
+                            </Grid>
+                        </WrapPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
                 <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal">
                     <TextBlock VerticalAlignment="Bottom" Margin="0,0,5,0"
@@ -477,13 +541,35 @@
                     <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Force Update"
                             Command="{Binding UpdateDataCommand}">
                     </Button>
-                    <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Refresh Memory View"
-                            Command="{Binding RefreshMemoryViewCommand}">
-                    </Button>
-
                 </WrapPanel>
             </Border>
         </Grid>
-        <TextBlock Text="Loading..." IsVisible="{Binding IsLoading}"/>
+        <dialogHost:DialogHost Grid.Row="0" Grid.RowSpan="2" IsOpen="{Binding IsEditingMemory}" CloseOnClickAway="False">
+            <dialogHost:DialogHost.DialogContent>
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <Label Grid.Row="0" Content="Edit memory..." FontWeight="Bold" HorizontalAlignment="Center" />
+                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" Grid.Row="1">
+                        <Label Grid.Row="0" Grid.Column="0" Content="Memory Address:"></Label>
+                        <TextBox Grid.Row="0" Grid.Column="1" Watermark="linear or segmented address" Text="{Binding MemoryEditAddress}" />
+                        <Label Grid.Row="1" Grid.Column="0" Content="Bytes:"></Label>
+                        <TextBox Grid.Row="1" Grid.Column="1" Watermark="hexadecimal format" Text="{Binding MemoryEditValue}" />
+                    </Grid>
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Grid.Row="2">
+                        <Button Content="OK" IsDefault="True" Command="{Binding ApplyMemoryEditCommand}" />
+                        <Button Content="Cancel" IsCancel="True" Command="{Binding CancelMemoryEditCommand}" />
+                    </StackPanel>
+                </Grid>
+            </dialogHost:DialogHost.DialogContent>
+        </dialogHost:DialogHost>
+        <dialogHost:DialogHost Grid.Row="0" Grid.RowSpan="2" IsOpen="{Binding IsDialogVisible}" CloseOnClickAway="False">
+            <dialogHost:DialogHost.DialogContent>
+                <Grid RowDefinitions="Auto,Auto,Auto">
+                    <Label Grid.Row="0" Content="Validation Error" FontWeight="Bold" HorizontalAlignment="Center" />
+                    <TextBlock Grid.Row="1" Text="{Binding Exception.Message}" />
+                    <Button Grid.Row="2" Content="OK" IsDefault="True" Command="{Binding ClearDialogCommand}" />
+                </Grid>
+            </dialogHost:DialogHost.DialogContent>
+        </dialogHost:DialogHost>
+        <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="Loading..." IsVisible="{Binding IsLoading}"/>
     </Grid>
 </Window>

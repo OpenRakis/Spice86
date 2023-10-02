@@ -110,7 +110,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     public IMemory Memory { get; }
 
     /// <summary>
-    /// The General MIDI (MPU-401) or MT-32 device.
+    /// The General MIDI or MT-32 device.
     /// </summary>
     public Midi MidiDevice { get; }
 
@@ -201,7 +201,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         }
         BiosDataArea = new BiosDataArea(Memory);
         CpuState = new State();
-        DualPic = DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
+        DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
         MachineBreakpoints = new(Memory, CpuState, loggerService);
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
@@ -356,10 +356,11 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     }
 
     public void Accept(IEmulatorDebugger emulatorDebugger) {
+        Memory.Accept(emulatorDebugger);
         Cpu.Accept(emulatorDebugger);
         VgaCard.Accept(emulatorDebugger);
         VgaRenderer.Accept(emulatorDebugger);
         VgaRegisters.Accept(emulatorDebugger);
-        Memory.Accept(emulatorDebugger);
+        MidiDevice.Accept(emulatorDebugger);
     }
 }

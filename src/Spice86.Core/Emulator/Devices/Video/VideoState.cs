@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 
 /// <inheritdoc />
-public class VideoState : IVideoState, IDebuggableComponent {
+public class VideoState : IVideoState {
     /// <summary>
     ///     Creates a new instance of the <see cref="VideoState" /> class.
     /// </summary>

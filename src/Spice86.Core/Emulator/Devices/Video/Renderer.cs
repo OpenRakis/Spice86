@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using System.Diagnostics;
 
 /// <inheritdoc />
-public class Renderer : IVgaRenderer, IDebuggableComponent {
+public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly IVideoMemory _memory;
     private readonly IVideoState _state;

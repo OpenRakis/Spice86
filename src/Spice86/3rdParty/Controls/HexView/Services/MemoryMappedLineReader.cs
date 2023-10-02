@@ -4,9 +4,9 @@ using Spice86._3rdParty.Controls.HexView.Models;
 using Spice86.Core.Emulator.Memory;
 
 public class MemoryMappedLineReader : ILineReader {
-    private readonly IMemory _memory;
+    private readonly Stream _memory;
 
-    public MemoryMappedLineReader(IMemory memory) {
+    public MemoryMappedLineReader(Stream memory) {
         _memory = memory;
     }
 
@@ -19,7 +19,11 @@ public class MemoryMappedLineReader : ILineReader {
             if (position > _memory.Length) {
                 break;
             }
-            bytes[i] = _memory.UInt8[position];
+            int value = _memory.ReadByte();
+            if (value == -1) {
+                break;
+            }
+            bytes[i] = (byte)value;
         }
         return bytes;
     }

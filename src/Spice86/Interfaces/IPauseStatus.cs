@@ -1,5 +1,7 @@
 namespace Spice86.Interfaces;
 
-public interface IPauseStatus {
-    bool IsPaused { get; }
+using System.ComponentModel;
+
+public interface IPauseStatus : INotifyPropertyChanged {
+    bool IsPaused { get; set; }
 }

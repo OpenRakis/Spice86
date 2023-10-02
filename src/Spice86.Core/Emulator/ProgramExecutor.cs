@@ -64,7 +64,18 @@ public sealed class ProgramExecutor : IProgramExecutor, IDebuggableComponent {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
     }
-    
+
+    public bool IsGdbCommandHandlerAvailable => _gdbServer?.IsGdbCommandHandlerAvailable is true;
+
+    /// <summary>
+    /// Steps a single instruction for the internal UI debugger
+    /// </summary>
+    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
+    public void StepInstruction() {
+        _gdbServer?.StepInstruction();
+        IsPaused = false;
+    }
+
     public void DumpEmulatorStateToDirectory(string path) {
         new RecorderDataWriter(Machine.Memory,
                 Machine.Cpu.State, Machine.CallbackHandler, _configuration,

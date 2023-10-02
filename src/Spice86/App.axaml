@@ -2,14 +2,21 @@
     x:Class="Spice86.App"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+    xmlns:spice86="clr-namespace:Spice86"
     RequestedThemeVariant="Default">
     <Application.Resources>
         <FontFamily x:Key="RobotoMonoFont">avares://Spice86/Assets#Roboto Mono</FontFamily>
         <FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
     </Application.Resources>
+    <Application.DataTemplates>
+        <spice86:ViewLocator />
+    </Application.DataTemplates>
     <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
     <Application.Styles>
         <FluentTheme DensityStyle="Compact" />
+        <dialogHostAvalonia:DialogHostStyles />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
         <StyleInclude Source="avares://Semi.Avalonia/Themes/Index.axaml" />
     </Application.Styles>
 </Application>

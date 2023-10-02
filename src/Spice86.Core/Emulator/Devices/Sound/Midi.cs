@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Sound;
@@ -10,7 +11,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// MPU401 MIDI interface implementation.
 /// </summary>
-public sealed class Midi : DefaultIOPortHandler, IDisposable {
+public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableComponent {
     /// <summary>
     /// The port number used for MIDI commands.
     /// </summary>
@@ -36,8 +37,10 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         _generalMidi = new GeneralMidi(audioPlayerFactory, mt32RomsPath, loggerService);
     }
     
+    
     /// <inheritdoc />
     public override byte ReadByte(int port) {
+        UpdateLastPortRead(port);
         return _generalMidi.ReadByte(port);
     }
 
@@ -46,9 +49,10 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         ioPortDispatcher.AddIOPortHandler(Data, this);
         ioPortDispatcher.AddIOPortHandler(Command, this);
     }
-
+    
     /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
+        UpdateLastPortWrite(port, value);
         _generalMidi.WriteByte(port, value);
     }
 
@@ -66,5 +70,9 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitExternalMidiDevice(this);
     }
 }

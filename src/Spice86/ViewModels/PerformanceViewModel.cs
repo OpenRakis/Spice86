@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Memory;
@@ -41,15 +42,11 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
 
         InstructionsExecuted = _state.Cycles;
         _performanceMeasurer.UpdateValue(_state.Cycles);
-        InstructionsPerSecond = _performanceMeasurer.ValuePerSecond;
         AverageInstructionsPerSecond = _performanceMeasurer.AverageValuePerSecond;
     }
 
     [ObservableProperty]
     private double _instructionsExecuted;
-
-    [ObservableProperty]
-    private double _instructionsPerSecond = -1;
 
     public void VisitMainMemory(IMemory memory) {
     }
@@ -74,6 +71,6 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
     public void VisitCpu(Cpu cpu) {
     }
 
-    public void VisitCpuFlags(Flags flags) {
+    public void VisitExternalMidiDevice(Midi midi) {
     }
 }
