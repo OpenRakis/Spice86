@@ -10,5 +10,5 @@ public interface IProgramExecutor : IDisposable, IDebuggableComponent {
     void DumpEmulatorStateToDirectory(string path);
     bool IsPaused { get; set; }
     bool IsGdbCommandHandlerAvailable { get; }
-    void StepInto();
+    void StepInstruction();
 }

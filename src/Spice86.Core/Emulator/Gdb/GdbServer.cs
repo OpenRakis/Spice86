@@ -189,7 +189,7 @@ public sealed class GdbServer : IDisposable {
         _waitFirstConnectionHandle?.Set();
     }
 
-    public void StepInto() {
+    public void StepInstruction() {
         GdbCommandHandler?.Step();
     }
 }

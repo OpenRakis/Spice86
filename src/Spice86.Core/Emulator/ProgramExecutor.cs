@@ -68,11 +68,11 @@ public sealed class ProgramExecutor : IProgramExecutor, IDebuggableComponent {
     public bool IsGdbCommandHandlerAvailable => _gdbServer?.IsGdbCommandHandlerAvailable is true;
 
     /// <summary>
-    /// Steps into code for the internal UI debugger
+    /// Steps a single instruction for the internal UI debugger
     /// </summary>
     /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
-    public void StepInto() {
-        _gdbServer?.StepInto();
+    public void StepInstruction() {
+        _gdbServer?.StepInstruction();
         IsPaused = false;
     }
 

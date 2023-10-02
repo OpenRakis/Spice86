@@ -53,8 +53,8 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void StepInto() {
-        _programExecutor?.StepInto();
+    public void StepInstruction() {
+        _programExecutor?.StepInstruction();
         IsLoading = true;
         UpdateData();
     }
@@ -63,7 +63,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     public void UpdateData() => UpdateValues(this, EventArgs.Empty);
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
     [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
     private bool _isPaused;
 
