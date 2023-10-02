@@ -64,6 +64,24 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     }
 
     /// <summary>
+    /// Updates the <see cref="LastPortRead"/> for the internal UI debugger.
+    /// </summary>
+    /// <param name="port">The port number</param>
+    protected void UpdateLastPortRead(int port) {
+        LastPortRead = port;
+    }
+
+    /// <summary>
+    /// Updates the <see cref="LastPortWritten"/> and value for the internal UI debugger.
+    /// </summary>
+    /// <param name="port">The port number</param>
+    /// <param name="value">The value written to the port.</param>
+    protected void UpdateLastPortWrite(int port, int value) {
+        LastPortWritten = port;
+        LastPortWrittenValue = value;
+    }
+
+    /// <summary>
     /// Read a byte from the specified port.
     /// </summary>
     /// <param name="port">The port to read from.</param>

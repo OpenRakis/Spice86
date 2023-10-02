@@ -40,7 +40,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     
     /// <inheritdoc />
     public override byte ReadByte(int port) {
-        LastPortRead = port;
+        UpdateLastPortRead(port);
         return _generalMidi.ReadByte(port);
     }
 
@@ -52,8 +52,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     
     /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
-        LastPortWritten = port;
-        LastPortWrittenValue = value;
+        UpdateLastPortWrite(port, value);
         _generalMidi.WriteByte(port, value);
     }
 
