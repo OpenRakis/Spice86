@@ -18,8 +18,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.1.7</version>
-		<PackageReleaseNotes>Fix: Menu UI stealing focus from emulator via dead keys.</PackageReleaseNotes>
+		<version>6.1.8</version>
+		<PackageReleaseNotes>UI: Disassembly view, Memory editing.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode DOS programs</Description>
