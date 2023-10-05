@@ -583,6 +583,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
         PerformanceViewModel = new(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer());
+        DebugViewModel = new DebugViewModel(_uiDispatcherTimer, this);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
