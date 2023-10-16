@@ -44,7 +44,7 @@ COM files and BIOS files are also supported.
 ## Dumping data
 It is recommended to set SPICE86_DUMPS_FOLDER environment variable pointing to where the emulator should dump the runtime data.
 If the variable is set or if --RecordedDataDirectory parameter is passed, the emulator will dump a bunch of information about the run there. If nothing is set, data will be dumped in the current directory.
-If there are already data there the emulator will load them first and complete them, you don't need to start from zero each time!
+If there is already data there the emulator will load it first and complete it, you don't need to start from zero each time!
 
 ## More command line options
 
