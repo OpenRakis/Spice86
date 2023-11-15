@@ -68,7 +68,7 @@
 		<PackageReference Include="System.IO.UnmanagedMemoryStream" Version="4.3.0" />
 		<PackageReference Include="System.Memory" Version="4.5.5" />
 		<PackageReference Include="System.Memory.Data" Version="7.0.0" />
-		<PackageReference Include="System.Text.Encoding.CodePages" Version="7.0.0" />
+		<PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
 		<PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
