@@ -5,7 +5,6 @@ using System;
 /// <summary>
 /// Exception thrown when an unrecoverable error occurs and the emulator cannot continue normal operation.
 /// </summary>
-[Serializable]
 public class UnrecoverableException : Exception {
     /// <summary>
     /// Initializes a new instance of the UnrecoverableException class.
@@ -27,13 +26,4 @@ public class UnrecoverableException : Exception {
     /// <param name="inner">The exception that is the cause of the current exception, or a null reference if no inner exception is specified.</param>
     public UnrecoverableException(string message, Exception inner) : base(message, inner) {
     }
-
-    /// <summary>
-    /// Initializes a new instance of the UnrecoverableException class with serialized data.
-    /// </summary>
-    /// <param name="info">The SerializationInfo that holds the serialized object data about the exception being thrown.</param>
-    /// <param name="context">The StreamingContext that contains contextual information about the source or destination.</param>
-    protected UnrecoverableException(
-      System.Runtime.Serialization.SerializationInfo info,
-      System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
 }
