@@ -31,12 +31,12 @@ public sealed class PortAudioEngine : IAudioEngine {
     public PortAudioEngine(int framesPerBuffer, AudioEngineOptions? options = default) {
         _options = options ?? new AudioEngineOptions();
 
-        PaStreamParameters parameters = new PaStreamParameters {
-            channelCount = _options.Channels,
-            device = _options.DefaultAudioDevice.DeviceIndex,
-            hostApiSpecificStreamInfo = IntPtr.Zero,
-            sampleFormat = (PaSampleFormat)PortAudioLib.Constants.PaSampleFormat,
-            suggestedLatency = _options.Latency
+        PaStreamParameters parameters = new() {
+            ChannelCount = _options.Channels,
+            Device = _options.DefaultAudioDevice.DeviceIndex,
+            HostApiSpecificStreamInfo = IntPtr.Zero,
+            SampleFormat = (PaSampleFormat)PortAudioLib.Constants.PaSampleFormat,
+            SuggestedLatency = _options.Latency
         };
 
         IntPtr stream;
