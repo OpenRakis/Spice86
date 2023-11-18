@@ -60,9 +60,8 @@ public class Counter {
     /// <summary>
     /// TODO: Use <paramref name="currentCycles"/>
     /// </summary>
-    /// <param name="currentCycles"></param>
-    /// <returns></returns>
-    public bool ProcessActivation(long currentCycles) {
+    /// <returns>Whether the activation was processed.</returns>
+    public bool ProcessActivation() {
         if (Activator.IsActivated) {
             Ticks--;
             return true;
