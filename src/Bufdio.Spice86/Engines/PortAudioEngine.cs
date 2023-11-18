@@ -10,7 +10,7 @@ using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities.Extensions;
 
 /// <summary>
-/// Interact with output audio device by using PortAudio library.
+/// Interact with output audio device by using the PortAudio library.
 /// This class cannot be inherited.
 /// <para>Implements: <see cref="IAudioEngine"/>.</para>
 /// </summary>
