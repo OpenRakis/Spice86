@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
+using System.Collections.Frozen;
 using System.Threading;
 
 using Serilog.Events;
@@ -91,26 +92,26 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
     private bool _disposed;
 
-    private static readonly SortedList<byte, byte> CommandLengths = new() {
-        [Commands.SetTimeConstant] = 1,
-        [Commands.SingleCycleDmaOutput8] = 2,
-        [Commands.DspIdentification] = 1,
-        [Commands.SetBlockTransferSize] = 2,
-        [Commands.SetSampleRate] = 2,
-        [Commands.SetInputSampleRate] = 2,
-        [Commands.SingleCycleDmaOutput16] = 3,
-        [Commands.AutoInitDmaOutput16] = 3,
-        [Commands.SingleCycleDmaOutput16Fifo] = 3,
-        [Commands.AutoInitDmaOutput16Fifo] = 3,
-        [Commands.SingleCycleDmaOutput8_Alt] = 3,
-        [Commands.AutoInitDmaOutput8_Alt] = 3,
-        [Commands.SingleCycleDmaOutput8Fifo_Alt] = 3,
-        [Commands.AutoInitDmaOutput8Fifo_Alt] = 3,
-        [Commands.PauseForDuration] = 2,
-        [Commands.SingleCycleDmaOutputADPCM4Ref] = 2,
-        [Commands.SingleCycleDmaOutputADPCM2Ref] = 2,
-        [Commands.SingleCycleDmaOutputADPCM3Ref] = 2
-    };
+    private static readonly FrozenDictionary<byte, byte> CommandLengths = new Dictionary<byte, byte>() {
+        {Commands.SetTimeConstant, 1},
+        {Commands.SingleCycleDmaOutput8, 2},
+        {Commands.DspIdentification, 1},
+        {Commands.SetBlockTransferSize, 2},
+        {Commands.SetSampleRate, 2},
+        {Commands.SetInputSampleRate, 2},
+        {Commands.SingleCycleDmaOutput16, 3},
+        {Commands.AutoInitDmaOutput16, 3},
+        {Commands.SingleCycleDmaOutput16Fifo, 3},
+        {Commands.AutoInitDmaOutput16Fifo, 3},
+        {Commands.SingleCycleDmaOutput8_Alt, 3},
+        {Commands.AutoInitDmaOutput8_Alt, 3},
+        {Commands.SingleCycleDmaOutput8Fifo_Alt, 3},
+        {Commands.AutoInitDmaOutput8Fifo_Alt, 3},
+        {Commands.PauseForDuration, 2},
+        {Commands.SingleCycleDmaOutputADPCM4Ref, 2},
+        {Commands.SingleCycleDmaOutputADPCM2Ref, 2},
+        {Commands.SingleCycleDmaOutputADPCM3Ref, 2}
+    }.ToFrozenDictionary();
 
     private readonly List<byte> _commandData = new();
     private readonly int _dma16;
@@ -152,7 +153,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _dualPic = dualPic;
         _mixer = new Mixer(this);
         _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
-        _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this, DMA, _dma16);
+        _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this);
         _playbackThread = new Thread(AudioPlayback) {
             Name = "PCMAudio",
         };
@@ -256,7 +257,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// The list of input ports.
     /// </summary>
-    public IEnumerable<int> InputPorts => new int[] { DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData };
+    public FrozenSet<int> InputPorts => new int[] { DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData }.ToFrozenSet();
 
     /// <summary>
     /// Gets the hardware IRQ assigned to the device.
@@ -266,7 +267,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// The list of output ports.
     /// </summary>
-    public IEnumerable<int> OutputPorts => new int[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress };
+    public FrozenSet<int> OutputPorts => new int[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress }.ToFrozenSet();
 
     /// <inheritdoc />
     public void Dispose() {

@@ -2,6 +2,7 @@
 
 using Spice86.Shared.Emulator.Keyboard;
 
+using System.Collections.Frozen;
 using System.Collections.Generic;
 
 /// <inheritdoc cref="IAvaloniaKeyScanCodeConverter" />
@@ -9,12 +10,12 @@ public class AvaloniaKeyScanCodeConverter : IAvaloniaKeyScanCodeConverter {
     /// <summary>
     /// A dictionary that maps <see cref="Key"/> values to their corresponding keyboard scan codes.
     /// </summary>
-    private static readonly Dictionary<Key, byte> _keyPressedScanCode;
+    private static readonly FrozenDictionary<Key, byte> _keyPressedScanCode;
     
     /// <summary>
     /// A dictionary that maps keyboard scan codes to their corresponding ASCII codes.
     /// </summary>
-    private static readonly Dictionary<byte, byte> _scanCodeToAscii;
+    private static readonly FrozenDictionary<byte, byte> _scanCodeToAscii;
 
     /// <summary>
     /// Initializes static members of the <see cref="AvaloniaKeyScanCodeConverter"/> class.
@@ -108,7 +109,7 @@ public class AvaloniaKeyScanCodeConverter : IAvaloniaKeyScanCodeConverter {
             {Key.Delete, 0x53},
             //{Key.D5, 0x4C}, ?
             {Key.Multiply, 0x37},
-        };
+        }.ToFrozenDictionary();
         _scanCodeToAscii = new Dictionary<byte, byte>()
         {
             {0x01, 0x1B},
@@ -167,7 +168,7 @@ public class AvaloniaKeyScanCodeConverter : IAvaloniaKeyScanCodeConverter {
             {0x4A, 0x2D},
             {0x4C, 0x35},
             {0x4E, 0x2B},
-        };
+        }.ToFrozenDictionary();
     }
 
     /// <inheritdoc />

@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 /// <summary>
 ///     Event arguments for the video mode changed event.
 /// </summary>
-public class VideoModeChangedEventArgs : EventArgs {
+public readonly record struct VideoModeChangedEventArgs {
     /// <summary>
     ///     Instantiates a new instance of <see cref="VideoModeChangedEventArgs" />.
     /// </summary>
@@ -17,5 +17,5 @@ public class VideoModeChangedEventArgs : EventArgs {
     /// <summary>
     ///     The new video mode.
     /// </summary>
-    public VgaMode NewMode { get; }
+    public VgaMode NewMode { get; init; }
 }

@@ -4,14 +4,14 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -19,8 +19,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Spice86.Core.Emulator.Memory.Indexable;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
 /// Implements the DOS interrupt dispatcher

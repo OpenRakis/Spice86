@@ -1,9 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
-using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 
