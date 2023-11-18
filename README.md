@@ -370,7 +370,7 @@ Stunts:
 
 ![](doc/stunts_skid.PNG)
 
-### Credits
+## Credits
 
 Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Those are: The DMA Controller, the PC Speaker, the SoundBlaster, the MT-32, and General MIDI.
 
