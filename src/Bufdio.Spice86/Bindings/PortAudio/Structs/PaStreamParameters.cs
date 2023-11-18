@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 using Bufdio.Spice86.Bindings.PortAudio.Enums;
 
 [StructLayout(LayoutKind.Sequential)]
-internal record struct PaStreamParameters
+internal readonly record struct PaStreamParameters
 {
-    public int device;
-    public int channelCount;
-    public PaSampleFormat sampleFormat;
-    public double suggestedLatency;
-    public IntPtr hostApiSpecificStreamInfo;
+    public readonly int Device { get; init; }
+    public readonly int ChannelCount { get; init; }
+    public readonly PaSampleFormat SampleFormat { get; init; }
+    public readonly double SuggestedLatency { get; init; }
+    public readonly IntPtr HostApiSpecificStreamInfo { get; init; }
 }

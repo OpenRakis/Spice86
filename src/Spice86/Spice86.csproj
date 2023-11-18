@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -30,7 +30,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<Content Include="libportaudio.dll">
-			<PackagePath>lib\net7.0\libportaudio.dll</PackagePath>
+			<PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<Pack>True</Pack>
 		</Content>
