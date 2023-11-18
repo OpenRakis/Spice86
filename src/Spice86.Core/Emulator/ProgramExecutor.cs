@@ -26,7 +26,7 @@ using Spice86.Shared.Utils;
 /// Loads and executes a program following the given configuration in the emulator.<br/>
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
-public sealed class ProgramExecutor : IProgramExecutor, IDebuggableComponent {
+public sealed class ProgramExecutor : IProgramExecutor {
     private readonly ILoggerService _loggerService;
     private bool _disposed;
     private readonly Configuration _configuration;
