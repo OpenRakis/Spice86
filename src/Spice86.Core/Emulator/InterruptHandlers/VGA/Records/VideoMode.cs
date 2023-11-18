@@ -1,7 +1,4 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
-
-using System.Collections.Frozen;
-
 /// <summary>
 ///     Represents a VGA video mode.
 /// </summary>
