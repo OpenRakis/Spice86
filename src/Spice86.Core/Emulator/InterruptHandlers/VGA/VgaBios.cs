@@ -24,7 +24,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <summary>
     ///     VGA BIOS constructor.
     /// </summary>
-    /// <param name="machine">The machine hosting the bios.</param>
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">A logger</param>

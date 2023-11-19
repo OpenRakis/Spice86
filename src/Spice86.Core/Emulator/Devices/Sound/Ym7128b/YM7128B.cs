@@ -2,6 +2,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 
 using System;
+using System.Collections.Frozen;
 using System.Collections.ObjectModel;
 using System.Diagnostics.Contracts;
 
@@ -11,7 +12,7 @@ public static class Ym7128B {
 
     public const string Version = "0.1.1";
 
-    static readonly ReadOnlyCollection<sbyte> GainDecibelTable = Array.AsReadOnly(new sbyte[]
+    static readonly FrozenSet<sbyte> GainDecibelTable = new sbyte[]
     {
     -128,  //  0 = -oo
     - 60,  //  1
@@ -45,11 +46,11 @@ public static class Ym7128B {
     -  4,  // 29
     -  2,  // 30
        0   // 31
-});
+}.ToFrozenSet();
 
     private static int GainFixed(double real) => (short)(real * (int)ImplementationSpecs.GainMax) & unchecked((short)ImplementationSpecs.GainMask);
 
-    static readonly ReadOnlyCollection<short> GainFixedTable = Array.AsReadOnly(new[]
+    static readonly FrozenSet<short> GainFixedTable = new short[]
 {
     // Pseudo-negative gains
     (short)~GainFixed(0.000000000000000000),  // -oo dB-
@@ -118,8 +119,9 @@ public static class Ym7128B {
     (short)+GainFixed(0.630957344480193250),  // - 4 dB(short)+
     (short)+GainFixed(0.794328234724281490),  // - 2 dB(short)+
     (short)+GainFixed(1.000000000000000000)   // - 0 dB+
-});
-    static readonly ReadOnlyCollection<double> GainFloatTable = Array.AsReadOnly(new[]
+}.ToFrozenSet();
+
+    static readonly FrozenSet<double> GainFloatTable = new double[]
 {
     // Negative gains
     -0.000000000000000000,  // -oo dB-
@@ -188,11 +190,11 @@ public static class Ym7128B {
     +0.630957344480193250,  // - 4 dB+
     +0.794328234724281490,  // - 2 dB+
     +1.000000000000000000   // - 0 dB+
-});
+}.ToFrozenSet();
 
     private static short GainShort(double real) => (short)(real * (int)ImplementationSpecs.GainMax);
 
-    static readonly ReadOnlyCollection<short> GainShortTable = Array.AsReadOnly(new[]
+    static readonly FrozenSet<short> GainShortTable = new short[]
     {
         // Negative gains
         (short)-GainShort(0.000000000000000000),  // -oo dB-
@@ -261,11 +263,11 @@ public static class Ym7128B {
         (short)+GainShort(0.630957344480193250),  // - 4 dB(short)+
         (short)+GainShort(0.794328234724281490),  // - 2 dB(short)+
         (short)+GainShort(1.000000000000000000)   // - 0 dB(short)+
-    });
+    }.ToFrozenSet();
 
     private static ushort Tap(int index) => (ushort)(index * ((int)DatasheetSpecs.BufferLength - 1) / ((int)DatasheetSpecs.TapValueCount - 1));
 
-    static readonly ReadOnlyCollection<ushort> TapTable = Array.AsReadOnly(new[]
+    static readonly FrozenSet<ushort> TapTable = new ushort[]
 {
     Tap( 0),  //   0.0 ms
     Tap( 1),  //   3.2 ms
@@ -299,15 +301,15 @@ public static class Ym7128B {
     Tap(29),  //  93.6 ms
     Tap(30),  //  96.8 ms
     Tap(31)   // 100.0 ms
-});
+}.ToFrozenSet();
 
     private static short Kernel(double real) {
         unchecked {
-            return ((short)(((short)real) * ((short)ImplementationSpecs.FixedMax) & ((short)ImplementationSpecs.CoeffMask)));
+            return (short)(((short)real) * ((short)ImplementationSpecs.FixedMax) & ((short)ImplementationSpecs.CoeffMask));
         }
     }
 
-    static readonly ReadOnlyCollection<short> OversamplerFixedKernelTable = Array.AsReadOnly(new[]
+    static readonly FrozenSet<short> OversamplerFixedKernelTable = new short[]
 {
 #if YM7128B_USE_MINPHASE
     // minimum phase
@@ -352,7 +354,7 @@ public static class Ym7128B {
     Kernel(-0.003826518613910499),
     Kernel(+0.005969087803865891)
 #endif
-});
+}.ToFrozenSet();
 
     public static short OversamplerFixedProcess(
         ref OversamplerFixed self,
@@ -362,7 +364,7 @@ public static class Ym7128B {
             short sample = self.Buffer[i];
             self.Buffer[i] = input;
             input = sample;
-            short kernel = OversamplerFixedKernelTable[i];
+            short kernel = OversamplerFixedKernelTable.Items[i];
             short oversampled = MulFixed(sample, kernel);
             accum += oversampled;
         }
@@ -583,7 +585,7 @@ public static class Ym7128B {
 
     public static ushort RegisterToTap(byte data) {
         byte i = (byte)(data & (int)DatasheetSpecs.TapValueMask);
-        ushort t = TapTable[i];
+        ushort t = TapTable.Items[i];
         return t;
     }
 
@@ -598,19 +600,19 @@ public static class Ym7128B {
 
     private static short RegisterToGainFixed(byte data) {
         byte i = (byte)(data & (int)DatasheetSpecs.GainDataMask);
-        short g = GainFixedTable[i];
+        short g = GainFixedTable.Items[i];
         return g;
     }
 
     private static double RegisterToGainFloat(byte data) {
         byte i = (byte)(data & (int)DatasheetSpecs.GainDataMask);
-        double g = GainFloatTable[i];
+        double g = GainFloatTable.Items[i];
         return g;
     }
 
     private static short RegisterToGainShort(byte data) {
         byte i = (byte)(data & (int)DatasheetSpecs.GainDataMask);
-        short g = GainShortTable[i];
+        short g = GainShortTable.Items[i];
         return g;
     }
 

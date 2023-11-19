@@ -1,14 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Blaster;
 
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Memory;
 
 using System;
 using System.Threading;
-
-using Spice86.Core.Emulator.Memory;
-
-using Spice86.Core.Emulator.VM;
 
 /// <summary>
 /// Emulates the Sound Blaster 16 DSP.
@@ -20,9 +16,7 @@ public sealed class Dsp {
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
     /// <param name="soundCard">The host sound-card, used to raise interrupts.</param>
-    /// <param name="dma8">8-bit DMA channel for the DSP device.</param>
-    /// <param name="dma16">16-bit DMA channel for the DSP device.</param>
-    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, IRequestInterrupt soundCard, int dma8, int dma16) {
+    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, IRequestInterrupt soundCard) {
         dmaChannel8 = eightBitDmaChannel;
         dmaChannel16 = sixteenBitDmaChannel;
         SampleRate = 22050;

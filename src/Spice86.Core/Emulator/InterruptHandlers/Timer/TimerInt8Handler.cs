@@ -5,7 +5,6 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -19,7 +18,6 @@ public class TimerInt8Handler : InterruptHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="memory">The memory bus.</param>

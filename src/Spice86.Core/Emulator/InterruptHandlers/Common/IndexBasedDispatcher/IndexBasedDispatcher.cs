@@ -2,11 +2,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
-
-using System.Collections;
-using System.Linq;
 
 /// <summary>
 /// Base class for most classes having to dispatch operations depending on a numeric value, like interrupts.

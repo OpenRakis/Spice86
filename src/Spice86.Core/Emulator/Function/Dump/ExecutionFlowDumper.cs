@@ -1,15 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.Function.Dump;
 
-using System.Diagnostics;
-using System.IO;
-
-using System.Text.Json;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
+
+using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
 
 /// <summary>
 /// Provides functionality for dumping and reading execution flow data to and from a file.

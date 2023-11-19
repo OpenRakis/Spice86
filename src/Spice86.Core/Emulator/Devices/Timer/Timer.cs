@@ -114,12 +114,11 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     }
 
     public void Tick() {
-        long cycles = _state.Cycles;
-        if (_counters[0].ProcessActivation(cycles)) {
+        if (_counters[0].ProcessActivation()) {
             _dualPic.ProcessInterruptRequest(0);
         }
 
-        if (_vgaScreenRefreshCounter.ProcessActivation(cycles)) {
+        if (_vgaScreenRefreshCounter.ProcessActivation()) {
             _vgaCard?.UpdateScreen();
         }
     }
