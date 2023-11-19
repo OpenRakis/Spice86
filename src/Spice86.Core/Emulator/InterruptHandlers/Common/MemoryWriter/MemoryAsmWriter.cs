@@ -76,7 +76,7 @@ public class MemoryAsmWriter : MemoryWriter {
         if (inMemoryAddressSwitcher.DefaultAddress is null) {
             throw new UnrecoverableException("Cannot write a FAR call to a null address.");
         }
-        inMemoryAddressSwitcher.PhysicalLocation = WriteFarCall(inMemoryAddressSwitcher.DefaultAddress).ToPhysical();
+        inMemoryAddressSwitcher.PhysicalLocation = WriteFarCall(inMemoryAddressSwitcher.DefaultAddress.Value).ToPhysical();
     }
 
     /// <summary>

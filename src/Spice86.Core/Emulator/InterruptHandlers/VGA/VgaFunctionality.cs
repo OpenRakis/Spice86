@@ -1166,7 +1166,7 @@ public class VgaFunctionality : IVgaFunctionality {
         } else {
             address = GetInterruptVectorAddress(0x43);
         }
-        address.Offset += (ushort)(character * characterHeight);
+        address = new SegmentedAddress(address.Segment, (ushort)(address.Offset + (ushort)(character * characterHeight)));
         return address;
     }
 

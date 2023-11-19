@@ -46,6 +46,6 @@ public class InMemoryAddressSwitcher {
             return;
         }
 
-        SetAddress(DefaultAddress.Segment, DefaultAddress.Offset);
+        SetAddress(DefaultAddress.Value.Segment, DefaultAddress.Value.Offset);
     }
 }
