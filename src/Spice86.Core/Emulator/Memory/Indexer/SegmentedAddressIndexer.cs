@@ -10,15 +10,18 @@ using Spice86.Shared.Emulator.Memory;
 /// Instantiates objects of type SegmentedAddress for the return address.
 /// </summary>
 public class SegmentedAddressIndexer : Indexer<SegmentedAddress> {
-    private readonly SegmentedAddressValueIndexer _segmentedAddressValueIndexer;
+    private readonly UInt16Indexer _uInt16Indexer;
 
-    public SegmentedAddressIndexer(SegmentedAddressValueIndexer segmentedAddressValueIndexer) {
-        _segmentedAddressValueIndexer = segmentedAddressValueIndexer;
+    public SegmentedAddressIndexer(UInt16Indexer uInt16Indexer) {
+        _uInt16Indexer = uInt16Indexer;
     }
 
     /// <inheritdoc/>
     public override SegmentedAddress this[uint address] {
-        get => new SegmentedAddress(_segmentedAddressValueIndexer[address]);
-        set => _segmentedAddressValueIndexer[address] = (value.Segment, value.Offset);
+        get => new(_uInt16Indexer[address + 2], _uInt16Indexer[address]);
+        set {
+            _uInt16Indexer[address] = value.Offset;
+            _uInt16Indexer[address + 2] = value.Segment;
+        }
     }
 }

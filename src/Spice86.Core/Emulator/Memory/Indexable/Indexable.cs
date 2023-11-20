@@ -51,21 +51,13 @@ public abstract class Indexable : IIndexable {
     }
 
     /// <summary>
-    ///     Allows indexed 16 bit Offset / Segment access to the memory.
-    /// </summary>
-    public abstract SegmentedAddressValueIndexer SegmentedAddressValue {
-        get;
-    }
-
-    /// <summary>
     ///     Allows indexed 16 bit Offset / Segment access to the memory as SegmentedAddress Object.
     /// </summary>
     public abstract SegmentedAddressIndexer SegmentedAddress {
         get;
     }
 
-    public static (UInt8Indexer, UInt16Indexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer,
-        SegmentedAddressValueIndexer, SegmentedAddressIndexer) InstantiateIndexersFromByteReaderWriter(
+    public static (UInt8Indexer, UInt16Indexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer, SegmentedAddressIndexer) InstantiateIndexersFromByteReaderWriter(
             IByteReaderWriter byteReaderWriter) {
         UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter);
         UInt16Indexer uInt16 = new UInt16Indexer(byteReaderWriter);
@@ -73,9 +65,8 @@ public abstract class Indexable : IIndexable {
         Int8Indexer int8 = new Int8Indexer(uInt8);
         Int16Indexer int16 = new Int16Indexer(uInt16);
         Int32Indexer int32 = new Int32Indexer(uInt32);
-        SegmentedAddressValueIndexer segmentedAddressValue = new SegmentedAddressValueIndexer(uInt16);
-        SegmentedAddressIndexer segmentedAddress = new SegmentedAddressIndexer(segmentedAddressValue);
-        return (uInt8, uInt16, uInt32, int8, int16, int32, segmentedAddressValue, segmentedAddress);
+        SegmentedAddressIndexer segmentedAddressIndexer = new SegmentedAddressIndexer(uInt16);
+        return (uInt8, uInt16, uInt32, int8, int16, int32, segmentedAddressIndexer);
     }
 
     /// <summary>

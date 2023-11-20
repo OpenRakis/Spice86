@@ -30,7 +30,7 @@ public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
         _memoryDevices = new IMemoryDevice[memorySize];
         Ram = new Ram(memorySize);
         RegisterMapping(0, memorySize, Ram);
-        (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
+        (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
         A20Gate = new(is20ThAddressLineSilenced);
     }
 
@@ -165,11 +165,6 @@ public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
 
     /// <inheritdoc/>
     public override Int32Indexer Int32 {
-        get;
-    }
-
-    /// <inheritdoc/>
-    public override SegmentedAddressValueIndexer SegmentedAddressValue {
         get;
     }
 

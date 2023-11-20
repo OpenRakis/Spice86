@@ -18,7 +18,6 @@ public class MemoryBasedDataStructureTest {
     private const string ExpectedString = "0123456789";
     private static readonly int ExpectedStringLength = ExpectedString.Length + 1;
     private static readonly SegmentedAddress ExpectedSegmentedAddress = new (0x0708, 0x0900);
-    private static readonly ValueTuple<ushort, ushort> ExpectedSegmentedAddressValue = (0x0708, 0x0900);
     
     private static readonly byte[] ExpectedUInt8Array = { 0x01, 0x02 };
     private static readonly ushort[] ExpectedUInt16Array = { 0x0101, 0x0202 };
@@ -97,14 +96,14 @@ public class MemoryBasedDataStructureTest {
     public void CanMapSegmentedAddressValue() {
         // Arrange
         (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
-        data.SegmentedAddressValue[ReadAddress] = ExpectedSegmentedAddressValue;
+        data.SegmentedAddress[ReadAddress] = ExpectedSegmentedAddress;
 
         // Act & Assert
         // Read
-        Assert.Equal(ExpectedSegmentedAddressValue, memoryBasedDataStructure.SegmentedAddressValue[ReadOffset]);
+        Assert.Equal(ExpectedSegmentedAddress, memoryBasedDataStructure.SegmentedAddress[ReadOffset]);
         // Write
-        memoryBasedDataStructure.SegmentedAddressValue[WriteOffset] = ExpectedSegmentedAddressValue;
-        Assert.Equal(ExpectedSegmentedAddressValue, data.SegmentedAddressValue[WriteAddress]);
+        memoryBasedDataStructure.SegmentedAddress[WriteOffset] = ExpectedSegmentedAddress;
+        Assert.Equal(ExpectedSegmentedAddress, data.SegmentedAddress[WriteAddress]);
     }
 
     [Fact]

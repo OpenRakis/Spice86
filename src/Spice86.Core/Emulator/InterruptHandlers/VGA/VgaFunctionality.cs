@@ -892,7 +892,7 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     private void SetInterruptVectorAddress(byte vector, ushort segment, ushort offset) {
-        _interruptVectorTable[vector] = (segment, offset);
+        _interruptVectorTable[vector] = new(segment, offset);
     }
 
     private void GraphicalClearCharacters(VgaMode vgaMode, CursorPosition startPosition, Area area, CharacterPlusAttribute ca) {

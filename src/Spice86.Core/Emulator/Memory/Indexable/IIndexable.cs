@@ -54,13 +54,6 @@ public interface IIndexable {
     Int32Indexer Int32 {
         get;
     }
-    
-    /// <summary>
-    ///     Allows indexed 16 bit Offset / Segment access to the memory.
-    /// </summary>
-    SegmentedAddressValueIndexer SegmentedAddressValue {
-        get;
-    }
 
     /// <summary>
     ///     Allows indexed 16 bit Offset / Segment access to the memory as SegmentedAddress Object.

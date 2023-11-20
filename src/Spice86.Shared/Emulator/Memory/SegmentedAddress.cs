@@ -130,4 +130,14 @@ public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
         }
         return segmentedAddress.Value.ToString();
     }
+
+    /// <summary>
+    /// Deconstructs the SegmentedAddress into two ushort values, the Segment and Offset
+    /// </summary>
+    /// <param name="segment">The segment part of the segmented address.</param>
+    /// <param name="offset">The offset part of the segmented address.</param>
+    public void Deconstruct(out ushort segment, out ushort offset) {
+        segment = Segment;
+        offset = Offset;
+    }
 }

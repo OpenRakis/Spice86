@@ -194,8 +194,8 @@ public class Dos {
         // Make the previous device point to this one
         if (Devices.Count > 0) {
             IVirtualDevice previousDevice = Devices[^1];
-            _memory.SegmentedAddressValue[previousDevice.Segment, previousDevice.Offset] =
-                (device.Segment, device.Offset);
+            _memory.SegmentedAddress[previousDevice.Segment, previousDevice.Offset] =
+                new(device.Segment, device.Offset);
         }
 
         // Handle changing of current input, output or clock devices.

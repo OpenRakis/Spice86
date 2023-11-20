@@ -37,15 +37,12 @@ public class ByteArrayBasedIndexable : Indexable {
     public override Int32Indexer Int32 { get; }
 
     /// <inheritdoc/>
-    public override SegmentedAddressValueIndexer SegmentedAddressValue { get; }
-
-    /// <inheritdoc/>
     public override SegmentedAddressIndexer SegmentedAddress {
         get;
     }
 
     public ByteArrayBasedIndexable(byte[] array) {
         ReaderWriter = new ByteArrayByteReaderWriter(array);
-        (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddressValue, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(ReaderWriter);
+        (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(ReaderWriter);
     }
 }
