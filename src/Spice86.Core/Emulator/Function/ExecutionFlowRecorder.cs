@@ -5,20 +5,15 @@ using Newtonsoft.Json;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-using IMemory = Spice86.Core.Emulator.Memory.IMemory;
 
 /// <summary>
 /// A class that records machine code execution flow.
 /// </summary>
 public class ExecutionFlowRecorder {
-    /// <summary>
-    /// A set of pre-allocated breakpoints from physical address 0x0 up to the end of the HMA.
-    /// </summary>
-    private readonly Dictionary<uint, AddressBreakPoint> _addressBreakPoints = new();
-
     /// <summary>
     /// Gets or sets whether we register calls, jumps, returns, and unaligned returns.
     /// </summary>
@@ -79,25 +74,6 @@ public class ExecutionFlowRecorder {
         UnalignedRetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
         ExecutedInstructions = new HashSet<SegmentedAddress>();
         ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>>();
-    }
-
-    /// <summary>
-    /// Avoids allocation and deallocation of closures before the emulation starts.
-    /// Speeds up the emulator quite a bit.
-    /// </summary>
-    /// <param name="machine">The memory bus.</param>
-    /// <param name="state">The CPU state.</param>
-    internal void PreAllocatePossibleExecutionFlowBreakPoints(IMemory memory, State state) {
-        //Avoid re-entry.
-        if (_addressBreakPoints.Count != 0) {
-            return;
-        }
-        // This is fast *because* the memory bus size is around 1 MB.
-        // Beyond that, this code would have to be deleted,
-        // as the allocation would take way too much time.
-        for (uint i = 0; i < Memory.A20Gate.EndOfHighMemoryArea; i++) {
-            _addressBreakPoints.Add(i, GenerateBreakPoint(memory, state, i));
-        }
     }
 
     /// <summary>
@@ -174,7 +150,9 @@ public class ExecutionFlowRecorder {
     ///  - key of the map is the address being modified
     ///  - value is a dictionary of instruction addresses that modified it, with for each instruction a list of the before and after values.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="machineBreakpoints"></param>
     /// <param name="cs">The value of the CS register, for the segment.</param>
     /// <param name="ip">The value of the IP register, for the offset.</param>
     public void RegisterExecutableByte(IMemory memory, State state, MachineBreakpoints machineBreakpoints, ushort cs, ushort ip) {
@@ -201,9 +179,7 @@ public class ExecutionFlowRecorder {
         }
 
         AddressBreakPoint? breakPoint;
-        if (!_addressBreakPoints.TryGetValue(physicalAddress, out breakPoint)) {
-            breakPoint = GenerateBreakPoint(memory, state, physicalAddress);
-        }
+        breakPoint = GenerateBreakPoint(memory, state, physicalAddress);
         
         machineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }

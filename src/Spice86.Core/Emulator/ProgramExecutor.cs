@@ -163,7 +163,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
         }
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
         LoadFileToRun(_configuration, loader);
-        executionFlowRecorder.PreAllocatePossibleExecutionFlowBreakPoints(Machine.Memory, Machine.Cpu.State);
         return Machine;
     }
 
