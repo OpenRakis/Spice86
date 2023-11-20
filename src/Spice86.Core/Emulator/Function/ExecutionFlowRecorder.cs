@@ -23,32 +23,32 @@ public class ExecutionFlowRecorder {
     /// Gets a dictionary of calls from one address to another.
     /// </summary>
     public IDictionary<uint, ISet<SegmentedAddress>> CallsFromTo { get; set; }
-    private readonly ISet<ulong> _callsEncountered = new HashSet<ulong>();
+    private readonly ISet<ulong> _callsEncountered = new HashSet<ulong>(200000);
     
     /// <summary>
     /// Gets a dictionary of jumps from one address to another.
     /// </summary>
     public IDictionary<uint, ISet<SegmentedAddress>> JumpsFromTo { get; set; }
-    private readonly ISet<ulong> _jumpsEncountered = new HashSet<ulong>();
+    private readonly ISet<ulong> _jumpsEncountered = new HashSet<ulong>(200000);
     
     /// <summary>
     /// Gets a dictionary of returns from one address to another.
     /// </summary>
     public IDictionary<uint, ISet<SegmentedAddress>> RetsFromTo { get; set; }
-    private readonly ISet<ulong> _retsEncountered = new HashSet<ulong>();
+    private readonly ISet<ulong> _retsEncountered = new HashSet<ulong>(200000);
     
     /// <summary>
     /// Gets a dictionary of unaligned returns from one address to another.
     /// </summary>
     public IDictionary<uint, ISet<SegmentedAddress>> UnalignedRetsFromTo { get; set; }
-    private readonly ISet<ulong> _unalignedRetsEncountered = new HashSet<ulong>();
+    private readonly ISet<ulong> _unalignedRetsEncountered = new HashSet<ulong>(200000);
     
     /// <summary>
     /// Gets the set of executed instructions.
     /// </summary>
     public ISet<SegmentedAddress> ExecutedInstructions { get; set; }
-    private readonly ISet<uint> _instructionsEncountered = new HashSet<uint>();
-    private readonly ISet<uint> _executableCodeAreasEncountered = new HashSet<uint>();
+    private readonly ISet<uint> _instructionsEncountered = new HashSet<uint>(200000);
+    private readonly ISet<uint> _executableCodeAreasEncountered = new HashSet<uint>(200000);
 
     /// <summary>
     /// Gets or sets whether we register self modifying machine code.
@@ -68,12 +68,12 @@ public class ExecutionFlowRecorder {
     /// </summary>
     public ExecutionFlowRecorder() {
         RecordData = false;
-        CallsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
-        JumpsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
-        RetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
-        UnalignedRetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>();
+        CallsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>(200000);
+        JumpsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>(200000);
+        RetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>(200000);
+        UnalignedRetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>(200000);
         ExecutedInstructions = new HashSet<SegmentedAddress>();
-        ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>>();
+        ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>>(200000);
     }
 
     /// <summary>
