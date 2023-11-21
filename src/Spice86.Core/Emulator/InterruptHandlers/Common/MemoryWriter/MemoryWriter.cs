@@ -38,7 +38,7 @@ public class MemoryWriter {
     /// <param name="b">data to write</param>
     public void WriteUInt8(byte b) {
         _memory.UInt8[CurrentAddress.Segment, CurrentAddress.Offset] = b;
-        CurrentAddress = new SegmentedAddress(CurrentAddress.Segment, (ushort)(CurrentAddress.Offset + 1));
+        CurrentAddress += 1;
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class MemoryWriter {
     /// <param name="w">data to write</param>
     public void WriteUInt16(ushort w) {
         _memory.UInt16[CurrentAddress.Segment, CurrentAddress.Offset] = w;
-        CurrentAddress = new SegmentedAddress(CurrentAddress.Segment, (ushort)(CurrentAddress.Offset + 2));
+        CurrentAddress += 2;
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public class MemoryWriter {
     /// <param name="dw">data to write</param>
     public void WriteUInt32(uint dw) {
         _memory.UInt32[CurrentAddress.Segment, CurrentAddress.Offset] = dw;
-        CurrentAddress = new SegmentedAddress(CurrentAddress.Segment, (ushort)(CurrentAddress.Offset + 4));
+        CurrentAddress += 4;
     }
 
     /// <summary>
@@ -65,8 +65,8 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="address">data to write</param>
     public void WriteSegmentedAddress(SegmentedAddress address) {
-        _memory.SegmentedAddress[CurrentAddress.Segment, CurrentAddress.Offset] = new(address.Segment, address.Offset);
-        CurrentAddress = new SegmentedAddress(CurrentAddress.Segment, (ushort)(CurrentAddress.Offset + 4));
+        _memory.SegmentedAddress[CurrentAddress.Segment, CurrentAddress.Offset] = address;
+        CurrentAddress += 4;
     }
 
 }

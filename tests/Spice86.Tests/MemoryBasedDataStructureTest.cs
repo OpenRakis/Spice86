@@ -77,23 +77,8 @@ public class MemoryBasedDataStructureTest {
         Assert.Equal(ExpectedUInt32, data.UInt32[WriteAddress]);
     }
 
-
     [Fact]
     public void CanMapSegmentedAddress() {
-        // Arrange
-        (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
-        data.SegmentedAddress[ReadAddress] = ExpectedSegmentedAddress;
-
-        // Act & Assert
-        // Read
-        Assert.Equal(ExpectedSegmentedAddress, memoryBasedDataStructure.SegmentedAddress[ReadOffset]);
-        // Write
-        memoryBasedDataStructure.SegmentedAddress[WriteOffset] = ExpectedSegmentedAddress;
-        Assert.Equal(ExpectedSegmentedAddress, data.SegmentedAddress[WriteAddress]);
-    }
-
-    [Fact]
-    public void CanMapSegmentedAddressValue() {
         // Arrange
         (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
         data.SegmentedAddress[ReadAddress] = ExpectedSegmentedAddress;
@@ -120,7 +105,6 @@ public class MemoryBasedDataStructureTest {
         Assert.Equal(ExpectedString, data.GetZeroTerminatedString(WriteAddress, ExpectedStringLength));
     }
 
-
     [Fact]
     public void CanMapUInt8Array() {
         // Arrange
@@ -135,7 +119,6 @@ public class MemoryBasedDataStructureTest {
         // Write
         WriteIndex0AndAssertIndex1Untouched<byte>(ExpectedUInt8Array, uInt8Array, data.UInt8, 1, 0);
     }
-
 
     [Fact]
     public void CanMapUInt16Array() {
