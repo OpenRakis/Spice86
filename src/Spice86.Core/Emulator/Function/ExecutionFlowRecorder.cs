@@ -96,7 +96,7 @@ public class ExecutionFlowRecorder {
         // Beyond that, this code would have to be deleted,
         // as the allocation would take way too much time.
         for (uint i = 0; i < Memory.A20Gate.EndOfHighMemoryArea; i++) {
-            _addressBreakPoints.Add(i, GenerateBreakPoint(memory, state, i));
+            _addressBreakPoints.Add(i, GenerateBreakPoint(this, memory, state, i));
         }
     }
 
@@ -202,26 +202,35 @@ public class ExecutionFlowRecorder {
 
         AddressBreakPoint? breakPoint;
         if (!_addressBreakPoints.TryGetValue(physicalAddress, out breakPoint)) {
-            breakPoint = GenerateBreakPoint(memory, state, physicalAddress);
+            breakPoint = GenerateBreakPoint(this, memory, state, physicalAddress);
         }
         
         machineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
-    private AddressBreakPoint GenerateBreakPoint(IMemory memory, State state, uint physicalAddress) {
-        AddressBreakPoint breakPoint = new(BreakPointType.WRITE, physicalAddress, _ => {
-            if (!IsRegisterExecutableCodeModificationEnabled) {
-                return;
-            }
+    /// <summary>
+    /// Since breakpoints are not removed on trigger, we keep a cache of it to not trigger GC reclaims of the Action created.
+    /// </summary>
+    private static Dictionary<AddressBreakPoint, Action<BreakPoint>> _actionCache = new();
 
-            byte oldValue = memory.UInt8[physicalAddress];
-            byte newValue = memory.CurrentlyWritingByte;
-            if (oldValue != newValue) {
-                RegisterExecutableByteModification(
-                    new SegmentedAddress(state.CS, state.IP), physicalAddress, oldValue, newValue);
-            }
-        }, false);
+    private static AddressBreakPoint GenerateBreakPoint(ExecutionFlowRecorder instance, IMemory memory, State state, uint physicalAddress) {
+        AddressBreakPoint breakPoint = new(BreakPointType.WRITE, physicalAddress, static (_) => { }, false);
+        _actionCache.Add(breakPoint, (_) => OnBreakPointReached(instance, memory, state, physicalAddress));
+        breakPoint.OnReached = _actionCache[breakPoint];
         return breakPoint;
+    }
+
+    private static void OnBreakPointReached(ExecutionFlowRecorder executionFlowRecorder, IMemory memory, State state, uint physicalAddress) {
+        if (!executionFlowRecorder.IsRegisterExecutableCodeModificationEnabled) {
+            return;
+        }
+
+        byte oldValue = memory.UInt8[physicalAddress];
+        byte newValue = memory.CurrentlyWritingByte;
+        if (oldValue != newValue) {
+            executionFlowRecorder.RegisterExecutableByteModification(
+                new SegmentedAddress(state.CS, state.IP), physicalAddress, oldValue, newValue);
+        }
     }
 
     private void RegisterExecutableByteModification(SegmentedAddress instructionAddress, uint modifiedAddress, byte oldValue, byte newValue) {

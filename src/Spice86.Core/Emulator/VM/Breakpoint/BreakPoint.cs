@@ -20,7 +20,7 @@ public abstract class BreakPoint {
     /// <summary>
     /// The action to take when the breakpoint is reached.
     /// </summary>
-    public Action<BreakPoint> OnReached { get; private set; }
+    public Action<BreakPoint> OnReached { get; set; }
 
     /// <summary>
     /// The type of the breakpoint.
