@@ -62,10 +62,10 @@ public class EmulationLoop {
     /// Starts and waits for the end of the emulation loop.
     /// </summary>
     /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>
-    public void Run() {
+    public void Run(int cycles) {
         FunctionHandler functionHandler = _cpu.FunctionHandler;
         try {
-            StartRunLoop(functionHandler);
+            StartRunLoop(functionHandler, cycles);
         } catch (HaltRequestedException) {
             // Actually a signal generated code requested Exit
             return;
@@ -88,25 +88,35 @@ public class EmulationLoop {
         IsPaused = false;
     }
 
-    private void StartRunLoop(FunctionHandler functionHandler) {
+    private void StartRunLoop(FunctionHandler functionHandler, int cycles) {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, _cpuState.CS, _cpuState.IP, null, null, "entry", false);
         _dmaController.StartDmaThread();
-        RunLoop();
+        RunLoop(cycles);
     }
     
-    private void RunLoop() {
+    private void RunLoop(int cycles) {
         _stopwatch.Start();
-        while (_cpuState.IsRunning) {
-            PauseIfAskedTo();
-            if (_listensToBreakpoints) {
-                _machineBreakpoints.CheckBreakPoint();
+        if(cycles != 0) {
+            while(_cpu.State.Cycles < cycles)
+                EmulationLoopCore();
+        }
+        else {
+            while (_cpuState.IsRunning) {
+                EmulationLoopCore();
             }
-            _cpu.ExecuteNextInstruction();
-            _timer.Tick();
         }
         _stopwatch.Stop();
         OutputPerfStats();
+    }
+
+    private void EmulationLoopCore() {
+        PauseIfAskedTo();
+        if (_listensToBreakpoints) {
+            _machineBreakpoints.CheckBreakPoint();
+        }
+        _cpu.ExecuteNextInstruction();
+        _timer.Tick();
     }
 
     private void OutputPerfStats() {

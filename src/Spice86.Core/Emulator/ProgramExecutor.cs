@@ -54,12 +54,10 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// </summary>
     public Machine Machine { get; private set; }
 
-    /// <summary>
-    /// Begins the emulation process.
-    /// </summary>
-    public void Run() {
+    /// <inheritdoc/>
+    public void Run(int cycles = 0) {
         _gdbServer?.StartServerAndWait();
-        _emulationLoop.Run();
+        _emulationLoop.Run(cycles);
         if (ListensToBreakpoints) {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
