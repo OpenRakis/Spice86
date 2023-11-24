@@ -31,7 +31,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
-        _logger.Debug("Initializing VGA BIOS");
+        if(_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Initializing VGA BIOS");
+        }
         FillDispatchTable();
 
         InitializeBiosArea();
