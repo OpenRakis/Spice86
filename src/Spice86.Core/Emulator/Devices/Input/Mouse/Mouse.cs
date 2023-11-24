@@ -6,8 +6,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
@@ -137,7 +135,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void UpdateMouse() {
-        long timestamp = DateTime.Now.Ticks;
+        long timestamp = System.Diagnostics.Stopwatch.GetTimestamp();
         // Check sample rate to see if we need to send an update yet.
         long ticksElapsed = timestamp - _lastUpdateTimestamp;
         if (ticksElapsed < _sampleRateTicks) {
