@@ -57,7 +57,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private bool _closeAppOnEmulatorExit;
     private bool _isAppClosing;
 
-    private Action? _uiUpdateMethod;
+    private static Action? _uiUpdateMethod;
     private bool _exitDrawThread;
     private Action? _drawAction;
     private Thread? _drawThread;
@@ -361,7 +361,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 } finally {
                     _drawingSemaphoreSlim?.Release();
                 }
-                _uiDispatcher.Post(() => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
+                _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
             }
         };
     }
