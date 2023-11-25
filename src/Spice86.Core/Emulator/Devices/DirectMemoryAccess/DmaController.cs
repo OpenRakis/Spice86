@@ -210,9 +210,6 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     /// <returns>Value of specified port.</returns>
     private byte GetPortValue(int port) {
         int index = Array.IndexOf(AllPorts, port);
-        if (index < 0) {
-            throw new ArgumentException("Invalid port.");
-        }
 
         return (index % 3) switch {
             0 => _channels[index / 3].Page,
@@ -229,9 +226,6 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     /// <param name="value">Value to write.</param>
     private void SetPortValue(int port, byte value) {
         int index = Array.IndexOf(AllPorts, port);
-        if (index < 0) {
-            throw new ArgumentException("Invalid port.");
-        }
 
         switch (index % 3) {
             case 0:
