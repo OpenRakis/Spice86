@@ -207,6 +207,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                     _blasterState = BlasterState.ResetRequest;
                 } else if (value == 0 && _blasterState == BlasterState.ResetRequest) {
                     _blasterState = BlasterState.Resetting;
+                    if(_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("SoundBlaster DSP was reset");
+                    }
                     Reset();
                 }
                 break;
