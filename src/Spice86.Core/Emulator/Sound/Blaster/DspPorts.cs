@@ -10,6 +10,16 @@ public static class DspPorts {
     public const int DspReset = 0x226;
 
     /// <summary>
+    /// The port used to set the DSP status.
+    /// </summary>
+    public const int DspWriteStatus = 0x0C;
+
+    /// <summary>
+    /// The port used to get the DSP status.
+    /// </summary>
+    public const int DspReadStatus = 0x0E;
+
+    /// <summary>
     /// The I/O port used for reading data from the DSP chip.
     /// </summary>
     public const int DspReadData = 0x22A;

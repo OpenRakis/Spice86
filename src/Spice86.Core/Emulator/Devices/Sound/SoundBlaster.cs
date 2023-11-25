@@ -41,6 +41,16 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     public const int DSP_WRITE_BUFFER_STATUS_PORT_NUMBER = 0x22C;
 
     /// <summary>
+    /// The port used to set the DSP status.
+    /// </summary>
+    public const int DSP_WRITE_STATUS = 0x0C;
+
+    /// <summary>
+    /// The port used to get the DSP status.
+    /// </summary>
+    public const int DSP_READ_STATUS = 0x0E;
+
+    /// <summary>
     /// The port number for sending FM music data to the left FM music channel.
     /// </summary>
     public const int FM_MUSIC_DATA_PORT_NUMBER = 0x229;
@@ -168,6 +178,12 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <inheritdoc />
     public override byte ReadByte(int port) {
         switch (port) {
+            case DspPorts.DspReadStatus:
+                if(_dsp.IsDmaTransferActive) {
+                    return 0xff;
+                } else {
+                    return 0x7f;
+                }
             case DspPorts.DspReadData:
                 if (_outputData.Count > 0) {
                     return _outputData.Dequeue();
@@ -201,6 +217,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             _playbackStarted = true;
         }
         switch (port) {
+            case DspPorts.DspWriteStatus:
+                return;
+
             case DspPorts.DspReset:
                 // Expect a 1, then 0 written to reset the DSP.
                 if (value == 1) {
@@ -286,6 +305,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 if (_playbackThread.IsAlive) {
                     _playbackThread.Join();
                 }
+                _dsp.Dispose();
             }
             _disposed = true;
         }
@@ -294,6 +314,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <inheritdoc />
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_READ_STATUS, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_STATUS, this);
         ioPortDispatcher.AddIOPortHandler(DSP_WRITE_BUFFER_STATUS_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER, this);
@@ -312,7 +334,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     }
 
     void IDmaDevice8.SingleCycleComplete() {
-        _dsp.IsEnabled = false;
+        _dsp.IsDmaTransferActive = false;
         RaiseInterruptRequest();
     }
 
@@ -480,13 +502,13 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             case Commands.PauseDmaMode16:
             case Commands.ExitDmaMode16:
                 _eightByteDmaChannel.IsActive = false;
-                _dsp.IsEnabled = false;
+                _dsp.IsDmaTransferActive = false;
                 break;
 
             case Commands.ContinueDmaMode:
             case Commands.ContinueDmaMode16:
                 _eightByteDmaChannel.IsActive = true;
-                _dsp.IsEnabled = true;
+                _dsp.IsDmaTransferActive = true;
                 break;
 
             case Commands.RaiseIrq8:
