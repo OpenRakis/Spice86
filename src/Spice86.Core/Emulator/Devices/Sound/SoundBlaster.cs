@@ -345,12 +345,12 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     }
 
     /// <summary>
-    /// Resamples the data in sourceBuffer to destinationBuffer with the given sampleRate. Returns the destinationBuffer lenght.
+    /// Resamples the data in sourceBuffer to destinationBuffer with the given sampleRate. Returns the destinationBuffer length.
     /// </summary>
     /// <param name="sourceBuffer"></param>
     /// <param name="sampleRate"></param>
     /// <param name="destinationBuffer"></param>
-    /// <returns>Lenght of the data written in destinationBuffer</returns>
+    /// <returns>Length of the data written in destinationBuffer</returns>
     private int Resample(Span<byte> sourceBuffer, int sampleRate, short[] destinationBuffer) {
         if (_dsp.Is16Bit && _dsp.IsStereo) {
             return LinearUpsampler.Resample16Stereo(_dsp.SampleRate, sampleRate, sourceBuffer.Cast<byte, short>(),
