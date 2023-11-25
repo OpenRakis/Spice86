@@ -1,6 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
+using System.Collections.Frozen;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
@@ -27,12 +29,12 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     private bool _dmaThreadStarted;
     private readonly ManualResetEvent _dmaResetEvent = new(true);
 
-    private static readonly int[] _otherOutputPorts = new int[] {
+    private static readonly FrozenSet<int> _otherOutputPorts = new int[] {
             ModeRegister8,
             ModeRegister16,
             MaskRegister8,
             MaskRegister16,
-            ClearBytePointerFlipFlop};
+            ClearBytePointerFlipFlop}.ToFrozenSet();
 
     private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
 
@@ -104,12 +106,12 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Gets the input ports for the DMA controller.
     /// </summary>
-    public IEnumerable<int> InputPorts => Array.AsReadOnly(AllPorts);
+    public FrozenSet<int> InputPorts => AllPorts.ToFrozenSet();
 
     /// <summary>
     /// Gets the output ports for the DMA controller.
     /// </summary>
-    public IEnumerable<int> OutputPorts {
+    public FrozenSet<int> OutputPorts {
         get {
             List<int> ports = new List<int>(AllPorts)
             {
@@ -119,7 +121,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
                 MaskRegister16
             };
 
-            return ports.AsReadOnly();
+            return ports.ToFrozenSet();
         }
     }
 
