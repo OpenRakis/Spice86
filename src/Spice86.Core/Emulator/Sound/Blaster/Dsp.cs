@@ -5,11 +5,12 @@ using Spice86.Core.Emulator.Memory;
 
 using System;
 using System.Threading;
+using System.Timers;
 
 /// <summary>
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
-public sealed class Dsp {
+public sealed class Dsp : IDisposable {
     private readonly IRequestInterrupt _soundCard;
     
     /// <summary>
@@ -22,7 +23,13 @@ public sealed class Dsp {
         SampleRate = 22050;
         BlockTransferSize = 65536;
         _soundCard = soundCard;
+        
     }
+
+    /// <summary>
+    /// Gets or sets the current DSP State
+    /// </summary>
+    public DspState State { get; private set; }
 
     /// <summary>
     /// Occurs when a buffer has been transferred in auto-initialize mode.
@@ -33,26 +40,31 @@ public sealed class Dsp {
     /// Gets or sets the DSP's sample rate.
     /// </summary>
     public int SampleRate { get; set; }
+
     /// <summary>
     /// Gets a value indicating whether the DMA mode is set to auto-initialize.
     /// </summary>
     public bool AutoInitialize { get; private set; }
+
     /// <summary>
     /// Gets or sets the size of a transfer block for auto-init mode.
     /// </summary>
     public int BlockTransferSize { get; set; }
+
     /// <summary>
     /// Gets a value indicating whether the waveform data is 16-bit.
     /// </summary>
     public bool Is16Bit { get; private set; }
+
     /// <summary>
     /// Gets a value indicating whether the waveform data is stereo.
     /// </summary>
     public bool IsStereo { get; private set; }
+
     /// <summary>
     /// Gets or sets a value indicating whether a DMA transfer is active.
     /// </summary>
-    public bool IsEnabled { get; set; }
+    public bool IsDmaTransferActive { get; set; }
 
     /// <summary>
     /// Starts a new DMA transfer.
@@ -68,7 +80,7 @@ public sealed class Dsp {
         AutoInitialize = autoInitialize;
         referenceByteExpected = referenceByte;
         compression = compressionLevel;
-        IsEnabled = true;
+        IsDmaTransferActive = true;
 
         decodeRemainderOffset = -1;
 
@@ -97,13 +109,22 @@ public sealed class Dsp {
 
         currentChannel.TransferRate = (int)(transferRate * factor);
         currentChannel.IsActive = true;
+
+        _resetTimer.Elapsed += OnResetTimerElapsed;
     }
+
+    private void OnResetTimerElapsed(object? sender, EventArgs e) {
+        State = DspState.Normal;
+        _resetTimer.Stop();
+    }
+
     /// <summary>
     /// Exits autoinitialize mode.
     /// </summary>
     public void ExitAutoInit() {
         AutoInitialize = false;
     }
+
     /// <summary>
     /// Reads samples from the internal buffer.
     /// </summary>
@@ -178,10 +199,12 @@ public sealed class Dsp {
 
         return actualCount;
     }
+
     /// <summary>
     /// Resets the DSP to its initial state.
     /// </summary>
     public void Reset() {
+        State = DspState.ResetWait;
         SampleRate = 22050;
         BlockTransferSize = 65536;
         AutoInitialize = false;
@@ -189,7 +212,11 @@ public sealed class Dsp {
         IsStereo = false;
         autoInitTotal = 0;
         readIdleCycles = 0;
+        State = DspState.Reset;
+        _resetTimer.Start();
     }
+
+    private System.Timers.Timer _resetTimer = new System.Timers.Timer(TimeSpan.FromMicroseconds(20));
 
     /// <summary>
     /// Reads samples from the internal buffer.
@@ -202,7 +229,7 @@ public sealed class Dsp {
             int amt = waveBuffer.Read(dest);
 
             if (amt == 0) {
-                if (!IsEnabled || readIdleCycles >= 100) {
+                if (!IsDmaTransferActive || readIdleCycles >= 100) {
                     byte zeroValue = Is16Bit ? (byte)0 : (byte)128;
                     dest.Fill(zeroValue);
                     return;
@@ -222,10 +249,12 @@ public sealed class Dsp {
     /// DMA channel used for 8-bit data transfers.
     /// </summary>
     private readonly DmaChannel dmaChannel8;
+
     /// <summary>
     /// DMA channel used for 16-bit data transfers.
     /// </summary>
     private readonly DmaChannel dmaChannel16;
+
     /// <summary>
     /// Currently active DMA channel.
     /// </summary>
@@ -235,6 +264,7 @@ public sealed class Dsp {
     /// Number of bytes transferred in the current auto-init cycle.
     /// </summary>
     private int autoInitTotal;
+
     /// <summary>
     /// Number of cycles with no new input data.
     /// </summary>
@@ -244,22 +274,28 @@ public sealed class Dsp {
     /// The current compression level.
     /// </summary>
     private CompressionLevel compression;
+
     /// <summary>
     /// Indicates whether a reference byte is expected.
     /// </summary>
     private bool referenceByteExpected;
+
     /// <summary>
     /// Current ADPCM decoder instance.
     /// </summary>
     private ADPCMDecoder? decoder;
+
     /// <summary>
     /// Buffer used for ADPCM decoding.
     /// </summary>
     private byte[]? decodeBuffer;
+
     /// <summary>
     /// Last index of remaining decoded bytes.
     /// </summary>
     private int decodeRemainderOffset;
+    private bool disposedValue;
+
     /// <summary>
     /// Remaining decoded bytes.
     /// </summary>
@@ -274,4 +310,26 @@ public sealed class Dsp {
     /// Size of output buffer in samples.
     /// </summary>
     private const int TargetBufferSize = 1024;
+
+    private void Dispose(bool disposing) {
+        if (!disposedValue) {
+            if (disposing) {
+                _resetTimer.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~Dsp()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
 }
