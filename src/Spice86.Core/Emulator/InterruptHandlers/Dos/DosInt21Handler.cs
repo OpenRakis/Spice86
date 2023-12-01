@@ -650,7 +650,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public void SetInterruptVector(byte vectorNumber, ushort segment, ushort offset) {
-        _interruptVectorTable[vectorNumber] = (segment, offset);
+        _interruptVectorTable[vectorNumber] = new(segment, offset);
     }
 
     public void WriteFileUsingHandle(bool calledFromVm) {

@@ -162,7 +162,7 @@ public class FunctionHandler {
         IMemory memory = _memory;
         return returnCallType switch {
             CallType.NEAR => new SegmentedAddress(_state.CS, memory.UInt16[stackPhysicalAddress]),
-            CallType.FAR or CallType.INTERRUPT => new SegmentedAddress(memory.SegmentedAddressValue[stackPhysicalAddress]),
+            CallType.FAR or CallType.INTERRUPT => new SegmentedAddress(memory.SegmentedAddress[stackPhysicalAddress]),
             CallType.MACHINE => null,
             _ => null
         };
@@ -270,8 +270,8 @@ public class FunctionHandler {
         }
 
         // Record the unexpected behaviour. Generated code will see this as well.
-        _executionFlowRecorder.RegisterUnalignedReturn(_state.CS, _state.IP, actualReturnAddress.Segment,
-            actualReturnAddress.Offset);
+        _executionFlowRecorder.RegisterUnalignedReturn(_state.CS, _state.IP, actualReturnAddress.Value.Segment,
+            actualReturnAddress.Value.Offset);
         FunctionInformation? currentFunctionInformation = GetFunctionInformation(currentFunctionCall);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose) && currentFunctionInformation != null
             && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {

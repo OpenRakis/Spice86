@@ -29,7 +29,7 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
             $"provided_interrupt_handler_{interruptHandler.VectorNumber}");
 
         // Define ASM in vector table
-        _interruptVectorTable[interruptHandler.VectorNumber] = (handlerAddress.Segment, handlerAddress.Offset);
+        _interruptVectorTable[interruptHandler.VectorNumber] = new(handlerAddress.Segment, handlerAddress.Offset);
         return handlerAddress;
     }
 }

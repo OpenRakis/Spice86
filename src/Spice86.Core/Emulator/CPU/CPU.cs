@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -97,8 +98,7 @@ public class Cpu : IDebuggableComponent {
     public void ExecuteNextInstruction() {
         _internalIp = State.IP;
 
-        _loggerService.LoggerPropertyBag.CsIp.Segment = State.CS;
-        _loggerService.LoggerPropertyBag.CsIp.Offset = State.IP;
+        _loggerService.LoggerPropertyBag.CsIp = new(State.CS, State.IP);
 
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
         byte opcode = ProcessPrefixes();

@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 /// <summary>
 /// An address that is represented with a real mode segment and an offset.
 /// </summary>
-public class SegmentedAddress : IComparable<SegmentedAddress> {
+public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     /// <summary>
     /// Initializes a new instance of the SegmentedAddress class from another instance, creating a copy.
     /// </summary>
@@ -39,39 +39,43 @@ public class SegmentedAddress : IComparable<SegmentedAddress> {
     /// </summary>
     /// <param name="other">The SegmentedAddress to compare with the current SegmentedAddress.</param>
     /// <returns>A value that indicates the relative order of the objects being compared.</returns>
-    public int CompareTo(SegmentedAddress? other) {
-        if (other == null) {
-            return 1;
-        }
+    public int CompareTo(SegmentedAddress other) {
         uint x = ToPhysical();
         uint y = other.ToPhysical();
         return x < y ? -1 : x == y ? 0 : 1;
     }
 
     /// <summary>
+    /// Compares the current SegmentedAddress object with another SegmentedAddress object.
+    /// </summary>
+    /// <param name="other">The SegmentedAddress to compare with the current SegmentedAddress.</param>
+    /// <returns>A value that indicates the relative order of the objects being compared.</returns>
+    public int CompareTo(SegmentedAddress? other) {
+        if (other == null) {
+            return 1;
+        }
+        uint x = ToPhysical();
+        uint y = other.Value.ToPhysical();
+        return x < y ? -1 : x == y ? 0 : 1;
+    }
+
+    /// <summary>
     /// Determines whether the current SegmentedAddress object is equal to another SegmentedAddress object.
     /// </summary>
-    /// <param name="obj">The object to compare with the current SegmentedAddress object.</param>
+    /// <param name="other">The object to compare with the current SegmentedAddress object.</param>
     /// <returns>true if the objects are equal; otherwise, false.</returns>
-    public override bool Equals(object? obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj is not SegmentedAddress other) {
-            return false;
-        }
+    public readonly bool Equals(SegmentedAddress other) {
         return MemoryUtils.ToPhysicalAddress(Segment, Offset) == MemoryUtils.ToPhysicalAddress(other.Segment, other.Offset);
     }
 
     /// <summary>
-    /// Adds the offset to the current SegmentedAddress object and returns the result as a new SegmentedAddress object.
+    /// Adds the offset to a new SegmentedAddress instance.
     /// </summary>
-    /// <param name="x">The SegmentedAddress to add the offset to.</param>
+    /// <param name="x">The original SegmentedAddress.</param>
     /// <param name="y">The value to add to the offset of the SegmentedAddress.</param>
-    /// <returns>A new SegmentedAddress object that represents the result of the addition.</returns>
+    /// <returns>A new SegmentedAddress instance that represents the result of the addition.</returns>
     public static SegmentedAddress operator +(SegmentedAddress x, ushort y) {
-        x.Offset += y;
-        return x;
+        return new SegmentedAddress(x.Segment, (ushort)(x.Offset + y));
     }
 
     /// <summary>
@@ -85,18 +89,18 @@ public class SegmentedAddress : IComparable<SegmentedAddress> {
     /// <summary>
     /// Gets or sets the offset value of the address.
     /// </summary>
-    public ushort Offset { get; set; }
+    public ushort Offset { get; init; }
 
     /// <summary>
     /// Gets or sets the segment value of the address.
     /// </summary>
-    public ushort Segment { get; set; }
+    public ushort Segment { get; init; }
     
     /// <summary>
     /// Converts the SegmentedAddress object to a 32-bit physical address.
     /// </summary>
     /// <returns>A 32-bit physical address.</returns>
-    public uint ToPhysical() {
+    public readonly uint ToPhysical() {
         return MemoryUtils.ToPhysicalAddress(Segment, Offset);
     }
 
@@ -104,7 +108,7 @@ public class SegmentedAddress : IComparable<SegmentedAddress> {
     /// Returns a string representation of the SegmentedAddress object in the form of a segment and offset value.
     /// </summary>
     /// <returns>A string representation of the SegmentedAddress object in the form of a segment and offset value.</returns>
-    public string ToSegmentOffsetRepresentation() {
+    public readonly string ToSegmentOffsetRepresentation() {
         return ConvertUtils.ToSegmentedAddressRepresentation(Segment, Offset);
     }
 
@@ -121,10 +125,19 @@ public class SegmentedAddress : IComparable<SegmentedAddress> {
     /// </summary>
     /// <returns>A string representation of the SegmentedAddress object, or "null" if input was <c>null</c>.</returns>
     public static string ToString(SegmentedAddress? segmentedAddress) {
-        if (segmentedAddress is not null) {
-            return segmentedAddress.ToString();
+        if (segmentedAddress == null) {
+            return "null";
         }
+        return segmentedAddress.Value.ToString();
+    }
 
-        return "null";
+    /// <summary>
+    /// Deconstructs the SegmentedAddress into two ushort values, the Segment and Offset
+    /// </summary>
+    /// <param name="segment">The segment part of the segmented address.</param>
+    /// <param name="offset">The offset part of the segmented address.</param>
+    public void Deconstruct(out ushort segment, out ushort offset) {
+        segment = Segment;
+        offset = Offset;
     }
 }

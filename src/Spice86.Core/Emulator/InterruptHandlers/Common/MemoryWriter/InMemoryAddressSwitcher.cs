@@ -34,7 +34,7 @@ public class InMemoryAddressSwitcher {
             throw new UnrecoverableException($"Attempted to set address but location is null. Please set {nameof(PhysicalLocation)} first.");
         }
         // Write the address
-        _memory.SegmentedAddressValue[PhysicalLocation.Value] = (segment, offset);
+        _memory.SegmentedAddress[PhysicalLocation.Value] = new(segment, offset);
     }
 
 
@@ -46,6 +46,6 @@ public class InMemoryAddressSwitcher {
             return;
         }
 
-        SetAddress(DefaultAddress.Segment, DefaultAddress.Offset);
+        SetAddress(DefaultAddress.Value.Segment, DefaultAddress.Value.Offset);
     }
 }

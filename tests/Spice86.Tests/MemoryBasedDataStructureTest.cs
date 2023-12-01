@@ -18,7 +18,6 @@ public class MemoryBasedDataStructureTest {
     private const string ExpectedString = "0123456789";
     private static readonly int ExpectedStringLength = ExpectedString.Length + 1;
     private static readonly SegmentedAddress ExpectedSegmentedAddress = new (0x0708, 0x0900);
-    private static readonly ValueTuple<ushort, ushort> ExpectedSegmentedAddressValue = (0x0708, 0x0900);
     
     private static readonly byte[] ExpectedUInt8Array = { 0x01, 0x02 };
     private static readonly ushort[] ExpectedUInt16Array = { 0x0101, 0x0202 };
@@ -78,7 +77,6 @@ public class MemoryBasedDataStructureTest {
         Assert.Equal(ExpectedUInt32, data.UInt32[WriteAddress]);
     }
 
-
     [Fact]
     public void CanMapSegmentedAddress() {
         // Arrange
@@ -91,20 +89,6 @@ public class MemoryBasedDataStructureTest {
         // Write
         memoryBasedDataStructure.SegmentedAddress[WriteOffset] = ExpectedSegmentedAddress;
         Assert.Equal(ExpectedSegmentedAddress, data.SegmentedAddress[WriteAddress]);
-    }
-
-    [Fact]
-    public void CanMapSegmentedAddressValue() {
-        // Arrange
-        (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
-        data.SegmentedAddressValue[ReadAddress] = ExpectedSegmentedAddressValue;
-
-        // Act & Assert
-        // Read
-        Assert.Equal(ExpectedSegmentedAddressValue, memoryBasedDataStructure.SegmentedAddressValue[ReadOffset]);
-        // Write
-        memoryBasedDataStructure.SegmentedAddressValue[WriteOffset] = ExpectedSegmentedAddressValue;
-        Assert.Equal(ExpectedSegmentedAddressValue, data.SegmentedAddressValue[WriteAddress]);
     }
 
     [Fact]
@@ -121,7 +105,6 @@ public class MemoryBasedDataStructureTest {
         Assert.Equal(ExpectedString, data.GetZeroTerminatedString(WriteAddress, ExpectedStringLength));
     }
 
-
     [Fact]
     public void CanMapUInt8Array() {
         // Arrange
@@ -136,7 +119,6 @@ public class MemoryBasedDataStructureTest {
         // Write
         WriteIndex0AndAssertIndex1Untouched<byte>(ExpectedUInt8Array, uInt8Array, data.UInt8, 1, 0);
     }
-
 
     [Fact]
     public void CanMapUInt16Array() {

@@ -4,9 +4,9 @@
 /// Holds breakpoints and triggers them when certain conditions are met.
 /// </summary>
 public class BreakPointHolder {
-    private readonly Dictionary<long, List<BreakPoint>> _addressBreakPoints = new();
+    private readonly Dictionary<long, List<BreakPoint>> _addressBreakPoints = new(1000);
 
-    private readonly List<BreakPoint> _unconditionalBreakPoints = new();
+    private readonly List<BreakPoint> _unconditionalBreakPoints = new(1000);
 
     /// <summary>
     /// Gets a value indicating whether this BreakPointHolder is empty.

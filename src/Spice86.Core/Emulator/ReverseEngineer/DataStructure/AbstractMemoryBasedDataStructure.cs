@@ -16,7 +16,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     protected AbstractMemoryBasedDataStructure(IByteReaderWriter byteReaderWriter) {
         ByteReaderWriter = byteReaderWriter;
         ByteReaderWriterShiftedToBaseAddress = new ByteReaderWriterWithBaseAddress(byteReaderWriter, this);
-        (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddressValue, SegmentedAddress) =
+        (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddress) =
             InstantiateIndexersFromByteReaderWriter(ByteReaderWriterShiftedToBaseAddress);
     }
 
@@ -48,11 +48,6 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
 
     /// <inheritdoc/>
     public override Int32Indexer Int32 {
-        get;
-    }
-
-    /// <inheritdoc/>
-    public override SegmentedAddressValueIndexer SegmentedAddressValue {
         get;
     }
 

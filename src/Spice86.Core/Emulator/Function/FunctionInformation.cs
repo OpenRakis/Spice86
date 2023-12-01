@@ -161,6 +161,6 @@ public record FunctionInformation : IComparable<FunctionInformation> {
             addresses = new HashSet<SegmentedAddress>();
             returnsMap.Add(functionReturn, addresses);
         }
-        addresses.Add(target);
+        addresses.Add(target.Value);
     }
 }
