@@ -5,6 +5,8 @@ using Spice86.Core.Emulator.Function;
 
 namespace Spice86.Core.Emulator.VM;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Shared.Interfaces;
 
@@ -111,7 +113,7 @@ public class EmulationLoop {
     }
 
     private void OutputPerfStats() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             long elapsedTimeMilliSeconds = _stopwatch.ElapsedMilliseconds;
             long cycles = _cpuState.Cycles;
             long cyclesPerSeconds = 0;

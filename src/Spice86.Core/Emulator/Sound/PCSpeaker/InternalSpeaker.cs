@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Sound.PCSpeaker;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 
 using System.Collections.Concurrent;
@@ -9,7 +10,7 @@ using System.Diagnostics;
 /// <summary>
 /// Emulates a PC speaker.
 /// </summary>
-public sealed class InternalSpeaker : IDisposable {
+public sealed class InternalSpeaker : IDisposable, IPauseable {
     /// <summary>
     /// Value into which the input frequency is divided to get the frequency in Hz.
     /// </summary>
@@ -48,6 +49,11 @@ public sealed class InternalSpeaker : IDisposable {
     /// Gets the current period in samples.
     /// </summary>
     private int PeriodInSamples => (int)(_outputSampleRate / Frequency);
+
+    /// <summary>
+    /// Gets or sets whether the PC Speaker render thread is paused
+    /// </summary>
+    public bool IsPaused { get; set; }
 
     /// <summary>
     /// Reads a byte from the control register.
@@ -181,6 +187,9 @@ public sealed class InternalSpeaker : IDisposable {
         int idleCount = 0;
 
         while (idleCount < 10000) {
+            if(IsPaused) {
+                Thread.Sleep(1);
+            }
             if (_queuedNotes.TryDequeue(out QueuedNote note)) {
                 int samples = GenerateSquareWave(buffer, note.Period);
                 int periods = note.PeriodCount;

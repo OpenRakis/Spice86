@@ -18,6 +18,11 @@ internal sealed class Mt32MidiDevice : MidiDevice {
     private bool _disposed;
 
     /// <summary>
+    /// Gets or sets whether the internal MT-32 music render thread is paused
+    /// </summary>
+    public override bool IsPaused { get => _player.IsPaused; set => _player.IsPaused = value; }
+
+    /// <summary>
     /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
     /// </summary>
     /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>

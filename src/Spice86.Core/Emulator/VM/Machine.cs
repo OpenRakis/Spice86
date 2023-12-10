@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -32,7 +33,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Centralizes classes instances that should live while the CPU is running.
 /// </summary>
-public sealed class Machine : IDisposable, IDebuggableComponent {
+public sealed class Machine : IDisposable, IDebuggableComponent, IPauseable {
     private bool _disposed;
 
     /// <summary>
@@ -326,6 +327,18 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// Defines all VGA high level functions, such as writing text to the screen.
     /// </summary>
     public IVgaFunctionality VgaFunctions { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the DMA thread and the Sound related render threads are paused
+    /// </summary>
+    public bool IsPaused {
+        get {
+            return DmaController.IsPaused && MidiDevice.IsPaused && PcSpeaker.IsPaused && SoundBlaster.IsPaused && OPL3FM.IsPaused;
+        }
+        set {
+            DmaController.IsPaused = MidiDevice.IsPaused = PcSpeaker.IsPaused = SoundBlaster.IsPaused  = OPL3FM.IsPaused = value;
+        }
+    }
 
     /// <summary>
     /// Registers an interrupt handler

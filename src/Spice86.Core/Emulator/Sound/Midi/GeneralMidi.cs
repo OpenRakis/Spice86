@@ -3,11 +3,12 @@
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Sound.Midi.MT32;
 using System;
+using Spice86.Core.Emulator.Pause;
 
 /// <summary>
 /// Virtual device which emulates General MIDI playback.
 /// </summary>
-public sealed class GeneralMidi : IDisposable {
+public sealed class GeneralMidi : IDisposable, IPauseable {
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private MidiDevice? _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
@@ -125,8 +126,20 @@ public sealed class GeneralMidi : IDisposable {
     public IEnumerable<int> OutputPorts => new int[] { 0x330, 0x331 };
 
     /// <summary>
-    /// Writes a byte to the specified port, either the DataPort or StatusPort.
-    /// If the DataPort is specified, the byte is sent to the MIDI device through the MIDI mapper.
+    /// Gets or sets whether the General MIDI render thread is paused
+    /// </summary>
+    public bool IsPaused {
+        get => _midiMapper?.IsPaused is true;
+        set {
+            if(_midiMapper is not null) {
+                _midiMapper.IsPaused = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes a byte to the specified port, either the DataPort or StatusPort. <br/>
+    /// If the DataPort is specified, the byte is sent to the MIDI device through the MIDI mapper. <br/>
     /// If the StatusPort is specified, the byte is interpreted as a command, and the GeneralMidiState may be modified accordingly.
     /// </summary>
     /// <param name="port">The port to write the byte to, either DataPort or StatusPort.</param>

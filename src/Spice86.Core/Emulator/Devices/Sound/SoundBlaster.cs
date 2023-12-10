@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.Blaster;
 using Spice86.Shared.Interfaces;
@@ -19,7 +20,7 @@ using Spice86.Shared.Interfaces;
 /// Sound blaster implementation. <br/>
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
-public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt, IBlasterEnvVarProvider, IDisposable {
+public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt, IBlasterEnvVarProvider, IPauseable, IDisposable {
     /// <summary>
     /// The port number for checking if data is available to be read from the DSP.
     /// </summary>
@@ -344,6 +345,11 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
 
+    /// <summary>
+    /// Gets or sets whether the PCM Render thread is paused
+    /// </summary>
+    public bool IsPaused { get; set; }
+
     private void AudioPlayback() {
         using AudioPlayer player = _audioPlayerFactory.CreatePlayer(48000, 2048);
 
@@ -352,6 +358,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         int sampleRate = player.Format.SampleRate;
 
         while (!_endPlayback) {
+            while(IsPaused) {
+                Thread.Sleep(1);
+            }
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
             player.WriteFullBuffer(writeBuffer.AsSpan(0, length));

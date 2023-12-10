@@ -8,11 +8,12 @@ using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Shared.Interfaces;
 
 using System;
+using Spice86.Core.Emulator.Pause;
 
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.
 /// </summary>
-public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
+public sealed class OPL3FM : DefaultIOPortHandler, IDisposable, IPauseable {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
@@ -128,6 +129,11 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
+    /// Gets or sets whether the FM Synth Render thread is paused
+    /// </summary>
+    public bool IsPaused { get; set; }
+
+    /// <summary>
     /// Generates and plays back output waveform data.
     /// </summary>
     private void GenerateWaveforms() {
@@ -140,6 +146,9 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         Span<float> playBuffer = stackalloc float[length];
         FillBuffer(buffer, playBuffer, expandToStereo);
         while (!_endThread) {
+            while(IsPaused) {
+                Thread.Sleep(1);
+            }
             _audioPlayer.WriteFullBuffer(playBuffer);
             FillBuffer(buffer, playBuffer, expandToStereo);
         }

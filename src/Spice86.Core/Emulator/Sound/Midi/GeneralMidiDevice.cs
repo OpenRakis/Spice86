@@ -49,6 +49,11 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         }
     }
 
+    /// <summary>
+    /// Gets or sets whether the General MIDI Render thread is paused
+    /// </summary>
+    public override bool IsPaused { get; set; }
+    
     private void RenderThreadMethod() {
         if (!File.Exists(SoundFont)) {
             return;
@@ -59,6 +64,9 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         Span<float> data = stackalloc float[16384];
         Synthesizer synthesizer = new(new SoundFont(SoundFont), _audioPlayer.Format.SampleRate);
         while (!_endThread) {
+            while(IsPaused) {
+                Thread.Sleep(1);
+            }
             if(!_endThread) {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }

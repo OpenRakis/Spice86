@@ -9,8 +9,9 @@ using Mt32emu;
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.Sound;
+using Spice86.Core.Emulator.Pause;
 
-internal sealed class Mt32Player : IDisposable {
+internal sealed class Mt32Player : IDisposable, IPauseable {
     private readonly Mt32Context _context = new();
     private readonly AudioPlayer _audioPlayer;
     private bool _disposed;
@@ -31,8 +32,8 @@ internal sealed class Mt32Player : IDisposable {
         }
 
         _audioPlayer = audioPlayerFactory.CreatePlayer();
-        if(!LoadRoms(romsPath)) {
-            if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+        if (!LoadRoms(romsPath)) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created", nameof(LoadRoms), romsPath, nameof(Mt32Player));
             }
             return;
@@ -49,15 +50,23 @@ internal sealed class Mt32Player : IDisposable {
     }
 
     private void StartThreadIfNeeded() {
-        if(!_disposed && !_exitRenderThread && !_threadStarted) {
+        if (!_disposed && !_exitRenderThread && !_threadStarted) {
             _threadStarted = true;
             _renderThread?.Start();
         }
     }
 
+    /// <summary>
+    /// Gets or sets whether the MT-32 music render thread is paused
+    /// </summary>
+    public bool IsPaused { get; set; }
+
     private void RenderThreadMethod() {
         Span<float> buffer = stackalloc float[128];
         while(!_exitRenderThread) {
+            while(IsPaused) {
+                Thread.Sleep(1);
+            }
             if(!_exitRenderThread) {
                 _fillBufferEvent.WaitOne(1);
             }

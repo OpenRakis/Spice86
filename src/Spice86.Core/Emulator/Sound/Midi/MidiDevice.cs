@@ -1,16 +1,22 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi;
+
+using Spice86.Core.Emulator.Pause;
+
 using System;
 
 /// <summary>
 /// The base class for all classes talking to an external MIDI device.
 /// </summary>
-internal abstract class MidiDevice : IDisposable {
+internal abstract class MidiDevice : IDisposable, IPauseable {
     private uint _currentMessage;
     private uint _bytesReceived;
     private uint _bytesExpected;
     private byte[] _currentSysex = new byte[128];
     private int _sysexIndex = -1;
     private static readonly uint[] MessageLength = { 3, 3, 3, 3, 2, 2, 3, 1 };
+
+    /// <inheritdoc/>
+    public abstract bool IsPaused { get; set; }
 
     /// <summary>
     /// Sends a byte to the MIDI device.

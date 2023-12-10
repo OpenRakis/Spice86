@@ -2,20 +2,26 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// PC speaker implementation.
+/// Represents an IBM PC Speaker.
 /// </summary>
-public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
+public sealed class PcSpeaker : DefaultIOPortHandler, IPauseable, IDisposable {
     private const int PcSpeakerPortNumber = 0x61;
 
     private bool _disposed;
 
     private readonly InternalSpeaker _pcSpeaker;
+
+    /// <summary>
+    /// Gets or sets whether the internal PC Speaker render thread is paused
+    /// </summary>
+    public bool IsPaused { get; set; }
 
     /// <summary>
     /// Initializes a new instance of <see cref="PcSpeaker"/>
