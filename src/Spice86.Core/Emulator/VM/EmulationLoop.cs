@@ -104,9 +104,6 @@ public class EmulationLoop : IPauseable {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
             PauseIfAskedTo();
-            if (_listensToBreakpoints) {
-                _machineBreakpoints.CheckBreakPoint();
-            }
             _cpu.ExecuteNextInstruction();
             _timer.Tick();
         }
@@ -142,6 +139,10 @@ public class EmulationLoop : IPauseable {
 
         if (!GenerateUnconditionalGdbBreakpoint()) {
             ThreadPause.SleepWhilePaused(ref _isPaused);
+        }
+
+        if (_listensToBreakpoints) {
+            _machineBreakpoints.CheckBreakPoint();
         }
     }
 }
