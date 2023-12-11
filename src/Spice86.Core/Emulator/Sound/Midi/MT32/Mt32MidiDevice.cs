@@ -1,54 +1,133 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi.MT32;
 
-using Spice86.Shared.Interfaces;
+using Mt32emu;
+
+using Spice86.Core.Backend.Audio;
+using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound.Midi;
+using Spice86.Shared.Interfaces;
+
+using System.IO.Compression;
+
+using System.Linq;
 
 /// <summary>
 /// A MIDI device implementation for playing MIDI files on an MT-32 sound module.
 /// </summary>
 internal sealed class Mt32MidiDevice : MidiDevice {
-    /// <summary>
-    /// The MT-32 player instance associated with this device.
-    /// </summary>
-    private readonly Mt32Player _player;
-
-    /// <summary>
-    /// Indicates whether this object has been disposed.
-    /// </summary>
+    private readonly Mt32Context _context = new();
+    private readonly AudioPlayer _audioPlayer;
     private bool _disposed;
+    private bool _threadStarted;
 
-    /// <summary>
-    /// Gets or sets whether the internal MT-32 music render thread is paused
-    /// </summary>
-    public override bool IsPaused { get => _player.IsPaused; set => _player.IsPaused = value; }
+    private readonly Thread? _renderThread;
 
-    /// <summary>
-    /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
-    /// </summary>
-    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
-    /// <param name="romsPath">The path to the MT-32 ROM files.</param>
-    /// <param name="loggerService">The logger service to use for logging messages.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
+    private bool _exitRenderThread = false;
+    private readonly ManualResetEvent _fillBufferEvent = new(false);
+
+    private readonly ILoggerService _loggerService;
+
     public Mt32MidiDevice(AudioPlayerFactory audioPlayerFactory, string romsPath, ILoggerService loggerService) {
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
-        _player = new Mt32Player(audioPlayerFactory, romsPath, loggerService);
+        _loggerService = loggerService;
+
+        _audioPlayer = audioPlayerFactory.CreatePlayer();
+        if (!LoadRoms(romsPath)) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created", nameof(LoadRoms), romsPath, nameof(Mt32MidiDevice));
+            }
+            return;
+        }
+
+        _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(_audioPlayer.Format.SampleRate);
+        _context.SetSampleRate(_audioPlayer.Format.SampleRate);
+
+        _context.OpenSynth();
+
+        _renderThread = new Thread(RenderThreadMethod) {
+            Name = "MT32Audio"
+        };
     }
 
-    /// <inheritdoc/>
-    protected override void PlayShortMessage(uint message) => _player.PlayShortMessage(message);
+    private void StartThreadIfNeeded() {
+        if (!_disposed && !_exitRenderThread && !_threadStarted) {
+            _threadStarted = true;
+            _renderThread?.Start();
+        }
+    }
 
-    /// <inheritdoc/>
-    protected override void PlaySysex(ReadOnlySpan<byte> data) => _player.PlaySysex(data);
+    private void RenderThreadMethod() {
+        Span<float> buffer = stackalloc float[128];
+        while (!_exitRenderThread) {
+            ThreadPause.SleepWhilePaused(ref _isPaused);
+            if (!_exitRenderThread) {
+                _fillBufferEvent.WaitOne(1);
+            }
+            buffer.Clear();
+            _context.Render(buffer);
+            _audioPlayer.WriteData(buffer);
+        }
+    }
 
-    /// <inheritdoc/>
+    protected override void PlayShortMessage(uint message) {
+        StartThreadIfNeeded();
+        if (!_disposed && !_exitRenderThread) {
+            _context.PlayMessage(message);
+            RaiseFillBufferEvent();
+        }
+    }
+
+    protected override void PlaySysex(ReadOnlySpan<byte> data) {
+        StartThreadIfNeeded();
+        if (!_disposed && !_exitRenderThread) {
+            _context.PlaySysex(data);
+            RaiseFillBufferEvent();
+        }
+    }
+
+    private void RaiseFillBufferEvent() {
+        if (!_disposed && !_exitRenderThread) {
+            _fillBufferEvent.Set();
+        }
+    }
+
+    private bool LoadRoms(string path) {
+        if (path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
+            using ZipArchive zip = new ZipArchive(File.OpenRead(path), ZipArchiveMode.Read);
+            bool foundRom = false;
+            for (int i = 0; i < zip.Entries.Count; i++) {
+                ZipArchiveEntry entry = zip.Entries[i];
+                if (entry.FullName.EndsWith(".ROM", StringComparison.OrdinalIgnoreCase)) {
+                    using Stream stream = entry.Open();
+                    _context.AddRom(stream);
+                    foundRom = true;
+                }
+            }
+            return foundRom;
+        } else if (Directory.Exists(path)) {
+            IEnumerable<string> fileNames = Directory.EnumerateFiles(path, "*.ROM");
+            foreach (string? fileName in fileNames) {
+                _context.AddRom(fileName);
+            }
+            return fileNames.Any();
+        }
+        return false;
+    }
+
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _player.Dispose();
+                _exitRenderThread = true;
+                _fillBufferEvent.Set();
+                if (_renderThread?.IsAlive == true) {
+                    _renderThread.Join();
+                }
+                _context.Dispose();
+                _fillBufferEvent.Dispose();
+                _audioPlayer.Dispose();
             }
-
             _disposed = true;
         }
     }

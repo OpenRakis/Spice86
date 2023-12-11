@@ -6,7 +6,7 @@ using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound.Midi.Windows;
 
-using OperatingSystem = System.OperatingSystem;
+using System;
 
 /// <summary>
 /// Represents an external General MIDI device. <br/>
@@ -50,11 +50,6 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         }
     }
 
-    /// <summary>
-    /// Gets or sets whether the General MIDI Render thread is paused
-    /// </summary>
-    public override bool IsPaused { get; set; }
-    
     private void RenderThreadMethod() {
         if (!File.Exists(SoundFont)) {
             return;
@@ -65,7 +60,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         Span<float> data = stackalloc float[16384];
         Synthesizer synthesizer = new(new SoundFont(SoundFont), _audioPlayer.Format.SampleRate);
         while (!_endThread) {
-            SleepWhilePaused();
+            ThreadPause.SleepWhilePaused(ref _isPaused);
             if (!_endThread) {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }

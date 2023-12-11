@@ -3,6 +3,7 @@
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Shared.Interfaces;
@@ -15,10 +16,29 @@ using System.Diagnostics;
 /// <summary>
 /// Represents an IBM PC Speaker.
 /// </summary>
-public sealed class PcSpeaker : PauseableDevice, IDisposable {
+public sealed class PcSpeaker : DefaultIOPortHandler, IPauseable, IDisposable {
     private const int PcSpeakerPortNumber = 0x61;
 
     private bool _disposed;
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="PcSpeaker"/>
+    /// </summary>
+    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
+    public PcSpeaker(AudioPlayerFactory audioPlayerFactory, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+        _audioPlayerFactory = audioPlayerFactory;
+        _frequencyRegister.ValueChanged += FrequencyChanged;
+        _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
+
+    }
+
+    /// <inheritdoc />
+    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
+    }
 
     /// <summary>
     /// Value into which the input frequency is divided to get the frequency in Hz.
@@ -36,6 +56,7 @@ public sealed class PcSpeaker : PauseableDevice, IDisposable {
     private Task? _generateWaveformTask;
     private readonly CancellationTokenSource _cancelGenerateWaveform = new();
     private int _currentPeriod;
+    private bool _isPaused;
 
     /// <summary>
     /// Gets the current frequency in Hz.
@@ -46,6 +67,9 @@ public sealed class PcSpeaker : PauseableDevice, IDisposable {
     /// Gets the current period in samples.
     /// </summary>
     private int PeriodInSamples => (int)(_outputSampleRate / Frequency);
+
+    /// <inheritdoc/>
+    public bool IsPaused { get => _isPaused; set => _isPaused = value; }
 
     /// <summary>
     /// Reads a byte from the control register.
@@ -118,6 +142,7 @@ public sealed class PcSpeaker : PauseableDevice, IDisposable {
         EnqueueCurrentNote();
         _currentPeriod = 0;
     }
+
     /// <summary>
     /// Invoked when the frequency has changed.
     /// </summary>
@@ -130,6 +155,7 @@ public sealed class PcSpeaker : PauseableDevice, IDisposable {
         _durationTimer.Start();
         _currentPeriod = PeriodInSamples;
     }
+
     /// <summary>
     /// Enqueues the current note.
     /// </summary>
@@ -148,6 +174,7 @@ public sealed class PcSpeaker : PauseableDevice, IDisposable {
             }
         }
     }
+
     /// <summary>
     /// Fills a buffer with a square wave of the current frequency.
     /// </summary>
@@ -166,6 +193,7 @@ public sealed class PcSpeaker : PauseableDevice, IDisposable {
 
         return period;
     }
+
     /// <summary>
     /// Generates the PC speaker waveform.
     /// </summary>
@@ -184,7 +212,7 @@ public sealed class PcSpeaker : PauseableDevice, IDisposable {
         int idleCount = 0;
 
         while (idleCount < 10000) {
-            SleepWhilePaused();
+            ThreadPause.SleepWhilePaused(ref _isPaused);
             if (_queuedNotes.TryDequeue(out QueuedNote note)) {
                 int samples = GenerateSquareWave(buffer, note.Period);
                 int periods = note.PeriodCount;
@@ -226,24 +254,5 @@ public sealed class PcSpeaker : PauseableDevice, IDisposable {
 
         while (player.WriteData(span) > 0) {
         }
-    }
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="PcSpeaker"/>
-    /// </summary>
-    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
-    /// <param name="state">The CPU state.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public PcSpeaker(AudioPlayerFactory audioPlayerFactory, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
-        _audioPlayerFactory = audioPlayerFactory;
-        _frequencyRegister.ValueChanged += FrequencyChanged;
-        _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
-
-    }
-
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
     }
 }

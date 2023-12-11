@@ -12,7 +12,7 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
 /// </summary>
-public sealed class DmaController : PauseableDevice, IDisposable {
+public sealed class DmaController : DefaultIOPortHandler, IPauseable, IDisposable {
     private const int ModeRegister8 = 0x0B;
     private const int ModeRegister16 = 0xD6;
     private const int MaskRegister8 = 0x0A;
@@ -27,6 +27,7 @@ public sealed class DmaController : PauseableDevice, IDisposable {
     private bool _exitDmaLoop;
     private readonly Thread _dmaThread;
     private bool _dmaThreadStarted;
+    private bool _isPaused;
     private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private static readonly FrozenSet<int> _otherOutputPorts = new int[] {
@@ -69,14 +70,14 @@ public sealed class DmaController : PauseableDevice, IDisposable {
     /// <summary>
     /// Gets or sets whether the DMA Thread is paused.
     /// </summary>
-    internal bool IsPaused {  get; set; }
-    
+    public bool IsPaused { get => _isPaused; set => _isPaused = value; }
+
     /// <summary>
     /// https://techgenix.com/direct-memory-access/
     /// </summary>
     private void DmaLoop() {
         while (!_exitDmaLoop) {
-            SleepWhilePaused();
+            ThreadPause.SleepWhilePaused(ref _isPaused);
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
                 bool transferred = dmaChannel.Transfer(_memory);
