@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Pause;
+﻿namespace Spice86.Core.Emulator.VM.Pause;
 /// <summary>
 /// Exposes a property to pause emulation
 /// </summary>

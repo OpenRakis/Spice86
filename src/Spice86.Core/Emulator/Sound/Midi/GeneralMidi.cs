@@ -3,7 +3,7 @@
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Sound.Midi.MT32;
 using System;
-using Spice86.Core.Emulator.Pause;
+using Spice86.Core.Emulator.VM.Pause;
 
 /// <summary>
 /// Virtual device which emulates General MIDI playback.

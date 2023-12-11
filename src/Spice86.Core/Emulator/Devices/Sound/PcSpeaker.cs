@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
+using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 

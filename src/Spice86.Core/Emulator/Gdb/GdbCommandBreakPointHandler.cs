@@ -9,6 +9,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using Serilog.Events;
+using Spice86.Core.Emulator.VM.Pause;
 
 /// <summary>
 /// Handles GDB commands related to breakpoints and stepping through instructions.

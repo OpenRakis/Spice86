@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
+using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
 
 using System;

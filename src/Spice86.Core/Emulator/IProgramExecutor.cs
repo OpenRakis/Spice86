@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator;
 
 using Spice86.Core.Emulator.Debugger;
-using Spice86.Core.Emulator.Pause;
+using Spice86.Core.Emulator.VM.Pause;
 
 /// <summary>
 /// The program executor is responsible for starting and controlling the emulated program. <br/>

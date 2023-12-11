@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi;
 
-using Spice86.Core.Emulator.Pause;
+using Spice86.Core.Emulator.VM.Pause;
 
 using System;
 
