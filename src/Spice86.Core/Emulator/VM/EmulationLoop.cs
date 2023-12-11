@@ -58,7 +58,9 @@ public class EmulationLoop : IPauseable {
         _stopwatch = new();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Gets or sets whether the emulation loop thread is paused.
+    /// </summary>
     public bool IsPaused { get => _isPaused; set => _isPaused = value; }
 
     /// <summary>
