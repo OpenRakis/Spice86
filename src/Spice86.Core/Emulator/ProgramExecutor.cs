@@ -83,7 +83,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
 
     /// <inheritdoc/>
     public bool IsPaused {
-        get => _emulationLoop.IsPaused;
+        get => Machine.IsPaused && _emulationLoop.IsPaused;
         set => Machine.IsPaused = _emulationLoop.IsPaused = value;
     }
 

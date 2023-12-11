@@ -1,3 +1,5 @@
+namespace Spice86.Core.Emulator.VM;
+
 using System.Diagnostics;
 
 using Serilog.Events;
@@ -7,16 +9,15 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
+using Spice86.Core.Emulator.Pause;
 using Spice86.Shared.Interfaces;
-
-namespace Spice86.Core.Emulator.VM;
 
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
 /// Also, calls the DMA Controller once in order to start the DMA thread loop for DMA transfers. <br/>
 /// On Pause, triggers a GDB breakpoint.
 /// </summary>
-public class EmulationLoop {
+public class EmulationLoop : Pauseable {
     private readonly ILoggerService _loggerService;
     private readonly Cpu _cpu;
     private readonly State _cpuState;
@@ -25,11 +26,6 @@ public class EmulationLoop {
     private readonly DmaController _dmaController;
     private readonly GdbCommandHandler? _gdbCommandHandler;
     private readonly Stopwatch _stopwatch;
-
-    /// <summary>
-    /// Gets or sets whether the emulation is paused.
-    /// </summary>
-    public bool IsPaused { get; set; }
 
     /// <summary>
     /// Whether we check for breakpoints in the emulation loop.
@@ -138,9 +134,7 @@ public class EmulationLoop {
         }
 
         if (!GenerateUnconditionalGdbBreakpoint()) {
-            while (IsPaused) {
-                Thread.Sleep(1);
-            }
+            SleepWhilePaused();
         }
     }
 }

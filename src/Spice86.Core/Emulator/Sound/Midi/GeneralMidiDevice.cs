@@ -3,6 +3,7 @@
 using MeltySynth;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound.Midi.Windows;
 
 using OperatingSystem = System.OperatingSystem;
@@ -64,10 +65,8 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         Span<float> data = stackalloc float[16384];
         Synthesizer synthesizer = new(new SoundFont(SoundFont), _audioPlayer.Format.SampleRate);
         while (!_endThread) {
-            while(IsPaused) {
-                Thread.Sleep(1);
-            }
-            if(!_endThread) {
+            SleepWhilePaused();
+            if (!_endThread) {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
             FillBuffer(synthesizer, data);

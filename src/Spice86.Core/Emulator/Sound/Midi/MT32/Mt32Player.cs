@@ -11,7 +11,7 @@ using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Pause;
 
-internal sealed class Mt32Player : IDisposable, IPauseable {
+internal sealed class Mt32Player : Pauseable, IDisposable {
     private readonly Mt32Context _context = new();
     private readonly AudioPlayer _audioPlayer;
     private bool _disposed;
@@ -56,17 +56,10 @@ internal sealed class Mt32Player : IDisposable, IPauseable {
         }
     }
 
-    /// <summary>
-    /// Gets or sets whether the MT-32 music render thread is paused
-    /// </summary>
-    public bool IsPaused { get; set; }
-
     private void RenderThreadMethod() {
         Span<float> buffer = stackalloc float[128];
         while(!_exitRenderThread) {
-            while(IsPaused) {
-                Thread.Sleep(1);
-            }
+            SleepWhilePaused();
             if(!_exitRenderThread) {
                 _fillBufferEvent.WaitOne(1);
             }

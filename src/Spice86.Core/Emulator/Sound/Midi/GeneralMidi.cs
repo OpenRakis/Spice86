@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.Pause;
 /// <summary>
 /// Virtual device which emulates General MIDI playback.
 /// </summary>
-public sealed class GeneralMidi : IDisposable, IPauseable {
+public sealed class GeneralMidi : IPauseable, IDisposable {
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private MidiDevice? _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
@@ -129,7 +129,7 @@ public sealed class GeneralMidi : IDisposable, IPauseable {
     /// Gets or sets whether the General MIDI render thread is paused
     /// </summary>
     public bool IsPaused {
-        get => _midiMapper?.IsPaused is true;
+        get => _midiMapper?.IsPaused is true or null;
         set {
             if(_midiMapper is not null) {
                 _midiMapper.IsPaused = value;

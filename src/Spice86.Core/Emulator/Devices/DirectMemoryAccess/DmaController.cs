@@ -12,7 +12,7 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
 /// </summary>
-public sealed class DmaController : DefaultIOPortHandler, IDisposable, IPauseable {
+public sealed class DmaController : PauseableDevice, IDisposable {
     private const int ModeRegister8 = 0x0B;
     private const int ModeRegister16 = 0xD6;
     private const int MaskRegister8 = 0x0A;
@@ -76,9 +76,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable, IPauseabl
     /// </summary>
     private void DmaLoop() {
         while (!_exitDmaLoop) {
-            while(IsPaused) {
-                Thread.Sleep(1);
-            }
+            SleepWhilePaused();
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
                 bool transferred = dmaChannel.Transfer(_memory);
@@ -132,8 +130,6 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable, IPauseabl
             return ports.ToFrozenSet();
         }
     }
-
-    bool IPauseable.IsPaused { get; set; }
 
     /// <inheritdoc/>
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {

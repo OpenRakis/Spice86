@@ -33,7 +33,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Centralizes classes instances that should live while the CPU is running.
 /// </summary>
-public sealed class Machine : IDisposable, IDebuggableComponent, IPauseable {
+public sealed class Machine : IPauseable, IDisposable, IDebuggableComponent {
     private bool _disposed;
 
     /// <summary>

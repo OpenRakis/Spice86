@@ -1,11 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Newtonsoft.Json.Linq;
-
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Shared.Interfaces;
@@ -18,7 +15,7 @@ using System.Diagnostics;
 /// <summary>
 /// Represents an IBM PC Speaker.
 /// </summary>
-public sealed class PcSpeaker : DefaultIOPortHandler, IPauseable, IDisposable {
+public sealed class PcSpeaker : PauseableDevice, IDisposable {
     private const int PcSpeakerPortNumber = 0x61;
 
     private bool _disposed;
@@ -49,11 +46,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IPauseable, IDisposable {
     /// Gets the current period in samples.
     /// </summary>
     private int PeriodInSamples => (int)(_outputSampleRate / Frequency);
-
-    /// <summary>
-    /// Gets or sets whether the PC Speaker render thread is paused
-    /// </summary>
-    public bool IsPaused { get; set; }
 
     /// <summary>
     /// Reads a byte from the control register.
@@ -192,9 +184,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IPauseable, IDisposable {
         int idleCount = 0;
 
         while (idleCount < 10000) {
-            while (IsPaused) {
-                Thread.Sleep(1);
-            }
+            SleepWhilePaused();
             if (_queuedNotes.TryDequeue(out QueuedNote note)) {
                 int samples = GenerateSquareWave(buffer, note.Period);
                 int periods = note.PeriodCount;
