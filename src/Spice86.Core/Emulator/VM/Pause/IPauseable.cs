@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.VM.Pause;
 /// <summary>
-/// Exposes a property to pause emulation
+/// Represents an emulator class with a render thread that can be paused.
 /// </summary>
 public interface IPauseable {
     /// <summary>
