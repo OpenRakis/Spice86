@@ -102,7 +102,7 @@ public class GdbCommandHandler {
                 'P' => _gdbCommandRegisterHandler.WriteRegister(commandContent),
                 'm' => _gdbCommandMemoryHandler.ReadMemory(commandContent),
                 'M' => _gdbCommandMemoryHandler.WriteMemory(commandContent),
-                'T' => HandleThreadALive(),
+                'T' => HandleThreadAlive(),
                 'v' => ProcessVPacket(commandContent),
                 's' => _gdbCommandBreakpointHandler.Step(),
                 'z' => _gdbCommandBreakpointHandler.RemoveBreakpoint(commandContent),
@@ -128,7 +128,7 @@ public class GdbCommandHandler {
         return _gdbIo.GenerateResponse("");
     }
 
-    private string HandleThreadALive() {
+    private string HandleThreadAlive() {
         return _gdbIo.GenerateResponse("OK");
     }
 
