@@ -1,7 +1,5 @@
 namespace Spice86.Core.Emulator.VM;
 
-using System.Diagnostics;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
@@ -9,9 +7,10 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
-using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
@@ -32,7 +31,6 @@ public class EmulationLoop : IPauseable {
     /// Whether we check for breakpoints in the emulation loop.
     /// </summary>
     private readonly bool _listensToBreakpoints;
-    private bool _isPaused;
 
     /// <summary>
     /// Initializes a new instance.
@@ -61,7 +59,7 @@ public class EmulationLoop : IPauseable {
     /// <summary>
     /// Gets or sets whether the emulation loop thread is paused.
     /// </summary>
-    public bool IsPaused { get => _isPaused; set => _isPaused = value; }
+    public bool IsPaused { get; set; }
 
     /// <summary>
     /// Starts and waits for the end of the emulation loop.
@@ -138,7 +136,7 @@ public class EmulationLoop : IPauseable {
         }
 
         if (!GenerateUnconditionalGdbBreakpoint()) {
-            ThreadPause.SleepWhilePaused(ref _isPaused);
+            ThreadPause.SleepWhilePaused(this);
         }
 
         if (_listensToBreakpoints) {

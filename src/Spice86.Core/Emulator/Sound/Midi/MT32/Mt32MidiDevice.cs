@@ -3,8 +3,8 @@
 using Mt32emu;
 
 using Spice86.Core.Backend.Audio;
-using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound.Midi;
+using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
 
 using System.IO.Compression;
@@ -61,7 +61,7 @@ internal sealed class Mt32MidiDevice : MidiDevice {
     private void RenderThreadMethod() {
         Span<float> buffer = stackalloc float[128];
         while (!_exitRenderThread) {
-            ThreadPause.SleepWhilePaused(ref _isPaused);
+            ThreadPause.SleepWhilePaused(this);
             if (!_exitRenderThread) {
                 _fillBufferEvent.WaitOne(1);
             }

@@ -3,7 +3,6 @@
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.PCSpeaker;
 using Spice86.Core.Emulator.VM.Pause;
@@ -213,7 +212,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IPauseable, IDisposable {
         int idleCount = 0;
 
         while (idleCount < 10000) {
-            ThreadPause.SleepWhilePaused(ref _isPaused);
+            ThreadPause.SleepWhilePaused(this);
             if (_queuedNotes.TryDequeue(out QueuedNote note)) {
                 int samples = GenerateSquareWave(buffer, note.Period);
                 int periods = note.PeriodCount;

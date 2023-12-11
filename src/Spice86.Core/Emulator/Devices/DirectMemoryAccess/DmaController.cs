@@ -3,7 +3,6 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
 
@@ -28,7 +27,6 @@ public sealed class DmaController : DefaultIOPortHandler, IPauseable, IDisposabl
     private bool _exitDmaLoop;
     private readonly Thread _dmaThread;
     private bool _dmaThreadStarted;
-    private bool _isPaused;
     private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private static readonly FrozenSet<int> _otherOutputPorts = new int[] {
@@ -71,14 +69,14 @@ public sealed class DmaController : DefaultIOPortHandler, IPauseable, IDisposabl
     /// <summary>
     /// Gets or sets whether the DMA Thread is paused.
     /// </summary>
-    public bool IsPaused { get => _isPaused; set => _isPaused = value; }
+    public bool IsPaused { get; set; }
 
     /// <summary>
     /// https://techgenix.com/direct-memory-access/
     /// </summary>
     private void DmaLoop() {
         while (!_exitDmaLoop) {
-            ThreadPause.SleepWhilePaused(ref _isPaused);
+            ThreadPause.SleepWhilePaused(this);
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
                 bool transferred = dmaChannel.Transfer(_memory);

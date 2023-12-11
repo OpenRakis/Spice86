@@ -1,9 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Sound.Midi;
 
-using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Sound.Midi.MT32;
-using System;
 using Spice86.Core.Emulator.VM.Pause;
+using Spice86.Shared.Interfaces;
+
+using System;
 
 /// <summary>
 /// Virtual device which emulates General MIDI playback.

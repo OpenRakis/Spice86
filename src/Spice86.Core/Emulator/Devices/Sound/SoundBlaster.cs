@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Pause;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.Blaster;
 using Spice86.Core.Emulator.VM.Pause;
@@ -358,7 +357,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IPauseable, IDmaDevice8
         int sampleRate = player.Format.SampleRate;
 
         while (!_endPlayback) {
-            ThreadPause.SleepWhilePaused(ref _isPaused);
+            ThreadPause.SleepWhilePaused(this);
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
             player.WriteFullBuffer(writeBuffer.AsSpan(0, length));
