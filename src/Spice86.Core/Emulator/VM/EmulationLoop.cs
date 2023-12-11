@@ -1,16 +1,15 @@
+using System.Diagnostics;
+
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-
-namespace Spice86.Core.Emulator.VM;
-
-using Serilog.Events;
-
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Shared.Interfaces;
 
-using System.Diagnostics;
+namespace Spice86.Core.Emulator.VM;
 
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
@@ -28,12 +27,12 @@ public class EmulationLoop {
     private readonly Stopwatch _stopwatch;
 
     /// <summary>
-    /// Whether the emulation is paused.
+    /// Gets or sets whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
 
     /// <summary>
-    /// Gets if we check for breakpoints in the emulation loop.
+    /// Whether we check for breakpoints in the emulation loop.
     /// </summary>
     private readonly bool _listensToBreakpoints;
 
