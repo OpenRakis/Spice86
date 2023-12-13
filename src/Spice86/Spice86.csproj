@@ -53,7 +53,7 @@
 	<ItemGroup>
 		<PackageReference Include="bodong.PropertyModels" Version="11.0.4.1" />
 		<PackageReference Include="DialogHost.Avalonia" Version="0.7.7" />
-		<PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.5" />
+		<PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.6" />
 		<PackageReference Include="Iced" Version="1.20.0" />
 		<PackageReference Include="Semi.Avalonia" Version="11.0.1" />
 		<PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.4.1" />
@@ -64,7 +64,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Avalonia" Version="11.0.5" />
+		<PackageReference Include="Avalonia" Version="11.0.6" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.5" />
 		<PackageReference Include="Avalonia.Desktop" Version="11.0.5" />
 		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.5" />
