@@ -118,7 +118,7 @@ public class EmulationLoop {
             if (elapsedTimeMilliSeconds > 0) {
                 cyclesPerSeconds = (_cpuState.Cycles * 1000) / elapsedTimeMilliSeconds;
             }
-            _loggerService.Warning("Executed {cycles} instructions in {elapsedTimeMilliSeconds}ms. {cyclesPerSeconds} Instructions per seconds on average over run.", cycles, elapsedTimeMilliSeconds, cyclesPerSeconds);
+            _loggerService.Warning("Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.", cycles, elapsedTimeMilliSeconds, cyclesPerSeconds);
         }
     }
     
