@@ -16,7 +16,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="IOPortDispatcher"/> class.
     /// </summary>
-    /// <param name="cpu">The CPU state.</param>
+    /// <param name="state">The CPU state, such as registers.</param>
     /// <param name="loggerService">The logger service.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public IOPortDispatcher(State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) => _failOnUnhandledPort = failOnUnhandledPort;
