@@ -192,15 +192,16 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <summary>
     /// Initializes a new instance
     /// </summary>
-    public Machine(IGui? gui, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+    public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea), configuration.A20Gate);
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
             Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         }
+        IoPortDispatcher = ioPortDispatcher;
         BiosDataArea = new BiosDataArea(Memory);
-        CpuState = new State();
+        CpuState = cpuState;
         DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
         MachineBreakpoints = new(Memory, CpuState, loggerService);
