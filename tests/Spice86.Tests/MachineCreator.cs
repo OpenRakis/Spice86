@@ -1,16 +1,15 @@
 namespace Spice86.Tests;
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Interfaces;
-
 using System;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 public class MachineCreator {
     public ProgramExecutor CreateProgramExecutorFromBinName(string binName, bool recordData = false) {
@@ -32,8 +31,6 @@ public class MachineCreator {
         ProgramExecutor programExecutor = new ProgramExecutor(configuration, loggerService, null);
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
-        // Disabling custom IO handling
-        cpu.IoPortDispatcher = null;
         cpu.ErrorOnUninitializedInterruptHandler = false;
         State state = machine.CpuState;
         state.Flags.IsDOSBoxCompatible = false;

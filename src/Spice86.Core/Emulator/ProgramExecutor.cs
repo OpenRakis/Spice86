@@ -21,6 +21,9 @@ using Spice86.Core.Emulator.Debugger;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
+using Spice86.Core.Emulator.IOPorts;
+using Spice86.Logging;
+using System.Net.NetworkInformation;
 
 /// <summary>
 /// Loads and executes a program following the given configuration in the emulator.<br/>
@@ -154,7 +157,9 @@ public sealed class ProgramExecutor : IProgramExecutor {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(ListensToBreakpoints);
-        Machine = new Machine(gui, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, ListensToBreakpoints);
+        State cpuState = new();
+        IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
+        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, ListensToBreakpoints);
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
