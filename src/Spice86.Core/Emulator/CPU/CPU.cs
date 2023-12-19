@@ -17,6 +17,8 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Runtime.CompilerServices;
+
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
 /// program use them. <br /> It also has some x87 FPU instructions to support telling the programs
@@ -224,7 +226,6 @@ public class Cpu : IDebuggableComponent {
     public void Callback(ushort callbackIndex) => _callbackHandler.Run(callbackIndex);
 
     private void ExecSubOpcode(byte subcode) {
-        //#replace with jump table
         switch (subcode) {
             case 0x80:
             case 0x81:
@@ -1082,11 +1083,10 @@ public class Cpu : IDebuggableComponent {
     }
 
     public void Aad(byte v2) {
-        byte result = (byte)(State.AL + (State.AH * v2));
-        State.AL = result;
+        State.AL = (byte)(State.AL + (State.AH * v2));
         State.AH = 0;
         State.Flags.FlagRegister = 0;
-        _alu8.UpdateFlags(result);
+        _alu8.UpdateFlags(State.AL);
     }
 
     public void Aas() {
