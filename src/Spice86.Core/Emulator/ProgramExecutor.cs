@@ -98,6 +98,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             if (disposing) {
                 _gdbServer?.Dispose();
                 _emulationLoop.Exit();
+                _emulationLoop.Dispose();
                 Machine.Dispose();
             }
             _disposed = true;

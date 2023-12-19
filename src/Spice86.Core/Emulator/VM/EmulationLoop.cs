@@ -15,7 +15,7 @@ using System.Diagnostics;
 /// Also, calls the DMA Controller once in order to start the DMA thread loop for DMA transfers. <br/>
 /// On Pause, triggers a GDB breakpoint.
 /// </summary>
-public class EmulationLoop {
+public sealed class EmulationLoop : IDisposable {
     private readonly ILoggerService _loggerService;
     private readonly Cpu _cpu;
     private readonly State _cpuState;
@@ -24,16 +24,14 @@ public class EmulationLoop {
     private readonly DmaController _dmaController;
     private readonly GdbCommandHandler? _gdbCommandHandler;
     private readonly Stopwatch _stopwatch;
-
-    /// <summary>
-    /// Whether the emulation is paused.
-    /// </summary>
-    public bool IsPaused { get; set; }
+    private readonly ManualResetEvent _manualResetEvent = new(true);
 
     /// <summary>
     /// Gets if we check for breakpoints in the emulation loop.
     /// </summary>
     private readonly bool _listensToBreakpoints;
+    private bool _disposed;
+    private bool _isPaused;
 
     /// <summary>
     /// Initializes a new instance.
@@ -82,6 +80,25 @@ public class EmulationLoop {
     }
 
     /// <summary>
+    /// Whether the emulation is paused.
+    /// </summary>
+    public bool IsPaused {
+        get => _isPaused;
+        set {
+            _isPaused = value;
+            if (_isPaused) {
+                Pause();
+            } else {
+                Resume();
+            }
+        }
+    }
+
+    private void Pause() {
+        _manualResetEvent.Reset();
+    }
+
+    /// <summary>
     /// Forces the emulation loop to exit.
     /// </summary>
     internal void Exit() {
@@ -99,7 +116,9 @@ public class EmulationLoop {
     private void RunLoop() {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
-            PauseIfAskedTo();
+            if (IsPaused && !GenerateUnconditionalGdbBreakpoint()) {
+                _manualResetEvent.WaitOne();
+            }
             if (_listensToBreakpoints) {
                 _machineBreakpoints.CheckBreakPoint();
             }
@@ -121,25 +140,31 @@ public class EmulationLoop {
             _loggerService.Warning("Executed {cycles} instructions in {elapsedTimeMilliSeconds}ms. {cyclesPerSeconds} Instructions per seconds on average over run.", cycles, elapsedTimeMilliSeconds, cyclesPerSeconds);
         }
     }
-    
+
     private bool GenerateUnconditionalGdbBreakpoint() {
-        if (_gdbCommandHandler is null) {
+        if(_gdbCommandHandler == null) {
             return false;
         }
-
         _gdbCommandHandler.Step();
         return true;
     }
-    
-    private void PauseIfAskedTo() {
-        if (!IsPaused) {
-            return;
-        }
 
-        if (!GenerateUnconditionalGdbBreakpoint()) {
-            while (IsPaused) {
-                Thread.Sleep(1);
+    private void Resume() {
+        _manualResetEvent.Set();
+    }
+
+    private void Dispose(bool disposing) {
+        if (!_disposed) {
+            if (disposing) {
+                _manualResetEvent.Dispose();
             }
+            _disposed = true;
         }
+    }
+
+    /// <inheritdoc />
+    public void Dispose() {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }
