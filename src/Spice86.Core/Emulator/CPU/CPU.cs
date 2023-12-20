@@ -17,7 +17,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Runtime.CompilerServices;
+using System.Collections.Frozen;
 
 /// <summary>
 /// Implementation of a 8086 CPU. <br /> It has some 80186, 80286 and 80386 instructions as some
@@ -34,8 +34,8 @@ public class Cpu : IDebuggableComponent {
 
     private readonly ILoggerService _loggerService;
 
-    private static readonly HashSet<int> _stringOpCodes = new()
-        { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F };
+    private static readonly FrozenSet<int> _stringOpCodes = new HashSet<int>()
+        { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F }.ToFrozenSet();
 
     private readonly IMemory _memory;
     
