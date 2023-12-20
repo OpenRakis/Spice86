@@ -22,33 +22,33 @@ public class ExecutionFlowRecorder {
     /// <summary>
     /// Gets a dictionary of calls from one address to another.
     /// </summary>
-    public IDictionary<uint, ISet<SegmentedAddress>> CallsFromTo { get; set; }
-    private readonly ISet<ulong> _callsEncountered = new HashSet<ulong>(200000);
+    public IDictionary<uint, HashSet<SegmentedAddress>> CallsFromTo { get; set; }
+    private readonly HashSet<ulong> _callsEncountered = new(200000);
     
     /// <summary>
     /// Gets a dictionary of jumps from one address to another.
     /// </summary>
-    public IDictionary<uint, ISet<SegmentedAddress>> JumpsFromTo { get; set; }
-    private readonly ISet<ulong> _jumpsEncountered = new HashSet<ulong>(200000);
+    public IDictionary<uint, HashSet<SegmentedAddress>> JumpsFromTo { get; set; }
+    private readonly HashSet<ulong> _jumpsEncountered = new(200000);
     
     /// <summary>
     /// Gets a dictionary of returns from one address to another.
     /// </summary>
-    public IDictionary<uint, ISet<SegmentedAddress>> RetsFromTo { get; set; }
-    private readonly ISet<ulong> _retsEncountered = new HashSet<ulong>(200000);
+    public IDictionary<uint, HashSet<SegmentedAddress>> RetsFromTo { get; set; }
+    private readonly HashSet<ulong> _retsEncountered = new(200000);
     
     /// <summary>
     /// Gets a dictionary of unaligned returns from one address to another.
     /// </summary>
-    public IDictionary<uint, ISet<SegmentedAddress>> UnalignedRetsFromTo { get; set; }
-    private readonly ISet<ulong> _unalignedRetsEncountered = new HashSet<ulong>(200000);
+    public IDictionary<uint, HashSet<SegmentedAddress>> UnalignedRetsFromTo { get; set; }
+    private readonly HashSet<ulong> _unalignedRetsEncountered = new(200000);
     
     /// <summary>
     /// Gets the set of executed instructions.
     /// </summary>
-    public ISet<SegmentedAddress> ExecutedInstructions { get; set; }
-    private readonly ISet<uint> _instructionsEncountered = new HashSet<uint>(200000);
-    private readonly ISet<uint> _executableCodeAreasEncountered = new HashSet<uint>(200000);
+    public HashSet<SegmentedAddress> ExecutedInstructions { get; set; }
+    private readonly HashSet<uint> _instructionsEncountered = new(200000);
+    private readonly HashSet<uint> _executableCodeAreasEncountered = new(200000);
 
     /// <summary>
     /// Gets or sets whether we register self modifying machine code.
@@ -61,19 +61,19 @@ public class ExecutionFlowRecorder {
     /// The key of the outer dictionary is the modified byte address.
     /// The value of the outer dictionary is a dictionary of modifying instructions, where the key is the instruction address and the value is a set of possible changes that the instruction did.
     /// </summary>
-    public IDictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>> ExecutableAddressWrittenBy { get; }
+    public IDictionary<uint, IDictionary<uint, HashSet<ByteModificationRecord>>> ExecutableAddressWrittenBy { get; }
 
     /// <summary>
     /// Initializes a new instance. <see cref="RecordData"/> is set to false.
     /// </summary>
     public ExecutionFlowRecorder() {
         RecordData = false;
-        CallsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>(200000);
-        JumpsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>(200000);
-        RetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>(200000);
-        UnalignedRetsFromTo = new Dictionary<uint, ISet<SegmentedAddress>>(200000);
+        CallsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
+        JumpsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
+        RetsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
+        UnalignedRetsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
         ExecutedInstructions = new HashSet<SegmentedAddress>();
-        ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, ISet<ByteModificationRecord>>>(200000);
+        ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, HashSet<ByteModificationRecord>>>(200000);
     }
 
     /// <summary>
@@ -207,18 +207,18 @@ public class ExecutionFlowRecorder {
             return;
         }
         if (!ExecutableAddressWrittenBy.TryGetValue(modifiedAddress,
-                out IDictionary<uint, ISet<ByteModificationRecord>>? instructionsChangingThisAddress)) {
-            instructionsChangingThisAddress = new Dictionary<uint, ISet<ByteModificationRecord>>();
+                out IDictionary<uint, HashSet<ByteModificationRecord>>? instructionsChangingThisAddress)) {
+            instructionsChangingThisAddress = new Dictionary<uint, HashSet<ByteModificationRecord>>();
             ExecutableAddressWrittenBy[modifiedAddress] = instructionsChangingThisAddress;
         }
-        if (!instructionsChangingThisAddress.TryGetValue(instructionAddressPhysical, out ISet<ByteModificationRecord>? byteModificationRecords)) {
+        if (!instructionsChangingThisAddress.TryGetValue(instructionAddressPhysical, out HashSet<ByteModificationRecord>? byteModificationRecords)) {
             byteModificationRecords = new HashSet<ByteModificationRecord>();
             instructionsChangingThisAddress[instructionAddressPhysical] = byteModificationRecords;
         }
         byteModificationRecords.Add(new ByteModificationRecord(oldValue, newValue));
     }
 
-    private void RegisterAddressJump(IDictionary<uint, ISet<SegmentedAddress>> FromTo, ISet<ulong> encountered, ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
+    private void RegisterAddressJump(IDictionary<uint, HashSet<SegmentedAddress>> FromTo, HashSet<ulong> encountered, ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
         if (!RecordData) {
             return;
         }
@@ -228,7 +228,7 @@ public class ExecutionFlowRecorder {
         }
         encountered.Add(key);
         uint physicalFrom = MemoryUtils.ToPhysicalAddress(fromCS, fromIP);
-        if (!FromTo.TryGetValue(physicalFrom, out ISet<SegmentedAddress>? destinationAddresses)) {
+        if (!FromTo.TryGetValue(physicalFrom, out HashSet<SegmentedAddress>? destinationAddresses)) {
             destinationAddresses = new HashSet<SegmentedAddress>();
             FromTo.Add(physicalFrom, destinationAddresses);
         }
