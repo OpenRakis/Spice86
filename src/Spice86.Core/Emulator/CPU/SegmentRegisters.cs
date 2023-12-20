@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
+using System.Collections.Frozen;
 using System.Collections.Generic;
 
 /// <summary>
@@ -43,18 +44,18 @@ public class SegmentRegisters : RegistersHolder {
     public SegmentRegisters() : base(GetRegistersNames()) {
     }
 
-    /// <summary>
-    /// Gets a dictionary that maps the segment register index to its name.
-    /// </summary>
-    /// <returns>A dictionary that maps the segment register index to its name.</returns>
-    private static Dictionary<int, string> GetRegistersNames() {
-        return new() {
+    private static readonly FrozenDictionary<int, string> _registersNames = new Dictionary<int, string>() {
             { EsIndex, "ES" },
             { CsIndex, "CS" },
             { SsIndex, "SS" },
             { DsIndex, "DS" },
             { FsIndex, "FS" },
             { GsIndex, "GS" }
-        };
-    }
+        }.ToFrozenDictionary();
+
+    /// <summary>
+    /// Gets a dictionary that maps the segment register index to its name.
+    /// </summary>
+    /// <returns>A dictionary that maps the segment register index to its name.</returns>
+    private static FrozenDictionary<int, string> GetRegistersNames() => _registersNames;
 }

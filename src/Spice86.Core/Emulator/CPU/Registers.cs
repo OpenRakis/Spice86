@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
+using System.Collections.Frozen;
+
 /// <summary>
 /// Represents the x86 registers.
 /// </summary>
@@ -50,8 +52,9 @@ public class Registers : RegistersHolder {
     public Registers() : base(GetRegistersNames()) {
     }
 
-    private static Dictionary<int, string> GetRegistersNames() {
-        return new() {
+    private static readonly FrozenDictionary<int, string> _registersNames = new Dictionary<int, string>()
+        {
+        
             { AxIndex, "AX" },
             { CxIndex, "CX" },
             { DxIndex, "DX" },
@@ -60,6 +63,7 @@ public class Registers : RegistersHolder {
             { BpIndex, "BP" },
             { SiIndex, "SI" },
             { DiIndex, "DI" }
-        };
-    }
+        }.ToFrozenDictionary();
+
+    private static FrozenDictionary<int, string> GetRegistersNames() => _registersNames;
 }

@@ -2,6 +2,8 @@
 
 using Spice86.Shared.Utils;
 
+using System.Collections.Frozen;
+
 /// <summary>
 /// A base class that represents a set of CPU registers.
 /// </summary>
@@ -18,13 +20,13 @@ public class RegistersHolder {
 
     private readonly uint[] _registers;
 
-    private readonly Dictionary<int, string> _registersNames;
+    private readonly FrozenDictionary<int, string> _registersNames;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RegistersHolder"/> class with the specified register names.
     /// </summary>
     /// <param name="registersNames">The names of the registers.</param>
-    protected RegistersHolder(Dictionary<int, string> registersNames) {
+    protected RegistersHolder(FrozenDictionary<int, string> registersNames) {
         _registersNames = registersNames;
         _registers = new uint[registersNames.Count];
     }
