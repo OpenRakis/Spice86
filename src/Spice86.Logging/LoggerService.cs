@@ -21,7 +21,7 @@ public class LoggerService : ILoggerService, IDisposable {
     /// <inheritdoc/>
     public bool AreLogsSilenced { get; set; }
 
-    private ILogger? _logger;
+    private Serilog.Core.Logger? _logger;
 
     private readonly LoggerConfiguration _loggerConfiguration;
 
@@ -50,7 +50,7 @@ public class LoggerService : ILoggerService, IDisposable {
         return AddProperties(_logger);
     }
     
-    private ILogger AddProperties(ILogger logger) {
+    private ILogger AddProperties(Serilog.Core.Logger logger) {
         return logger.ForContext("IP", LoggerPropertyBag.CsIp, destructureObjects: false);
     }
     

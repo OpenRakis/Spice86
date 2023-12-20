@@ -7,7 +7,7 @@ using Bufdio.Spice86.Engines;
 /// The audio rendering backend
 /// </summary>
 public sealed class PortAudioPlayer : AudioPlayer {
-    private readonly IAudioEngine _engine;
+    private readonly PortAudioEngine _engine;
     private readonly PortAudioLib _portAudioLib;
 
     public PortAudioPlayer(PortAudioLib portAudioLib, int framesPerBuffer, AudioFormat format, double? suggestedLatency = null) : base(format) {

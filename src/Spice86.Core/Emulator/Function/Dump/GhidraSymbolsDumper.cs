@@ -33,14 +33,14 @@ public class GhidraSymbolsDumper {
         ICollection<FunctionInformation> functionInformationsValues = functionHandler.FunctionInformations.Values;
         List<string> lines = new();
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
-        ISet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
+        HashSet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
         DumpFunctionInformations(lines, dumpedAddresses, functionInformationsValues);
         DumpLabels(lines, dumpedAddresses, executionFlowRecorder);
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);
         lines.ForEach(line => printWriter.WriteLine(line));
     }
 
-    private void DumpLabels(List<string> lines, ISet<SegmentedAddress> dumpedAddresses, ExecutionFlowRecorder executionFlowRecorder) {
+    private void DumpLabels(List<string> lines, HashSet<SegmentedAddress> dumpedAddresses, ExecutionFlowRecorder executionFlowRecorder) {
         executionFlowRecorder.JumpsFromTo
             .SelectMany(x => x.Value)
             .Where(address => !dumpedAddresses.Contains(address))
@@ -55,7 +55,7 @@ public class GhidraSymbolsDumper {
         return ToGhidraSymbol("spice86_label", address, "l");
     }
 
-    private void DumpFunctionInformations(ICollection<string> lines, ISet<SegmentedAddress> dumpedAddresses, ICollection<FunctionInformation> functionInformations) {
+    private void DumpFunctionInformations(List<string> lines, HashSet<SegmentedAddress> dumpedAddresses, ICollection<FunctionInformation> functionInformations) {
         functionInformations
             .OrderBy(functionInformation => functionInformation.Address)
             .Select(functionInformation => DumpFunctionInformation(dumpedAddresses, functionInformation))
@@ -63,7 +63,7 @@ public class GhidraSymbolsDumper {
             .ForEach(line => lines.Add(line));
     }
 
-    private string DumpFunctionInformation(ISet<SegmentedAddress> dumpedAddresses, FunctionInformation functionInformation) {
+    private string DumpFunctionInformation(HashSet<SegmentedAddress> dumpedAddresses, FunctionInformation functionInformation) {
         dumpedAddresses.Add(functionInformation.Address);
         return ToGhidraSymbol(functionInformation.Name, functionInformation.Address, "f");
     }
