@@ -16,9 +16,9 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// </summary>
     public Func<int, Action>? FunctionOverride { get; }
 
-    private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _returns;
+    private Dictionary<FunctionReturn, HashSet<SegmentedAddress>>? _returns;
 
-    private Dictionary<FunctionReturn, ISet<SegmentedAddress>>? _unalignedReturns;
+    private Dictionary<FunctionReturn, HashSet<SegmentedAddress>>? _unalignedReturns;
 
     /// <summary>
     /// Initializes a new instance.
@@ -43,7 +43,7 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// <summary>
     /// Gets or creates the dictionary of returns for the function.
     /// </summary>
-    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> Returns {
+    public Dictionary<FunctionReturn, HashSet<SegmentedAddress>> Returns {
         get {
             _returns ??= new();
             return _returns;
@@ -53,7 +53,7 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// <summary>
     /// Gets or creates the dictionary of unaligned returns for the function.
     /// </summary>
-    public Dictionary<FunctionReturn, ISet<SegmentedAddress>> UnalignedReturns {
+    public Dictionary<FunctionReturn, HashSet<SegmentedAddress>> UnalignedReturns {
         get {
             _unalignedReturns ??= new();
             return _unalignedReturns;
@@ -152,11 +152,11 @@ public record FunctionInformation : IComparable<FunctionInformation> {
         return $"{Name}_{ConvertUtils.ToCSharpStringWithPhysical(_address)}";
     }
 
-    private static void AddReturn(Dictionary<FunctionReturn, ISet<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress? target) {
+    private static void AddReturn(Dictionary<FunctionReturn, HashSet<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress? target) {
         if (target == null) {
             return;
         }
-        returnsMap.TryGetValue(functionReturn, out ISet<SegmentedAddress>? addresses);
+        returnsMap.TryGetValue(functionReturn, out HashSet<SegmentedAddress>? addresses);
         if (addresses == null) {
             addresses = new HashSet<SegmentedAddress>();
             returnsMap.Add(functionReturn, addresses);
