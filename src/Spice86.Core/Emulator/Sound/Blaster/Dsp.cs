@@ -216,7 +216,7 @@ public sealed class Dsp : IDisposable {
         _resetTimer.Start();
     }
 
-    private System.Timers.Timer _resetTimer = new System.Timers.Timer(TimeSpan.FromMicroseconds(20));
+    private readonly System.Timers.Timer _resetTimer = new System.Timers.Timer(TimeSpan.FromMicroseconds(20));
 
     /// <summary>
     /// Reads samples from the internal buffer.
