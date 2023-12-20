@@ -140,7 +140,7 @@ public class ExecutionFlowRecorder {
     /// <param name="segment">The address segment.</param>
     /// <param name="offset">The address offset.</param>
     /// <returns><c>true</c> when the address was added, <c>false</c> if it was already there</returns>
-    private static bool AddSegmentedAddressInCache(ISet<uint> cache, ushort segment, ushort offset) {
+    private static bool AddSegmentedAddressInCache(HashSet<uint> cache, ushort segment, ushort offset) {
         return cache.Add(MemoryUtils.ToPhysicalAddress(segment, offset));
     }
 

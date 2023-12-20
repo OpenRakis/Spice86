@@ -168,7 +168,7 @@ public class DosMemoryManager {
         return true;
     }
 
-    private IEnumerable<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
+    private List<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
         DosMemoryControlBlock? current = _start;
         List<DosMemoryControlBlock> candidates = new();
         while (true) {
