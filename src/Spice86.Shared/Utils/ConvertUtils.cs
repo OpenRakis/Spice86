@@ -53,20 +53,6 @@ public static partial class ConvertUtils {
         return res;
     }
 
-    /// <summary> Sign extend value considering it is a 16 bit value </summary>
-    /// <param name="value"> </param>
-    /// <returns> the value sign extended </returns>
-    public static short Int16(ushort value) {
-        return (short)value;
-    }
-
-    /// <summary> Sign extend value considering it is a 8 bit value </summary>
-    /// <param name="value"> </param>
-    /// <returns> the value sign extended </returns>
-    public static sbyte Int8(byte value) {
-        return (sbyte)value;
-    }
-
     /// <summary>Parses a hex string as uint </summary>
     /// <param name="value"> </param>
     /// <returns>the value as a uint</returns>
@@ -147,15 +133,6 @@ public static partial class ConvertUtils {
     }
 
     /// <summary>
-    /// Converts a 16-bit unsigned integer to a binary string representation.
-    /// </summary>
-    /// <param name="value">The input 16-bit unsigned integer.</param>
-    /// <returns>A binary string representation of the input value.</returns>
-    public static string ToBin16(ushort value) {
-        return value.ToString(CultureInfo.InvariantCulture);
-    }
-
-    /// <summary>
     /// Converts an 8-bit unsigned integer to a binary string representation.
     /// </summary>
     /// <param name="value">The input 8-bit unsigned integer.</param>
@@ -171,15 +148,6 @@ public static partial class ConvertUtils {
     /// <returns>An ASCII character represented by the input value.</returns>
     public static char ToChar(byte value) {
         return Encoding.ASCII.GetString(new[] { value })[0];
-    }
-
-    /// <summary>
-    /// Converts a SegmentedAddress object to a C# formatted string.
-    /// </summary>
-    /// <param name="address">The SegmentedAddress object to convert.</param>
-    /// <returns>A C# formatted string representing the SegmentedAddress object.</returns>
-    public static string ToCSharpString(SegmentedAddress address) {
-        return $"{ToHex16WithoutX(address.Segment)}_{ToHex16WithoutX(address.Offset)}";
     }
 
     /// <summary>
@@ -199,7 +167,7 @@ public static partial class ConvertUtils {
     public static string ToHex(byte value) {
         return $"0x{value:X}";
     }
-    
+
     /// <summary>
     /// Returns a hexadecimal string representation of the given short value.
     /// </summary>
@@ -272,24 +240,6 @@ public static partial class ConvertUtils {
     public static string ToSegmentedAddressRepresentation(ushort segment, ushort offset) {
         return $"{ToHex16(segment)}:{ToHex16(offset)}";
     }
-
-    /// <summary>
-    /// Returns a string representation of the given byte array in ASCII format.
-    /// </summary>
-    /// <param name="value">The byte array to convert to a string.</param>
-    /// <returns>A string representation of the byte array in ASCII format.</returns>
-    public static string ToString(byte[] value) {
-        return Encoding.ASCII.GetString(value);
-    }
-
-    /// <summary>
-    /// Returns a string representation of the given byte span in ASCII format.
-    /// </summary>
-    /// <param name="value">The byte span to convert to a string.</param>
-    /// <returns>A string representation of the byte span in ASCII format.</returns>
-    public static string ToString(Span<byte> value) {
-        return Encoding.ASCII.GetString(value);
-    }
     
     /// <summary>
     /// Returns the lower 16 bits of the given ushort value.
@@ -310,30 +260,12 @@ public static partial class ConvertUtils {
     }
 
     /// <summary>
-    /// Returns the lower 32 bits of the given long value as an int.
-    /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The lower 32 bits of the given long value as an int.</returns>
-    public static int Uint32i(long value) {
-        return (int)Uint32(value);
-    }
-
-    /// <summary>
     /// Returns the lower 8 bits of the given byte value.
     /// </summary>
     /// <param name="value">The value to convert.</param>
     /// <returns>The lower 8 bits of the given byte value.</returns>
     public static byte Uint8(byte value) {
         return (byte)(value & 0xFF);
-    }
-
-    /// <summary>
-    /// Returns the lower 8 bits of the given byte value as a signed byte.
-    /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The lower 8 bits of the given byte value as a signed byte.</returns>
-    public static sbyte Uint8b(byte value) {
-        return (sbyte)Uint8(value);
     }
 
     /// <summary>
