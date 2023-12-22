@@ -3,14 +3,13 @@
 using Spice86.Shared.Emulator.Memory;
 
 using System.Globalization;
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
 /// <summary>
 /// Provides utilities for converting between different data types and formats.
 /// </summary>
-public static class ConvertUtils {
+public static partial class ConvertUtils {
     private const string HexStringStartPattern = "0x";
 
     private const uint SegmentSize = 0x10000;
@@ -88,7 +87,7 @@ public static class ConvertUtils {
     /// <param name="value">The input string to modify.</param>
     /// <returns>The modified string with any hexadecimal values removed.</returns>
     private static string Replace0xWithBlank(string value) {
-        return new Regex(HexStringStartPattern).Replace(value, "");
+        return SourceGeneratedReged().Replace(value, "");
     }
     
     /// <summary>
@@ -386,4 +385,7 @@ public static class ConvertUtils {
         }
         return path.Replace('/', '\\').Replace("//", @"\");
     }
+
+    [GeneratedRegex(HexStringStartPattern)]
+    private static partial Regex SourceGeneratedReged();
 }
