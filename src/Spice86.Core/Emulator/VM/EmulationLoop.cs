@@ -55,6 +55,7 @@ public sealed class EmulationLoop : IDisposable {
         _dmaController = dmaController;
         _gdbCommandHandler = gdbCommandHandler;
         _stopwatch = new();
+        _pauseProcedure = _gdbCommandHandler is not null ? _gdbCommandHandler.Step : (() => _manualResetEvent.WaitOne());
     }
     
     /// <summary>
@@ -96,12 +97,14 @@ public sealed class EmulationLoop : IDisposable {
 
     private void Pause() {
         _manualResetEvent.Reset();
+        _pauseProcedure ??= () => _manualResetEvent.WaitOne();
     }
 
     /// <summary>
     /// Forces the emulation loop to exit.
     /// </summary>
     internal void Exit() {
+        _threadMustExit = true;
         _cpuState.IsRunning = false;
         IsPaused = false;
     }
@@ -112,24 +115,28 @@ public sealed class EmulationLoop : IDisposable {
         _dmaController.StartDmaThread();
         RunLoop();
     }
+
+    private Action _pauseProcedure;
+
+    private bool _threadMustExit;
     
     private void RunLoop() {
         _stopwatch.Start();
-        while (_cpuState.IsRunning) {
-            if (IsPaused && !GenerateUnconditionalGdbBreakpoint()) {
-                _manualResetEvent.WaitOne();
+        while (!_threadMustExit) {
+            if(IsPaused) {
+                _pauseProcedure.Invoke();
             }
-            if (_listensToBreakpoints) {
+            if(_listensToBreakpoints) {
                 _machineBreakpoints.CheckBreakPoint();
             }
             _cpu.ExecuteNextInstruction();
             _timer.Tick();
         }
-        _stopwatch.Stop();
         OutputPerfStats();
     }
 
     private void OutputPerfStats() {
+        _stopwatch.Stop();
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
             long elapsedTimeMilliSeconds = _stopwatch.ElapsedMilliseconds;
             long cycles = _cpuState.Cycles;
@@ -139,14 +146,6 @@ public sealed class EmulationLoop : IDisposable {
             }
             _loggerService.Warning("Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.", cycles, elapsedTimeMilliSeconds, cyclesPerSeconds);
         }
-    }
-
-    private bool GenerateUnconditionalGdbBreakpoint() {
-        if(_gdbCommandHandler == null) {
-            return false;
-        }
-        _gdbCommandHandler.Step();
-        return true;
     }
 
     private void Resume() {
