@@ -47,7 +47,7 @@ public class ExecutionFlowRecorder {
     /// Gets the set of executed instructions.
     /// </summary>
     public HashSet<SegmentedAddress> ExecutedInstructions { get; set; }
-    private readonly HashSet<uint> _instructionsEncountered = new(200000);
+    private readonly Dictionary<uint, (ushort Cs, ushort Ip)> _instructionsEncountered = new(200000);
     private readonly HashSet<uint> _executableCodeAreasEncountered = new(200000);
 
     /// <summary>
@@ -140,8 +140,8 @@ public class ExecutionFlowRecorder {
     /// <param name="segment">The address segment.</param>
     /// <param name="offset">The address offset.</param>
     /// <returns><c>true</c> when the address was added, <c>false</c> if it was already there</returns>
-    private static bool AddSegmentedAddressInCache(HashSet<uint> cache, ushort segment, ushort offset) {
-        return cache.Add(MemoryUtils.ToPhysicalAddress(segment, offset));
+    private static bool AddSegmentedAddressInCache(Dictionary<uint, (ushort Cs, ushort Ip)> cache, ushort segment, ushort offset) {
+        return cache.TryAdd(MemoryUtils.ToPhysicalAddress(segment, offset), (segment, offset));
     }
 
     /// <summary>
