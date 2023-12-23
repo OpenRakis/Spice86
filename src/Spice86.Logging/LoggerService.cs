@@ -28,6 +28,15 @@ public class LoggerService : ILoggerService, IDisposable {
     /// <inheritdoc/>
     public ILoggerPropertyBag LoggerPropertyBag { get; }
 
+    private bool _threadStarted;
+
+    private void StartThread() {
+        if (!_threadStarted) {
+            _threadStarted = true;
+            _thread.Start();
+        }
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LoggerService"/> class.
     /// </summary>
@@ -38,7 +47,6 @@ public class LoggerService : ILoggerService, IDisposable {
         _loggerConfiguration
             .MinimumLevel.ControlledBy(LogLevelSwitch);
         _thread = new Thread(LogThread);
-        _thread.Start();
     }
     
     /// <summary>
@@ -97,6 +105,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Information(messageTemplate, properties));
         _manualResetEvent.Set();
     }
@@ -106,6 +115,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Warning(message));
     }
     
@@ -114,6 +124,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Warning(e, messageTemplate, properties));
     }
     
@@ -122,6 +133,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Error(e, messageTemplate, properties));
     }
     
@@ -130,6 +142,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Fatal(e, messageTemplate, properties));
     }
     
@@ -138,6 +151,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Warning(messageTemplate, properties));
     }
     
@@ -146,6 +160,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Error(messageTemplate, properties));
     }
     
@@ -154,6 +169,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Fatal(messageTemplate, properties));
     }
     
@@ -162,6 +178,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Debug(messageTemplate, properties));
     }
     
@@ -170,13 +187,15 @@ public class LoggerService : ILoggerService, IDisposable {
         if (AreLogsSilenced) {
             return;
         }
+        StartThread();
         _logEvents.Enqueue(() => GetLogger().Verbose(messageTemplate, properties));
     }
 #pragma warning restore Serilog004
 
     /// <inheritdoc/>
     public void Write(LogEvent logEvent) {
-        GetLogger().Write(logEvent);
+        StartThread();
+        _logEvents.Enqueue(() => GetLogger().Write(logEvent));
     }
 
     /// <inheritdoc/>
