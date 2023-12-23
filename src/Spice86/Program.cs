@@ -13,6 +13,7 @@ using Avalonia.Threading;
 
 using Spice86.Views;
 using Spice86.ViewModels;
+using Spice86.Logging;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -56,7 +57,7 @@ public class Program {
         else {
             StartConsole(configuration, _loggerService);
         }
-        ((IDisposable)_loggerService).Dispose();
+        ((LoggerService)_loggerService).Dispose();
     }
 
     private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
