@@ -57,7 +57,6 @@ public class Program {
         else {
             StartConsole(configuration, _loggerService);
         }
-        ((LoggerService)_loggerService).Dispose();
     }
 
     private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
