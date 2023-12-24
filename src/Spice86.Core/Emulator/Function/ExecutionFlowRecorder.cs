@@ -46,8 +46,7 @@ public class ExecutionFlowRecorder {
     /// <summary>
     /// Gets the set of executed instructions.
     /// </summary>
-    public HashSet<SegmentedAddress> ExecutedInstructions { get; set; }
-    private readonly Dictionary<uint, (ushort Cs, ushort Ip)> _instructionsEncountered = new(200000);
+    public IDictionary<uint, SegmentedAddress> ExecutedInstructions { get; set; }
     private readonly HashSet<uint> _executableCodeAreasEncountered = new(200000);
 
     /// <summary>
@@ -72,7 +71,7 @@ public class ExecutionFlowRecorder {
         JumpsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
         RetsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
         UnalignedRetsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
-        ExecutedInstructions = new HashSet<SegmentedAddress>();
+        ExecutedInstructions = new Dictionary<uint, SegmentedAddress>();
         ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, HashSet<ByteModificationRecord>>>(200000);
     }
 
@@ -126,22 +125,7 @@ public class ExecutionFlowRecorder {
     /// <param name="cs">The segment.</param>
     /// <param name="ip">The offset.</param>
     public void RegisterExecutedInstruction(ushort cs, ushort ip) {
-        if (!AddSegmentedAddressInCache(_instructionsEncountered, cs, ip)) {
-            return;
-        }
-        
-        ExecutedInstructions.Add(new SegmentedAddress(cs, ip));
-    }
-
-    /// <summary>
-    /// Add the segmented address in the cache.
-    /// </summary>
-    /// <param name="cache">The cache to add the segmented address to.</param>
-    /// <param name="segment">The address segment.</param>
-    /// <param name="offset">The address offset.</param>
-    /// <returns><c>true</c> when the address was added, <c>false</c> if it was already there</returns>
-    private static bool AddSegmentedAddressInCache(Dictionary<uint, (ushort Cs, ushort Ip)> cache, ushort segment, ushort offset) {
-        return cache.TryAdd(MemoryUtils.ToPhysicalAddress(segment, offset), (segment, offset));
+        ExecutedInstructions.TryAdd(MemoryUtils.ToPhysicalAddress(cs, ip), new SegmentedAddress(cs, ip));
     }
 
     /// <summary>
