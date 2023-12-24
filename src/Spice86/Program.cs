@@ -50,14 +50,14 @@ public class Program {
     }
 
     private void StartApp(Configuration configuration, string[] args) {
-        using (_loggerService) {
-            Startup.SetLoggingLevel(_loggerService, configuration);
-            if (!configuration.HeadlessMode) {
-                StartMainWindow(configuration, _loggerService, args);
-            } else {
-                StartConsole(configuration, _loggerService);
-            }
+        Startup.SetLoggingLevel(_loggerService, configuration);
+        if (!configuration.HeadlessMode) {
+            StartMainWindow(configuration, _loggerService, args);
         }
+        else {
+            StartConsole(configuration, _loggerService);
+        }
+        ((LoggerService)_loggerService).Dispose();
     }
 
     private static void StartConsole(Configuration configuration, ILoggerService loggerService) {

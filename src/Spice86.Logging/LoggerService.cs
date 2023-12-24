@@ -9,7 +9,7 @@ using Spice86.Shared.Interfaces;
 using System.Collections.Concurrent;
 
 /// <inheritdoc/>
-public class LoggerService : ILoggerService {
+public class LoggerService : ILoggerService, IDisposable {
     /// <summary>
     /// The format for the log message that will be output.
     /// </summary>

@@ -7,7 +7,7 @@ using Serilog.Events;
 using System.Diagnostics;
 
 /// <inheritdoc/>
-public interface ILoggerService : ILogger, IDisposable {
+public interface ILoggerService : ILogger {
     /// <summary>
     /// Dynamic global minimum log level, from Verbose to Fatal.
     /// </summary>
