@@ -212,10 +212,7 @@ public class LoggerService : ILoggerService, IDisposable {
         if (!_disposed) {
             if (disposing) {
                 _threadMustExit = true;
-                if(_threadStarted && _thread.IsAlive) {
-                    _manualResetEvent.Set();
-                    _thread.Join();
-                }
+                _thread.Join();
                 _manualResetEvent.Dispose();
             }
 
