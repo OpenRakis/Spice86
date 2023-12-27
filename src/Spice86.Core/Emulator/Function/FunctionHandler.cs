@@ -174,7 +174,7 @@ public class FunctionHandler {
     /// <returns>The return address of the current function from the machine stack without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStackForCurrentFunction() {
         FunctionCall? currentFunctionCall = CurrentFunctionCall;
-        return currentFunctionCall == null ? null : PeekReturnAddressOnMachineStack(currentFunctionCall.CallType);
+        return currentFunctionCall == null ? null : PeekReturnAddressOnMachineStack(currentFunctionCall.Value.CallType);
     }
 
     /// <summary>
@@ -187,7 +187,7 @@ public class FunctionHandler {
             return true;
         }
 
-        if (_callerStack.TryPop(out FunctionCall? currentFunctionCall) == false) {
+        if (_callerStack.TryPop(out FunctionCall currentFunctionCall) == false) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Returning but no call was done before!!");
             }
@@ -242,7 +242,7 @@ public class FunctionHandler {
             if (_callerStack.Count > 0 == false) {
                 return null;
             }
-            return _callerStack.TryPeek(out FunctionCall? firstElement) ? firstElement : null;
+            return _callerStack.TryPeek(out FunctionCall firstElement) ? firstElement : null;
         }
     }
 
@@ -253,7 +253,7 @@ public class FunctionHandler {
         if (functionCall == null) {
             return null;
         }
-        if (FunctionInformations.TryGetValue(functionCall.EntryPointAddress, out FunctionInformation? value)) {
+        if (FunctionInformations.TryGetValue(functionCall.Value.EntryPointAddress, out FunctionInformation? value)) {
             return value;
         }
         return null;
