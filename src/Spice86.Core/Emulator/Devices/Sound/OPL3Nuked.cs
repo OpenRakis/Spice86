@@ -41,6 +41,8 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Shared.Emulator.Errors;
 
+using System.Collections.Frozen;
+
 public static class Opl3Nuked {
     public const int OplWriteBufSize = 1024;
     public const int OplWriteBufDelay = 2;
@@ -74,7 +76,7 @@ public static class Opl3Nuked {
     /// <summary>
     /// logsin table
     /// </summary>
-    private static readonly ReadOnlyCollection<ushort> LogSinRom = Array.AsReadOnly(new ushort[] {
+    private static readonly FrozenSet<ushort> LogSinRom = new ushort[] {
         0x859, 0x6c3, 0x607, 0x58b, 0x52e, 0x4e4, 0x4a6, 0x471,
         0x443, 0x41a, 0x3f5, 0x3d3, 0x3b5, 0x398, 0x37e, 0x365,
         0x34e, 0x339, 0x324, 0x311, 0x2ff, 0x2ed, 0x2dc, 0x2cd,
@@ -107,12 +109,12 @@ public static class Opl3Nuked {
         0x004, 0x004, 0x003, 0x003, 0x003, 0x002, 0x002, 0x002,
         0x002, 0x001, 0x001, 0x001, 0x001, 0x001, 0x001, 0x001,
         0x000, 0x000, 0x000, 0x000, 0x000, 0x000, 0x000, 0x000
-    });
+    }.ToFrozenSet();
 
     /// <summary>
     /// Exp table
     /// </summary>
-    private static readonly ReadOnlyCollection<uint> ExpRom = Array.AsReadOnly(new uint[]{
+    private static readonly FrozenSet<uint> ExpRom = new uint[]{
         0x7fa, 0x7f5, 0x7ef, 0x7ea, 0x7e4, 0x7df, 0x7da, 0x7d4,
         0x7cf, 0x7c9, 0x7c4, 0x7bf, 0x7b9, 0x7b4, 0x7ae, 0x7a9,
         0x7a4, 0x79f, 0x799, 0x794, 0x78f, 0x78a, 0x784, 0x77f,
@@ -145,26 +147,26 @@ public static class Opl3Nuked {
         0x442, 0x43f, 0x43c, 0x439, 0x436, 0x433, 0x430, 0x42d,
         0x42a, 0x428, 0x425, 0x422, 0x41f, 0x41c, 0x419, 0x416,
         0x414, 0x411, 0x40e, 0x40b, 0x408, 0x406, 0x403, 0x400
-    });
+    }.ToFrozenSet();
 
     /// <summary>
     /// freq mult table multiplied by 2
     /// 1/2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15
     /// </summary>
-    private static readonly ReadOnlyCollection<int> Mt = Array.AsReadOnly(new[] {
+    private static readonly FrozenSet<byte> Mt = new byte[] {
         1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30
-    });
+    }.ToFrozenSet();
 
     /// <summary>
     /// KSL Table
     /// </summary>
-    private static readonly ReadOnlyCollection<byte> KslRom = Array.AsReadOnly(new byte[] {
+    private static readonly FrozenSet<byte> KslRom = new byte[] {
         0, 32, 40, 45, 48, 51, 53, 55, 56, 58, 59, 60, 61, 62, 63, 64
-    });
+    }.ToFrozenSet();
 
-    private static readonly ReadOnlyCollection<byte> KslShift = Array.AsReadOnly(new byte[] {
+    private static readonly FrozenSet<byte> KslShift =new byte[] {
         8, 1, 2, 0
-    });
+    }.ToFrozenSet();
 
     /// <summary>
     /// envelope generator constants
@@ -184,9 +186,9 @@ public static class Opl3Nuked {
         12, 13, 14, 15, 16, 17, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
     });
 
-    private static readonly ReadOnlyCollection<byte> ChSlot = Array.AsReadOnly(new byte[] {
+    private static readonly FrozenSet<byte> ChSlot = new byte[] {
         0, 1, 2, 6, 7, 8, 12, 13, 14, 18, 19, 20, 24, 25, 26, 30, 31, 32
-    });
+    }.ToFrozenSet();
 
 #if OPL_ENABLE_STEREOEXT
     /// <summary>
@@ -203,7 +205,7 @@ public static class Opl3Nuked {
         if (level > 0x1fff) {
             level = 0x1fff;
         }
-        return (short)((ExpRom[level & 0xff] << 1) >> (level >> 8));
+        return (short)((ExpRom.Items[level & 0xff] << 1) >> (level >> 8));
     }
 
     private static short Opl3EnvelopeCalcSin0(ushort phase, ushort envelope) {
@@ -214,9 +216,9 @@ public static class Opl3Nuked {
         }
         ushort output;
         if ((phase & 0x100) >= 1) {
-            output = LogSinRom[(phase & 0xff) ^ 0xff];
+            output = LogSinRom.Items[(phase & 0xff) ^ 0xff];
         } else {
-            output = LogSinRom[phase & 0xff];
+            output = LogSinRom.Items[phase & 0xff];
         }
         return (short)(Opl3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
     }
@@ -227,9 +229,9 @@ public static class Opl3Nuked {
         if ((phase & 0x200) >= 1) {
             output = 0x1000;
         } else if ((phase & 0x100) >= 1) {
-            output = LogSinRom[(phase & 0xff) ^ 0xff];
+            output = LogSinRom.Items[(phase & 0xff) ^ 0xff];
         } else {
-            output = LogSinRom[phase & 0xff];
+            output = LogSinRom.Items[phase & 0xff];
         }
         return Opl3EnvelopeCalcExp(output + (envelope << 3));
     }
@@ -238,9 +240,9 @@ public static class Opl3Nuked {
         phase &= 0x3ff;
         ushort output;
         if ((phase & 0x100) >= 1) {
-            output = LogSinRom[(phase & 0xff) ^ 0xff];
+            output = LogSinRom.Items[(phase & 0xff) ^ 0xff];
         } else {
-            output = LogSinRom[phase & 0xff];
+            output = LogSinRom.Items[phase & 0xff];
         }
         return Opl3EnvelopeCalcExp(output + (envelope << 3));
     }
@@ -251,7 +253,7 @@ public static class Opl3Nuked {
         if ((phase & 0x100) >= 1) {
             output = 0x1000;
         } else {
-            output = LogSinRom[phase & 0xff];
+            output = LogSinRom.Items[phase & 0xff];
         }
         return Opl3EnvelopeCalcExp(output + (envelope << 3));
     }
@@ -266,9 +268,9 @@ public static class Opl3Nuked {
         if ((phase & 0x200) >= 1) {
             output = 0x1000;
         } else if ((phase & 0x80) >= 1) {
-            output = LogSinRom[((phase ^ 0xff) << 1) & 0xff];
+            output = LogSinRom.Items[((phase ^ 0xff) << 1) & 0xff];
         } else {
-            output = LogSinRom[(phase << 1) & 0xff];
+            output = LogSinRom.Items[(phase << 1) & 0xff];
         }
         return (short)(Opl3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
     }
@@ -279,9 +281,9 @@ public static class Opl3Nuked {
         if ((phase & 0x200) >= 1) {
             output = 0x1000;
         } else if ((phase & 0x80) >= 1) {
-            output = LogSinRom[((phase ^ 0xff) << 1) & 0xff];
+            output = LogSinRom.Items[((phase ^ 0xff) << 1) & 0xff];
         } else {
-            output = LogSinRom[(phase << 1) & 0xff];
+            output = LogSinRom.Items[(phase << 1) & 0xff];
         }
         return Opl3EnvelopeCalcExp(output + (envelope << 3));
     }
@@ -306,7 +308,7 @@ public static class Opl3Nuked {
         return (short)(Opl3EnvelopeCalcExp(output + (envelope << 3)) ^ neg);
     }
 
-    private static readonly ReadOnlyCollection<Func<ushort, ushort, short>> EnvelopeSin = Array.AsReadOnly(new Func<ushort, ushort, short>[]{
+    private static readonly FrozenSet<Func<ushort, ushort, short>> EnvelopeSin = new Func<ushort, ushort, short>[]{
         (x, y) => Opl3EnvelopeCalcSin0(x, y),
         (x, y) => Opl3EnvelopeCalcSin1(x, y),
         (x, y) => Opl3EnvelopeCalcSin2(x, y),
@@ -315,7 +317,7 @@ public static class Opl3Nuked {
         (x, y) => Opl3EnvelopeCalcSin5(x, y),
         (x, y) => Opl3EnvelopeCalcSin6(x, y),
         (x, y) => Opl3EnvelopeCalcSin7(x, y),
-    });
+    }.ToFrozenSet();
 
     private enum EnvelopeGenNum {
         Attack,
@@ -325,7 +327,7 @@ public static class Opl3Nuked {
     }
 
     private static void Opl3EnvelopeUpdateKsl(ref Opl3Slot slot) {
-        short ksl = (short)((KslRom[slot.Channel.FNum >> 6] << 2)
+        short ksl = (short)((KslRom.Items[slot.Channel.FNum >> 6] << 2)
             - ((0x08 - slot.Channel.Block) << 5));
         if (ksl < 0) {
             ksl = 0;
@@ -346,7 +348,7 @@ public static class Opl3Nuked {
         byte egOff;
         byte reset = 0;
         slot.EgOut = (ushort)(slot.EgRout + (slot.RegTl << 2)
-            + (slot.EgKsl >> KslShift[slot.RegKsl]) + slot.Trem);
+            + (slot.EgKsl >> KslShift.Items[slot.RegKsl]) + slot.Trem);
         if (slot.Key > 0 && slot.EgGen == (int)EnvelopeGenNum.Release) {
             reset = 1;
             regRate = slot.RegAr;
@@ -496,7 +498,7 @@ public static class Opl3Nuked {
         if (slot.PgReset > 0) {
             slot.PgPhase = 0;
         }
-        slot.PgPhase = (uint)(slot.PgPhase + (basefreq * Mt[slot.RegMult]) >> 1);
+        slot.PgPhase = slot.PgPhase + (basefreq * Mt.Items[slot.RegMult]) >> 1;
         /* Rhythm mode */
         noise = chip.Noise;
         slot.PgPhaseOut = phase;
@@ -584,7 +586,7 @@ public static class Opl3Nuked {
     }
 
     private static void Opl3SlotGenerate(ref Opl3Slot slot) {
-        slot.Out = EnvelopeSin[slot.RegWf]((ushort)(slot.PgPhaseOut + slot.Mod), slot.EgOut);
+        slot.Out = EnvelopeSin.Items[slot.RegWf]((ushort)(slot.PgPhaseOut + slot.Mod), slot.EgOut);
     }
 
     private static void Opl3SlotCalcFb(ref Opl3Slot slot) {
@@ -1079,7 +1081,7 @@ public static class Opl3Nuked {
 
         for (channelNum = 0; channelNum < 18; channelNum++) {
             channel = chip.Channel[channelNum];
-            localChannelSlot = ChSlot[channelNum];
+            localChannelSlot = ChSlot.Items[channelNum];
             channel.Slots[0] = chip.Slot[localChannelSlot];
             channel.Slots[1] = chip.Slot[localChannelSlot + 3];
             chip.Slot[localChannelSlot].Channel = channel;
@@ -1276,8 +1278,8 @@ public struct Opl3Chip {
     public byte TremoloPos { get; set; }
     public byte TremoloShift { get; set; }
     public uint Noise { get; set; }
-    public short ZeroMod { get; set; }
-    public int[] MixBuff { get; set; } = new int[2];
+    public short ZeroMod { get; init; }
+    public int[] MixBuff { get; init; } = new int[2];
     public byte RmHhBits2 { get; set; }
     public byte RmHhBits3 { get; set; }
     public byte RmHhBits7 { get; set; }
@@ -1328,8 +1330,8 @@ public struct Opl3Slot {
     public byte RegMult { get; set; }
     public byte RegKsl { get; set; }
     public byte RegTl { get; set; }
-    public byte RegAr { get; set; }
-    public byte RegDr { get; set; }
+    public byte RegAr { get; init; }
+    public byte RegDr { get; init; }
     public byte RegSl { get; set; }
 
     public byte RegRr { get; set; }
