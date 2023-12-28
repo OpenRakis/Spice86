@@ -182,7 +182,7 @@ public class Chip {
 public class Opl {
     public const byte DefaultVolumeValue = 0xff;
 
-    public MixerChannel Channel { get; private set; } = new();
+    //public MixerChannel Channel { get; private set; } = new();
 
     /// <summary>
     /// The cache for 2 chips or an OPL3
