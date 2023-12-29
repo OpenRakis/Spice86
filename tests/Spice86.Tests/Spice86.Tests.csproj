@@ -13,9 +13,21 @@
 		<PrivateAssets>all</PrivateAssets>
 		<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	</PackageReference>
+	<PackageReference Include="ErrorProne.NET.Structs" Version="0.1.2">
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  <PrivateAssets>all</PrivateAssets>
+	</PackageReference>
 	<PackageReference Include="FluentAssertions" Version="6.12.0" />
 	<PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
+	<PackageReference Include="lookbusy1344.RecordValueAnalyser" Version="1.2.0">
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  <PrivateAssets>all</PrivateAssets>
+	</PackageReference>
 	<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+	<PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.8.14">
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  <PrivateAssets>all</PrivateAssets>
+	</PackageReference>
 	<PackageReference Include="NSubstitute" Version="5.1.0" />
 	<PackageReference Include="NSubstitute.Analyzers.CSharp" Version="1.0.16">
 	  <PrivateAssets>all</PrivateAssets>
