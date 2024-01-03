@@ -8,13 +8,17 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+using Spice86.Core.Emulator.OperatingSystem;
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
 /// Provides DOS applications with XMS memory.
+/// <remarks>This provides XMS 2.0</remarks>
 /// </summary>
 public sealed class ExtendedMemoryManager : InterruptHandler, IMemoryDevice {
     private int _a20EnableCount;
@@ -25,24 +29,31 @@ public sealed class ExtendedMemoryManager : InterruptHandler, IMemoryDevice {
     /// The segment of the interrupt handler.
     /// </summary>
 
-    public const ushort InterruptHandlerSegment = 0xD000;
+    public const ushort DosDeviceSegment = 0xD000;
     
     /// <summary>
     /// The size of available XMS Memory, in bytes.
+    /// <remarks>
+    /// 32 MB for XMS 2.0
+    /// </remarks>
     /// </summary>
-    public const uint XmsMemorySize = 8 * 1024 * 1024;
+    public const uint XmsMemorySize = 32 * 1024 * 1024;
 
     /// <summary>
     /// XMS plain old memory.
     /// </summary>
     public Ram XmsRam { get; private set; } = new(XmsMemorySize);
-/// <inheritdoc/>
+
+    /// <summary>
+    /// DOS Device Driver Name.
+    /// </summary>
+    public const string XmsIdentifier = "XMSXXXX0";
 
     public ExtendedMemoryManager(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        Memory.LoadData(MemoryUtils.ToPhysicalAddress(InterruptHandlerSegment, 0),
+        Memory.LoadData(MemoryUtils.ToPhysicalAddress(DosDeviceSegment, 0),
             new byte[]{
                 0xEB, // jump near
                 0x03, // offset
@@ -56,7 +67,7 @@ public sealed class ExtendedMemoryManager : InterruptHandler, IMemoryDevice {
     }
 
     /// <summary>
-    /// Specifies the starting physical address of XMS.
+    /// Specifies the starting physical address of XMS. XMS starts at 1088k after HMA
     /// </summary>
     public const uint XmsBaseAddress = 0x10FFF0;
 
