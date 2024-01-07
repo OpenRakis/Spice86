@@ -311,7 +311,7 @@ Compatibility list available [here](COMPATIBILITY.md).
 
 ### How to build on your machine
 
-- Install the .NET 7 SDK (once)
+- Install the .NET 8 SDK (once)
 - clone the repo
 - run this where Spice86.sln is located:
 
