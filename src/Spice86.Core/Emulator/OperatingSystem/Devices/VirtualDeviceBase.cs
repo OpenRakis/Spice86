@@ -17,13 +17,13 @@ public abstract class VirtualDeviceBase : IVirtualDevice {
         StrategyEntryPoint = strategy;
         InterruptEntryPoint = interrupt;
     }
-    
+
     /// <inheritdoc />
     public ushort Segment { get; set; }
-    
+
     /// <inheritdoc />
     public ushort Offset { get; set; }
-    
+
     /// <inheritdoc />
     public DeviceAttributes Attributes { get; set; }
 

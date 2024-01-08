@@ -17,11 +17,11 @@ internal sealed class BassDrum : Channel2 {
 
         base.GetChannelOutput(output);
     }
-    
+
     // Key ON and OFF are unused in rhythm channels.
     public override void KeyOn() {
     }
-    
+
     public override void KeyOff() {
     }
 }

@@ -18,12 +18,12 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// Contains the argument of the last <see cref="ReadByte"/> operation.
     /// </summary>
     public int LastPortRead { get; protected set; }
-    
+
     /// <summary>
     /// Contains the first argument of the last <see cref="WriteByte"/> operation.
     /// </summary>
     public int LastPortWritten { get; protected set; }
-    
+
     /// <summary>
     /// Contains the second argument of the last <see cref="WriteByte"/> operation.
     /// </summary>

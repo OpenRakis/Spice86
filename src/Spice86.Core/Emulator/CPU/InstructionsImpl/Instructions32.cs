@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.CPU.Registers;
 
 public class Instructions32 : Instructions16Or32 {
-    
+
     private readonly Alu32 _alu32;
     
     public Instructions32(Cpu cpu, Memory.IMemory memory, ModRM modRm) :
@@ -197,7 +197,7 @@ public class Instructions32 : Instructions16Or32 {
         // PUSH Imm32
         Stack.Push32(Cpu.NextUint32());
     }
-    
+
     // Push Sign extended 8bit immediate value
     public override void PushImm8SignExtended() {
         // sign extend it to 16 bits
@@ -211,7 +211,7 @@ public class Instructions32 : Instructions16Or32 {
         ModRM.Read();
         ImulRmVal(Cpu.NextUint8());
     }
-    
+
     public override void ImulRmImm16Or32() {
         // IMUL32 rm32 Imm32
         ModRM.Read();
@@ -222,7 +222,7 @@ public class Instructions32 : Instructions16Or32 {
         long result = _alu32.Imul(value, (int)ModRM.GetRm32());
         ModRM.R32 = (uint)result;
     }
-    
+
     public override void ImulRmReg16Or32() {
         // IMUL32 r32 rm32
         ModRM.Read();
@@ -232,7 +232,7 @@ public class Instructions32 : Instructions16Or32 {
     protected override void AdvanceSI() {
         AdvanceSI(State.Direction32);
     }
-    
+
     protected override void AdvanceDI() {
         AdvanceDI(State.Direction32);
     }
@@ -242,7 +242,7 @@ public class Instructions32 : Instructions16Or32 {
         Memory.UInt32[MemoryAddressEsDi] = value;
         AdvanceSIDI();
     }
-    
+
     public override void Cmps() {
         uint value = Memory.UInt32[MemoryAddressOverridableDsSi];
         _alu32.Sub(value, Memory.UInt32[MemoryAddressEsDi]);
@@ -259,22 +259,22 @@ public class Instructions32 : Instructions16Or32 {
         // TEST EAX idw
         _alu32.And(State.EAX, Cpu.NextUint32());
     }
-    
+
     public override void Stos() {
         Memory.UInt32[MemoryAddressEsDi] = State.EAX;
         AdvanceDI();
     }
-    
+
     public override void Lods() {
         State.EAX = Memory.UInt32[MemoryAddressOverridableDsSi];
         AdvanceSI();
     }
-    
+
     public override void Scas() {
         _alu32.Sub(State.EAX, Memory.UInt32[MemoryAddressEsDi]);
         AdvanceDI();
     }
-    
+
     public override void Ins() {
         ushort port = State.DX;
         uint value = Cpu.In32(port);
@@ -288,7 +288,7 @@ public class Instructions32 : Instructions16Or32 {
         Cpu.Out32(port, value);
         AdvanceSI();
     }
-    
+
     public override void Grp1(bool signExtendOp2) {
         ModRM.Read();
         uint groupIndex = ModRM.RegisterIndex;
@@ -315,7 +315,7 @@ public class Instructions32 : Instructions16Or32 {
             ModRM.SetRm32(res);
         }
     }
-    
+
     public override void Grp2(Grp2CountSource countSource) {
         ModRM.Read();
         uint groupIndex = ModRM.RegisterIndex;
@@ -334,7 +334,7 @@ public class Instructions32 : Instructions16Or32 {
         };
         ModRM.SetRm32(res);
     }
-    
+
     
     protected override void Grp3TestRm() {
         _alu32.And(ModRM.GetRm32(), Cpu.NextUint32());
@@ -343,7 +343,7 @@ public class Instructions32 : Instructions16Or32 {
     protected override void Grp3NotRm() {
         ModRM.SetRm32(~ModRM.GetRm32());
     }
-    
+
     protected override void Grp3NegRm() {
         uint value = ModRM.GetRm32();
         value = _alu32.Sub(0, value);
@@ -402,12 +402,12 @@ public class Instructions32 : Instructions16Or32 {
         ModRM.R32 = value1;
         ModRM.SetRm32(value2);
     }
-    
+
     public override void XchgAcc(int regIndex) {
         // XCHG EAX regIndex
         (State.EAX, UInt32Registers[regIndex]) = (UInt32Registers[regIndex], State.EAX);
     }
-    
+
     public override void MovRmReg() {
         // MOV rmdw rdw
         ModRM.Read();
@@ -419,28 +419,28 @@ public class Instructions32 : Instructions16Or32 {
         ModRM.Read();
         ModRM.R32 = ModRM.GetRm32();
     }
-    
+
     public override void MovRegImm(int regIndex) {
         // MOV reg32(regIndex) idw
         UInt32Registers[regIndex] = Cpu.NextUint32();
     }
-    
+
     public override void MovAccMoffs() {
         // MOV EAX moffs32
         State.EAX = Memory.UInt32[DsNextUint16Address];
     }
-    
+
     public override void MovMoffsAcc() {
         // MOV moffs32 EAX
         Memory.UInt32[DsNextUint16Address] = State.EAX;
     }
-    
+
     public override void MovRmImm() {
         // MOV rmdw idw
         ModRM.Read();
         ModRM.SetRm32(Cpu.NextUint32());
     }
-    
+
     public override void MovRmSreg() {
         // MOV rmdw sreg
         ModRM.Read();
@@ -456,7 +456,7 @@ public class Instructions32 : Instructions16Or32 {
         ModRM.Read();
         ModRM.SetRm32(Stack.Pop32());
     }
-    
+
     public override void Cbw() {
         // CBW, Convert word to dword
         int shortValue = (short)State.AX;
@@ -481,13 +481,13 @@ public class Instructions32 : Instructions16Or32 {
         // POPF
         State.Flags.FlagRegister = Stack.Pop32();
     }
-    
+
     protected override ushort DoLxsAndReturnSegmentValue() {
         uint memoryAddress = ReadLxsMemoryAddress();
         ModRM.R32 = Memory.UInt32[memoryAddress];
         return Memory.UInt16[memoryAddress + 4];
     }
-    
+
     public override void InImm8() {
         // IN EAX Imm8
         byte port = Cpu.NextUint8();
@@ -500,7 +500,7 @@ public class Instructions32 : Instructions16Or32 {
         uint value = State.EAX;
         Cpu.Out32(port, value);
     }
-    
+
     public override void InDx() {
         // IN EAX DX
         State.EAX = Cpu.In32(State.DX);

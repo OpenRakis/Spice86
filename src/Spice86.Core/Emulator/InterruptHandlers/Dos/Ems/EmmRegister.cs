@@ -11,13 +11,13 @@ public class EmmRegister : IMemoryDevice {
     /// The physical page mapped in main memory, set to a logical page reference.
     /// </summary>
     public EmmPage PhysicalPage { get; set; }
-    
+
     /// <summary>
     /// The start address of the register, in main memory. <br/>
     /// This is an absolute address within the EMM Page Frame.
     /// </summary>
     public uint Offset { get; init; }
-    
+
     /// <summary>
     /// Constructs a new instance.
     /// </summary>

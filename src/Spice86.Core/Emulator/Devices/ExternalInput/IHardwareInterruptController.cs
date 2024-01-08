@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Shared.Emulator.Errors;
 
 /// <summary>
-/// Controller to route external irq to cpu interrupt vectors. 
+/// Controller to route external irq to cpu interrupt vectors.
 /// </summary>
 public interface IHardwareInterruptController {
     /// <summary>

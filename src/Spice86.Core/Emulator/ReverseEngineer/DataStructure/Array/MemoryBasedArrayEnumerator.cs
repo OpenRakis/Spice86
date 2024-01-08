@@ -13,24 +13,24 @@ public class MemoryBasedArrayEnumerator<T> : IEnumerator<T> {
     public MemoryBasedArrayEnumerator(MemoryBasedArray<T> memoryBasedArray) {
         _memoryBasedArray = memoryBasedArray;
     }
-    
+
     /// <inheritdoc/>
     public bool MoveNext() {
         _position++;
         return _position < _memoryBasedArray.Count;
     }
-    
+
     /// <inheritdoc/>
     public void Reset() {
         _position = -1;
     }
-    
+
     /// <inheritdoc/>
     public T Current { get => _memoryBasedArray[_position]; }
-    
+
     /// <inheritdoc/>
     object? IEnumerator.Current => Current;
-    
+
     /// <inheritdoc/>
     public void Dispose() {
     }

@@ -18,7 +18,7 @@ public sealed class Mixer {
     /// Gets or sets the current mixer address.
     /// </summary>
     public int CurrentAddress { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the interrupt status register for the mixer.
     /// </summary>
@@ -58,7 +58,7 @@ public sealed class Mixer {
             _ => 0,
         };
     }
-    
+
     /// <summary>
     /// Returns the byte value for the DMA mixer register based on the current DMA value of the SoundBlaster instance.
     /// </summary>

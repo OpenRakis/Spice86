@@ -12,7 +12,7 @@ public abstract class CpuException : Exception {
 
     /// <summary>
     /// The type of exception, Fault, Trap or Abort.
-    /// This determines when the exception occur and how it is handled.  
+    /// This determines when the exception occur and how it is handled.
     /// </summary>
     public CpuExceptionType Type { get; }
 

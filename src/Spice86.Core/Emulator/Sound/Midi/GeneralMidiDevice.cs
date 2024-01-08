@@ -14,7 +14,7 @@ using OperatingSystem = System.OperatingSystem;
 /// </summary>
 internal sealed class GeneralMidiDevice : MidiDevice {
     private readonly AudioPlayer _audioPlayer;
-    
+
     private bool _disposed;
     private bool _threadStarted;
 
@@ -22,12 +22,12 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     private readonly Thread? _playbackThread;
     private volatile bool _endThread;
     private volatile uint _message;
-    
+
     /// <summary>
     /// The soundfont file name we use for all General MIDI preset sounds.
     /// </summary>
     private const string SoundFont = "2MGM.sf2";
-    
+
     private IntPtr _midiOutHandle;
 
     public GeneralMidiDevice(AudioPlayerFactory audioPlayerFactory) {
@@ -39,9 +39,9 @@ internal sealed class GeneralMidiDevice : MidiDevice {
             NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
         }
     }
-    
+
     ~GeneralMidiDevice() => Dispose(false);
-    
+
     private void StartThreadIfNeeded() {
         if(!_disposed && !_endThread && !_threadStarted) {
             _playbackThread?.Start();
@@ -82,7 +82,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
             WakeUpRenderThread();
         }
     }
-    
+
     private void WakeUpRenderThread() {
         if(!_disposed && !_endThread) {
             _fillBufferEvent.Set();
@@ -121,7 +121,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     protected override void PlaySysex(ReadOnlySpan<byte> data) {
         // NOP
     }
-    
+
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if(disposing) {

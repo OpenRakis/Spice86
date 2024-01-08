@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Input.Keyboard; 
+namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 /// <summary>
 /// IDs of keyboard ports for both read and write. <br/>
@@ -16,7 +16,7 @@ public static class KeyboardPorts {
     public const byte StatusRegister = 0x64;
 
     /// <summary>
-    /// If the CPU writes to port 0x64, the byte is interpreted as a command byte. 
+    /// If the CPU writes to port 0x64, the byte is interpreted as a command byte.
     /// </summary>
     public const byte Command = 0x64;
 }

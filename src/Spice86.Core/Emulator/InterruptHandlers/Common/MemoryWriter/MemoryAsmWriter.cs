@@ -78,7 +78,7 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
-    /// Writes a far CALL instruction. 
+    /// Writes a far CALL instruction.
     /// </summary>
     /// <param name="destination">Segmented address of the function to call</param>
     /// <returns>Returns the address of the call destination segmented address</returns>

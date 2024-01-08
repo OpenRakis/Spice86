@@ -7,7 +7,7 @@ using Spice86.Core.Emulator.Devices.Input.Keyboard;
 /// </summary>
 public class KeyboardStream : Stream {
     private readonly KeyboardStreamedInput _keyboardStreamedInput;
-    
+
     /// <summary>
     /// Creates a new instance of the <see cref="KeyboardStream" /> class.
     /// </summary>

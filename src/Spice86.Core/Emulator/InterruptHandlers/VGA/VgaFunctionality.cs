@@ -271,7 +271,7 @@ public class VgaFunctionality : IVgaFunctionality {
                 return;
         }
         SetInterruptVectorAddress(0x43, address.Segment, address.Offset);
-        
+
         VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(vgaMode));
     }
 

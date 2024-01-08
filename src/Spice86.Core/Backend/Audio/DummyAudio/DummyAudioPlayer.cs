@@ -1,4 +1,4 @@
-namespace Spice86.Core.Backend.Audio.DummyAudio; 
+namespace Spice86.Core.Backend.Audio.DummyAudio;
 
 /// <summary>
 /// Dummy audio player with no backend

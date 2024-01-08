@@ -6,7 +6,7 @@ namespace Spice86.Core.Emulator.CPU.Exceptions;
 ///    - The instruction length exceeds 15 bytes, but this only occurs with redundant prefixes. <br/>
 ///    - The instruction tries to access a non-existent control register (for example, mov cr6, eax). <br/>
 ///    - The UD instruction is executed.  <br/>
-/// The saved instruction pointer points to the instruction which caused the exception. 
+/// The saved instruction pointer points to the instruction which caused the exception.
 /// </summary>
 public class CpuInvalidOpcodeException : CpuException {
     /// <inheritdoc />

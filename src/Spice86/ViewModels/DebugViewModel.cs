@@ -31,7 +31,7 @@ using System.Runtime.InteropServices.ComTypes;
 public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugViewModel {
     [ObservableProperty]
     private MachineInfo _machine = new();
-    
+
     [ObservableProperty]
     private VideoCardInfo _videoCard = new();
 
@@ -41,11 +41,11 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     private readonly IPauseStatus? _pauseStatus;
 
     [ObservableProperty] private bool _isLoading = true;
-    
+
     private IMemory? _memory;
 
     public bool IsGdbServerAvailable => _programExecutor?.IsGdbCommandHandlerAvailable is true;
-    
+
     public DebugViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
@@ -89,7 +89,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     [ObservableProperty]
     private PaletteViewModel? _paletteViewModel;
-    
+
     public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
@@ -196,7 +196,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
             _mustRefreshMainMemory = false;
         }
     }
-    
+
     [ObservableProperty]
     private EmulatedMemoryStream? _memoryStream;
 
@@ -223,9 +223,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
             State.PropertyChanged -= OnStatePropertyChanged;
             Flags.PropertyChanged -= OnStatePropertyChanged;
         }
-        
+
         return;
-        
+
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
             if (sender is null || e.PropertyName == null || !IsPaused || IsLoading) {
                 return;
@@ -382,7 +382,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         VideoCard.CrtControllerVerticalTotal = videoState.CrtControllerRegisters.VerticalTotalValue;
         VideoCard.CrtControllerVerticalTotalRegister = videoState.CrtControllerRegisters.VerticalTotal;
         VideoCard.CrtControllerWriteProtect = videoState.CrtControllerRegisters.VerticalSyncEndRegister.WriteProtect;
-        
+
         VideoCard.GraphicsDataRotate = videoState.GraphicsControllerRegisters.DataRotateRegister.Value;
         VideoCard.GraphicsRotateCount = videoState.GraphicsControllerRegisters.DataRotateRegister.RotateCount;
         VideoCard.GraphicsFunctionSelect = videoState.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect;
@@ -432,7 +432,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     }
 
     private bool _needToUpdateDisassembly;
-    
+
     public void VisitCpu(Cpu cpu) {
         if (!IsPaused) {
             _needToUpdateDisassembly = true;
@@ -477,7 +477,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         _cpu = cpu;
         uint currentIp = cpu.State.IpPhysicalAddress;
         CodeReader codeReader = CreateCodeReader(_memory, out EmulatedMemoryStream emulatedMemoryStream);
-        
+
         _decoder ??= Decoder.Create(16, codeReader, currentIp,
             DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
         Instructions.Clear();

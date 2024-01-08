@@ -12,7 +12,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class SystemBiosInt15Handler : InterruptHandler {
     private readonly A20Gate _a20Gate;
-    
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>

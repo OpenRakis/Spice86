@@ -12,7 +12,7 @@ public sealed class FmSynthesizer {
     private readonly double _tremoloIncrement0;
     private readonly double _tremoloIncrement1;
     private readonly int _tremoloTableLength;
-    
+
     internal readonly int[] Registers = new int[0x200];
     internal readonly HighHat? HighHatOperator;
     internal readonly SnareDrum? SnareDrumOperator;
@@ -261,7 +261,7 @@ public sealed class FmSynthesizer {
             }
         }
     }
-    
+
     private void InitializeOperators() {
         // The YMF262 has 36 operators:
         for (int array = 0; array < 2; array++) {
@@ -281,7 +281,7 @@ public sealed class FmSynthesizer {
         _tomTomOperatorInNonRhythmMode = _operators[0, 0x12];
         _topCymbalOperatorInNonRhythmMode = _operators[0, 0x15];
     }
-    
+
     private void InitializeChannels2Op() {
         // The YMF262 has 18 2-op channels.
         // Each 2-op channel can be at a serial or parallel operator configuration:
@@ -307,7 +307,7 @@ public sealed class FmSynthesizer {
             }
         }
     }
-    
+
     private void InitializeChannels() {
         // Channel is an abstract class that can be a 2-op, 4-op, rhythm or disabled channel, 
         // depending on the OPL3 configuration at the time.
@@ -318,7 +318,7 @@ public sealed class FmSynthesizer {
             }
         }
     }
-    
+
     private void Update_1_NTS1_6() {
         int _1_nts1_6 = Registers[_1_NTS1_6_Offset];
         // Note Selection. This register is used in Channel.updateOperators() implementations,
@@ -327,7 +327,7 @@ public sealed class FmSynthesizer {
         // OPL3.nts,Operator.keyScaleNumber and Operator.ksr
         Nts = (_1_nts1_6 & 0x40) >> 6;
     }
-    
+
     private void Update_DAM1_DVB1_RYT1_BD1_SD1_TOM1_TC1_HH1() {
         int dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1 = Registers[Dam1Dvb1Ryt1Bd1Sd1Tom1Tc1Hh1Offset];
         // Depth of amplitude. This register is used in EnvelopeGenerator.getEnvelope();
@@ -383,7 +383,7 @@ public sealed class FmSynthesizer {
             }
         }
     }
-    
+
     private void Update_7_NEW1() {
         int _7_new1 = Registers[_7_NEW1_Offset];
         // OPL2/OPL3 mode selection. This register is used in 
@@ -395,7 +395,7 @@ public sealed class FmSynthesizer {
 
         Set4OpConnections();
     }
-    
+
     private void SetEnabledChannels() {
         for (int array = 0; array < 2; array++) {
             for (int i = 0; i < 9; i++) {
@@ -405,7 +405,7 @@ public sealed class FmSynthesizer {
             }
         }
     }
-    
+
     private void Update_2_CONNECTIONSEL6() {
         // This method is called only if IsOpl3Mode is set.
         int _2_connectionsel6 = Registers[_2_CONNECTIONSEL6_Offset];
@@ -413,7 +413,7 @@ public sealed class FmSynthesizer {
         Connectionsel = (_2_connectionsel6 & 0x3F);
         Set4OpConnections();
     }
-    
+
     private void Set4OpConnections() {
         var disabledChannel = new NullChannel(this);
 
@@ -438,7 +438,7 @@ public sealed class FmSynthesizer {
             }
         }
     }
-    
+
     private void SetRhythmMode() {
         if (Ryt == 1) {
             _channels[0, 6] = _bassDrumChannel;

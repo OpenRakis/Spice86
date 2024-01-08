@@ -8,7 +8,7 @@ using Spice86.Shared.Interfaces;
 /// Provides an interface for generating function information overrides for machine code.
 /// </summary>
 public interface IOverrideSupplier {
-    
+
     /// <summary>
     /// Generates function information overrides for the given target program.
     /// </summary>

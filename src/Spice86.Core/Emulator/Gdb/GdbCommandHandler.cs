@@ -26,7 +26,7 @@ public class GdbCommandHandler {
     private readonly State _state;
     private readonly FunctionHandler _functionHandler;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
-    
+
     /// <summary>
     /// Constructs a new instance of <see cref="GdbCommandHandler"/>
     /// </summary>

@@ -149,7 +149,7 @@ internal sealed class Channel4 : Channel {
 
         GetFourChannelOutput(channelOutput, output);
     }
-    
+
     /// <summary>
     /// Activates channel output.
     /// </summary>
@@ -160,7 +160,7 @@ internal sealed class Channel4 : Channel {
         _op4?.KeyOn();
         Feedback0 = Feedback1 = 0;
     }
-    
+
     /// <summary>
     /// Disables channel output.
     /// </summary>
@@ -170,7 +170,7 @@ internal sealed class Channel4 : Channel {
         _op3?.KeyOff();
         _op4?.KeyOff();
     }
-    
+
     /// <summary>
     /// Updates the state of all of the operators in the channel.
     /// </summary>

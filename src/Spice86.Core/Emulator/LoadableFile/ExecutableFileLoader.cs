@@ -15,12 +15,12 @@ public abstract class ExecutableFileLoader {
     /// The emulator CPU.
     /// </summary>
     protected State _state;
-    
+
     /// <summary>
     /// The memory bus.
     /// </summary>
     protected IMemory _memory;
-    
+
     private readonly ILoggerService _loggerService;
 
     /// <summary>

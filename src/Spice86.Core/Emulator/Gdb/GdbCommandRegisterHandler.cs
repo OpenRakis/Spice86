@@ -88,7 +88,7 @@ public class GdbCommandRegisterHandler {
             return _gdbIo.GenerateUnsupportedResponse();
         }
     }
-    
+
     /// <summary>
     /// Handles the GDB command to write a value to a specific register.
     /// </summary>

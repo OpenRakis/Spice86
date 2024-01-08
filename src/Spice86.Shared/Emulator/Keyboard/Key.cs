@@ -1,4 +1,4 @@
-namespace Spice86.Shared.Emulator.Keyboard; 
+namespace Spice86.Shared.Emulator.Keyboard;
 
 /// <summary>
 /// Defines the keys available on a keyboard.

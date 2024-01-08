@@ -6,7 +6,7 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
     private const byte BeforeMsbMask = 0x40;
 
     private const byte MsbMask = 0x80;
-    
+
     public Alu8(State state) : base(state) {
     }
 

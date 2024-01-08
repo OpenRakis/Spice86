@@ -12,17 +12,17 @@ using Spice86.Shared.Utils;
 /// Bios entry point is at physical address 0xFFFF0 (F000:FFF0).
 /// </summary>
 public class BiosLoader : ExecutableFileLoader {
-    
+
     /// <summary>
     /// Offset of the BIOS code within the segment.
     /// </summary>
     private const ushort CodeOffset = 0xFFF0;
-    
+
     /// <summary>
     /// Segment where the BIOS code is loaded.
     /// </summary>
     private const ushort CodeSegment = 0xF000;
-    
+
     /// <summary>
     /// Indicates whether DOS initialization is needed for the loaded file (always false for BIOS).
     /// </summary>

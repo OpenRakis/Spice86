@@ -1,13 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
-using System.Collections.Frozen;
-using System.Collections.ObjectModel;
-using System.Linq;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+
+using System.Collections.Frozen;
+using System.Collections.ObjectModel;
 
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
@@ -53,7 +52,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
         }
 
         Channels = new ReadOnlyCollection<DmaChannel>(_channels);
-        
+
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
@@ -65,7 +64,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
             _dmaThreadStarted = true;
         }
     }
-    
+
     /// <summary>
     /// https://techgenix.com/direct-memory-access/
     /// </summary>
@@ -254,7 +253,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
             _disposed = true;
         }
     }
-    
+
     /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method

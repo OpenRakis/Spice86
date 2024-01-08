@@ -16,7 +16,7 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class GhidraSymbolsDumper {
     private readonly ILoggerService _loggerService;
-    
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>

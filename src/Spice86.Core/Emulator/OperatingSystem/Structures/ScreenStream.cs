@@ -12,7 +12,7 @@ using System.Linq;
 public class ScreenStream : Stream {
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
-    
+
     /// <summary>
     ///     Creates a new instance of the <see cref="ScreenStream" /> class.
     /// </summary>

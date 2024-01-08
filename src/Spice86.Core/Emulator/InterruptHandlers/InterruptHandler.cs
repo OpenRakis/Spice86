@@ -52,7 +52,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
         // Default implementation for most Interrupts:
         //  - Create a callback That will call the Run method
         //  - Write that in ram with an IRET
-        
+
         // Write ASM
         SegmentedAddress interruptHandlerAddress = memoryAsmWriter.GetCurrentAddressCopy();
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
@@ -82,7 +82,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
         return new UnhandledInterruptException(_state, VectorNumber, index);
     }
-    
+
     /// <summary>
     /// Sets the Carry Flag in the CPU state and optionally on the interrupt stack.
     /// </summary>
@@ -106,7 +106,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
             _stack.SetFlagOnInterruptStack(Flags.Zero, value);
         }
     }
-    
+
     /// <summary>
     /// Runs the C# code that replaces the machine code. <br/>
     /// While the C# code is run, the interrupt stack is disabled.

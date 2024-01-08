@@ -12,7 +12,7 @@ using System.Timers;
 /// </summary>
 public sealed class Dsp : IDisposable {
     private readonly IRequestInterrupt _soundCard;
-    
+
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
@@ -23,7 +23,7 @@ public sealed class Dsp : IDisposable {
         SampleRate = 22050;
         BlockTransferSize = 65536;
         _soundCard = soundCard;
-        
+
     }
 
     /// <summary>

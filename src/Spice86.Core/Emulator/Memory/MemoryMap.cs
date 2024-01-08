@@ -8,17 +8,17 @@ public static class MemoryMap {
     /// Segment that contains a list of addresses of interrupt handlers.
     /// </summary>
     public const int InterruptVectorSegment = 0x0000;
-    
+
     /// <summary>
     /// Segment of the VGA static functionality table.
     /// </summary>
     public const ushort StaticFunctionalityTableSegment = 0x0100;
-    
+
     /// <summary>
     /// Segment containing the BIOS data area.
     /// </summary>
     public const ushort BiosDataSegment = 0x0040;
-    
+
     /// <summary>
     /// The length of the boot sector code.
     /// </summary>

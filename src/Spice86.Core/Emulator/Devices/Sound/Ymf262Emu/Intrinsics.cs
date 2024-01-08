@@ -6,7 +6,7 @@ using System.Runtime.Intrinsics.X86;
 /// Provides low-level hardware intrinsics for use in performance-critical code.
 /// </summary>
 internal static class Intrinsics {
-    
+
     /// <summary>
     /// Extracts a contiguous sequence of bits from a given integer value, starting from a specified index
     /// and with a specified length. If the BMI1 instruction set is supported by the current CPU, this method

@@ -59,12 +59,12 @@ public sealed class GeneralMidi : IDisposable {
     /// Gets the current state of the General MIDI device.
     /// </summary>
     public GeneralMidiState State { get; private set; }
-    
+
     /// <summary>
     /// Gets or sets the path where MT-32 roms are stored.
     /// </summary>
     public string? Mt32RomsPath { get; }
-    
+
     /// <summary>
     /// Gets or sets a value indicating whether to emulate an MT-32 device.
     /// </summary>
@@ -87,7 +87,7 @@ public sealed class GeneralMidi : IDisposable {
     /// All the input ports usable with the device.
     /// </summary>
     public IEnumerable<int> InputPorts => new int[] { DataPort, StatusPort };
-    
+
     /// <summary>
     /// Read a byte from a port. Either the Data port or the Status port.
     /// </summary>
@@ -110,7 +110,7 @@ public sealed class GeneralMidi : IDisposable {
                 throw new ArgumentException("Invalid MIDI port.");
         }
     }
-    
+
     /// <summary>
     /// Read a byte from a port.
     /// </summary>
@@ -123,7 +123,7 @@ public sealed class GeneralMidi : IDisposable {
     /// All the output ports usable with the device.
     /// </summary>
     public IEnumerable<int> OutputPorts => new int[] { 0x330, 0x331 };
-    
+
     /// <summary>
     /// Writes a byte to the specified port, either the DataPort or StatusPort.
     /// If the DataPort is specified, the byte is sent to the MIDI device through the MIDI mapper.
@@ -161,7 +161,7 @@ public sealed class GeneralMidi : IDisposable {
                 break;
         }
     }
-    
+
     /// <summary>
     /// Write a word to the device.
     /// </summary>

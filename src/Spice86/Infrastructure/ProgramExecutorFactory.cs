@@ -12,7 +12,7 @@ public class ProgramExecutorFactory : IProgramExecutorFactory {
         _loggerService = loggerService;
         _configuration = configuration;
     }
-    
+
     public IProgramExecutor Create(IGui? gui = null) {
         return new ProgramExecutor(_configuration, _loggerService, gui);
     }

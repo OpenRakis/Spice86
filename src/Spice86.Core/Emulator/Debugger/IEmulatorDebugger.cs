@@ -19,11 +19,11 @@ public interface IEmulatorDebugger {
     void VisitVideoState(IVideoState videoState);
 
     void VisitDacPalette(ArgbPalette argbPalette);
-    
+
     void VisitDacRegisters(DacRegisters dacRegisters);
-    
+
     void VisitVgaCard(VgaCard vgaCard);
-    
+
     void VisitCpu(Cpu cpu);
     void VisitExternalMidiDevice(Midi midi);
 }

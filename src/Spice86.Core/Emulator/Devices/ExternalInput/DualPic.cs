@@ -21,7 +21,7 @@ public class DualPic : DefaultIOPortHandler {
     private const int SlaveData = 0xA1;
 
     private const byte DefaultIcw1 = 0b10001;
-    
+
     private const byte DefaultIcw4 = 0b0001;
 
     private const byte BaseInterruptVectorMaster = 0x08;
@@ -47,7 +47,7 @@ public class DualPic : DefaultIOPortHandler {
             MaskAllInterrupts();
         }
     }
-    
+
     /// <summary>
     /// Initializes the PICs with default initialization commands.
     /// </summary>
@@ -91,7 +91,7 @@ public class DualPic : DefaultIOPortHandler {
             throw new UnhandledOperationException(_state, $"IRQ {irq} not supported at the moment");
         }
     }
-    
+
     /// <summary>
     /// Determines whether this instance has a pending interrupt request.
     /// </summary>
@@ -119,7 +119,7 @@ public class DualPic : DefaultIOPortHandler {
 
         return null;
     }
-    
+
     /// <summary>
     /// Acknowledges the interrupt request from the first PIC. <br/>
     /// This signals that the PIC has processed the interrupt request and is ready to receive new requests.

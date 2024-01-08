@@ -377,7 +377,7 @@ public interface IVgaFunctionality {
     ///     Load custom font and set the amount of screen rows.
     /// </summary>
     void LoadGraphicsFont(ushort segment, ushort offset, byte height, byte rowSpecifier, byte userSpecifiedRows);
-    
+
     /// <summary>
     ///    Notifies when the video mode has changed.
     /// </summary>

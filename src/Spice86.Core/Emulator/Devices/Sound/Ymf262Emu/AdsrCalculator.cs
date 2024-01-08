@@ -27,7 +27,7 @@ internal sealed class AdsrCalculator
     /// Gets or sets the current ADSR state.
     /// </summary>
     public AdsrState State { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the current sustain level.
     /// </summary>
@@ -50,7 +50,7 @@ internal sealed class AdsrCalculator
             }
         }
     }
-    
+
     /// <summary>
     /// Gets or sets the total output level.
     /// </summary>
@@ -83,7 +83,7 @@ internal sealed class AdsrCalculator
                 break;
         }
     }
-    
+
     public void SetActualAttackRate(int attackRate, int ksr, int keyScaleNumber)
     {
         // According to the YMF278B manual's OPL3 section, the attack curve is exponential,
@@ -127,14 +127,14 @@ internal sealed class AdsrCalculator
         // The dB increment is dictated by the period between 10% and 90%:
         _dBdecayIncrement = _opl.CalculateIncrement(PercentageToDb(0.1), PercentageToDb(0.9), period10To90InSeconds);
     }
-    
+
     public void SetActualReleaseRate(int releaseRate, int ksr, int keyScaleNumber)
     {
         int actualReleaseRate = CalculateActualRate(releaseRate, ksr, keyScaleNumber);
         double period10To90InSeconds = DecayAndReleaseTimeValuesTable[actualReleaseRate];
         _dBreleaseIncrement = _opl.CalculateIncrement(PercentageToDb(0.1), PercentageToDb(0.9), period10To90InSeconds);
     }
-    
+
     public double GetEnvelope(int egt, int am)
     {
         // The datasheets attenuation values
@@ -235,14 +235,14 @@ internal sealed class AdsrCalculator
         // The envelope has a resolution of 0.1875 dB:
         return ((int)(outputEnvelope / envelopeResolution)) * envelopeResolution;
     }
-    
+
     public void KeyOn()
     {
         double xCurrent = Intrinsics.Log2(-_envelope);
         _x = Math.Min(xCurrent, _xMinimumInAttack);
         State = AdsrState.Attack;
     }
-    
+
     public void KeyOff()
     {
         if (State != AdsrState.Off) {

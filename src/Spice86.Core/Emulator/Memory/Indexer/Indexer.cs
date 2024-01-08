@@ -19,7 +19,7 @@ public abstract class Indexer<T> {
         get => this[(uint)address];
         set => this[(uint)address] = value;
     }
-    
+
     /// <summary>
     /// Indexer for addresses that are long. For convenience.
     /// </summary>

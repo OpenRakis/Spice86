@@ -49,10 +49,10 @@ public class PspGenerator {
 
         // Load the command-line arguments into the PSP.
         _memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
-        
+
         // Copy the DOS env vars into the PSP.
         _memory.LoadData(pspAddress + ENVIRONMENT_SEGMENT_OFFSET, _environmentBlockGenerator.BuildEnvironmentBlock());
-        
+
         // Initialize the memory manager with the PSP segment and the last free segment value.
         _dosMemoryManager.Init(pspSegment, lastFreeSegment);
 

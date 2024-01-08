@@ -47,12 +47,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// Value used when a page is unmapped or unallocated.
     /// </summary>
     public const ushort EmmNullPage = 0xFFFF;
-    
+
     /// <summary>
     /// Value used when an EMM handle is unmapped un unallocated.
     /// </summary>
     public const ushort EmmNullHandle = 0xFFFF;
-    
+
     /// <summary>
     /// The start address of the Emm Page Frame, as a segment value. <br/>
     /// The page frame is located above 640K bytes.  Normally, only video <br/>
@@ -64,7 +64,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// The size of an EMM logical or physical page: 16 KB.
     /// </summary>
     public const ushort EmmPageSize = 16384;
-    
+
     /// <summary>
     /// This is required so EMS can be detected by DOS applications. <br/>
     /// (this is one, of two, methods to do so).
@@ -81,7 +81,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// This is referred as the Emm Page Frame.
     /// </summary>
     public IDictionary<ushort, EmmRegister> EmmPageFrame { get; init; } = new Dictionary<ushort, EmmRegister>();
-    
+
     /// <summary>
     /// This is the copy of the page frame. <br/>
     /// We copy the Emm Page Frame into it in the Save Page Map function. <br/>
@@ -138,7 +138,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         AddAction(0x44, MapUnmapHandlePage);
         AddAction(0x45, DeallocatePages);
         AddAction(0x46, GetEmmVersion);
-        AddAction(0x47, SavePageMap); 
+        AddAction(0x47, SavePageMap);
         AddAction(0x48, RestorePageMap);
         AddAction(0x4B, GetEmmHandleCount);
         AddAction(0x4C, GetHandlePages);
@@ -175,7 +175,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _loggerService.Debug("EMS: {@MethodName}: {@Result}", nameof(GetStatus), _state.AH);
         }
     }
-    
+
     /// <summary>
     /// Returns in _state.BX where the 64KB EMM Page Frame is located.
     /// </summary>
@@ -188,7 +188,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _loggerService.Debug("EMS: {@MethodName}: 0x{Result:X4}", nameof(GetPageFrameSegment), _state.BX);
         }
     }
-    
+
     /// <summary>
     /// The Get Unallocated Page Count function returns in _state.BX the number of
     /// unallocated pages (pages available to your program),
@@ -323,7 +323,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         }
         emmRegister.PhysicalPage = allocatedEmmHandle.LogicalPages[logicalPageNumber];
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Mapped logical page {LogicalPage} to physical page {PhysicalPage}", 
+            _loggerService.Debug("Mapped logical page {LogicalPage} to physical page {PhysicalPage}",
                 logicalPageNumber,
                 physicalPageNumber);
         }
@@ -381,7 +381,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _loggerService.Debug("EMS: {@MethodName}: 0x{Version:X2}", nameof(GetEmmVersion), _state.AL);
         }
     }
-    
+
     /// <summary>
     /// Save Page Map saves the contents of the page mapping registers on all
     /// expanded memory boards in an internal save area.  The function is
@@ -418,7 +418,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         if (EmmHandles[handleId].SavedPageMap) {
             return EmmStatus.EmmPageMapSaved;
         }
-        
+
         EmmPageFrameSave.Clear();
 
         foreach (KeyValuePair<ushort, EmmRegister> item in EmmPageFrame) {
@@ -465,7 +465,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         if (EmmHandles[handleId].SavedPageMap) {
             return EmmStatus.EmmPageMapSaved;
         }
-        
+
         EmmPageFrame.Clear();
 
         foreach (KeyValuePair<ushort, EmmRegister> item in EmmPageFrameSave) {
@@ -513,7 +513,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         _state.AH = GetAllHandlePages(MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI));
         _state.AX = EmmStatus.EmmNoError;
     }
-    
+
     public byte GetAllHandlePages(uint tableAddress) {
         foreach(KeyValuePair<int, EmmHandle> allocatedHandle in EmmHandles) {
             _memory.UInt16[tableAddress] = allocatedHandle.Value.HandleNumber;
@@ -590,7 +590,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = EmmStatus.EmmInvalidHandle;
             return;
         }
-        
+
         if (EmmHandles.Count == EmmMemory.TotalPages) {
             _state.AH = EmmStatus.EmmOutOfHandles;
             return;
@@ -599,14 +599,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             _state.AH = EmmStatus.EmmNotEnoughPages;
             return;
         }
-        
+
         EmmHandle handle = EmmHandles[handleId];
 
         if (handle.LogicalPages.Count == reallocationCount) {
             _state.AH = EmmStatus.EmmNoError;
             return;
         }
-        
+
         if (reallocationCount == 0) {
             handle.LogicalPages.Clear();
         }
@@ -644,7 +644,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         ushort handle = _state.DX;
         _state.AH = GetSetHandleName(handle, _state.AL);
     }
-    
+
     /// <summary>
     /// Gets or Set a handle name, depending on the <paramref name="operation"/>
     /// </summary>
@@ -715,7 +715,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 break;
         }
     }
-    
+
     /// <summary>
     /// Returns the number of open EMM handles
     /// </summary>

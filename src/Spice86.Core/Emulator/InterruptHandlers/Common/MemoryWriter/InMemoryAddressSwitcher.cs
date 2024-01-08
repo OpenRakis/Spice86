@@ -13,12 +13,12 @@ public class InMemoryAddressSwitcher {
     public InMemoryAddressSwitcher(IIndexable memory) {
         _memory = memory;
     }
-    
+
     /// <summary>
     /// Physical address of the SegmentedAddress we want to store.
     /// </summary>
     public uint? PhysicalLocation { private get; set; }
-    
+
     /// <summary>
     /// Value of the Default Address to use.
     /// </summary>

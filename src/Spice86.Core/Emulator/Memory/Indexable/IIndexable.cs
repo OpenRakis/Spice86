@@ -33,7 +33,7 @@ public interface IIndexable {
     UInt32Indexer UInt32 {
         get;
     }
-    
+
     /// <summary>
     ///     Allows indexed signed byte access to the memory.
     /// </summary>
@@ -78,7 +78,7 @@ public interface IIndexable {
     /// <param name="maxLength">The maximum length to write</param>
     /// <exception cref="UnrecoverableException"></exception>
     void SetZeroTerminatedString(uint address, string value, int maxLength);
-    
+
     /// <summary>
     ///     Load data from a byte array into memory.
     /// </summary>

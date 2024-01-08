@@ -53,7 +53,7 @@ public class BreakPointHolder {
             _unconditionalBreakPoints.Remove(breakPoint);
         }
     }
-    
+
     /// <summary>
     /// Triggers all breakpoints that match the specified address.
     /// </summary>
@@ -84,7 +84,7 @@ public class BreakPointHolder {
             }
         }
     }
-    
+
     /// <summary>
     /// Triggers all breakpoints that match the specified address range.
     /// </summary>

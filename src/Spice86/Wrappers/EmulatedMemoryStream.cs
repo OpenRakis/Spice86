@@ -15,7 +15,7 @@ public class EmulatedMemoryStream : Stream {
         _canSeek = true;
         _canRead = true;
     }
-    
+
     public override void Flush() {
         throw new NotSupportedException();
     }

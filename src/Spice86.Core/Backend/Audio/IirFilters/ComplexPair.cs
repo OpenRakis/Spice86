@@ -24,7 +24,7 @@ namespace Spice86.Core.Backend.Audio.IirFilters;
 using System.Numerics;
 
 /**
- * 
+ *
  * A complex pair
  *
  */

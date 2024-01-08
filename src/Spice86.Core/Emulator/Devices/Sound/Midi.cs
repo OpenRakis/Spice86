@@ -16,7 +16,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     /// The port number used for MIDI commands.
     /// </summary>
     public const int Command = 0x331;
-    
+
     /// <summary>
     /// The port number used for MIDI data.
     /// </summary>
@@ -36,7 +36,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     public Midi(AudioPlayerFactory audioPlayerFactory, State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _generalMidi = new GeneralMidi(audioPlayerFactory, mt32RomsPath, loggerService);
     }
-    
+
     
     /// <inheritdoc />
     public override byte ReadByte(int port) {
@@ -49,7 +49,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
         ioPortDispatcher.AddIOPortHandler(Data, this);
         ioPortDispatcher.AddIOPortHandler(Command, this);
     }
-    
+
     /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         UpdateLastPortWrite(port, value);

@@ -88,13 +88,13 @@ public class State : IDebuggableComponent {
     /// </summary>
 
     public short Direction8 => (short)(DirectionFlag ? -1 : 1);
-    
+
     /// <summary>
     /// Gets the offset value of the Direction Flag for 16 bit CPU instructions.
     /// </summary>
 
     public short Direction16 => (short)(DirectionFlag ? -2 : 2);
-    
+
     /// <summary>
     /// Gets the offset value of the Direction Flag for 32 bit CPU instructions.
     /// </summary>
@@ -112,7 +112,7 @@ public class State : IDebuggableComponent {
 
     public GeneralRegisters GeneralRegisters { get; } = new();
     public SegmentRegisters SegmentRegisters { get; } = new();
-    
+
     public bool IsRunning { get; set; } = true;
 
     /// <summary>

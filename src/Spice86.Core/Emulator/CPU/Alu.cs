@@ -44,7 +44,7 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     public Alu(State state) {
         _state = state;
     }
-    
+
     public TUnsigned Adc(TUnsigned value1, TUnsigned value2) {
         return Add(value1, value2, true);
     }
@@ -78,14 +78,14 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
         _state.CarryFlag = carry;
         return res;
     }
-    
+
     public abstract TUnsigned Sub(TUnsigned value1, TUnsigned value2, bool useCarry);
 
     public abstract TUnsigned Div(TUnsignedUpper value1, TUnsigned value2);
     public abstract TUnsignedUpper Mul(TUnsigned value1, TUnsigned value2);
-    
+
     public abstract TSigned Idiv(TSignedUpper value1, TSigned value2);
-    
+
     public abstract TSignedUpper Imul(TSigned value1, TSigned value2);
 
 

@@ -148,7 +148,7 @@ public class Pic : IHardwareInterruptController {
                 ClearHighestInServiceIrq();
             }
         }
-        
+
         if (rotatePriorities) {
             _lowestPriorityIrq = interruptLevel;
         }

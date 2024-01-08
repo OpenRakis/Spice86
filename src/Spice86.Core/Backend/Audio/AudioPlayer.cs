@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 public abstract class AudioPlayer : IDisposable
 {
     private readonly InternalBufferWriter _writer;
-    
+
     /// <summary>
     /// Whether the native resources were disposed.
     /// </summary>
@@ -49,7 +49,6 @@ public abstract class AudioPlayer : IDisposable
     public int WriteData(Span<short> data) => _writer.WriteData(data);
 
     
-    
     /// <summary>
     /// Writes the full buffer of audio data to the player/>.
     /// </summary>
@@ -68,7 +67,7 @@ public abstract class AudioPlayer : IDisposable
             }
         }
     }
-    
+
     /// <summary>
     /// Writes the full buffer of audio data to the player/>.
     /// </summary>
@@ -87,7 +86,7 @@ public abstract class AudioPlayer : IDisposable
             }
         }
     }
-    
+
     
     /// <summary>
     /// Writes the full buffer of audio data to the player/>.
@@ -129,7 +128,7 @@ public abstract class AudioPlayer : IDisposable
     protected virtual void Dispose(bool disposing) {
         _disposed = true;
     }
-    
+
     /// <summary>
     /// Writes the audio data to the rendering backend
     /// </summary>

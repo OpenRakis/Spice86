@@ -32,7 +32,7 @@ public class Stack {
         _state.SP = (ushort)(_state.SP - 2);
         _memory.UInt16[_state.StackPhysicalAddress] = value;
     }
-    
+
     public uint Peek32(int index) {
         return _memory.UInt32[(uint)(PhysicalAddress + index)];
     }
@@ -51,7 +51,7 @@ public class Stack {
         _state.SP = (ushort)(_state.SP - 4);
         _memory.UInt32[_state.StackPhysicalAddress] = value;
     }
-    
+
     public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
         uint flagsAddress = MemoryUtils.ToPhysicalAddress(_state.SS, (ushort)(_state.SP + 4));
         int value = _memory.UInt16[flagsAddress];

@@ -211,7 +211,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure {
     public byte RtcWaitFlag { get => UInt8[0xA0]; set => UInt8[0xA0] = value; }
 
     // 7 btyes of padding at 0xA1
-    
+
     public SegmentedAddress VideoSavetable { get => SegmentedAddress[0xA8]; set => SegmentedAddress[0xA8] = value; }
 
 }

@@ -15,12 +15,10 @@ public class GeneralRegisters : RegistersHolder {
     /// The index of the BP register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
     public const uint BpIndex = 5;
-    
     /// <summary>
     /// The index of the BX register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
     public const uint BxIndex = 3;
-    
     /// <summary>
     /// The index of the CX register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
@@ -35,17 +33,14 @@ public class GeneralRegisters : RegistersHolder {
     /// The index of the DX register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
     public const uint DxIndex = 2;
-    
     /// <summary>
     /// The index of the SI register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
     public const uint SiIndex = 6;
-    
     /// <summary>
     /// The index of the SP register in the <see cref="GetRegistersNames"/> dictionary.
     /// </summary>
     public const uint SpIndex = 4;
-    
     /// <summary>
     /// Initializes a new instance of the <see cref="GeneralRegisters"/> class.
     /// </summary>

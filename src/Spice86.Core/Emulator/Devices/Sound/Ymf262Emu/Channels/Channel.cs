@@ -51,28 +51,28 @@ internal abstract class Channel
             output[3] = (Chd == 1) ? channelOutput : 0;
         }
     }
-    
+
     /// <summary>
     /// Returns an array containing the channel's output values.
     /// </summary>
     /// <returns>Array containing the channel's output values.</returns>
     public abstract void GetChannelOutput(Span<double> output);
-    
+
     /// <summary>
     /// Activates channel output.
     /// </summary>
     public abstract void KeyOn();
-    
+
     /// <summary>
     /// Disables channel output.
     /// </summary>
     public abstract void KeyOff();
-    
+
     /// <summary>
     /// Updates the state of all of the operators in the channel.
     /// </summary>
     public abstract void UpdateOperators();
-    
+
     public void Update_2_KON1_BLOCK3_FNUMH2()
     {
         int _2_kon1_block3_fnumh2 = Opl.Registers[ChannelBaseAddress + _2_KON1_BLOCK3_FNUMH2_Offset];
@@ -96,7 +96,7 @@ internal abstract class Channel
             Kon = newKon;
         }
     }
-    
+
     public void Update_FNUML8()
     {
         int fnuml8 = Opl.Registers[ChannelBaseAddress + Fnuml8Offset];
@@ -104,7 +104,7 @@ internal abstract class Channel
         Fnuml = fnuml8 & 0xFF;
         UpdateOperators();
     }
-    
+
     public void Update_CHD1_CHC1_CHB1_CHA1_FB3_CNT1()
     {
         int chd1Chc1Chb1Cha1Fb3Cnt1 = Opl.Registers[ChannelBaseAddress + Chd1Chc1Chb1Cha1Fb3Cnt1Offset];
@@ -116,7 +116,7 @@ internal abstract class Channel
         Cnt = chd1Chc1Chb1Cha1Fb3Cnt1 & 0x01;
         UpdateOperators();
     }
-    
+
     /// <summary>
     /// Updates the state of the channel.
     /// </summary>

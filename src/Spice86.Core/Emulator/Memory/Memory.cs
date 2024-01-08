@@ -14,7 +14,7 @@ public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
     public MemoryBreakpoints MemoryBreakpoints { get; } = new();
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
-    
+
     /// <summary>
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
     /// </summary>
@@ -75,7 +75,7 @@ public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
             _memoryDevices[address].Write(address, value);
         }
     }
-    
+
     /// <summary>
     ///     Allows write breakpoints to access the byte being written before it actually is.
     /// </summary>

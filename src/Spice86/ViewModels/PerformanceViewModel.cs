@@ -19,7 +19,7 @@ using System;
 public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
     private State? _state;
     private readonly IPerformanceMeasurer? _performanceMeasurer;
-    
+
     [ObservableProperty]
     private double _averageInstructionsPerSecond;
 
@@ -50,9 +50,9 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
 
     public void VisitMainMemory(IMemory memory) {
     }
-    
+
     public void VisitCpuState(State state) => _state = state;
-    
+
     public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
     }
 

@@ -62,7 +62,7 @@ internal class Operator {
         EnvelopeGenerator.SetActualDecayRate(_dr, _ksr, _keyScaleNumber);
         EnvelopeGenerator.SetActualReleaseRate(_rr, _ksr, _keyScaleNumber);
     }
-    
+
     public void Update_KSL2_TL6()
     {
         int ksl2Tl6 = Opl.Registers[_operatorBaseAddress + Ksl2Tl6Offset];
@@ -75,7 +75,7 @@ internal class Operator {
         EnvelopeGenerator.SetAtennuation(_fNumber, _block, _ksl);
         EnvelopeGenerator.TotalLevel = _tl;
     }
-    
+
     public void Update_AR4_DR4()
     {
         int ar4Dr4 = Opl.Registers[_operatorBaseAddress + Ar4Dr4Offset];
@@ -88,7 +88,7 @@ internal class Operator {
         EnvelopeGenerator.SetActualAttackRate(Ar, _ksr, _keyScaleNumber);
         EnvelopeGenerator.SetActualDecayRate(_dr, _ksr, _keyScaleNumber);
     }
-    
+
     public void Update_SL4_RR4()
     {
         int sl4Rr4 = Opl.Registers[_operatorBaseAddress + Sl4Rr4Offset];
@@ -101,13 +101,13 @@ internal class Operator {
         EnvelopeGenerator.SustainLevel = _sl;
         EnvelopeGenerator.SetActualReleaseRate(_rr, _ksr, _keyScaleNumber);
     }
-    
+
     public void Update_5_WS3()
     {
         int _5_ws3 = Opl.Registers[_operatorBaseAddress + _5_WS3_Offset];
         Ws = _5_ws3 & 0x07;
     }
-    
+
     /// <summary>
     /// Returns the current output value of the operator.
     /// </summary>
@@ -130,7 +130,7 @@ internal class Operator {
         double operatorOutput = GetOutput(modulator, Phase, Ws);
         return operatorOutput;
     }
-    
+
     public virtual double GetOutput(double modulator, double outputPhase, int waveform)
     {
         outputPhase = (outputPhase + modulator) % 1;
@@ -144,7 +144,7 @@ internal class Operator {
         int sampleIndex = (int)(outputPhase * Wavelength);
         return GetWaveformValue(waveform, sampleIndex) * Envelope;
     }
-    
+
     public virtual void KeyOn()
     {
         if (Ar > 0)
@@ -157,12 +157,12 @@ internal class Operator {
             EnvelopeGenerator.State = AdsrState.Off;
         }
     }
-    
+
     public virtual void KeyOff()
     {
         EnvelopeGenerator.KeyOff();
     }
-    
+
     public virtual void UpdateOperator(int ksn, int fNum, int blk)
     {
         _keyScaleNumber = ksn;

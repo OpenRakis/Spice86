@@ -40,7 +40,7 @@ public class DosFileManager {
     /// All the files opened by DOS.
     /// </summary>
     public OpenFile?[] OpenFiles { get; } = new OpenFile[MaxOpenFiles];
-    
+
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
     static DosFileManager() {
@@ -164,7 +164,7 @@ public class DosFileManager {
         dta.SearchId = GenerateNewKey();
         dta.Drive = DefaultDrive;
         dta.EntryCountWithinSearchResults = 0;
-        
+
         if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is { } characterDevice) {
             if(!TryUpdateDosTransferAreaWithFileMatch(dta, characterDevice.Name, out DosFileOperationResult status, searchAttributes)) {
                 return status;
@@ -172,11 +172,11 @@ public class DosFileManager {
             _activeFileSearches.Add(dta.SearchId, (characterDevice.Name, fileSpec));
             return DosFileOperationResult.NoValue();
         }
-        
+
         if (IsOnlyADosDriveRoot(fileSpec)) {
             return DosFileOperationResult.Error(ErrorCode.NoMoreFiles);
         }
-        
+
         if (!GetSearchFolder(fileSpec, out string? searchFolder)) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
@@ -188,7 +188,7 @@ public class DosFileManager {
                 searchFolder,
                 GetFileSpecWithoutSubFolderInIt(fileSpec) ?? fileSpec,
                 enumerationOptions);
-            
+
             if (matchingPaths.Length == 0) {
                 return DosFileOperationResult.Error(ErrorCode.PathNotFound);
             }
@@ -222,7 +222,7 @@ public class DosFileManager {
         searchFolder = _dosPathResolver.GetFullHostPathFromDosOrDefault(subFolderName);
         return !string.IsNullOrWhiteSpace(searchFolder);
     }
-    
+
     private static string? GetSubFoldersInFileSpec(string fileSpec) {
         int index = fileSpec.LastIndexOfAny(_directoryChars);
         if (index != -1) {
@@ -258,12 +258,12 @@ public class DosFileManager {
             MatchCasing = MatchCasing.CaseInsensitive,
             MatchType = MatchType.Win32
         };
-        
+
         if (attributes == 0) {
             enumerationOptions.AttributesToSkip = FileAttributes.System | FileAttributes.Hidden;
             return enumerationOptions;
         }
-        
+
         DosFileAttributes attributesToInclude = (DosFileAttributes)attributes;
 
         FileAttributes attributesToSkip = 0;
@@ -277,9 +277,9 @@ public class DosFileManager {
         if (!attributesToInclude.HasFlag(DosFileAttributes.Hidden)) {
             attributesToSkip |= FileAttributes.Hidden;
         }
-        
+
         enumerationOptions.AttributesToSkip = attributesToSkip;
-        
+
         return enumerationOptions;
     }
 
@@ -293,12 +293,12 @@ public class DosFileManager {
         if (searchDrive >= 26 || searchDrive > _dosPathResolver.NumberOfPotentiallyValidDriveLetters) {
             return FileOperationErrorWithLog("Search on an invalid drive", ErrorCode.NoMoreMatchingFiles);
         }
-        
+
         byte key = dta.SearchId;
         if (!_activeFileSearches.TryGetValue(key, out (string FileSystemEntry, string FileSpec) search)) {
             return FileOperationErrorWithLog($"Call FindFirst first to initiate a search.", ErrorCode.NoMoreMatchingFiles);
         }
-        
+
         if (!GetSearchFolder(search.FileSpec, out string? searchFolder)) {
             return FileOperationErrorWithLog("Search in an invalid folder", ErrorCode.NoMoreMatchingFiles);
         }
@@ -309,7 +309,7 @@ public class DosFileManager {
             (!File.Exists(search.FileSystemEntry) && !Directory.Exists(search.FileSystemEntry))) {
             return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}", ErrorCode.NoMoreMatchingFiles);
         }
-        
+
         string matchFileSystemEntryName = matchingFiles[dta.EntryCountWithinSearchResults..][0];
         dta.EntryCountWithinSearchResults++;
 
@@ -396,7 +396,7 @@ public class DosFileManager {
             }
             return OpenDeviceInternal(device, openMode);
         }
-        
+
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             return FileNotFoundError(fileName);
@@ -429,7 +429,7 @@ public class DosFileManager {
         Stream stream = device.OpenStream(openMode);
         ushort dosIndex = (ushort)freeIndex.Value;
         SetOpenFile(dosIndex, new OpenFile(name ?? device.Name, dosIndex, stream));
-        
+
         return DosFileOperationResult.Value16(dosIndex);
     }
 
@@ -537,7 +537,7 @@ public class DosFileManager {
     private DosFileOperationResult PathNotFoundError(string? path) {
         return FileOperationErrorWithLog($"File {path} not found!", ErrorCode.PathNotFound);
     }
-    
+
     private DosFileOperationResult RemoveCurrentDirError(string? path) {
         return FileOperationErrorWithLog($"Attempted to remove current dir {path}", ErrorCode.AttemptedToRemoveCurrentDirectory);
     }
@@ -584,7 +584,7 @@ public class DosFileManager {
         }
         return DosFileOperationResult.Error(ErrorCode.TooManyOpenFiles);
     }
-    
+
     internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
 
     private static ushort ToDosDate(DateTime localDate) {
@@ -600,7 +600,7 @@ public class DosFileManager {
         int hours = localTime.Hour;
         return (ushort)((dosSeconds & 0b11111) | (minutes & 0b111111) << 5 | (hours & 0b11111) << 11);
     }
-    
+
     private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, string openMode) {
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             // Not found
@@ -668,7 +668,7 @@ public class DosFileManager {
     }
 
     private void SetOpenFile(ushort fileHandle, OpenFile? openFile) => OpenFiles[fileHandle] = openFile;
-    
+
     private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string matchingFileSystemEntry, ushort? searchAttributes = null) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Found matching file {MatchingFileSystemEntry}", matchingFileSystemEntry);
@@ -736,7 +736,7 @@ public class DosFileManager {
 
         return PathNotFoundError(dosDirectory);
     }
-    
+
     /// <summary>
     /// Removes a file on disk.
     /// </summary>

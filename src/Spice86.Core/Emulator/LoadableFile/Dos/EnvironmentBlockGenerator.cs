@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 /// </summary>
 public class EnvironmentBlockGenerator {
     private readonly EnvironmentVariables _environmentVariables;
-    
+
     /// <summary>
     /// Initializes a new instance of the EnvironmentBlockGenerator class.
     /// </summary>

@@ -58,7 +58,7 @@ public class DosInt21Handler : InterruptHandler {
         _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
-    
+
     private void FillDispatchTable() {
         AddAction(0x00, QuitWithExitCode);
         AddAction(0x02, DisplayOutput);
@@ -135,7 +135,7 @@ public class DosInt21Handler : InterruptHandler {
             stream.WriteByte(_state.AL);
         }
     }
-    
+
     public void PrinterOutput() {
         IVirtualDevice? prn = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
         if (prn is not CharacterDevice printer) {
@@ -213,7 +213,7 @@ public class DosInt21Handler : InterruptHandler {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(GetStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
-    
+
     public void GetAllocationInfoForAnyDrive() {
         GetAllocationInfoForDefaultDrive();
     }
@@ -249,7 +249,7 @@ public class DosInt21Handler : InterruptHandler {
                 break;
         }
     }
-    
+
     public void AllocateMemoryBlock(bool calledFromVm) {
         ushort requestedSize = _state.BX;
         _loggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSize);
@@ -584,7 +584,7 @@ public class DosInt21Handler : InterruptHandler {
         string str = GetDosString(_memory, segment, offset, '$');
 
         _vgaFunctionality.WriteString(str);
-        
+
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("PRINT STRING: {String}", str);
         }
@@ -645,7 +645,7 @@ public class DosInt21Handler : InterruptHandler {
             _loggerService.Verbose("SET INTERRUPT VECTOR FOR INT {VectorNumber} at address {SegmentOffset}", ConvertUtils.ToHex(vectorNumber),
                 ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
         }
-        
+
         SetInterruptVector(vectorNumber, segment, offset);
     }
 
@@ -670,11 +670,11 @@ public class DosInt21Handler : InterruptHandler {
         ReadOnlySpan<byte> sourceAsArray = stackalloc byte[] {characterByte};
         return _cp850CharSet.GetString(sourceAsArray);
     }
-    
+
     private string ConvertDosChars(IEnumerable<byte> characterBytes) {
         return _cp850CharSet.GetString(characterBytes.ToArray());
     }
-    
+
     /// <summary>
     /// Gets an ASCIZ pathname containing the current DOS directory in the address at DS:DI. <br/>
     /// Params: <br/>
@@ -800,7 +800,7 @@ public class DosInt21Handler : InterruptHandler {
             _loggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}", returnMessage, _state.ToString());
         }
     }
-    
+
     private void SetStateFromDosFileOperationResult(bool calledFromVm, DosFileOperationResult dosFileOperationResult) {
         if (dosFileOperationResult.IsError) {
             LogDosError(calledFromVm);

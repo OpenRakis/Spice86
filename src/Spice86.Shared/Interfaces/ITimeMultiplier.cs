@@ -1,4 +1,4 @@
-namespace Spice86.Shared.Interfaces; 
+namespace Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Interface from the PIT available to the GUI.

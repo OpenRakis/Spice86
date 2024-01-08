@@ -35,9 +35,9 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
-    
+
     private bool ListensToBreakpoints => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
-    
+
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>

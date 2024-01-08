@@ -13,7 +13,15 @@ public static partial class ConvertUtils {
     private const string HexStringStartPattern = "0x";
 
     private const uint SegmentSize = 0x10000;
-
+    /// <summary>
+    /// Returns the lower 8 bits of the given byte value as a signed byte.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <returns>The lower 8 bits of the given byte value as a signed byte.</returns>
+    public static sbyte Uint8b(byte value) {
+        return (sbyte)Uint8(value);
+    }
+    
     /// <summary>
     /// Returns the lower 16 bits of the given ushort value.
     /// </summary>
@@ -49,14 +57,14 @@ public static partial class ConvertUtils {
     public static byte Uint8(byte value) {
         return (byte)(value & 0xFF);
     }
-
+    
     /// <summary>
-    /// Returns the lower 8 bits of the given byte value as a signed byte.
+    /// Returns the least significant byte of a 32-bit unsigned integer.
     /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The lower 8 bits of the given byte value as a signed byte.</returns>
-    public static sbyte Uint8b(byte value) {
-        return (sbyte)Uint8(value);
+    /// <param name="value">The input 32-bit unsigned integer.</param>
+    /// <returns>The least significant byte of the input value.</returns>
+    public static byte ReadLsb16(uint value) {
+        return (byte)value;
     }
 
     /// <summary>
@@ -134,22 +142,14 @@ public static partial class ConvertUtils {
     private static string Replace0xWithBlank(string value) {
         return SourceGeneratedReged().Replace(value, "");
     }
-    
+
     /// <summary>
     /// Returns the least significant byte of a 16-bit unsigned integer.
     /// </summary>
     /// <param name="value">The input 16-bit unsigned integer.</param>
     /// <returns>The least significant byte of the input value.</returns>
-    public static byte ReadLsb(ushort value) {
-        return (byte)value;
-    }
-    
-    /// <summary>
-    /// Returns the least significant byte of a 32-bit unsigned integer.
-    /// </summary>
-    /// <param name="value">The input 32-bit unsigned integer.</param>
-    /// <returns>The least significant byte of the input value.</returns>
-    public static byte ReadLsb16(uint value) {
+    public static byte ReadLsb(ushort value)
+    {
         return (byte)value;
     }
 
@@ -262,7 +262,7 @@ public static partial class ConvertUtils {
     public static string ToHex(byte value) {
         return $"0x{value:X}";
     }
-    
+
     /// <summary>
     /// Returns a hexadecimal string representation of the given short value.
     /// </summary>
@@ -307,7 +307,7 @@ public static partial class ConvertUtils {
     public static string ToHex16WithoutX(ushort value) {
         return $"{value:X4}";
     }
-    
+
     /// <summary>
     /// Returns a string representation of the given uint value in hexadecimal form without the "0x" prefix.
     /// </summary>

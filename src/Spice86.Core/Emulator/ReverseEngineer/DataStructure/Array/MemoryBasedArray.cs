@@ -36,7 +36,7 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IEnumerabl
     }
 
     /// IEnumerable implementation
-    
+
     /// <inheritdoc/>
     public IEnumerator<T> GetEnumerator() {
         return new MemoryBasedArrayEnumerator<T>(this);
@@ -47,7 +47,6 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IEnumerabl
         return GetEnumerator();
     }
 
-    
     /// IList implementation
 
     /// <inheritdoc/>
@@ -62,7 +61,7 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IEnumerabl
         }
         return -1;
     }
-    
+
     /// <inheritdoc/>
     public void Insert(int index, T item) {
         throw CreateNotSupportedExceptionReadOnly();
@@ -72,7 +71,7 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IEnumerabl
     public void RemoveAt(int index) {
         throw CreateNotSupportedExceptionReadOnly();
     }
-    
+
     /// ICollection implementation
 
     /// <inheritdoc/>

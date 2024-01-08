@@ -83,7 +83,6 @@ public sealed class GdbServer : IDisposable {
         }
     }
 
-    
     /// <summary>
     /// Gets the GdbCommandHandler instance associated with the current GdbServer instance.
     /// </summary>
@@ -116,7 +115,6 @@ public sealed class GdbServer : IDisposable {
         _loggerService.Verbose("Client disconnected");
     }
 
-    
     /// <summary>
     /// Runs the GDB server and handles incoming connections.
     /// </summary>

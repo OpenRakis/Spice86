@@ -44,7 +44,7 @@ public abstract class Instructions {
     public abstract void SbbRmReg();
     public abstract void SbbRegRm();
     public abstract void SbbAccImm();
-    
+
     // And
     public abstract void AndRmReg();
     public abstract void AndRegRm();

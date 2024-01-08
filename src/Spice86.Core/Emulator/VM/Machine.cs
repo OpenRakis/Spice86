@@ -34,7 +34,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public sealed class Machine : IDisposable, IDebuggableComponent {
     private bool _disposed;
-    
+
     /// <summary>
     /// Memory mapped BIOS values.
     /// </summary>
@@ -54,7 +54,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// Handles all the callbacks, most notably interrupts.
     /// </summary>
     public CallbackHandler CallbackHandler { get; }
-    
+
     private InterruptInstaller InterruptInstaller { get; }
 
     private AssemblyRoutineInstaller AssemblyRoutineInstaller { get; }
@@ -163,7 +163,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The VGA Registers
     /// </summary>
     public IVideoState VgaRegisters { get; set; }
-    
+
     /// <summary>
     /// The VGA port handler
     /// </summary>
@@ -173,12 +173,12 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The class that handles converting video memory to a bitmap
     /// </summary>
     public readonly IVgaRenderer VgaRenderer;
-    
+
     /// <summary>
     /// The Video BIOS interrupt handler.
     /// </summary>
     public IVideoInt10Handler VideoInt10Handler { get; }
-    
+
     /// <summary>
     /// The Video Rom containing fonts and other data.
     /// </summary>
@@ -188,7 +188,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The DMA controller.
     /// </summary>
     public DmaController DmaController { get; }
-    
+
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
@@ -216,13 +216,13 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         CallbackHandler = new(CpuState, loggerService);
 
         Cpu = new Cpu(Memory, CpuState, DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints, loggerService, executionFlowRecorder, recordData);
-        
+
         // IO devices
         DmaController = new DmaController(Memory, CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(DmaController);
 
         RegisterIoPortHandler(DualPic);
-        
+
         VgaRegisters = new VideoState();
         VgaIoPortHandler = new VgaIoPortHandler(CpuState, loggerService, VgaRegisters, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(VgaIoPortHandler);
@@ -262,15 +262,15 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         MemoryAsmWriter memoryAsmWriter = new(Memory, new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), CallbackHandler);
         InterruptInstaller = new InterruptInstaller(new InterruptVectorTable(Memory), memoryAsmWriter, Cpu.FunctionHandler);
         AssemblyRoutineInstaller = new AssemblyRoutineInstaller(memoryAsmWriter, Cpu.FunctionHandler);
-        
+
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom,  configuration.InitializeDOS is true);
         VideoInt10Handler = new VgaBios(Memory, Cpu, VgaFunctions, BiosDataArea, loggerService);
-        
+
         TimerInt8Handler = new TimerInt8Handler(Memory, Cpu, DualPic, Timer, BiosDataArea, loggerService);
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(Memory, Cpu, DualPic, Keyboard, BiosDataArea, loggerService);
-        
+
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(Memory, Cpu, loggerService);
         SystemBiosInt12Handler = new SystemBiosInt12Handler(Memory, Cpu, BiosDataArea, loggerService);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(Memory, Cpu, Memory.A20Gate, loggerService);

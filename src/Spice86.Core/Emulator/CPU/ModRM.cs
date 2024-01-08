@@ -77,7 +77,7 @@ public class ModRM {
             MemoryAddress = null;
             return;
         }
-        
+
         if (_cpu.AddressSize == 16) {
             short displacement = mode switch {
                 1 => (sbyte)_cpu.NextUint8(),

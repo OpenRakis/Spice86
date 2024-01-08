@@ -60,7 +60,7 @@ public class GdbCustomCommandsHandler {
         _onBreakpointReached = onBreakpointReached;
         _recordedDataWriter = new RecorderDataWriter(_memory, _cpu.State, callbackHandler, configuration, executionFlowRecorder, recordedDataDirectory, _loggerService);
     }
-    
+
     /// <summary>
     /// Handles a custom command passed from GDB.
     /// </summary>
@@ -134,7 +134,7 @@ public class GdbCustomCommandsHandler {
     private string CallStack() {
         return _gdbIo.GenerateMessageToDisplayResponse(DumpCallStack());
     }
-    
+
     /// <summary>
     /// Returns a string that dumps the call stack.
     /// </summary>
@@ -281,7 +281,7 @@ Supported custom commands:
 
         return "";
     }
-    
+
     /// <summary>
     /// Peeks at the return address.
     /// </summary>

@@ -40,7 +40,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
         _memoryDataExporter = new(memory, callbackHandler, configuration, dumpDirectory, loggerService);
     }
 
-    /// <summary> 
+    /// <summary>
     /// Dumps all recorded data to their respective files.
     /// </summary>
     public void DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
@@ -57,7 +57,7 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     private void DumpGhidraSymbols(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
         new GhidraSymbolsDumper(_loggerService).Dump(executionFlowRecorder, functionHandler, SymbolsFile);
     }
-    
+
     /// <summary>
     /// Dumps the CPU registers to the file system.
     /// </summary>

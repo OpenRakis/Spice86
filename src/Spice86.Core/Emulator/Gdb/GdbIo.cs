@@ -47,7 +47,6 @@ public sealed class GdbIo : IDisposable {
         _stream = new NetworkStream(_socket);
     }
 
-    
     /// <summary>
     /// Gets a value indicating whether the GDB client is still connected to the server.
     /// </summary>
@@ -59,7 +58,7 @@ public sealed class GdbIo : IDisposable {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-    
+
     /// <summary>
     /// Generates a message response to display.
     /// </summary>
@@ -86,7 +85,6 @@ public sealed class GdbIo : IDisposable {
         return $"+${data}#{_gdbFormatter.FormatValueAsHex8(checksum)}";
     }
 
-    
     /// <summary>
     /// Generates an unsupported response string for a GDB client command.
     /// </summary>

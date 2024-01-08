@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems; 
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 /// <summary>
 /// Constants for some Expanded Memory Manager subFunctions IDs.

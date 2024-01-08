@@ -38,13 +38,13 @@ public class Cpu : IDebuggableComponent {
         { 0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x6C, 0x6D, 0x6E, 0x6F }.ToFrozenSet();
 
     private readonly IMemory _memory;
-    
+
     internal DualPic DualPic { get; }
-    
+
     private readonly ModRM _modRM;
 
     private readonly Alu8 _alu8;
-    
+
     internal MachineBreakpoints MachineBreakpoints { get; }
     private readonly CallbackHandler _callbackHandler;
     private readonly Instructions8 _instructions8;
@@ -157,7 +157,7 @@ public class Cpu : IDebuggableComponent {
     public Stack Stack { get; }
 
     public State State { get; }
-    
+
     public void InterruptRet() {
         FunctionHandlerInUse.Ret(CallType.INTERRUPT);
         _internalIp = Stack.Pop16();

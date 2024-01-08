@@ -16,7 +16,7 @@ using System;
 /// </summary>
 public sealed class PortAudioLib : IDisposable {
     private bool _disposed;
-    
+
     internal static class Constants {
         /// <summary>
         /// 32-bit floats
@@ -71,11 +71,11 @@ public sealed class PortAudioLib : IDisposable {
         NativeMethods.PortAudioInitialize();
 
         int deviceCount = NativeMethods.PortAudioGetDeviceCount();
-        
+
         Ensure.That<BufdioException>(deviceCount > 0, "No output devices are available.");
 
         int defaultDevice = NativeMethods.PortAudioGetDefaultOutputDevice();
-        
+
         _defaultOutputDevice = defaultDevice.PaGetPaDeviceInfo().PaToAudioDevice(defaultDevice);
         _outputDevices = new List<AudioDevice>();
 
@@ -95,7 +95,7 @@ public sealed class PortAudioLib : IDisposable {
     /// <returns>A string containing the filename of the system-provided PortAudio library</returns>
     public static string GetPortAudioLibName() => NativeMethods.GetPortAudioLibName();
 
-    /// <inheritdoc/>    
+    /// <inheritdoc/>
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);

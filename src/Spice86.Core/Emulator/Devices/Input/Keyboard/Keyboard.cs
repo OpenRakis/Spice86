@@ -20,12 +20,12 @@ public class Keyboard : DefaultIOPortHandler {
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
     /// </summary>
     public KeyboardCommand Command { get; private set; } = KeyboardCommand.None;
-    
+
     /// <summary>
     /// Part of the value sent when the CPU reads the status register.
     /// </summary>
     public const byte SystemTestStatusMask = 1<<2;
-    
+
     /// <summary>
     /// Part of the value sent when the CPU reads the status register.
     /// </summary>
@@ -71,7 +71,7 @@ public class Keyboard : DefaultIOPortHandler {
         if (scancode == null) {
             scancode = 0;
         }
-        
+
         return port switch {
             KeyboardPorts.Data => scancode.Value,
             // keyboard not locked, self-test completed.

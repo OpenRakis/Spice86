@@ -38,7 +38,7 @@ public readonly record struct AudioEngineOptions
 
     /// <summary>
     /// Initializes <see cref="AudioEngineOptions"/> by using default output device.
-    /// Sample rate will be set to 44100, channels to 2 (or max) and latency to default high. 
+    /// Sample rate will be set to 44100, channels to 2 (or max) and latency to default high.
     /// </summary>
     public AudioEngineOptions(AudioDevice defaultOutputDevice)
     {

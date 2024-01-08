@@ -13,7 +13,7 @@ public class EmmPage {
     public EmmPage(uint size) {
         PageMemory = new Ram(size);
     }
-    
+
     /// <summary>
     /// THe page's memory content.
     /// </summary>

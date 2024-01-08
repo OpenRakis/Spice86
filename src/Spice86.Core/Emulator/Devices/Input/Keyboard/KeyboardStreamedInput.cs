@@ -9,7 +9,7 @@ public class KeyboardStreamedInput {
     }
 
     public bool HasInput => _keyboardInt16Handler.HasKeyCodePending();
-    
+
     public ushort GetPendingInput() {
         return _keyboardInt16Handler.GetNextKeyCode() ?? 0;
     }
