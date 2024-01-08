@@ -318,7 +318,7 @@ public class PicTests {
         // Assert
         result.Should().Be(ExpectedVectorNumberFromIrq(1), "IRQ1 is the highest priority now and not IRQ0");
     }
-    
+
     [Fact]
     public void EoiBeforeAutomaticRotation() {
         // Arrange
@@ -330,13 +330,13 @@ public class PicTests {
         _pic.InterruptRequest(0);
         _pic.ComputeVectorNumber();
         // At this point both 0 and 1 are in service
-        
+
         // Act
         // rotate on non-specific EOI:
         //  - EOI highest priority interrupt (so IRQ0)
         //  - So now Highest in service is 1 instead of 0
         _pic.ProcessCommandWrite(NonSpecificEOICommand|RotatePriorityCommand|0);
-        
+
         // Assert
         // IRQ1 should still be in service but not IRQ0
         AssertInServiceRegister(1 << 1);

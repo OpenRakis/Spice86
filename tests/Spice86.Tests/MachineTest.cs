@@ -142,7 +142,7 @@ public class MachineTest {
             memory.UInt32[0] = 0;
         });
     }
-    
+
     [AssertionMethod]
     private void AssertAddressMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
         int count = 0;
@@ -295,7 +295,7 @@ public class MachineTest {
         Assert.Equal(cf, state.CarryFlag);
         Assert.Equal(of, state.OverflowFlag);
     }
-    
+
     [Theory]
     [InlineData(0b00111100000000000000000000000000, 0b00100000000000000000000000000001, 0, 0b00111100000000000000000000000000, true, true)] // result is same as dest, flags unaffected
     [InlineData(0b00000000000000000000000000000001, 0b00000000000000000000000000000000, 1, 0b00000000000000000000000000000010, false, false)] // shift one bit 
