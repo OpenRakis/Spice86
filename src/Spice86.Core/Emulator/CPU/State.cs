@@ -8,7 +8,7 @@ using System.Text;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// Represents the state of the CPU
+/// Represents the state of the CPU Registers and Flags.
 /// </summary>
 public class State : IDebuggableComponent {
     // Accumulator
@@ -169,6 +169,7 @@ public class State : IDebuggableComponent {
         return DumpedRegFlags;
     }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitCpuState(this);
     }

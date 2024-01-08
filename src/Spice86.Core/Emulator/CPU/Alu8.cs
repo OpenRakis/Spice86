@@ -2,11 +2,18 @@
 
 using Spice86.Core.Emulator.CPU.Exceptions;
 
+/// <summary>
+/// Arithmetic Logic Unit code for 8bits operations.
+/// </summary>
 public class Alu8 : Alu<byte, sbyte, ushort, short> {
     private const byte BeforeMsbMask = 0x40;
 
     private const byte MsbMask = 0x80;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="state">The class representing the CPU registers, flags, and execution state.</param>
     public Alu8(State state) : base(state) {
     }
 

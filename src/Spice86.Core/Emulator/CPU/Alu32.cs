@@ -2,6 +2,9 @@
 
 using Spice86.Core.Emulator.CPU.Exceptions;
 
+/// <summary>
+/// Arithmetic Logic Unit code for 32bits operations.
+/// </summary>
 public class Alu32 : Alu<uint, int, ulong, long>  {
 
     private const uint BeforeMsbMask = 0x40000000;

@@ -1,15 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
-
-using System;
 
 /// <summary>
 /// The exception thrown when an Invalid Operation Code was encountered.
 /// </summary>
-[Serializable]
 public class InvalidOpCodeException : InvalidVMOperationException {
     /// <summary>
     /// Initializes a new instance.

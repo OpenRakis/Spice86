@@ -2,6 +2,9 @@
 
 using Spice86.Core.Emulator.CPU.Exceptions;
 
+/// <summary>
+/// Arithmetic Logic Unit code for 16bits operations.
+/// </summary>
 public class Alu16 : Alu<ushort, short, uint, int>  {
     private const ushort BeforeMsbMask = 0x4000;
 
