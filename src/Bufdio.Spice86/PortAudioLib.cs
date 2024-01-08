@@ -94,7 +94,8 @@ public sealed class PortAudioLib : IDisposable {
     /// </summary>
     /// <returns>A string containing the filename of the system-provided PortAudio library</returns>
     public static string GetPortAudioLibName() => NativeMethods.GetPortAudioLibName();
-    
+
+    /// <inheritdoc/>    
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
