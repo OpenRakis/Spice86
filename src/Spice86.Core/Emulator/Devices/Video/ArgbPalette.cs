@@ -46,6 +46,7 @@ public class ArgbPalette : IDebuggableComponent {
         }
     }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitDacPalette(this);
     }
