@@ -29,9 +29,10 @@ public class BiosLoader : ExecutableFileLoader {
     public override bool DosInitializationNeeded => false;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BiosLoader"/> class with the specified <paramref name="machine"/> and <paramref name="loggerService"/>.
+    /// Initializes a new instance of the <see cref="BiosLoader"/> class
     /// </summary>
-    /// <param name="machine">The machine instance to load the BIOS on.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service to log messages to.</param>
     public BiosLoader(IMemory memory, State state, ILoggerService loggerService) : base(memory, state, loggerService) {
     }

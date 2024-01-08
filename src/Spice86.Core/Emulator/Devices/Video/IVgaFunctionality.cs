@@ -324,6 +324,9 @@ public interface IVgaFunctionality {
     /// <summary>
     ///     Point the 8x14 font to the specified location and specify height and screen rows.
     /// </summary>
+    /// <param name="segment">The segment part of the Segmented Address.</param>
+    /// <param name="offset">The offset part of the Segmented Address.</param>
+    /// <param name="height">The character height.</param>
     /// <param name="rowSpecifier">0 = user-specified, 1 = 14, 3 = 43, default = 25</param>
     /// <param name="userSpecifiedRows">Amount of rows when rowSpecifier is 0</param>
     void LoadUserGraphicsCharacters(ushort segment, ushort offset, byte height, byte rowSpecifier, byte userSpecifiedRows);

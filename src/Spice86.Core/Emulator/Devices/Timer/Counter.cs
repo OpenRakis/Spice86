@@ -6,9 +6,21 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Represents a Programmable Interval Timer (PIT) counter in an IBM PC. <br/>
+/// The PIT is a chip connected to the CPU and is used to generate accurate time delays under software control. <br/>
+/// Each counter can be programmed to operate in one of six modes and can count up or down.
+/// </summary>
 public class Counter {
+    /// <summary>
+    /// Equals to 1.193182 MHz
+    /// </summary>
     public const long HardwareFrequency = 1193182;
     private readonly ILoggerService _loggerService;
+
+    /// <summary>
+    /// Gets or sets the activator for the counter.
+    /// </summary>
     public CounterActivator Activator { get; protected set; }
     private readonly State _state;
 
@@ -16,6 +28,13 @@ public class Counter {
 
     private bool _firstByteWritten;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Counter"/> class.
+    /// </summary>
+    /// <param name="state">The CPU state</param>
+    /// <param name="loggerService">The logger service implementation</param>
+    /// <param name="index">The index of the counter</param>
+    /// <param name="activator">The activator for the counter</param>
     public Counter(State state, ILoggerService loggerService, int index, CounterActivator activator) {
         _loggerService = loggerService;
         _state = state;
@@ -26,23 +45,49 @@ public class Counter {
         UpdateDesiredFreqency(18);
     }
 
+    /// <summary>
+    /// Gets or sets the Binary Coded Decimal (BCD) value for the counter.
+    /// </summary>
     public int Bcd { get; set; }
 
+    /// <summary>
+    /// Gets the index of the counter.
+    /// </summary>
     public int Index { get; private set; }
 
+    /// <summary>
+    /// Gets or sets the mode of operation for the counter.
+    /// </summary>
     public int Mode { get; set; }
 
+    /// <summary>
+    /// Gets or sets the latch value for the counter.
+    /// </summary>
     public ushort? Latch { get; set; } = null;
 
+
     /// <summary>
+    /// Gets or sets the read/write policy for the counter.
+    /// <br/>
     /// Some programs don't set it so let's use by default the simplest mode (1)
     /// </summary>
     public int ReadWritePolicy { get; set; } = 1;
 
+    /// <summary>
+    /// Gets the current tick count of the counter.
+    /// <br/>
+    /// Defaults to 0xFFFF (65535) when the counter is not activated.
+    /// </summary>
     public ushort Ticks { get; private set; } = 0xFFFF;
 
+    /// <summary>
+    /// Gets the current value of the counter.
+    /// </summary>
     public ushort Value { get; private set; }
 
+    /// <summary>
+    /// Gets the value of the counter using the current mode.
+    /// </summary>
     public byte ValueUsingMode {
         get {
             ushort value = Latch ?? Ticks;
@@ -58,7 +103,7 @@ public class Counter {
     }
 
     /// <summary>
-    /// TODO: Use <paramref name="currentCycles"/>
+    /// Checks whether the counter is activated and if so, decrements the ticks.
     /// </summary>
     /// <returns>Whether the activation was processed.</returns>
     public bool ProcessActivation() {
@@ -70,6 +115,10 @@ public class Counter {
         return false;
     }
 
+    /// <summary>
+    /// Configures the counter using the specified <paramref name="value"/>.
+    /// </summary>
+    /// <param name="value">The read/write policy.</param>
     public void Configure(ushort value) {
         ReadWritePolicy = (ushort)(value >> 4 & 0b11);
         if (ReadWritePolicy == 0) {
@@ -81,11 +130,18 @@ public class Counter {
         Bcd = (ushort)(value & 1);
     }
 
-    public void SetValue(ushort counter) {
-        Value = counter;
+    /// <summary>
+    /// Sets the counter <see cref="Value"/> to the specified <paramref name="value"/>.
+    /// </summary>
+    /// <param name="value">The counter value</param>
+    public void SetValue(ushort value) {
+        Value = value;
         OnValueWrite();
     }
 
+    /// <summary>
+    /// Sets the value of the counter using the current mode.
+    /// </summary>
     public void SetValueUsingMode(byte partialValue) {
         switch (ReadWritePolicy) {
             case 1:
@@ -102,10 +158,14 @@ public class Counter {
         OnValueWrite();
     }
 
+    /// <inheritdoc/>
     public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
     }
 
+    /// <summary>
+    /// Called when a value is written to the counter. It updates the desired frequency based on the new value.
+    /// </summary>
     private void OnValueWrite() {
         if (Value == 0) {
             UpdateDesiredFreqency(HardwareFrequency / 0x10000);
@@ -114,13 +174,9 @@ public class Counter {
         }
     }
 
-    private byte Lsb(ushort value) {
-        return ConvertUtils.ReadLsb(value);
-    }
+    private byte Lsb(ushort value) => ConvertUtils.ReadLsb(value);
 
-    private byte Msb(ushort value) {
-        return ConvertUtils.ReadMsb(value);
-    }
+    private byte Msb(ushort value) => ConvertUtils.ReadMsb(value);
 
     private byte Policy3(ushort value) {
         // LSB first, then MSB
@@ -145,13 +201,9 @@ public class Counter {
         }
     }
 
-    private void WriteLsb(byte partialValue) {
-        Value = ConvertUtils.WriteLsb(Value, partialValue);
-    }
+    private void WriteLsb(byte partialValue) => Value = ConvertUtils.WriteLsb(Value, partialValue);
 
-    private void WriteMsb(byte partialValue) {
-        Value = ConvertUtils.WriteMsb16(Value, partialValue);
-    }
+    private void WriteMsb(byte partialValue) => Value = ConvertUtils.WriteMsb16(Value, partialValue);
 
     private void WritePolicy3(byte partialValue) {
         // LSB first, then MSB

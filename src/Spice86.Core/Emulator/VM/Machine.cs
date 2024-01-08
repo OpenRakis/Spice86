@@ -365,6 +365,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         GC.SuppressFinalize(this);
     }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         Memory.Accept(emulatorDebugger);
         Cpu.Accept(emulatorDebugger);

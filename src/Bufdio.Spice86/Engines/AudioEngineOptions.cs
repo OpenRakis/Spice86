@@ -9,7 +9,7 @@ public readonly record struct AudioEngineOptions
     /// <summary>
     /// Initializes <see cref="AudioEngineOptions"/>.
     /// </summary>
-    /// <param name="defaultAudioDevice">Desired output device, see: <see cref="PortAudioLib.OutputDevices"/>.</param>
+    /// <param name="defaultOutputDevice">Desired output device, see: <see cref="PortAudioLib.OutputDevices"/>.</param>
     /// <param name="channels">Desired audio channels, or fallback to maximum channels.</param>
     /// <param name="sampleRate">Desired output sample rate.</param>
     /// <param name="latency">Desired output latency.</param>
@@ -25,7 +25,7 @@ public readonly record struct AudioEngineOptions
     /// Initializes <see cref="AudioEngineOptions"/> by using default output device
     /// and its default high output latency.
     /// </summary>
-    /// <param name="defaultAudioDevice">Desired output device, see: <see cref="PortAudioLib.OutputDevices"/>.</param>
+    /// <param name="defaultOutputDevice">Desired output device, see: <see cref="PortAudioLib.OutputDevices"/>.</param>
     /// <param name="channels">Desired audio channels, or fallback to maximum channels.</param>
     /// <param name="sampleRate">Desired output sample rate.</param>
     public AudioEngineOptions(AudioDevice defaultOutputDevice, int channels, int sampleRate)

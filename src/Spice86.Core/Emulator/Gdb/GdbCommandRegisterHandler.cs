@@ -20,6 +20,7 @@ public class GdbCommandRegisterHandler {
     /// <summary>
     /// Initializes a new instance of the GdbCommandRegisterHandler class
     /// </summary>
+    /// <param name="state">The CPU state.</param>
     /// <param name="gdbIo">The GdbIo object to use for communication with GDB.</param>
     /// <param name="loggerService">The ILoggerService implementation.</param>
     public GdbCommandRegisterHandler(State state, GdbIo gdbIo, ILoggerService loggerService) {

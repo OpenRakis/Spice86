@@ -16,6 +16,8 @@ public sealed class Dsp : IDisposable {
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
+    /// <param name="eightBitDmaChannel">The 8-bit wide DMA channel</param>
+    /// <param name="sixteenBitDmaChannel">The 16-bit wide DMA channel</param>
     /// <param name="soundCard">The host sound-card, used to raise interrupts.</param>
     public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, IRequestInterrupt soundCard) {
         dmaChannel8 = eightBitDmaChannel;
@@ -23,7 +25,6 @@ public sealed class Dsp : IDisposable {
         SampleRate = 22050;
         BlockTransferSize = 65536;
         _soundCard = soundCard;
-
     }
 
     /// <summary>

@@ -31,7 +31,7 @@ public class InvalidVMOperationException : Exception {
     }
 
     /// <summary>
-    /// Generates a status message that includes the current state of the <paramref name="machine"/>
+    /// Generates a status message that includes the current state of the CPU.
     /// and an optional error message.
     /// </summary>
     /// <param name="state">The CPU state.</param>
