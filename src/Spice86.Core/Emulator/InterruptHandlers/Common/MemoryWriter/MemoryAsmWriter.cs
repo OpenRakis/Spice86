@@ -45,21 +45,31 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <summary>
     /// Erases a callback instruction at current address and replaces it with an INT + a NOP. Useful to dump memory and avoid unsupported opcodes in ghidra.
     /// </summary>
-    /// <param name="callbackNumber"></param>
+    /// <param name="callbackNumber">The callback to NOP.</param>
     public void EraseCallbackWithInt(byte callbackNumber) {
         this.WriteInt(callbackNumber);
         this.WriteNop();
     }
 
+    /// <summary>
+    /// Writes an IRET instruction to memory.
+    /// </summary>
     public void WriteIret() {
         WriteUInt8(0xCF);
     }
 
+    /// <summary>
+    /// Writes an INT instruction to memory, followed by the vector number.
+    /// </summary>
+    /// <param name="vectorNumber">The interrupt to call, represented by its vector number.</param>
     public void WriteInt(byte vectorNumber) {
         WriteUInt8(0xCD);
         WriteUInt8(vectorNumber);
     }
 
+    /// <summary>
+    /// Writes a NOP to memory. This instruction does nothing.
+    /// </summary>
     public void WriteNop() {
         WriteUInt8(0x90);
     }
@@ -90,6 +100,9 @@ public class MemoryAsmWriter : MemoryWriter {
         return ret;
     }
 
+    /// <summary>
+    /// Writes a FAR RET instruction to memory.
+    /// </summary>
     public void WriteFarRet() {
         WriteUInt8(0xCB);
     }

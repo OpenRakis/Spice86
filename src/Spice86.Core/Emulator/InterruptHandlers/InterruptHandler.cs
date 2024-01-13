@@ -70,8 +70,8 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <summary>
     /// Stores the Action at the given index
     /// </summary>
-    /// <param name="index"></param>
-    /// <param name="action"></param>
+    /// <param name="index">The identifier for the action. Typically, it's the value in the AH register.</param>
+    /// <param name="action">The C# method that implements the function called via the interrupt.</param>
     public void AddAction(int index, Action action) {
         AddRunnable(index, new RunnableAction(action));
     }

@@ -29,7 +29,7 @@ public sealed class PortAudioLib : IDisposable {
     private readonly List<AudioDevice> _outputDevices = new();
 
     /// <summary>
-    /// Gets whether or not the PortAudio library is already initialized.
+    /// Gets whether the PortAudio library is already initialized.
     /// </summary>
     public bool IsPortAudioInitialized { get; private set; }
 

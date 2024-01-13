@@ -4,8 +4,9 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 
-using System.Collections.Frozen;
-
+/// <summary>
+///    Represents the VGA ROM.
+/// </summary>
 public class VgaRom : IMemoryDevice {
     private const int BaseAddress = Segment << 4;
 

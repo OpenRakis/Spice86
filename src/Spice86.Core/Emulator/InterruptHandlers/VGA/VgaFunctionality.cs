@@ -11,7 +11,7 @@ using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-/// <inheritdoc />
+/// <inheritdoc cref="IVgaFunctionality" />
 public class VgaFunctionality : IVgaFunctionality {
     private const byte DefaultAttribute = 0x07;
     private readonly BiosDataArea _biosDataArea;
@@ -24,10 +24,10 @@ public class VgaFunctionality : IVgaFunctionality {
     /// Creates a new instance of the <see cref="VgaFunctionality"/> class.
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
-    /// <param name="ioPortDispatcher"></param>
-    /// <param name="biosDataArea"></param>
-    /// <param name="vgaRom"></param>
-    /// <param name="bootUpInTextMode"></param>
+    /// <param name="ioPortDispatcher">The IOPortDispatcher, used to read from or write to VGA ports.</param>
+    /// <param name="biosDataArea">The global BIOS variables.</param>
+    /// <param name="vgaRom">The VGA ROM, so we can access the IBM fonts.</param>
+    /// <param name="bootUpInTextMode">Whether we begin with mode 0x03.</param>
     public VgaFunctionality(IIndexable memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, bool bootUpInTextMode) {
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;

@@ -17,7 +17,7 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="hardwareInterruptHandler">The too programmable interrupt controllers.</param>
+    /// <param name="hardwareInterruptHandler">The two programmable interrupt controllers.</param>
     /// <param name="memory">The memory bus.</param>
     public BiosMouseInt74Handler(DualPic hardwareInterruptHandler, IIndexable memory) {
         _hardwareInterruptHandler = hardwareInterruptHandler;

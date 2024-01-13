@@ -8,6 +8,10 @@ using Spice86.Shared.Emulator.Memory;
 /// Representation of an EXE file as a MemoryBasedDataStructure
 /// </summary>
 public class ExeFile : MemoryBasedDataStructure {
+    /// <summary>
+    /// Creates a new instance of the ExeFile class.
+    /// </summary>
+    /// <param name="byteReaderWriter">The class that allows writing and reading at specific addresses in memory.</param>
     public ExeFile(IByteReaderWriter byteReaderWriter) : base(byteReaderWriter, 0) {
     }
 

@@ -4,7 +4,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -34,6 +33,12 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// <inheritdoc />
     public override byte VectorNumber => 0x1A;
 
+    /// <summary>
+    /// Gets the system clock counter in AX and DX. It is used by operating systems to measure time since the system started.
+    /// <remarks>
+    /// Never overflows.
+    /// </remarks>
+    /// </summary>
     public void GetSystemClockCounter() {
         uint value = _timerHandler.TickCounterValue;
         if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -52,6 +57,9 @@ public class SystemClockInt1AHandler : InterruptHandler {
         Run(operation);
     }
 
+    /// <summary>
+    /// Sets the system clock counter from the value in DX.
+    /// </summary>
     public void SetSystemClockCounter() {
         uint value = (ushort)(State.CX << 16 | State.DX);
         if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -60,7 +68,10 @@ public class SystemClockInt1AHandler : InterruptHandler {
         _timerHandler.TickCounterValue = value;
     }
 
-    private void TandySoundSystemUnhandled() {
+    /// <summary>
+    /// Tandy sound system is not implemented. Does nothing.
+    /// </summary>
+    public void TandySoundSystemUnhandled() {
         if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             LoggerService.Verbose("TANDY SOUND SYSTEM IS NOT IMPLEMENTED");
         }

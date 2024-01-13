@@ -161,8 +161,8 @@ public class Dos {
     /// Add a device to memory so that the information can be read by both DOS and programs.
     /// </summary>
     /// <param name="device">The character or block device to add</param>
-    /// <param name="segment">The segment at which the </param>
-    /// <param name="offset"></param>
+    /// <param name="segment">The segment part of the segmented address for the DOS device header.</param>
+    /// <param name="offset">The offset part of the segmented address for the DOS device header.</param>
     public void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
         // Store the location of the header
         device.Segment = segment ?? MemoryMap.DeviceDriverSegment;

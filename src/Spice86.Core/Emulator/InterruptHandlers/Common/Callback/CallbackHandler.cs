@@ -44,6 +44,11 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
         GetRunnable(index).RunFromOverriden();
     }
 
+    /// <summary>
+    /// Remove Spice86 machine code for callbacks from the memory dump, so it has less "noise".
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <returns>A byte array representing the memory content with the Spice86 machine code for callbacks removed.</returns>
     public byte[] ReplaceAllCallbacksInRamImage(IMemory memory) {
         ByteArrayBasedIndexable indexable = new ByteArrayBasedIndexable(memory.RamCopy);
         MemoryAsmWriter memoryAsmWriter = new MemoryAsmWriter(indexable, new SegmentedAddress(0, 0), this);

@@ -148,7 +148,7 @@ public class ExecutionFlowRecorder {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="machineBreakpoints"></param>
+    /// <param name="machineBreakpoints">The class used to store breakpoints.</param>
     /// <param name="cs">The value of the CS register, for the segment.</param>
     /// <param name="ip">The value of the IP register, for the offset.</param>
     public void RegisterExecutableByte(IMemory memory, State state, MachineBreakpoints machineBreakpoints, ushort cs, ushort ip) {

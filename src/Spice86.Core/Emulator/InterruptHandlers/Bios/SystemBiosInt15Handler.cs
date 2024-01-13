@@ -45,12 +45,12 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
     /// <summary>
     /// Bios support function for the A20 Gate line. <br/>
-    /// AL contains one of:
-    /// <ul>
-    ///   <li>0: Disable</li>
-    ///   <li>1: Enable</li>
-    ///   <li>2: Query status</li>
-    ///   <li>3: Get A20 support</li>
+    /// AL contains one of:<br/>
+    /// <ul><br/>
+    ///   <li>0: Disable</li><br/>
+    ///   <li>1: Enable</li><br/>
+    ///   <li>2: Query status</li><br/>
+    ///   <li>3: Get A20 support</li><br/>
     /// </ul>
     /// </summary>
     public void ToggleA20GateOrGetStatus(bool calledFromVm) {
@@ -90,7 +90,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
         State.AX = 0;
     }
 
-    private void Unsupported() {
+    /// <summary>
+    /// This function tells to the emulated program that we are an IBM PC AT, not a IBM PS/2.
+    /// </summary>
+    public void Unsupported() {
         // We are not an IBM PS/2
         SetCarryFlag(true, true);
         State.AH = 0x86;

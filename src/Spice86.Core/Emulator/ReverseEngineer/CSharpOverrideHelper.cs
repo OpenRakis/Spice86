@@ -475,7 +475,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Call the given callback number
     /// </summary>
-    /// <param name="callbackNumber"></param>
+    /// <param name="callbackNumber">The callback identifier.</param>
     public void Callback(byte callbackNumber) {
         Machine.CallbackHandler.RunFromOverriden(callbackNumber);
     }
@@ -648,7 +648,7 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
-    /// Call this in your override when you re-implement a function with a branch that seems never
+    /// Call this in your override when you re-implement a function with a branch that seems to be never
     /// reached.
     /// <param name="message">The error message for the <see cref="UnrecoverableException"/></param>
     /// <returns>An new instance of <see cref="UnrecoverableException"/> that you should throw.</returns>
@@ -727,7 +727,7 @@ public class CSharpOverrideHelper {
     /// Halt the program.
     /// </summary>
     /// <returns>An <see cref="Action"/> that exits the program.</returns>
-    public Action Hlt() => () => Exit();
+    public Action Hlt() => Exit;
 
     /// <summary>
     /// Exit the program.

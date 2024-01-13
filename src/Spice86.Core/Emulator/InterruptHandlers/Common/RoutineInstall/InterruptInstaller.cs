@@ -22,7 +22,7 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
     /// Writes ASM code of the given handler in RAM.
     /// Registers it in the vector table and register its name in the function handler as well.
     /// </summary>
-    /// <param name="interruptHandler"></param>
+    /// <param name="interruptHandler">The class that implements the interrupt handling with C# functions.</param>
     /// <returns>Address of the handler ASM code</returns>
     public SegmentedAddress InstallInterruptHandler(IInterruptHandler interruptHandler) {
         SegmentedAddress handlerAddress = InstallAssemblyRoutine(interruptHandler,

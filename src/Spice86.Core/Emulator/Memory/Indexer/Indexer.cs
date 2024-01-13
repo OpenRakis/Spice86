@@ -14,7 +14,7 @@ public abstract class Indexer<T> {
     /// <summary>
     /// Indexer for addresses that are int. For convenience.
     /// </summary>
-    /// <param name="address"></param>
+    /// <param name="address">The linear address for the element.</param>
     public T this[int address] {
         get => this[(uint)address];
         set => this[(uint)address] = value;
@@ -23,7 +23,7 @@ public abstract class Indexer<T> {
     /// <summary>
     /// Indexer for addresses that are long. For convenience.
     /// </summary>
-    /// <param name="address"></param>
+    /// <param name="address">The linear address for the element.</param>
     public T this[long address] {
         get => this[(uint)address];
         set => this[(uint)address] = value;
