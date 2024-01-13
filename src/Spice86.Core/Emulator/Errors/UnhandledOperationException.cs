@@ -1,14 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Errors;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.VM;
-
-using System;
 
 /// <summary>
 /// Exception thrown when an unsupported or invalid operation is requested.
 /// </summary>
-[Serializable]
 public class UnhandledOperationException : InvalidVMOperationException {
     /// <summary>
     /// Initializes a new instance of the <see cref="UnhandledOperationException"/> class.

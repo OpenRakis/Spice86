@@ -9,7 +9,6 @@ using System;
 /// <summary>
 /// Thrown when an unhandled IO Port is accessed.
 /// </summary>
-[Serializable]
 public class UnhandledIOPortException : UnhandledOperationException {
     /// <summary>
     /// Initializes a new instance of the <see cref="UnhandledIOPortException"/> class with the specified machine and IO Port number.

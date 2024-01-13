@@ -3,12 +3,9 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 
-using System;
-
 /// <summary>
 /// The exception thrown when an invalid counter index is used in the Programmable Interval Timer.
 /// </summary>
-[Serializable]
 public class InvalidCounterIndexException : InvalidVMOperationException {
     /// <summary>
     /// Initializes a new instance.
