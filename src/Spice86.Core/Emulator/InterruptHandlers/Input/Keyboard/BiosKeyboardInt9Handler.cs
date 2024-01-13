@@ -46,8 +46,8 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
         byte ascii = _keyboard.LastKeyboardInput.AsciiCode ?? 0;
 
-        if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{BiosInt9KeyReceived}", ascii);
+        if(LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("{BiosInt9KeyReceived}", ascii);
         }
 
         BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scancode.Value << 8 | ascii));

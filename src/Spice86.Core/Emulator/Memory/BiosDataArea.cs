@@ -14,7 +14,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="byteReaderWriter">Where data is read and written.</param>
+    /// <param name="byteReaderWriter">Where data is read from and written to.</param>
     public BiosDataArea(IByteReaderWriter byteReaderWriter) : base(byteReaderWriter, MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0)) {
     }
 

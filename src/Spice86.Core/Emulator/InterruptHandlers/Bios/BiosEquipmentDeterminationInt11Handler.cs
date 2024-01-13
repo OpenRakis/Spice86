@@ -17,6 +17,6 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        _state.AX = 0;
+        State.AX = 0;
     }
 }

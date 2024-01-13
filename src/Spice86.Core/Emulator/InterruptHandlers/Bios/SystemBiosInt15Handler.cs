@@ -39,7 +39,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte operation = _state.AH;
+        byte operation = State.AH;
         Run(operation);
     }
 
@@ -54,7 +54,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </ul>
     /// </summary>
     public void ToggleA20GateOrGetStatus(bool calledFromVm) {
-        switch (_state.AL) {
+        switch (State.AL) {
             case 0:
                 _a20Gate.IsEnabled = false;
                 SetCarryFlag(false, calledFromVm);
@@ -64,20 +64,20 @@ public class SystemBiosInt15Handler : InterruptHandler {
                 SetCarryFlag(false, calledFromVm);
                 break;
             case 2:
-                _state.AL = (byte) (_a20Gate.IsEnabled ? 0x1 : 0x0);
-                _state.AH = 0; // success
+                State.AL = (byte) (_a20Gate.IsEnabled ? 0x1 : 0x0);
+                State.AH = 0; // success
                 SetCarryFlag(false, calledFromVm);
                 break;
             case 3:
                 _a20Gate.IsEnabled = false;
-                _state.BX = 0x3; //Bitmask, keyboard and 0x92;
-                _state.AH = 0; // success
+                State.BX = 0x3; //Bitmask, keyboard and 0x92;
+                State.AH = 0; // success
                 SetCarryFlag(false, calledFromVm);
                 break;
 
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("Unrecognized command in AL for {MethodName}", nameof(ToggleA20GateOrGetStatus));
+                if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+                    LoggerService.Error("Unrecognized command in AL for {MethodName}", nameof(ToggleA20GateOrGetStatus));
                 }
                 break;
         }
@@ -87,12 +87,12 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// Reports extended memory size in AX.
     /// </summary>
     public void GetExtendedMemorySize() {
-        _state.AX = 0;
+        State.AX = 0;
     }
 
     private void Unsupported() {
         // We are not an IBM PS/2
         SetCarryFlag(true, true);
-        _state.AH = 0x86;
+        State.AH = 0x86;
     }
 }

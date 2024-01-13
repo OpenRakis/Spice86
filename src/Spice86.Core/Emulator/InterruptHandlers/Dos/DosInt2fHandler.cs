@@ -21,7 +21,7 @@ public class DosInt2fHandler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte operation = _state.AH;
+        byte operation = State.AH;
         Run(operation);
     }
 
@@ -39,20 +39,20 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="calledFromVm">Whether it was called by the emulator or not</param>
     public void ClearCFAndCX(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
-        _state.CX = 0;
+        State.CX = 0;
     }
 
     public void SendDeviceDriverRequest() {
-        ushort drive = _state.CX;
-        uint deviceDriverRequestHeaderAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SEND DEVICE DRIVER REQUEST Drive {Drive} Request header at: {Address:x8}",
+        ushort drive = State.CX;
+        uint deviceDriverRequestHeaderAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("SEND DEVICE DRIVER REQUEST Drive {Drive} Request header at: {Address:x8}",
                 drive, deviceDriverRequestHeaderAddress);
         }
 
         // Carry flag signals error.
-        _state.CarryFlag = true;
+        State.CarryFlag = true;
         // AX carries error reason.
-        _state.AX = 0x000F; // Error code for "Invalid drive"
+        State.AX = 0x000F; // Error code for "Invalid drive"
     }
 }

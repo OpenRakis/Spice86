@@ -24,7 +24,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
 
     /// <inheritdoc/>
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
-        return new UnhandledCallbackException(_state, index);
+        return new UnhandledCallbackException(State, index);
     }
 
     /// <summary>

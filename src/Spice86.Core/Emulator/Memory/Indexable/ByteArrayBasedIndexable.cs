@@ -41,6 +41,10 @@ public class ByteArrayBasedIndexable : Indexable {
         get;
     }
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="array">The byte array used as RAM storage.</param>
     public ByteArrayBasedIndexable(byte[] array) {
         ReaderWriter = new ByteArrayReaderWriter(array);
         (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(ReaderWriter);

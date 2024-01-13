@@ -26,22 +26,22 @@ public class KeyboardInt16Handler : InterruptHandler {
     public override byte VectorNumber => 0x16;
 
     public void GetKeystroke() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("READ KEY STROKE");
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("READ KEY STROKE");
         }
         ushort? keyCode = GetNextKeyCode();
         keyCode ??= 0;
 
         // AH = keyboard scan code
         // AL = ASCII character or zero if special function key
-        _state.AX = keyCode.Value;
+        State.AX = keyCode.Value;
     }
 
     public bool HasKeyCodePending() => _biosKeyboardBuffer.PeekKeyCode() is not null;
 
     public void GetKeystrokeStatus(bool calledFromVm) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("KEY STROKE STATUS");
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("KEY STROKE STATUS");
         }
 
         // ZF = 0 if a key pressed (even Ctrl-Break)
@@ -50,12 +50,12 @@ public class KeyboardInt16Handler : InterruptHandler {
         // AL = ASCII character or zero if special function key
         if (_biosKeyboardBuffer.IsEmpty) {
             SetZeroFlag(true, calledFromVm);
-            _state.AX = 0;
+            State.AX = 0;
         } else {
             ushort? keyCode = _biosKeyboardBuffer.PeekKeyCode();
             if (keyCode != null) {
                 SetZeroFlag(false, calledFromVm);
-                _state.AX = keyCode.Value;
+                State.AX = keyCode.Value;
             }
         }
     }
@@ -65,7 +65,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public override void Run() {
-        byte operation = _state.AH;
+        byte operation = State.AH;
         Run(operation);
     }
 }

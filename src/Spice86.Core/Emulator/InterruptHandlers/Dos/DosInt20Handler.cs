@@ -24,7 +24,7 @@ public class DosInt20Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        _loggerService.Verbose("PROGRAM TERMINATE");
-        _state.IsRunning = false;
+        LoggerService.Verbose("PROGRAM TERMINATE");
+        State.IsRunning = false;
     }
 }

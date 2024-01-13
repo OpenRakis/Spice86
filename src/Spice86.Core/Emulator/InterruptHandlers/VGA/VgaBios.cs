@@ -48,16 +48,16 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void WriteString() {
-        CursorPosition cursorPosition = new(_state.DL, _state.DH, _state.BH);
-        ushort length = _state.CX;
-        ushort segment = _state.ES;
-        ushort offset = _state.BP;
-        byte attribute = _state.BL;
-        bool includeAttributes = (_state.AL & 0x02) != 0;
-        bool updateCursorPosition = (_state.AL & 0x01) != 0;
+        CursorPosition cursorPosition = new(State.DL, State.DH, State.BH);
+        ushort length = State.CX;
+        ushort segment = State.ES;
+        ushort offset = State.BP;
+        byte attribute = State.BL;
+        bool includeAttributes = (State.AL & 0x02) != 0;
+        bool updateCursorPosition = (State.AL & 0x01) != 0;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-            string str = _memory.GetZeroTerminatedString(address, _state.CX);
+            string str = Memory.GetZeroTerminatedString(address, State.CX);
             _logger.Debug("{ClassName} INT 10 13 {MethodName}: {String} at {X},{Y} attribute: 0x{Attribute:X2}",
                 nameof(VgaBios), nameof(WriteString), str, cursorPosition.X, cursorPosition.Y, includeAttributes ? "included" : attribute);
         }
@@ -71,28 +71,28 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void GetSetDisplayCombinationCode() {
-        switch (_state.AL) {
+        switch (State.AL) {
             case 0x00: {
-                _state.AL = 0x1A; // Function supported
-                _state.BL = _biosDataArea.DisplayCombinationCode; // Primary display
-                _state.BH = 0x00; // No secondary display
+                State.AL = 0x1A; // Function supported
+                State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
+                State.BH = 0x00; // No secondary display
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
-                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), _state.BL);
+                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
                 }
                 break;
             }
             case 0x01: {
-                _state.AL = 0x1A; // Function supported
-                _biosDataArea.DisplayCombinationCode = _state.BL;
+                State.AL = 0x1A; // Function supported
+                _biosDataArea.DisplayCombinationCode = State.BL;
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
-                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), _state.BL);
+                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
                 }
                 break;
             }
             default: {
-                throw new NotSupportedException($"AL=0x{_state.AL:X2} is not a valid subFunction for INT 10 1A");
+                throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 1A");
             }
         }
     }
@@ -101,9 +101,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     public void VideoSubsystemConfiguration() {
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
-                nameof(VgaBios), nameof(LoadFontInfo), _state.BL);
+                nameof(VgaBios), nameof(LoadFontInfo), State.BL);
         }
-        switch (_state.BL) {
+        switch (State.BL) {
             case 0x10:
                 EgaVgaInformation();
                 break;
@@ -131,7 +131,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             default:
                 // Do not fail in case the index is not valid, this is the behaviour of the VGA bios and some programs expect this (prince of persia, checkit).
                 if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("BL={BL} is not a valid subFunction for INT 10 12", ConvertUtils.ToHex8(_state.BL));
+                    _logger.Warning("BL={BL} is not a valid subFunction for INT 10 12", ConvertUtils.ToHex8(State.BL));
                 }
                 break;
         }
@@ -141,65 +141,65 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     public void LoadFontInfo() {
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("{ClassName} INT 10 11 {MethodName} - Sub function 0x{SubFunction:X2}",
-                nameof(VgaBios), nameof(LoadFontInfo), _state.AL);
+                nameof(VgaBios), nameof(LoadFontInfo), State.AL);
         }
-        switch (_state.AL) {
+        switch (State.AL) {
             case 0x00:
-                _vgaFunctions.LoadUserFont(_state.ES, _state.BP, _state.CX, _state.DX, _state.BL, _state.BH);
+                _vgaFunctions.LoadUserFont(State.ES, State.BP, State.CX, State.DX, State.BL, State.BH);
                 break;
             case 0x01:
-                _vgaFunctions.LoadFont(Fonts.VgaFont14, 0x100, 0, _state.BL, 14);
+                _vgaFunctions.LoadFont(Fonts.VgaFont14, 0x100, 0, State.BL, 14);
                 break;
             case 0x02:
-                _vgaFunctions.LoadFont(Fonts.VgaFont8, 0x100, 0, _state.BL, 8);
+                _vgaFunctions.LoadFont(Fonts.VgaFont8, 0x100, 0, State.BL, 8);
                 break;
             case 0x03:
-                SetBlockSpecifier(_state.BL);
+                SetBlockSpecifier(State.BL);
                 break;
             case 0x04:
-                _vgaFunctions.LoadFont(Fonts.VgaFont16, 0x100, 0, _state.BL, 16);
+                _vgaFunctions.LoadFont(Fonts.VgaFont16, 0x100, 0, State.BL, 16);
                 break;
             case 0x10:
-                _vgaFunctions.LoadUserFont(_state.ES, _state.BP, _state.CX, _state.DX, _state.BL, _state.BH);
-                _vgaFunctions.SetScanLines(_state.BH);
+                _vgaFunctions.LoadUserFont(State.ES, State.BP, State.CX, State.DX, State.BL, State.BH);
+                _vgaFunctions.SetScanLines(State.BH);
                 break;
             case 0x11:
-                _vgaFunctions.LoadFont(Fonts.VgaFont14, 0x100, 0, _state.BL, 14);
+                _vgaFunctions.LoadFont(Fonts.VgaFont14, 0x100, 0, State.BL, 14);
                 _vgaFunctions.SetScanLines(14);
                 break;
             case 0x12:
-                _vgaFunctions.LoadFont(Fonts.VgaFont8, 0x100, 0, _state.BL, 8);
+                _vgaFunctions.LoadFont(Fonts.VgaFont8, 0x100, 0, State.BL, 8);
                 _vgaFunctions.SetScanLines(8);
                 break;
             case 0x14:
-                _vgaFunctions.LoadFont(Fonts.VgaFont16, 0x100, 0, _state.BL, 16);
+                _vgaFunctions.LoadFont(Fonts.VgaFont16, 0x100, 0, State.BL, 16);
                 _vgaFunctions.SetScanLines(16);
                 break;
             case 0x20:
-                _vgaFunctions.LoadUserCharacters8X8(_state.ES, _state.BP);
+                _vgaFunctions.LoadUserCharacters8X8(State.ES, State.BP);
                 break;
             case 0x21:
-                _vgaFunctions.LoadUserGraphicsCharacters(_state.ES, _state.BP, _state.CL, _state.BL, _state.DL);
+                _vgaFunctions.LoadUserGraphicsCharacters(State.ES, State.BP, State.CL, State.BL, State.DL);
                 break;
             case 0x22:
-                _vgaFunctions.LoadRom8X14Font(_state.BL, _state.DL);
+                _vgaFunctions.LoadRom8X14Font(State.BL, State.DL);
                 break;
             case 0x23:
-                _vgaFunctions.LoadRom8X8Font(_state.BL, _state.DL);
+                _vgaFunctions.LoadRom8X8Font(State.BL, State.DL);
                 break;
             case 0x24:
-                _vgaFunctions.LoadGraphicsRom8X16Font(_state.BL, _state.DL);
+                _vgaFunctions.LoadGraphicsRom8X16Font(State.BL, State.DL);
                 break;
             case 0x30:
-                SegmentedAddress address = _vgaFunctions.GetFontAddress(_state.BH);
-                _state.ES = address.Segment;
-                _state.BP = address.Offset;
-                _state.CX = (ushort)(_biosDataArea.CharacterHeight & 0xFF);
-                _state.DL = _biosDataArea.ScreenRows;
+                SegmentedAddress address = _vgaFunctions.GetFontAddress(State.BH);
+                State.ES = address.Segment;
+                State.BP = address.Offset;
+                State.CX = (ushort)(_biosDataArea.CharacterHeight & 0xFF);
+                State.DL = _biosDataArea.ScreenRows;
                 break;
 
             default:
-                throw new NotSupportedException($"AL=0x{_state.AL:X2} is not a valid subFunction for INT 10 11");
+                throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 11");
         }
     }
 
@@ -207,90 +207,90 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     public void SetPaletteRegisters() {
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 10 {MethodName} - Sub function 0x{SubFunction:X2}",
-                nameof(VgaBios), nameof(SetPaletteRegisters), _state.AL);
+                nameof(VgaBios), nameof(SetPaletteRegisters), State.AL);
         }
-        switch (_state.AL) {
+        switch (State.AL) {
             case 0x00:
-                _vgaFunctions.SetEgaPaletteRegister(_state.BL, _state.BH);
+                _vgaFunctions.SetEgaPaletteRegister(State.BL, State.BH);
                 break;
             case 0x01:
-                _vgaFunctions.SetOverscanBorderColor(_state.BH);
+                _vgaFunctions.SetOverscanBorderColor(State.BH);
                 break;
             case 0x02:
-                _vgaFunctions.SetAllPaletteRegisters(_state.ES, _state.DX);
+                _vgaFunctions.SetAllPaletteRegisters(State.ES, State.DX);
                 break;
             case 0x03:
-                _vgaFunctions.ToggleIntensity((_state.BL & 1) != 0);
+                _vgaFunctions.ToggleIntensity((State.BL & 1) != 0);
                 break;
             case 0x07:
-                if (_state.BL > 0xF) {
+                if (State.BL > 0xF) {
                     return;
                 }
-                _state.BH = _vgaFunctions.ReadPaletteRegister(_state.BL);
+                State.BH = _vgaFunctions.ReadPaletteRegister(State.BL);
                 break;
             case 0x08:
-                _state.BH = _vgaFunctions.GetOverscanBorderColor();
+                State.BH = _vgaFunctions.GetOverscanBorderColor();
                 break;
             case 0x09:
-                _vgaFunctions.GetAllPaletteRegisters(_state.ES, _state.DX);
+                _vgaFunctions.GetAllPaletteRegisters(State.ES, State.DX);
                 break;
             case 0x10:
-                _vgaFunctions.WriteToDac(_state.BL, _state.DH, _state.CH, _state.CL);
+                _vgaFunctions.WriteToDac(State.BL, State.DH, State.CH, State.CL);
                 break;
             case 0x12:
-                _vgaFunctions.WriteToDac(_state.ES, _state.DX, _state.BL, _state.CX);
+                _vgaFunctions.WriteToDac(State.ES, State.DX, State.BL, State.CX);
                 break;
             case 0x13:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("{ClassName} INT 10 10 {MethodName} - Select color page, mode '{Mode}', value 0x{Value:X2} ",
-                        nameof(VgaBios), nameof(SetPaletteRegisters), _state.BL == 0 ? "set Mode Control register bit 7" : "set color select register", _state.BH);
+                        nameof(VgaBios), nameof(SetPaletteRegisters), State.BL == 0 ? "set Mode Control register bit 7" : "set color select register", State.BH);
                 }
-                if (_state.BL == 0) {
-                    _vgaFunctions.SetP5P4Select((_state.BH & 1) != 0);
+                if (State.BL == 0) {
+                    _vgaFunctions.SetP5P4Select((State.BH & 1) != 0);
                 } else {
-                    _vgaFunctions.SetColorSelectRegister(_state.BH);
+                    _vgaFunctions.SetColorSelectRegister(State.BH);
                 }
                 break;
             case 0x15:
-                byte[] rgb = _vgaFunctions.ReadFromDac((byte)_state.BX, 1);
-                _state.DH = rgb[0];
-                _state.CH = rgb[1];
-                _state.CL = rgb[2];
+                byte[] rgb = _vgaFunctions.ReadFromDac((byte)State.BX, 1);
+                State.DH = rgb[0];
+                State.CH = rgb[1];
+                State.CL = rgb[2];
                 break;
             case 0x17:
-                _vgaFunctions.ReadFromDac(_state.ES, _state.DX, (byte)_state.BX, _state.CX);
+                _vgaFunctions.ReadFromDac(State.ES, State.DX, (byte)State.BX, State.CX);
                 break;
             case 0x18:
-                _vgaFunctions.WriteToPixelMask(_state.BL);
+                _vgaFunctions.WriteToPixelMask(State.BL);
                 break;
             case 0x19:
-                _state.BL = _vgaFunctions.ReadPixelMask();
+                State.BL = _vgaFunctions.ReadPixelMask();
                 break;
             case 0x1A:
-                _state.BX = _vgaFunctions.ReadColorPageState();
+                State.BX = _vgaFunctions.ReadColorPageState();
                 break;
             case 0x1B:
-                _vgaFunctions.PerformGrayScaleSumming(_state.BL, _state.CX);
+                _vgaFunctions.PerformGrayScaleSumming(State.BL, State.CX);
                 break;
             default:
-                throw new NotSupportedException($"0x{_state.AL:X2} is not a valid palette register subFunction");
+                throw new NotSupportedException($"0x{State.AL:X2} is not a valid palette register subFunction");
         }
     }
 
     /// <inheritdoc />
     public void GetVideoState() {
-        _state.BH = _biosDataArea.CurrentVideoPage;
-        _state.AL = (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & 0x80);
-        _state.AH = (byte)_biosDataArea.ScreenColumns;
+        State.BH = _biosDataArea.CurrentVideoPage;
+        State.AL = (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & 0x80);
+        State.AH = (byte)_biosDataArea.ScreenColumns;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 0F {MethodName} - Page {Page}, mode {Mode}, columns {Columns}",
-                nameof(VgaBios), nameof(GetVideoState), _state.BH, _state.AL, _state.AH);
+                nameof(VgaBios), nameof(GetVideoState), State.BH, State.AL, State.AH);
         }
     }
 
     /// <inheritdoc />
     public void WriteTextInTeletypeMode() {
-        CharacterPlusAttribute characterPlusAttribute = new((char)_state.AL, _state.BL, false);
+        CharacterPlusAttribute characterPlusAttribute = new((char)State.AL, State.BL, false);
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(_biosDataArea.CurrentVideoPage);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 0E {MethodName} - {Character} Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
@@ -301,32 +301,32 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void SetColorPaletteOrBackGroundColor() {
-        switch (_state.BH) {
+        switch (State.BH) {
             case 0x00:
-                _vgaFunctions.SetBorderColor(_state.BL);
+                _vgaFunctions.SetBorderColor(State.BL);
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
-                        nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), _state.BL);
+                        nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
                 }
                 break;
             case 0x01:
-                _vgaFunctions.SetPalette(_state.BL);
+                _vgaFunctions.SetPalette(State.BL);
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set palette id {PaletteId}",
-                        nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), _state.BL);
+                        nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
                 }
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(_state.BH), _state.BH, $"INT 10: {nameof(SetColorPaletteOrBackGroundColor)} Invalid subFunction 0x{_state.BH:X2}");
+                throw new ArgumentOutOfRangeException(nameof(State.BH), State.BH, $"INT 10: {nameof(SetColorPaletteOrBackGroundColor)} Invalid subFunction 0x{State.BH:X2}");
         }
     }
 
     /// <inheritdoc />
     public void WriteCharacterAtCursor() {
-        CharacterPlusAttribute characterPlusAttribute = new((char)_state.AL, _state.BL, false);
-        byte currentVideoPage = _state.BH;
+        CharacterPlusAttribute characterPlusAttribute = new((char)State.AL, State.BL, false);
+        byte currentVideoPage = State.BH;
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(currentVideoPage);
-        int count = _state.CX;
+        int count = State.CX;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 0A {MethodName} - {Count} times '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(WriteCharacterAtCursor), count, characterPlusAttribute.Character, characterPlusAttribute.Attribute, cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
@@ -337,10 +337,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void WriteCharacterAndAttributeAtCursor() {
-        CharacterPlusAttribute characterPlusAttribute = new((char)_state.AL, _state.BL, true);
-        byte currentVideoPage = _state.BH;
+        CharacterPlusAttribute characterPlusAttribute = new((char)State.AL, State.BL, true);
+        byte currentVideoPage = State.BH;
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(currentVideoPage);
-        int count = _state.CX;
+        int count = State.CX;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 09 {MethodName} - {Count} times '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(WriteCharacterAndAttributeAtCursor), count, characterPlusAttribute.Character, characterPlusAttribute.Attribute, cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
@@ -350,10 +350,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void ReadCharacterAndAttributeAtCursor() {
-        CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(_state.BH);
+        CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(State.BH);
         CharacterPlusAttribute characterPlusAttribute = _vgaFunctions.ReadChar(cursorPosition);
-        _state.AL = (byte)characterPlusAttribute.Character;
-        _state.AH = characterPlusAttribute.Attribute;
+        State.AL = (byte)characterPlusAttribute.Character;
+        State.AH = characterPlusAttribute.Attribute;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 08 {MethodName} - Character '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(ReadCharacterAndAttributeAtCursor), characterPlusAttribute.Character, characterPlusAttribute.Attribute, cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
@@ -362,25 +362,25 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void ScrollPageDown() {
-        _vgaFunctions.VerifyScroll(-1, _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
+        _vgaFunctions.VerifyScroll(-1, State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 07 {MethodName} - from {X},{Y} to {X2},{Y2}, {Lines} lines, attribute {Attribute}",
-                nameof(VgaBios), nameof(ScrollPageDown), _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
+                nameof(VgaBios), nameof(ScrollPageDown), State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
         }
     }
 
     /// <inheritdoc />
     public void ScrollPageUp() {
-        _vgaFunctions.VerifyScroll(1, _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
+        _vgaFunctions.VerifyScroll(1, State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 06 {MethodName} - from {X},{Y} to {X2},{Y2}, {Lines} lines, attribute {Attribute}",
-                nameof(VgaBios), nameof(ScrollPageUp), _state.CL, _state.CH, _state.DL, _state.DH, _state.AL, _state.BH);
+                nameof(VgaBios), nameof(ScrollPageUp), State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
         }
     }
 
     /// <inheritdoc />
     public void SelectActiveDisplayPage() {
-        byte page = _state.AL;
+        byte page = State.AL;
         int address = _vgaFunctions.SetActivePage(page);
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -391,20 +391,20 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void GetCursorPosition() {
-        byte page = _state.BH;
+        byte page = State.BH;
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(page);
-        _state.CX = _biosDataArea.CursorType;
-        _state.DL = (byte)cursorPosition.X;
-        _state.DH = (byte)cursorPosition.Y;
+        State.CX = _biosDataArea.CursorType;
+        State.DL = (byte)cursorPosition.X;
+        State.DH = (byte)cursorPosition.Y;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 03 {MethodName} - cursor position {X},{Y} on page {Page} type {Type}",
-                nameof(VgaBios), nameof(GetCursorPosition), cursorPosition.X, cursorPosition.Y, cursorPosition.Page, _state.CX);
+                nameof(VgaBios), nameof(GetCursorPosition), cursorPosition.X, cursorPosition.Y, cursorPosition.Page, State.CX);
         }
     }
 
     /// <inheritdoc />
     public void SetCursorPosition() {
-        CursorPosition cursorPosition = new(_state.DL, _state.DH, _state.BH);
+        CursorPosition cursorPosition = new(State.DL, State.DH, State.BH);
         _vgaFunctions.SetCursorPosition(cursorPosition);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 02 {MethodName} - cursor position {X},{Y} on page {Page}",
@@ -414,46 +414,46 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void SetCursorType() {
-        _vgaFunctions.SetCursorShape(_state.CX);
+        _vgaFunctions.SetCursorShape(State.CX);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 01 {MethodName} - CX: {CX}",
-                nameof(VgaBios), nameof(SetCursorType), _state.CX);
+                nameof(VgaBios), nameof(SetCursorType), State.CX);
         }
     }
 
     /// <inheritdoc />
     public void ReadDot() {
-        _state.AL = _vgaFunctions.ReadPixel(_state.CX, _state.DX);
+        State.AL = _vgaFunctions.ReadPixel(State.CX, State.DX);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 0D {MethodName} - pixel at {X},{Y} = 0x{Pixel:X2}",
-                nameof(VgaBios), nameof(ReadDot), _state.CX, _state.DX, _state.AL);
+                nameof(VgaBios), nameof(ReadDot), State.CX, State.DX, State.AL);
         }
     }
 
     /// <inheritdoc />
     public void WriteDot() {
-        _vgaFunctions.WritePixel(_state.AL, _state.CX, _state.DX);
+        _vgaFunctions.WritePixel(State.AL, State.CX, State.DX);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 0C {MethodName} - write {Pixel} at {X},{Y}",
-                nameof(VgaBios), nameof(WriteDot), _state.AL, _state.CX, _state.DX);
+                nameof(VgaBios), nameof(WriteDot), State.AL, State.CX, State.DX);
         }
     }
 
     /// <inheritdoc />
     public void SetVideoMode() {
-        int modeId = _state.AL & 0x7F;
+        int modeId = State.AL & 0x7F;
         ModeFlags flags = ModeFlags.Legacy | (ModeFlags)_biosDataArea.ModesetCtl & (ModeFlags.NoPalette | ModeFlags.GraySum);
-        if ((_state.AL & 0x80) != 0) {
+        if ((State.AL & 0x80) != 0) {
             flags |= ModeFlags.NoClearMem;
         }
 
         // Set AL
         if (modeId > 7) {
-            _state.AL = 0x20;
+            State.AL = 0x20;
         } else if (modeId == 6) {
-            _state.AL = 0x3F;
+            State.AL = 0x3F;
         } else {
-            _state.AL = 0x30;
+            State.AL = 0x30;
         }
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 00 {MethodName} - mode {ModeId:X2}, {Flags}",
@@ -469,7 +469,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     ///     Runs the specified video BIOS function.
     /// </summary>
     public override void Run() {
-        byte operation = _state.AH;
+        byte operation = State.AH;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} running INT 10 operation 0x{Operation:X2}", nameof(VgaBios), operation);
         }
@@ -482,7 +482,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             _logger.Debug("{ClassName} INT 10 04 {MethodName} - Read Light Pen Position, returning 0",
                 nameof(VgaBios), nameof(ReadLightPenPosition));
         }
-        _state.AX = _state.BX = _state.CX = _state.DX = 0;
+        State.AX = State.BX = State.CX = State.DX = 0;
     }
 
     private void InitializeBiosArea() {
@@ -500,7 +500,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             _logger.Debug("{ClassName} INT 10 12 36 {MethodName} - Ignored",
                 nameof(VgaBios), nameof(VideoScreenOnOff));
         }
-        _state.AL = 0x12;
+        State.AL = 0x12;
     }
 
     private void DisplaySwitch() {
@@ -508,69 +508,69 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             _logger.Debug("{ClassName} INT 10 12 35 {MethodName} - Ignored",
                 nameof(VgaBios), nameof(DisplaySwitch));
         }
-        _state.AL = 0x12;
+        State.AL = 0x12;
     }
 
     private void CursorEmulation() {
-        bool enabled = (_state.AL & 0x01) == 0;
+        bool enabled = (State.AL & 0x01) == 0;
         _vgaFunctions.CursorEmulation(enabled);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 34 {MethodName} - {Result}",
                 nameof(VgaBios), nameof(CursorEmulation), enabled ? "Enabled" : "Disabled");
         }
-        _state.AL = 0x12;
+        State.AL = 0x12;
     }
 
     private void SummingToGrayScales() {
-        bool enabled = (_state.AL & 0x01) == 0;
+        bool enabled = (State.AL & 0x01) == 0;
         _vgaFunctions.SummingToGrayScales(enabled);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 33 {MethodName} - {Result}",
                 nameof(VgaBios), nameof(SummingToGrayScales), enabled ? "Enabled" : "Disabled");
         }
-        _state.AL = 0x12;
+        State.AL = 0x12;
     }
 
     private void VideoEnableDisable() {
-        _vgaFunctions.EnableVideoAddressing((_state.AL & 1) == 0);
+        _vgaFunctions.EnableVideoAddressing((State.AL & 1) == 0);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 32 {MethodName} - {Result}",
-                nameof(VgaBios), nameof(VideoEnableDisable), (_state.AL & 0x01) == 0 ? "Enabled" : "Disabled");
+                nameof(VgaBios), nameof(VideoEnableDisable), (State.AL & 0x01) == 0 ? "Enabled" : "Disabled");
         }
-        _state.AL = 0x12;
+        State.AL = 0x12;
     }
 
     private void DefaultPaletteLoading() {
-        _vgaFunctions.DefaultPaletteLoading((_state.AL & 1) != 0);
+        _vgaFunctions.DefaultPaletteLoading((State.AL & 1) != 0);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 31 {MethodName} - 0x{Al:X2}",
-                nameof(VgaBios), nameof(DefaultPaletteLoading), _state.AL);
+                nameof(VgaBios), nameof(DefaultPaletteLoading), State.AL);
         }
-        _state.AL = 0x12;
+        State.AL = 0x12;
     }
 
     private void SelectScanLines() {
-        int lines = _state.AL switch {
+        int lines = State.AL switch {
             0x00 => 200,
             0x01 => 350,
             0x02 => 400,
-            _ => throw new NotSupportedException($"AL=0x{_state.AL:X2} is not a valid subFunction for INT 10 12 30")
+            _ => throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 12 30")
         };
         _vgaFunctions.SelectScanLines(lines);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 30 {MethodName} - {Lines} lines",
                 nameof(VgaBios), nameof(SelectScanLines), lines);
         }
-        _state.AL = 0x12;
+        State.AL = 0x12;
     }
 
     private void EgaVgaInformation() {
-        _state.BH = (byte)(_vgaFunctions.GetColorMode() ? 0x01 : 0x00);
-        _state.BL = 0x03;
-        _state.CX = _vgaFunctions.GetFeatureSwitches();
+        State.BH = (byte)(_vgaFunctions.GetColorMode() ? 0x01 : 0x00);
+        State.BL = 0x03;
+        State.CX = _vgaFunctions.GetFeatureSwitches();
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 10 {MethodName} - ColorMode 0x{ColorMode:X2}, Memory: 0x{Memory:X2}, FeatureSwitches: 0x{FeatureSwitches:X2}",
-                nameof(VgaBios), nameof(EgaVgaInformation), _state.BH, _state.BL, _state.CX);
+                nameof(VgaBios), nameof(EgaVgaInformation), State.BH, State.BL, State.CX);
         }
     }
 

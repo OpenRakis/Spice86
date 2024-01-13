@@ -36,18 +36,36 @@ public class MemoryBreakpoints {
         }
     }
 
+    /// <summary>
+    /// Triggers all the breakpoints matching the specified address, if the memory was read.
+    /// </summary>
+    /// <param name="address">The address to match.</param>
     public void MonitorReadAccess(uint address) {
         _readBreakPoints.TriggerMatchingBreakPoints(address);
     }
 
-    public void MonitorWriteAccess(uint address, byte value) {
+    /// <summary>
+    /// Triggers all the breakpoints matching the specified address, if the memory was written to.
+    /// </summary>
+    /// <param name="address">The address to match.</param>
+    public void MonitorWriteAccess(uint address) {
         _writeBreakPoints.TriggerMatchingBreakPoints(address);
     }
 
+    /// <summary>
+    /// Triggers all the read breakpoints matching the specified memory range.
+    /// </summary>
+    /// <param name="startAddress">The start of the range.</param>
+    /// <param name="endAddress">The inclusive end of the range.</param>
     public void MonitorRangeReadAccess(uint startAddress, uint endAddress) {
         _readBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
     }
 
+    /// <summary>
+    /// Triggers all the write breakpoints matching the specified memory range.
+    /// </summary>
+    /// <param name="startAddress">The start of the range.</param>
+    /// <param name="endAddress">The inclusive end of the range.</param>
     public void MonitorRangeWriteAccess(uint startAddress, uint endAddress) {
         _writeBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
     }
