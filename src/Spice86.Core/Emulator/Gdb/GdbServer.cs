@@ -89,6 +89,10 @@ public sealed class GdbServer : IDisposable {
     /// </summary>
     public GdbCommandHandler? GdbCommandHandler { get; private set; }
 
+    /// <summary>
+    /// Returns a value indicating whether the GdbCommandHandler instance is available.<br/>
+    /// This means that we set a connection with GDB earlier, and we assume that GDB client is still connected.
+    /// </summary>
     public bool IsGdbCommandHandlerAvailable => GdbCommandHandler is not null;
 
     /// <summary>
@@ -188,6 +192,9 @@ public sealed class GdbServer : IDisposable {
         _waitFirstConnectionHandle?.Set();
     }
 
+    /// <summary>
+    /// Executes a single CPU instruction.
+    /// </summary>
     public void StepInstruction() {
         GdbCommandHandler?.Step();
     }
