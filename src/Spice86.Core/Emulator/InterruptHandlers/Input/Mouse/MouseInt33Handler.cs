@@ -36,21 +36,21 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     Returns: AX    Mouse installed status: 0x0000 = not installed 0xFFFF = installed
-    ///     BX    number of mouse buttons
-    ///     ──────────────────────────────────────────────────────────────────
-    ///     Info: Resets the mouse.  Use this function to determine if mouse support is present.  It performs a hardware and
-    ///     software reset (see INT 33H 0021H for a way to performs just a software reset).
-    ///     For text-mode applications, this function does the following:
-    ///     • Moves the mouse pointer to the center of the screen
-    ///     • Hides the pointer (use INT 33H 0001H to display it).
-    ///     • Clears any "exclusion area" set via INT 33H 0010H. TODO: not implemented
-    ///     • Sets the pointer mask to the default: inverse-attribute of character at pointer (use INT 33H 000aH to change the
-    ///     appearance of the pointer). TODO: not implemented
-    ///     • Sets the range to the height and width of the entire screen
-    ///     (use INT 33H 0007H, and INT 33H 0008H or INT 33H 0010H to limit the mouse pointer display area).
-    ///     • Sets up for pointer drawing on video pg 0 (see INT 33H 001dH). TODO: not implemented
-    ///     • Enables LightPen emulation (see INT 33H 000dH). TODO: not implemented
+    ///     Returns: AX    Mouse installed status: 0x0000 = not installed 0xFFFF = installed <br/>
+    ///     BX    number of mouse buttons <br/>
+    ///     ────────────────────────────────────────────────────────────────── <br/>
+    ///     Info: Resets the mouse.  Use this function to determine if mouse support is present.  It performs a hardware and <br/>
+    ///     software reset (see INT 33H 0021H for a way to performs just a software reset). <br/>
+    ///     For text-mode applications, this function does the following: <br/>
+    ///     • Moves the mouse pointer to the center of the screen <br/>
+    ///     • Hides the pointer (use INT 33H 0001H to display it). <br/>
+    ///     • Clears any "exclusion area" set via INT 33H 0010H. TODO: not implemented <br/>
+    ///     • Sets the pointer mask to the default: inverse-attribute of character at pointer (use INT 33H 000aH to change the <br/>
+    ///     appearance of the pointer). TODO: not implemented <br/>
+    ///     • Sets the range to the height and width of the entire screen <br/>
+    ///     (use INT 33H 0007H, and INT 33H 0008H or INT 33H 0010H to limit the mouse pointer display area). <br/>
+    ///     • Sets up for pointer drawing on video pg 0 (see INT 33H 001dH). TODO: not implemented <br/>
+    ///     • Enables LightPen emulation (see INT 33H 000dH). TODO: not implemented <br/>
     ///     • Sets pointer speed ratio to horizontal: 8 to 8; vertical 8 to 16 and sets the maximum doubling threshold to 64
     ///     mickeys (see INT 33H 001aH).
     /// </summary>
@@ -65,19 +65,19 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns: none
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This unhides the mouse pointer.  It actually increments an  internal counter used by the mouse support to
-    /// determine when to show the pointer.
+    /// Returns: none <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This unhides the mouse pointer.  It actually increments an  internal counter used by the mouse support to <br/>
+    /// determine when to show the pointer. <br/> <br/>
     ///
-    ///         That counter starts as -1 (after an INT 33H 0000H or 0021H reset).  This call increments it to 0.
+    ///         That counter starts as -1 (after an INT 33H 0000H or 0021H reset).  This call increments it to 0. <br/> <br/>
     ///
-    /// Whenever the counter is 0, the mouse pointer is displayed and tracked on-screen.  When the counter is 0, subsequent
-    /// Show Pointer calls are ignored.  Calls to INT 33H 0002H (hide pointer) decrement the counter.
+    /// Whenever the counter is 0, the mouse pointer is displayed and tracked on-screen.  When the counter is 0, subsequent <br/>
+    /// Show Pointer calls are ignored.  Calls to INT 33H 0002H (hide pointer) decrement the counter. <br/> <br/>
     ///
-    ///         This logic relieves programs of the burden of global tracking of the hidden/displayed state.  A subroutine
-    ///         may always use INT 33H 0001H at the beginning and INT 33H 0002H at the end, without affecting the
-    ///         shown/hidden state of the calling routine.
+    ///         This logic relieves programs of the burden of global tracking of the hidden/displayed state.  A subroutine <br/>
+    ///         may always use INT 33H 0001H at the beginning and INT 33H 0002H at the end, without affecting the <br/>
+    ///         shown/hidden state of the calling routine. <br/> <br/>
     ///
     ///         This function also resets the "exclusion area" set via INT 33H 0010H. TODO: not implemented
     /// </summary>
@@ -90,11 +90,11 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns: none
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This removes the mouse pointer from the screen (if it is currently visible).  It actually decrements an
-    ///     internal pointer- display cursor.  If that counter is 0 before the call, the mouse pointer is removed from the
-    ///     screen.
+    /// Returns: none <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This removes the mouse pointer from the screen (if it is currently visible).  It actually decrements an <br/>
+    ///     internal pointer- display cursor.  If that counter is 0 before the call, the mouse pointer is removed from the <br/>
+    ///     screen. <br/> <br/>
     ///
     ///     Use this function before performing any direct writes to the video display (if doing so will overwrite the mouse
     ///     pointer) and call INT 33H 0001H (show ptr) after writing to the screen.
@@ -108,21 +108,21 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns:
-    ///     BX    Button status:
-    ///         bit 0 = left button down   (BX & 1) == 1
-    ///         bit 1 = right button down  (BX & 2) == 2
-    ///         bit 2 = center button down (BX & 4) == 4
-    ///     CX    X coordinate (horizontal)    divide by 8 for text column
-    ///     DX    Y coordinate (vertical)      divide by 8 for text line
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This returns the current position of the mouse pointer, and the current status of the mouse buttons.
+    /// Returns: <br/>
+    ///     BX    Button status: <br/>
+    ///         bit 0 = left button down   (BX &amp; 1) == 1 <br/>
+    ///         bit 1 = right button down  (BX &amp; 2) == 2 <br/>
+    ///         bit 2 = center button down (BX &amp; 4) == 4 <br/>
+    ///     CX    X coordinate (horizontal)    divide by 8 for text column <br/>
+    ///     DX    Y coordinate (vertical)      divide by 8 for text line <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This returns the current position of the mouse pointer, and the current status of the mouse buttons. <br/> <br/>
     ///
-    ///     Rather than constantly polling this function, many programmers prefer to install a mouse event handler via
+    ///     Rather than constantly polling this function, many programmers prefer to install a mouse event handler via <br/>
     ///     INT 33H 000cH or INT 33H 0018H and maintain global variables for instant access to mouse information.
     ///
-    /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each
-    ///     value by 8 to get a character column,row.
+    /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, <br/>
+    ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
     public void GetMousePositionAndStatus() {
         MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
@@ -136,18 +136,18 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     CX    X coordinate (horizontal)    multiply text column by 8
-    ///     DX    Y coordinate (vertical)      multiply text line by 8
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This sets the driver's internal pointer coordinates.
+    ///     CX    X coordinate (horizontal)    multiply text column by 8 <br/>
+    ///     DX    Y coordinate (vertical)      multiply text line by 8 <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This sets the driver's internal pointer coordinates. <br/> <br/>
     ///
     ///     The pointer moves there, even if it is currently hidden (see INT 33H 0002H) or if X,Y is in the exclusion
-    ///     area (see INT 33H 0010H).
+    ///     area (see INT 33H 0010H). <br/> <br/>
     ///
-    ///     If X,Y is outside the range set by INT 33H 0007H and INT 33H 0008H, then the pointer is "pinned" within the
-    ///     range rectangle (it will be set to the nearest valid limit).
+    ///     If X,Y is outside the range set by INT 33H 0007H and INT 33H 0008H, <br/>
+    ///     then the pointer is "pinned" within the range rectangle (it will be set to the nearest valid limit).
     ///
-    ///     It is rare to need to move the pointer; the best policy is to let the user do the driving.
+    ///     It is rare to need to move the pointer; the best policy is to let the user do the driving. <br/> <br/>
     ///
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each value by 8
     ///     to get a character column,row.
@@ -164,15 +164,15 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     CX    minimum Y coordinate (vertical pixel position)
-    ///     DX    maximum Y coordinate (vertical pixel position)
-    /// Returns: none
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This sets a horizontal range out of which the mouse pointer will not be able to move.  Attempts by the user
-    ///     (or the program via INT 33H 0004H) to move to the left of CX or the right of DX will cause the pointer to
-    ///     remain at the minimum or maximum value in the range.
+    ///     CX    minimum Y coordinate (vertical pixel position) <br/>
+    ///     DX    maximum Y coordinate (vertical pixel position) <br/>
+    /// Returns: none <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This sets a horizontal range out of which the mouse pointer will not be able to move.  Attempts by the user <br/>
+    ///     (or the program via INT 33H 0004H) to move to the left of CX or the right of DX will cause the pointer to <br/>
+    ///     remain at the minimum or maximum value in the range. <br/> <br/>
     ///
-    ///     Use INT 33H 0008H to limit motion on the vertical axis.
+    ///     Use INT 33H 0008H to limit motion on the vertical axis. <br/> <br/>
     ///
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each value by
     ///     8 to get a character column,row.
@@ -187,15 +187,15 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     CX    minimum Y coordinate (vertical pixel position)
-    ///     DX    maximum Y coordinate (vertical pixel position)
-    /// Returns: none
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This sets a vertical range out of which the mouse pointer will  not be able to move.  Attempts by the user
-    ///     (or the program via INT 33H 0004H) to move above CX or below DX will cause the pointer to remain at the
-    ///     minimum or maximum value in the range.
+    ///     CX    minimum Y coordinate (vertical pixel position) <br/>
+    ///     DX    maximum Y coordinate (vertical pixel position) <br/>
+    /// Returns: none <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This sets a vertical range out of which the mouse pointer will  not be able to move.  Attempts by the user <br/>
+    ///     (or the program via INT 33H 0004H) to move above CX or below DX will cause the pointer to remain at the <br/>
+    ///     minimum or maximum value in the range. <br/> <br/>
     ///
-    ///     Use INT 33H 0007H to limit motion on the horizontal axis.
+    ///     Use INT 33H 0007H to limit motion on the horizontal axis. <br/> <br/>
     ///
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each value by
     ///     8 to get a character column,row.
@@ -210,49 +210,49 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     CX    event mask (events which you want sent to your handler)
-    ///         bit 0 = mouse movement           (CX | 01H)
-    ///         bit 1 = left button pressed      (CX | 02H)
-    ///         bit 2 = left button released     (CX | 04H)
-    ///         bit 3 = right button pressed     (CX | 08H)
-    ///         bit 4 = right button released    (CX | 10H)
-    ///         bit 5 = center button pressed    (CX | 20H)
-    ///         bit 6 = center button released   (CX | 40H)
-    ///         All events:      CX = 007fH
-    ///         Disable handler: CX = 0000H
-    ///         ES:DX address of your event handler code
-    /// ──────────────────────────────────────────────────────────────────
-    /// Returns: none
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This installs a custom mouse event handler.  Specify which events you want to monitor via bit-codes in CX,
-    ///     and pass the address of your handler in ES:DX.  When any of the specified events occur, the code at ES:DX will
-    ///     get control via a far CALL.
+    ///     CX    event mask (events which you want sent to your handler) <br/>
+    ///         bit 0 = mouse movement           (CX | 01H) <br/>
+    ///         bit 1 = left button pressed      (CX | 02H) <br/>
+    ///         bit 2 = left button released     (CX | 04H) <br/>
+    ///         bit 3 = right button pressed     (CX | 08H) <br/>
+    ///         bit 4 = right button released    (CX | 10H) <br/>
+    ///         bit 5 = center button pressed    (CX | 20H) <br/>
+    ///         bit 6 = center button released   (CX | 40H) <br/>
+    ///         All events:      CX = 007fH <br/>
+    ///         Disable handler: CX = 0000H <br/>
+    ///         ES:DX address of your event handler code <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Returns: none <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This installs a custom mouse event handler.  Specify which events you want to monitor via bit-codes in CX, <br/>
+    ///     and pass the address of your handler in ES:DX.  When any of the specified events occur, the code at ES:DX will <br/>
+    ///     get control via a far CALL. <br/> <br/>
     ///
-    ///     On entry to your handler:
+    ///     On entry to your handler: <br/>
     ///         AX contains a bit mask identifying which event has occurred (it is encoded in the same format as described
-    ///             for CX, above).
+    ///             for CX, above). <br/> <br/>
     ///
-    ///         BX contains the mouse button status:
-    ///             bit 0 = left button    (BX & 1) == 1
-    ///             bit 1 = right button   (BX & 2) == 2
-    ///             bit 2 = center button  (BX & 4) == 4
+    ///         BX contains the mouse button status: <br/>
+    ///             bit 0 = left button    (BX &amp; 1) == 1 <br/>
+    ///             bit 1 = right button   (BX &amp; 2) == 2 <br/>
+    ///             bit 2 = center button  (BX &amp; 4) == 4 <br/> <br/>
     ///
-    ///         CX horizontal position (in text mode, divide by 8 for character column)
-    ///         DX vertical position (in text mode, divide by 8 for character line)
+    ///         CX horizontal position (in text mode, divide by 8 for character column) <br/>
+    ///         DX vertical position (in text mode, divide by 8 for character line) <br/> <br/>
     ///
-    ///         SI distance of last horizontal motion (mickeys: &lt;0=left; >0=right)
-    ///         DI distance of last vertical motion (mickeys: &lt;0=upward, >0=down)
+    ///         SI distance of last horizontal motion (mickeys: &lt;0=left; >0=right) <br/>
+    ///         DI distance of last vertical motion (mickeys: &lt;0=upward, >0=down) <br/> <br/>
     ///
-    ///         DS mouse driver data segment
-    ///             You will need to set up DS to access your own variables.  You need not save/restore CPU registers, since
-    ///             the driver does this for you.
+    ///         DS mouse driver data segment <br/>
+    ///             You will need to set up DS to access your own variables. <br/>
+    ///             You need not save/restore CPU registers, since, the driver does this for you. <br/> <br/>
     ///
-    ///     Exit your custom handler via a FAR RETurn (not an IRET).
+    ///     Exit your custom handler via a FAR RETurn (not an IRET). <br/>
     ///
-    ///     To enable or disable selected events for your handler, use this function again, passing a modified mask in CX.
-    ///     To disable all events for the handler, call this function again passing a value of 0000H in CX.
+    ///     To enable or disable selected events for your handler, use this function again, passing a modified mask in CX. <br/>
+    ///     To disable all events for the handler, call this function again passing a value of 0000H in CX. <br/> <br/>
     ///
-    /// Warning: You must disable your custom event handler (call with CX=0) before exiting to DOS.  For TSRs, you must
+    /// Warning: You must disable your custom event handler (call with CX=0) before exiting to DOS.  For TSRs, you must <br/>
     ///     enable each time you pop up and disable each time you pop down.
     ///
     /// Notes: You may prefer to use the more-flexible INT 33H 0014H (exchange handlers) or INT 33H 0018H (install
@@ -268,33 +268,33 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     CX    desired horizontal mickeys per 8 pixels
-    ///     DX    desired vertical mickeys per 8 pixels
-    /// ──────────────────────────────────────────────────────────────────
-    /// Returns: none
-    /// ──────────────────────────────────────────────────────────────────
+    ///     CX    desired horizontal mickeys per 8 pixels <br/>
+    ///     DX    desired vertical mickeys per 8 pixels <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Returns: none <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
     /// Info: This sets the base speed at which the pointer moves around the screen, compared to the distance actually
-    ///     moved by the mouse.
+    ///     moved by the mouse. <br/> <br/>
     ///
     ///     The mickey-to-pixel ratio is used to convert distance values, such as INT 33H 000bH and values obtained in SI
-    ///     and DI by custom event handlers (see INT 33H 000cH), to pixels or character cells.
+    ///     and DI by custom event handlers (see INT 33H 000cH), to pixels or character cells. <br/> <br/>
     ///
     ///     The pointer may actually move much farther/faster than the base speed specified in this call.  When the mouse
     ///     is moved quickly, the mouse support automatically doubles the ratio (moving the pointer exponentially more
-    ///     quickly).  See INT 33H 0013H.
+    ///     quickly).  See INT 33H 0013H. <br/> <br/>
     ///
-    ///     1 mickey = 1/200th of an inch = 0.005 inch.
+    ///     1 mickey = 1/200th of an inch = 0.005 inch. <br/> <br/>
     ///
     ///     Note that the values for CX and DX are in character cells (8-pixel units).  The default settings are CX=8 and
     ///     DX=16.  This means that the pointer moves twice as fast horizontally as it does vertically.  It also means that
     ///     a slow, steady 1-inch mouse motion moves the pointer by 25 characters horizontally or 12 vertical lines. The
-    ///     calculation goes as follows:
+    ///     calculation goes as follows: <br/> <br/>
     ///
-    ///         desiredCharsPerInch = 200 / CX
-    ///         ...so...
-    ///         CX = 200 / desiredCharsPerInch  (thus, CX=8 moves 25 chars)
+    ///         desiredCharsPerInch = 200 / CX <br/>
+    ///         ...so... <br/>
+    ///         CX = 200 / desiredCharsPerInch  (thus, CX=8 moves 25 chars) <br/> <br/>
     ///
-    ///         For graphics mode (i.e., pixel measurements) use:
+    ///         For graphics mode (i.e., pixel measurements) use: <br/> <br/>
     ///
     ///         CX = 25 / desiredPixelsPerInch   (thus, CX=8 moves 200 pixels)
     /// </summary>
@@ -348,30 +348,30 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     CX    event mask (events which you want sent to your handler)
-    ///         bit 0 = mouse movement           (CX | 01H)
-    ///         bit 1 = left button pressed      (CX | 02H)
-    ///         bit 2 = left button released     (CX | 04H)
-    ///         bit 3 = right button pressed     (CX | 08H)
-    ///         bit 4 = right button released    (CX | 10H)
-    ///         bit 5 = center button pressed    (CX | 20H)
-    ///         bit 6 = center button released   (CX | 40H)
-    ///         All events:      CX = 007fH
-    ///     ES:DX address of your event handler code
-    /// ──────────────────────────────────────────────────────────────────
-    /// Returns:
-    ///     CX    event mask of previous event handler
-    ///     ES:DX address of the previously-installed event handler code
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This function works like INT 33H 000cH (which see for details). The only difference is that upon return, you
-    ///     obtain the address and event mask of the previously-installed event handler.
+    ///     CX    event mask (events which you want sent to your handler) <br/>
+    ///         bit 0 = mouse movement           (CX | 01H) <br/>
+    ///         bit 1 = left button pressed      (CX | 02H) <br/>
+    ///         bit 2 = left button released     (CX | 04H) <br/>
+    ///         bit 3 = right button pressed     (CX | 08H) <br/>
+    ///         bit 4 = right button released    (CX | 10H) <br/>
+    ///         bit 5 = center button pressed    (CX | 20H) <br/>
+    ///         bit 6 = center button released   (CX | 40H) <br/>
+    ///         All events:      CX = 007fH <br/>
+    ///     ES:DX address of your event handler code <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Returns: <br/>
+    ///     CX    event mask of previous event handler <br/>
+    ///     ES:DX address of the previously-installed event handler code <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This function works like INT 33H 000cH (which see for details). The only difference is that upon return, you <br/>
+    ///     obtain the address and event mask of the previously-installed event handler. <br/> <br/>
     ///
-    ///     This provides a way to install an event handler temporarily; that is, you can install one while performing a
-    ///     certain subroutine, then restore the previous one when you exit that subroutine.
+    ///     This provides a way to install an event handler temporarily; that is, you can install one while performing a <br/>
+    ///     certain subroutine, then restore the previous one when you exit that subroutine. <br/> <br/>
     ///
-    ///     This also provides a way to chain event handlers.  Install a handler for all events, and if you get an event
-    ///     which you don't really care about, pass it on to the previously-installed handler (assuming its event mask
-    ///     shows that it expects the event).
+    ///     This also provides a way to chain event handlers.  Install a handler for all events, and if you get an event <br/>
+    ///     which you don't really care about, pass it on to the previously-installed handler (assuming its event mask <br/>
+    ///     shows that it expects the event). <br/> <br/>
     ///
     /// Notes: INT 33H 0018H provides a flexible means for installing up to three specialized-event handlers.
     /// </summary>
@@ -389,18 +389,18 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     BX    interrupt rate code:
-    ///         1=none;
-    ///         2=30 per sec,
-    ///         4=50 per sec
-    ///         8=100 per sec;
-    ///         16=200 per second
-    /// ──────────────────────────────────────────────────────────────────
-    /// Returns: none
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: This sets the rate at which the mouse hardware will interrupt with updated mouse positions and status.
+    ///     BX    interrupt rate code: <br/>
+    ///         1=none; <br/>
+    ///         2=30 per sec, <br/>
+    ///         4=50 per sec <br/>
+    ///         8=100 per sec; <br/>
+    ///         16=200 per second <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Returns: none <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This sets the rate at which the mouse hardware will interrupt with updated mouse positions and status. <br/> <br/>
     ///
-    ///     This call is only meaningful for the Inport mouse.  Use INT 33H 0024H to see if an Inport mouse is installed.
+    ///     This call is only meaningful for the Inport mouse.  Use INT 33H 0024H to see if an Inport mouse is installed. <br/> <br/>
     ///
     ///     Increasing the number of interrupts per second provides more accuracy for the mouse, but makes the foreground
     ///     application slow down.
@@ -416,21 +416,21 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns:
-    ///     BH    major version number
-    ///     BL    minor version number (i.e., left of decimal)
-    ///     CH    mouse type:
-    ///         1 = bus mouse
-    ///         2 = serial mouse
-    ///         3 = Inport mouse
-    ///         4 = PS/2 mouse
-    ///         5 = HP mouse
-    ///     CL    IRQ number:
-    ///         0 = PS/2
-    ///         2,3,4,5, or 7 = PC IRQ number
-    /// ──────────────────────────────────────────────────────────────────
-    /// Info: If you need to use new functions of a recent version of the mouse support, use this function and inspect the
-    ///     return values in BH and BL.
+    /// Returns: <br/>
+    ///     BH    major version number <br/>
+    ///     BL    minor version number (i.e., left of decimal) <br/>
+    ///     CH    mouse type: <br/>
+    ///         1 = bus mouse <br/>
+    ///         2 = serial mouse <br/>
+    ///         3 = Inport mouse <br/>
+    ///         4 = PS/2 mouse <br/>
+    ///         5 = HP mouse <br/>
+    ///     CL    IRQ number: <br/>
+    ///         0 = PS/2 <br/>
+    ///         2,3,4,5, or 7 = PC IRQ number <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: If you need to use new functions of a recent version of the mouse support, <br/>
+    /// use this function and inspect the return values in BH and BL. <br/> <br/>
     ///
     ///     The value in CH can be used to see if calls to INT 33H 001cH are meaningful.
     /// </summary>
