@@ -27,6 +27,10 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <inheritdoc />
     public byte VectorNumber => 0x74;
 
+    /// <summary>
+    /// Sets the mouse driver address.
+    /// </summary>
+    /// <param name="driverAddress">The Segmented Address to use</param>
     public void SetMouseDriverAddress(SegmentedAddress driverAddress) => _driverAddressSwitcher.SetAddress(driverAddress.Segment, driverAddress.Offset);
 
     /// <inheritdoc />

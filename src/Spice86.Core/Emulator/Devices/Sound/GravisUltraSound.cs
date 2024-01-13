@@ -2,8 +2,6 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -26,7 +24,7 @@ public class GravisUltraSound : DefaultIOPortHandler {
     public GravisUltraSound(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
     }
 
-    /// <inhheritdoc/>
+    /// <inheritdoc/>
     public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(MixControlRegister, this);
         ioPortDispatcher.AddIOPortHandler(ReadDataOrTriggerStatus, this);

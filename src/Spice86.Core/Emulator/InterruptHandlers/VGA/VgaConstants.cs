@@ -1,6 +1,9 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
-public class VgaConstants {
+/// <summary>
+/// Defines a few VGA constants.
+/// </summary>
+public static class VgaConstants {
     /// <summary>
     ///     The segment of the graphics memory.
     /// </summary>
