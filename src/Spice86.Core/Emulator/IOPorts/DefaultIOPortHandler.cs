@@ -47,7 +47,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <summary>
     /// Constructor for DefaultIOPortHandler
     /// </summary>
-    /// <param name="state">The CPU state.</param>
+    /// <param name="state">The CPU Registers and Flags.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">Logger service implementation.</param>
     protected DefaultIOPortHandler(State state, bool failOnUnhandledPort, ILoggerService loggerService) {

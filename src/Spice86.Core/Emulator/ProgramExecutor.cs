@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Logging;
 using System.Net.NetworkInformation;
 
+/// <inheritdoc cref="IProgramExecutor"/>
 public sealed class ProgramExecutor : IProgramExecutor {
     private readonly ILoggerService _loggerService;
     private bool _disposed;

@@ -7,10 +7,9 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -26,7 +25,7 @@ public class ExeLoader : DosFileLoader {
     /// <summary>
     /// Initializes a new instance of the <see cref="ExeLoader"/> class with the specified machine, logger service, and starting segment.
     /// </summary>
-    /// <param name="machine">The machine instance to load the executable into.</param>
+    /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service to use for logging.</param>
     /// <param name="state">The CPU's state registers.</param>
     /// <param name="environmentVariables">The master environment block, from the DOS kernel.</param>
@@ -56,7 +55,7 @@ public class ExeLoader : DosFileLoader {
         ExeFile exeFile = new ExeFile(new ByteArrayReaderWriter(exe));
         if (!exeFile.IsValid) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Invalid EXE file {file}", file);
+                _loggerService.Error("Invalid EXE file {File}", file);
             }
             throw new UnrecoverableException($"Invalid EXE file {file}");
         }

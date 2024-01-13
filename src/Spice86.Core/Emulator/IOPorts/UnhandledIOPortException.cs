@@ -1,12 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.IOPorts;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Errors;
+using Spice86.Shared.Utils;
 
 using System;
-
-using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Utils;
 
 /// <summary>
 /// Thrown when an unhandled IO Port is accessed.
