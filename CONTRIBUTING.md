@@ -24,7 +24,7 @@ Thank you for wanting to contribute. Here are some guidelines.
 
 ### Required SDK
 
-- [.NET](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+- [.NET](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 
 ### What this project should do
 
