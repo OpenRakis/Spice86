@@ -6,10 +6,14 @@ using System.Collections;
 /// Enumerator for Memory based arrays
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public class MemoryBasedArrayEnumerator<T> : IEnumerator<T> {
+public sealed class MemoryBasedArrayEnumerator<T> : IEnumerator<T> {
     private readonly MemoryBasedArray<T> _memoryBasedArray;
     private int _position = -1;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MemoryBasedArrayEnumerator{T}"/> class.
+    /// </summary>
+    /// <param name="memoryBasedArray"></param>
     public MemoryBasedArrayEnumerator(MemoryBasedArray<T> memoryBasedArray) {
         _memoryBasedArray = memoryBasedArray;
     }
@@ -33,5 +37,6 @@ public class MemoryBasedArrayEnumerator<T> : IEnumerator<T> {
 
     /// <inheritdoc/>
     public void Dispose() {
+        // Nothing to dispose
     }
 }

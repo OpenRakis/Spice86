@@ -11,31 +11,41 @@ using Spice86.Shared.Utils;
 /// Represents the state of the CPU Registers and Flags.
 /// </summary>
 public class State : IDebuggableComponent {
-    // Accumulator
+    /// <summary>
+    /// Gets or sets the high byte of the Accumulator register.
+    /// </summary>
     public byte AH { get => GeneralRegisters.UInt8High[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.AxIndex] = value; }
     public byte AL { get => GeneralRegisters.UInt8Low[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.AxIndex] = value; }
     public ushort AX { get => GeneralRegisters.UInt16[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.AxIndex] = value; }
     public uint EAX { get => GeneralRegisters.UInt32[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.AxIndex] = value; }
 
-    // Base
+    /// <summary>
+    /// Base
+    /// </summary>
     public byte BH { get => GeneralRegisters.UInt8High[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.BxIndex] = value; }
     public byte BL { get => GeneralRegisters.UInt8Low[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.BxIndex] = value; }
     public ushort BX { get => GeneralRegisters.UInt16[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.BxIndex] = value; }
     public uint EBX { get => GeneralRegisters.UInt32[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.BxIndex] = value; }
 
-    // Counter
+    /// <summary>
+    /// Counter
+    /// </summary>
     public byte CH { get => GeneralRegisters.UInt8High[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.CxIndex] = value; }
     public byte CL { get => GeneralRegisters.UInt8Low[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.CxIndex] = value; }
     public ushort CX { get => GeneralRegisters.UInt16[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.CxIndex] = value; }
     public uint ECX { get => GeneralRegisters.UInt32[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.CxIndex] = value; }
 
-    // Data
+    /// <summary>
+    /// Data
+    /// </summary>
     public byte DH { get => GeneralRegisters.UInt8High[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.DxIndex] = value; }
     public byte DL { get => GeneralRegisters.UInt8Low[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.DxIndex] = value; }
     public ushort DX { get => GeneralRegisters.UInt16[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.DxIndex] = value; }
     public uint EDX { get => GeneralRegisters.UInt32[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.DxIndex] = value; }
 
-    // Destination Index
+    /// <summary>
+    /// Destination Index
+    /// </summary>
     public ushort DI { get => GeneralRegisters.UInt16[GeneralRegisters.DiIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.DiIndex] = value; }
     public uint EDI { get => GeneralRegisters.UInt32[GeneralRegisters.DiIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.DiIndex] = value; }
 
@@ -43,26 +53,36 @@ public class State : IDebuggableComponent {
     public ushort SI { get => GeneralRegisters.UInt16[GeneralRegisters.SiIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.SiIndex] = value; }
     public uint ESI { get => GeneralRegisters.UInt32[GeneralRegisters.SiIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.SiIndex] = value; }
 
-    // Base Pointer
+    /// <summary>
+    /// Base Pointer
+    /// </summary>
     public ushort BP { get => GeneralRegisters.UInt16[GeneralRegisters.BpIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.BpIndex] = value; }
     public uint EBP { get => GeneralRegisters.UInt32[GeneralRegisters.BpIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.BpIndex] = value; }
 
-    // Stack Pointer
+    /// <summary>
+    /// Stack Pointer
+    /// </summary>
     public ushort SP { get => GeneralRegisters.UInt16[GeneralRegisters.SpIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.SpIndex] = value; }
     public uint ESP { get => GeneralRegisters.UInt32[GeneralRegisters.SpIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.SpIndex] = value; }
 
     // Code Segment
     public ushort CS { get => SegmentRegisters.UInt16[SegmentRegisters.CsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.CsIndex] = value; }
 
-    // Data Segment
+    /// <summary>
+    /// Data Segment
+    /// </summary>
     public ushort DS { get => SegmentRegisters.UInt16[SegmentRegisters.DsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.DsIndex] = value; }
 
-    // Extra segments
+    /// <summary>
+    /// Extra segments
+    /// </summary>
     public ushort ES { get => SegmentRegisters.UInt16[SegmentRegisters.EsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.EsIndex] = value; }
     public ushort FS { get => SegmentRegisters.UInt16[SegmentRegisters.FsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.FsIndex] = value; }
     public ushort GS { get => SegmentRegisters.UInt16[SegmentRegisters.GsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.GsIndex] = value; }
 
-    // Stack Segment
+    /// <summary>
+    /// Stack Segment
+    /// </summary>
     public ushort SS { get => SegmentRegisters.UInt16[SegmentRegisters.SsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.SsIndex] = value; }
 
     /// <summary> Instruction pointer </summary>
@@ -107,12 +127,31 @@ public class State : IDebuggableComponent {
     /// The number of CPU cycles, incremented on each new instruction.
     /// </summary>
     public long Cycles { get; private set; }
+
+    /// <summary>
+    /// The physical address of the instruction pointer in memory
+    /// </summary>
     public uint IpPhysicalAddress => MemoryUtils.ToPhysicalAddress(CS, IP);
+
+    /// <summary>
+    /// The physical address of the stack in memory
+    /// </summary>
     public uint StackPhysicalAddress => MemoryUtils.ToPhysicalAddress(SS, SP);
 
+    /// <summary>
+    /// The CPU registers
+    /// </summary>
     public GeneralRegisters GeneralRegisters { get; } = new();
+
+    /// <summary>
+    /// The CPU segment registers <br/>
+    /// The segment registers are registers that store segment selectors, which are used to access different parts of memory.
+    /// </summary>
     public SegmentRegisters SegmentRegisters { get; } = new();
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the CPU is running.
+    /// </summary>
     public bool IsRunning { get; set; } = true;
 
     /// <summary>

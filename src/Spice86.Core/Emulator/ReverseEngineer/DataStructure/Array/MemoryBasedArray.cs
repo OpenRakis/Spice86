@@ -35,7 +35,7 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IEnumerabl
         return (uint)(index * ValueSize);
     }
 
-    /// IEnumerable implementation
+    // IEnumerable implementation
 
     /// <inheritdoc/>
     public IEnumerator<T> GetEnumerator() {
@@ -47,7 +47,7 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IEnumerabl
         return GetEnumerator();
     }
 
-    /// IList implementation
+    // IList implementation
 
     /// <inheritdoc/>
     public abstract T this[int i] { get; set; }
@@ -72,7 +72,7 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IEnumerabl
         throw CreateNotSupportedExceptionReadOnly();
     }
 
-    /// ICollection implementation
+    // ICollection implementation
 
     /// <inheritdoc/>
     public bool Contains(T item) {

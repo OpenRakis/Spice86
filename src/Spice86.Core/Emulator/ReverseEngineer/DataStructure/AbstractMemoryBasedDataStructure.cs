@@ -71,6 +71,11 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// </summary>
     public abstract uint BaseAddress { get; }
 
+    /// <summary>
+    /// Adds the base address to the specified offset.
+    /// </summary>
+    /// <param name="offset">The offset to add to the <see cref="BaseAddress"/></param>
+    /// <returns>The linear address of <see cref="BaseAddress"/> + offset</returns>
     protected uint ComputeAddressFromOffset(uint offset) {
         return (uint)(BaseAddress + offset);
     }

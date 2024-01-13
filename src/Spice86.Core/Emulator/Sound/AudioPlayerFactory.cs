@@ -11,6 +11,10 @@ using Spice86.Shared.Interfaces;
 public class AudioPlayerFactory {
     private readonly PortAudioPlayerFactory _portAudioPlayerFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AudioPlayerFactory"/> class.
+    /// </summary>
+    /// <param name="loggerService">The logger service implementation.</param>
     public AudioPlayerFactory(ILoggerService loggerService) {
         _portAudioPlayerFactory = new(loggerService);
     }

@@ -1,6 +1,5 @@
 ﻿using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 
 namespace Spice86.Core.Emulator.CPU;
 
@@ -59,6 +58,9 @@ public class ModRM {
         return _memory.UInt8[(uint)MemoryAddress];
     }
 
+    /// <summary>
+    /// Gets or sets the value of the segment register pointed at by the <see cref="RegisterIndex"/> property.
+    /// </summary>
     public ushort SegmentRegister { get => _state.SegmentRegisters.UInt16[RegisterIndex]; set => _state.SegmentRegisters.UInt16[RegisterIndex] = value; }
 
     public void Read() {

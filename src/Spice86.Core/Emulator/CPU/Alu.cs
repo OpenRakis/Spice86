@@ -136,7 +136,10 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
         uint lastBit = value >> count - 1 & 0x1;
         _state.CarryFlag = lastBit == 1;
     }
-
+    /// <summary>
+    /// Sets the parity flag by looking at the lowest byte of the value
+    /// </summary>
+    /// <param name="value"></param>
     protected void SetParityFlag(ulong value) {
         _state.ParityFlag = IsParity((byte)value);
     }
