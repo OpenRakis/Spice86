@@ -110,6 +110,9 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x62, GetPspAddress);
     }
 
+    /// <summary>
+    /// Reads a character from the standard auxiliary device (usually the keyboard) and stores it in AL.
+    /// </summary>
     public void ReadCharacterFromStdAux() {
         IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
         if (aux is not CharacterDevice stdAux) {
@@ -124,6 +127,9 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Writes a character from the AL register to the standard auxiliary device.
+    /// </summary>
     public void WriteCharacterToStdAux() {
         IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
         if (aux is not CharacterDevice stdAux) {
@@ -136,6 +142,9 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Writes a character from the AL register to the printer device.
+    /// </summary>
     public void PrinterOutput() {
         IVirtualDevice? prn = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
         if (prn is not CharacterDevice printer) {
@@ -188,36 +197,46 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Creates a directory.
+    /// Creates a directory from the path pointed by DS:DX.
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void CreateDirectory(bool calledFromVm) {
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetStringAtDsDx());
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
     /// <summary>
-    /// Removes a file.
+    /// Removes a file path, pointed by DS:DX.
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void RemoveFile(bool calledFromVm) {
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveFile(GetStringAtDsDx());
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveFile(GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
     /// <summary>
-    /// Removes a directory.
+    /// Removes a directory, pointed by DS:DX.
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void RemoveDirectory(bool calledFromVm) {
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(GetStringAtDsDx());
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
+    /// <summary>
+    /// Returns the bytes per sector (in CX), sectors per cluster (in AX), total clusters (in DX), media id (in DS), and drive parameter block address for the default drive (in BX). <br/>
+    /// Sets the AH register to 0.
+    /// TODO: Implement it for real. This is just a stub that returns the same information as <see cref="GetAllocationInfoForDefaultDrive"/> as we can only mount C: !
+    /// </summary>
     public void GetAllocationInfoForAnyDrive() {
         GetAllocationInfoForDefaultDrive();
     }
 
+    /// <summary>
+    /// Returns the bytes per sector (in CX), sectors per cluster (in AX), total clusters (in DX), media id (in DS), and drive parameter block address for the default drive (in BX). <br/>
+    /// Sets the AH register to 0. <br/>
+    /// Notes: always returns the same values.
+    /// </summary>
     public void GetAllocationInfoForDefaultDrive() {
         // Bytes per sector
         State.CX = 0x200;
@@ -232,6 +251,10 @@ public class DosInt21Handler : InterruptHandler {
         State.AH = 0;
     }
 
+    /// <summary>
+    /// Either gets (AL: 0) or sets (AL: not zero) the country code. <br/>
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void SetCountryCode(bool calledFromVm) {
         switch (State.AL) {
             case 0: //Get country specific information
@@ -250,6 +273,14 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Allocates a memory block of the requested size in BX. <br/>
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error. Possible error code in AX: 0x08 (Insufficient memory).
+    /// </returns>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void AllocateMemoryBlock(bool calledFromVm) {
         ushort requestedSize = State.BX;
         LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSize);
@@ -268,8 +299,16 @@ public class DosInt21Handler : InterruptHandler {
         State.AX = res.UsableSpaceSegment;
     }
 
+    /// <summary>
+    /// Changes the current directory to the one pointed by DS:DX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void ChangeCurrentDirectory(bool calledFromVm) {
-        string newDirectory = GetStringAtDsDx();
+        string newDirectory = GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SET CURRENT DIRECTORY: {NewDirectory}", newDirectory);
         }
@@ -277,12 +316,23 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
+    /// <summary>
+    /// Clears the keyboard buffer and calls the INT21H function number from AL.
+    /// </summary>
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
         byte operation = State.AL;
         LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
         Run(operation);
     }
 
+    /// <summary>
+    /// Closes a file handle. The handle is in BX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns> 
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void CloseFile(bool calledFromVm) {
         ushort fileHandle = State.BX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -292,8 +342,16 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
+    /// <summary>
+    /// Creates a file using a handle. The file name is in DS:DX, the file attribute in CX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void CreateFileUsingHandle(bool calledFromVm) {
-        string fileName = GetStringAtDsDx();
+        string fileName = GetZeroTerminatedStringAtDsDx();
         ushort fileAttribute = State.CX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("CREATE FILE USING HANDLE: {FileName} with attribute {FileAttribute}", fileName, fileAttribute);
@@ -302,6 +360,16 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
+    /// <summary>
+    /// Performs an IO control operation. <br/>
+    /// TODO: Read from STDIN is not implemented.
+    /// TODO: Print to STDOUT only prints to the log, not to the standard output.
+    /// </summary>
+    /// <returns>
+    /// If there is no keycode pending in the keyboard controller buffer, ZF is cleared and AL is set to 0. <br/>
+    /// Otherwise, the Zero flag is cleared and the keycode is in AL.
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void DirectConsoleIo(bool calledFromVm) {
         byte character = State.DL;
         if (character == 0xFF) {
@@ -324,12 +392,19 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Disk Reset. Not implemented. Does nothing.
+    /// </summary>
     public void DiskReset() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("DISK RESET (Nothing to do...)");
         }
     }
 
+    /// <summary>
+    /// Puts the character in DL in the internal string buffer named _displayOutputBuilder.<br/>
+    /// TODO: This is only a stub that prints nothing on screen.
+    /// </summary>
     public void DisplayOutput() {
         byte characterByte = State.DL;
         string character = ConvertSingleDosChar(characterByte);
@@ -346,6 +421,14 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Duplicate a file handle. The handle is in BX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void DuplicateFileHandle(bool calledFromVm) {
         ushort fileHandle = State.BX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -355,9 +438,18 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
+    /// <summary>
+    /// Finds the first file matching the DOS file spec pointed by DS:DX and the attributes in CX. <br/>
+    /// </summary>
+    /// <returns>
+    /// CF and AX are cleared on success. <br/>
+    /// CF is set on error. <br/>
+    /// The matching file is returned in the Disk Transfer Area.
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FindFirstMatchingFile(bool calledFromVm) {
         ushort attributes = State.CX;
-        string fileSpec = GetStringAtDsDx();
+        string fileSpec = GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FIND FIRST MATCHING FILE {Attributes}, {FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
         }
@@ -377,9 +469,18 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Finds the next file matching the DOS file spec given to <see cref="FindFirstMatchingFile"/>. <br/>
+    /// </summary>
+    /// <returns>
+    /// CF and AX are cleared on success. <br/>
+    /// CF is set on error. <br/>
+    /// The matching file is returned in the Disk Transfer Area.
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FindNextMatchingFile(bool calledFromVm) {
         ushort attributes = State.CX;
-        string fileSpec = GetStringAtDsDx();
+        string fileSpec = GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FIND NEXT MATCHING FILE {Attributes}, {FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
         }
@@ -388,6 +489,14 @@ public class DosInt21Handler : InterruptHandler {
         SetAxToZeroOnSuccess(dosFileOperationResult);
     }
 
+    /// <summary>
+    /// Free a memory block identified by the block segment in ES. <br/>
+    /// </summary>
+    /// <returns>
+    /// CF and AX are cleared on success. <br/>
+    /// CF is set on error. Possible error code in AX: 0x09 (Invalid memory block address). <br/>
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FreeMemoryBlock(bool calledFromVm) {
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -402,6 +511,12 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Gets the current default drive
+    /// </summary>
+    /// <returns>
+    /// AL = current default drive (0x0: A:, 0x1: B:, 0x2: C:, 0x3: D:, ...)
+    /// </returns>
     public void GetCurrentDefaultDrive() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET CURRENT DEFAULT DRIVE");
@@ -409,6 +524,15 @@ public class DosInt21Handler : InterruptHandler {
         State.AL = _dosFileManager.DefaultDrive;
     }
 
+    /// <summary>
+    /// Gets the current data from the host's DateTime.Now.
+    /// </summary>
+    /// <returns>
+    /// AL = day of the week <br/>
+    /// CX = year <br/>
+    /// DH = month <br/>
+    /// DL = day <br/>
+    /// </returns>
     public void GetDate() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET DATE");
@@ -498,6 +622,9 @@ public class DosInt21Handler : InterruptHandler {
     /// <summary>
     /// Gets the address of the current Program Segment Prefix.
     /// </summary>
+    /// <returns>
+    /// The segment of the current PSP in BX.
+    /// </returns>
     public void GetPspAddress() {
         ushort pspSegment = _dosMemoryManager.PspSegment;
         State.BX = pspSegment;
@@ -506,6 +633,13 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Gets or sets the Ctrl-C flag. AL: 0 = get, 1 or 2 = set it from DL.
+    /// </summary>
+    /// <returns>
+    /// The Ctrl-C flag in DL if AL is 0. <br/>
+    /// </returns>
+    /// <exception cref="UnhandledOperationException">If the operation in AL is not supported.</exception>
     public void GetSetControlBreak() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET/SET CTRL-C FLAG");
@@ -523,7 +657,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns the current MS-DOS time.
+    /// Returns the current MS-DOS time in CH (hour), CL (minute), DH (second), and DL (millisecond) from the host's DateTime.Now.
     /// </summary>
     public void GetTime() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -536,6 +670,15 @@ public class DosInt21Handler : InterruptHandler {
         State.DL = (byte)now.Millisecond;
     }
 
+    /// <summary>
+    /// Modifies a memory block identified by the block segment in ES, and sets the new requested size to the value in BX. <br/>
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error. BX is set to zero on error. <br/>
+    /// Possible error code in AX: 0x08 (Insufficient memory).
+    /// </returns>
+    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void ModifyMemoryBlock(bool calledFromVm) {
         ushort requestedSize = State.BX;
         ushort blockSegment = State.ES;
@@ -552,6 +695,14 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Moves a file using a DOS handle. AL specifies the origin of the move, BX the file handle, CX:DX the offset.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void MoveFilePointerUsingHandle(bool calledFromVm) {
         byte originOfMove = State.AL;
         ushort fileHandle = State.BX;
@@ -566,8 +717,16 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
+    /// <summary>
+    /// Opens the file pointed by DS:DX with the access mode in AL.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void OpenFile(bool calledFromVm) {
-        string fileName = GetStringAtDsDx();
+        string fileName = GetZeroTerminatedStringAtDsDx();
         byte accessMode = State.AL;
         byte rwAccessMode = (byte)(accessMode & 0b111);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -578,6 +737,9 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
+    /// <summary>
+    /// Prints a dollar terminated string pointed by DS:DX to the screen at the current cursor position and page.
+    /// </summary>
     public void PrintString() {
         ushort segment = State.DS;
         ushort offset = State.DX;
@@ -590,6 +752,10 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    /// <summary>
+    /// Quits the current DOS process and sets the exit code from the value in the AL register. <br/>
+    /// TODO: This is only a stub that sets the cpu state <see cref="State.IsRunning"/> property to <c>False</c>, thus ending the emulation loop !
+    /// </summary>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -598,6 +764,14 @@ public class DosInt21Handler : InterruptHandler {
         State.IsRunning = false;
     }
 
+    /// <summary>
+    /// Reads a file from disk from the file handle in BX, the read length in CX, and the buffer at DS:DX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void ReadFile(bool calledFromVm) {
         ushort fileHandle = State.BX;
         ushort readLength = State.CX;
@@ -616,6 +790,12 @@ public class DosInt21Handler : InterruptHandler {
         Run(operation);
     }
 
+    /// <summary>
+    /// Sets the default drive from the value in the DL register.
+    /// </summary>
+    /// <returns>
+    /// The number of potentially valid drive letters in AL.
+    /// </returns>
     public void SelectDefaultDrive() {
         _dosFileManager.SelectDefaultDrive(State.DL);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -625,7 +805,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Sets the address of the DTA.
+    /// Sets the address of the DTA from DS:DX.
     /// </summary>
     public void SetDiskTransferAddress() {
         ushort segment = State.DS;
@@ -637,6 +817,13 @@ public class DosInt21Handler : InterruptHandler {
         _dosFileManager.SetDiskTransferAreaAddress(segment, offset);
     }
 
+    /// <summary>
+    /// Sets a new interrupt vector from an existing on in the Interrupt Vector Table. <br/>
+    /// Be sure to call <see cref="GetInterruptVector"/> first to get the current vector address. <br/>
+    /// Params: <br/>
+    /// - AL: Vector Number <br/>
+    /// - DS:DX: New interrupt vector address
+    /// </summary>
     public void SetInterruptVector() {
         byte vectorNumber = State.AL;
         ushort segment = State.DS;
@@ -649,10 +836,24 @@ public class DosInt21Handler : InterruptHandler {
         SetInterruptVector(vectorNumber, segment, offset);
     }
 
+    /// <summary>
+    /// Sets a new interrupt vector from an existing on in the Interrupt Vector Table.
+    /// </summary>
+    /// <param name="vectorNumber">The vector number the new vector will answer to.</param>
+    /// <param name="segment">The address of the new interrupt vector, segment part.</param>
+    /// <param name="offset">The address of the new interrupt vector, offset part.</param>
     public void SetInterruptVector(byte vectorNumber, ushort segment, ushort offset) {
         _interruptVectorTable[vectorNumber] = new(segment, offset);
     }
 
+    /// <summary>
+    /// Writes a file to disk from the file handle in BX, the file length in CX, and the buffer at DS:DX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether the called was called by the emulator.</param>
     public void WriteFileUsingHandle(bool calledFromVm) {
         ushort fileHandle = State.BX;
         ushort writeLength = State.CX;
@@ -676,17 +877,17 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Gets an ASCIZ pathname containing the current DOS directory in the address at DS:DI. <br/>
+    /// Gets an ASCIIZ pathname containing the current DOS directory in the address at DS:DI. <br/>
     /// Params: <br/>
-    /// DL = drive number (0x0: default, 0x1: A:, 0x2: B:, 0x3: C:, ...)
+    /// DL = drive number (0x0: A:, 0x1: B:, 0x2: C:, 0x3: D:, ...)
     /// </summary>
     /// <remarks>
     /// Does not include a drive, or the initial backslash
     /// </remarks>
     /// <returns>
     /// DS:DI = ASCIZ pathname containing the current DOS directory. <br/>
-    /// CF is clear if sucessful. <br/>
-    /// CF is set on error. Possible error code in AX: 0xF (InvalidDrive).
+    /// CF is cleared on success. <br/>
+    /// CF is set on error. Possible error code in AX: 0xF (Invalid Drive).
     /// </returns>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void GetCurrentDirectory(bool calledFromVm) {
@@ -703,7 +904,15 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
-    private string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
+    /// <summary>
+    /// Gets a string from the memory at the given segment and offset, until the given end character is found.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="segment">The segment part of the start address.</param>
+    /// <param name="offset">The offset part of the start address.</param>
+    /// <param name="end">The end character. Usually zero.</param>
+    /// <returns>The string from memory.</returns>
+    public string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
         StringBuilder stringBuilder = new();
         List<byte> sourceArray = new();
@@ -715,9 +924,20 @@ public class DosInt21Handler : InterruptHandler {
         return stringBuilder.ToString();
     }
 
+    /// <summary>
+    /// Gets (AL: 0) or sets (AL: 1) file attributes for the file identified via its file path at DS:DX.
+    /// TODO: The Set File Attributes operation is not implemented.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error. Possible error code in AX: 0x2 (File not found). <br/>
+    /// TODO: Always returns that the file is read / write in Get File Attributes mode.
+    /// </returns>
+    /// <exception cref="UnhandledOperationException">When the operation in the AL Register is not supported.</exception>
+    /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
     public void GetSetFileAttributes(bool calledFromVm) {
         byte op = State.AL;
-        string dosFileName = GetStringAtDsDx();
+        string dosFileName = GetZeroTerminatedStringAtDsDx();
         string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
@@ -730,7 +950,7 @@ public class DosInt21Handler : InterruptHandler {
         switch (op) {
             case 0: {
                     if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        LoggerService.Verbose("GET FILE ATTRIBUTE {FilneName}", fileName);
+                        LoggerService.Verbose("GET FILE ATTRIBUTE {FileName}", fileName);
                     }
                     FileAttributes attributes = File.GetAttributes(fileName);
                     // let's always return the file is read / write
@@ -749,11 +969,28 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
-    private string GetStringAtDsDx() {
+    /// <summary>
+    /// Gets a zero terminated string from the memory at DS:DX.
+    /// </summary>
+    /// <returns>The string from memory.</returns>
+    public string GetZeroTerminatedStringAtDsDx() {
         return GetDosString(Memory, State.DS, State.DX, '\0');
     }
 
-    private void IoControl(bool calledFromVm) {
+    /// <summary>
+    /// Provides three operations: get device information, set device information, and get logical drive for physical drive. <br/>
+    /// <para>
+    /// AL = 0: Get device information from the device handle in BX. Returns result in DX. TODO: Implement it entirely. <br/>
+    /// AL = 1: Set device information. Does nothing. TODO: Implement it. <br/>
+    /// AL = 0xE: Get logical drive for physical drive. Always returns 0 in AL for only one drive. TODO: Update it once we mount more than just C: ! <br/> <br/>
+    /// </para>
+    /// </summary>
+    /// <returns>
+    /// Always indicates success by clearing the carry flag.
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
+    /// <exception cref="UnhandledOperationException">When the IO control operation in the AL Register is not recognized.</exception>
+    public void IoControl(bool calledFromVm) {
         byte op = State.AL;
         ushort handle = State.BX;
 
