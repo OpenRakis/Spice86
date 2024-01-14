@@ -35,6 +35,7 @@ public class VideoState : IVideoState {
     /// <inheritdoc />
     public AttributeControllerRegisters AttributeControllerRegisters { get; }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitVideoState(this);
         DacRegisters.Accept(emulatorDebugger);

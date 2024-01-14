@@ -5,6 +5,9 @@ namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Instruction set of the CPU
+/// </summary>
 public abstract class Instructions {
     protected readonly Cpu Cpu;
     protected readonly State State;
