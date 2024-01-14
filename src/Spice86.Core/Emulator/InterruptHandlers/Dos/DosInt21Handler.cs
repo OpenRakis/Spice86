@@ -900,7 +900,9 @@ public class DosInt21Handler : InterruptHandler {
         Memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length);
         SetCarryFlag(false, calledFromVm);
         // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
-        State.AX = 0x0100;
+        if(!result.IsError) {
+            State.AX = 0x0100;
+        }
         SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
