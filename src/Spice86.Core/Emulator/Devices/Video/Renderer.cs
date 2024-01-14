@@ -320,6 +320,7 @@ public class Renderer : IVgaRenderer {
         }
     }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitVgaRenderer(this);
     }

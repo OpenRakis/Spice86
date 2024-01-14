@@ -12,6 +12,12 @@ using Spice86.Shared.Utils;
 /// Reimplementation of int2f
 /// </summary>
 public class DosInt2fHandler : InterruptHandler {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public DosInt2fHandler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         FillDispatchTable();
     }
@@ -42,6 +48,10 @@ public class DosInt2fHandler : InterruptHandler {
         State.CX = 0;
     }
 
+    /// <summary>
+    /// Sends a DOS device driver request. Always fails.
+    /// TOOD: Implement this.
+    /// </summary>
     public void SendDeviceDriverRequest() {
         ushort drive = State.CX;
         uint deviceDriverRequestHeaderAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);

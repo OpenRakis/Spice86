@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -240,23 +239,29 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         State.AH = EmmStatus.EmmNoError;
     }
 
-    public EmmHandle AllocatePages(ushort numberOfPagesToAlloc, EmmHandle? newHandle = null) {
-        int key = newHandle?.HandleNumber ?? EmmHandles.Count;
-        newHandle ??= new() {
+    /// <summary>
+    /// Allocates logical pages to a handle.
+    /// </summary>
+    /// <param name="numberOfPagesToAlloc">The number of pages to allocate</param>
+    /// <param name="existingHandle">Used to reallocate logical pages to an existing handle. Optional.</param>
+    /// <returns>The modified <see cref="EmmHandle"/> instance.</returns>
+    public EmmHandle AllocatePages(ushort numberOfPagesToAlloc, EmmHandle? existingHandle = null) {
+        int key = existingHandle?.HandleNumber ?? EmmHandles.Count;
+        existingHandle ??= new() {
             HandleNumber = (ushort)key
         };
         while (numberOfPagesToAlloc > 0) {
-            ushort pageNumber = (ushort)newHandle.LogicalPages.Count;
-            newHandle.LogicalPages.Add(new EmmPage(EmmPageSize){
+            ushort pageNumber = (ushort)existingHandle.LogicalPages.Count;
+            existingHandle.LogicalPages.Add(new EmmPage(EmmPageSize){
                 PageNumber = pageNumber
             });
             numberOfPagesToAlloc--;
         }
 
-        if (!EmmHandles.TryAdd(key, newHandle)) {
-            EmmHandles[key] = newHandle;
+        if (!EmmHandles.TryAdd(key, existingHandle)) {
+            EmmHandles[key] = existingHandle;
         }
-        return newHandle;
+        return existingHandle;
     }
 
     /// <summary>
@@ -284,6 +289,28 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         State.AH = MapUnmapHandlePage(logicalPageNumber, physicalPageNumber, handleId);
     }
 
+    /// <summary>
+    /// The Map/Unmap Handle Page function maps a logical page at a specific
+    /// physical page anywhere in the mappable regions of system memory. <br/>
+    /// The lowest valued physical page numbers are associated with regions of
+    /// memory outside the conventional memory range.  Use Function 25 (Get Mappable Physical Address Array)
+    /// to determine which physical pages within a system are mappable and determine the segment addresses which
+    /// correspond to a specific physical page number.  Function 25 provides a
+    /// cross reference between physical page numbers and segment addresses. <br/>
+    /// This function can also unmap physical pages, making them inaccessible for reading or writing. <br/>
+    /// You unmap a physical page by setting its associated logical page to FFFFh.
+    /// </summary>
+    /// <param name="handleId">The Id of the EMM handle.</param>
+    /// <param name="logicalPageNumber">The logical page number.</param>
+    /// <param name="physicalPageNumber">The physical page number.</param>
+    /// <remarks>
+    /// The handle determines what type of pages are being mapped. <br/>
+    /// Logical pages allocated by Function 4 and Function 27 (Allocate Standard Pages
+    /// subFunction) are referred to as pages and are 16K bytes long. <br/>
+    /// Logical pages allocated by Function 27 (Allocate Raw Pages subFunction) are
+    /// referred to as raw pages and might not be the same size as logical pages.
+    /// </remarks>
+    /// <returns>The status code.</returns>
     public byte MapUnmapHandlePage(ushort logicalPageNumber, ushort physicalPageNumber, ushort handleId) {
         if (physicalPageNumber > EmmPageFrame.Count) {
             if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -333,6 +360,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     private bool IsValidHandle(ushort handleId) => EmmHandles.ContainsKey(handleId);
 
+    /// <summary>
+    /// Maps a memory segment to a logical page.
+    /// </summary>
+    /// <param name="logicalPage">The logical page number</param>
+    /// <param name="segment">The memory segment</param>
+    /// <param name="handleId">The EMM Handle Id</param>
     public void MapSegment(ushort logicalPage, ushort segment, ushort handleId) {
         uint address = MemoryUtils.ToPhysicalAddress(segment, 0);
         uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
@@ -408,6 +441,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         State.AH = SavePageMap(State.DX);
     }
 
+    /// <summary>
+    /// Saves the page map to the <see cref="EmmPageFrameSave"/> dictionary.
+    /// </summary>
+    /// <param name="handleId">The Id of the EMM handle to be saved.</param>
+    /// <returns>The status code.</returns>
     public byte SavePageMap(ushort handleId) {
         if (!IsValidHandle(handleId)) {
             if (handleId != 0) {
@@ -455,6 +493,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         State.AH = RestorePageMap(State.DX);
     }
 
+    /// <summary>
+    /// Restores the page map from the <see cref="EmmPageFrameSave"/> dictionary.
+    /// </summary>
+    /// <param name="handleId">The Id of the EMM handle to restore.</param>
+    /// <returns>The status code.</returns>
     public byte RestorePageMap(ushort handleId) {
         if (!IsValidHandle(handleId)) {
             if (handleId != 0) {
@@ -514,6 +557,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         State.AX = EmmStatus.EmmNoError;
     }
 
+    /// <summary>
+    /// The Get All Handle Pages function returns an array of the open EMM
+    /// handles and the number of pages allocated to each one.
+    /// </summary>
+    /// <param name="tableAddress">The linear address of the table to fill.</param>
+    /// <returns>The status code.</returns>
     public byte GetAllHandlePages(uint tableAddress) {
         foreach(KeyValuePair<int, EmmHandle> allocatedHandle in EmmHandles) {
             Memory.UInt16[tableAddress] = allocatedHandle.Value.HandleNumber;

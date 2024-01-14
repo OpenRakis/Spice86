@@ -58,6 +58,7 @@ public class VgaCard : IDebuggableComponent {
         _renderer.Render(buffer);
     }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitVgaCard(this);
     }

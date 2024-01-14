@@ -17,7 +17,7 @@ public class EmmPage {
     /// <summary>
     /// THe page's memory content.
     /// </summary>
-    public Ram PageMemory { get; set; }
+    public Ram PageMemory { get; }
 
     /// <summary>
     /// The logical page number, for book keeping inside our dictionaries.

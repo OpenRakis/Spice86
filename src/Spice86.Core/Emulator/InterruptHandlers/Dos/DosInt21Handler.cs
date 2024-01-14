@@ -21,7 +21,7 @@ using System.Linq;
 using System.Text;
 
 /// <summary>
-/// Implements the DOS interrupt dispatcher
+/// Implementation of the DOS INT21H services.
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
     private readonly Encoding _cp850CharSet;
