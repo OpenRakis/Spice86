@@ -6,7 +6,11 @@ using System.Collections.Frozen;
 using System.Collections.ObjectModel;
 using System.Diagnostics.Contracts;
 
-public static class Ym7128B {
+/// <summary>
+/// The Yamaha Surround Processor chip
+/// Internal class until used by the future Adlib Gold implementation.
+/// </summary>
+internal static class Ym7128B {
     public const int Ym7128BFloatMin = -1;
     public const int Ym7128BFloatMax = 1;
 

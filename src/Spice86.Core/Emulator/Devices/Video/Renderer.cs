@@ -7,7 +7,7 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 
 using System.Diagnostics;
 
-/// <inheritdoc />
+/// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly IVideoMemory _memory;

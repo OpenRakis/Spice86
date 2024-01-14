@@ -6,7 +6,7 @@ using Serilog.Events;
 using Serilog.Exceptions;
 using Spice86.Shared.Interfaces;
 
-/// <inheritdoc/>
+/// <inheritdoc cref="ILoggerService"/>
 public class LoggerService : ILoggerService {
     /// <summary>
     /// The format for the log message that will be output.

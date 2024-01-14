@@ -74,7 +74,7 @@ public abstract class Indexable : IIndexable {
     /// </summary>
     /// <param name="address">The address in memory from where to read</param>
     /// <param name="maxLength">The maximum string length</param>
-    /// <returns></returns>
+    /// <returns>The zero-terminated string retrieved from memory.</returns>
     public virtual string GetZeroTerminatedString(uint address, int maxLength) {
         StringBuilder res = new();
         for (int i = 0; i < maxLength; i++) {

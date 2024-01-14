@@ -439,7 +439,6 @@ public class DosFileManager {
     /// <param name="fileHandle">The handle to the file.</param>
     /// <param name="readLength">The amount of data to read.</param>
     /// <param name="targetAddress">The start address of the receiving buffer.</param>
-    /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult ReadFile(ushort fileHandle, ushort readLength, uint targetAddress) {
         OpenFile? file = GetOpenFile(fileHandle);
@@ -708,7 +707,6 @@ public class DosFileManager {
     /// Creates a directory on disk.
     /// </summary>
     /// <param name="dosDirectory">The directory name to create</param>
-    /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
         string? parentFolder = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(dosDirectory);
@@ -741,7 +739,6 @@ public class DosFileManager {
     /// Removes a file on disk.
     /// </summary>
     /// <param name="dosFile">The file name to delete</param>
-    /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveFile(string dosFile) {
         string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile);
@@ -770,7 +767,6 @@ public class DosFileManager {
     /// Removes a directory on disk.
     /// </summary>
     /// <param name="dosDirectory">The directory name to delete</param>
-    /// <returns></returns>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
         string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosDirectory);

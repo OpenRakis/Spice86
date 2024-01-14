@@ -123,10 +123,10 @@ public sealed class FmSynthesizer {
             // Through out this emulator we will use the same name convention to
             // reference a byte with several bit registers.
             // The name of each bit register will be followed by the number of bits
-            // it occupies inside the byte. 
+            // it occupies inside the byte.
             // Numbers without accompanying names are unused bits.
             case 0x00:
-                // Unique registers for the entire OPL3:                
+                // Unique registers for the entire OPL3:
                 if (array == 1) {
                     if (address == 0x04) {
                         Update_2_CONNECTIONSEL6();
@@ -175,7 +175,7 @@ public sealed class FmSynthesizer {
                 int operatorOffset = address & 0x1F;
 
                 switch (address & 0xE0) {
-                    // 0x20...0x35 keeps am,vib,egt,ksr,mult for each operator:                
+                    // 0x20...0x35 keeps am,vib,egt,ksr,mult for each operator:
                     case 0x20:
                         _operators[array, operatorOffset]?.Update_AM1_VIB1_EGT1_KSR1_MULT4();
                         break;

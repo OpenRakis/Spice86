@@ -21,7 +21,10 @@ public class BiosKeyboardBuffer {
         _biosDataArea = biosDataArea;
     }
 
-    public void Init() {
+    /// <summary>
+    /// Setups the <see cref="StartAddress"/> and <see cref="EndAddress"/> of the BIOS keyboard buffer in memory.
+    /// </summary>
+    internal void Init() {
         // absolute base address is uint but BDA is low in memory so it fits in ushort
         StartAddress = (ushort)_biosDataArea.KbdBuf.BaseAddress;
         EndAddress = (ushort)(StartAddress + _biosDataArea.KbdBuf.Count);
@@ -92,9 +95,9 @@ public class BiosKeyboardBuffer {
     }
 
     /// <summary>
-    /// Peek the keycode without dequeuing it
+    /// Peeks at the pending keycode in the BIOS keyboard buffer, and returns it without dequeuing it
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The pending keycode, or <c>null</c> if <see cref="IsEmpty"/> is <c>True</c>.</returns>
     public ushort? PeekKeyCode() {
         if (IsEmpty) {
             return null;

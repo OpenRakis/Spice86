@@ -5,7 +5,6 @@ using Spice86.Core.Emulator.Memory;
 
 using System;
 using System.Threading;
-using System.Timers;
 
 /// <summary>
 /// Emulates the Sound Blaster 16 DSP.

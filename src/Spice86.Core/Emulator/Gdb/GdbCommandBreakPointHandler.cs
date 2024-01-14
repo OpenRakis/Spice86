@@ -135,7 +135,7 @@ public class GdbCommandBreakpointHandler {
     /// Removes a breakpoint
     /// </summary>
     /// <param name="commandContent">The breakpoint command string.</param>
-    /// <returns></returns>
+    /// <returns>Either an empty string if the breakpoint string could not be parsed, or "OK"</returns>
     public string RemoveBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         if (breakPoint == null) {

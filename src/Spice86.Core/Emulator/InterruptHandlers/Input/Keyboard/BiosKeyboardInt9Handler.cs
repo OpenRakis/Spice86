@@ -5,12 +5,10 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Memory.Indexable;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Crude implementation of Int9
+/// Crude implementation of BIOS keyboard buffer handler (interrupt 0x9)
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
@@ -32,6 +30,9 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         BiosKeyboardBuffer.Init();
     }
 
+    /// <summary>
+    /// Gets the BIOS keyboard buffer.
+    /// </summary>
     public BiosKeyboardBuffer BiosKeyboardBuffer { get; }
 
     /// <inheritdoc />
@@ -39,8 +40,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte? scancode = _keyboard.LastKeyboardInput.ScanCode;
-        if (scancode is null) {
+        if (_keyboard.LastKeyboardInput.ScanCode is null) {
             return;
         }
 
@@ -50,7 +50,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
             LoggerService.Verbose("{BiosInt9KeyReceived}", ascii);
         }
 
-        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scancode.Value << 8 | ascii));
+        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(_keyboard.LastKeyboardInput.ScanCode.Value << 8 | ascii));
         _dualPic.AcknowledgeInterrupt(1);
     }
 }

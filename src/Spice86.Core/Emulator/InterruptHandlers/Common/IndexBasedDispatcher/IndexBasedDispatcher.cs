@@ -68,7 +68,7 @@ public abstract class IndexBasedDispatcher<T> where T: IRunnable {
     /// Gets the runnables from the <see cref="_dispatchTable"/>
     /// </summary>
     /// <param name="index">The index at which the runnables is supposed to be available.</param>
-    /// <returns></returns>
+    /// <returns>The piece of runnable C# code, in other words the function implementation.</returns>
     /// <exception cref="UnhandledOperationException">If the runnables is not found in the <see cref="_dispatchTable"/></exception>
     protected T GetRunnable(int index) {
         if (!_dispatchTable.TryGetValue(index, out T? handler)) {
@@ -81,6 +81,6 @@ public abstract class IndexBasedDispatcher<T> where T: IRunnable {
     /// Helper method that generates an <see cref="UnhandledOperationException"/>
     /// </summary>
     /// <param name="index">The index at which the runnables is supposed to be available.</param>
-    /// <returns></returns>
+    /// <returns>An <see cref="UnhandledOperationException"/> instance.</returns>
     protected abstract UnhandledOperationException GenerateUnhandledOperationException(int index);
 }

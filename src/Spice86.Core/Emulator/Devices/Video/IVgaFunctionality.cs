@@ -12,7 +12,7 @@ public interface IVgaFunctionality {
     /// <summary>
     ///     Write a text string to the screen at the current cursor position and page.
     /// </summary>
-    /// <param name="text"></param>
+    /// <param name="text">The text string to print on the screen.</param>
     void WriteString(string text);
 
     /// <summary>
@@ -108,7 +108,7 @@ public interface IVgaFunctionality {
     /// <summary>
     ///     Set the color select register.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write.</param>
     void SetColorSelectRegister(byte value);
 
     /// <summary>
@@ -116,7 +116,7 @@ public interface IVgaFunctionality {
     /// </summary>
     /// <param name="startIndex">Start index in the palette.</param>
     /// <param name="count">Amount of entries to return</param>
-    /// <returns></returns>
+    /// <returns>A byte array of palette entries.</returns>
     byte[] ReadFromDac(byte startIndex, int count);
 
     /// <summary>
@@ -131,7 +131,7 @@ public interface IVgaFunctionality {
     /// <summary>
     ///     Set the Pixel Mask register.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write.</param>
     void WriteToPixelMask(byte value);
 
     /// <summary>
@@ -160,27 +160,26 @@ public interface IVgaFunctionality {
     ///     Get the cursor position on the specified page.
     /// </summary>
     /// <param name="currentVideoPage">Which of the 8 pages to get the cursor from</param>
-    /// <returns></returns>
+    /// <returns>A mutable struct with value based equality representing the cursor position.</returns>
     CursorPosition GetCursorPosition(byte currentVideoPage);
 
     /// <summary>
     ///     Set the cursor position on the current page.
     /// </summary>
-    /// <param name="cursorPosition"></param>
     void SetCursorPosition(CursorPosition cursorPosition);
 
     /// <summary>
     ///     Write the specified character to the specified cursor position on the current page.
     /// </summary>
-    /// <param name="cursorPosition"></param>
-    /// <param name="characterPlusAttribute"></param>
-    /// <returns></returns>
+    /// <param name="cursorPosition">The struct representing the cursor position.</param>
+    /// <param name="characterPlusAttribute">The character to write.</param>
+    /// <returns>A mutable struct with value based equality representing the cursor position.</returns>
     CursorPosition WriteTeletype(CursorPosition cursorPosition, CharacterPlusAttribute characterPlusAttribute);
 
     /// <summary>
     ///     Write the specified character to the current cursor position on the current page.
     /// </summary>
-    /// <param name="characterPlusAttribute"></param>
+    /// <param name="characterPlusAttribute">The character to write.</param>
     void WriteTextInTeletypeMode(CharacterPlusAttribute characterPlusAttribute);
 
     /// <summary>
@@ -205,20 +204,20 @@ public interface IVgaFunctionality {
     /// <summary>
     ///     Get the character at the specified cursor position on the current page.
     /// </summary>
-    /// <param name="cursorPosition"></param>
+    /// <param name="cursorPosition">The struct representing the cursor position.</param>
     CharacterPlusAttribute ReadChar(CursorPosition cursorPosition);
 
     /// <summary>
     ///     Switch to the specified page.
     /// </summary>
-    /// <param name="page"></param>
+    /// <param name="page">The page to switch to. Can't be above 7.</param>
     /// <returns>Start address of the specified page.</returns>
     int SetActivePage(byte page);
 
     /// <summary>
     ///     Set the shape of the text cursor.
     /// </summary>
-    /// <param name="cursorType"></param>
+    /// <param name="cursorType">The ushort value representing the text cursor shape to apply.</param>
     void SetCursorShape(ushort cursorType);
 
     /// <summary>
@@ -245,15 +244,15 @@ public interface IVgaFunctionality {
     void VgaSetMode(int modeId, ModeFlags flags);
 
     /// <summary>
-    ///     Get the value oif the feature switches register.
+    ///     Get the value of the feature switches register.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>A byte representing the value of the features switches register.</returns>
     byte GetFeatureSwitches();
 
     /// <summary>
     ///     Get whether the current mode is a color mode.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>A boolean value.</returns>
     bool GetColorMode();
 
     /// <summary>
@@ -262,27 +261,27 @@ public interface IVgaFunctionality {
     void SelectScanLines(int lines);
 
     /// <summary>
-    ///     Specify whether to use switch to the default palette when loading a new mode.
+    ///     Specify whether to switch to the default palette when loading a new mode.
     /// </summary>
-    /// <param name="enabled"></param>
+    /// <param name="enabled">Whether we switch to the default color palette.</param>
     void DefaultPaletteLoading(bool enabled);
 
     /// <summary>
     ///     Enable or disable video addressing.
     /// </summary>
-    /// <param name="enabled"></param>
+    /// <param name="enabled">Set to <c>False</c> to disable video addressing.</param>
     void EnableVideoAddressing(bool enabled);
 
     /// <summary>
     ///     Enable or disable the gray scale summing.
     /// </summary>
-    /// <param name="enabled"></param>
+    /// <param name="enabled">Set to <c>False</c> to disable the gray scale summing.</param>
     void SummingToGrayScales(bool enabled);
 
     /// <summary>
     ///     Enable or disable the cursor emulation.
     /// </summary>
-    /// <param name="enabled"></param>
+    /// <param name="enabled">Set to <c>False</c> to disable the cursor emulation.</param>
     void CursorEmulation(bool enabled);
 
     /// <summary>
@@ -364,11 +363,11 @@ public interface IVgaFunctionality {
     void VerifyScroll(int direction, byte upperLeftX, byte upperLeftY, byte lowerRightX, byte lowerRightY, int lines, byte attribute);
 
     /// <summary>
-    ///     Clear an area of the screen.
+    ///     Clear an area of the screen. Can be used both in text mode and graphical mode.
     /// </summary>
-    /// <param name="startPosition"></param>
-    /// <param name="area"></param>
-    /// <param name="characterPlusAttribute"></param>
+    /// <param name="startPosition">The start cursor position</param>
+    /// <param name="area">The rectangular area of text to erase</param>
+    /// <param name="characterPlusAttribute">A character with an attribute. If it has the <see cref="CharacterPlusAttribute.UseAttribute"/> the <see cref="CharacterPlusAttribute.Attribute"/> will be used to determine the value used to erase memory. Else, the Default character attribute will be used.</param>
     void ClearCharacters(CursorPosition startPosition, Area area, CharacterPlusAttribute characterPlusAttribute);
 
     /// <summary>

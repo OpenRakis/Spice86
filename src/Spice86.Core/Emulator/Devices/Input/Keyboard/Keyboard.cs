@@ -68,9 +68,7 @@ public class Keyboard : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override byte ReadByte(int port) {
         byte? scancode = LastKeyboardInput.ScanCode;
-        if (scancode == null) {
-            scancode = 0;
-        }
+        scancode ??= 0;
 
         return port switch {
             KeyboardPorts.Data => scancode.Value,

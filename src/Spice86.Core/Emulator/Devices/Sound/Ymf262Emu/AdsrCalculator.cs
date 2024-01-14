@@ -174,7 +174,7 @@ internal sealed class AdsrCalculator
                 goto case AdsrState.Decay;
 
             case AdsrState.Decay:
-                // The decay and release are linear.                
+                // The decay and release are linear.
                 if (_envelope > envelopeSustainLevel)
                 {
                     _envelope -= _dBdecayIncrement;
@@ -274,7 +274,7 @@ internal sealed class AdsrCalculator
 
     private static ReadOnlySpan<double> GetAttackTimeValues(int i) => new(AttackTimeValuesTable, i * 2, 2);
 
-    // These attack periods in miliseconds were taken from the YMF278B manual. 
+    // These attack periods in milliseconds were taken from the YMF278B manual. 
     // The attack actual rates range from 0 to 63, with different data for 
     // 0%-100% and for 10%-90%: 
     private static readonly double[] AttackTimeValuesTable =
@@ -348,7 +348,7 @@ internal sealed class AdsrCalculator
         0.00, 0.00
     };
 
-    // These decay and release periods in miliseconds were taken from the YMF278B manual. 
+    // These decay and release periods in milliseconds were taken from the YMF278B manual. 
     // The rate index range from 0 to 63, with different data for 
     // 0%-100% and for 10%-90%: 
     private static readonly double[] DecayAndReleaseTimeValuesTable =

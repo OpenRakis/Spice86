@@ -3,9 +3,6 @@ namespace Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
