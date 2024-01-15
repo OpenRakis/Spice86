@@ -3,7 +3,16 @@
 using System.Numerics;
 
 /// <summary>
-/// Arithmetic-logic unit
+/// Represents the Arithmetic-Logic Unit (ALU) of the CPU.
+/// <para>
+/// The ALU is a fundamental building block of the CPU, and is responsible for carrying out most of the arithmetic and logical operations, such as addition, subtraction, multiplication, division, and bitwise operations.
+/// </para>
+/// <para>
+/// This class is a generic class that can work with different types of numbers, including both signed and unsigned numbers. The type parameters TUnsigned and TSigned represent the types of the unsigned and signed numbers that this ALU can work with, respectively. The type parameters TUnsignedUpper and TSignedUpper represent the types of the upper half of the results of multiplication operations.
+/// </para>
+/// <para>
+/// The ALU also plays a role in setting the flags of the CPU based on the results of its operations. For example, it can set the zero flag if the result of an operation is zero, or the carry flag if an operation results in a carry or borrow.
+/// </para>
 /// </summary>
 public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     where TUnsigned : IUnsignedNumber<TUnsigned>
@@ -93,7 +102,9 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     public abstract TUnsigned Or(TUnsigned value1, TUnsigned value2);
 
     /// <summary>
-    /// The XOR operation, also known as the exclusive OR operation, compares two values and returns 1 if they are equal and 0 if they are not equal.
+    /// XOR computes the exclusive OR of the two operands. Each bit of the result
+    /// is 1 if the corresponding bits of the operands are different; each bit is 0
+    /// if the corresponding bits are the same. The answer replaces the first operand.
     /// </summary>
     public abstract TUnsigned Xor(TUnsigned value1, TUnsigned value2);
 

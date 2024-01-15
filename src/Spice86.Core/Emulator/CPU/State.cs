@@ -9,6 +9,29 @@ using Spice86.Shared.Utils;
 
 /// <summary>
 /// Represents the state of the CPU Registers and Flags.
+/// <para>
+/// Visualization of the 32-bit general-purpose registers:
+/// <code>
+/// +-------------------+ <br/>
+/// |       EAX         | <br/>
+/// +-------------------+ <br/>
+/// |       EBX         | <br/>
+/// +-------------------+ <br/>
+/// |       ECX         | <br/>
+/// +-------------------+ <br/>
+/// |       EDX         | <br/>
+/// +-------------------+ <br/>
+/// |       ESI         | <br/>
+/// +-------------------+ <br/>
+/// |       EDI         | <br/>
+/// +-------------------+ <br/>
+/// |       ESP         | <br/>
+/// +-------------------+ <br/>
+/// |       EBP         | <br/>
+/// +-------------------+ <br/>
+/// </code>
+/// </para>
+/// Each of these registers can be accessed as a whole (32 bits), or in parts as AX/BX/CX/DX (lower 16 bits), AH/BH/CH/DH (high 8 bits of the 16-bit register), and AL/BL/CL/DL (low 8 bits of the 16-bit register).
 /// </summary>
 public class State : IDebuggableComponent {
     /// <summary>
@@ -164,20 +187,20 @@ public class State : IDebuggableComponent {
     public ushort CS { get => SegmentRegisters.UInt16[SegmentRegisters.CsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.CsIndex] = value; }
 
     /// <summary>
-    /// Gets or sets the Data Segment Register value.
+    /// Gets or sets the DS Register value. (DATA SEGMENT)
     /// </summary>
     public ushort DS { get => SegmentRegisters.UInt16[SegmentRegisters.DsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.DsIndex] = value; }
 
     /// <summary>
-    /// Gets or sets the Extra segment register value.
+    /// Gets or sets the Extra segment register value. (DATA SEGMENT)
     /// </summary>
     public ushort ES { get => SegmentRegisters.UInt16[SegmentRegisters.EsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.EsIndex] = value; }
     /// <summary>
-    /// Gets or sets the FS segment register value.
+    /// Gets or sets the FS segment register value. (DATA SEGMENT)
     /// </summary>
     public ushort FS { get => SegmentRegisters.UInt16[SegmentRegisters.FsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.FsIndex] = value; }
     /// <summary>
-    /// Gets or sets the GS segment register value.
+    /// Gets or sets the GS segment register value. (DATA SEGMENT)
     /// </summary>
     public ushort GS { get => SegmentRegisters.UInt16[SegmentRegisters.GsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.GsIndex] = value; }
 

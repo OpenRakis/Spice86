@@ -4,7 +4,26 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// Represents the stack of the CPU
+/// Represents the stack of the CPU.
+/// In the x86 architecture, the stack grows downwards, meaning it grows from higher memory addresses to lower memory addresses. <br/>
+/// <para>
+/// Visualization: <br/><br/>
+/// 
+/// Higher Memory Addresses<br/>
+/// +-------------------+<br/>
+/// |                   |<br/>
+/// |                   |<br/>
+/// |    Stack Data     |<br/>
+/// |                   |<br/>
+/// |                   |<br/>
+/// +-------------------+ &lt; Stack Pointer (SP)<br/>
+/// |                   |<br/>
+/// |    Free Space     |<br/>
+/// |                   |<br/>
+/// |                   |<br/>
+/// +-------------------+<br/>
+/// Lower Memory Addresses<br/>
+/// </para>
 /// </summary>
 public class Stack {
     private readonly IMemory _memory;
@@ -47,7 +66,7 @@ public class Stack {
     /// <summary>
     /// Pops a 16 bit value from the stack
     /// </summary>
-    /// <returns>The value retrived from the stack, read from memory</returns>
+    /// <returns>The value retrieved from the stack, therefore read from memory</returns>
     public ushort Pop16() {
         ushort res = _memory.UInt16[_state.StackPhysicalAddress];
         _state.SP = (ushort)(_state.SP + 2);
@@ -57,7 +76,7 @@ public class Stack {
     /// <summary>
     /// Pushes a 16 bit value on the stack
     /// </summary>
-    /// <param name="value">The value pushed onto the stack, stored in memory.</param>
+    /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
     public void Push16(ushort value) {
         _state.SP = (ushort)(_state.SP - 2);
         _memory.UInt16[_state.StackPhysicalAddress] = value;

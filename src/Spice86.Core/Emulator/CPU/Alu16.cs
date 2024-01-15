@@ -10,6 +10,10 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
 
     private const ushort MsbMask = 0x8000;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="state">The CPU registers and flags</param>
     public Alu16(State state) : base(state) {
     }
 
