@@ -40,7 +40,7 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="state">The state of the CPU.</param>
+    /// <param name="state">The CPU registers and flags.</param>
     public Alu(State state) {
         _state = state;
     }
@@ -91,6 +91,10 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
 
     public abstract TUnsigned And(TUnsigned value1, TUnsigned value2);
     public abstract TUnsigned Or(TUnsigned value1, TUnsigned value2);
+
+    /// <summary>
+    /// The XOR operation, also known as the exclusive OR operation, compares two values and returns 1 if they are equal and 0 if they are not equal.
+    /// </summary>
     public abstract TUnsigned Xor(TUnsigned value1, TUnsigned value2);
 
     public abstract TUnsigned Rcl(TUnsigned value, byte count);
@@ -139,17 +143,28 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     /// <summary>
     /// Sets the parity flag by looking at the lowest byte of the value
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The ulong value we take the lowest byte from</param>
     protected void SetParityFlag(ulong value) {
         _state.ParityFlag = IsParity((byte)value);
     }
 
+    /// <summary>
+    /// Sets the zero flag by checking if the value is zero
+    /// </summary>
+    /// <param name="value">The value to check</param>
     protected void SetZeroFlag(ulong value) {
         _state.ZeroFlag = value == 0;
     }
 
+    /// <summary>
+    /// Sets the value of the sign flag.
+    /// </summary>
     protected abstract void SetSignFlag(TUnsigned value);
 
+    /// <summary>
+    /// Sets the zero, parity and sign flags.
+    /// </summary>
+    /// <param name="value">The value to assign to the flag</param>
     public void UpdateFlags(TUnsigned value) {
         SetZeroFlag(ulong.CreateTruncating(value));
         SetParityFlag(ulong.CreateTruncating(value));

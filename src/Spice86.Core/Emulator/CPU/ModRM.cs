@@ -6,18 +6,33 @@ namespace Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Represents the ModRM byte of some instructions
+/// </summary>
 public class ModRM {
     private readonly Cpu _cpu;
-    private readonly Memory.IMemory _memory;
+    private readonly IMemory _memory;
     private readonly State _state;
     private uint _registerMemoryIndex;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus</param>
+    /// <param name="cpu">The emulated CPU</param>
+    /// <param name="state">The CPU Registers and Flags</param>
     public ModRM(IMemory memory, Cpu cpu, State state) {
         _cpu = cpu;
         _memory = memory;
         _state = state;
     }
 
+    /// <summary>
+    /// Returns the linear address the ModRM byte can point at.
+    /// </summary>
+    /// <param name="defaultSegmentRegisterIndex">The segment part of the segmented address.</param>
+    /// <param name="offset">The offset part of the segmented address.</param>
+    /// <returns>The segment:offset computed into a linear address.</returns>
     public uint GetAddress(uint defaultSegmentRegisterIndex, ushort offset) {
         uint segmentIndex = _state.SegmentOverrideIndex??defaultSegmentRegisterIndex;
 
@@ -25,18 +40,40 @@ public class ModRM {
         return MemoryUtils.ToPhysicalAddress(segment, offset);
     }
 
+    /// <summary>
+    /// Gets the linear address the ModRM byte can point at. Can be <c>null</c>.
+    /// </summary>
     public uint? MemoryAddress { get; private set; }
 
+    /// <summary>
+    /// Gets the memory offset of the ModRM byte can point at. Can be <c>null</c>.
+    /// </summary>
     public ushort? MemoryOffset { get; private set; }
 
+    /// <summary>
+    /// Gets or sets the value of the 32 bit register pointed at by the <see cref="RegisterIndex"/> property.
+    /// </summary>
     public uint R32 { get => _state.GeneralRegisters.UInt32[RegisterIndex]; set =>_state.GeneralRegisters.UInt32[RegisterIndex] = value; }
 
+    /// <summary>
+    /// Gets or sets the value of the 16 bit register pointed at by the <see cref="RegisterIndex"/> property.
+    /// </summary>
     public ushort R16 { get => _state.GeneralRegisters.UInt16[RegisterIndex]; set =>_state.GeneralRegisters.UInt16[RegisterIndex] = value; }
 
+    /// <summary>
+    /// Gets or sets the value of the 8 bit register pointed at by the <see cref="RegisterIndex"/> property.
+    /// </summary>
     public byte R8 { get => _state.GeneralRegisters.UInt8HighLow[RegisterIndex]; set => _state.GeneralRegisters.UInt8HighLow[RegisterIndex] = value; }
 
+    /// <summary>
+    /// Gets the index of the register pointed at by the ModRM byte.
+    /// </summary>
     public uint RegisterIndex { get; private set; }
 
+    /// <summary>
+    /// If <see cref="MemoryAddress"/> is <c>null</c>, returns the 32 bit value of the register pointed at by the _registerMemoryIndex field. <br/>
+    /// If <see cref="MemoryAddress"/> is not <c>null</c>, returns the 32 bit value at the linear address pointed at by the <see cref="MemoryAddress"/> property.
+    /// </summary>
     public uint GetRm32() {
         if (MemoryAddress == null) {
             return _state.GeneralRegisters.UInt32[_registerMemoryIndex];
@@ -44,6 +81,10 @@ public class ModRM {
         return _memory.UInt32[(uint)MemoryAddress];
     }
 
+    /// <summary>
+    /// If <see cref="MemoryAddress"/> is <c>null</c>, returns the 16 bit value of the register pointed at by the _registerMemoryIndex field. <br/>
+    /// If <see cref="MemoryAddress"/> is not <c>null</c>, returns the 16 bit value at the linear address pointed at by the <see cref="MemoryAddress"/> property.
+    /// </summary>
     public ushort GetRm16() {
         if (MemoryAddress == null) {
             return _state.GeneralRegisters.UInt16[_registerMemoryIndex];
@@ -51,6 +92,10 @@ public class ModRM {
         return _memory.UInt16[(uint)MemoryAddress];
     }
 
+    /// <summary>
+    /// If <see cref="MemoryAddress"/> is <c>null</c>, returns the 8 bit value of the register pointed at by the _registerMemoryIndex field. <br/>
+    /// If <see cref="MemoryAddress"/> is not <c>null</c>, returns the 8 bit value at the linear address pointed at by the <see cref="MemoryAddress"/> property.
+    /// </summary>
     public byte GetRm8() {
         if (MemoryAddress == null) {
             return _state.GeneralRegisters.UInt8HighLow[_registerMemoryIndex];
@@ -63,6 +108,9 @@ public class ModRM {
     /// </summary>
     public ushort SegmentRegister { get => _state.SegmentRegisters.UInt16[RegisterIndex]; set => _state.SegmentRegisters.UInt16[RegisterIndex] = value; }
 
+    /// <summary>
+    /// Parses the ModRM byte of the instruction and sets the <see cref="RegisterIndex"/>, <see cref="MemoryOffset"/> and <see cref="MemoryAddress"/> properties.
+    /// </summary>
     public void Read() {
         byte modRM = _cpu.NextUint8();
         /*
@@ -106,6 +154,11 @@ public class ModRM {
         MemoryAddress = GetAddress(segmentRegisterIndex, (ushort)MemoryOffset);
     }
 
+    /// <summary>
+    /// If <see cref="MemoryAddress"/> is <c>null</c>, sets the value of the 32 bit register pointed at by the _registerMemoryIndex field. <br/>
+    /// If <see cref="MemoryAddress"/> is not <c>null</c>, sets the 32 bit value at the linear address pointed at by the <see cref="MemoryAddress"/> property.
+    /// </summary>
+    /// <param name="value">The value to copy.</param>
     public void SetRm32(uint value) {
         if (MemoryAddress == null) {
             _state.GeneralRegisters.UInt32[_registerMemoryIndex] = value;
@@ -114,6 +167,11 @@ public class ModRM {
         }
     }
 
+    /// <summary>
+    /// If <see cref="MemoryAddress"/> is <c>null</c>, sets the value of the 16 bit register pointed at by the _registerMemoryIndex field. <br/>
+    /// If <see cref="MemoryAddress"/> is not <c>null</c>, sets the 16 bit value at the linear address pointed at by the <see cref="MemoryAddress"/> property.
+    /// </summary>
+    /// <param name="value">The value to copy.</param>
     public void SetRm16(ushort value) {
         if (MemoryAddress == null) {
             _state.GeneralRegisters.UInt16[_registerMemoryIndex] = value;
@@ -122,6 +180,11 @@ public class ModRM {
         }
     }
 
+    /// <summary>
+    /// If <see cref="MemoryAddress"/> is <c>null</c>, sets the value of the 8 bit register pointed at by the _registerMemoryIndex field. <br/>
+    /// If <see cref="MemoryAddress"/> is not <c>null</c>, sets the 8 bit value at the linear address pointed at by the <see cref="MemoryAddress"/> property.
+    /// </summary>
+    /// <param name="value">The value to copy.</param>
     public void SetRm8(byte value) {
         if (MemoryAddress == null) {
             _state.GeneralRegisters.UInt8HighLow[_registerMemoryIndex] = value;
