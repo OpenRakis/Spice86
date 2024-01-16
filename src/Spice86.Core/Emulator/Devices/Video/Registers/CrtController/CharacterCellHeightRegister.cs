@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 
+/// <summary>
+/// Represents the 8 bit Character Cell Height register.
+/// </summary>
 public class CharacterCellHeightRegister : Register8 {
     /// <summary>
     ///     If this bit is programmed to ‘1’, every scanline is displayed twice in succession. The Scanline Counter-based

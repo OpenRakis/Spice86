@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 
+/// <summary>
+/// Represents the 8 bit Horizontal Sync End register.
+/// </summary>
 public class HorizontalSyncEndRegister : Register8 {
     /// <summary>
     ///     This bit extends the Horizontal Blanking End value by one bit. Refer to register CR3 for an explanation of the

@@ -19,6 +19,9 @@ public class VgaCard : IDebuggableComponent {
     /// <summary>
     ///     Create a new VGA card.
     /// </summary>
+    /// <param name="gui">The GUI to render to.</param>
+    /// <param name="renderer">The VGA renderer to use.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public VgaCard(IGui? gui, IVgaRenderer renderer, ILoggerService loggerService) {
         _gui = gui;
         _logger = loggerService;

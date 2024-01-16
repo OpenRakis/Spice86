@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.AttributeController;
 
+/// <summary>
+/// Represents the 8 bit Color Select register.
+/// </summary>
 public class ColorSelectRegister : Register8 {
     /// <summary>
     ///     Use these 2 bits as bits 4 and 5 of the color attribute when

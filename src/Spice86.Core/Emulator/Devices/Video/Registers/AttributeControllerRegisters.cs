@@ -14,6 +14,9 @@ public sealed class AttributeControllerRegisters {
         InternalPalette = new byte[16];
     }
 
+    /// <summary>
+    /// Gets or sets the address register.
+    /// </summary>
     public AttributeControllerRegister AddressRegister { get; set; }
 
     /// <summary>

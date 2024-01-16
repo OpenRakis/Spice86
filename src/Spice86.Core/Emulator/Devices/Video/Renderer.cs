@@ -16,6 +16,8 @@ public class Renderer : IVgaRenderer {
     /// <summary>
     ///     Create a new VGA renderer.
     /// </summary>
+    /// <param name="memory">The video memory implementation.</param>
+    /// <param name="state">The video state implementation.</param>
     public Renderer(IVideoState state, IVideoMemory memory) {
         _state = state;
         _memory = memory;

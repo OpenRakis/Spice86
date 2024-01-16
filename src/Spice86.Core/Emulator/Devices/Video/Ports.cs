@@ -15,6 +15,10 @@ public static class Ports {
     public const int DacStateRead = 0x03C7;
     public const int DacAddressReadIndex = 0x03C7;
     public const int DacAddressWriteIndex = 0x03C8;
+
+    /// <summary>
+    /// This register is used for accessing the Digital-to-Analog Converter (DAC) memory. It operates in a sequence of three I/O operations, each corresponding to the intensity values of red, green, and blue, respectively. The specific DAC entry to be accessed is initially determined by either the DAC Address Read Mode Register or the DAC Address Write Mode Register, depending on the type of I/O operation being performed. After three I/O operations, the index automatically increments, allowing the next DAC entry to be accessed without the need to manually update the index. It's important to perform I/O operations to this port in groups of three to ensure consistent results, as the outcome can vary based on the DAC implementation if this is not adhered to.
+    /// </summary>
     public const int DacData = 0x03C9;
     public const int FeatureControlRead = 0x03CA;
     public const int MiscOutputRead = 0x03CC;

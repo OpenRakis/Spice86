@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 
+/// <summary>
+/// Represents the 8 bit CRT Mode Control register.
+/// </summary>
 public class CrtModeControlRegister : Register8 {
     /// <summary>
     ///     CRTC Timing Logic enabled/disabled

@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.AttributeController;
 
+/// <summary>
+/// Represents the 8 bit Attribute Controller Mode register.
+/// </summary>
 public class AttributeControllerModeRegister : Register8 {
     /// <summary>
     ///     True: LUT bit 4 and 5 come from Color Select register

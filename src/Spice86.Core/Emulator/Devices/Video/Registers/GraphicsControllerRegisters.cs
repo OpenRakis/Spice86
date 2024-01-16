@@ -7,6 +7,9 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 ///     Emulates the VGA Graphics registers.
 /// </summary>
 public sealed class GraphicsControllerRegisters {
+    /// <summary>
+    /// Gets or sets the address register.
+    /// </summary>
     public GraphicsControllerRegister AddressRegister { get; set; }
 
     /// <summary>

@@ -10,6 +10,10 @@ using Spice86.Shared.Emulator.Memory;
 public class InMemoryAddressSwitcher {
     private readonly IIndexable _memory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryAddressSwitcher"/> class.
+    /// </summary>
+    /// <param name="memory">The memory bus</param>
     public InMemoryAddressSwitcher(IIndexable memory) {
         _memory = memory;
     }

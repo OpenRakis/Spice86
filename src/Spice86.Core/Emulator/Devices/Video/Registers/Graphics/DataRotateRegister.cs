@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 
+/// <summary>
+/// Represents the 8 bit Data Rotate register.
+/// </summary>
 public class DataRotateRegister : Register8 {
     /// <summary>
     ///     This field allows data from the CPU bus to be rotated up to seven bit positions prior to being altered by the SR
