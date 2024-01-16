@@ -42,8 +42,14 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     /// </summary>
     private const uint FourBitParityTable = 0b1001011001101001;
 
+    /// <summary>
+    /// The mask value of 0x1F (or 31 in decimal) effectively discards all but the 5 least significant bits of the shift count, thus ensuring it is within the range 0-31.
+    /// </summary>
     protected const int ShiftCountMask = 0x1F;
 
+    /// <summary>
+    /// CPU registers and flags.
+    /// </summary>
     protected readonly State _state;
 
     /// <summary>
@@ -54,14 +60,36 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
         _state = state;
     }
 
+    /// <summary>
+    /// ADC (Add Integers with Carry) sums the operands, adds one if CF is set, and
+    /// replaces the destination operand with the result. If CF is cleared, ADC
+    /// performs the same operation as the ADD instruction. An ADD followed by
+    /// multiple ADC instructions can be used to add numbers longer than 32 bits.
+    /// </summary>
+    /// <param name="value1">The first value</param>
+    /// <param name="value2">The second value</param>
+    /// <returns>The result of the operation.</returns>
     public TUnsigned Adc(TUnsigned value1, TUnsigned value2) {
         return Add(value1, value2, true);
     }
 
+    /// <summary>
+    /// ADD (Add Integers) replaces the destination operand with the sum of the
+    /// source and destination operands. Sets CF if overflow.
+    /// </summary>
+    /// <param name="value1">The first value</param>
+    /// <param name="value2">The second value</param>
+    /// <returns>The result of the operation.</returns>
     public TUnsigned Add(TUnsigned value1, TUnsigned value2) {
         return Add(value1, value2, false);
     }
 
+    /// <summary>
+    /// INC (Increment) adds one to the destination operand. INC does not affect
+    ///: CF. Use ADD with an immediate value of 1 if an increment that updates carry (CF) is needed.
+    /// </summary>
+    /// <param name="value">The value to increment</param>
+    /// <returns>The result of the operation.</returns>
     public TUnsigned Inc(TUnsigned value) {
         // CF is not modified
         bool carry = _state.CarryFlag;
@@ -132,6 +160,9 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
         return value1 ^ value2 ^ dst ^ ((value1 ^ dst) & ~(value1 ^ value2));
     }
 
+    /// <summary>
+    /// Returns whether the given byte has even parity.
+    /// </summary>
     private static bool IsParity(byte value) {
         int low4 = value & 0xF;
         int high4 = value >> 4 & 0xF;
@@ -147,10 +178,16 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
         return (value1 ^ dst) & (value1 ^ value2);
     }
 
+    /// <summary>
+    /// Shifts the value to the right by the given number of bits and sets the carry flag if the last bit is 1.
+    /// </summary>
+    /// <param name="value">The value to shift to the right</param>
+    /// <param name="count">The amount of right shifts</param>
     protected void SetCarryFlagForRightShifts(uint value, int count) {
         uint lastBit = value >> count - 1 & 0x1;
         _state.CarryFlag = lastBit == 1;
     }
+
     /// <summary>
     /// Sets the parity flag by looking at the lowest byte of the value
     /// </summary>

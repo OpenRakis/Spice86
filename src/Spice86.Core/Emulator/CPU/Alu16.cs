@@ -36,7 +36,8 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = false;
         return res;
     }
-
+    
+    /// <inheritdoc/>
     public override ushort Div(uint value1, ushort value2) {
         if (value2 == 0) {
             throw new CpuDivisionErrorException($"Division by zero");

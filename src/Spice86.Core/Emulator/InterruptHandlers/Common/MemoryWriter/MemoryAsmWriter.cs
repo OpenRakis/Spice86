@@ -45,7 +45,7 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <summary>
     /// Erases a callback instruction at current address and replaces it with an INT + a NOP. Useful to dump memory and avoid unsupported opcodes in ghidra.
     /// </summary>
-    /// <param name="callbackNumber">The callback to NOP.</param>
+    /// <param name="callbackNumber">Used to write an INT instruction to memory, followed by the callback number.</param>
     public void EraseCallbackWithInt(byte callbackNumber) {
         this.WriteInt(callbackNumber);
         this.WriteNop();
