@@ -1,5 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-enum Reg {
+internal enum Reg {
     Gl1,
     Gl2,
     Gl3,

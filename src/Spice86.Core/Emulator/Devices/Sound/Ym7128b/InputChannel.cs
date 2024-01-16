@@ -1,5 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-enum InputChannel {
+internal enum InputChannel {
     Mono,
     Count
 }

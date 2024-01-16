@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 
-public struct ChipIdealProcessData {
+internal struct ChipIdealProcessData {
 
     public ChipIdealProcessData() {
         Inputs = new float[(int)InputChannel.Count];

@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 //! Datasheet specifications
-enum DatasheetSpecs {
+internal enum DatasheetSpecs {
     //! Clock rate [Hz]
     ClockRate = 7159090,
 

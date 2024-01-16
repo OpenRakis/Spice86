@@ -1,5 +1,5 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-public struct ChipFloatProcessData {
+internal struct ChipFloatProcessData {
     public ChipFloatProcessData() {
         Inputs = new double[(int)InputChannel.Count];
         Outputs = new double[(int)OutputChannel.Count][];

@@ -1,5 +1,5 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-public struct ChipFixed {
+internal struct ChipFixed {
     public ChipFixed() {
         Regs = new byte[(int)Reg.Count];
         Gains = new short[(int)Reg.T0];
