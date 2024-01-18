@@ -1,13 +1,12 @@
-﻿using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.CPU;
 
-namespace Spice86.Core.Emulator.CPU;
-
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// Represents the ModRM byte of some instructions
+/// Represents the ModRM byte. A lot of x86 instructions use a ModRM byte to specify an operand or further extend the opcode.
 /// </summary>
 public class ModRM {
     private readonly Cpu _cpu;
@@ -109,8 +108,20 @@ public class ModRM {
     public ushort SegmentRegister { get => _state.SegmentRegisters.UInt16[RegisterIndex]; set => _state.SegmentRegisters.UInt16[RegisterIndex] = value; }
 
     /// <summary>
-    /// Parses the ModRM byte of the instruction and sets the <see cref="RegisterIndex"/>, <see cref="MemoryOffset"/> and <see cref="MemoryAddress"/> properties.
+    /// Parses the ModRM byte of the instruction and sets the <see cref="RegisterIndex"/>, <see cref="MemoryOffset"/> and <see cref="MemoryAddress"/> properties
+    /// <para>
+    /// Parses the ModR/M byte of the instruction and sets the <see cref="RegisterIndex"/>, <see cref="MemoryOffset"/> and <see cref="MemoryAddress"/> properties.
+    /// The ModR/M byte is divided into three parts: <br/>
+    /// - The two most significant bits (bit 7 and bit 6) represent the mode. <br/>
+    /// - The next three bits (bit 5 through bit 3) represent the register index. <br/>
+    /// - The three least significant bits (bit 2 through bit 0) represent the memory register index. <br/>
+    /// If the mode is 3, the value at the memory register index is used directly and the memory address is not used. <br/>
+    /// If the CPU is in 16-bit addressing mode, a displacement is read based on the mode (8-bit for mode 1, 16-bit for mode 2, and 0 for other modes), and added to the offset computed based on the mode and memory register index. <br/>
+    /// If the resulting offset is outside the range of a 16-bit unsigned integer, a general protection fault is thrown. <br/>
+    /// The memory address is then computed based on the segment register determined by the mode and the offset. <br/>
+    /// </para>
     /// </summary>
+    /// <exception cref="CpuGeneralProtectionFaultException">Thrown when the displacement overflows 16 bits.</exception>
     public void Read() {
         byte modRM = _cpu.NextUint8();
         /*
