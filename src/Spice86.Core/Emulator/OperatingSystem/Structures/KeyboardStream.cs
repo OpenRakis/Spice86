@@ -34,7 +34,7 @@ public class KeyboardStream : Stream {
     public override void Flush() {
     }
 
-    private Queue<byte> _keyboardbuffer = new();
+    private readonly Queue<byte> _keyboardbuffer = new();
 
     /// <inheritdoc />
     public override int Read(byte[] buffer, int offset, int count) {

@@ -2,19 +2,21 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 
+using System.Collections.Frozen;
+
 /// <summary>
 /// A base class that represents a set of CPU registers.
 /// </summary>
 public class RegistersHolder {
     private readonly uint[] _registers;
 
-    private readonly Dictionary<uint, string> _registersNames;
+    private readonly FrozenDictionary<uint, string> _registersNames;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RegistersHolder"/> class with the specified register names.
     /// </summary>
     /// <param name="registersNames">The names of the registers.</param>
-    protected RegistersHolder(Dictionary<uint, string> registersNames) {
+    protected RegistersHolder(FrozenDictionary<uint, string> registersNames) {
         _registersNames = registersNames;
         _registers = new uint[registersNames.Count];
         IUIntReaderWriter readerWriter = new UIntArrayReaderWriter(_registers);

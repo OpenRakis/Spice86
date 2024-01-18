@@ -5,4 +5,4 @@
 /// </summary>
 /// <param name="OldValue">The old byte value.</param>
 /// <param name="NewValue">The new byte value.</param>
-public record ByteModificationRecord(byte OldValue, byte NewValue);
+public readonly record struct ByteModificationRecord(byte OldValue, byte NewValue);

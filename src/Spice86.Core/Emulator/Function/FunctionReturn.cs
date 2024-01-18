@@ -8,10 +8,10 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 /// <param name="ReturnCallType">The calling convention.</param>
 /// <param name="Address">The return address.</param>
-public record FunctionReturn(CallType ReturnCallType, SegmentedAddress Address) : IComparable<FunctionReturn> {
+public readonly record struct FunctionReturn(CallType ReturnCallType, SegmentedAddress Address) : IComparable<FunctionReturn> {
     /// <inheritdoc/>
-    public int CompareTo(FunctionReturn? other) {
-        return Address.CompareTo(other?.Address);
+    public int CompareTo(FunctionReturn other) {
+        return Address.CompareTo(other.Address);
     }
     
     /// <inheritdoc/>

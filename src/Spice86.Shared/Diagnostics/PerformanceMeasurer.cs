@@ -22,11 +22,22 @@ public class PerformanceMeasurer : IPerformanceMeasurer {
     /// </summary>
     public PerformanceMeasurer() => _lastTimeInMilliseconds = GetCurrentTime();
 
+    private long _firstMeasureTimeInTicks = 0;
+
+    private const int WindowSizeInSeconds = 30;
+
     private static long GetCurrentTime() => System.Environment.TickCount64;
 
     /// <inheritdoc />
     public void UpdateValue(long newMeasure) {
         long newTimeInMilliseconds = GetCurrentTime();
+        if (_firstMeasureTimeInTicks == 0) {
+            _firstMeasureTimeInTicks = newTimeInMilliseconds;
+        } else if((TimeSpan.FromTicks(newTimeInMilliseconds) - TimeSpan.FromTicks(_firstMeasureTimeInTicks)).TotalSeconds >= WindowSizeInSeconds) {
+            _firstMeasureTimeInTicks = newTimeInMilliseconds;
+            _sampledMetricsCount = 0;
+            AverageValuePerSecond = 0;
+        }
         long millisecondsDelta = newTimeInMilliseconds - _lastTimeInMilliseconds;
         _lastTimeInMilliseconds = newTimeInMilliseconds;
         long valueDelta = newMeasure - _measure;
