@@ -4,13 +4,14 @@ using Spice86.Core.Emulator.VM;
 
 namespace Spice86.Core.Emulator.CPU;
 
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Utils;
 
 public class ModRM {
     private readonly Cpu _cpu;
     private readonly Memory.IMemory _memory;
     private readonly State _state;
-    private int _registerMemoryIndex;
+    private uint _registerMemoryIndex;
 
     public ModRM(IMemory memory, Cpu cpu, State state) {
         _cpu = cpu;
@@ -18,11 +19,10 @@ public class ModRM {
         _state = state;
     }
 
-    public uint GetAddress(int defaultSegmentRegisterIndex, ushort offset) {
-        int? segmentIndex = _state.SegmentOverrideIndex;
-        segmentIndex ??= defaultSegmentRegisterIndex;
+    public uint GetAddress(uint defaultSegmentRegisterIndex, ushort offset) {
+        uint segmentIndex = _state.SegmentOverrideIndex??defaultSegmentRegisterIndex;
 
-        ushort segment = _state.SegmentRegisters.GetRegister16((int)segmentIndex);
+        ushort segment = _state.SegmentRegisters.UInt16[segmentIndex];
         return MemoryUtils.ToPhysicalAddress(segment, offset);
     }
 
@@ -30,36 +30,36 @@ public class ModRM {
 
     public ushort? MemoryOffset { get; private set; }
 
-    public uint R32 { get => _state.Registers.GetRegister32(RegisterIndex); set => _state.Registers.SetRegister32(RegisterIndex, value); }
+    public uint R32 { get => _state.GeneralRegisters.UInt32[RegisterIndex]; set =>_state.GeneralRegisters.UInt32[RegisterIndex] = value; }
 
-    public ushort R16 { get => _state.Registers.GetRegister16(RegisterIndex); set => _state.Registers.SetRegister16(RegisterIndex, value); }
+    public ushort R16 { get => _state.GeneralRegisters.UInt16[RegisterIndex]; set =>_state.GeneralRegisters.UInt16[RegisterIndex] = value; }
 
-    public byte R8 { get => _state.Registers.GetRegisterFromHighLowIndex8(RegisterIndex); set => _state.Registers.SetRegisterFromHighLowIndex8(RegisterIndex, value); }
+    public byte R8 { get => _state.GeneralRegisters.UInt8HighLow[RegisterIndex]; set => _state.GeneralRegisters.UInt8HighLow[RegisterIndex] = value; }
 
-    public int RegisterIndex { get; private set; }
+    public uint RegisterIndex { get; private set; }
 
     public uint GetRm32() {
         if (MemoryAddress == null) {
-            return _state.Registers.GetRegister32(_registerMemoryIndex);
+            return _state.GeneralRegisters.UInt32[_registerMemoryIndex];
         }
         return _memory.UInt32[(uint)MemoryAddress];
     }
 
     public ushort GetRm16() {
         if (MemoryAddress == null) {
-            return _state.Registers.GetRegister16(_registerMemoryIndex);
+            return _state.GeneralRegisters.UInt16[_registerMemoryIndex];
         }
         return _memory.UInt16[(uint)MemoryAddress];
     }
 
     public byte GetRm8() {
         if (MemoryAddress == null) {
-            return _state.Registers.GetRegisterFromHighLowIndex8(_registerMemoryIndex);
+            return _state.GeneralRegisters.UInt8HighLow[_registerMemoryIndex];
         }
         return _memory.UInt8[(uint)MemoryAddress];
     }
 
-    public ushort SegmentRegister { get => _state.SegmentRegisters.GetRegister16(RegisterIndex); set => _state.SegmentRegisters.SetRegister16(RegisterIndex, value); }
+    public ushort SegmentRegister { get => _state.SegmentRegisters.UInt16[RegisterIndex]; set => _state.SegmentRegisters.UInt16[RegisterIndex] = value; }
 
     public void Read() {
         byte modRM = _cpu.NextUint8();
@@ -69,8 +69,8 @@ public class ModRM {
          * bit 2 through bit 0 = registerMemoryIndex
          */
         int mode = modRM >> 6 & 0b11;
-        RegisterIndex = modRM >> 3 & 0b111;
-        _registerMemoryIndex = modRM & 0b111;
+        RegisterIndex = (uint)(modRM >> 3 & 0b111);
+        _registerMemoryIndex = (uint)(modRM & 0b111);
         if (mode == 3) {
             // value at reg[memoryRegisterIndex] to be used instead of memoryAddress
             MemoryOffset = null;
@@ -100,13 +100,13 @@ public class ModRM {
             MemoryOffset = (ushort)offset;
         }
 
-        int segmentRegisterIndex = ComputeDefaultSegment(mode);
+        uint segmentRegisterIndex = ComputeDefaultSegment(mode);
         MemoryAddress = GetAddress(segmentRegisterIndex, (ushort)MemoryOffset);
     }
 
     public void SetRm32(uint value) {
         if (MemoryAddress == null) {
-            _state.Registers.SetRegister32(_registerMemoryIndex, value);
+            _state.GeneralRegisters.UInt32[_registerMemoryIndex] = value;
         } else {
             _memory.UInt32[(uint)MemoryAddress] = value;
         }
@@ -114,7 +114,7 @@ public class ModRM {
 
     public void SetRm16(ushort value) {
         if (MemoryAddress == null) {
-            _state.Registers.SetRegister16(_registerMemoryIndex, value);
+            _state.GeneralRegisters.UInt16[_registerMemoryIndex] = value;
         } else {
             _memory.UInt16[(uint)MemoryAddress] = value;
         }
@@ -122,13 +122,13 @@ public class ModRM {
 
     public void SetRm8(byte value) {
         if (MemoryAddress == null) {
-            _state.Registers.SetRegisterFromHighLowIndex8(_registerMemoryIndex, value);
+            _state.GeneralRegisters.UInt8HighLow[_registerMemoryIndex] = value;
         } else {
             _memory.UInt8[(uint)MemoryAddress] = value;
         }
     }
 
-    private int ComputeDefaultSegment(int mode) {
+    private uint ComputeDefaultSegment(int mode) {
         // The default segment register is SS for the effective addresses containing a
         // BP index, DS for other effective addresses
         return _registerMemoryIndex switch {
@@ -158,7 +158,7 @@ public class ModRM {
         };
     }
 
-    private uint ComputeOffset32(int mode, int rm) {
+    private uint ComputeOffset32(int mode, uint rm) {
         uint result = rm switch {
             0 => _state.EAX,
             1 => _state.ECX,

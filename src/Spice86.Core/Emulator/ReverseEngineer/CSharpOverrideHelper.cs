@@ -629,7 +629,7 @@ public class CSharpOverrideHelper {
         ushort offset,
         ushort expectedSegment,
         ushort expectedOffset) {
-        uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.GetRegister16(segmentRegisterIndex), offset);
+        uint address = MemoryUtils.ToPhysicalAddress(State.SegmentRegisters.UInt16[segmentRegisterIndex], offset);
         (ushort foundSegment, ushort foundOffset) = Memory.SegmentedAddress[address];
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
             throw FailAsUntested(

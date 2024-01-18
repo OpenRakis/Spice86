@@ -228,7 +228,7 @@ public class DosInt21Handler : InterruptHandler {
         // Media Id
         _state.DS = 0x8010;
         // From DOSBox source code...
-        _state.BX = ConvertUtils.Uint16((ushort) (0x8010 + _dosFileManager.DefaultDrive * 9)) ;
+        _state.BX = (ushort) (0x8010 + _dosFileManager.DefaultDrive * 9);
         _state.AH = 0;
     }
 

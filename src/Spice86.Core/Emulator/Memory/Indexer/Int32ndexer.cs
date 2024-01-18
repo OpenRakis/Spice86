@@ -3,7 +3,7 @@
 /// <summary>
 /// Provides indexed signed int access over memory.
 /// </summary>
-public class Int32Indexer : Indexer<int> {
+public class Int32Indexer : MemoryIndexer<int> {
     private readonly UInt32Indexer _uInt32Indexer;
 
     /// <summary>

@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
-using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>

@@ -53,7 +53,7 @@ public class ExeLoader : DosFileLoader {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Exe size: {ExeSize}", exe.Length);
         }
-        ExeFile exeFile = new ExeFile(new ByteArrayByteReaderWriter(exe));
+        ExeFile exeFile = new ExeFile(new ByteArrayReaderWriter(exe));
         if (!exeFile.IsValid) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("Invalid EXE file {file}", file);

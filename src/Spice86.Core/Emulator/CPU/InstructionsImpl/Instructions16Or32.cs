@@ -69,7 +69,7 @@ public abstract class Instructions16Or32 : Instructions {
 
     public void Grp5() {
         ModRM.Read();
-        int groupIndex = ModRM.RegisterIndex;
+        uint groupIndex = ModRM.RegisterIndex;
         switch (groupIndex) {
             case 0:
                 Grp45RmInc();

@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 /// This layout is common for various instructions / interrupt table / ...
 /// Instantiates objects of type SegmentedAddress for the return address.
 /// </summary>
-public class SegmentedAddressIndexer : Indexer<SegmentedAddress> {
+public class SegmentedAddressIndexer : MemoryIndexer<SegmentedAddress> {
     private readonly UInt16Indexer _uInt16Indexer;
 
     public SegmentedAddressIndexer(UInt16Indexer uInt16Indexer) {

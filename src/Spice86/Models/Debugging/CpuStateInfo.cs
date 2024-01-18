@@ -50,7 +50,7 @@ public partial class StateInfo : ObservableObject {
 
     [ObservableProperty, ReadOnly(true)] private uint _ipPhysicalAddress;
 
-    [ObservableProperty] private int? _segmentOverrideIndex;
+    [ObservableProperty] private uint? _segmentOverrideIndex;
 
     // Source Index
     [ObservableProperty] private ushort _SI;

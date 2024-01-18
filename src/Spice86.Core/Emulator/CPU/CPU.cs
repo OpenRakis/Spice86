@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
@@ -861,7 +862,7 @@ public class Cpu : IDebuggableComponent {
                 break;
             case 0xD9: {
                 _modRM.Read();
-                int groupIndex = _modRM.RegisterIndex;
+                uint groupIndex = _modRM.RegisterIndex;
                 switch (groupIndex) {
                     case 0x7: {
                         // FNSTCW
@@ -894,7 +895,7 @@ public class Cpu : IDebuggableComponent {
                 break;
             case 0xDD: {
                 _modRM.Read();
-                int groupIndex = _modRM.RegisterIndex;
+                uint groupIndex = _modRM.RegisterIndex;
                 switch (groupIndex) {
                     case 0x7:
                         // FNSTSW

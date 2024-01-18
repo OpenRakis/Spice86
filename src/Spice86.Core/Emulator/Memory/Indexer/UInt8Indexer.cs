@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// <summary>
 /// Provides indexed byte access over memory.
 /// </summary>
-public class UInt8Indexer : Indexer<byte> {
+public class UInt8Indexer : MemoryIndexer<byte> {
     private readonly IByteReaderWriter _byteReaderWriter;
 
     /// <summary>

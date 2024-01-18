@@ -22,6 +22,6 @@ public class GdbFormatter {
     /// <param name="value">The 8-bit value to format.</param>
     /// <returns>The formatted string.</returns>
     public string FormatValueAsHex8(byte value) {
-        return $"{ConvertUtils.Uint8(value):X2}";
+        return $"{value:X2}";
     }
 }

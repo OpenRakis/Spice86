@@ -2,6 +2,8 @@ using Spice86.Core.Emulator.CPU.Exceptions;
 
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
+using Spice86.Core.Emulator.CPU.Registers;
+
 public class Instructions16 : Instructions16Or32 {
     private readonly Alu16 _alu16;
 
@@ -10,6 +12,8 @@ public class Instructions16 : Instructions16Or32 {
         _alu16 = new Alu16(cpu.State);
 
     }
+
+    private UInt16RegistersIndexer UInt16Registers => State.GeneralRegisters.UInt16;
 
     public override void AddRmReg() {
         // ADD rmw rw
@@ -149,22 +153,22 @@ public class Instructions16 : Instructions16Or32 {
 
     public override void IncReg(int regIndex) {
         // INC regIndex
-        State.Registers.SetRegister16(regIndex, _alu16.Inc(State.Registers.GetRegister16(regIndex)));
+        UInt16Registers[regIndex] = _alu16.Inc(UInt16Registers[regIndex]);
     }
 
     public override void DecReg(int regIndex) {
         // DEC regIndex
-        State.Registers.SetRegister16(regIndex, _alu16.Dec(State.Registers.GetRegister16(regIndex)));
+        UInt16Registers[regIndex] = _alu16.Dec(UInt16Registers[regIndex]);
     }
 
     public override void PushReg(int regIndex) {
         // PUSH regIndex
-        Stack.Push16(State.Registers.GetRegister16(regIndex));
+        Stack.Push16(UInt16Registers[regIndex]);
     }
 
     public override void PopReg(int regIndex) {
         // POP regIndex
-        State.Registers.SetRegister16(regIndex, Stack.Pop16());
+        UInt16Registers[regIndex] = Stack.Pop16();
     }
 
     public override void Pusha() {
@@ -291,7 +295,7 @@ public class Instructions16 : Instructions16Or32 {
 
     public override void Grp1(bool signExtendOp2) {
         ModRM.Read();
-        int groupIndex = ModRM.RegisterIndex;
+        uint groupIndex = ModRM.RegisterIndex;
         ushort op1 = ModRM.GetRm16();
         ushort op2;
         if (signExtendOp2) {
@@ -319,7 +323,7 @@ public class Instructions16 : Instructions16Or32 {
 
     public override void Grp2(Grp2CountSource countSource) {
         ModRM.Read();
-        int groupIndex = ModRM.RegisterIndex;
+        uint groupIndex = ModRM.RegisterIndex;
         ushort value = ModRM.GetRm16();
         byte count = ComputeGrp2Count(countSource);
 
@@ -407,9 +411,7 @@ public class Instructions16 : Instructions16Or32 {
 
     public override void XchgAcc(int regIndex) {
         // XCHG AX regIndex
-        ushort value1 = State.AX;
-        State.AX = State.Registers.GetRegister16(regIndex);
-        State.Registers.SetRegister16(regIndex, value1);
+        (State.AX, UInt16Registers[regIndex]) = (UInt16Registers[regIndex], State.AX);
     }
 
     public override void MovRmReg() {
@@ -426,7 +428,7 @@ public class Instructions16 : Instructions16Or32 {
 
     public override void MovRegImm(int regIndex) {
         // MOV reg66(regIndex) iw
-        State.Registers.SetRegister16(regIndex, Cpu.NextUint16());
+        UInt16Registers[regIndex] = Cpu.NextUint16();
     }
 
     public override void MovAccMoffs() {

@@ -36,7 +36,7 @@ public static class ConvertUtils {
     /// <param name="start">The index of the first byte to use in the conversion.</param>
     /// <returns>The converted 32-bit integer.</returns>
     public static uint BytesToInt32(byte[] data, int start) {
-        return Uint32((data[start] << 24 & 0xFF000000) | ((uint)data[start + 1] << 16 & 0x00FF0000) | ((uint)data[start + 2] << 8 & 0x0000FF00) | ((uint)data[start + 3] & 0x000000FF));
+        return (uint)((data[start] << 24 & 0xFF000000) | ((uint)data[start + 1] << 16 & 0x00FF0000) | ((uint)data[start + 2] << 8 & 0x0000FF00) | ((uint)data[start + 3] & 0x000000FF));
     }
     
     /// <summary>
@@ -99,6 +99,15 @@ public static class ConvertUtils {
     public static byte ReadLsb(ushort value) {
         return (byte)value;
     }
+    
+    /// <summary>
+    /// Returns the least significant byte of a 32-bit unsigned integer.
+    /// </summary>
+    /// <param name="value">The input 32-bit unsigned integer.</param>
+    /// <returns>The least significant byte of the input value.</returns>
+    public static byte ReadLsb16(uint value) {
+        return (byte)value;
+    }
 
     /// <summary>
     /// Returns the most significant byte of a 16-bit unsigned integer.
@@ -106,6 +115,15 @@ public static class ConvertUtils {
     /// <param name="value">The input 16-bit unsigned integer.</param>
     /// <returns>The most significant byte of the input value.</returns>
     public static byte ReadMsb(ushort value) {
+        return (byte)(value >> 8);
+    }
+    
+    /// <summary>
+    /// Returns the bits 8...15 of a 32-bit unsigned integer.
+    /// </summary>
+    /// <param name="value">The input 32-bit unsigned integer.</param>
+    /// <returns>The bits 8...15 of the input value.</returns>
+    public static byte ReadMsb16(uint value) {
         return (byte)(value >> 8);
     }
 
@@ -291,51 +309,6 @@ public static class ConvertUtils {
     public static string ToString(Span<byte> value) {
         return Encoding.ASCII.GetString(value);
     }
-    
-    /// <summary>
-    /// Returns the lower 16 bits of the given ushort value.
-    /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The lower 16 bits of the given ushort value.</returns>
-    public static ushort Uint16(ushort value) {
-        return (ushort)(value & 0xFFFF);
-    }
-
-    /// <summary>
-    /// Returns the lower 32 bits of the given long value.
-    /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The lower 32 bits of the given long value.</returns>
-    public static uint Uint32(long value) {
-        return (uint)(value & 4294967295L);
-    }
-
-    /// <summary>
-    /// Returns the lower 32 bits of the given long value as an int.
-    /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The lower 32 bits of the given long value as an int.</returns>
-    public static int Uint32i(long value) {
-        return (int)Uint32(value);
-    }
-
-    /// <summary>
-    /// Returns the lower 8 bits of the given byte value.
-    /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The lower 8 bits of the given byte value.</returns>
-    public static byte Uint8(byte value) {
-        return (byte)(value & 0xFF);
-    }
-
-    /// <summary>
-    /// Returns the lower 8 bits of the given byte value as a signed byte.
-    /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The lower 8 bits of the given byte value as a signed byte.</returns>
-    public static sbyte Uint8b(byte value) {
-        return (sbyte)Uint8(value);
-    }
 
     /// <summary>
     /// Returns a new ushort value with the lower 8 bits replaced with the given byte value.
@@ -346,6 +319,16 @@ public static class ConvertUtils {
     public static ushort WriteLsb(ushort value, byte lsb) {
         return (ushort)((value & 0xFF00) | lsb);
     }
+    
+    /// <summary>
+    /// Returns a new uint value with the lower 8 bits replaced with the given byte value.
+    /// </summary>
+    /// <param name="value">The original ushort value.</param>
+    /// <param name="lsb">The value to replace the lower 8 bits with.</param>
+    /// <returns>A new uint value with the lower 8 bits replaced with the given byte value.</returns>
+    public static uint WriteLsb(uint value, byte lsb) {
+        return (value & 0xFFFFFF00) | lsb;
+    }
 
     /// <summary>
     /// Returns a new ushort value with the higher 8 bits replaced with the given byte value.
@@ -353,8 +336,22 @@ public static class ConvertUtils {
     /// <param name="value">The original ushort value.</param>
     /// <param name="msb">The value to replace the higher 8 bits with.</param>
     /// <returns>A new ushort value with the higher 8 bits replaced with the given byte value.</returns>
-    public static ushort WriteMsb(ushort value, byte msb) {
-        return (ushort)((value & 0x00FF) | (msb << 8 & 0xFF00));
+    public static ushort WriteMsb16(ushort value, byte msb) {
+        ushort erased = (ushort)(value & 0x00FF);
+        ushort written = (ushort)((msb << 8) & 0xFF00);
+        return (ushort)(erased | written);
+    }
+    
+    /// <summary>
+    /// Returns a new uint value with the bits 8...15 replaced with the given byte value.
+    /// </summary>
+    /// <param name="value">The original uint value.</param>
+    /// <param name="msb">The value to replace the higher 8 bits with.</param>
+    /// <returns>A new uint value with the bits 8...15 replaced with the given byte value.</returns>
+    public static uint WriteMsb16(uint value, byte msb) {
+        uint erased = value & 0xFFFF00FF;
+        uint written = (uint)((msb << 8) & 0x0000FF00);
+        return erased | written;
     }
 
     /// <summary>

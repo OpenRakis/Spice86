@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// <summary>
 /// Provides indexed unsigned 16-byte access over memory.
 /// </summary>
-public class UInt16Indexer : Indexer<ushort> {
+public class UInt16Indexer : MemoryIndexer<ushort> {
     private readonly IByteReaderWriter _byteReaderWriter;
 
     /// <summary>

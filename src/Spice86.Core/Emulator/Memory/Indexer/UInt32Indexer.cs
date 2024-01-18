@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// <summary>
 /// Provides indexed unsigned 32-bit access over memory.
 /// </summary>
-public class UInt32Indexer : Indexer<uint> {
+public class UInt32Indexer : MemoryIndexer<uint> {
     private readonly IByteReaderWriter _byteReaderWriter;
 
     /// <summary>

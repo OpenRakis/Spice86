@@ -11,7 +11,7 @@ public class ByteArrayBasedIndexable : Indexable {
     /// <summary>
     /// Access to underlying ReaderWriter
     /// </summary>
-    public ByteArrayByteReaderWriter ReaderWriter { get; }
+    public ByteArrayReaderWriter ReaderWriter { get; }
 
     /// <summary>
     /// Underlying array being wrapped
@@ -42,7 +42,7 @@ public class ByteArrayBasedIndexable : Indexable {
     }
 
     public ByteArrayBasedIndexable(byte[] array) {
-        ReaderWriter = new ByteArrayByteReaderWriter(array);
+        ReaderWriter = new ByteArrayReaderWriter(array);
         (UInt8, UInt16, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(ReaderWriter);
     }
 }

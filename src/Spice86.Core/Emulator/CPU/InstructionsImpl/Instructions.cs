@@ -2,6 +2,7 @@ using Spice86.Core.Emulator.Errors;
 
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Utils;
 
 public abstract class Instructions {
@@ -119,7 +120,7 @@ public abstract class Instructions {
 
     public void Grp3() {
         ModRM.Read();
-        int groupIndex = ModRM.RegisterIndex;
+        uint groupIndex = ModRM.RegisterIndex;
         switch (groupIndex) {
             case 0:
                 Grp3TestRm();
