@@ -18,7 +18,7 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.1.8</version>
+		<version>6.2.0</version>
 		<PackageReleaseNotes>UI: Disassembly view, Memory editing.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -57,19 +57,22 @@
 		<PackageReference Include="Iced" Version="1.20.0" />
 		<PackageReference Include="Semi.Avalonia" Version="11.0.1" />
 		<PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.6.3" />
-		<PackageReference Include="Pure.DI" Version="2.0.42" />
+		<PackageReference Include="Pure.DI" Version="2.0.45">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Avalonia" Version="11.0.6" />
-		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.6" />
-		<PackageReference Include="Avalonia.Desktop" Version="11.0.6" />
-		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.6" />
+		<PackageReference Include="Avalonia" Version="11.0.7" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.7" />
+		<PackageReference Include="Avalonia.Desktop" Version="11.0.7" />
+		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.7" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.6" />
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.7" />
 		<PackageReference Include="Roslynator.Analyzers" Version="4.9.0">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
