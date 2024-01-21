@@ -48,7 +48,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         }
         // screen refresh is 60hz regardless of the configuration
         _vgaScreenRefreshCounter = new Counter(state, _loggerService, 4, new TimeCounterActivator(1));
-        _vgaScreenRefreshCounter.SetValue((int)(Counter.HardwareFrequency / 60));
+        _vgaScreenRefreshCounter.UpdateDesiredFreqency(60);
     }
 
     /// <inheritdoc cref="ITimeMultiplier" /> 

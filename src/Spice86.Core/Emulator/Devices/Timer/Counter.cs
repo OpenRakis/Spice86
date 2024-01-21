@@ -138,7 +138,7 @@ public class Counter {
         return Lsb(value);
     }
 
-    private void UpdateDesiredFreqency(long desiredFrequency) {
+    public void UpdateDesiredFreqency(long desiredFrequency) {
         Activator.Frequency = desiredFrequency;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("Updating counter {Index} frequency to {DesiredFrequency}", Index, desiredFrequency);
