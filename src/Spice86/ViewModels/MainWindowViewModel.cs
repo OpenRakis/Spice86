@@ -338,7 +338,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
-    public void UpdateScreen() {
+    private void InitializeRenderingThread() {
         if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
             return;
         }
@@ -453,6 +453,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             }
         }
         _isSettingResolution = false;
+        InitializeRenderingThread();
     }, DispatcherPriority.MaxValue);
 
     public event EventHandler<UIRenderEventArgs>? RenderScreen;

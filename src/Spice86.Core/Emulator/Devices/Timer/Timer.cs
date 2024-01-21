@@ -33,22 +33,13 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private readonly Counter[] _counters = new Counter[3];
     private readonly DualPic _dualPic;
 
-    private readonly IVideoCard? _vgaCard;
-
-    // screen refresh
-    private readonly Counter _vgaScreenRefreshCounter;
-
-    public Timer(State state, ILoggerService loggerService, DualPic dualPic, IVideoCard? vgaCard, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Timer(State state, ILoggerService loggerService, DualPic dualPic,CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
-        _vgaCard = vgaCard;
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(state,
                 _loggerService,
                 i, counterConfigurator.InstanciateCounterActivator(state));
         }
-        // screen refresh is 60hz regardless of the configuration
-        _vgaScreenRefreshCounter = new Counter(state, _loggerService, 4, new TimeCounterActivator(1));
-        _vgaScreenRefreshCounter.UpdateDesiredFreqency(60);
     }
 
     /// <inheritdoc cref="ITimeMultiplier" /> 
@@ -113,13 +104,10 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         base.WriteByte(port, value);
     }
 
+
     public void Tick() {
         if (_counters[0].ProcessActivation()) {
             _dualPic.ProcessInterruptRequest(0);
-        }
-
-        if (_vgaScreenRefreshCounter.ProcessActivation()) {
-            _vgaCard?.UpdateScreen();
         }
     }
 

@@ -6,16 +6,15 @@ using Spice86.Core.Emulator.Debugger;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 
+using System.Diagnostics;
+
 /// <summary>
 ///     Thin interface between renderer and gui.
 /// </summary>
-public class VgaCard : IVideoCard {
+public class VgaCard : IDebuggableComponent {
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
     private readonly IVgaRenderer _renderer;
-    private int _renderHeight;
-    private int _renderWidth;
-    private int _requiredBufferSize;
 
     /// <summary>
     ///     Create a new VGA card.
@@ -24,30 +23,36 @@ public class VgaCard : IVideoCard {
         _gui = gui;
         _logger = loggerService;
         _renderer = renderer;
-        _renderWidth = renderer.Width;
-        _renderHeight = renderer.Height;
-        _requiredBufferSize = _renderWidth * _renderHeight;
-        if (gui is not null) {
-            gui.RenderScreen += (_, e) => Render(e);
+        if (_gui is not null) {
+            _gui.RenderScreen += (_, e) => Render(e);
+            // Init bitmaps, needed for GUI to start calling Render function
+            _gui.SetResolution(_renderer.Width, _renderer.Height);
         }
     }
 
-    public void UpdateScreen() {
-        if (_renderer.Width != _renderWidth || _renderer.Height != _renderHeight) {
-            _gui?.SetResolution(_renderer.Width, _renderer.Height);
-            _renderWidth = _renderer.Width;
-            _renderHeight = _renderer.Height;
-            _requiredBufferSize = _renderWidth * _renderHeight;
+    private bool EnsureGuiResolutionMatchesHardware() {
+        if (_renderer.Width == _gui?.Width && _renderer.Height == _gui?.Height) {
+            // Resolution is matching, nothing to do.
+            return true;
         }
-        _gui?.UpdateScreen();
+        _gui?.SetResolution(_renderer.Width, _renderer.Height);
+        // Wait for it to be applied
+        while (_renderer.Width != _gui?.Width || _renderer.Height != _gui?.Height);
+        // Report that resolution did not match
+        return false;
     }
+    
 
-    /// <inheritdoc />
     private unsafe void Render(UIRenderEventArgs uiRenderEventArgs) {
+        if (!EnsureGuiResolutionMatchesHardware()) {
+            // Gui resolution had to be changed, UI event is not valid anymore.
+            return;
+        }
         var buffer = new Span<uint>((void*)uiRenderEventArgs.Address, uiRenderEventArgs.Length);
-        if (buffer.Length < _requiredBufferSize && _logger.IsEnabled(LogEventLevel.Warning)) {
+        int requiredBufferSize = _renderer.Width * _renderer.Height;
+        if (buffer.Length < requiredBufferSize && _logger.IsEnabled(LogEventLevel.Warning)) {
             _logger.Warning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
-                buffer.Length, _requiredBufferSize, _renderWidth, _renderHeight);
+                buffer.Length, requiredBufferSize, _renderer.Width, _renderer.Height);
             return;
         }
         _renderer.Render(buffer);

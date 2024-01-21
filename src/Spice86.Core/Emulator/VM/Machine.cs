@@ -157,7 +157,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <summary>
     /// The VGA Card.
     /// </summary>
-    public IVideoCard VgaCard { get; }
+    public VgaCard VgaCard { get; }
     
     /// <summary>
     /// The VGA Registers
@@ -233,7 +233,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
 
-        Timer = new Timer(CpuState, loggerService, DualPic, VgaCard, counterConfigurator, configuration.FailOnUnhandledPort);
+        Timer = new Timer(CpuState, loggerService, DualPic, counterConfigurator, configuration.FailOnUnhandledPort);
         if (gui is not null) {
             gui.ProgrammableIntervalTimer = Timer;
         }

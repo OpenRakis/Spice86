@@ -176,7 +176,6 @@ public class GdbCustomCommandsHandler {
             "dumpall" => DumpAll(executionFlowRecorder, functionHandler),
             "breakcycles" => BreakCycles(args),
             "breakcsip" => BreakCsIp(args),
-            "vbuffer" => Vbuffer(args),
             _ => InvalidCommand(originalCommand),
         };
     }
@@ -257,11 +256,6 @@ Supported custom commands:
  - peekRet<optional type>: displays the return address of the current function as stored in the stack in RAM.If a parameter is provided, dump the return on the stack as if the return was one of the provided type. Valid values are: {GetValidRetValues()}
  - state: displays the state of the machine
  - ramx: displays the content of ram at the specified segmented address with x being the number of bits to extract. Example: ram8 DS:1234 => Will display the byte at address DS:1234
- - vbuffer: family of commands to control video bufers:
-   - vbuffer refresh: refreshes the screen
-   - vbuffer add<address> <resolution> <scale?>: Example vbuffer add 0x1234 320x200 1.5 -> Add an additional buffer displaying what is at address 0x1234, with resolution 320x200 and scale 1.5
-   - vbuffer remove <address>: Deletes the buffer at address
-   - vbuffer list: Lists the buffers currently displayed
 ");
     }
 
@@ -300,22 +294,5 @@ Supported custom commands:
     private string State() {
         string state = _state.ToString();
         return _gdbIo.GenerateMessageToDisplayResponse(state);
-    }
-
-    private string Vbuffer(string[] args) {
-        try {
-            string action = ExtractAction(args);
-
-            // Actions for 1 parameter
-            if ("refresh".Equals(action)) {
-                _gui?.UpdateScreen();
-                return _gdbIo.GenerateResponse("");
-            } else {
-                return _gdbIo.GenerateMessageToDisplayResponse($"Could not understand action {action}");
-            }
-        } catch (ArgumentException e) {
-            e.Demystify();
-            return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
-        }
     }
 }
