@@ -15,7 +15,7 @@ public sealed class Mixer {
     public Mixer(SoundBlaster blaster) => _blaster = blaster;
 
     /// <summary>
-    /// Gets or sets the current mixer address.
+    /// Gets or sets the current mixer register in use.
     /// </summary>
     public int CurrentAddress { get; set; }
 
@@ -25,9 +25,9 @@ public sealed class Mixer {
     public InterruptStatus InterruptStatusRegister { get; set; }
 
     /// <summary>
-    /// Reads data from the current mixer address.
+    /// Reads data from the <see cref="CurrentAddress"/>
     /// </summary>
-    /// <returns>The data read from the current mixer address.</returns>
+    /// <returns>The data read from the current in use mixer register.</returns>
     public byte ReadData() {
         switch (CurrentAddress) {
             case MixerRegisters.InterruptStatus:
