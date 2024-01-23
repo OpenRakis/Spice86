@@ -130,6 +130,11 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     public SoundBlaster SoundBlaster { get; }
 
     /// <summary>
+    /// INT12H handler.
+    /// </summary>
+    public SystemBiosInt12Handler SystemBiosInt12Handler { get; }
+
+    /// <summary>
     /// INT15H handler.
     /// </summary>
     public SystemBiosInt15Handler SystemBiosInt15Handler { get; }
@@ -200,7 +205,9 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         }
         IoPortDispatcher = ioPortDispatcher;
-        BiosDataArea = new BiosDataArea(Memory);
+        BiosDataArea = new BiosDataArea(Memory) {
+            ConventionalMemorySizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, 640) // max 640k conventional memory
+        };
         CpuState = cpuState;
         DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
@@ -265,6 +272,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(Memory, Cpu, DualPic, Keyboard, BiosDataArea, loggerService);
         
         BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(Memory, Cpu, loggerService);
+        SystemBiosInt12Handler = new SystemBiosInt12Handler(Memory, Cpu, BiosDataArea, loggerService);
         SystemBiosInt15Handler = new SystemBiosInt15Handler(Memory, Cpu, Memory.A20Gate, loggerService);
         KeyboardInt16Handler = new KeyboardInt16Handler(Memory, Cpu, loggerService, BiosKeyboardInt9Handler.BiosKeyboardBuffer);
 
@@ -279,6 +287,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             RegisterInterruptHandler(TimerInt8Handler);
             RegisterInterruptHandler(BiosKeyboardInt9Handler);
             RegisterInterruptHandler(BiosEquipmentDeterminationInt11Handler);
+            RegisterInterruptHandler(SystemBiosInt12Handler);
             RegisterInterruptHandler(SystemBiosInt15Handler);
             RegisterInterruptHandler(KeyboardInt16Handler);
             RegisterInterruptHandler(SystemClockInt1AHandler);
