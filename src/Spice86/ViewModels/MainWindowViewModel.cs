@@ -54,6 +54,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
+    private bool _drawingSemaphoreSlimDisposed;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
     private string _lastExecutableDirectory = string.Empty;
@@ -262,7 +263,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             File.Exists(filePath)) {
             await RestartEmulatorWithNewProgram(filePath);
         }
-        else if (_hostStorageProvider.CanOpen == true) {
+        else if (_hostStorageProvider.CanOpen) {
             FilePickerOpenOptions options = new() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
@@ -339,13 +340,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             return;
         }
         _drawAction = () => {
+            if (_drawingSemaphoreSlimDisposed) {
+                return;
+            }
             _drawingSemaphoreSlim?.Wait();
             try {
                 using ILockedFramebuffer pixels = Bitmap.Lock();
                 var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
                 RenderScreen.Invoke(this, uiRenderEventArgs);
             } finally {
-                _drawingSemaphoreSlim?.Release();
+                if (!_drawingSemaphoreSlimDisposed) {
+                    _drawingSemaphoreSlim?.Release();
+                }
             }
             _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
         };
@@ -433,12 +439,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (Width != width || Height != height) {
             Width = width;
             Height = height;
+            if (_drawingSemaphoreSlimDisposed) {
+                return;
+            }
             _drawingSemaphoreSlim?.Wait();
             try {
                 Bitmap?.Dispose();
                 Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
             } finally {
-                _drawingSemaphoreSlim?.Release();
+                if (!_drawingSemaphoreSlimDisposed) {
+                    _drawingSemaphoreSlim?.Release();
+                }
             }
         }
         _isSettingResolution = false;
@@ -456,29 +467,26 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                DisposeDrawThread();
+                _windowActivator.CloseDebugWindow();
+                _drawAction = null;
+                _drawTimer.Stop();
+                _drawTimer.Dispose();
+                _isDrawThreadInitialized = false;
                 _uiDispatcher.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
                 }, DispatcherPriority.MaxValue);
+                _drawingSemaphoreSlimDisposed = true;
                 _drawingSemaphoreSlim?.Dispose();
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
-                _windowActivator.CloseDebugWindow();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
             }
             _disposed = true;
         }
-    }
-
-    private void DisposeDrawThread() {
-        _drawAction = null;
-        _drawTimer.Stop();
-        _drawTimer.Dispose();
-        _isDrawThreadInitialized = false;
     }
 
     private void DisposeEmulator() => _programExecutor?.Dispose();
