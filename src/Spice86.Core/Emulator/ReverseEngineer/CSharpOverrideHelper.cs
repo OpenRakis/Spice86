@@ -704,6 +704,25 @@ public class CSharpOverrideHelper {
     public void Interrupt(byte vectorNumber) {
         Machine.CallbackHandler.RunFromOverriden(vectorNumber);
     }
+    
+    /// <summary>
+    /// Defines C# functions for provided interrupt handlers so that when overriden code generates an interrupt, an override for it is found and executed.
+    /// Does not currently handle mouse code which has more than a callback + iret.
+    /// </summary>
+    public void SetProvidedInterruptHandlersAsOverridden() {
+        InterruptVectorTable ivt = new InterruptVectorTable(Memory);
+        for (byte i = 0; i < 0xFF; i++) {
+            SegmentedAddress handlerAddress = ivt[i];
+            if (handlerAddress.Segment == 0 && handlerAddress.Offset == 0) {
+                continue;
+            }
+            int callback = i;
+            DefineFunction(handlerAddress.Segment, handlerAddress.Offset, (offset) => {
+                    Machine.CallbackHandler.RunFromOverriden(callback);
+                    return InterruptRet();
+                }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
+        }
+    }
 
     /// <summary>
     /// Halt the program.
